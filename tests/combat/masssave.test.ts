@@ -14,6 +14,7 @@ import {
   abilityModifier,
   applySaveDamage,
   damageForResult,
+  hasMagicResistance,
   rollSave,
   saveBonus,
 } from '../../src/combat/masssave.ts'
@@ -123,6 +124,22 @@ describe('rollSave', () => {
 
   it('throws for a PC', () => {
     expect(() => rollSave(pc(), request, { rand: faceSeq(10) })).toThrow()
+  })
+
+  it('rolls with advantage when Magic Resistance applies', () => {
+    const archmage = monster({}, creature({ traits: [{ name: 'Magic Resistance', text: '' }] }))
+    // Advantage rolls two d20 and keeps the higher: 2 then 18 → 18 (+2 dex) = 20.
+    const r = rollSave(archmage, request, { rand: faceSeq(2, 18), magicResistance: true })
+    expect(r.total).toBe(20)
+    expect(r.applied).toContainEqual({ source: 'Magic Resistance', effect: 'advantage' })
+  })
+})
+
+describe('hasMagicResistance', () => {
+  it('detects the trait on a monster and never on a PC', () => {
+    expect(hasMagicResistance(monster({}, creature({ traits: [{ name: 'Magic Resistance', text: '' }] })))).toBe(true)
+    expect(hasMagicResistance(monster())).toBe(false)
+    expect(hasMagicResistance(pc())).toBe(false)
   })
 })
 

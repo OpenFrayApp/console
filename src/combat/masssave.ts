@@ -48,13 +48,24 @@ export function saveBonus(c: Combatant, ability: Ability): number | null {
 const formatBonus = (n: number): string => (n === 0 ? '' : n > 0 ? `+${n}` : `${n}`)
 
 /**
+ * Magic Resistance — advantage on saves against spells and other magical effects.
+ * A creature trait, so it's board data we can read (true only for monsters).
+ */
+export function hasMagicResistance(c: Combatant): boolean {
+  if (c.isPC) return false
+  return (c.creature.traits ?? []).some((t) => /magic resistance/i.test(t.name))
+}
+
+/**
  * Auto-roll a save for a combatant that has a save bonus (monsters/NPCs). Folds
- * in any savingThrows effects (Bless, etc.). Throws for PCs — record those by hand.
+ * in any savingThrows effects (Bless, etc.). Pass `magicResistance` to grant
+ * advantage when the effect is magical and the creature resists magic. Throws
+ * for PCs — record those by hand.
  */
 export function rollSave(
   c: Combatant,
   request: SaveRequest,
-  ctx: { rand?: RandomSource } = {},
+  ctx: { rand?: RandomSource; magicResistance?: boolean } = {},
 ): SaveRoll {
   const bonus = saveBonus(c, request.ability)
   if (bonus === null) {
@@ -66,6 +77,7 @@ export function rollSave(
     roller: c,
     kind: 'save',
     rand: ctx.rand,
+    advantageSources: ctx.magicResistance ? ['Magic Resistance'] : [],
   })
   return {
     combatantId: c.combatantId,

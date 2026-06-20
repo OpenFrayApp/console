@@ -44,6 +44,8 @@ export interface EffectRollOptions {
   kind: RollKind
   /** Attack range — drives Prone (melee = advantage, ranged = disadvantage). */
   range?: AttackRange
+  /** Extra advantage sources beyond effects, e.g. a trait like "Magic Resistance". */
+  advantageSources?: string[]
   crit?: boolean | CritRule
   rand?: RandomSource
 }
@@ -125,6 +127,9 @@ export function rollWithEffects(
       applied.push({ source, effect: 'disadvantage' })
     }
   }
+
+  // Trait-driven advantage passed in by the caller (e.g. Magic Resistance).
+  for (const source of opts.advantageSources ?? []) addAdvantage('advantage', source)
 
   // Manual mechanical effects (advantageAgainst, disadvantageOn, flatBonus).
   for (const { effect, modifier } of applicable) {

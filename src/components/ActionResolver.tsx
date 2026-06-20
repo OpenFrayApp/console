@@ -12,7 +12,7 @@ import { roll } from '../dice/roll.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { applyDamage } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
-import { rollSave, type SaveResult } from '../combat/masssave.ts'
+import { hasMagicResistance, rollSave, type SaveResult } from '../combat/masssave.ts'
 import { condition } from '../combat/effects.ts'
 import {
   applyConcentrationResult,
@@ -184,6 +184,11 @@ function DamagePill({
     </span>
   )
 }
+
+// Applying damage is the irreversible step, so it's deliberately understated
+// rather than a bright call-to-action.
+const APPLY_BTN =
+  'rounded-md border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50'
 
 const chip =
   'rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -459,7 +464,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
             <button
               type="button"
               onClick={apply}
-              className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500"
+              className={`${APPLY_BTN}${hit ? '' : ' opacity-40 transition-opacity hover:opacity-100'}`}
             >
               Apply to {nameOf(attack.target)}
             </button>
@@ -505,6 +510,7 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [onSave, setOnSave] = useState<SaveOutcome>(save?.onSave ?? 'half')
   const [dc, setDc] = useState(String(save?.dc ?? 15))
+  const [magical, setMagical] = useState(false)
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
   const [area, setArea] = useState<RolledDamage[]>([])
   const [resolved, setResolved] = useState(false)
@@ -547,7 +553,9 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
       if (c.isPC) {
         next[c.combatantId] = {} // the player rolls; recorded below
       } else {
-        const saveRoll = rollSave(c, request)
+        const saveRoll = rollSave(c, request, {
+          magicResistance: magical && hasMagicResistance(c),
+        })
         const d20 = saveRoll.roll.dice.find((g) => g.sides === 20)?.kept[0]
         next[c.combatantId] = { result: saveRoll.result, total: saveRoll.total, d20 }
         onRoll(
@@ -665,6 +673,15 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
           <option value="none">save → no damage</option>
           <option value="negates">save → negates effect</option>
         </select>
+        {targets.some(hasMagicResistance) && (
+          <label
+            className="flex items-center gap-1"
+            title="Magic Resistance grants advantage on saves against spells and other magical effects"
+          >
+            <input type="checkbox" checked={magical} onChange={(e) => setMagical(e.target.checked)} />
+            Magical
+          </label>
+        )}
       </div>
 
       <fieldset className="mb-3">
@@ -695,13 +712,7 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
                 <li key={c.combatantId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{nameOf(c)}</span>
-                    {row?.d20 != null && (
-                      <DieRoll
-                        value={row.d20}
-                        spinKey={spinKey}
-                        tone={row.result === 'save' ? 'crit' : 'fumble'}
-                      />
-                    )}
+                    {row?.d20 != null && <DieRoll value={row.d20} spinKey={spinKey} />}
                     {row?.total != null && (
                       <span className="tabular-nums text-slate-500 dark:text-slate-400">{row.total}</span>
                     )}
@@ -748,11 +759,7 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
             })}
           </ul>
 
-          <button
-            type="button"
-            onClick={apply}
-            className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500"
-          >
+          <button type="button" onClick={apply} className={`mt-3 ${APPLY_BTN}`}>
             Apply damage
           </button>
 
