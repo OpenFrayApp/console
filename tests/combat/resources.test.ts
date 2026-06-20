@@ -11,6 +11,7 @@ import {
   applyDamage,
   applyHealing,
   grantTempHp,
+  hpTier,
   isBloodied,
   isLimitedAvailable,
   rechargeLimited,
@@ -155,10 +156,36 @@ describe('grantTempHp', () => {
   })
 })
 
+describe('hpTier', () => {
+  const at = (current: number) => hpTier(monster({ hp: { current, max: 40, temp: 0 } }))
+
+  it('is healthy at full HP', () => {
+    expect(at(40)).toBe('healthy')
+  })
+
+  it('is hurt below max but above half', () => {
+    expect(at(39)).toBe('hurt')
+    expect(at(21)).toBe('hurt')
+  })
+
+  it('is bloodied at or below half, above a quarter', () => {
+    expect(at(20)).toBe('bloodied')
+    expect(at(11)).toBe('bloodied')
+  })
+
+  it('is critical at or below a quarter', () => {
+    expect(at(10)).toBe('critical')
+    expect(at(1)).toBe('critical')
+    expect(at(0)).toBe('critical')
+  })
+})
+
 describe('isBloodied', () => {
-  it('is true at or below half max HP', () => {
+  it('is true at or below half (bloodied or critical), false above', () => {
     expect(isBloodied(monster({ hp: { current: 20, max: 40, temp: 0 } }))).toBe(true)
+    expect(isBloodied(monster({ hp: { current: 8, max: 40, temp: 0 } }))).toBe(true)
     expect(isBloodied(monster({ hp: { current: 21, max: 40, temp: 0 } }))).toBe(false)
+    expect(isBloodied(monster({ hp: { current: 40, max: 40, temp: 0 } }))).toBe(false)
   })
 })
 

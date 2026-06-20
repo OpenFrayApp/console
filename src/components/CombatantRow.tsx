@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import { isBloodied } from '../combat/resources.ts'
+import { hpTier, type HpTier } from '../combat/resources.ts'
 import { EffectBadge } from './EffectBadge.tsx'
 
 const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
@@ -10,6 +10,28 @@ const armorClass = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
 
 function cx(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
+}
+
+/** HP number colour by wound tier — both themes. */
+function hpToneFor(tier: HpTier): string {
+  switch (tier) {
+    case 'hurt':
+      return 'text-amber-600 dark:text-amber-400'
+    case 'bloodied':
+      return 'font-semibold text-rose-600 dark:text-rose-400'
+    case 'critical':
+      return 'font-bold text-red-700 dark:text-red-400'
+    case 'healthy':
+    default:
+      return 'text-slate-900 dark:text-slate-100'
+  }
+}
+
+const TIER_LABEL: Record<HpTier, string> = {
+  healthy: 'Healthy',
+  hurt: 'Hurt',
+  bloodied: 'Bloodied',
+  critical: 'Critical',
 }
 
 interface CombatantRowProps {
@@ -20,12 +42,13 @@ interface CombatantRowProps {
 /**
  * One row in the initiative list: initiative, name, HP/AC, and the combatant's
  * effect badges (conditions and effects, one unified list). Dead/down combatants
- * are greyed and struck through; bloodied HP is flagged.
+ * are greyed and struck through; living combatants surface their wound tier.
  */
 export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
   const { hp, status } = combatant
   const downed = status === 'dead' || status === 'down'
-  const bloodied = !downed && isBloodied(combatant)
+  const tier = hpTier(combatant)
+  const showTier = !downed && tier !== 'healthy'
 
   return (
     <div
@@ -73,9 +96,7 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
           <span
             className={cx(
               'tabular-nums',
-              bloodied
-                ? 'font-semibold text-rose-600 dark:text-rose-400'
-                : 'text-slate-900 dark:text-slate-100',
+              downed ? 'text-slate-900 dark:text-slate-100' : hpToneFor(tier),
             )}
           >
             {hp.current}/{hp.max}
@@ -83,7 +104,7 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
           {hp.temp > 0 && (
             <span className="text-sky-600 dark:text-sky-400"> +{hp.temp} temp</span>
           )}
-          {bloodied && <span className="sr-only"> Bloodied</span>}
+          {showTier && <span className="sr-only"> {TIER_LABEL[tier]}</span>}
         </div>
         <div className="text-xs text-slate-500 dark:text-slate-400">
           AC {armorClass(combatant)}

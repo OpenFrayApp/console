@@ -20,9 +20,29 @@ import type { SpellLevel } from '../schema/creature.ts'
 
 const clampNonNegativeInt = (n: number): number => Math.max(0, Math.floor(n))
 
-/** A creature is bloodied at or below half its max HP. */
+/**
+ * Wound tier from current/max HP, independent of the alive/dead status:
+ * - `healthy`  — at full HP
+ * - `hurt`     — below max but above half
+ * - `bloodied` — at or below half, above a quarter
+ * - `critical` — at or below a quarter (close to death)
+ *
+ * This feeds the phase-2 player view, which shows a wound tier instead of exact HP.
+ */
+export type HpTier = 'healthy' | 'hurt' | 'bloodied' | 'critical'
+
+export function hpTier(c: Combatant): HpTier {
+  const { current, max } = c.hp
+  if (max <= 0 || current >= max) return 'healthy'
+  if (current > Math.floor(max / 2)) return 'hurt'
+  if (current > Math.floor(max / 4)) return 'bloodied'
+  return 'critical'
+}
+
+/** Bloodied-or-worse: at or below half max HP. */
 export function isBloodied(c: Combatant): boolean {
-  return c.hp.current <= Math.floor(c.hp.max / 2)
+  const tier = hpTier(c)
+  return tier === 'bloodied' || tier === 'critical'
 }
 
 /** Reaching 0 HP downs a PC and kills a monster (by default); above 0 is active. */

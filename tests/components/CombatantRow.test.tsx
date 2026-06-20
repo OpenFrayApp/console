@@ -94,9 +94,15 @@ describe('CombatantRow', () => {
     expect(screen.getByText('Dead')).toBeInTheDocument()
   })
 
-  it('flags bloodied HP accessibly', () => {
+  it('flags the wound tier accessibly', () => {
+    render(<CombatantRow combatant={monster({ hp: { current: 6, max: 7, temp: 0 } })} />)
+    expect(screen.getByText('Hurt')).toBeInTheDocument()
+    cleanup()
     render(<CombatantRow combatant={monster({ hp: { current: 3, max: 7, temp: 0 } })} />)
     expect(screen.getByText('Bloodied')).toBeInTheDocument()
+    cleanup()
+    render(<CombatantRow combatant={monster({ hp: { current: 1, max: 7, temp: 0 } })} />)
+    expect(screen.getByText('Critical')).toBeInTheDocument()
   })
 
   it('shows temporary HP', () => {
