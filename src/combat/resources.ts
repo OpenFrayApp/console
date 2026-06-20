@@ -45,10 +45,19 @@ export function isBloodied(c: Combatant): boolean {
   return tier === 'bloodied' || tier === 'critical'
 }
 
-/** Reaching 0 HP downs a PC and kills a monster (by default); above 0 is active. */
-function statusForHp(c: Combatant, current: number): CombatantStatus {
+/**
+ * Status after an HP change. A monster at 0 dies; a PC at 0 is downed (and will
+ * make death saves) — unless the massive-damage rule kills it outright: the
+ * leftover damage after reaching 0 equals or exceeds the PC's HP maximum.
+ */
+function statusForHp(
+  c: Combatant,
+  current: number,
+  overkill: number,
+): CombatantStatus {
   if (current > 0) return 'active'
-  return c.isPC ? 'down' : 'dead'
+  if (!c.isPC) return 'dead'
+  return overkill >= c.hp.max ? 'dead' : 'down'
 }
 
 /** Apply damage: temporary HP absorbs first, then current HP floors at 0. */
@@ -56,8 +65,10 @@ export function applyDamage(c: Combatant, amount: number): Combatant {
   const dmg = clampNonNegativeInt(amount)
   const fromTemp = Math.min(c.hp.temp, dmg)
   const temp = c.hp.temp - fromTemp
-  const current = Math.max(0, c.hp.current - (dmg - fromTemp))
-  return { ...c, hp: { ...c.hp, current, temp }, status: statusForHp(c, current) }
+  const toHp = dmg - fromTemp
+  const current = Math.max(0, c.hp.current - toHp)
+  const overkill = Math.max(0, toHp - c.hp.current)
+  return { ...c, hp: { ...c.hp, current, temp }, status: statusForHp(c, current, overkill) }
 }
 
 /** Heal up to max HP. Healing above 0 revives a downed/dead creature (revivify). */

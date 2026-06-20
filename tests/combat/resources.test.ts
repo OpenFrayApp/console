@@ -109,6 +109,13 @@ describe('applyDamage', () => {
     expect(downed.status).toBe('down')
   })
 
+  it('kills a PC outright when overkill >= max HP (massive damage)', () => {
+    // 20/20 PC takes 40: reduced to 0 with 20 leftover, which equals max -> dead.
+    expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 40).status).toBe('dead')
+    // 39 leaves 19 overkill, just under max -> still only downed.
+    expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 39).status).toBe('down')
+  })
+
   it('consumes temporary HP before current HP', () => {
     const c = applyDamage(monster({ hp: { current: 40, max: 40, temp: 5 } }), 8)
     expect(c.hp.temp).toBe(0)
