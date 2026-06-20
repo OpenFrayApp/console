@@ -14,12 +14,18 @@ const GOBLIN: Creature = {
   size: 'Small',
   type: 'humanoid',
   ac: 15,
+  armorDetail: 'leather armor, shield',
   maxHp: 10,
   hpFormula: '3d6',
+  initiative: 2,
   cr: 0.25,
-  speed: { walk: 30 },
+  speed: { walk: 30, climb: 30 },
   abilities: { str: 8, dex: 15, con: 10, int: 10, wis: 8, cha: 8 },
-  senses: { passivePerception: 9 },
+  saves: { dex: 4 },
+  skills: { stealth: 6 },
+  senses: { passivePerception: 9, darkvision: 60 },
+  languages: ['Common', 'Goblin'],
+  immunities: ['Poison'],
   traits: [{ name: 'Pack Tactics', text: 'It has **advantage** when allies are near.' }],
   actions: [
     {
@@ -63,6 +69,19 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('Actions')).toBeInTheDocument()
     expect(screen.getByText('Bonus Actions')).toBeInTheDocument()
     expect(screen.getByText('Legendary Actions (3/round)')).toBeInTheDocument()
+  })
+
+  it('renders defenses, speeds, skills, senses, and languages', () => {
+    const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
+    const text = container.textContent ?? ''
+    expect(text).toContain('15 (leather armor, shield)') // AC + armor detail
+    expect(text).toContain('Initiative +2')
+    expect(text).toContain('30 ft., climb 30 ft.') // both speeds
+    expect(text).toContain('Saving Throws Dex +4')
+    expect(text).toContain('Skills Stealth +6')
+    expect(text).toContain('Damage Immunities Poison')
+    expect(text).toContain('Darkvision 60 ft., Passive Perception 9')
+    expect(text).toContain('Languages Common, Goblin')
   })
 
   it('renders markdown (bold) rather than raw asterisks', () => {
