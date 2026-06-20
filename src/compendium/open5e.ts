@@ -262,25 +262,44 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
-/** Damage from a structured attack. Open5e sometimes files the only type under
- *  extra_damage_type with no extra dice — treat that as the primary type. */
-function attackDamage(a: Open5eAttack): DamageRoll[] {
+const DAMAGE_TYPE_RE =
+  /\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage/gi
+
+/** Damage types named in the stat-block prose, in order ("… Slashing damage plus … Lightning damage"). */
+function damageTypesInProse(desc: string): DamageType[] {
+  const out: DamageType[] = []
+  for (const m of desc.matchAll(DAMAGE_TYPE_RE)) out.push(m[1].toLowerCase() as DamageType)
+  return out
+}
+
+/**
+ * Damage from a structured attack. Open5e files a *single*-damage attack's type
+ * under `extra_damage_type` (with no extra dice) — borrow that for the primary
+ * only when there's no separate extra component, else the lightning would bleed
+ * onto the slashing. When `damage_type` is missing, fall back to the type named
+ * in the prose so each component keeps its own type.
+ */
+function attackDamage(a: Open5eAttack, desc: string): DamageRoll[] {
   const out: DamageRoll[] = []
+  const prose = damageTypesInProse(desc)
+  const hasExtra = !!(a.extra_damage_die_count && a.extra_damage_die_type)
   if (a.damage_die_count && a.damage_die_type) {
-    const type = (a.damage_type?.name ?? a.extra_damage_type?.name)?.toLowerCase()
+    const borrow = hasExtra ? undefined : a.extra_damage_type?.name
+    const type = (a.damage_type?.name ?? borrow ?? prose[0])?.toLowerCase()
     out.push({
       formula: diceFormula(a.damage_die_count, a.damage_die_type, a.damage_bonus),
       type: type as DamageType,
     })
   }
-  if (a.extra_damage_die_count && a.extra_damage_die_type) {
+  if (hasExtra) {
+    const type = (a.extra_damage_type?.name ?? prose[1] ?? prose[0])?.toLowerCase()
     out.push({
       formula: diceFormula(
-        a.extra_damage_die_count,
-        a.extra_damage_die_type,
+        a.extra_damage_die_count!,
+        a.extra_damage_die_type!,
         a.extra_damage_bonus,
       ),
-      type: a.extra_damage_type?.name?.toLowerCase() as DamageType,
+      type: type as DamageType,
     })
   }
   return out
@@ -328,7 +347,7 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
         attack.range != null
           ? { normal: attack.range, long: attack.long_range ?? undefined }
           : undefined,
-      damage: attackDamage(attack),
+      damage: attackDamage(attack, raw.desc),
       recharge,
       text: raw.desc,
     }
