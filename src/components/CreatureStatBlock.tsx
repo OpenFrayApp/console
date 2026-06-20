@@ -95,10 +95,10 @@ function Section({ title, items }: { title: string; items?: Entry[] }) {
   if (!items || items.length === 0) return null
   return (
     <div>
-      <h4 className="mb-1 border-b border-slate-200 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <h4 className="mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
         {title}
       </h4>
-      <div className="space-y-1.5 text-sm text-slate-700 dark:text-slate-300">
+      <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {items.map((entry) => (
           <Markdown key={entry.name}>
             {`**${entry.name}${entry.note ? ` (${entry.note})` : ''}.** ${entry.text ?? ''}`}
@@ -109,23 +109,64 @@ function Section({ title, items }: { title: string; items?: Entry[] }) {
   )
 }
 
+const ABILITY_GROUPS: Ability[][] = [
+  ['str', 'dex', 'con'],
+  ['int', 'wis', 'cha'],
+]
+
+/** The ability block as two MOD/SAVE tables, like a printed stat block. */
+function AbilityScores({ creature }: { creature: Creature }) {
+  const saveFor = (a: Ability): number =>
+    creature.saves?.[a] ?? abilityMod(creature.abilities[a])
+  return (
+    <div className="grid grid-cols-2 gap-x-4 text-sm">
+      {ABILITY_GROUPS.map((group, i) => (
+        <table key={i} className="w-full">
+          <thead>
+            <tr className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <th className="w-9" />
+              <th />
+              <th className="px-1 text-right font-medium">Mod</th>
+              <th className="px-1 text-right font-medium">Save</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.map((a) => (
+              <tr key={a} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
+                <td className="rounded-l px-2 py-1 font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  {ABILITY_LABEL[a]}
+                </td>
+                <td className="px-1 py-1 text-right tabular-nums">{creature.abilities[a]}</td>
+                <td className="px-1 py-1 text-right tabular-nums">
+                  {signed(abilityMod(creature.abilities[a]))}
+                </td>
+                <td className="rounded-r px-2 py-1 text-right tabular-nums">{signed(saveFor(a))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ))}
+    </div>
+  )
+}
+
 export function CreatureStatBlock({ creature }: { creature: Creature }) {
   const legendaryTitle = creature.legendaryActions
     ? `Legendary Actions (${creature.legendaryActions.perRound}/round)`
     : 'Legendary Actions'
 
   return (
-    <div className="flex flex-1 flex-col space-y-3">
-      <div>
+    <div className="flex flex-1 flex-col space-y-4">
+      <div className="border-b border-slate-200 pb-2 dark:border-slate-800">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{creature.name}</h3>
+          <h3 className="text-2xl font-bold tracking-tight">{creature.name}</h3>
           {creature.legendaryActions && (
             <span className="rounded bg-amber-200 px-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
               Legendary
             </span>
           )}
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm italic text-slate-500 dark:text-slate-400">
           {creature.size} {creature.type} · CR {formatCr(creature.cr)}
           {creature.xp != null ? ` (${creature.xp.toLocaleString('en-US')} XP)` : ''}
         </p>
@@ -149,20 +190,9 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-6 gap-2 text-center text-sm">
-        {ABILITIES.map((a) => (
-          <div key={a}>
-            <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-              {a}
-            </div>
-            <div className="tabular-nums">
-              {creature.abilities[a]} ({signed(abilityMod(creature.abilities[a]))})
-            </div>
-          </div>
-        ))}
-      </div>
+      <AbilityScores creature={creature} />
 
-      <div className="space-y-0.5 text-sm text-slate-700 dark:text-slate-300">
+      <div className="space-y-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         <MetaRow label="Saving Throws" value={creature.saves && formatSaves(creature.saves)} />
         <MetaRow label="Skills" value={creature.skills && formatSkills(creature.skills)} />
         <MetaRow label="Resistances" value={creature.resistances?.join(', ')} />

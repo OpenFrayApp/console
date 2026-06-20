@@ -66,10 +66,18 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('10 (3d6)')).toBeInTheDocument()
   })
 
-  it('shows ability modifiers', () => {
-    render(<CreatureStatBlock creature={GOBLIN} />)
-    expect(screen.getByText('15 (+2)')).toBeInTheDocument()
-    expect(screen.getAllByText('8 (-1)').length).toBeGreaterThan(0)
+  it('shows ability scores with modifiers and proficient saves', () => {
+    const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
+    const row = (re: RegExp) =>
+      [...container.querySelectorAll('tr')].find((r) => re.test(r.textContent ?? ''))
+    const dex = row(/dex/i)
+    expect(dex?.textContent).toContain('15') // score
+    expect(dex?.textContent).toContain('+2') // modifier
+    expect(dex?.textContent).toContain('+4') // proficient save (saves.dex = 4)
+    const str = row(/str/i)
+    expect(str?.textContent).toContain('8')
+    // STR is not proficient — mod and save both fall back to the ability modifier.
+    expect((str?.textContent?.match(/-1/g) ?? []).length).toBe(2)
   })
 
   it('renders every stat-block section and the Legendary badge', () => {
