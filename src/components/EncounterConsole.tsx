@@ -8,7 +8,6 @@ import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
-import { EncounterPlayback } from './EncounterPlayback.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
@@ -72,7 +71,7 @@ export function EncounterConsole({
     combatants[0]
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[24rem_1fr_24rem]">
+    <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem]">
       {/* Left — initiative tracker */}
       <section className="flex min-h-0 flex-col">
         <h2 className={COLUMN_HEADING}>
@@ -107,38 +106,30 @@ export function EncounterConsole({
         </div>
       </section>
 
-      {/* Center — playback, then the selected combatant: stat block + controls */}
+      {/* Center — the selected combatant: stat block + controls */}
       <section className="min-h-0 overflow-auto">
-        <div className="max-w-2xl space-y-4">
-          <EncounterPlayback
-            started={started}
-            paused={paused}
-            canBegin={combatants.length > 0}
-            dispatch={dispatch}
-          />
-          {selected ? (
-            <>
-              {selected.isPC ? (
-                <PcSummary pc={selected} />
-              ) : (
-                <CreatureStatBlock creature={selected.creature} />
-              )}
-              <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
-                <CombatantControls
-                  combatant={selected}
-                  combatants={combatants}
-                  round={encounter.round}
-                  dispatch={dispatch}
-                  onRoll={onRoll}
-                />
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Add a combatant, then select it to see its stat block and actions.
-            </p>
-          )}
-        </div>
+        {selected ? (
+          <div className="space-y-4">
+            {selected.isPC ? (
+              <PcSummary pc={selected} />
+            ) : (
+              <CreatureStatBlock creature={selected.creature} />
+            )}
+            <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+              <CombatantControls
+                combatant={selected}
+                combatants={combatants}
+                round={encounter.round}
+                dispatch={dispatch}
+                onRoll={onRoll}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Add a combatant, then select it to see its stat block and actions.
+          </p>
+        )}
       </section>
 
       {/* Right — combat actions, dice, roll log */}

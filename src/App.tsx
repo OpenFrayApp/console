@@ -10,6 +10,7 @@ import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
+import { EncounterPlayback } from './components/EncounterPlayback.tsx'
 import { type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
@@ -60,14 +61,26 @@ function App() {
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+      {/* Header columns mirror the console grid so the playback lines up with the
+          stat block (center) and the title sits over the tracker (left). */}
+      <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:grid lg:grid-cols-[28rem_1fr_auto] lg:items-center lg:gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             D&amp;D 5e combat console
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div>
+          {view === 'encounter' && (
+            <EncounterPlayback
+              started={started}
+              paused={paused}
+              canBegin={encounter.combatants.length > 0}
+              dispatch={dispatch}
+            />
+          )}
+        </div>
+        <div className="flex items-center gap-3 lg:justify-self-end">
           {view === 'encounter' && (
             <>
               <div className="flex items-center gap-2">
