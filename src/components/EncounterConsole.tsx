@@ -78,7 +78,11 @@ export function EncounterConsole() {
 
       {encounter.combatants.length > 0 && (
         <div className="flex flex-wrap items-start gap-2">
-          <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} />
+          <MassSavePanel
+            combatants={encounter.combatants}
+            dispatch={dispatch}
+            onRoll={pushRoll}
+          />
           <CastSpellPanel
             combatants={encounter.combatants}
             dispatch={dispatch}

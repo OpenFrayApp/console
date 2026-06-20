@@ -195,6 +195,7 @@ export function CastSpellPanel({
           combatants={combatants}
           dispatch={dispatch}
           onClose={reset}
+          onRoll={onRoll}
           title={`${spell.name} — save`}
           seed={{
             ability: save.ability,

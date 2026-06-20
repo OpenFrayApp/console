@@ -6,7 +6,20 @@ import type { Ability } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { applySaveDamage, rollSave, type SaveResult } from '../combat/masssave.ts'
+import {
+  applySaveDamage,
+  damageForResult,
+  rollSave,
+  type SaveResult,
+} from '../combat/masssave.ts'
+import {
+  applyConcentrationResult,
+  breakConcentration,
+  concentrationPromptDC,
+  rollConcentrationCheck,
+} from '../combat/concentration.ts'
+import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
+import type { OnRoll } from './RollLog.tsx'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
@@ -36,16 +49,25 @@ export interface GroupSaveSeed {
  * rule. Shared by the standalone Group Save and by casting a save spell, which
  * seeds the ability/on-save from the spell and the DC from the caster.
  */
+interface ConcPrompt {
+  combatant: Combatant
+  dc: number
+  damage: number
+}
+
 export function GroupSaveForm({
   combatants,
   dispatch,
   onClose,
+  onRoll,
   title = 'Group save',
   seed,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onClose: () => void
+  /** Logs the optional in-app concentration roll, when available. */
+  onRoll?: OnRoll
   title?: string
   seed?: GroupSaveSeed
 }) {
@@ -55,6 +77,7 @@ export function GroupSaveForm({
   const [onSave, setOnSave] = useState<SaveOutcome>(seed?.onSave ?? 'half')
   const [rows, setRows] = useState<Record<string, Row>>({})
   const [damage, setDamage] = useState(seed?.damage ?? '')
+  const [pending, setPending] = useState<ConcPrompt[]>([])
 
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
@@ -84,20 +107,70 @@ export function GroupSaveForm({
 
   const applyDamage = () => {
     const full = num(damage)
+    const prompts: ConcPrompt[] = []
     for (const c of combatants) {
       const result = rows[c.combatantId]?.result
       if (!result) continue
+      const dealt = damageForResult(full, result, onSave)
+      const promptDc = concentrationPromptDC(c, applySaveDamage(c, full, result, onSave), dealt)
+      if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: dealt })
       dispatch({
         type: 'update',
         id: c.combatantId,
         update: (cc) => applySaveDamage(cc, full, result, onSave),
       })
     }
-    onClose()
+    // Surviving concentrators that took damage owe a concentration save next.
+    if (prompts.length > 0) setPending(prompts)
+    else onClose()
+  }
+
+  const resolveConcentration = (combatantId: string, update?: (c: Combatant) => Combatant) => {
+    if (update) dispatch({ type: 'update', id: combatantId, update })
+    setPending((prev) => {
+      const next = prev.filter((p) => p.combatant.combatantId !== combatantId)
+      if (next.length === 0) onClose()
+      return next
+    })
+  }
+
+  const rollConcentration = (p: ConcPrompt) => {
+    const check = rollConcentrationCheck(p.combatant, p.damage)
+    onRoll?.(`${nameOf(p.combatant)}: concentration`, check.roll, check.applied)
+    resolveConcentration(p.combatant.combatantId, (c) =>
+      applyConcentrationResult(c, check.maintained),
+    )
   }
 
   const resolved = Object.keys(rows).length > 0
   const selectedCombatants = combatants.filter((c) => selected.has(c.combatantId))
+
+  if (pending.length > 0) {
+    return (
+      <div className="w-full rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+        <h3 className="mb-2 text-sm font-semibold">Concentration checks</h3>
+        <ul className="space-y-2">
+          {pending.map((p) => (
+            <li
+              key={p.combatant.combatantId}
+              className="flex flex-wrap items-center justify-between gap-2"
+            >
+              <span className="text-sm font-medium">{nameOf(p.combatant)}</span>
+              <ConcentrationPrompt
+                dc={p.dc}
+                canRoll={!p.combatant.isPC}
+                onMaintain={() => resolveConcentration(p.combatant.combatantId)}
+                onBreak={() =>
+                  resolveConcentration(p.combatant.combatantId, breakConcentration)
+                }
+                onRoll={p.combatant.isPC ? undefined : () => rollConcentration(p)}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full rounded-lg border border-slate-200 p-3 dark:border-slate-800">

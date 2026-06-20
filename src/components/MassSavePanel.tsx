@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
+import type { OnRoll } from './RollLog.tsx'
 
 /**
  * The standalone Fireball flow: a button that opens the shared group-save form.
@@ -13,9 +14,11 @@ import { GroupSaveForm } from './GroupSaveForm.tsx'
 export function MassSavePanel({
   combatants,
   dispatch,
+  onRoll,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
+  onRoll: OnRoll
 }) {
   const [open, setOpen] = useState(false)
 
@@ -37,6 +40,7 @@ export function MassSavePanel({
       combatants={combatants}
       dispatch={dispatch}
       onClose={() => setOpen(false)}
+      onRoll={onRoll}
     />
   )
 }

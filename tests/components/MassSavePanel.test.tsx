@@ -48,7 +48,13 @@ afterEach(cleanup)
 describe('MassSavePanel', () => {
   it('rolls saves for selected monsters and applies split damage', () => {
     const dispatch = vi.fn()
-    render(<MassSavePanel combatants={[monster('a'), monster('b')]} dispatch={dispatch} />)
+    render(
+      <MassSavePanel
+        combatants={[monster('a'), monster('b')]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+      />,
+    )
 
     fireEvent.click(screen.getByText('Group save'))
     fireEvent.click(screen.getByLabelText('Select a'))
@@ -69,5 +75,30 @@ describe('MassSavePanel', () => {
 
   it('half damage on a save (sanity on the helper)', () => {
     expect(applySaveDamage(monster('a'), 24, 'save', 'half').hp.current).toBe(18)
+  })
+
+  it('prompts surviving concentrators after applying damage', () => {
+    const dispatch = vi.fn()
+    const conc = (): MonsterCombatant => ({
+      ...monster('a'),
+      concentration: { spell: 'Hold Person', saveDc: 13, round: 1 },
+    })
+    render(<MassSavePanel combatants={[conc()]} dispatch={dispatch} onRoll={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByLabelText('Select a'))
+    fireEvent.click(screen.getByText('Roll saves'))
+    fireEvent.click(screen.getByText('Fail'))
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
+    fireEvent.click(screen.getByText('Apply'))
+
+    expect(screen.getByText('Concentration checks')).toBeInTheDocument()
+    expect(screen.getByText('Concentration — DC 12')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Broken'))
+    const breakCall = dispatch.mock.calls
+      .map((c) => c[0])
+      .find((a) => a.type === 'update' && a.id === 'a' && a.update(conc()).concentration === null)
+    expect(breakCall).toBeTruthy()
   })
 })
