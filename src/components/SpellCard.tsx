@@ -3,6 +3,7 @@
 
 import type { Spell } from '../schema/spell.ts'
 import { Markdown } from './Markdown.tsx'
+import { SourceLink } from './SourceLink.tsx'
 
 const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
 
@@ -60,6 +61,8 @@ export function SpellCard({ spell }: { spell: Spell }) {
           Classes: {spell.classes.join(', ')}
         </p>
       )}
+
+      <SourceLink source={spell.source} />
     </div>
   )
 }

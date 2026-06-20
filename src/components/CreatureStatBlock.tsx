@@ -6,6 +6,7 @@ import type { Action, Recharge } from '../schema/action.ts'
 import type { Creature } from '../schema/creature.ts'
 import { formatCr } from '../compendium/format.ts'
 import { Markdown } from './Markdown.tsx'
+import { SourceLink } from './SourceLink.tsx'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const ABILITY_LABEL: Record<Ability, string> = {
@@ -181,6 +182,8 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
       <Section title="Reactions" items={actionEntries(creature.reactions)} />
       <Section title={legendaryTitle} items={actionEntries(creature.legendaryActions?.actions)} />
       <Section title="Lair Actions" items={actionEntries(creature.lairActions)} />
+
+      <SourceLink source={creature.source} />
     </div>
   )
 }

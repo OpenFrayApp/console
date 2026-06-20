@@ -9,3 +9,23 @@ export function formatCr(cr: number | undefined): string {
   if (cr === 0.5) return '1/2'
   return String(cr)
 }
+
+export interface SourceInfo {
+  label: string
+  /** Where the content came from; absent for user-authored content. */
+  url?: string
+}
+
+/** Human label + link for a content source (see CREDITS.md for attribution). */
+export function sourceInfo(source: string): SourceInfo {
+  switch (source) {
+    case 'srd-5.2':
+      return { label: 'SRD 5.2 (CC-BY-4.0)', url: 'https://www.dndbeyond.com/srd' }
+    case 'srd-5.1':
+      return { label: 'SRD 5.1 (CC-BY-4.0)', url: 'https://www.dndbeyond.com/srd' }
+    case 'custom':
+      return { label: 'Custom (you)' }
+    default:
+      return { label: source }
+  }
+}
