@@ -3,9 +3,11 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  mapOpen5eCreature,
   mapOpen5eSpell,
   mapSource,
   slugFromKey,
+  type Open5eCreature,
   type Open5eSpell,
 } from '../../src/compendium/open5e.ts'
 
@@ -70,5 +72,130 @@ describe('mapOpen5eSpell', () => {
   it('omits the higher-level note when absent', () => {
     const spell = mapOpen5eSpell({ ...ACID_ARROW, higher_level: null })
     expect(spell.text).not.toContain('At Higher Levels:')
+  })
+})
+
+// Trimmed from the real Open5e v2 srd-2024 "Aboleth" record.
+const ABOLETH: Open5eCreature = {
+  key: 'srd-2024_aboleth',
+  document: { key: 'srd-2024' },
+  name: 'Aboleth',
+  size: { name: 'Large' },
+  type: { name: 'Aberration' },
+  armor_class: 17,
+  hit_points: 150,
+  hit_dice: '20d10 + 40',
+  challenge_rating: 10,
+  ability_scores: {
+    strength: 21,
+    dexterity: 9,
+    constitution: 15,
+    intelligence: 18,
+    wisdom: 15,
+    charisma: 18,
+  },
+  speed: { walk: 10, unit: 'feet', swim: 40 },
+  saving_throws_all: { dexterity: 3, constitution: 6, intelligence: 8, wisdom: 6 },
+  passive_perception: 20,
+  darkvision_range: 120,
+  blindsight_range: null,
+  actions: [
+    {
+      name: 'Tentacle',
+      action_type: 'ACTION',
+      desc: 'Melee Attack Roll: +9, reach 15 ft. 12 (2d6 + 5) Bludgeoning damage.',
+      attacks: [
+        {
+          to_hit_mod: 9,
+          reach: 15,
+          range: null,
+          long_range: null,
+          damage_die_count: 2,
+          damage_die_type: 'D6',
+          damage_bonus: 5,
+          damage_type: null,
+          extra_damage_die_count: null,
+          extra_damage_die_type: null,
+          extra_damage_bonus: null,
+          extra_damage_type: { name: 'Bludgeoning' },
+        },
+      ],
+    },
+    {
+      name: 'Consume Memories',
+      action_type: 'ACTION',
+      desc: 'Intelligence Saving Throw: DC 16, one creature within 30 feet. Failure: 10 (3d6) Psychic damage. Success: Half damage.',
+      attacks: [],
+    },
+    {
+      name: 'Rend',
+      action_type: 'ACTION',
+      desc: 'Melee Attack Roll: +11, reach 10 ft. 13 (2d6 + 6) Slashing damage plus 4 (1d8) Acid damage.',
+      attacks: [
+        {
+          to_hit_mod: 11,
+          reach: 10,
+          range: null,
+          long_range: null,
+          damage_die_count: 2,
+          damage_die_type: 'D6',
+          damage_bonus: 6,
+          damage_type: { name: 'Slashing' },
+          extra_damage_die_count: 1,
+          extra_damage_die_type: 'D8',
+          extra_damage_bonus: 0,
+          extra_damage_type: { name: 'Acid' },
+        },
+      ],
+    },
+    { name: 'Legendary Move', action_type: 'LEGENDARY', desc: 'It moves.', attacks: [] },
+  ],
+}
+
+describe('mapOpen5eCreature', () => {
+  const c = mapOpen5eCreature(ABOLETH)
+
+  it('maps the clean stat-block fields', () => {
+    expect(c.id).toBe('srd-5.2:aboleth')
+    expect(c.edition).toBe('5.5')
+    expect(c.size).toBe('Large')
+    expect(c.type).toBe('aberration')
+    expect(c.ac).toBe(17)
+    expect(c.maxHp).toBe(150)
+    expect(c.hpFormula).toBe('20d10+40')
+    expect(c.cr).toBe(10)
+    expect(c.abilities).toEqual({ str: 21, dex: 9, con: 15, int: 18, wis: 15, cha: 18 })
+    expect(c.speed).toEqual({ walk: 10, swim: 40 })
+    expect(c.saves).toEqual({ dex: 3, con: 6, int: 8, wis: 6 })
+    expect(c.senses).toEqual({ passivePerception: 20, darkvision: 120 })
+  })
+
+  it('keeps only ACTION-type actions', () => {
+    expect(c.actions?.map((a) => a.name)).toEqual(['Tentacle', 'Consume Memories', 'Rend'])
+  })
+
+  it('maps a structured attack action', () => {
+    const tentacle = c.actions?.find((a) => a.name === 'Tentacle')
+    expect(tentacle?.kind).toBe('melee')
+    expect(tentacle?.toHit).toBe(9)
+    expect(tentacle?.reach).toBe(15)
+    // single-damage quirk: type resolved from extra_damage_type
+    expect(tentacle?.damage).toEqual([{ formula: '2d6+5', type: 'bludgeoning' }])
+  })
+
+  it('maps a two-damage attack', () => {
+    const rend = c.actions?.find((a) => a.name === 'Rend')
+    expect(rend?.damage).toEqual([
+      { formula: '2d6+6', type: 'slashing' },
+      { formula: '1d8', type: 'acid' },
+    ])
+  })
+
+  it('parses a save action from prose', () => {
+    const save = c.actions?.find((a) => a.name === 'Consume Memories')
+    expect(save?.kind).toBe('save')
+    expect(save?.toHit).toBeNull()
+    expect(save?.save).toEqual({ ability: 'int', dc: 16, onSave: 'half' })
+    expect(save?.damage).toEqual([{ formula: '3d6', type: 'psychic' }])
   })
 })
