@@ -17,13 +17,16 @@ import {
   breakConcentration,
   concentrationPromptDC,
   rollConcentrationCheck,
+  startConcentration,
 } from '../combat/concentration.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
+import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { EffectPicker } from './EffectPicker.tsx'
+import { GroupSaveForm } from './GroupSaveForm.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
@@ -35,21 +38,47 @@ const CHIP =
 const BTN =
   'rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
 
+interface TaggedAction {
+  action: Action
+  /** Category label for non-standard actions (Bonus, Reaction, Legendary, Lair). */
+  tag?: string
+}
+
+/** Every rollable action on a creature — attacks and saves, across all categories. */
+function rollableActions(c: Combatant): TaggedAction[] {
+  if (c.isPC) return []
+  const { creature } = c
+  const tagged: TaggedAction[] = [
+    ...(creature.actions ?? []).map((action) => ({ action })),
+    ...(creature.bonusActions ?? []).map((action) => ({ action, tag: 'Bonus' })),
+    ...(creature.reactions ?? []).map((action) => ({ action, tag: 'Reaction' })),
+    ...(creature.legendaryActions?.actions ?? []).map((action) => ({ action, tag: 'Legendary' })),
+    ...(creature.lairActions ?? []).map((action) => ({ action, tag: 'Lair' })),
+  ]
+  return tagged.filter((t) => t.action.toHit != null || t.action.save != null)
+}
+
 export function CombatantControls({
   combatant,
   combatants,
+  round,
   dispatch,
   onRoll,
 }: {
   combatant: Combatant
   /** The full order, so attacks can pick a target for effect-aware rolling. */
   combatants: Combatant[]
+  /** Current round, recorded when concentration starts. */
+  round: number
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
 }) {
   const [amount, setAmount] = useState('')
   const [targetId, setTargetId] = useState('')
   const [concPrompt, setConcPrompt] = useState<{ dc: number; damage: number } | null>(null)
+  const [concInput, setConcInput] = useState<string | null>(null)
+  const [showBlock, setShowBlock] = useState(false)
+  const [saveAction, setSaveAction] = useState<{ action: Action; damage?: number } | null>(null)
   const n = Math.max(0, Math.floor(Number(amount) || 0))
   const id = combatant.combatantId
   const name = nameOf(combatant)
@@ -67,20 +96,22 @@ export function CombatantControls({
     apply((c) => applyDamage(c, n))
   }
 
+  const startConc = () => {
+    const spell = (concInput ?? '').trim() || 'Concentration'
+    apply((c) => startConcentration(c, { spell, saveDc: 0, round }))
+    setConcInput(null)
+  }
+
   const others = combatants.filter((c) => c.combatantId !== id)
   const target = others.find((c) => c.combatantId === targetId)
 
   const showDeathSaves =
     combatant.isPC && combatant.status === 'unconscious' && !isStable(combatant)
 
-  // Monsters carry rollable actions; PCs roll their own at the table.
-  const attacks: (Action & { toHit: number })[] = combatant.isPC
-    ? []
-    : (combatant.creature.actions ?? []).filter(
-        (a): a is Action & { toHit: number } => a.toHit != null,
-      )
+  const actions = rollableActions(combatant)
 
-  const rollAttack = (action: Action & { toHit: number }) => {
+  const rollAttack = (action: Action) => {
+    if (action.toHit == null) return
     const range = action.kind === 'ranged' ? 'ranged' : 'melee'
     const { result, applied } = rollWithEffects(`1d20${signed(action.toHit)}`, {
       roller: combatant,
@@ -95,6 +126,19 @@ export function CombatantControls({
   const rollDamage = (action: Action) => {
     const formula = (action.damage ?? []).map((d) => d.formula).join('+')
     if (formula) onRoll(`${name}: ${action.name} damage`, roll(formula, { kind: 'damage' }))
+  }
+
+  // A save action (breath weapon, etc.) rolls its damage, then opens the group
+  // save seeded from the action — the same resolver as a cast save spell.
+  const triggerSaveAction = (action: Action) => {
+    const formula = (action.damage ?? []).map((d) => d.formula).join('+')
+    let dealt: number | undefined
+    if (formula) {
+      const result = roll(formula, { kind: 'damage' })
+      onRoll(`${name}: ${action.name} damage`, result)
+      dealt = result.total
+    }
+    setSaveAction({ action, damage: dealt })
   }
 
   const addEffect = (effect: Effect) =>
@@ -113,7 +157,7 @@ export function CombatantControls({
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         placeholder="HP"
-        aria-label={`HP amount for ${combatant.isPC ? combatant.name : combatant.label}`}
+        aria-label={`HP amount for ${name}`}
         className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       <button type="button" className={BTN} onClick={damage}>
@@ -131,6 +175,40 @@ export function CombatantControls({
       </button>
 
       <EffectPicker onApply={addEffect} />
+
+      {combatant.concentration ? (
+        <button type="button" className={BTN} onClick={() => apply(breakConcentration)}>
+          End concentration
+        </button>
+      ) : concInput === null ? (
+        <button type="button" className={BTN} onClick={() => setConcInput('')}>
+          Concentrate
+        </button>
+      ) : (
+        <span className="inline-flex items-center gap-1">
+          <input
+            autoFocus
+            value={concInput}
+            onChange={(e) => setConcInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') startConc()
+              if (e.key === 'Escape') setConcInput(null)
+            }}
+            placeholder="Spell / effect"
+            aria-label={`Concentration spell for ${name}`}
+            className="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+          />
+          <button type="button" className={BTN} onClick={startConc}>
+            Set
+          </button>
+        </span>
+      )}
+
+      {!combatant.isPC && (
+        <button type="button" className={BTN} onClick={() => setShowBlock((s) => !s)}>
+          {showBlock ? 'Hide stat block' : 'Stat block'}
+        </button>
+      )}
 
       {showDeathSaves && (
         <DeathSaveControls
@@ -163,7 +241,7 @@ export function CombatantControls({
         />
       )}
 
-      {attacks.length > 0 && (
+      {actions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
           {others.length > 0 && (
             <select
@@ -180,23 +258,62 @@ export function CombatantControls({
               ))}
             </select>
           )}
-          {attacks.map((action) => (
-            <span key={action.id} className="inline-flex gap-px">
-              <button type="button" className={CHIP} onClick={() => rollAttack(action)}>
-                {action.name} {signed(action.toHit)}
+          {actions.map(({ action, tag }, i) => {
+            const suffix = tag ? ` (${tag})` : ''
+            if (action.toHit != null) {
+              return (
+                <span key={`${action.id}-${i}`} className="inline-flex gap-px">
+                  <button type="button" className={CHIP} onClick={() => rollAttack(action)}>
+                    {action.name} {signed(action.toHit)}
+                    {suffix}
+                  </button>
+                  {action.damage && action.damage.length > 0 && (
+                    <button
+                      type="button"
+                      className={CHIP}
+                      aria-label={`${action.name} damage`}
+                      onClick={() => rollDamage(action)}
+                    >
+                      dmg
+                    </button>
+                  )}
+                </span>
+              )
+            }
+            return (
+              <button
+                key={`${action.id}-${i}`}
+                type="button"
+                className={CHIP}
+                onClick={() => triggerSaveAction(action)}
+              >
+                {action.name} · {action.save?.ability.toUpperCase()} save
+                {suffix}
               </button>
-              {action.damage && action.damage.length > 0 && (
-                <button
-                  type="button"
-                  className={CHIP}
-                  aria-label={`${action.name} damage`}
-                  onClick={() => rollDamage(action)}
-                >
-                  dmg
-                </button>
-              )}
-            </span>
-          ))}
+            )
+          })}
+        </div>
+      )}
+
+      {saveAction?.action.save && (
+        <GroupSaveForm
+          combatants={combatants}
+          dispatch={dispatch}
+          onRoll={onRoll}
+          onClose={() => setSaveAction(null)}
+          title={`${name}: ${saveAction.action.name}`}
+          seed={{
+            ability: saveAction.action.save.ability,
+            dc: String(saveAction.action.save.dc),
+            onSave: saveAction.action.save.onSave,
+            damage: saveAction.damage != null ? String(saveAction.damage) : undefined,
+          }}
+        />
+      )}
+
+      {showBlock && !combatant.isPC && (
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900">
+          <CreatureStatBlock creature={combatant.creature} />
         </div>
       )}
     </div>

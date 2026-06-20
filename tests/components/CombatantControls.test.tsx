@@ -78,6 +78,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={monster()}
         combatants={[monster()]}
+        round={1}
         dispatch={dispatch}
         onRoll={() => {}}
       />,
@@ -96,6 +97,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={monster()}
         combatants={[monster()]}
+        round={1}
         dispatch={dispatch}
         onRoll={() => {}}
       />,
@@ -110,6 +112,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={monster()}
         combatants={[monster()]}
+        round={1}
         dispatch={vi.fn()}
         onRoll={onRoll}
       />,
@@ -127,6 +130,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={downedPc()}
         combatants={[downedPc()]}
+        round={1}
         dispatch={dispatch}
         onRoll={() => {}}
       />,
@@ -137,6 +141,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={downedPc({ deathSaves: { successes: 3, failures: 0 } })}
         combatants={[downedPc()]}
+        round={1}
         dispatch={dispatch}
         onRoll={() => {}}
       />,
@@ -155,6 +160,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={conc()}
         combatants={[conc()]}
+        round={1}
         dispatch={dispatch}
         onRoll={() => {}}
       />,
@@ -170,6 +176,83 @@ describe('CombatantControls', () => {
     expect(breakCall).toBeTruthy()
   })
 
+  it('marks a combatant as concentrating', () => {
+    const dispatch = vi.fn()
+    render(
+      <CombatantControls
+        combatant={monster()}
+        combatants={[monster()]}
+        round={3}
+        dispatch={dispatch}
+        onRoll={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Concentrate'))
+    fireEvent.change(screen.getByLabelText(/Concentration spell/), {
+      target: { value: 'Hold Person' },
+    })
+    fireEvent.click(screen.getByText('Set'))
+
+    const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
+    const updated = call?.update(monster())
+    expect(updated?.concentration).toEqual({ spell: 'Hold Person', saveDc: 0, round: 3 })
+  })
+
+  it('toggles the source stat block', () => {
+    render(
+      <CombatantControls
+        combatant={monster()}
+        combatants={[monster()]}
+        round={1}
+        dispatch={vi.fn()}
+        onRoll={() => {}}
+      />,
+    )
+    expect(screen.queryByText('Scimitar +4')).toBeTruthy() // chip present
+    expect(screen.queryByText(/Passive Perception/)).toBeNull()
+    fireEvent.click(screen.getByText('Stat block'))
+    expect(screen.getByText(/Passive Perception/)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Hide stat block'))
+    expect(screen.queryByText(/Passive Perception/)).toBeNull()
+  })
+
+  it('opens a seeded group save for a save action (breath weapon)', () => {
+    const onRoll = vi.fn()
+    const dragon = (): MonsterCombatant => ({
+      ...monster(),
+      creature: {
+        ...creature(),
+        actions: [
+          {
+            id: 'fire-breath',
+            name: 'Fire Breath',
+            kind: 'save',
+            toHit: null,
+            save: { ability: 'dex', dc: 21, onSave: 'half' },
+            damage: [{ formula: '2d6', type: 'fire' }],
+            text: 'Dexterity Saving Throw: DC 21.',
+          },
+        ],
+      },
+    })
+    render(
+      <CombatantControls
+        combatant={dragon()}
+        combatants={[dragon()]}
+        round={1}
+        dispatch={vi.fn()}
+        onRoll={onRoll}
+      />,
+    )
+    fireEvent.click(screen.getByText(/Fire Breath/))
+    // Damage is rolled and logged, and the seeded group save appears.
+    expect(onRoll).toHaveBeenCalled()
+    const dc = screen.getByLabelText('Save DC') as HTMLInputElement
+    expect(dc.value).toBe('21')
+    const ability = screen.getByLabelText('Save ability') as HTMLSelectElement
+    expect(ability.value).toBe('dex')
+  })
+
   it('aims an attack at a selected target and notes it in the log', () => {
     const onRoll = vi.fn()
     const targetMon: MonsterCombatant = {
@@ -182,6 +265,7 @@ describe('CombatantControls', () => {
       <CombatantControls
         combatant={monster()}
         combatants={[monster(), targetMon]}
+        round={1}
         dispatch={vi.fn()}
         onRoll={onRoll}
       />,

@@ -118,6 +118,7 @@ export function EncounterConsole() {
                   <CombatantControls
                     combatant={c}
                     combatants={encounter.combatants}
+                    round={encounter.round}
                     dispatch={dispatch}
                     onRoll={pushRoll}
                   />
