@@ -16,6 +16,7 @@ import {
   spendLimited,
 } from '../combat/resources.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
+import { rollWithEffects } from '../combat/effectroll.ts'
 import {
   applyConcentrationResult,
   breakConcentration,
@@ -207,6 +208,19 @@ export function EncounterConsole({
     }
   }
 
+  // Roll an ability check / save / skill off the stat block (d20 + modifier),
+  // effect-aware so Bless etc. fold in, and log it.
+  const rollCheckFor = (
+    c: Combatant,
+    label: string,
+    modifier: number,
+    kind: 'save' | 'check',
+  ) => {
+    const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
+    const { result, applied } = rollWithEffects(formula, { roller: c, kind })
+    onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, applied)
+  }
+
   // Spend a rechargeable action when it's used from the resolver.
   const consumeIfRechargeable = (c: Combatant, action: Action) => {
     if (c.isPC || !isRechargeable(action)) return
@@ -289,6 +303,7 @@ export function EncounterConsole({
                   onAction={setActionFor}
                   rechargeState={rechargeStateOf(selected)}
                   onRecharge={(action) => rollRechargeFor(selected, action)}
+                  onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
                 />
               )}
             </div>

@@ -94,8 +94,37 @@ const ABILITY_GROUPS: Ability[][] = [
   ['int', 'wis', 'cha'],
 ]
 
+/** Roll a d20 + this modifier when `onCheck` is supplied (i.e. in combat). */
+export type OnCheck = (label: string, modifier: number, kind: 'save' | 'check') => void
+
+function RollableValue({
+  label,
+  modifier,
+  kind,
+  onCheck,
+  children,
+}: {
+  label: string
+  modifier: number
+  kind: 'save' | 'check'
+  onCheck?: OnCheck
+  children: string
+}) {
+  if (!onCheck) return <>{children}</>
+  return (
+    <button
+      type="button"
+      onClick={() => onCheck(label, modifier, kind)}
+      title={`Roll ${label}`}
+      className="text-indigo-600 hover:underline dark:text-indigo-400"
+    >
+      {children}
+    </button>
+  )
+}
+
 /** The ability block as two MOD/SAVE tables that fill the available width. */
-function AbilityScores({ creature }: { creature: Creature }) {
+function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: OnCheck }) {
   const saveFor = (a: Ability): number =>
     creature.saves?.[a] ?? abilityMod(creature.abilities[a])
   return (
@@ -116,9 +145,25 @@ function AbilityScores({ creature }: { creature: Creature }) {
                 <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{ABILITY_LABEL[a]}</td>
                 <td className="px-1 py-1 text-right tabular-nums">{creature.abilities[a]}</td>
                 <td className="px-1 py-1 text-right tabular-nums">
-                  {signed(abilityMod(creature.abilities[a]))}
+                  <RollableValue
+                    label={`${ABILITY_LABEL[a]} check`}
+                    modifier={abilityMod(creature.abilities[a])}
+                    kind="check"
+                    onCheck={onCheck}
+                  >
+                    {signed(abilityMod(creature.abilities[a]))}
+                  </RollableValue>
                 </td>
-                <td className="rounded-r px-2 py-1 text-right tabular-nums">{signed(saveFor(a))}</td>
+                <td className="rounded-r px-2 py-1 text-right tabular-nums">
+                  <RollableValue
+                    label={`${ABILITY_LABEL[a]} save`}
+                    modifier={saveFor(a)}
+                    kind="save"
+                    onCheck={onCheck}
+                  >
+                    {signed(saveFor(a))}
+                  </RollableValue>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -128,7 +173,7 @@ function AbilityScores({ creature }: { creature: Creature }) {
   )
 }
 
-function SkillsTable({ skills }: { skills: SkillBonuses }) {
+function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCheck }) {
   const entries = Object.entries(skills)
   if (entries.length === 0) return null
   return (
@@ -143,7 +188,16 @@ function SkillsTable({ skills }: { skills: SkillBonuses }) {
         {entries.map(([skill, bonus]) => (
           <tr key={skill} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
             <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{titleCase(skill)}</td>
-            <td className="rounded-r px-2 py-1 text-right tabular-nums">{signed(bonus as number)}</td>
+            <td className="rounded-r px-2 py-1 text-right tabular-nums">
+              <RollableValue
+                label={titleCase(skill)}
+                modifier={bonus as number}
+                kind="check"
+                onCheck={onCheck}
+              >
+                {signed(bonus as number)}
+              </RollableValue>
+            </td>
           </tr>
         ))}
       </tbody>
@@ -269,6 +323,7 @@ export function CreatureStatBlock({
   onAction,
   rechargeState,
   onRecharge,
+  onCheck,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -289,6 +344,8 @@ export function CreatureStatBlock({
   rechargeState?: Record<string, boolean>
   /** Roll the recharge die for a spent ability. */
   onRecharge?: (action: Action) => void
+  /** Roll an ability check / save / skill (d20 + modifier). Combat only. */
+  onCheck?: OnCheck
 }) {
   const displayName = label ?? creature.name
   const legendaryTitle = creature.legendaryActions
@@ -349,11 +406,11 @@ export function CreatureStatBlock({
 
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
         <div className="min-w-[20rem] flex-1">
-          <AbilityScores creature={creature} />
+          <AbilityScores creature={creature} onCheck={onCheck} />
         </div>
         {creature.skills && (
           <div className="min-w-[12rem] flex-1">
-            <SkillsTable skills={creature.skills} />
+            <SkillsTable skills={creature.skills} onCheck={onCheck} />
           </div>
         )}
       </div>
