@@ -3,3 +3,4 @@
 
 export * from './combatant.ts'
 export * from './initiative.ts'
+export * from './resources.ts'

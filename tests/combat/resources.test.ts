@@ -1,0 +1,205 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 OpenFray contributors
+
+import { describe, expect, it } from 'vitest'
+import type { Creature } from '../../src/schema/creature.ts'
+import type {
+  MonsterCombatant,
+  PlayerCharacter,
+} from '../../src/schema/combatant.ts'
+import {
+  applyDamage,
+  applyHealing,
+  grantTempHp,
+  isBloodied,
+  isLimitedAvailable,
+  rechargeLimited,
+  restoreSlot,
+  slotsRemaining,
+  spendLegendary,
+  useLimited,
+  useSlot,
+} from '../../src/combat/resources.ts'
+
+// --- fixtures ---------------------------------------------------------------
+
+function creature(): Creature {
+  return {
+    id: 'srd:mage',
+    source: 'srd-5.2',
+    name: 'Mage',
+    size: 'Medium',
+    type: 'humanoid',
+    ac: 12,
+    maxHp: 40,
+    speed: { walk: 30 },
+    abilities: { str: 9, dex: 14, con: 11, int: 17, wis: 12, cha: 11 },
+    senses: { passivePerception: 11 },
+    spellcasting: {
+      ability: 'int',
+      saveDc: 14,
+      toHit: 6,
+      slots: { '1': 4, '3': 3 },
+      spells: [],
+    },
+    limitedUse: [
+      {
+        id: 'fire-breath',
+        name: 'Fire Breath',
+        recharge: { type: 'dice', value: 5 },
+        action: { id: 'fb', name: 'Fire Breath', kind: 'save', toHit: null },
+      },
+    ],
+  }
+}
+
+function monster(overrides: Partial<MonsterCombatant> = {}): MonsterCombatant {
+  return {
+    isPC: false,
+    combatantId: 'm',
+    creatureId: 'srd:mage',
+    creature: creature(),
+    label: 'Mage',
+    initiative: 12,
+    status: 'active',
+    hp: { current: 40, max: 40, temp: 0 },
+    slotsUsed: {},
+    limitedUseState: { 'fire-breath': { available: true } },
+    legendaryRemaining: 3,
+    concentration: null,
+    effects: [],
+    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
+    ...overrides,
+  }
+}
+
+function pc(overrides: Partial<PlayerCharacter> = {}): PlayerCharacter {
+  return {
+    isPC: true,
+    combatantId: 'p',
+    name: 'Thalia',
+    initiative: 18,
+    ac: 16,
+    passivePerception: 14,
+    status: 'active',
+    hp: { current: 30, max: 30, temp: 0 },
+    concentration: null,
+    effects: [],
+    ...overrides,
+  }
+}
+
+// --- HP ---------------------------------------------------------------------
+
+describe('applyDamage', () => {
+  it('reduces current HP', () => {
+    expect(applyDamage(monster(), 12).hp.current).toBe(28)
+  })
+
+  it('floors current HP at 0 and kills a monster', () => {
+    const dead = applyDamage(monster({ hp: { current: 7, max: 40, temp: 0 } }), 99)
+    expect(dead.hp.current).toBe(0)
+    expect(dead.status).toBe('dead')
+  })
+
+  it('downs a PC at 0 HP rather than killing', () => {
+    const downed = applyDamage(pc({ hp: { current: 4, max: 30, temp: 0 } }), 10)
+    expect(downed.hp.current).toBe(0)
+    expect(downed.status).toBe('down')
+  })
+
+  it('consumes temporary HP before current HP', () => {
+    const c = applyDamage(monster({ hp: { current: 40, max: 40, temp: 5 } }), 8)
+    expect(c.hp.temp).toBe(0)
+    expect(c.hp.current).toBe(37)
+  })
+
+  it('only eats temp HP when damage is fully absorbed', () => {
+    const c = applyDamage(monster({ hp: { current: 40, max: 40, temp: 5 } }), 3)
+    expect(c.hp.temp).toBe(2)
+    expect(c.hp.current).toBe(40)
+  })
+
+  it('does not mutate the input', () => {
+    const m = monster()
+    applyDamage(m, 10)
+    expect(m.hp.current).toBe(40)
+  })
+})
+
+describe('applyHealing', () => {
+  it('caps healing at max HP', () => {
+    const c = applyHealing(monster({ hp: { current: 35, max: 40, temp: 0 } }), 20)
+    expect(c.hp.current).toBe(40)
+  })
+
+  it('revives a dead monster healed above 0', () => {
+    const c = applyHealing(
+      monster({ status: 'dead', hp: { current: 0, max: 40, temp: 0 } }),
+      5,
+    )
+    expect(c.hp.current).toBe(5)
+    expect(c.status).toBe('active')
+  })
+
+  it('leaves temp HP untouched', () => {
+    const c = applyHealing(monster({ hp: { current: 20, max: 40, temp: 6 } }), 5)
+    expect(c.hp.temp).toBe(6)
+  })
+})
+
+describe('grantTempHp', () => {
+  it('keeps the higher value (temp HP does not stack)', () => {
+    expect(grantTempHp(monster({ hp: { current: 40, max: 40, temp: 8 } }), 5).hp.temp).toBe(8)
+    expect(grantTempHp(monster({ hp: { current: 40, max: 40, temp: 3 } }), 9).hp.temp).toBe(9)
+  })
+})
+
+describe('isBloodied', () => {
+  it('is true at or below half max HP', () => {
+    expect(isBloodied(monster({ hp: { current: 20, max: 40, temp: 0 } }))).toBe(true)
+    expect(isBloodied(monster({ hp: { current: 21, max: 40, temp: 0 } }))).toBe(false)
+  })
+})
+
+// --- spell slots ------------------------------------------------------------
+
+describe('spell slots', () => {
+  it('spends a slot and reports remaining, not exceeding max', () => {
+    const after = useSlot(monster(), '1')
+    expect(slotsRemaining(after, '1')).toBe(3)
+  })
+
+  it('does not spend below zero remaining', () => {
+    const drained = monster({ slotsUsed: { '1': 4 } })
+    expect(useSlot(drained, '1').slotsUsed['1']).toBe(4)
+  })
+
+  it('restores a spent slot, flooring at zero used', () => {
+    expect(restoreSlot(monster({ slotsUsed: { '1': 2 } }), '1').slotsUsed['1']).toBe(1)
+    expect(restoreSlot(monster(), '1').slotsUsed['1'] ?? 0).toBe(0)
+  })
+})
+
+// --- legendary actions ------------------------------------------------------
+
+describe('spendLegendary', () => {
+  it('decrements remaining legendary actions', () => {
+    expect(spendLegendary(monster({ legendaryRemaining: 3 })).legendaryRemaining).toBe(2)
+  })
+
+  it('clamps at zero', () => {
+    expect(spendLegendary(monster({ legendaryRemaining: 1 }), 3).legendaryRemaining).toBe(0)
+  })
+})
+
+// --- limited-use / recharge -------------------------------------------------
+
+describe('limited-use abilities', () => {
+  it('marks an ability used, then recharged', () => {
+    const used = useLimited(monster(), 'fire-breath')
+    expect(isLimitedAvailable(used, 'fire-breath')).toBe(false)
+    const back = rechargeLimited(used, 'fire-breath')
+    expect(isLimitedAvailable(back, 'fire-breath')).toBe(true)
+  })
+})
