@@ -14,6 +14,7 @@ import {
   applyConcentrationResult,
   breakConcentration,
   concentrationDC,
+  concentrationPromptDC,
   isConcentrating,
   rollConcentrationCheck,
   startConcentration,
@@ -140,5 +141,31 @@ describe('applyDamage ends concentration on incapacitation', () => {
 
   it('keeps it when the creature survives', () => {
     expect(applyDamage(monster(), 5).concentration).toEqual(HOLD)
+  })
+})
+
+describe('concentrationPromptDC', () => {
+  it('prompts a surviving concentrator with the damage-scaled DC', () => {
+    const before = monster() // 30 HP
+    expect(concentrationPromptDC(before, applyDamage(before, 24), 24)).toBe(12)
+    expect(concentrationPromptDC(before, applyDamage(before, 5), 5)).toBe(10)
+  })
+
+  it('does not prompt a non-concentrator', () => {
+    const before = monster({ concentration: null })
+    expect(concentrationPromptDC(before, applyDamage(before, 9), 9)).toBeNull()
+  })
+
+  it('does not prompt when the damage knocked it out (already cleared)', () => {
+    const before = monster() // 30 HP — 30 damage kills it
+    expect(concentrationPromptDC(before, applyDamage(before, 30), 30)).toBeNull()
+    // A PC downed to 0: concentration already gone, so no prompt.
+    const pcBefore = pc({ hp: { current: 8, max: 30, temp: 0 }, concentration: HOLD })
+    expect(concentrationPromptDC(pcBefore, applyDamage(pcBefore, 8), 8)).toBeNull()
+  })
+
+  it('does not prompt on zero damage', () => {
+    const before = monster()
+    expect(concentrationPromptDC(before, before, 0)).toBeNull()
   })
 })

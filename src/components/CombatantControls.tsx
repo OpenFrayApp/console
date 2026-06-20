@@ -12,12 +12,21 @@ import {
   markDeathSaveSuccess,
   rollDeathSave,
 } from '../combat/deathsaves.ts'
+import {
+  applyConcentrationResult,
+  breakConcentration,
+  concentrationPromptDC,
+  rollConcentrationCheck,
+} from '../combat/concentration.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
+import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { EffectPicker } from './EffectPicker.tsx'
 import type { OnRoll } from './RollLog.tsx'
+
+const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 const CHIP =
@@ -28,22 +37,38 @@ const BTN =
 
 export function CombatantControls({
   combatant,
+  combatants,
   dispatch,
   onRoll,
 }: {
   combatant: Combatant
+  /** The full order, so attacks can pick a target for effect-aware rolling. */
+  combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
 }) {
   const [amount, setAmount] = useState('')
+  const [targetId, setTargetId] = useState('')
+  const [concPrompt, setConcPrompt] = useState<{ dc: number; damage: number } | null>(null)
   const n = Math.max(0, Math.floor(Number(amount) || 0))
   const id = combatant.combatantId
-  const name = combatant.isPC ? combatant.name : combatant.label
+  const name = nameOf(combatant)
 
   const apply = (update: (c: Combatant) => Combatant) => {
     dispatch({ type: 'update', id, update })
     setAmount('')
   }
+
+  const damage = () => {
+    if (n > 0) {
+      const dc = concentrationPromptDC(combatant, applyDamage(combatant, n), n)
+      setConcPrompt(dc != null ? { dc, damage: n } : null)
+    }
+    apply((c) => applyDamage(c, n))
+  }
+
+  const others = combatants.filter((c) => c.combatantId !== id)
+  const target = others.find((c) => c.combatantId === targetId)
 
   const showDeathSaves =
     combatant.isPC && combatant.status === 'unconscious' && !isStable(combatant)
@@ -56,11 +81,15 @@ export function CombatantControls({
       )
 
   const rollAttack = (action: Action & { toHit: number }) => {
+    const range = action.kind === 'ranged' ? 'ranged' : 'melee'
     const { result, applied } = rollWithEffects(`1d20${signed(action.toHit)}`, {
       roller: combatant,
+      target,
+      range,
       kind: 'attack',
     })
-    onRoll(`${name}: ${action.name}`, result, applied)
+    const label = target ? `${name}: ${action.name} → ${nameOf(target)}` : `${name}: ${action.name}`
+    onRoll(label, result, applied)
   }
 
   const rollDamage = (action: Action) => {
@@ -87,7 +116,7 @@ export function CombatantControls({
         aria-label={`HP amount for ${combatant.isPC ? combatant.name : combatant.label}`}
         className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
       />
-      <button type="button" className={BTN} onClick={() => apply((c) => applyDamage(c, n))}>
+      <button type="button" className={BTN} onClick={damage}>
         Damage
       </button>
       <button type="button" className={BTN} onClick={() => apply((c) => applyHealing(c, n))}>
@@ -112,8 +141,45 @@ export function CombatantControls({
       )}
       </div>
 
+      {concPrompt && (
+        <ConcentrationPrompt
+          dc={concPrompt.dc}
+          canRoll={!combatant.isPC}
+          onMaintain={() => setConcPrompt(null)}
+          onBreak={() => {
+            apply(breakConcentration)
+            setConcPrompt(null)
+          }}
+          onRoll={
+            combatant.isPC
+              ? undefined
+              : () => {
+                  const check = rollConcentrationCheck(combatant, concPrompt.damage)
+                  onRoll(`${name}: concentration`, check.roll, check.applied)
+                  apply((c) => applyConcentrationResult(c, check.maintained))
+                  setConcPrompt(null)
+                }
+          }
+        />
+      )}
+
       {attacks.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
+          {others.length > 0 && (
+            <select
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+              aria-label={`Attack target for ${name}`}
+              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">No target</option>
+              {others.map((c) => (
+                <option key={c.combatantId} value={c.combatantId}>
+                  {nameOf(c)}
+                </option>
+              ))}
+            </select>
+          )}
           {attacks.map((action) => (
             <span key={action.id} className="inline-flex gap-px">
               <button type="button" className={CHIP} onClick={() => rollAttack(action)}>

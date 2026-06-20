@@ -21,6 +21,21 @@ export function concentrationDC(damage: number): number {
   return Math.max(10, Math.floor(Math.max(0, damage) / 2))
 }
 
+/**
+ * The DC to prompt after a combatant takes damage, or null for no prompt. A
+ * concentrator that stays conscious must save; one knocked out or killed has
+ * already lost concentration (applyDamage clears it), so it isn't asked again.
+ */
+export function concentrationPromptDC(
+  before: Combatant,
+  after: Combatant,
+  damage: number,
+): number | null {
+  if (damage <= 0) return null
+  if (!isConcentrating(before) || !isConcentrating(after)) return null
+  return concentrationDC(damage)
+}
+
 export function isConcentrating(c: Combatant): boolean {
   return c.concentration !== null
 }

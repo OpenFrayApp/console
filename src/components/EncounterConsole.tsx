@@ -111,7 +111,12 @@ export function EncounterConsole() {
                       })
                     }
                   />
-                  <CombatantControls combatant={c} dispatch={dispatch} onRoll={pushRoll} />
+                  <CombatantControls
+                    combatant={c}
+                    combatants={encounter.combatants}
+                    dispatch={dispatch}
+                    onRoll={pushRoll}
+                  />
                 </div>
               ))}
             </div>
