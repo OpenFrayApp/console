@@ -31,19 +31,24 @@ export function DieRoll({
   tone?: 'normal' | 'crit' | 'fumble'
 }) {
   const [face, setFace] = useState(value)
+  // The crit/fumble colour only shows once the die has settled — not mid-spin.
+  const [settled, setSettled] = useState(true)
   const frame = useRef(0)
 
   useEffect(() => {
     if (prefersReducedMotion()) {
       setFace(value)
+      setSettled(true)
       return
     }
+    setSettled(false)
     const start = performance.now()
     let lastSwap = 0
     const tick = (now: number) => {
       const elapsed = now - start
       if (elapsed >= SPIN_MS) {
         setFace(value)
+        setSettled(true)
         return
       }
       // Swap faces less often as the die "slows down" (≈40ms → ≈150ms).
@@ -59,9 +64,9 @@ export function DieRoll({
   }, [spinKey, value])
 
   const toneClass =
-    tone === 'crit'
+    settled && tone === 'crit'
       ? 'text-emerald-600 dark:text-emerald-400'
-      : tone === 'fumble'
+      : settled && tone === 'fumble'
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-slate-700 dark:text-slate-200'
 
