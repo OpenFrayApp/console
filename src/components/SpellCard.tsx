@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Spell } from '../schema/spell.ts'
+import { Markdown } from './Markdown.tsx'
 
 const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
 
@@ -50,9 +51,9 @@ export function SpellCard({ spell }: { spell: Spell }) {
         />
       </dl>
 
-      <p className="whitespace-pre-line text-sm text-slate-700 dark:text-slate-300">
-        {spell.text}
-      </p>
+      <div className="text-sm text-slate-700 dark:text-slate-300">
+        <Markdown>{spell.text}</Markdown>
+      </div>
 
       {spell.classes && spell.classes.length > 0 && (
         <p className="text-xs text-slate-500 dark:text-slate-400">

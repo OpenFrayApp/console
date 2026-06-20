@@ -20,6 +20,7 @@ const GOBLIN: Creature = {
   speed: { walk: 30 },
   abilities: { str: 8, dex: 15, con: 10, int: 10, wis: 8, cha: 8 },
   senses: { passivePerception: 9 },
+  traits: [{ name: 'Pack Tactics', text: 'It has **advantage** when allies are near.' }],
   actions: [
     {
       id: 'scimitar',
@@ -31,6 +32,13 @@ const GOBLIN: Creature = {
       text: 'Melee Attack Roll: +4, reach 5 ft. 5 (1d6 + 2) Slashing damage.',
     },
   ],
+  bonusActions: [
+    { id: 'escape', name: 'Nimble Escape', kind: 'utility', toHit: null, text: 'Disengage or Hide.' },
+  ],
+  legendaryActions: {
+    perRound: 3,
+    actions: [{ id: 'pounce', name: 'Pounce', kind: 'utility', toHit: null, text: 'It pounces.' }],
+  },
 }
 
 afterEach(cleanup)
@@ -40,19 +48,29 @@ describe('CreatureStatBlock', () => {
     render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText(/Small humanoid · CR 1\/4/)).toBeInTheDocument()
-    expect(screen.getByText('15')).toBeInTheDocument() // AC
-    expect(screen.getByText('10 (3d6)')).toBeInTheDocument() // HP
+    expect(screen.getByText('10 (3d6)')).toBeInTheDocument()
   })
 
   it('shows ability modifiers', () => {
     render(<CreatureStatBlock creature={GOBLIN} />)
-    expect(screen.getByText('15 (+2)')).toBeInTheDocument() // dex (unique)
-    expect(screen.getAllByText('8 (-1)').length).toBeGreaterThan(0) // str/wis/cha
+    expect(screen.getByText('15 (+2)')).toBeInTheDocument()
+    expect(screen.getAllByText('8 (-1)').length).toBeGreaterThan(0)
   })
 
-  it('renders actions', () => {
+  it('renders every stat-block section', () => {
     render(<CreatureStatBlock creature={GOBLIN} />)
-    expect(screen.getByText('Scimitar.')).toBeInTheDocument()
-    expect(screen.getByText(/Melee Attack Roll: \+4/)).toBeInTheDocument()
+    expect(screen.getByText('Traits')).toBeInTheDocument()
+    expect(screen.getByText('Actions')).toBeInTheDocument()
+    expect(screen.getByText('Bonus Actions')).toBeInTheDocument()
+    expect(screen.getByText('Legendary Actions (3/round)')).toBeInTheDocument()
+  })
+
+  it('renders markdown (bold) rather than raw asterisks', () => {
+    const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
+    expect(container.textContent).toContain('Scimitar')
+    expect(container.textContent).toContain('Melee Attack Roll: +4')
+    expect(container.textContent).toContain('advantage')
+    expect(container.textContent).not.toContain('**')
+    expect(container.querySelector('strong')).not.toBeNull()
   })
 })

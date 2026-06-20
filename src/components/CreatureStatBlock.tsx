@@ -1,25 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { Action } from '../schema/action.ts'
 import type { Ability } from '../schema/primitives.ts'
 import type { Creature } from '../schema/creature.ts'
 import { formatCr } from '../compendium/format.ts'
+import { Markdown } from './Markdown.tsx'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const abilityMod = (score: number): number => Math.floor((score - 10) / 2)
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
-function ActionLine({ action }: { action: Action }) {
+interface Entry {
+  name: string
+  text?: string
+}
+
+function Section({ title, items }: { title: string; items?: Entry[] }) {
+  if (!items || items.length === 0) return null
   return (
-    <p>
-      <span className="font-semibold">{action.name}.</span>{' '}
-      <span className="text-slate-600 dark:text-slate-400">{action.text}</span>
-    </p>
+    <div>
+      <h4 className="mb-1 border-b border-slate-200 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        {title}
+      </h4>
+      <div className="space-y-1.5 text-sm text-slate-700 dark:text-slate-300">
+        {items.map((entry) => (
+          <Markdown key={entry.name}>{`**${entry.name}.** ${entry.text ?? ''}`}</Markdown>
+        ))}
+      </div>
+    </div>
   )
 }
 
 export function CreatureStatBlock({ creature }: { creature: Creature }) {
+  const legendaryTitle = creature.legendaryActions
+    ? `Legendary Actions (${creature.legendaryActions.perRound}/round)`
+    : 'Legendary Actions'
+
   return (
     <div className="space-y-3">
       <div>
@@ -57,18 +73,12 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
         ))}
       </div>
 
-      {creature.actions && creature.actions.length > 0 && (
-        <div>
-          <h4 className="mb-1 border-b border-slate-200 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            Actions
-          </h4>
-          <div className="space-y-1.5 text-sm">
-            {creature.actions.map((action) => (
-              <ActionLine key={action.id} action={action} />
-            ))}
-          </div>
-        </div>
-      )}
+      <Section title="Traits" items={creature.traits} />
+      <Section title="Actions" items={creature.actions} />
+      <Section title="Bonus Actions" items={creature.bonusActions} />
+      <Section title="Reactions" items={creature.reactions} />
+      <Section title={legendaryTitle} items={creature.legendaryActions?.actions} />
+      <Section title="Lair Actions" items={creature.lairActions} />
     </div>
   )
 }
