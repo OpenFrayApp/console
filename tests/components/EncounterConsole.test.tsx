@@ -100,12 +100,15 @@ describe('Encounter flow', () => {
     expect([before, after].sort()).toEqual(['Goblin', 'Ogre'])
   })
 
-  it('applies damage through the controls', async () => {
-    render(<App />)
+  it('edits HP by clicking it in the stat block (+N / -N / set)', async () => {
+    const { container } = render(<App />)
     await addGoblin()
-    fireEvent.change(screen.getByLabelText(/HP amount/), { target: { value: '3' } })
-    fireEvent.click(screen.getByText('Damage'))
-    expect(screen.getByText('4/7')).toBeInTheDocument() // 7 - 3
+    // Click the HP widget, type a delta, commit with Enter.
+    fireEvent.click(screen.getByTitle(/Set HP/))
+    const input = container.querySelector('input.w-14') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '-3' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.getAllByText('4/7').length).toBeGreaterThan(0) // 7 - 3
   })
 
   it('logs a quick roll', () => {

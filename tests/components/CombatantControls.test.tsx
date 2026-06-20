@@ -72,25 +72,6 @@ function downedPc(over: Partial<PlayerCharacter> = {}): PlayerCharacter {
 afterEach(cleanup)
 
 describe('CombatantControls', () => {
-  it('dispatches a damage update with the entered amount', () => {
-    const dispatch = vi.fn()
-    render(
-      <CombatantControls
-        combatant={monster()}
-        combatants={[monster()]}
-        round={1}
-        dispatch={dispatch}
-        onRoll={() => {}}
-      />,
-    )
-    fireEvent.change(screen.getByLabelText(/HP amount/), { target: { value: '3' } })
-    fireEvent.click(screen.getByText('Damage'))
-
-    const call = dispatch.mock.calls.find((c) => c[0].type === 'update')
-    expect(call?.[0].id).toBe('m')
-    expect(call?.[0].update(monster()).hp.current).toBe(4)
-  })
-
   it('dispatches a remove', () => {
     const dispatch = vi.fn()
     render(
@@ -147,33 +128,6 @@ describe('CombatantControls', () => {
       />,
     )
     expect(screen.queryByText('Roll death save')).toBeNull()
-  })
-
-  it('prompts a concentration save when a concentrator takes damage and survives', () => {
-    const dispatch = vi.fn()
-    const conc = (): MonsterCombatant => ({
-      ...monster(),
-      hp: { current: 30, max: 30, temp: 0 },
-      concentration: { spell: 'Hold Person', saveDc: 13, round: 1 },
-    })
-    render(
-      <CombatantControls
-        combatant={conc()}
-        combatants={[conc()]}
-        round={1}
-        dispatch={dispatch}
-        onRoll={() => {}}
-      />,
-    )
-    fireEvent.change(screen.getByLabelText(/HP amount/), { target: { value: '24' } })
-    fireEvent.click(screen.getByText('Damage'))
-
-    expect(screen.getByText('Concentration — DC 12')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Broken'))
-    const breakCall = dispatch.mock.calls
-      .map((c) => c[0])
-      .find((a) => a.type === 'update' && a.update(conc()).concentration === null)
-    expect(breakCall).toBeTruthy()
   })
 
   it('marks a combatant as concentrating', () => {

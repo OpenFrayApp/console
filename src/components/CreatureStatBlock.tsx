@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { Ability, Senses, SkillBonuses, Speeds } from '../schema/primitives.ts'
 import type { Action, Recharge } from '../schema/action.ts'
 import type { Creature } from '../schema/creature.ts'
-import type { HitPoints } from '../schema/combatant.ts'
+import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import { hpTierOf } from '../combat/resources.ts'
 import { formatCr } from '../compendium/format.ts'
+import { EditableField } from './EditableField.tsx'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -85,60 +86,6 @@ function MetaTable({ rows }: { rows: [string, string | undefined][] }) {
         ))}
       </tbody>
     </table>
-  )
-}
-
-/** Click-to-edit text: shows `children`, swaps to an input on click, commits on
- *  Enter/blur, cancels on Escape. */
-function EditableField({
-  initial,
-  onCommit,
-  title,
-  inputClassName,
-  inputMode = 'text',
-  children,
-}: {
-  initial: string
-  onCommit: (value: string) => void
-  title: string
-  inputClassName: string
-  inputMode?: 'numeric' | 'text'
-  children: ReactNode
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(initial)
-  if (editing) {
-    const commit = () => {
-      onCommit(draft)
-      setEditing(false)
-    }
-    return (
-      <input
-        autoFocus
-        value={draft}
-        inputMode={inputMode}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') commit()
-          if (e.key === 'Escape') setEditing(false)
-        }}
-        className={inputClassName}
-      />
-    )
-  }
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={() => {
-        setDraft(initial)
-        setEditing(true)
-      }}
-      className="cursor-text rounded px-0.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-    >
-      {children}
-    </button>
   )
 }
 
@@ -275,6 +222,7 @@ function Section({ title, items }: { title: string; items?: Entry[] }) {
 export function CreatureStatBlock({
   creature,
   hp,
+  concentration,
   label,
   onRename,
   onHpInput,
@@ -283,6 +231,8 @@ export function CreatureStatBlock({
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
   hp?: HitPoints
+  /** Live concentration, when in combat — drives the "C" badge. */
+  concentration?: Concentration | null
   /** The combatant's display name (shown in the tracker); defaults to the creature name. */
   label?: string
   /** Rename the combatant's tracker label. */
@@ -342,6 +292,14 @@ export function CreatureStatBlock({
                   className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-amber-200 text-xs font-bold text-amber-800 dark:bg-amber-900 dark:text-amber-200"
                 >
                   L
+                </span>
+              )}
+              {concentration && (
+                <span
+                  title={concentration.spell ? `Concentrating: ${concentration.spell}` : 'Concentrating'}
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-violet-200 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-200"
+                >
+                  C
                 </span>
               )}
               {label && label !== creature.name && (

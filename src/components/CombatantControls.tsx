@@ -5,25 +5,17 @@ import { useState } from 'react'
 import type { Action } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { applyDamage, applyHealing } from '../combat/resources.ts'
 import {
   isStable,
   markDeathSaveFailure,
   markDeathSaveSuccess,
   rollDeathSave,
 } from '../combat/deathsaves.ts'
-import {
-  applyConcentrationResult,
-  breakConcentration,
-  concentrationPromptDC,
-  rollConcentrationCheck,
-  startConcentration,
-} from '../combat/concentration.ts'
+import { breakConcentration, startConcentration } from '../combat/concentration.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
-import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { EffectPicker } from './EffectPicker.tsx'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
 import type { OnRoll } from './RollLog.tsx'
@@ -72,30 +64,16 @@ export function CombatantControls({
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
 }) {
-  const [amount, setAmount] = useState('')
   const [targetId, setTargetId] = useState('')
-  const [concPrompt, setConcPrompt] = useState<{ dc: number; damage: number } | null>(null)
   const [concInput, setConcInput] = useState<string | null>(null)
   const [saveAction, setSaveAction] = useState<{ action: Action; damage?: number } | null>(null)
-  const n = Math.max(0, Math.floor(Number(amount) || 0))
   const id = combatant.combatantId
   const name = nameOf(combatant)
 
-  const apply = (update: (c: Combatant) => Combatant) => {
-    dispatch({ type: 'update', id, update })
-    setAmount('')
-  }
-
-  const damage = () => {
-    if (n > 0) {
-      const dc = concentrationPromptDC(combatant, applyDamage(combatant, n), n)
-      setConcPrompt(dc != null ? { dc, damage: n } : null)
-    }
-    apply((c) => applyDamage(c, n))
-  }
+  const apply = (update: (c: Combatant) => Combatant) => dispatch({ type: 'update', id, update })
 
   const startConc = () => {
-    const spell = (concInput ?? '').trim() || 'Concentration'
+    const spell = (concInput ?? '').trim()
     apply((c) => startConcentration(c, { spell, saveDc: 0, round }))
     setConcInput(null)
   }
@@ -149,89 +127,48 @@ export function CombatantControls({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-      <input
-        type="number"
-        min="0"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        placeholder="HP"
-        aria-label={`HP amount for ${name}`}
-        className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
-      />
-      <button type="button" className={BTN} onClick={damage}>
-        Damage
-      </button>
-      <button type="button" className={BTN} onClick={() => apply((c) => applyHealing(c, n))}>
-        Heal
-      </button>
-      <button
-        type="button"
-        className={BTN}
-        onClick={() => dispatch({ type: 'remove', id })}
-      >
-        Remove
-      </button>
-
-      <EffectPicker onApply={addEffect} />
-
-      {combatant.concentration ? (
-        <button type="button" className={BTN} onClick={() => apply(breakConcentration)}>
-          End concentration
+        <button type="button" className={BTN} onClick={() => dispatch({ type: 'remove', id })}>
+          Remove
         </button>
-      ) : concInput === null ? (
-        <button type="button" className={BTN} onClick={() => setConcInput('')}>
-          Concentrate
-        </button>
-      ) : (
-        <span className="inline-flex items-center gap-1">
-          <input
-            autoFocus
-            value={concInput}
-            onChange={(e) => setConcInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') startConc()
-              if (e.key === 'Escape') setConcInput(null)
-            }}
-            placeholder="Spell / effect"
-            aria-label={`Concentration spell for ${name}`}
-            className="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
-          />
-          <button type="button" className={BTN} onClick={startConc}>
-            Set
+
+        <EffectPicker onApply={addEffect} />
+
+        {combatant.concentration ? (
+          <button type="button" className={BTN} onClick={() => apply(breakConcentration)}>
+            End concentration
           </button>
-        </span>
-      )}
+        ) : concInput === null ? (
+          <button type="button" className={BTN} onClick={() => setConcInput('')}>
+            Concentrate
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <input
+              autoFocus
+              value={concInput}
+              onChange={(e) => setConcInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') startConc()
+                if (e.key === 'Escape') setConcInput(null)
+              }}
+              placeholder="Spell / effect (optional)"
+              aria-label={`Concentration spell for ${name}`}
+              className="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            />
+            <button type="button" className={BTN} onClick={startConc}>
+              Set
+            </button>
+          </span>
+        )}
 
-      {showDeathSaves && (
-        <DeathSaveControls
-          onSave={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c) })}
-          onFail={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveFailure(c) : c) })}
-          onRoll={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? rollDeathSave(c).pc : c) })}
-        />
-      )}
+        {showDeathSaves && (
+          <DeathSaveControls
+            onSave={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c) })}
+            onFail={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveFailure(c) : c) })}
+            onRoll={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? rollDeathSave(c).pc : c) })}
+          />
+        )}
       </div>
-
-      {concPrompt && (
-        <ConcentrationPrompt
-          dc={concPrompt.dc}
-          canRoll={!combatant.isPC}
-          onMaintain={() => setConcPrompt(null)}
-          onBreak={() => {
-            apply(breakConcentration)
-            setConcPrompt(null)
-          }}
-          onRoll={
-            combatant.isPC
-              ? undefined
-              : () => {
-                  const check = rollConcentrationCheck(combatant, concPrompt.damage)
-                  onRoll(`${name}: concentration`, check.roll, check.applied)
-                  apply((c) => applyConcentrationResult(c, check.maintained))
-                  setConcPrompt(null)
-                }
-          }
-        />
-      )}
 
       {actions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">

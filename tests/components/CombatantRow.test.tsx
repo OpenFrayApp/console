@@ -119,7 +119,7 @@ describe('CombatantRow', () => {
 
   it('shows temporary HP', () => {
     render(<CombatantRow combatant={pc({ hp: { current: 20, max: 38, temp: 5 } })} />)
-    expect(screen.getByText('+5 temp')).toBeInTheDocument()
+    expect(screen.getByText('+5')).toBeInTheDocument()
   })
 
   it('shows a concentration indicator', () => {

@@ -166,7 +166,8 @@ export function CombatantRow({
 
         {combatant.concentration && (
           <div className="mt-1 text-xs text-violet-600 dark:text-violet-400">
-            Concentrating: {combatant.concentration.spell}
+            Concentrating
+            {combatant.concentration.spell ? `: ${combatant.concentration.spell}` : ''}
           </div>
         )}
       </div>
@@ -177,7 +178,7 @@ export function CombatantRow({
             {hp.current}/{hp.max}
           </span>
           {hp.temp > 0 && (
-            <span className="text-sky-600 dark:text-sky-400"> +{hp.temp} temp</span>
+            <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>
           )}
           {showTier && <span className="sr-only"> {TIER_LABEL[tier]}</span>}
         </div>
