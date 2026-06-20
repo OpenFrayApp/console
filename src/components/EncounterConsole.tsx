@@ -276,6 +276,8 @@ export function EncounterConsole({
   )
   const players = combatants.filter((c) => c.isPC)
   const creatures = combatants.filter((c) => !c.isPC)
+  const living = combatants.filter((c) => c.status !== 'dead')
+  const dead = combatants.filter((c) => c.status === 'dead')
 
   return (
     <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
@@ -300,7 +302,12 @@ export function EncounterConsole({
               Add creatures to build the encounter.
             </p>
           ) : started ? (
-            combatants.map(renderRow)
+            // During combat: living combatants in initiative order, the dead grouped below.
+            <>
+              {living.map(renderRow)}
+              {dead.length > 0 && <GroupHeading>Dead</GroupHeading>}
+              {dead.map(renderRow)}
+            </>
           ) : (
             // Before combat there's no order yet, so group by kind for clarity.
             <>

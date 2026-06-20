@@ -172,6 +172,16 @@ describe('nextTurn', () => {
     expect(activeCombatant(e)?.combatantId).toBe('c')
   })
 
+  it('does not skip a downed PC making death saves', () => {
+    const combatants = [
+      monster('a', 30),
+      { ...pc('p', 20), status: 'unconscious' as const },
+      monster('b', 10, { status: 'dead' }),
+    ]
+    const e = nextTurn(encounter(combatants, 1, 0))
+    expect(activeCombatant(e)?.combatantId).toBe('p')
+  })
+
   it('does nothing when no combatant can act', () => {
     const e0 = encounter([monster('a', 20, { status: 'dead' })], 3, 0)
     const e = nextTurn(e0)

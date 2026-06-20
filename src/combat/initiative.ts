@@ -40,9 +40,12 @@ export function activeCombatant(e: Encounter): Combatant | undefined {
   return e.combatants[e.activeIndex]
 }
 
-/** A creature takes turns only while active; dead/down are skipped. */
+/**
+ * A creature takes turns while active. A downed (unconscious) PC still gets its
+ * turn so the DM can roll/mark a death save; only the truly dead are skipped.
+ */
 function takesTurn(c: Combatant): boolean {
-  return c.status === 'active'
+  return c.status === 'active' || (c.isPC && c.status === 'unconscious')
 }
 
 /**
