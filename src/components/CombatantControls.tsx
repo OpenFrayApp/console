@@ -14,6 +14,7 @@ import { breakConcentration, startConcentration } from '../combat/concentration.
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectPicker } from './EffectPicker.tsx'
+import type { OnRoll } from './RollLog.tsx'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
@@ -29,11 +30,13 @@ export function CombatantControls({
   combatant,
   round,
   dispatch,
+  onRoll,
 }: {
   combatant: Combatant
   /** Current round, recorded when concentration starts. */
   round: number
   dispatch: (action: EncounterAction) => void
+  onRoll: OnRoll
 }) {
   const [concInput, setConcInput] = useState<string | null>(null)
   const id = combatant.combatantId
@@ -98,7 +101,12 @@ export function CombatantControls({
           <DeathSaveControls
             onSave={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c) })}
             onFail={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveFailure(c) : c) })}
-            onRoll={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? rollDeathSave(c).pc : c) })}
+            onRoll={() => {
+              if (!combatant.isPC) return
+              const ds = rollDeathSave(combatant)
+              onRoll(`${name}: death save`, ds.result)
+              dispatch({ type: 'update', id, update: (c) => (c.isPC ? ds.pc : c) })
+            }}
           />
         )}
       </div>

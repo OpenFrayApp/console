@@ -64,7 +64,7 @@ afterEach(cleanup)
 describe('CombatantControls', () => {
   it('dispatches a remove', () => {
     const dispatch = vi.fn()
-    render(<CombatantControls combatant={monster()} round={1} dispatch={dispatch} />)
+    render(<CombatantControls combatant={monster()} round={1} dispatch={dispatch} onRoll={() => {}} />)
     fireEvent.click(screen.getByText('Remove'))
     expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'm' })
   })
@@ -72,7 +72,7 @@ describe('CombatantControls', () => {
   it('shows death-save controls for an unconscious PC, hidden once stable', () => {
     const dispatch = vi.fn()
     const { rerender } = render(
-      <CombatantControls combatant={downedPc()} round={1} dispatch={dispatch} />,
+      <CombatantControls combatant={downedPc()} round={1} dispatch={dispatch} onRoll={() => {}} />,
     )
     expect(screen.getByText('Roll death save')).toBeInTheDocument()
 
@@ -81,6 +81,7 @@ describe('CombatantControls', () => {
         combatant={downedPc({ deathSaves: { successes: 3, failures: 0 } })}
         round={1}
         dispatch={dispatch}
+        onRoll={() => {}}
       />,
     )
     expect(screen.queryByText('Roll death save')).toBeNull()
@@ -88,7 +89,7 @@ describe('CombatantControls', () => {
 
   it('marks a combatant as concentrating', () => {
     const dispatch = vi.fn()
-    render(<CombatantControls combatant={monster()} round={3} dispatch={dispatch} />)
+    render(<CombatantControls combatant={monster()} round={3} dispatch={dispatch} onRoll={() => {}} />)
     fireEvent.click(screen.getByText('Concentrate'))
     fireEvent.change(screen.getByLabelText(/Concentration spell/), {
       target: { value: 'Hold Person' },

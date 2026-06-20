@@ -375,6 +375,7 @@ export function EncounterConsole({
                 combatant={selected}
                 round={encounter.round}
                 dispatch={dispatch}
+                onRoll={onRoll}
               />
             </div>
           </>
