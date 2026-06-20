@@ -15,7 +15,7 @@ import type {
 } from '../schema/primitives.ts'
 import type { Action, DamageRoll, Recharge, SaveOutcome } from '../schema/action.ts'
 import type { Creature, Trait } from '../schema/creature.ts'
-import type { Spell } from '../schema/spell.ts'
+import type { Spell, SpellMechanics, SpellSave, SpellScaling } from '../schema/spell.ts'
 
 /**
  * Transforms for ingesting Open5e v2 content into OpenFray's schema. We pull
@@ -62,6 +62,73 @@ export interface Open5eSpell {
   somatic: boolean
   material: boolean
   material_specified?: string | null
+  // Structured mechanics (v2). Damage types use our short lowercase names.
+  damage_roll?: string | null
+  damage_types?: string[] | null
+  saving_throw_ability?: string | null
+  attack_roll?: boolean | null
+  casting_options?: { type: string; damage_roll?: string | null }[] | null
+}
+
+/** Build typed damage from a spell's roll + damage types. Only typed damage is
+ *  captured — a roll with no damage type (e.g. healing) yields nothing. */
+function spellDamage(
+  roll: string | null | undefined,
+  types: string[] | null | undefined,
+): DamageRoll[] | undefined {
+  if (!roll || !types?.length) return undefined
+  return types.map((t) => ({ formula: roll, type: t.toLowerCase() as DamageType }))
+}
+
+/** The on-save rule lives in 2024 prose, not a field. We only assert what the
+ *  wording makes clear: "half ... on a success(ful)" → half; a save with no damage
+ *  is treated as negates. A damage spell whose text we can't read stays
+ *  `undefined` so the DM confirms it rather than us guessing wrong. */
+function spellOnSave(desc: string, hasDamage: boolean): SaveOutcome | undefined {
+  if (/\bhalf\b[^.]*success|success[^.]*\bhalf\b/i.test(desc)) return 'half'
+  if (!hasDamage) return 'negates'
+  return undefined
+}
+
+/** Higher-level damage variants. `slot_level_N` = upcast; `player_level_N` =
+ *  cantrip scaling by character level. Only variants that change damage are kept. */
+function spellScaling(
+  opts: Open5eSpell['casting_options'],
+  types: string[] | null | undefined,
+): SpellScaling[] | undefined {
+  if (!opts?.length) return undefined
+  const out: SpellScaling[] = []
+  for (const opt of opts) {
+    const damage = spellDamage(opt.damage_roll, types)
+    const m = /_(\d+)$/.exec(opt.type)
+    if (!damage || !m) continue
+    out.push({
+      level: Number(m[1]),
+      by: opt.type.startsWith('player_level') ? 'character' : 'slot',
+      damage,
+    })
+  }
+  return out.length ? out : undefined
+}
+
+function spellMechanics(raw: Open5eSpell): SpellMechanics | undefined {
+  const damage = spellDamage(raw.damage_roll, raw.damage_types)
+  const abilityName = raw.saving_throw_ability?.toLowerCase()
+  const ability = abilityName ? ABILITY_BY_NAME[abilityName] : undefined
+  const onSave = ability ? spellOnSave(raw.desc, !!damage) : undefined
+  const save: SpellSave | undefined = ability
+    ? { ability, ...(onSave && { onSave }) }
+    : undefined
+  const attackRoll = raw.attack_roll ? true : undefined
+  const scaling = spellScaling(raw.casting_options, raw.damage_types)
+
+  if (!damage && !save && !attackRoll && !scaling) return undefined
+  return {
+    ...(damage && { damage }),
+    ...(attackRoll && { attackRoll }),
+    ...(save && { save }),
+    ...(scaling && { scaling }),
+  }
 }
 
 export function mapOpen5eSpell(raw: Open5eSpell): Spell {
@@ -71,6 +138,7 @@ export function mapOpen5eSpell(raw: Open5eSpell): Spell {
   const text = raw.higher_level
     ? `${raw.desc}\n\nAt Higher Levels: ${raw.higher_level}`
     : raw.desc
+  const mechanics = spellMechanics(raw)
 
   return {
     id: `${source}:${slug}`,
@@ -92,6 +160,7 @@ export function mapOpen5eSpell(raw: Open5eSpell): Spell {
     ritual: raw.ritual,
     classes: raw.classes?.map((c) => c.name),
     text,
+    ...(mechanics && { mechanics }),
   }
 }
 

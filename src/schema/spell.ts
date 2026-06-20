@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { ContentSource, Edition } from './primitives.ts'
+import type { Ability, ContentSource, Edition } from './primitives.ts'
+import type { DamageRoll, SaveOutcome } from './action.ts'
 
 export interface SpellComponents {
   verbal: boolean
@@ -12,9 +13,49 @@ export interface SpellComponents {
 }
 
 /**
- * A compendium spell. Spells are largely DM-adjudicated prose, so the body lives
- * in `text` (display only); the surrounding fields are the structured metadata
- * the UI filters and renders by. Shares the source/edition model with Creature.
+ * The save a spell forces. The DC is deliberately absent: it belongs to the
+ * caster, not the spell (a monster's `Spellcasting.saveDc`, or DM-entered for a
+ * PC, since a PC's DC depends on a build we don't model). `onSave` is `undefined`
+ * when it can't be read from the spell text; the DM confirms it at cast time.
+ */
+export interface SpellSave {
+  ability: Ability
+  onSave?: SaveOutcome
+}
+
+/** A damage variant when the spell is cast at a higher level. */
+export interface SpellScaling {
+  /** Slot level (`by: 'slot'`) or caster/character level (`by: 'character'`). */
+  level: number
+  by: 'slot' | 'character'
+  damage: DamageRoll[]
+}
+
+/**
+ * Structured, rollable mechanics for a spell — present only when the spell has
+ * any (damage, a save, or a spell attack). Utility spells (Shield, Detect Magic)
+ * have none. Note: only *typed* damage is captured here; healing dice are not
+ * modelled yet. Feeds the dice/mass-save flow when casting is wired up.
+ */
+export interface SpellMechanics {
+  /** Base damage at the spell's own level. */
+  damage?: DamageRoll[]
+  /** True when the spell resolves with a spell attack roll against AC. */
+  attackRoll?: boolean
+  /** Present when the spell forces a saving throw. */
+  save?: SpellSave
+  /** Higher-level damage variants, from the source's casting options. */
+  scaling?: SpellScaling[]
+}
+
+/**
+ * A compendium spell. Today this holds display metadata + the prose body (`text`),
+ * which is what the browse/reference UI needs. It is intentionally extensible:
+ * Open5e v2 also exposes structured mechanics (damage dice, damage types, save
+ * ability, upcast variants) that aren't modelled here yet — add them when spells
+ * become rollable so casting can feed the mass-save flow (see
+ * docs/compendium-ingest.md #14). The DC is never a spell field: it comes from the
+ * caster, not the spell. Shares the source/edition model with Creature.
  */
 export interface Spell {
   /** Stable id, e.g. `"srd:fireball"`. */
@@ -35,4 +76,6 @@ export interface Spell {
   classes?: string[]
   /** The spell description — display only. */
   text: string
+  /** Structured mechanics for rolling/casting; absent for utility spells. */
+  mechanics?: SpellMechanics
 }

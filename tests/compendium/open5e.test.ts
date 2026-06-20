@@ -73,6 +73,113 @@ describe('mapOpen5eSpell', () => {
     const spell = mapOpen5eSpell({ ...ACID_ARROW, higher_level: null })
     expect(spell.text).not.toContain('At Higher Levels:')
   })
+
+  it('leaves mechanics undefined for a spell with no damage/save/attack', () => {
+    expect(mapOpen5eSpell(ACID_ARROW).mechanics).toBeUndefined()
+  })
+})
+
+// Trimmed from the real Open5e v2 srd-2024 records, with the structured fields.
+const FIREBALL: Open5eSpell = {
+  key: 'srd-2024_fireball',
+  document: { key: 'srd-2024' },
+  name: 'Fireball',
+  desc: 'Each creature in a 20-foot-radius Sphere makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one.',
+  higher_level: 'The damage increases by 1d6 for each spell slot level above 3.',
+  level: 3,
+  school: { name: 'Evocation' },
+  classes: [{ name: 'Wizard' }],
+  casting_time: 'action',
+  range_text: '150 feet',
+  duration: 'instantaneous',
+  concentration: false,
+  ritual: false,
+  verbal: true,
+  somatic: true,
+  material: true,
+  material_specified: 'a ball of bat guano and sulfur',
+  damage_roll: '8d6',
+  damage_types: ['fire'],
+  saving_throw_ability: 'dexterity',
+  attack_roll: false,
+  casting_options: [
+    { type: 'slot_level_4', damage_roll: '9d6' },
+    { type: 'slot_level_5', damage_roll: '10d6' },
+  ],
+}
+
+const FIRE_BOLT: Open5eSpell = {
+  key: 'srd-2024_fire-bolt',
+  document: { key: 'srd-2024' },
+  name: 'Fire Bolt',
+  desc: 'You hurl a mote of fire. Make a ranged spell attack.',
+  higher_level: null,
+  level: 0,
+  school: { name: 'Evocation' },
+  classes: [{ name: 'Wizard' }],
+  casting_time: 'action',
+  range_text: '120 feet',
+  duration: 'instantaneous',
+  concentration: false,
+  ritual: false,
+  verbal: true,
+  somatic: true,
+  material: false,
+  material_specified: null,
+  damage_roll: '1d10',
+  damage_types: ['fire'],
+  saving_throw_ability: '',
+  attack_roll: true,
+  casting_options: [{ type: 'player_level_5', damage_roll: '2d10' }],
+}
+
+describe('mapOpen5eSpell — mechanics', () => {
+  it('captures save, typed damage, and slot-level scaling for a save spell', () => {
+    const { mechanics } = mapOpen5eSpell(FIREBALL)
+    expect(mechanics).toBeDefined()
+    expect(mechanics?.damage).toEqual([{ formula: '8d6', type: 'fire' }])
+    expect(mechanics?.save).toEqual({ ability: 'dex', onSave: 'half' })
+    expect(mechanics?.attackRoll).toBeUndefined()
+    expect(mechanics?.scaling).toEqual([
+      { level: 4, by: 'slot', damage: [{ formula: '9d6', type: 'fire' }] },
+      { level: 5, by: 'slot', damage: [{ formula: '10d6', type: 'fire' }] },
+    ])
+  })
+
+  it('does not put the save DC on the spell (the caster owns it)', () => {
+    const save = mapOpen5eSpell(FIREBALL).mechanics?.save
+    expect(save && 'dc' in save).toBe(false)
+  })
+
+  it('leaves onSave undefined when the damage spell text is not readable', () => {
+    const save = mapOpen5eSpell({
+      ...FIREBALL,
+      desc: 'A burst of raw energy erupts. Each creature makes a Dexterity saving throw.',
+    }).mechanics?.save
+    expect(save).toEqual({ ability: 'dex' })
+  })
+
+  it('marks a save-with-no-damage spell as negates', () => {
+    const save = mapOpen5eSpell({
+      ...FIREBALL,
+      desc: 'The target makes a Wisdom saving throw or is paralyzed.',
+      damage_roll: null,
+      damage_types: null,
+      saving_throw_ability: 'wisdom',
+      casting_options: null,
+    }).mechanics?.save
+    expect(save).toEqual({ ability: 'wis', onSave: 'negates' })
+  })
+
+  it('captures an attack roll and character-level scaling for a cantrip', () => {
+    const { mechanics } = mapOpen5eSpell(FIRE_BOLT)
+    expect(mechanics?.attackRoll).toBe(true)
+    expect(mechanics?.save).toBeUndefined()
+    expect(mechanics?.damage).toEqual([{ formula: '1d10', type: 'fire' }])
+    expect(mechanics?.scaling).toEqual([
+      { level: 5, by: 'character', damage: [{ formula: '2d10', type: 'fire' }] },
+    ])
+  })
 })
 
 // Trimmed from the real Open5e v2 srd-2024 "Aboleth" record.
