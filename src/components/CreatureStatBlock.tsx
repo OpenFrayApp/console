@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { Ability, Senses, SkillBonuses, Speeds } from '../schema/primitives.ts'
+import type { Ability, Senses, SkillBonuses } from '../schema/primitives.ts'
+import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
 import type { Creature } from '../schema/creature.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
@@ -33,20 +34,6 @@ function titleCase(skill: string): string {
   return skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
 }
 
-const SPEED_LABEL: Record<keyof Speeds, string> = {
-  walk: 'Walk',
-  fly: 'Fly',
-  swim: 'Swim',
-  climb: 'Climb',
-  burrow: 'Burrow',
-  hover: 'Hover',
-}
-
-function speedLines(speed: Speeds): string[] {
-  return (['walk', 'fly', 'swim', 'climb', 'burrow'] as (keyof Speeds)[])
-    .filter((k) => typeof speed[k] === 'number')
-    .map((k) => `${SPEED_LABEL[k]} ${speed[k] as number} ft.`)
-}
 
 function rechargeLabel(recharge: Recharge | undefined): string | undefined {
   if (!recharge) return undefined
@@ -146,7 +133,7 @@ function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: On
                 <td className="px-1 py-1 text-right tabular-nums">{creature.abilities[a]}</td>
                 <td className="px-1 py-1 text-right tabular-nums">
                   <RollableValue
-                    label={`${ABILITY_LABEL[a]} check`}
+                    label={`${a.toUpperCase()} check`}
                     modifier={abilityMod(creature.abilities[a])}
                     kind="check"
                     onCheck={onCheck}
@@ -156,7 +143,7 @@ function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: On
                 </td>
                 <td className="rounded-r px-2 py-1 text-right tabular-nums">
                   <RollableValue
-                    label={`${ABILITY_LABEL[a]} save`}
+                    label={`${a.toUpperCase()} save`}
                     modifier={saveFor(a)}
                     kind="save"
                     onCheck={onCheck}

@@ -3,6 +3,7 @@
 
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
+import { parseSpeedInput } from '../combat/speed.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
@@ -47,8 +48,8 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!f.name.trim()) return
-    const maxHp = num(f.hp)
-    const walk = num(f.speed)
+    const maxHp = Math.max(1, num(f.hp))
+    const speed = parseSpeedInput(f.speed)
     onAdd({
       isPC: true,
       kind: 'pc',
@@ -62,7 +63,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       resistances: list(f.resistances).length ? list(f.resistances) : undefined,
       immunities: list(f.immunities).length ? list(f.immunities) : undefined,
       vulnerabilities: list(f.vulnerabilities).length ? list(f.vulnerabilities) : undefined,
-      speed: walk ? { walk } : undefined,
+      speed: Object.keys(speed).length ? speed : undefined,
       status: 'active',
       hp: { current: maxHp, max: maxHp, temp: 0 },
       concentration: null,
@@ -112,7 +113,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <input value={f.pp} onChange={set('pp')} placeholder="Pass. Perc." aria-label="Passive Perception" inputMode="numeric" className={FIELD} />
-            <input value={f.speed} onChange={set('speed')} placeholder="Speed" aria-label="Speed" inputMode="numeric" className={FIELD} />
+            <input value={f.speed} onChange={set('speed')} placeholder="Speed (30, Climb 12)" aria-label="Speed" className={FIELD} />
           </div>
           <input value={f.languages} onChange={set('languages')} placeholder="Languages (comma-separated)" aria-label="Languages" className={FIELD} />
           <div className="space-y-1">

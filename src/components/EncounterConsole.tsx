@@ -33,6 +33,7 @@ import { EncounterPlayback } from './EncounterPlayback.tsx'
 import { hpToneFor } from './hpTone.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { MetaTable } from './CreatureStatBlock.tsx'
+import { speedLines } from '../combat/speed.ts'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
@@ -85,7 +86,6 @@ function PcSummary({
   if (pc.passivePerception != null) {
     rows.push(['Senses', `Passive Perception ${pc.passivePerception}`])
   }
-  if (pc.speed?.walk) rows.push(['Speed', `${pc.speed.walk} ft.`])
   if (pc.languages?.length) rows.push(['Languages', pc.languages.join(', ')])
   if (pc.resistances?.length) rows.push(['Resistances', pc.resistances.join(', ')])
   if (pc.immunities?.length) rows.push(['Immunities', pc.immunities.join(', ')])
@@ -98,6 +98,7 @@ function PcSummary({
         onRename={onRename}
         subtitle={pc.kind === 'quick' ? 'Quick add' : 'Player character'}
         concentration={pc.concentration}
+        speeds={pc.speed ? speedLines(pc.speed) : undefined}
         stats={
           <>
             <HeaderStat label="AC" value={pc.ac} />
@@ -271,9 +272,9 @@ export function EncounterConsole({
   const creatures = combatants.filter((c) => !c.isPC)
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem]">
+    <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
       {/* Left — initiative tracker */}
-      <section className="flex min-h-0 flex-col">
+      <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800">
         <div className="flex items-center justify-between gap-2">
           <h2 className={COLUMN_HEADING}>
             {started ? `Round ${encounter.round}${paused ? ' · paused' : ''}` : 'Initiative'}
@@ -307,7 +308,7 @@ export function EncounterConsole({
       </section>
 
       {/* Center — stat block scrolls; Source + controls stay pinned at the bottom. */}
-      <section className="flex min-h-0 flex-col">
+      <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800">
         {selected ? (
           <>
             <div className="min-h-0 flex-1 overflow-auto pr-4">
@@ -379,7 +380,7 @@ export function EncounterConsole({
       </section>
 
       {/* Right — combat actions, dice, roll log */}
-      <aside className="flex min-h-0 flex-col gap-3 overflow-auto">
+      <aside className="flex min-h-0 flex-col gap-3 overflow-auto lg:pl-4">
         {combatants.length > 0 && (
           <div className="flex flex-wrap items-start gap-2">
             <MassSavePanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />

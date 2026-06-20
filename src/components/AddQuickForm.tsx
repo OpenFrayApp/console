@@ -26,7 +26,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-    const maxHp = num(hp)
+    const maxHp = Math.max(1, num(hp))
     onAdd({
       isPC: true,
       kind: 'quick',
