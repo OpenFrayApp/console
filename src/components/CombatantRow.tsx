@@ -40,6 +40,8 @@ const TIER_LABEL: Record<HpTier, string> = {
 interface CombatantRowProps {
   combatant: Combatant
   active?: boolean
+  /** When set, effect badges become removable. */
+  onRemoveEffect?: (effectId: string) => void
 }
 
 /**
@@ -47,7 +49,11 @@ interface CombatantRowProps {
  * effect badges (conditions and effects, one unified list). Dead/down combatants
  * are greyed and struck through; living combatants surface their wound tier.
  */
-export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
+export function CombatantRow({
+  combatant,
+  active = false,
+  onRemoveEffect,
+}: CombatantRowProps) {
   const { hp, status } = combatant
   const dead = status === 'dead'
   const downed = dead || status === 'unconscious'
@@ -94,7 +100,11 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
         {combatant.effects.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {combatant.effects.map((e) => (
-              <EffectBadge key={e.id} effect={e} />
+              <EffectBadge
+                key={e.id}
+                effect={e}
+                onRemove={onRemoveEffect ? () => onRemoveEffect(e.id) : undefined}
+              />
             ))}
           </div>
         )}

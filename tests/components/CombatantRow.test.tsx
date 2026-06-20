@@ -2,8 +2,8 @@
 // Copyright (C) 2026 OpenFray contributors
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type {
   MonsterCombatant,
@@ -87,6 +87,18 @@ describe('CombatantRow', () => {
     )
     expect(screen.getByText('Prone')).toBeInTheDocument()
     expect(screen.getByText('Poisoned')).toBeInTheDocument()
+  })
+
+  it('removes an effect when onRemoveEffect is provided', () => {
+    const onRemoveEffect = vi.fn()
+    render(
+      <CombatantRow
+        combatant={monster({ effects: [condition('Prone')] })}
+        onRemoveEffect={onRemoveEffect}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Prone' }))
+    expect(onRemoveEffect).toHaveBeenCalledOnce()
   })
 
   it('marks a dead monster', () => {

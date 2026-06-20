@@ -19,13 +19,30 @@ function toneFor(icon: string | undefined): string {
   }
 }
 
-/** A single Effect rendered as a reminder badge on a combatant row. */
-export function EffectBadge({ effect }: { effect: Effect }) {
+/** A single Effect rendered as a badge; clickable to remove when `onRemove` is set. */
+export function EffectBadge({
+  effect,
+  onRemove,
+}: {
+  effect: Effect
+  onRemove?: () => void
+}) {
+  const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(effect.icon)}`
+  if (onRemove) {
+    return (
+      <button
+        type="button"
+        onClick={onRemove}
+        title={`Remove ${effect.name}`}
+        className={`${className} hover:opacity-80`}
+      >
+        {badgeLabel(effect)}
+        <span aria-hidden>×</span>
+      </button>
+    )
+  }
   return (
-    <span
-      title={effect.name}
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(effect.icon)}`}
-    >
+    <span title={effect.name} className={className}>
       {badgeLabel(effect)}
     </span>
   )

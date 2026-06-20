@@ -14,7 +14,9 @@ import {
 } from '../combat/deathsaves.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { roll } from '../dice/roll.ts'
+import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
+import { EffectPicker } from './EffectPicker.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
@@ -66,6 +68,13 @@ export function CombatantControls({
     if (formula) onRoll(`${name}: ${action.name} damage`, roll(formula, { kind: 'damage' }))
   }
 
+  const addEffect = (effect: Effect) =>
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({ ...c, effects: [...c.effects, effect] }),
+    })
+
   return (
     <div className="space-y-1 pl-9">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -91,6 +100,8 @@ export function CombatantControls({
       >
         Remove
       </button>
+
+      <EffectPicker onApply={addEffect} />
 
       {showDeathSaves && (
         <DeathSaveControls

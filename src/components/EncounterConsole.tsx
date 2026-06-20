@@ -82,7 +82,20 @@ export function EncounterConsole() {
             <div className="space-y-2">
               {encounter.combatants.map((c, i) => (
                 <div key={c.combatantId} className="space-y-1">
-                  <CombatantRow combatant={c} active={started && i === encounter.activeIndex} />
+                  <CombatantRow
+                    combatant={c}
+                    active={started && i === encounter.activeIndex}
+                    onRemoveEffect={(effectId) =>
+                      dispatch({
+                        type: 'update',
+                        id: c.combatantId,
+                        update: (cc) => ({
+                          ...cc,
+                          effects: cc.effects.filter((e) => e.id !== effectId),
+                        }),
+                      })
+                    }
+                  />
                   <CombatantControls combatant={c} dispatch={dispatch} onRoll={pushRoll} />
                 </div>
               ))}

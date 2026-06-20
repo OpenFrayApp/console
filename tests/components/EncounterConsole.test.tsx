@@ -70,4 +70,12 @@ describe('EncounterConsole', () => {
     expect(screen.getByText('1d20')).toBeInTheDocument()
     expect(screen.queryByText('No rolls yet.')).toBeNull()
   })
+
+  it('applies an effect from the picker to a combatant', async () => {
+    render(<EncounterConsole />)
+    await addGoblin()
+    fireEvent.click(screen.getByText('+ Effect'))
+    fireEvent.click(screen.getByText('Prone'))
+    expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row
+  })
 })
