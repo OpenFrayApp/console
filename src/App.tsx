@@ -2,94 +2,23 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useEffect, useState } from 'react'
-import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
-import type { Creature } from './schema/creature.ts'
-import { instantiate } from './combat/combatant.ts'
-import {
-  isStable,
-  markDeathSaveFailure,
-  markDeathSaveSuccess,
-  rollDeathSave,
-} from './combat/deathsaves.ts'
-import { advantageAgainst, condition, flatBonus } from './combat/effects.ts'
-import { sortByInitiative } from './combat/initiative.ts'
-import { CombatantRow } from './components/CombatantRow.tsx'
 import { Compendium } from './components/Compendium.tsx'
-import { DeathSaveControls } from './components/DeathSaveControls.tsx'
+import { EncounterConsole } from './components/EncounterConsole.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
 type Theme = 'dark' | 'light'
 type View = 'encounter' | 'compendium'
 
-// Temporary preview data so the initiative list is visible. Replaced when real
-// encounter state lands.
-const GOBLIN: Creature = {
-  id: 'srd:goblin',
-  source: 'srd-5.2',
-  name: 'Goblin',
-  size: 'Small',
-  type: 'humanoid',
-  ac: 15,
-  maxHp: 7,
-  speed: { walk: 30 },
-  abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-  senses: { passivePerception: 9 },
-}
-
-const thalia: Combatant = {
-  isPC: true,
-  combatantId: 'p1',
-  name: 'Thalia',
-  initiative: 21,
-  ac: 16,
-  passivePerception: 14,
-  status: 'active',
-  hp: { current: 24, max: 38, temp: 5 },
-  concentration: { spell: 'Bless', saveDc: 13, round: 1 },
-  effects: [flatBonus('Bless', '1d4')],
-  languages: ['Common', 'Elvish'],
-}
-
-const goblinA = instantiate(GOBLIN, {
-  combatantId: 'g1',
-  initiative: 17,
-  label: 'Goblin (A)',
-})
-
-const goblinB: Combatant = {
-  ...instantiate(GOBLIN, { combatantId: 'g2', initiative: 12, label: 'Goblin (B)' }),
-  hp: { current: 3, max: 7, temp: 0 },
-  effects: [condition('Prone'), advantageAgainst('Reckless Attack', { source: 'p1' })],
-}
-
-const BORIN_START: PlayerCharacter = {
-  isPC: true,
-  combatantId: 'p2',
-  name: 'Borin',
-  initiative: 14,
-  ac: 18,
-  passivePerception: 12,
-  status: 'unconscious',
-  hp: { current: 0, max: 28, temp: 0 },
-  concentration: null,
-  effects: [],
-  deathSaves: { successes: 0, failures: 0 },
-}
-
 function App() {
   const [theme, setTheme] = useState<Theme>('dark')
   const [view, setView] = useState<View>('encounter')
-  // A downed PC wired to the death-save controls (interactive preview).
-  const [borin, setBorin] = useState<PlayerCharacter>(BORIN_START)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-
-  const roster = sortByInitiative([thalia, goblinA, goblinB, borin])
 
   return (
     <div className="flex min-h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -130,36 +59,9 @@ function App() {
       </header>
 
       <main className="flex-1 px-6 py-6">
-        {view === 'compendium' ? (
-          <div className="mx-auto w-full max-w-5xl">
-            <Compendium />
-          </div>
-        ) : (
-          <div className="mx-auto w-full max-w-2xl">
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Initiative
-            </h2>
-          <div className="space-y-2">
-            {roster.map((c, i) => (
-              <div key={c.combatantId} className="space-y-1">
-                <CombatantRow combatant={c} active={i === 0} />
-                {c.combatantId === 'p2' && c.isPC && c.status === 'unconscious' && !isStable(c) && (
-                  <div className="pl-10">
-                    <DeathSaveControls
-                      onSave={() => setBorin(markDeathSaveSuccess)}
-                      onFail={() => setBorin((p) => markDeathSaveFailure(p))}
-                      onRoll={() => setBorin((p) => rollDeathSave(p).pc)}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-            <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-              Preview data — encounter state wiring comes later.
-            </p>
-          </div>
-        )}
+        <div className="mx-auto w-full max-w-5xl">
+          {view === 'compendium' ? <Compendium /> : <EncounterConsole />}
+        </div>
       </main>
 
       {/* AGPL §13: a network-deployed copy must offer its source. */}
