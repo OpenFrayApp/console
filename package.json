@@ -12,7 +12,8 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ingest:srd": "node scripts/ingest-srd.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

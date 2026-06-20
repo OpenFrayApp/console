@@ -15,13 +15,16 @@ About/Credits screen), alongside the AGPL §13 "Source" link.
 
 ## System Reference Document 5.2 (D&D 2024)
 
-This work includes material from the System Reference Document 5.2 ("SRD 5.2")
-by Wizards of the Coast LLC, available under the Creative Commons Attribution 4.0
-International License (<https://creativecommons.org/licenses/by/4.0/legalcode>).
+OpenFray's compendium (331 creatures, 339 spells) is seeded from the SRD 5.2 via
+the Open5e API and used under CC-BY-4.0. Required attribution:
 
-> [Use WotC's exact specified attribution text for SRD 5.2 here.]
+> This work includes material from the System Reference Document 5.2 ("SRD 5.2")
+> by Wizards of the Coast LLC and available at <https://www.dndbeyond.com/srd>.
+> The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International
+> License available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
-Changes were made: content was reformatted and restructured for use in OpenFray.
+Changes were made: content was reformatted and restructured into OpenFray's schema
+(structured action/damage fields, etc.).
 
 ## System Reference Document 5.1 (D&D 2014)
 
