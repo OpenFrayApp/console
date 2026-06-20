@@ -114,4 +114,31 @@ describe('CombatantRow', () => {
     const { container } = render(<CombatantRow combatant={pc()} active />)
     expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
   })
+
+  it('shows death-save pips for a downed PC', () => {
+    render(
+      <CombatantRow
+        combatant={pc({
+          status: 'down',
+          hp: { current: 0, max: 30, temp: 0 },
+          deathSaves: { successes: 1, failures: 2 },
+        })}
+      />,
+    )
+    expect(screen.getByText('1 of 3 successes')).toBeInTheDocument()
+    expect(screen.getByText('2 of 3 failures')).toBeInTheDocument()
+  })
+
+  it('flags a stabilized PC', () => {
+    render(
+      <CombatantRow
+        combatant={pc({
+          status: 'down',
+          hp: { current: 0, max: 30, temp: 0 },
+          deathSaves: { successes: 3, failures: 0 },
+        })}
+      />,
+    )
+    expect(screen.getByText('Stable')).toBeInTheDocument()
+  })
 })

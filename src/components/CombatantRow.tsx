@@ -3,7 +3,9 @@
 
 import type { Combatant } from '../schema/combatant.ts'
 import { hpTier, type HpTier } from '../combat/resources.ts'
+import { isStable } from '../combat/deathsaves.ts'
 import { EffectBadge } from './EffectBadge.tsx'
+import { DeathSavePips } from './DeathSaveControls.tsx'
 
 const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const armorClass = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
@@ -80,6 +82,11 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
               Down
             </span>
           )}
+          {combatant.isPC && isStable(combatant) && (
+            <span className="rounded bg-emerald-200 px-1 text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+              Stable
+            </span>
+          )}
         </div>
 
         {combatant.effects.length > 0 && (
@@ -87,6 +94,14 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
             {combatant.effects.map((e) => (
               <EffectBadge key={e.id} effect={e} />
             ))}
+          </div>
+        )}
+
+        {combatant.isPC && combatant.status === 'down' && (
+          <div className="mt-1">
+            <DeathSavePips
+              saves={combatant.deathSaves ?? { successes: 0, failures: 0 }}
+            />
           </div>
         )}
       </div>

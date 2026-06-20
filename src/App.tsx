@@ -2,12 +2,18 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useEffect, useState } from 'react'
-import type { Combatant } from './schema/combatant.ts'
+import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Creature } from './schema/creature.ts'
 import { instantiate } from './combat/combatant.ts'
+import {
+  markDeathSaveFailure,
+  markDeathSaveSuccess,
+  rollDeathSave,
+} from './combat/deathsaves.ts'
 import { advantageAgainst, condition, flatBonus } from './combat/effects.ts'
 import { sortByInitiative } from './combat/initiative.ts'
 import { CombatantRow } from './components/CombatantRow.tsx'
+import { DeathSaveControls } from './components/DeathSaveControls.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
@@ -53,16 +59,32 @@ const goblinB: Combatant = {
   effects: [condition('Prone'), advantageAgainst('Reckless Attack', { source: 'p1' })],
 }
 
-const SAMPLE = sortByInitiative([thalia, goblinA, goblinB])
+const BORIN_START: PlayerCharacter = {
+  isPC: true,
+  combatantId: 'p2',
+  name: 'Borin',
+  initiative: 14,
+  ac: 18,
+  passivePerception: 12,
+  status: 'down',
+  hp: { current: 0, max: 28, temp: 0 },
+  concentration: null,
+  effects: [],
+  deathSaves: { successes: 0, failures: 0 },
+}
 
 function App() {
   const [theme, setTheme] = useState<Theme>('dark')
+  // A downed PC wired to the death-save controls (interactive preview).
+  const [borin, setBorin] = useState<PlayerCharacter>(BORIN_START)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+
+  const roster = sortByInitiative([thalia, goblinA, goblinB, borin])
 
   return (
     <div className="flex min-h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -89,8 +111,20 @@ function App() {
             Initiative
           </h2>
           <div className="space-y-2">
-            {SAMPLE.map((c, i) => (
-              <CombatantRow key={c.combatantId} combatant={c} active={i === 0} />
+            {roster.map((c, i) => (
+              <div key={c.combatantId} className="space-y-1">
+                <CombatantRow combatant={c} active={i === 0} />
+                {c.combatantId === 'p2' && c.isPC && c.status === 'down' && (
+                  <div className="pl-10">
+                    <DeathSaveControls
+                      saves={c.deathSaves ?? { successes: 0, failures: 0 }}
+                      onSave={() => setBorin(markDeathSaveSuccess)}
+                      onFail={() => setBorin((p) => markDeathSaveFailure(p))}
+                      onRoll={() => setBorin((p) => rollDeathSave(p).pc)}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
           <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
