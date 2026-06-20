@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 OpenFray contributors
+
+import type { Combatant } from '../schema/combatant.ts'
+import { isBloodied } from '../combat/resources.ts'
+import { EffectBadge } from './EffectBadge.tsx'
+
+const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
+const armorClass = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
+
+function cx(...parts: (string | false | undefined)[]): string {
+  return parts.filter(Boolean).join(' ')
+}
+
+interface CombatantRowProps {
+  combatant: Combatant
+  active?: boolean
+}
+
+/**
+ * One row in the initiative list: initiative, name, HP/AC, and the combatant's
+ * effect badges (conditions and effects, one unified list). Dead/down combatants
+ * are greyed and struck through; bloodied HP is flagged.
+ */
+export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
+  const { hp, status } = combatant
+  const downed = status === 'dead' || status === 'down'
+  const bloodied = !downed && isBloodied(combatant)
+
+  return (
+    <div
+      aria-current={active ? 'true' : undefined}
+      className={cx(
+        'flex items-center gap-3 rounded-lg border px-3 py-2',
+        active
+          ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
+          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
+        downed && 'opacity-50',
+      )}
+    >
+      <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
+        {combatant.initiative}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={cx('truncate font-medium', downed && 'line-through')}>
+            {displayName(combatant)}
+          </span>
+          {status === 'dead' && (
+            <span className="rounded bg-slate-200 px-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+              Dead
+            </span>
+          )}
+          {status === 'down' && (
+            <span className="rounded bg-amber-200 px-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              Down
+            </span>
+          )}
+        </div>
+
+        {combatant.effects.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {combatant.effects.map((e) => (
+              <EffectBadge key={e.id} effect={e} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="text-right text-sm">
+        <div>
+          <span
+            className={cx(
+              'tabular-nums',
+              bloodied
+                ? 'font-semibold text-rose-600 dark:text-rose-400'
+                : 'text-slate-900 dark:text-slate-100',
+            )}
+          >
+            {hp.current}/{hp.max}
+          </span>
+          {hp.temp > 0 && (
+            <span className="text-sky-600 dark:text-sky-400"> +{hp.temp} temp</span>
+          )}
+          {bloodied && <span className="sr-only"> Bloodied</span>}
+        </div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          AC {armorClass(combatant)}
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -2,29 +2,67 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useEffect, useState } from 'react'
+import type { Combatant } from './schema/combatant.ts'
+import type { Creature } from './schema/creature.ts'
+import { instantiate } from './combat/combatant.ts'
+import { advantageAgainst, condition, flatBonus } from './combat/effects.ts'
+import { sortByInitiative } from './combat/initiative.ts'
+import { CombatantRow } from './components/CombatantRow.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
 type Theme = 'dark' | 'light'
 
-/**
- * App shell. Designed tablet/desktop-first (the combat console is a dense
- * landscape layout); this is just the scaffold landing until the tracker lands.
- *
- * Theming: dark is the default; light is fully supported. Every element is
- * styled for both modes (light base + `dark:` override).
- */
+// Temporary preview data so the initiative list is visible. Replaced when real
+// encounter state lands.
+const GOBLIN: Creature = {
+  id: 'srd:goblin',
+  source: 'srd-5.2',
+  name: 'Goblin',
+  size: 'Small',
+  type: 'humanoid',
+  ac: 15,
+  maxHp: 7,
+  speed: { walk: 30 },
+  abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
+  senses: { passivePerception: 9 },
+}
+
+const thalia: Combatant = {
+  isPC: true,
+  combatantId: 'p1',
+  name: 'Thalia',
+  initiative: 21,
+  ac: 16,
+  passivePerception: 14,
+  status: 'active',
+  hp: { current: 24, max: 38, temp: 5 },
+  concentration: null,
+  effects: [flatBonus('Bless', '1d4')],
+}
+
+const goblinA = instantiate(GOBLIN, {
+  combatantId: 'g1',
+  initiative: 17,
+  label: 'Goblin (A)',
+})
+
+const goblinB: Combatant = {
+  ...instantiate(GOBLIN, { combatantId: 'g2', initiative: 12, label: 'Goblin (B)' }),
+  hp: { current: 3, max: 7, temp: 0 },
+  effects: [condition('Prone'), advantageAgainst('Reckless Attack', { source: 'p1' })],
+}
+
+const SAMPLE = sortByInitiative([thalia, goblinA, goblinB])
+
 function App() {
-  // Dark by default — matches <html class="dark"> set in index.html (no flash).
   const [theme, setTheme] = useState<Theme>('dark')
 
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle('dark', theme === 'dark')
+    document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
-  const toggleTheme = () =>
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   return (
     <div className="flex min-h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -45,16 +83,18 @@ function App() {
         </button>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-6">
-        <div className="max-w-md text-center">
-          <h2 className="text-2xl font-semibold">Scaffold ready</h2>
-          <p className="mt-2 text-slate-500 dark:text-slate-400">
-            React + Vite + TypeScript + Tailwind, dark/light themed. Next: the
-            shared{' '}
-            <code className="rounded bg-slate-100 px-1.5 py-0.5 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-              Creature / Action / Effect
-            </code>{' '}
-            schema (build step 1).
+      <main className="flex-1 px-6 py-6">
+        <div className="mx-auto w-full max-w-2xl">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Initiative
+          </h2>
+          <div className="space-y-2">
+            {SAMPLE.map((c, i) => (
+              <CombatantRow key={c.combatantId} combatant={c} active={i === 0} />
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+            Preview data — encounter state wiring comes later.
           </p>
         </div>
       </main>
