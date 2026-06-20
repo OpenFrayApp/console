@@ -10,7 +10,6 @@ import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
-import { EncounterPlayback } from './components/EncounterPlayback.tsx'
 import { type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
@@ -74,12 +73,6 @@ function App() {
               <div className="flex items-center gap-2">
                 <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
                 <AddCreaturePicker onPick={handlePick} />
-                <EncounterPlayback
-                  started={started}
-                  paused={paused}
-                  canBegin={encounter.combatants.length > 0}
-                  dispatch={dispatch}
-                />
               </div>
               <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
             </>
