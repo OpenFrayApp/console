@@ -3,6 +3,7 @@
 
 export * from './combatant.ts'
 export * from './deathsaves.ts'
+export * from './effectroll.ts'
 export * from './effects.ts'
 export * from './initiative.ts'
 export * from './resources.ts'
