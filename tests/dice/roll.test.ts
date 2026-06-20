@@ -105,4 +105,35 @@ describe('roll', () => {
     expect(roll('2d20', { rand: faceSeq(20, 20) }).crit).toBe(false)
     expect(roll('1d6', { rand: faceSeq(1) }).fumble).toBe(false)
   })
+
+  it('applies advantage from context to a plain d20', () => {
+    const r = roll('1d20+5', { advantage: 'advantage', rand: faceSeq(4, 18) })
+    expect(r.dice[0].kept).toEqual([18])
+    expect(r.total).toBe(23)
+    expect(r.advantageState).toBe('advantage')
+  })
+
+  it('applies disadvantage from context', () => {
+    const r = roll('1d20+5', { advantage: 'disadvantage', rand: faceSeq(4, 18) })
+    expect(r.dice[0].kept).toEqual([4])
+    expect(r.advantageState).toBe('disadvantage')
+  })
+
+  it("treats advantage 'normal' as a no-op", () => {
+    const r = roll('1d20+5', { advantage: 'normal', rand: faceSeq(7) })
+    expect(r.dice[0].results).toHaveLength(1)
+    expect(r.total).toBe(12)
+  })
+
+  it('folds in bonus terms (Bless) without touching the modifier', () => {
+    const r = roll('1d20+5', { bonuses: ['1d4'], rand: faceSeq(10, 3) })
+    expect(r.dice).toHaveLength(2)
+    expect(r.modifier).toBe(5)
+    expect(r.total).toBe(18) // 10 + 5 + 3
+  })
+
+  it('folds in negative numeric bonuses', () => {
+    const r = roll('1d20+5', { bonuses: [-2], rand: faceSeq(10) })
+    expect(r.total).toBe(13) // 10 + 5 - 2
+  })
 })

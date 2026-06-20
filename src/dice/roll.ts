@@ -7,6 +7,8 @@ import {
   parseFormula,
   type AdvantageState,
   type DiceTerm,
+  type FlatTerm,
+  type Term,
 } from './formula.ts'
 
 /**
@@ -61,8 +63,41 @@ export interface RollContext {
   kind?: RollKind
   /** Crit handling for damage dice. `true` is shorthand for RAW `double-dice`. */
   crit?: boolean | CritRule
+  /** Force advantage/disadvantage on the d20 (the effect layer resolves the net). */
+  advantage?: AdvantageState
+  /** Extra additive terms folded in, e.g. Bless `'1d4'`; numbers or formula fragments. */
+  bonuses?: (number | string)[]
   /** Injectable randomness for tests; defaults to the CSPRNG. */
   rand?: RandomSource
+}
+
+/** Apply adv/dis to the first plain d20 term (roll two, keep highest/lowest). */
+function applyAdvantage(
+  terms: Term[],
+  advantage: 'advantage' | 'disadvantage',
+): Term[] {
+  let applied = false
+  return terms.map((t) => {
+    if (applied || t.kind !== 'dice' || t.sides !== 20 || t.keep || t.advantage) {
+      return t
+    }
+    applied = true
+    return {
+      ...t,
+      count: 2,
+      keep: { mode: advantage === 'advantage' ? 'kh' : 'kl', n: 1 },
+      advantage,
+    }
+  })
+}
+
+/** Turn extra bonuses (numbers or formula fragments) into additive terms. */
+function bonusTerms(bonuses: (number | string)[]): Term[] {
+  return bonuses.flatMap((b) =>
+    typeof b === 'number'
+      ? [{ kind: 'flat', value: b } satisfies FlatTerm]
+      : parseFormula(b).terms,
+  )
 }
 
 function normalizeCrit(crit: boolean | CritRule | undefined): CritRule {
@@ -119,13 +154,20 @@ export function roll(formula: string, ctx: RollContext = {}): RollResult {
   const rand = ctx.rand ?? cryptoRandom
   const critRule = normalizeCrit(ctx.crit)
   const parsed = parseFormula(formula)
+  let terms = parsed.terms
+  if (ctx.advantage && ctx.advantage !== 'normal') {
+    terms = applyAdvantage(terms, ctx.advantage)
+  }
+  if (ctx.bonuses && ctx.bonuses.length > 0) {
+    terms = [...terms, ...bonusTerms(ctx.bonuses)]
+  }
 
   const dice: DieGroup[] = []
   let modifier = 0
   let total = 0
   let advantageState: AdvantageState = 'normal'
 
-  for (const term of parsed.terms) {
+  for (const term of terms) {
     if (term.kind === 'flat') {
       modifier += term.value
       total += term.value
