@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState, type FormEvent } from 'react'
+import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
+import { useDismiss } from '../hooks/useDismiss.ts'
 
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
 
@@ -18,6 +19,9 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
   const [hp, setHp] = useState('')
   const [initiative, setInitiative] = useState('')
   const [pp, setPp] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(ref, open, close)
 
   const reset = () => {
     setName('')
@@ -48,7 +52,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

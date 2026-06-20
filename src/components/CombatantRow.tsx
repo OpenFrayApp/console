@@ -39,7 +39,12 @@ const TIER_LABEL: Record<HpTier, string> = {
 
 interface CombatantRowProps {
   combatant: Combatant
+  /** Whose turn it is (the initiative cursor). */
   active?: boolean
+  /** The row the DM has selected to inspect in the detail panel. */
+  selected?: boolean
+  /** Selects this combatant when the row is clicked. */
+  onSelect?: () => void
   /** When set, effect badges become removable. */
   onRemoveEffect?: (effectId: string) => void
 }
@@ -52,6 +57,8 @@ interface CombatantRowProps {
 export function CombatantRow({
   combatant,
   active = false,
+  selected = false,
+  onSelect,
   onRemoveEffect,
 }: CombatantRowProps) {
   const { hp, status } = combatant
@@ -63,11 +70,26 @@ export function CombatantRow({
   return (
     <div
       aria-current={active ? 'true' : undefined}
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect}
+      onKeyDown={
+        onSelect
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelect()
+              }
+            }
+          : undefined
+      }
       className={cx(
         'flex items-center gap-3 rounded-lg border px-3 py-2',
+        onSelect && 'cursor-pointer',
         active
           ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
+        selected && 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-950',
         dead && 'opacity-50',
       )}
     >

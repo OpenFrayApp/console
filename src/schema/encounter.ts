@@ -20,6 +20,8 @@ export interface Encounter {
   ownerId: string | null
   name?: string
   round: number
+  /** Combat is started (round > 0) but held — the turn cursor is hidden until resumed. */
+  paused?: boolean
   /** Index into the initiative-sorted combatants of whose turn it is. */
   activeIndex: number
   /** Sorted by initiative descending. */

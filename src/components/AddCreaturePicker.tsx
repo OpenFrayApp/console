@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import { loadSrdCreatures } from '../compendium/srd.ts'
 import { formatCr } from '../compendium/format.ts'
+import { useDismiss } from '../hooks/useDismiss.ts'
 
 /** A search popover to pick an SRD creature to add to the encounter. */
 export function AddCreaturePicker({ onPick }: { onPick: (c: Creature) => void }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(ref, open, close)
 
   useEffect(() => {
     if (open && creatures === null) {
@@ -24,7 +28,7 @@ export function AddCreaturePicker({ onPick }: { onPick: (c: Creature) => void })
     .slice(0, 50)
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

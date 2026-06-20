@@ -13,6 +13,9 @@ import { beginEncounter, nextTurn, sortByInitiative } from '../combat/initiative
 
 export type EncounterAction =
   | { type: 'begin' }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'stop' }
   | { type: 'nextTurn' }
   | { type: 'add'; combatant: Combatant }
   | { type: 'remove'; id: string }
@@ -31,7 +34,17 @@ const indexOfId = (combatants: Combatant[], id: string | undefined): number => {
 export function encounterReducer(state: Encounter, action: EncounterAction): Encounter {
   switch (action.type) {
     case 'begin':
-      return beginEncounter(state)
+      return { ...beginEncounter(state), paused: false }
+
+    case 'pause':
+      return { ...state, paused: true }
+
+    case 'resume':
+      return { ...state, paused: false }
+
+    // End combat back to setup: keep the combatants on the board, reset the clock.
+    case 'stop':
+      return { ...state, round: 0, activeIndex: 0, paused: false }
 
     case 'nextTurn':
       return nextTurn(state)

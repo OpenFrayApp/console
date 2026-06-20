@@ -1,148 +1,158 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useReducer, useState } from 'react'
-import type { Creature } from '../schema/creature.ts'
-import { instantiate } from '../combat/combatant.ts'
-import { roll } from '../dice/roll.ts'
-import { emptyEncounter, encounterReducer } from '../state/encounter.ts'
-import { AddCreaturePicker } from './AddCreaturePicker.tsx'
-import { AddPcForm } from './AddPcForm.tsx'
-import { CombatantControls } from './CombatantControls.tsx'
+import type { PlayerCharacter } from '../schema/combatant.ts'
+import type { Encounter } from '../schema/encounter.ts'
+import type { EncounterAction } from '../state/encounter.ts'
 import { CastSpellPanel } from './CastSpellPanel.tsx'
+import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
+import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
 
-const dexMod = (creature: Creature): number => Math.floor((creature.abilities.dex - 10) / 2)
+const COLUMN_HEADING =
+  'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
-export function EncounterConsole() {
-  const [encounter, dispatch] = useReducer(encounterReducer, undefined, emptyEncounter)
-  const [rollLog, setRollLog] = useState<RollEntry[]>([])
-  const started = encounter.round > 0
+/** Lightweight detail panel for a selected PC (no full stat block by design). */
+function PcSummary({ pc }: { pc: PlayerCharacter }) {
+  return (
+    <div className="space-y-1">
+      <h3 className="text-lg font-semibold">{pc.name}</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400">Player character</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <span>
+          <span className="font-semibold">AC</span> {pc.ac}
+        </span>
+        <span>
+          <span className="font-semibold">HP</span> {pc.hp.current}/{pc.hp.max}
+          {pc.hp.temp > 0 ? ` +${pc.hp.temp} temp` : ''}
+        </span>
+        <span>
+          <span className="font-semibold">Passive Perception</span> {pc.passivePerception}
+        </span>
+      </div>
+      {pc.languages && pc.languages.length > 0 && (
+        <p className="text-sm">
+          <span className="font-semibold">Languages</span> {pc.languages.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
 
-  const pushRoll: OnRoll = (label, result, applied) => {
-    setRollLog((prev) =>
-      [{ id: crypto.randomUUID(), label, result, applied }, ...prev].slice(0, 25),
-    )
-  }
-
-  const handlePick = (creature: Creature) => {
-    // Auto-label duplicates ("Goblin", "Goblin 2", …) and roll initiative.
-    const sameKind = encounter.combatants.filter(
-      (c) => !c.isPC && c.creatureId === creature.id,
-    ).length
-    const label = sameKind > 0 ? `${creature.name} ${sameKind + 1}` : creature.name
-    const mod = dexMod(creature)
-    const initiative = roll(`1d20${mod >= 0 ? `+${mod}` : `${mod}`}`).total
-    dispatch({
-      type: 'add',
-      combatant: instantiate(creature, {
-        combatantId: crypto.randomUUID(),
-        initiative,
-        label,
-      }),
-    })
-  }
+export function EncounterConsole({
+  encounter,
+  dispatch,
+  rollLog,
+  onRoll,
+  selectedId,
+  onSelect,
+  started,
+  paused,
+}: {
+  encounter: Encounter
+  dispatch: (action: EncounterAction) => void
+  rollLog: RollEntry[]
+  onRoll: OnRoll
+  selectedId: string | null
+  onSelect: (id: string) => void
+  started: boolean
+  paused: boolean
+}) {
+  const { combatants, activeIndex } = encounter
+  const running = started && !paused
+  const activeId = running ? combatants[activeIndex]?.combatantId : undefined
+  // Show the explicitly-selected combatant, else whoever's turn it is, else the first.
+  const selected =
+    combatants.find((c) => c.combatantId === selectedId) ??
+    combatants.find((c) => c.combatantId === activeId) ??
+    combatants[0]
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          {started ? `Round ${encounter.round}` : 'Initiative'}
+    <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[20rem_1fr_26rem]">
+      {/* Left — initiative tracker */}
+      <section className="flex min-h-0 flex-col">
+        <h2 className={COLUMN_HEADING}>
+          {started ? `Round ${encounter.round}${paused ? ' · paused' : ''}` : 'Initiative'}
         </h2>
-        <div className="flex items-center gap-2">
-          <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
-          <AddCreaturePicker onPick={handlePick} />
-          {started ? (
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'nextTurn' })}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              Next turn
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'begin' })}
-              disabled={encounter.combatants.length === 0}
-              className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Begin
-            </button>
-          )}
-        </div>
-      </div>
-
-      {encounter.combatants.length > 0 && (
-        <div className="flex flex-wrap items-start gap-2">
-          <MassSavePanel
-            combatants={encounter.combatants}
-            dispatch={dispatch}
-            onRoll={pushRoll}
-          />
-          <CastSpellPanel
-            combatants={encounter.combatants}
-            dispatch={dispatch}
-            onRoll={pushRoll}
-          />
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-[1fr_18rem]">
-        <div>
-          {encounter.combatants.length === 0 ? (
+        <div className="mt-2 flex-1 space-y-2 overflow-auto px-1 py-1">
+          {combatants.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Add creatures to build the encounter.
             </p>
           ) : (
-            <div className="space-y-2">
-              {encounter.combatants.map((c, i) => (
-                <div key={c.combatantId} className="space-y-1">
-                  <CombatantRow
-                    combatant={c}
-                    active={started && i === encounter.activeIndex}
-                    onRemoveEffect={(effectId) =>
-                      dispatch({
-                        type: 'update',
-                        id: c.combatantId,
-                        update: (cc) => ({
-                          ...cc,
-                          effects: cc.effects.filter((e) => e.id !== effectId),
-                        }),
-                      })
-                    }
-                  />
-                  <CombatantControls
-                    combatant={c}
-                    combatants={encounter.combatants}
-                    round={encounter.round}
-                    dispatch={dispatch}
-                    onRoll={pushRoll}
-                  />
-                </div>
-              ))}
-            </div>
+            combatants.map((c, i) => (
+              <CombatantRow
+                key={c.combatantId}
+                combatant={c}
+                active={running && i === activeIndex}
+                selected={c.combatantId === selected?.combatantId}
+                onSelect={() => onSelect(c.combatantId)}
+                onRemoveEffect={(effectId) =>
+                  dispatch({
+                    type: 'update',
+                    id: c.combatantId,
+                    update: (cc) => ({
+                      ...cc,
+                      effects: cc.effects.filter((e) => e.id !== effectId),
+                    }),
+                  })
+                }
+              />
+            ))
           )}
         </div>
+      </section>
 
-        <aside className="space-y-3">
-          <div>
-            <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Dice
-            </h3>
-            <QuickRoll onRoll={pushRoll} />
+      {/* Center — selected combatant: stat block + controls */}
+      <section className="min-h-0 overflow-auto">
+        {selected ? (
+          <div className="max-w-2xl space-y-4">
+            {selected.isPC ? (
+              <PcSummary pc={selected} />
+            ) : (
+              <CreatureStatBlock creature={selected.creature} />
+            )}
+            <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+              <CombatantControls
+                combatant={selected}
+                combatants={combatants}
+                round={encounter.round}
+                dispatch={dispatch}
+                onRoll={onRoll}
+              />
+            </div>
           </div>
-          <div>
-            <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Roll log
-            </h3>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Add a combatant, then select it to see its stat block and actions.
+          </p>
+        )}
+      </section>
+
+      {/* Right — combat actions, dice, roll log */}
+      <aside className="flex min-h-0 flex-col gap-3 overflow-auto">
+        {combatants.length > 0 && (
+          <div className="flex flex-wrap items-start gap-2">
+            <MassSavePanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
+            <CastSpellPanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
+          </div>
+        )}
+
+        <div>
+          <h3 className={`mb-1 ${COLUMN_HEADING}`}>Dice</h3>
+          <QuickRoll onRoll={onRoll} />
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <h3 className={`mb-1 ${COLUMN_HEADING}`}>Roll log</h3>
+          <div className="min-h-0 flex-1 overflow-auto">
             <RollLog entries={rollLog} />
           </div>
-        </aside>
-      </div>
+        </div>
+      </aside>
     </div>
   )
 }

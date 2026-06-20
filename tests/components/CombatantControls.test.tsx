@@ -198,24 +198,6 @@ describe('CombatantControls', () => {
     expect(updated?.concentration).toEqual({ spell: 'Hold Person', saveDc: 0, round: 3 })
   })
 
-  it('toggles the source stat block', () => {
-    render(
-      <CombatantControls
-        combatant={monster()}
-        combatants={[monster()]}
-        round={1}
-        dispatch={vi.fn()}
-        onRoll={() => {}}
-      />,
-    )
-    expect(screen.queryByText('Scimitar +4')).toBeTruthy() // chip present
-    expect(screen.queryByText(/Passive Perception/)).toBeNull()
-    fireEvent.click(screen.getByText('Stat block'))
-    expect(screen.getByText(/Passive Perception/)).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Hide stat block'))
-    expect(screen.queryByText(/Passive Perception/)).toBeNull()
-  })
-
   it('opens a seeded group save for a save action (breath weapon)', () => {
     const onRoll = vi.fn()
     const dragon = (): MonsterCombatant => ({

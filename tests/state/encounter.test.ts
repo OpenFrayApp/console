@@ -82,6 +82,31 @@ describe('encounterReducer', () => {
     expect(e.combatants[0].hp.current).toBe(4)
   })
 
+  it('pauses and resumes without losing the round or order', () => {
+    let e = encounterReducer(withCombatants(monster('a', 20), monster('b', 10)), {
+      type: 'begin',
+    })
+    e = encounterReducer(e, { type: 'nextTurn' }) // b active, round 1
+    e = encounterReducer(e, { type: 'pause' })
+    expect(e.paused).toBe(true)
+    expect(e.round).toBe(1)
+    e = encounterReducer(e, { type: 'resume' })
+    expect(e.paused).toBe(false)
+    expect(e.combatants[e.activeIndex].combatantId).toBe('b')
+  })
+
+  it('stops back to setup, keeping the combatants', () => {
+    let e = encounterReducer(withCombatants(monster('a', 20), monster('b', 10)), {
+      type: 'begin',
+    })
+    e = encounterReducer(e, { type: 'nextTurn' })
+    e = encounterReducer(e, { type: 'stop' })
+    expect(e.round).toBe(0)
+    expect(e.activeIndex).toBe(0)
+    expect(e.paused).toBe(false)
+    expect(e.combatants.map((c) => c.combatantId)).toEqual(['a', 'b'])
+  })
+
   it('appends log entries', () => {
     let e = encounterReducer(emptyEncounter(), { type: 'log', message: 'Goblin hits' })
     e = encounterReducer(e, { type: 'log', message: 'Goblin misses' })

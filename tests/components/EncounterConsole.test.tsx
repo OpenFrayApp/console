@@ -25,9 +25,12 @@ vi.mock('../../src/compendium/srd.ts', () => ({
   loadSrdSpells: () => Promise.resolve([]),
 }))
 
-const { EncounterConsole } = await import('../../src/components/EncounterConsole.tsx')
+// The encounter flow spans the header toolbar (App) and the console body.
+const { default: App } = await import('../../src/App.tsx')
 
 afterEach(cleanup)
+
+const begin = () => screen.getByRole('button', { name: 'Begin' })
 
 async function addGoblin() {
   fireEvent.click(screen.getByText('+ Add creature'))
@@ -35,28 +38,34 @@ async function addGoblin() {
   fireEvent.click(screen.getByText('Goblin'))
 }
 
-describe('EncounterConsole', () => {
+describe('Encounter flow', () => {
   it('starts empty with Begin disabled', () => {
-    render(<EncounterConsole />)
+    render(<App />)
     expect(screen.getByText(/Add creatures to build the encounter/)).toBeInTheDocument()
-    expect(screen.getByText('Begin')).toBeDisabled()
+    expect(begin()).toBeDisabled()
   })
 
-  it('adds a creature from the compendium and begins the encounter', async () => {
-    render(<EncounterConsole />)
+  it('adds a creature and runs the playback controls', async () => {
+    render(<App />)
     await addGoblin()
 
-    // The combatant row now shows the goblin (the picker has closed).
-    expect(screen.getByText('Goblin')).toBeInTheDocument()
-    expect(screen.getByText('Begin')).toBeEnabled()
+    // The goblin appears in the tracker row and the center stat block.
+    expect(screen.getAllByText('Goblin').length).toBeGreaterThan(0)
+    expect(begin()).toBeEnabled()
 
-    fireEvent.click(screen.getByText('Begin'))
+    fireEvent.click(begin())
     expect(screen.getByText('Round 1')).toBeInTheDocument()
-    expect(screen.getByText('Next turn')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next turn' })).toBeInTheDocument()
+
+    // Pause holds (resumable), then Stop resets to setup.
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    expect(begin()).toBeInTheDocument()
   })
 
   it('applies damage through the controls', async () => {
-    render(<EncounterConsole />)
+    render(<App />)
     await addGoblin()
     fireEvent.change(screen.getByLabelText(/HP amount/), { target: { value: '3' } })
     fireEvent.click(screen.getByText('Damage'))
@@ -64,7 +73,7 @@ describe('EncounterConsole', () => {
   })
 
   it('logs a quick roll', () => {
-    render(<EncounterConsole />)
+    render(<App />)
     expect(screen.getByText('No rolls yet.')).toBeInTheDocument()
     fireEvent.click(screen.getByText('d20'))
     expect(screen.getByText('1d20')).toBeInTheDocument()
@@ -72,7 +81,7 @@ describe('EncounterConsole', () => {
   })
 
   it('applies an effect from the picker to a combatant', async () => {
-    render(<EncounterConsole />)
+    render(<App />)
     await addGoblin()
     fireEvent.click(screen.getByText('+ Effect'))
     fireEvent.click(screen.getByText('Prone'))

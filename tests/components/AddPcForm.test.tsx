@@ -36,4 +36,25 @@ describe('AddPcForm', () => {
     fireEvent.click(screen.getByText('Add'))
     expect(onAdd).not.toHaveBeenCalled()
   })
+
+  it('closes when the user clicks outside it', () => {
+    render(
+      <div>
+        <AddPcForm onAdd={vi.fn()} />
+        <button type="button">outside</button>
+      </div>,
+    )
+    fireEvent.click(screen.getByText('+ Add PC'))
+    expect(screen.getByLabelText('PC name')).toBeInTheDocument()
+    fireEvent.pointerDown(screen.getByText('outside'))
+    expect(screen.queryByLabelText('PC name')).toBeNull()
+  })
+
+  it('closes on Escape', () => {
+    render(<AddPcForm onAdd={vi.fn()} />)
+    fireEvent.click(screen.getByText('+ Add PC'))
+    expect(screen.getByLabelText('PC name')).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByLabelText('PC name')).toBeNull()
+  })
 })

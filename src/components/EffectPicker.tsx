@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ConditionName, Effect } from '../schema/effect.ts'
 import {
   advantageAgainst,
@@ -10,6 +10,7 @@ import {
   flatBonus,
   reminder,
 } from '../combat/effects.ts'
+import { useDismiss } from '../hooks/useDismiss.ts'
 
 // Ordered roughly by table frequency.
 const CONDITIONS: ConditionName[] = [
@@ -37,6 +38,9 @@ const CHIP =
 export function EffectPicker({ onApply }: { onApply: (effect: Effect) => void }) {
   const [open, setOpen] = useState(false)
   const [custom, setCustom] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(ref, open, close)
 
   const apply = (effect: Effect) => {
     onApply(effect)
@@ -44,7 +48,7 @@ export function EffectPicker({ onApply }: { onApply: (effect: Effect) => void })
   }
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

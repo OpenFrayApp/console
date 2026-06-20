@@ -136,6 +136,15 @@ describe('CombatantRow', () => {
     expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
   })
 
+  it('selects on click when onSelect is provided', () => {
+    const onSelect = vi.fn()
+    const { container } = render(<CombatantRow combatant={pc()} onSelect={onSelect} />)
+    const row = container.querySelector('[role="button"]')
+    expect(row).not.toBeNull()
+    fireEvent.click(row as Element)
+    expect(onSelect).toHaveBeenCalledOnce()
+  })
+
   it('shows death-save pips for a downed PC', () => {
     render(
       <CombatantRow

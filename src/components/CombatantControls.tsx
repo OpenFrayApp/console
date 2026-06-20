@@ -22,7 +22,6 @@ import {
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
-import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { EffectPicker } from './EffectPicker.tsx'
@@ -77,7 +76,6 @@ export function CombatantControls({
   const [targetId, setTargetId] = useState('')
   const [concPrompt, setConcPrompt] = useState<{ dc: number; damage: number } | null>(null)
   const [concInput, setConcInput] = useState<string | null>(null)
-  const [showBlock, setShowBlock] = useState(false)
   const [saveAction, setSaveAction] = useState<{ action: Action; damage?: number } | null>(null)
   const n = Math.max(0, Math.floor(Number(amount) || 0))
   const id = combatant.combatantId
@@ -149,7 +147,7 @@ export function CombatantControls({
     })
 
   return (
-    <div className="space-y-1 pl-9">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
       <input
         type="number"
@@ -202,12 +200,6 @@ export function CombatantControls({
             Set
           </button>
         </span>
-      )}
-
-      {!combatant.isPC && (
-        <button type="button" className={BTN} onClick={() => setShowBlock((s) => !s)}>
-          {showBlock ? 'Hide stat block' : 'Stat block'}
-        </button>
       )}
 
       {showDeathSaves && (
@@ -309,12 +301,6 @@ export function CombatantControls({
             damage: saveAction.damage != null ? String(saveAction.damage) : undefined,
           }}
         />
-      )}
-
-      {showBlock && !combatant.isPC && (
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900">
-          <CreatureStatBlock creature={combatant.creature} />
-        </div>
       )}
     </div>
   )
