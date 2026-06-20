@@ -5,12 +5,11 @@ import { useRef, useState } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
-const toNum = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
-
 /**
- * When combat begins, monsters roll initiative automatically but players roll
- * their own — so the DM enters each PC's number here (the app never rolls for a
- * player). Monsters' initiatives have already been rolled by this point.
+ * When combat begins, monsters and quick adds roll initiative automatically, but
+ * players roll their own. The DM enters each player's rolled total here; leaving
+ * a field blank rolls d20 + that player's modifier instead. The app never rolls
+ * a player's own dice unless asked (the blank-field case is opt-in).
  */
 export function InitiativePrompt({
   pcs,
@@ -18,18 +17,15 @@ export function InitiativePrompt({
   onCancel,
 }: {
   pcs: PlayerCharacter[]
-  onStart: (initiatives: Record<string, number>) => void
+  /** Raw field values (blank = roll d20 + modifier); the caller resolves them. */
+  onStart: (values: Record<string, string>) => void
   onCancel: () => void
 }) {
   const ref = useRef<HTMLFormElement>(null)
   useDismiss(ref, true, onCancel)
   const [values, setValues] = useState<Record<string, string>>({})
 
-  const submit = () => {
-    const out: Record<string, number> = {}
-    for (const pc of pcs) out[pc.combatantId] = toNum(values[pc.combatantId] ?? '')
-    onStart(out)
-  }
+  const submit = () => onStart(values)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -52,7 +48,8 @@ export function InitiativePrompt({
           </button>
         </div>
         <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-          Enter what each player rolled. Monsters have already rolled.
+          Enter each player's rolled total, or leave blank to roll d20 + their modifier.
+          Monsters and quick adds have already rolled.
         </p>
         <ul className="space-y-2">
           {pcs.map((pc, i) => (

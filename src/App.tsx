@@ -3,6 +3,7 @@
 
 import { useEffect, useReducer, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
+import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
 import { instantiate } from './combat/combatant.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
@@ -14,11 +15,14 @@ import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
-import { EncounterPlayback } from './components/EncounterPlayback.tsx'
+import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
 import { type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
+
+/** A player rolls their own initiative; monsters and quick adds are auto-rolled. */
+const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
 
 type Theme = 'dark' | 'light'
 type View = 'encounter' | 'compendium'
@@ -86,15 +90,34 @@ function App() {
       }
     }
   }
-  // Roll initiative for each monster (1d20 + Dex mod), logged; returns id → total.
-  const rollMonsterInitiatives = (): Record<string, number> => {
+  const rollInit = (label: string, mod: number): number => {
+    const result = roll(`1d20${mod >= 0 ? `+${mod}` : `${mod}`}`)
+    pushRoll(`${label}: initiative`, result)
+    return result.total
+  }
+
+  // Auto-roll initiative for everyone who isn't a player: monsters (1d20 + Dex)
+  // and quick adds (flat 1d20). Players roll their own — see resolvePlayerInits.
+  const rollAutoInitiatives = (): Record<string, number> => {
     const inits: Record<string, number> = {}
     for (const c of encounter.combatants) {
-      if (c.isPC) continue
-      const mod = dexMod(c.creature)
-      const result = roll(`1d20${mod >= 0 ? `+${mod}` : `${mod}`}`)
-      pushRoll(`${c.label}: initiative`, result)
-      inits[c.combatantId] = result.total
+      if (isPlayer(c)) continue
+      const label = c.isPC ? c.name : c.label
+      inits[c.combatantId] = rollInit(label, c.isPC ? 0 : dexMod(c.creature))
+    }
+    return inits
+  }
+
+  // Resolve the players' initiative fields: a typed value is used flat; a blank
+  // field rolls d20 + that player's modifier (logged).
+  const resolvePlayerInits = (raw: Record<string, string>): Record<string, number> => {
+    const inits: Record<string, number> = {}
+    for (const c of encounter.combatants) {
+      if (!isPlayer(c) || !c.isPC) continue
+      const entered = (raw[c.combatantId] ?? '').trim()
+      inits[c.combatantId] = entered
+        ? Math.floor(Number(entered) || 0)
+        : rollInit(c.name, c.initiativeMod ?? 0)
     }
     return inits
   }
@@ -115,13 +138,14 @@ function App() {
     setPcInitPrompt(null)
   }
 
-  // Begin: roll monsters now; if there are PCs, collect their rolled numbers first.
+  // Begin: auto-roll monsters/quick-adds now; if there are players, collect their
+  // numbers first, otherwise start immediately.
   const handleBegin = () => {
-    const monsterInits = rollMonsterInitiatives()
-    if (encounter.combatants.some((c) => c.isPC)) {
-      setPcInitPrompt(monsterInits)
+    const autoInits = rollAutoInitiatives()
+    if (encounter.combatants.some(isPlayer)) {
+      setPcInitPrompt(autoInits)
     } else {
-      startCombat(monsterInits)
+      startCombat(autoInits)
     }
   }
   const handleNextTurn = () => {
@@ -136,31 +160,18 @@ function App() {
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Header columns mirror the console grid so the playback lines up with the
-          stat block (center) and the title sits over the tracker (left). */}
-      <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:grid lg:grid-cols-[28rem_1fr_auto] lg:items-center lg:gap-4">
+      <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             D&amp;D 5e combat console
           </p>
         </div>
-        <div>
-          {view === 'encounter' && (
-            <EncounterPlayback
-              started={started}
-              paused={paused}
-              canBegin={encounter.combatants.length > 0}
-              dispatch={dispatch}
-              onBegin={handleBegin}
-              onNextTurn={handleNextTurn}
-            />
-          )}
-        </div>
-        <div className="flex items-center gap-3 lg:justify-self-end">
+        <div className="flex items-center gap-3">
           {view === 'encounter' && (
             <>
               <div className="flex items-center gap-2">
+                <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
                 <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
                 <AddCreaturePicker onPick={handlePick} />
               </div>
@@ -210,14 +221,18 @@ function App() {
             onSelect={setSelectedId}
             started={started}
             paused={paused}
+            onBegin={handleBegin}
+            onNextTurn={handleNextTurn}
           />
         )}
       </main>
 
       {pcInitPrompt && (
         <InitiativePrompt
-          pcs={encounter.combatants.filter((c) => c.isPC)}
-          onStart={(pcInits) => startCombat({ ...pcInitPrompt, ...pcInits })}
+          pcs={encounter.combatants.filter(
+            (c): c is PlayerCharacter => c.isPC && c.kind !== 'quick',
+          )}
+          onStart={(raw) => startCombat({ ...pcInitPrompt, ...resolvePlayerInits(raw) })}
           onCancel={() => setPcInitPrompt(null)}
         />
       )}

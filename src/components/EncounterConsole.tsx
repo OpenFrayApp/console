@@ -29,6 +29,7 @@ import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
+import { EncounterPlayback } from './EncounterPlayback.tsx'
 import { hpToneFor } from './hpTone.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { MetaTable } from './CreatureStatBlock.tsx'
@@ -38,6 +39,14 @@ import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+
+function GroupHeading({ children }: { children: string }) {
+  return (
+    <p className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+      {children}
+    </p>
+  )
+}
 
 /** id → charged? for a monster's tracked recharge abilities (undefined for PCs). */
 function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
@@ -72,12 +81,22 @@ function PcSummary({
     ) : (
       <span className="text-slate-400 dark:text-slate-500">—</span>
     )
+  const rows: [string, string | undefined][] = []
+  if (pc.passivePerception != null) {
+    rows.push(['Senses', `Passive Perception ${pc.passivePerception}`])
+  }
+  if (pc.speed?.walk) rows.push(['Speed', `${pc.speed.walk} ft.`])
+  if (pc.languages?.length) rows.push(['Languages', pc.languages.join(', ')])
+  if (pc.resistances?.length) rows.push(['Resistances', pc.resistances.join(', ')])
+  if (pc.immunities?.length) rows.push(['Immunities', pc.immunities.join(', ')])
+  if (pc.vulnerabilities?.length) rows.push(['Vulnerabilities', pc.vulnerabilities.join(', ')])
+
   return (
     <div className="@container flex flex-1 flex-col space-y-4">
       <StatHeader
         name={pc.name}
         onRename={onRename}
-        subtitle="Player character"
+        subtitle={pc.kind === 'quick' ? 'Quick add' : 'Player character'}
         concentration={pc.concentration}
         stats={
           <>
@@ -96,14 +115,11 @@ function PcSummary({
           </>
         }
       />
-      <div className="min-w-[16rem] flex-1">
-        <MetaTable
-          rows={[
-            ['Senses', `Passive Perception ${pc.passivePerception}`],
-            ['Languages', pc.languages?.join(', ')],
-          ]}
-        />
-      </div>
+      {rows.length > 0 && (
+        <div className="min-w-[16rem] flex-1">
+          <MetaTable rows={rows} />
+        </div>
+      )}
     </div>
   )
 }
@@ -117,6 +133,8 @@ export function EncounterConsole({
   onSelect,
   started,
   paused,
+  onBegin,
+  onNextTurn,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
@@ -126,6 +144,8 @@ export function EncounterConsole({
   onSelect: (id: string) => void
   started: boolean
   paused: boolean
+  onBegin: () => void
+  onNextTurn: () => void
 }) {
   const { combatants, activeIndex } = encounter
   const running = started && !paused
@@ -231,38 +251,57 @@ export function EncounterConsole({
     })
   }
 
+  const renderRow = (c: Combatant) => (
+    <CombatantRow
+      key={c.combatantId}
+      combatant={c}
+      active={running && c.combatantId === activeId}
+      selected={c.combatantId === selected?.combatantId}
+      onSelect={() => onSelect(c.combatantId)}
+      onRemoveEffect={(effectId) =>
+        dispatch({
+          type: 'update',
+          id: c.combatantId,
+          update: (cc) => ({ ...cc, effects: cc.effects.filter((e) => e.id !== effectId) }),
+        })
+      }
+    />
+  )
+  const players = combatants.filter((c) => c.isPC)
+  const creatures = combatants.filter((c) => !c.isPC)
+
   return (
     <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem]">
       {/* Left — initiative tracker */}
       <section className="flex min-h-0 flex-col">
-        <h2 className={COLUMN_HEADING}>
-          {started ? `Round ${encounter.round}${paused ? ' · paused' : ''}` : 'Initiative'}
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className={COLUMN_HEADING}>
+            {started ? `Round ${encounter.round}${paused ? ' · paused' : ''}` : 'Initiative'}
+          </h2>
+          <EncounterPlayback
+            started={started}
+            paused={paused}
+            canBegin={combatants.length > 0}
+            dispatch={dispatch}
+            onBegin={onBegin}
+            onNextTurn={onNextTurn}
+          />
+        </div>
         <div className="mt-2 flex-1 space-y-2 overflow-auto px-1 py-1">
           {combatants.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Add creatures to build the encounter.
             </p>
+          ) : started ? (
+            combatants.map(renderRow)
           ) : (
-            combatants.map((c, i) => (
-              <CombatantRow
-                key={c.combatantId}
-                combatant={c}
-                active={running && i === activeIndex}
-                selected={c.combatantId === selected?.combatantId}
-                onSelect={() => onSelect(c.combatantId)}
-                onRemoveEffect={(effectId) =>
-                  dispatch({
-                    type: 'update',
-                    id: c.combatantId,
-                    update: (cc) => ({
-                      ...cc,
-                      effects: cc.effects.filter((e) => e.id !== effectId),
-                    }),
-                  })
-                }
-              />
-            ))
+            // Before combat there's no order yet, so group by kind for clarity.
+            <>
+              {players.length > 0 && <GroupHeading>Players &amp; NPCs</GroupHeading>}
+              {players.map(renderRow)}
+              {creatures.length > 0 && <GroupHeading>Creatures</GroupHeading>}
+              {creatures.map(renderRow)}
+            </>
           )}
         </div>
       </section>
