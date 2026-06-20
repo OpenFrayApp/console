@@ -6,6 +6,7 @@ import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Creature } from './schema/creature.ts'
 import { instantiate } from './combat/combatant.ts'
 import {
+  isStable,
   markDeathSaveFailure,
   markDeathSaveSuccess,
   rollDeathSave,
@@ -115,7 +116,7 @@ function App() {
             {roster.map((c, i) => (
               <div key={c.combatantId} className="space-y-1">
                 <CombatantRow combatant={c} active={i === 0} />
-                {c.combatantId === 'p2' && c.isPC && c.status === 'down' && (
+                {c.combatantId === 'p2' && c.isPC && c.status === 'down' && !isStable(c) && (
                   <div className="pl-10">
                     <DeathSaveControls
                       saves={c.deathSaves ?? { successes: 0, failures: 0 }}
