@@ -136,6 +136,15 @@ describe('CombatantRow', () => {
     expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
   })
 
+  it('marks the combatant type with an icon', () => {
+    const { rerender } = render(<CombatantRow combatant={monster()} />)
+    expect(screen.getByRole('img', { name: 'Monster' })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: 'Player character' })).toBeNull()
+
+    rerender(<CombatantRow combatant={pc()} />)
+    expect(screen.getByRole('img', { name: 'Player character' })).toBeInTheDocument()
+  })
+
   it('selects on click when onSelect is provided', () => {
     const onSelect = vi.fn()
     const { container } = render(<CombatantRow combatant={pc()} onSelect={onSelect} />)

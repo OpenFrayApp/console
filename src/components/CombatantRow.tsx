@@ -10,6 +10,45 @@ import { DeathSavePips } from './DeathSaveControls.tsx'
 const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const armorClass = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
 
+/** A glanceable type marker: sword-and-shield for PCs, a monster face for monsters. */
+function CombatantTypeIcon({ isPC }: { isPC: boolean }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.75,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  }
+  if (isPC) {
+    return (
+      <svg
+        {...common}
+        className="h-4 w-4 shrink-0 text-sky-500 dark:text-sky-400"
+        role="img"
+        aria-label="Player character"
+      >
+        <path d="M12 21s6-3 6-8V6l-6-2-6 2v7c0 5 6 8 6 8z" />
+        <path d="M12 7.5v6M10 9.5h4" />
+      </svg>
+    )
+  }
+  return (
+    <svg
+      {...common}
+      className="h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400"
+      role="img"
+      aria-label="Monster"
+    >
+      <path d="M4 4l2.6 3.2a8 8 0 0 1 10.8 0L20 4" />
+      <path d="M5.2 8A7 7 0 0 0 4 12a8 8 0 0 0 16 0 7 7 0 0 0-1.2-4" />
+      <path d="M9 16.4c.9.7 1.9 1 3 1s2.1-.3 3-1" />
+      <circle cx="9.2" cy="12.6" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="14.8" cy="12.6" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 function cx(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
@@ -99,6 +138,7 @@ export function CombatantRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
+          <CombatantTypeIcon isPC={combatant.isPC} />
           <span className={cx('truncate font-medium', dead && 'line-through')}>
             {displayName(combatant)}
           </span>
