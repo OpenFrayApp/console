@@ -32,12 +32,15 @@ const clampNonNegativeInt = (n: number): number => Math.max(0, Math.floor(n))
  */
 export type HpTier = 'healthy' | 'hurt' | 'bloodied' | 'critical'
 
-export function hpTier(c: Combatant): HpTier {
-  const { current, max } = c.hp
+export function hpTierOf(current: number, max: number): HpTier {
   if (max <= 0 || current >= max) return 'healthy'
   if (current > Math.floor(max / 2)) return 'hurt'
   if (current > Math.floor(max / 4)) return 'bloodied'
   return 'critical'
+}
+
+export function hpTier(c: Combatant): HpTier {
+  return hpTierOf(c.hp.current, c.hp.max)
 }
 
 /** Bloodied-or-worse: at or below half max HP. */

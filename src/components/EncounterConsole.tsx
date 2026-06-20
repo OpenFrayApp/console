@@ -8,7 +8,6 @@ import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
-import { SourceLink } from './SourceLink.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
@@ -115,11 +114,10 @@ export function EncounterConsole({
               {selected.isPC ? (
                 <PcSummary pc={selected} />
               ) : (
-                <CreatureStatBlock creature={selected.creature} showSource={false} />
+                <CreatureStatBlock creature={selected.creature} hp={selected.hp} />
               )}
             </div>
             <div className="shrink-0 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-              {!selected.isPC && <SourceLink source={selected.creature.source} />}
               <CombatantControls
                 combatant={selected}
                 combatants={combatants}

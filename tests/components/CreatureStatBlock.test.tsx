@@ -59,11 +59,18 @@ const GOBLIN: Creature = {
 afterEach(cleanup)
 
 describe('CreatureStatBlock', () => {
-  it('renders the header, CR with XP, and HP', () => {
+  it('renders the header, CR with XP, and the AC/HP icons', () => {
     render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText(/Small humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
-    expect(screen.getByText('10 (3d6)')).toBeInTheDocument()
+    expect(screen.getByTitle('Armor Class 15')).toBeInTheDocument()
+    expect(screen.getByTitle('10 HP')).toBeInTheDocument() // max HP (no live combat HP)
+  })
+
+  it('tints the HP heart by wound tier when live combat HP is given', () => {
+    render(<CreatureStatBlock creature={GOBLIN} hp={{ current: 2, max: 10, temp: 0 }} />)
+    const heart = screen.getByTitle('2 of 10 HP')
+    expect(heart.querySelector('.text-red-700')).not.toBeNull() // critical tier
   })
 
   it('shows ability scores with modifiers and proficient saves', () => {
@@ -90,13 +97,13 @@ describe('CreatureStatBlock', () => {
     expect(container.textContent).toContain('Pounce (Recharge 5–6)') // recharge surfaced
   })
 
-  it('renders defenses, speeds, skills, senses, and languages', () => {
+  it('renders initiative, speeds, skills, senses, and languages', () => {
     const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     const text = container.textContent ?? ''
-    expect(text).toContain('Initiative +2')
-    expect(text).toContain('30 ft., climb 30 ft.') // both speeds
-    expect(text).toContain('Saving Throws Dex +4')
-    expect(text).toContain('Skills Stealth +6')
+    expect(text).toContain('Init +2')
+    expect(screen.getByTitle('Walk 30 ft.')).toBeInTheDocument()
+    expect(screen.getByTitle('Climb 30 ft.')).toBeInTheDocument()
+    expect(screen.getByText('Stealth')).toBeInTheDocument() // skills table
     expect(text).toContain('Damage Immunities Poison')
     expect(text).toContain('Darkvision 60 ft., Passive Perception 9')
     expect(text).toContain('Languages Common, Goblin')
