@@ -68,10 +68,11 @@ content imports as later, additive layers.
 
 - **Code:** [AGPL-3.0](./LICENSE). A hosted/modified version must share its source.
 - **Game content:** SRD 5.2 / 5.1 via [Open5e](https://open5e.com), under
-  **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app. Some
-  iconic monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC
-  and cannot be included; the custom-creature form and third-party (e.g. Kobold
-  Press) content fill that gap, each under its own license.
+  **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app and in
+  [`CREDITS.md`](./CREDITS.md). All game content uses CC-BY-4.0; the OGL is not used.
+  Some iconic monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC
+  and cannot be included; the custom-creature form and third-party content fill that
+  gap, each honored under its own license.
 - *Compatible with fifth edition. Not affiliated with or endorsed by Wizards of
   the Coast.*
 

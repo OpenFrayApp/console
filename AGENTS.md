@@ -150,6 +150,13 @@ to.
 
 ## Licensing of content
 
-SRD content is CC-BY-4.0 (attribution required, in-app + CREDITS). Third-party
-content (e.g. Kobold Press) retains its own license — honor each separately. This
-content attribution is separate from the project's AGPL (which governs the code).
+**All game content is used under CC-BY-4.0; the OGL is never used, in any version.**
+SRD 5.2 is CC-BY-only; SRD 5.1 is dual-licensed and we elect CC-BY. CC-BY's real
+obligations: credit WotC with their exact attribution string, link the license, state
+that changes were made, don't imply endorsement — satisfied via an in-app
+About/Credits screen + `CREDITS.md`. Third-party content (e.g. Kobold Press) is
+honored under its own license, checked per source, **never assumed CC-BY** — do not add
+OGL boilerplate (Section 15 / Product Identity); flag OGL-only sources to the
+maintainer. **Never ingest SRD-excluded WotC IP** (Beholder, Mind Flayer, …). Full
+instructions: [`docs/content-licensing.md`](./docs/content-licensing.md). This content
+licensing is separate from the project's AGPL (which governs the code).
