@@ -7,6 +7,7 @@ import { instantiate } from '../combat/combatant.ts'
 import { roll } from '../dice/roll.ts'
 import { emptyEncounter, encounterReducer } from '../state/encounter.ts'
 import { AddCreaturePicker } from './AddCreaturePicker.tsx'
+import { AddPcForm } from './AddPcForm.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
@@ -50,6 +51,7 @@ export function EncounterConsole() {
           {started ? `Round ${encounter.round}` : 'Initiative'}
         </h2>
         <div className="flex items-center gap-2">
+          <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
           <AddCreaturePicker onPick={handlePick} />
           {started ? (
             <button
