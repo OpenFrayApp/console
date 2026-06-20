@@ -124,6 +124,10 @@ dedup.
 7. Mass save flow.
 8. SRD compendium + custom-creature/spell form (seed from Open5e **v2**; ingest
    once, spot-check against schema, clean, then store — do not call live).
+   **Before touching the compendium/ingest, read [`docs/compendium-ingest.md`](docs/compendium-ingest.md)**
+   — it lists the Open5e data gotchas (broken `armor_detail`, prose save actions,
+   `order_in_statblock`, recharge in `usage_limits`, proficient-saves filter, …) and
+   toolchain traps, so they aren't rediscovered the hard way.
 9. Concentration auto-checks.
 10. Identity: anonymous (ephemeral, `sessionStorage`) + sign-up (persist, RLS on).
 
