@@ -23,71 +23,65 @@ import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
-import { EditableField } from './EditableField.tsx'
 import { hpToneFor } from './hpTone.ts'
+import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
-const HP_INPUT =
-  'w-14 rounded border border-slate-300 bg-white px-1 text-center text-sm tabular-nums dark:border-slate-600 dark:bg-slate-800'
 
-/** Lightweight detail panel for a selected PC (no full stat block by design). */
+/** PC detail panel — same header style as the creature stat block, lighter body. */
 function PcSummary({
   pc,
+  onRename,
   onHpInput,
   onTempInput,
 }: {
   pc: PlayerCharacter
+  onRename: (name: string) => void
   onHpInput: (raw: string) => void
   onTempInput: (raw: string) => void
 }) {
   const hpTone = hpToneFor(hpTierOf(pc.hp.current, pc.hp.max))
+  const hpValue = (
+    <span>
+      <span className={hpTone}>{pc.hp.current}</span>
+      <span className="text-slate-400 dark:text-slate-500">/{pc.hp.max}</span>
+    </span>
+  )
+  const tmpValue =
+    pc.hp.temp > 0 ? (
+      <span className="text-sky-600 dark:text-sky-400">{pc.hp.temp}</span>
+    ) : (
+      <span className="text-slate-400 dark:text-slate-500">—</span>
+    )
   return (
-    <div className="space-y-1">
-      <h3 className="text-2xl font-bold tracking-tight">{pc.name}</h3>
-      <p className="text-sm italic text-slate-500 dark:text-slate-400">Player character</p>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        <span>
-          <span className="font-semibold">AC</span> {pc.ac}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="font-semibold">HP</span>
-          <EditableField
-            initial=""
-            onCommit={onHpInput}
-            title="Set HP, or +N / −N"
-            inputMode="numeric"
-            inputClassName={HP_INPUT}
-          >
-            <span className="tabular-nums">
-              <span className={hpTone}>{pc.hp.current}</span>/{pc.hp.max}
-            </span>
-          </EditableField>
-          <span className="text-slate-300 dark:text-slate-600">·</span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">tmp</span>
-          <EditableField
-            initial=""
-            onCommit={onTempInput}
-            title="Set temp HP, or +N / −N"
-            inputMode="numeric"
-            inputClassName={HP_INPUT}
-          >
-            <span
-              className={
-                pc.hp.temp > 0 ? 'text-sky-600 tabular-nums dark:text-sky-400' : 'text-slate-400'
-              }
-            >
-              {pc.hp.temp > 0 ? pc.hp.temp : '—'}
-            </span>
-          </EditableField>
-        </span>
-        <span>
-          <span className="font-semibold">Passive Perception</span> {pc.passivePerception}
-        </span>
-      </div>
+    <div className="@container flex flex-1 flex-col space-y-4">
+      <StatHeader
+        name={pc.name}
+        onRename={onRename}
+        subtitle="Player character"
+        concentration={pc.concentration}
+        stats={
+          <>
+            <HeaderStat label="AC" value={pc.ac} />
+            <HeaderStat
+              label="HP"
+              value={hpValue}
+              edit={{ initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' }}
+            />
+            <HeaderStat
+              label="TMP"
+              value={tmpValue}
+              edit={{ initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }}
+            />
+            <HeaderStat label="Init" value={pc.initiative} />
+            <HeaderStat label="PP" value={pc.passivePerception} />
+          </>
+        }
+      />
       {pc.languages && pc.languages.length > 0 && (
         <p className="text-sm">
           <span className="font-semibold">Languages</span> {pc.languages.join(', ')}
@@ -222,6 +216,13 @@ export function EncounterConsole({
               {selected.isPC ? (
                 <PcSummary
                   pc={selected}
+                  onRename={(name) =>
+                    dispatch({
+                      type: 'update',
+                      id: selected.combatantId,
+                      update: (c) => (c.isPC ? { ...c, name } : c),
+                    })
+                  }
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}
                   onTempInput={(raw) => applyHpInput(selected, raw, true)}
                 />
