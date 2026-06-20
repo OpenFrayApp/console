@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { GroupSaveForm } from './GroupSaveForm.tsx'
+import { GroupSaveModal } from './ActionResolver.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 /**
@@ -36,7 +36,7 @@ export function MassSavePanel({
   }
 
   return (
-    <GroupSaveForm
+    <GroupSaveModal
       combatants={combatants}
       dispatch={dispatch}
       onClose={() => setOpen(false)}

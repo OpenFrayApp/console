@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName } from '../schema/effect.ts'
-import type { DamageType } from '../schema/primitives.ts'
+import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import { roll } from '../dice/roll.ts'
@@ -25,6 +25,7 @@ import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { DieRoll, SPIN_MS } from './DieRoll.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
+const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const acOf = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
@@ -98,6 +99,26 @@ export function ActionResolver(props: ResolverProps) {
     <AttackResolver {...props} />
   ) : (
     <SaveResolver {...props} />
+  )
+}
+
+/**
+ * The standalone "Group save" — the same save modal with no preset action: the DM
+ * picks the ability, DC, on-save rule, targets, and a damage number.
+ */
+export function GroupSaveModal({
+  combatants,
+  dispatch,
+  onRoll,
+  onClose,
+}: {
+  combatants: Combatant[]
+  dispatch: (a: EncounterAction) => void
+  onRoll: OnRoll
+  onClose: () => void
+}) {
+  return (
+    <SaveResolver combatants={combatants} dispatch={dispatch} onRoll={onRoll} onClose={onClose} />
   )
 }
 
@@ -498,12 +519,34 @@ interface SaveRow {
   edited?: string
 }
 
-function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, onClose }: ResolverProps) {
-  const save = action.save ?? null
-  const targets = targetsFor(attacker, combatants)
+function SaveResolver({
+  attacker,
+  action,
+  combatants,
+  dispatch,
+  onRoll,
+  onUse,
+  onClose,
+}: {
+  attacker?: MonsterCombatant
+  action?: Action
+  combatants: Combatant[]
+  dispatch: (a: EncounterAction) => void
+  onRoll: OnRoll
+  onUse?: () => void
+  onClose: () => void
+}) {
+  const save = action?.save ?? null
+  // A standalone group save (no action) targets everyone and lets the DM type
+  // the damage; an action's save excludes the attacker and rolls its damage.
+  const targets = attacker
+    ? targetsFor(attacker, combatants)
+    : combatants.filter((c) => c.status !== 'dead')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [ability, setAbility] = useState<Ability>(save?.ability ?? 'dex')
   const [onSave, setOnSave] = useState<SaveOutcome>(save?.onSave ?? 'half')
   const [dc, setDc] = useState(String(save?.dc ?? 15))
+  const [baseDamage, setBaseDamage] = useState('')
   const [magical, setMagical] = useState(false)
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
   const [area, setArea] = useState<RolledDamage[]>([])
@@ -512,7 +555,7 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
   const [pending, setPending] = useState<{ combatant: Combatant; dc: number; damage: number }[]>([])
   const [note, setNote] = useState<string | null>(null)
 
-  const title = `${nameOf(attacker)} · ${action.name}`
+  const title = attacker && action ? `${nameOf(attacker)} · ${action.name}` : 'Group save'
   const selectedTargets = targets.filter((t) => selected.has(t.combatantId))
 
   const toggle = (id: string) =>
@@ -523,13 +566,19 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
       return next
     })
 
-  // Per-target damage after the save rule and the target's own defenses.
+  // Per-target damage after the save rule and the target's own defenses. With an
+  // action, damage is the rolled (typed) components; for a standalone group save
+  // it's the single number the DM typed (no type, so no resistance applies).
   const defaultDamage = (target: Combatant, result?: SaveResult): number => {
     if (!result) return 0
-    return area.reduce((sum, comp) => {
-      const afterSave = result === 'save' ? (onSave === 'half' ? Math.floor(comp.amount / 2) : 0) : comp.amount
-      return sum + adjustForDefense(afterSave, damageRelation(target, comp.type))
-    }, 0)
+    if (area.length > 0) {
+      return area.reduce((sum, comp) => {
+        const afterSave = result === 'save' ? (onSave === 'half' ? Math.floor(comp.amount / 2) : 0) : comp.amount
+        return sum + adjustForDefense(afterSave, damageRelation(target, comp.type))
+      }, 0)
+    }
+    const base = toNum(baseDamage)
+    return result === 'save' ? (onSave === 'half' ? Math.floor(base / 2) : 0) : base
   }
 
   const damageValue = (target: Combatant): string => {
@@ -538,10 +587,12 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
   }
 
   const rollSaves = () => {
-    const request = { ability: save?.ability ?? 'dex', dc: toNum(dc) || 10, onSave }
-    const components = rollDamageComponents(action, false)
-    setArea(components)
-    logDamage(components, attacker, action, onRoll)
+    const request = { ability, dc: toNum(dc) || 10, onSave }
+    if (action) {
+      const components = rollDamageComponents(action, false)
+      setArea(components)
+      if (attacker) logDamage(components, attacker, action, onRoll)
+    }
     const next: Record<string, SaveRow> = {}
     for (const c of selectedTargets) {
       if (c.isPC) {
@@ -552,11 +603,7 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
         })
         const d20 = saveRoll.roll.dice.find((g) => g.sides === 20)?.kept[0]
         next[c.combatantId] = { result: saveRoll.result, total: saveRoll.total, d20 }
-        onRoll(
-          `${nameOf(c)}: ${save?.ability.toUpperCase() ?? ''} save`.trim(),
-          saveRoll.roll,
-          saveRoll.applied,
-        )
+        onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, saveRoll.applied)
       }
     }
     setRows(next)
@@ -642,11 +689,26 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
   }
 
   return (
-    <Modal title={title} subtitle={metaLine(action)} onClose={onClose}>
+    <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose}>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-          {save?.ability.toUpperCase() ?? '—'} save
-        </span>
+        {action ? (
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            {ability.toUpperCase()} save
+          </span>
+        ) : (
+          <select
+            value={ability}
+            onChange={(e) => setAbility(e.target.value as Ability)}
+            aria-label="Save ability"
+            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
+          >
+            {ABILITIES.map((a) => (
+              <option key={a} value={a}>
+                {a.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        )}
         <label className="flex items-center gap-1">
           DC
           <input
@@ -667,6 +729,18 @@ function SaveResolver({ attacker, action, combatants, dispatch, onRoll, onUse, o
           <option value="none">save → no damage</option>
           <option value="negates">save → negates effect</option>
         </select>
+        {!action && (
+          <label className="flex items-center gap-1">
+            Damage
+            <input
+              value={baseDamage}
+              onChange={(e) => setBaseDamage(e.target.value)}
+              aria-label="Damage"
+              inputMode="numeric"
+              className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+            />
+          </label>
+        )}
         {targets.some(hasMagicResistance) && (
           <label
             className="flex items-center gap-1"

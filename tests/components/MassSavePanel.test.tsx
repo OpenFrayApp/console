@@ -57,13 +57,13 @@ describe('MassSavePanel', () => {
     )
 
     fireEvent.click(screen.getByText('Group save'))
-    fireEvent.click(screen.getByLabelText('Select a'))
+    fireEvent.click(screen.getByRole('button', { name: /a AC 15/ })) // target chip
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
     fireEvent.click(screen.getByText('Roll saves'))
 
     // Monster 'a' got a Save/Fail result; force it to Fail for a deterministic apply.
     fireEvent.click(screen.getByText('Fail'))
-    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
-    fireEvent.click(screen.getByText('Apply'))
+    fireEvent.click(screen.getByText('Apply damage'))
 
     const call = dispatch.mock.calls.find((c) => c[0].type === 'update' && c[0].id === 'a')
     expect(call).toBeTruthy()
@@ -86,11 +86,11 @@ describe('MassSavePanel', () => {
     render(<MassSavePanel combatants={[conc()]} dispatch={dispatch} onRoll={vi.fn()} />)
 
     fireEvent.click(screen.getByText('Group save'))
-    fireEvent.click(screen.getByLabelText('Select a'))
+    fireEvent.click(screen.getByRole('button', { name: /a AC 15/ }))
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
     fireEvent.click(screen.getByText('Roll saves'))
     fireEvent.click(screen.getByText('Fail'))
-    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
-    fireEvent.click(screen.getByText('Apply'))
+    fireEvent.click(screen.getByText('Apply damage'))
 
     expect(screen.getByText('Concentration checks')).toBeInTheDocument()
     expect(screen.getByText('Concentration — DC 12')).toBeInTheDocument()
