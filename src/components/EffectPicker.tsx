@@ -37,10 +37,22 @@ const CHIP =
 /** Quick-apply picker: tap a condition or one of the ~6 effect shapes. */
 export function EffectPicker({ onApply }: { onApply: (effect: Effect) => void }) {
   const [open, setOpen] = useState(false)
+  const [up, setUp] = useState(false)
   const [custom, setCustom] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
+
+  // Open upward when there isn't room below (the picker often sits low, in the
+  // stat-block footer) — so the menu lands where there's space, not off-screen.
+  const toggle = () => {
+    if (!open && ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      const below = window.innerHeight - rect.bottom
+      setUp(below < 260 && rect.top > below)
+    }
+    setOpen((o) => !o)
+  }
 
   const apply = (effect: Effect) => {
     onApply(effect)
@@ -51,13 +63,17 @@ export function EffectPicker({ onApply }: { onApply: (effect: Effect) => void })
     <div className="relative inline-block" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         className="rounded border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
       >
         + Effect
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <div
+          className={`absolute z-30 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900 ${
+            up ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
           <div className="flex flex-wrap gap-1">
             {CONDITIONS.map((c) => (
               <button key={c} type="button" className={CHIP} onClick={() => apply(condition(c))}>

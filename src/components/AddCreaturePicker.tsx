@@ -55,11 +55,7 @@ export function AddCreaturePicker({ onPick }: { onPick: (c: Creature) => void })
                 <li key={c.id}>
                   <button
                     type="button"
-                    onClick={() => {
-                      onPick(c)
-                      setOpen(false)
-                      setQuery('')
-                    }}
+                    onClick={() => onPick(c)}
                     className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     <span className="truncate">{c.name}</span>
