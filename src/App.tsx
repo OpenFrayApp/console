@@ -45,6 +45,7 @@ const thalia: Combatant = {
   hp: { current: 24, max: 38, temp: 5 },
   concentration: null,
   effects: [flatBonus('Bless', '1d4')],
+  languages: ['Common', 'Elvish'],
 }
 
 const goblinA = instantiate(GOBLIN, {

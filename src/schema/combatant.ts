@@ -87,6 +87,8 @@ export interface PlayerCharacter extends CombatantBase {
   name: string
   ac: number
   passivePerception: number
+  /** Languages the PC speaks, entered by the DM. Free-form. */
+  languages?: string[]
   /** Present once the PC is downed; absent/zeroed when conscious. */
   deathSaves?: DeathSaves
 }
