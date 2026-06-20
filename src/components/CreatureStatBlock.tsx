@@ -127,13 +127,13 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           {creature.size} {creature.type} · CR {formatCr(creature.cr)}
+          {creature.xp != null ? ` (${creature.xp.toLocaleString('en-US')} XP)` : ''}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
         <span>
           <span className="font-semibold">AC</span> {creature.ac}
-          {creature.armorDetail ? ` (${creature.armorDetail})` : ''}
         </span>
         {creature.initiative != null && (
           <span>

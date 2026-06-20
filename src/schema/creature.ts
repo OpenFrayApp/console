@@ -74,8 +74,6 @@ export interface Creature {
   /** Creature type, e.g. `"dragon"`, `"humanoid"`. */
   type: string
   ac: number
-  /** AC qualifier, e.g. `"natural armor"`. */
-  armorDetail?: string
   maxHp: number
   /** Optional dice formula to roll HP per instance, e.g. `"19d12+133"`. */
   hpFormula?: string
@@ -95,6 +93,8 @@ export interface Creature {
   conditionImmunities?: string[]
   /** Challenge rating. */
   cr?: number
+  /** XP award for the encounter, e.g. 15000 at CR 16. */
+  xp?: number
 
   /** Passive features shown above the actions. */
   traits?: Trait[]

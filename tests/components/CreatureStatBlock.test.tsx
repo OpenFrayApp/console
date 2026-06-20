@@ -14,11 +14,11 @@ const GOBLIN: Creature = {
   size: 'Small',
   type: 'humanoid',
   ac: 15,
-  armorDetail: 'leather armor, shield',
   maxHp: 10,
   hpFormula: '3d6',
   initiative: 2,
   cr: 0.25,
+  xp: 50,
   speed: { walk: 30, climb: 30 },
   abilities: { str: 8, dex: 15, con: 10, int: 10, wis: 8, cha: 8 },
   saves: { dex: 4 },
@@ -59,10 +59,10 @@ const GOBLIN: Creature = {
 afterEach(cleanup)
 
 describe('CreatureStatBlock', () => {
-  it('renders the header, defenses, and a fractional CR', () => {
+  it('renders the header, CR with XP, and HP', () => {
     render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Goblin')).toBeInTheDocument()
-    expect(screen.getByText(/Small humanoid · CR 1\/4/)).toBeInTheDocument()
+    expect(screen.getByText(/Small humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
     expect(screen.getByText('10 (3d6)')).toBeInTheDocument()
   })
 
@@ -85,7 +85,6 @@ describe('CreatureStatBlock', () => {
   it('renders defenses, speeds, skills, senses, and languages', () => {
     const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     const text = container.textContent ?? ''
-    expect(text).toContain('15 (leather armor, shield)') // AC + armor detail
     expect(text).toContain('Initiative +2')
     expect(text).toContain('30 ft., climb 30 ft.') // both speeds
     expect(text).toContain('Saving Throws Dex +4')

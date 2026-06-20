@@ -86,6 +86,7 @@ const ABOLETH: Open5eCreature = {
   hit_points: 150,
   hit_dice: '20d10 + 40',
   challenge_rating: 10,
+  experience_points: 5900,
   ability_scores: {
     strength: 21,
     dexterity: 9,
@@ -99,7 +100,6 @@ const ABOLETH: Open5eCreature = {
   passive_perception: 20,
   darkvision_range: 120,
   blindsight_range: null,
-  armor_detail: 'natural armor',
   initiative_bonus: 7,
   skill_bonuses: { perception: 10, animal_handling: 4 },
   languages: {
@@ -208,8 +208,8 @@ describe('mapOpen5eCreature', () => {
     ])
   })
 
-  it('maps defenses, skills, languages, initiative, and armor detail', () => {
-    expect(c.armorDetail).toBe('natural armor')
+  it('maps defenses, skills, languages, initiative, and XP', () => {
+    expect(c.xp).toBe(5900)
     expect(c.initiative).toBe(7)
     expect(c.skills).toEqual({ perception: 10, animalHandling: 4 })
     expect(c.languages).toEqual(['Deep Speech', 'Telepathy 120 ft.'])

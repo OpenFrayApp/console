@@ -149,10 +149,10 @@ export interface Open5eCreature {
   size: { name: string }
   type: { name: string }
   armor_class: number
-  armor_detail?: string | null
   hit_points: number
   hit_dice?: string | null
   challenge_rating?: number
+  experience_points?: number | null
   initiative_bonus?: number | null
   ability_scores: Record<string, number>
   speed: Record<string, number | string>
@@ -366,7 +366,6 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
     size: raw.size.name as Size,
     type: raw.type.name.toLowerCase(),
     ac: raw.armor_class,
-    armorDetail: raw.armor_detail?.trim() || undefined,
     maxHp: raw.hit_points,
     hpFormula: raw.hit_dice ? raw.hit_dice.replace(/\s+/g, '') : undefined,
     initiative: raw.initiative_bonus ?? undefined,
@@ -388,6 +387,7 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
     vulnerabilities: nameList(raw.resistances_and_immunities?.damage_vulnerabilities),
     conditionImmunities: nameList(raw.resistances_and_immunities?.condition_immunities),
     cr: raw.challenge_rating,
+    xp: raw.experience_points ?? undefined,
     traits: undefIfEmpty(traits),
     actions: undefIfEmpty(actionsOfType('ACTION')),
     bonusActions: undefIfEmpty(actionsOfType('BONUS_ACTION')),
