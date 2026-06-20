@@ -63,7 +63,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       {open && (
         <form
           onSubmit={submit}
-          className="absolute right-0 z-10 mt-1 w-64 space-y-2 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          className="absolute right-0 z-30 mt-1 w-64 space-y-2 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
           <input
             autoFocus

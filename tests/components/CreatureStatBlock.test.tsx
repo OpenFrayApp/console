@@ -59,18 +59,22 @@ const GOBLIN: Creature = {
 afterEach(cleanup)
 
 describe('CreatureStatBlock', () => {
-  it('renders the header, CR with XP, and the AC/HP widgets', () => {
-    render(<CreatureStatBlock creature={GOBLIN} />)
+  it('renders the header with CR, AC, HP, and Init', () => {
+    const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText(/Small humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
-    expect(screen.getByTitle('Armor Class 15')).toBeInTheDocument()
-    expect(screen.getByTitle('10 / 10 HP')).toBeInTheDocument() // max HP (no live combat HP)
+    expect(screen.getByText('AC')).toBeInTheDocument()
+    expect(screen.getByText('HP')).toBeInTheDocument()
+    expect(screen.getByText('Init')).toBeInTheDocument()
+    expect(container.textContent).toContain('10/10') // HP current/max
   })
 
   it('tints current HP by wound tier when live combat HP is given', () => {
-    render(<CreatureStatBlock creature={GOBLIN} hp={{ current: 2, max: 10, temp: 0 }} />)
-    const panel = screen.getByTitle('2 / 10 HP')
-    expect(panel.querySelector('.text-red-700')).not.toBeNull() // critical tier
+    const { container } = render(
+      <CreatureStatBlock creature={GOBLIN} hp={{ current: 2, max: 10, temp: 0 }} />,
+    )
+    const crit = container.querySelector('.text-red-700') // critical tier
+    expect(crit?.textContent).toBe('2')
   })
 
   it('shows ability scores with modifiers and proficient saves', () => {
@@ -93,20 +97,19 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('Actions')).toBeInTheDocument()
     expect(screen.getByText('Bonus Actions')).toBeInTheDocument()
     expect(screen.getByText('Legendary Actions (3/round)')).toBeInTheDocument()
-    expect(screen.getByText('Legendary')).toBeInTheDocument() // header badge
+    expect(screen.getByTitle('Legendary')).toBeInTheDocument() // "L" header badge
     expect(container.textContent).toContain('Pounce (Recharge 5–6)') // recharge surfaced
   })
 
-  it('renders initiative, speeds, skills, senses, and languages', () => {
+  it('renders speeds as text, skills, defenses, and senses tables', () => {
     const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     const text = container.textContent ?? ''
-    expect(screen.getByText('Init')).toBeInTheDocument()
-    expect(screen.getByTitle('Walk 30 ft.')).toBeInTheDocument()
-    expect(screen.getByTitle('Climb 30 ft.')).toBeInTheDocument()
+    expect(text).toContain('Walk 30 ft.')
+    expect(text).toContain('Climb 30 ft.')
     expect(screen.getByText('Stealth')).toBeInTheDocument() // skills table
-    expect(text).toContain('Damage Immunities Poison')
-    expect(text).toContain('Darkvision 60 ft., Passive Perception 9')
-    expect(text).toContain('Languages Common, Goblin')
+    expect(screen.getByText('Poison')).toBeInTheDocument() // immunities value
+    expect(screen.getByText(/Darkvision 60 ft., Passive Perception 9/)).toBeInTheDocument()
+    expect(screen.getByText('Common, Goblin')).toBeInTheDocument() // languages value
   })
 
   it('renders markdown (bold) rather than raw asterisks', () => {

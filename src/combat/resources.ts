@@ -91,6 +91,36 @@ export function applyDamage(
   return { ...c, hp: { ...c.hp, current, temp }, status, concentration }
 }
 
+/**
+ * Set current HP to an exact value (the DM typed a number). Unlike applyDamage,
+ * this does not route through temporary HP — it sets `current` directly and
+ * recomputes status the same way.
+ */
+export function setCurrentHp(c: Combatant, value: number): Combatant {
+  const current = Math.max(0, Math.min(c.hp.max, Math.floor(value)))
+  if (current > 0 && c.isPC) {
+    return {
+      ...c,
+      hp: { ...c.hp, current },
+      status: 'active',
+      deathSaves: { successes: 0, failures: 0 },
+    }
+  }
+  const status = statusForHp(c, current, 0)
+  const concentration = status === 'active' ? c.concentration : null
+  return { ...c, hp: { ...c.hp, current }, status, concentration }
+}
+
+/** Parse an HP/temp edit: a bare number sets the value; `+N`/`-N` adjusts it. */
+export type HpInput = { delta: number } | { set: number }
+
+export function parseHpInput(raw: string): HpInput | null {
+  const s = raw.trim()
+  if (/^[+-]\d+$/.test(s)) return { delta: Number(s) }
+  if (/^\d+$/.test(s)) return { set: Number(s) }
+  return null
+}
+
 /** Heal up to max HP. Healing above 0 revives a downed/dead creature (revivify). */
 export function applyHealing(c: Combatant, amount: number): Combatant {
   const current = Math.min(c.hp.max, c.hp.current + clampNonNegativeInt(amount))

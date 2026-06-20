@@ -14,8 +14,10 @@ import {
   hpTier,
   isBloodied,
   isLimitedAvailable,
+  parseHpInput,
   rechargeLimited,
   restoreSlot,
+  setCurrentHp,
   slotsRemaining,
   spendLegendary,
   useLimited,
@@ -174,6 +176,50 @@ describe('applyHealing', () => {
   it('leaves temp HP untouched', () => {
     const c = applyHealing(monster({ hp: { current: 20, max: 40, temp: 6 } }), 5)
     expect(c.hp.temp).toBe(6)
+  })
+})
+
+describe('setCurrentHp', () => {
+  it('sets current HP exactly, not through temp HP', () => {
+    const c = setCurrentHp(monster({ hp: { current: 40, max: 40, temp: 5 } }), 10)
+    expect(c.hp.current).toBe(10)
+    expect(c.hp.temp).toBe(5) // untouched
+  })
+
+  it('clamps to 0..max', () => {
+    expect(setCurrentHp(monster(), 999).hp.current).toBe(40)
+    expect(setCurrentHp(monster(), -5).hp.current).toBe(0)
+  })
+
+  it('kills a monster set to 0 and revives one set above 0', () => {
+    expect(setCurrentHp(monster({ hp: { current: 0, max: 40, temp: 0 }, status: 'dead' }), 12).status).toBe('active')
+    expect(setCurrentHp(monster(), 0).status).toBe('dead')
+  })
+
+  it('downs a PC at 0 (not dead) and resets death saves on revive', () => {
+    const downed = setCurrentHp(pc({ hp: { current: 20, max: 30, temp: 0 } }), 0)
+    expect(downed.status).toBe('unconscious')
+    const revived = setCurrentHp(
+      pc({ status: 'unconscious', hp: { current: 0, max: 30, temp: 0 }, deathSaves: { successes: 1, failures: 2 } }),
+      5,
+    )
+    expect(revived.status).toBe('active')
+    expect(revived.isPC && revived.deathSaves).toEqual({ successes: 0, failures: 0 })
+  })
+})
+
+describe('parseHpInput', () => {
+  it('parses a bare number as a set', () => {
+    expect(parseHpInput('12')).toEqual({ set: 12 })
+  })
+  it('parses +N / -N as a delta', () => {
+    expect(parseHpInput('+5')).toEqual({ delta: 5 })
+    expect(parseHpInput('-3')).toEqual({ delta: -3 })
+  })
+  it('rejects junk', () => {
+    expect(parseHpInput('')).toBeNull()
+    expect(parseHpInput('abc')).toBeNull()
+    expect(parseHpInput('1d6')).toBeNull()
   })
 })
 

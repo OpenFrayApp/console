@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { PlayerCharacter } from '../schema/combatant.ts'
+import type { HitPoints, PlayerCharacter } from '../schema/combatant.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { EncounterAction } from '../state/encounter.ts'
+import {
+  applyDamage,
+  applyHealing,
+  parseHpInput,
+  setCurrentHp,
+} from '../combat/resources.ts'
 import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
@@ -70,6 +76,36 @@ export function EncounterConsole({
     combatants.find((c) => c.combatantId === activeId) ??
     combatants[0]
 
+  // Apply an HP/temp edit typed into the stat block ("12", "+5", "-3").
+  const applyHpInput = (id: string, current: HitPoints, raw: string, isTemp: boolean) => {
+    const parsed = parseHpInput(raw)
+    if (!parsed) return
+    if (isTemp) {
+      const next = 'delta' in parsed ? Math.max(0, current.temp + parsed.delta) : parsed.set
+      if (
+        'set' in parsed &&
+        next < current.temp &&
+        !window.confirm(
+          `Temporary HP doesn't stack — you normally keep the higher value (now ${current.temp}). Set it to ${next} anyway?`,
+        )
+      ) {
+        return
+      }
+      dispatch({ type: 'update', id, update: (c) => ({ ...c, hp: { ...c.hp, temp: Math.max(0, next) } }) })
+      return
+    }
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) =>
+        'delta' in parsed
+          ? parsed.delta < 0
+            ? applyDamage(c, -parsed.delta)
+            : applyHealing(c, parsed.delta)
+          : setCurrentHp(c, parsed.set),
+    })
+  }
+
   return (
     <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem]">
       {/* Left — initiative tracker */}
@@ -110,11 +146,24 @@ export function EncounterConsole({
       <section className="flex min-h-0 flex-col">
         {selected ? (
           <>
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div className="min-h-0 flex-1 overflow-auto pr-4">
               {selected.isPC ? (
                 <PcSummary pc={selected} />
               ) : (
-                <CreatureStatBlock creature={selected.creature} hp={selected.hp} />
+                <CreatureStatBlock
+                  creature={selected.creature}
+                  hp={selected.hp}
+                  label={selected.label}
+                  onRename={(label) =>
+                    dispatch({
+                      type: 'update',
+                      id: selected.combatantId,
+                      update: (c) => (c.isPC ? c : { ...c, label }),
+                    })
+                  }
+                  onHpInput={(raw) => applyHpInput(selected.combatantId, selected.hp, raw, false)}
+                  onTempInput={(raw) => applyHpInput(selected.combatantId, selected.hp, raw, true)}
+                />
               )}
             </div>
             <div className="shrink-0 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">

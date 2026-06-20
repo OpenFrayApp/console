@@ -57,7 +57,7 @@ export function EffectPicker({ onApply }: { onApply: (effect: Effect) => void })
         + Effect
       </button>
       {open && (
-        <div className="absolute z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <div className="absolute z-30 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
           <div className="flex flex-wrap gap-1">
             {CONDITIONS.map((c) => (
               <button key={c} type="button" className={CHIP} onClick={() => apply(condition(c))}>
