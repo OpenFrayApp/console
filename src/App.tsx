@@ -14,11 +14,13 @@ import {
 import { advantageAgainst, condition, flatBonus } from './combat/effects.ts'
 import { sortByInitiative } from './combat/initiative.ts'
 import { CombatantRow } from './components/CombatantRow.tsx'
+import { Compendium } from './components/Compendium.tsx'
 import { DeathSaveControls } from './components/DeathSaveControls.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
 type Theme = 'dark' | 'light'
+type View = 'encounter' | 'compendium'
 
 // Temporary preview data so the initiative list is visible. Replaced when real
 // encounter state lands.
@@ -77,6 +79,7 @@ const BORIN_START: PlayerCharacter = {
 
 function App() {
   const [theme, setTheme] = useState<Theme>('dark')
+  const [view, setView] = useState<View>('encounter')
   // A downed PC wired to the death-save controls (interactive preview).
   const [borin, setBorin] = useState<PlayerCharacter>(BORIN_START)
 
@@ -97,21 +100,45 @@ function App() {
             D&amp;D 5e combat console
           </p>
         </div>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          {theme === 'dark' ? 'Light' : 'Dark'} mode
-        </button>
+        <div className="flex items-center gap-3">
+          <nav className="flex gap-1" aria-label="View">
+            {(['encounter', 'compendium'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                aria-current={view === v ? 'page' : undefined}
+                className={
+                  view === v
+                    ? 'rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium capitalize text-white'
+                    : 'rounded-md px-3 py-1.5 text-sm font-medium capitalize text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }
+              >
+                {v}
+              </button>
+            ))}
+          </nav>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {theme === 'dark' ? 'Light' : 'Dark'} mode
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 px-6 py-6">
-        <div className="mx-auto w-full max-w-2xl">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Initiative
-          </h2>
+        {view === 'compendium' ? (
+          <div className="mx-auto w-full max-w-5xl">
+            <Compendium />
+          </div>
+        ) : (
+          <div className="mx-auto w-full max-w-2xl">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Initiative
+            </h2>
           <div className="space-y-2">
             {roster.map((c, i) => (
               <div key={c.combatantId} className="space-y-1">
@@ -128,10 +155,11 @@ function App() {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-            Preview data — encounter state wiring comes later.
-          </p>
-        </div>
+            <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+              Preview data — encounter state wiring comes later.
+            </p>
+          </div>
+        )}
       </main>
 
       {/* AGPL §13: a network-deployed copy must offer its source. */}
