@@ -83,10 +83,12 @@ export function rollDeathSave(
   ctx: RollContext = {},
 ): DeathSaveRoll {
   const result = roll('1d20', { ...ctx, kind: 'save' })
-  if (result.crit) {
+  // A death save has its own nat-20 / nat-1 rule, independent of attack crits.
+  const natural = result.dice.find((g) => g.sides === 20)?.kept[0]
+  if (natural === 20) {
     return { pc: reviveAtOneHp(pc), result, outcome: 'critical-success' }
   }
-  if (result.fumble) {
+  if (natural === 1) {
     return { pc: markDeathSaveFailure(pc, 2), result, outcome: 'critical-failure' }
   }
   if (result.total >= SAVE_DC) {

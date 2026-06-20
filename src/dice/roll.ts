@@ -179,7 +179,9 @@ export function roll(formula: string, ctx: RollContext = {}): RollResult {
     dice.push(group)
   }
 
-  const { crit, fumble } = critFumble(dice)
+  // A natural 20 / 1 only crits or fumbles on an attack roll — saves and checks
+  // (and damage) don't.
+  const { crit, fumble } = ctx.kind === 'attack' ? critFumble(dice) : { crit: false, fumble: false }
   return {
     formula: parsed.source,
     kind: ctx.kind ?? 'raw',
