@@ -9,6 +9,7 @@ import { emptyEncounter, encounterReducer } from '../state/encounter.ts'
 import { AddCreaturePicker } from './AddCreaturePicker.tsx'
 import { AddPcForm } from './AddPcForm.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
+import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
@@ -76,7 +77,14 @@ export function EncounterConsole() {
       </div>
 
       {encounter.combatants.length > 0 && (
-        <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} />
+        <div className="flex flex-wrap items-start gap-2">
+          <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} />
+          <CastSpellPanel
+            combatants={encounter.combatants}
+            dispatch={dispatch}
+            onRoll={pushRoll}
+          />
+        </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-[1fr_18rem]">
