@@ -85,14 +85,25 @@ export interface Creature {
   /** Creature type, e.g. `"dragon"`, `"humanoid"`. */
   type: string
   ac: number
+  /** AC qualifier, e.g. `"natural armor"`. */
+  armorDetail?: string
   maxHp: number
   /** Optional dice formula to roll HP per instance, e.g. `"19d12+133"`. */
   hpFormula?: string
+  initiative?: number
   speed: Speeds
   abilities: AbilityScores
+  /** Proficient saving throws only (others fall back to the ability modifier). */
   saves?: SaveBonuses
+  /** Proficient skills. */
   skills?: SkillBonuses
   senses: Senses
+  languages?: string[]
+  /** Damage resistances / immunities / vulnerabilities, and condition immunities. */
+  resistances?: string[]
+  immunities?: string[]
+  vulnerabilities?: string[]
+  conditionImmunities?: string[]
   /** Challenge rating. */
   cr?: number
 

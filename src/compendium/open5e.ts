@@ -9,6 +9,8 @@ import type {
   SaveBonuses,
   Senses,
   Size,
+  SkillBonuses,
+  Skill,
   Speeds,
 } from '../schema/primitives.ts'
 import type { Action, DamageRoll, SaveOutcome } from '../schema/action.ts'
@@ -133,17 +135,27 @@ export interface Open5eCreature {
   size: { name: string }
   type: { name: string }
   armor_class: number
+  armor_detail?: string | null
   hit_points: number
   hit_dice?: string | null
   challenge_rating?: number
+  initiative_bonus?: number | null
   ability_scores: Record<string, number>
   speed: Record<string, number | string>
   saving_throws_all?: Record<string, number> | null
+  skill_bonuses?: Record<string, number> | null
   passive_perception?: number | null
   darkvision_range?: number | null
   blindsight_range?: number | null
   tremorsense_range?: number | null
   truesight_range?: number | null
+  languages?: { as_string?: string; data?: { name: string }[] } | null
+  resistances_and_immunities?: {
+    damage_resistances?: { name: string }[]
+    damage_immunities?: { name: string }[]
+    damage_vulnerabilities?: { name: string }[]
+    condition_immunities?: { name: string }[]
+  } | null
   traits?: { name: string; desc: string }[]
   actions?: Open5eAction[]
 }
@@ -261,14 +273,48 @@ function mapSpeed(speed: Record<string, number | string>): Speeds {
   return out
 }
 
-function mapSaves(all: Record<string, number> | null | undefined): SaveBonuses | undefined {
+const abilityModifier = (score: number): number => Math.floor((score - 10) / 2)
+
+/** Keep only proficient saves — those whose bonus differs from the ability mod. */
+function mapSaves(
+  all: Record<string, number> | null | undefined,
+  scores: Record<string, number>,
+): SaveBonuses | undefined {
   if (!all) return undefined
   const out: SaveBonuses = {}
   for (const [name, ability] of Object.entries(ABILITY_BY_NAME)) {
-    if (typeof all[name] === 'number') out[ability] = all[name]
+    const bonus = all[name]
+    if (typeof bonus === 'number' && bonus !== abilityModifier(scores[name])) {
+      out[ability] = bonus
+    }
   }
-  return out
+  return Object.keys(out).length ? out : undefined
 }
+
+const toCamel = (key: string): string => key.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+
+function mapSkills(sb: Record<string, number> | null | undefined): SkillBonuses | undefined {
+  if (!sb) return undefined
+  const out: SkillBonuses = {}
+  for (const [key, bonus] of Object.entries(sb)) {
+    if (typeof bonus === 'number') out[toCamel(key) as Skill] = bonus
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
+function mapLanguages(
+  lang: Open5eCreature['languages'],
+): string[] | undefined {
+  if (!lang) return undefined
+  if (lang.data?.length) return lang.data.map((l) => l.name)
+  if (lang.as_string) {
+    return lang.as_string.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  return undefined
+}
+
+const nameList = (arr: { name: string }[] | undefined): string[] | undefined =>
+  arr && arr.length ? arr.map((x) => x.name) : undefined
 
 function mapSenses(raw: Open5eCreature): Senses {
   const senses: Senses = { passivePerception: raw.passive_perception ?? 10 }
@@ -300,8 +346,10 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
     size: raw.size.name as Size,
     type: raw.type.name.toLowerCase(),
     ac: raw.armor_class,
+    armorDetail: raw.armor_detail?.trim() || undefined,
     maxHp: raw.hit_points,
     hpFormula: raw.hit_dice ? raw.hit_dice.replace(/\s+/g, '') : undefined,
+    initiative: raw.initiative_bonus ?? undefined,
     speed: mapSpeed(raw.speed),
     abilities: {
       str: a.strength,
@@ -311,8 +359,14 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
       wis: a.wisdom,
       cha: a.charisma,
     },
-    saves: mapSaves(raw.saving_throws_all),
+    saves: mapSaves(raw.saving_throws_all, a),
+    skills: mapSkills(raw.skill_bonuses),
     senses: mapSenses(raw),
+    languages: mapLanguages(raw.languages),
+    resistances: nameList(raw.resistances_and_immunities?.damage_resistances),
+    immunities: nameList(raw.resistances_and_immunities?.damage_immunities),
+    vulnerabilities: nameList(raw.resistances_and_immunities?.damage_vulnerabilities),
+    conditionImmunities: nameList(raw.resistances_and_immunities?.condition_immunities),
     cr: raw.challenge_rating,
     traits: undefIfEmpty(traits),
     actions: undefIfEmpty(actionsOfType('ACTION')),

@@ -99,6 +99,19 @@ const ABOLETH: Open5eCreature = {
   passive_perception: 20,
   darkvision_range: 120,
   blindsight_range: null,
+  armor_detail: 'natural armor',
+  initiative_bonus: 7,
+  skill_bonuses: { perception: 10, animal_handling: 4 },
+  languages: {
+    as_string: 'Deep Speech',
+    data: [{ name: 'Deep Speech' }, { name: 'Telepathy 120 ft.' }],
+  },
+  resistances_and_immunities: {
+    damage_resistances: [{ name: 'Acid' }],
+    damage_immunities: [],
+    damage_vulnerabilities: [],
+    condition_immunities: [{ name: 'Charmed' }],
+  },
   traits: [{ name: 'Amphibious', desc: 'The aboleth can breathe air and water.' }],
   actions: [
     {
@@ -184,6 +197,22 @@ describe('mapOpen5eCreature', () => {
     expect(c.traits).toEqual([
       { name: 'Amphibious', text: 'The aboleth can breathe air and water.' },
     ])
+  })
+
+  it('maps defenses, skills, languages, initiative, and armor detail', () => {
+    expect(c.armorDetail).toBe('natural armor')
+    expect(c.initiative).toBe(7)
+    expect(c.skills).toEqual({ perception: 10, animalHandling: 4 })
+    expect(c.languages).toEqual(['Deep Speech', 'Telepathy 120 ft.'])
+    expect(c.resistances).toEqual(['Acid'])
+    expect(c.conditionImmunities).toEqual(['Charmed'])
+    expect(c.immunities).toBeUndefined()
+    expect(c.vulnerabilities).toBeUndefined()
+  })
+
+  it('keeps only proficient saves (bonus differs from the ability modifier)', () => {
+    // dex 9 (mod -1) save 3, con 15 (+2) save 6, int 18 (+4) save 8, wis 15 (+2) save 6
+    expect(c.saves).toEqual({ dex: 3, con: 6, int: 8, wis: 6 })
   })
 
   it('maps a structured attack action', () => {
