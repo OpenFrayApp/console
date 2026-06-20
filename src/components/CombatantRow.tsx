@@ -106,6 +106,12 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
             />
           </div>
         )}
+
+        {combatant.concentration && (
+          <div className="mt-1 text-xs text-violet-600 dark:text-violet-400">
+            Concentrating: {combatant.concentration.spell}
+          </div>
+        )}
       </div>
 
       <div className="text-right text-sm">

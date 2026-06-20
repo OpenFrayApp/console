@@ -44,7 +44,7 @@ const thalia: Combatant = {
   passivePerception: 14,
   status: 'active',
   hp: { current: 24, max: 38, temp: 5 },
-  concentration: null,
+  concentration: { spell: 'Bless', saveDc: 13, round: 1 },
   effects: [flatBonus('Bless', '1d4')],
   languages: ['Common', 'Elvish'],
 }

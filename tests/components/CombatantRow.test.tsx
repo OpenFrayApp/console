@@ -110,6 +110,15 @@ describe('CombatantRow', () => {
     expect(screen.getByText('+5 temp')).toBeInTheDocument()
   })
 
+  it('shows a concentration indicator', () => {
+    render(
+      <CombatantRow
+        combatant={pc({ concentration: { spell: 'Hold Person', saveDc: 13, round: 2 } })}
+      />,
+    )
+    expect(screen.getByText('Concentrating: Hold Person')).toBeInTheDocument()
+  })
+
   it('marks the active combatant with aria-current', () => {
     const { container } = render(<CombatantRow combatant={pc()} active />)
     expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
