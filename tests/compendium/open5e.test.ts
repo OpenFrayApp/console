@@ -99,6 +99,7 @@ const ABOLETH: Open5eCreature = {
   passive_perception: 20,
   darkvision_range: 120,
   blindsight_range: null,
+  traits: [{ name: 'Amphibious', desc: 'The aboleth can breathe air and water.' }],
   actions: [
     {
       name: 'Tentacle',
@@ -148,7 +149,8 @@ const ABOLETH: Open5eCreature = {
         },
       ],
     },
-    { name: 'Legendary Move', action_type: 'LEGENDARY', desc: 'It moves.', attacks: [] },
+    { name: 'Nimble Dodge', action_type: 'BONUS_ACTION', desc: 'The aboleth slips aside.', attacks: [] },
+    { name: 'Psychic Drain', action_type: 'LEGENDARY_ACTION', desc: 'It drains a mind.', attacks: [] },
   ],
 }
 
@@ -170,8 +172,18 @@ describe('mapOpen5eCreature', () => {
     expect(c.senses).toEqual({ passivePerception: 20, darkvision: 120 })
   })
 
-  it('keeps only ACTION-type actions', () => {
+  it('partitions actions by type', () => {
     expect(c.actions?.map((a) => a.name)).toEqual(['Tentacle', 'Consume Memories', 'Rend'])
+    expect(c.bonusActions?.map((a) => a.name)).toEqual(['Nimble Dodge'])
+    expect(c.legendaryActions?.actions.map((a) => a.name)).toEqual(['Psychic Drain'])
+    expect(c.legendaryActions?.perRound).toBe(3)
+    expect(c.reactions).toBeUndefined()
+  })
+
+  it('maps traits', () => {
+    expect(c.traits).toEqual([
+      { name: 'Amphibious', text: 'The aboleth can breathe air and water.' },
+    ])
   })
 
   it('maps a structured attack action', () => {

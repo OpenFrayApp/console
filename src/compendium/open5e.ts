@@ -12,7 +12,7 @@ import type {
   Speeds,
 } from '../schema/primitives.ts'
 import type { Action, DamageRoll, SaveOutcome } from '../schema/action.ts'
-import type { Creature } from '../schema/creature.ts'
+import type { Creature, Trait } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 
 /**
@@ -144,8 +144,13 @@ export interface Open5eCreature {
   blindsight_range?: number | null
   tremorsense_range?: number | null
   truesight_range?: number | null
+  traits?: { name: string; desc: string }[]
   actions?: Open5eAction[]
 }
+
+/** 5e creatures get this many legendary actions per round; Open5e doesn't expose
+ *  the count, and it is 3 for the overwhelming majority. */
+const DEFAULT_LEGENDARY_PER_ROUND = 3
 
 const dieSize = (die: string): number => Number(die.replace(/^d/i, ''))
 
@@ -274,10 +279,19 @@ function mapSenses(raw: Open5eCreature): Senses {
   return senses
 }
 
+const undefIfEmpty = <T>(arr: T[]): T[] | undefined => (arr.length ? arr : undefined)
+
 export function mapOpen5eCreature(raw: Open5eCreature): Creature {
   const documentKey = raw.document.key
   const { source, edition } = mapSource(documentKey)
   const a = raw.ability_scores
+
+  const actionsOfType = (type: string): Action[] =>
+    (raw.actions ?? []).filter((act) => act.action_type === type).map(mapOpen5eAction)
+
+  const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: t.desc }))
+  const legendary = actionsOfType('LEGENDARY_ACTION')
+
   return {
     id: `${source}:${slugFromKey(raw.key, documentKey)}`,
     source,
@@ -300,8 +314,13 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
     saves: mapSaves(raw.saving_throws_all),
     senses: mapSenses(raw),
     cr: raw.challenge_rating,
-    actions: (raw.actions ?? [])
-      .filter((act) => act.action_type === 'ACTION')
-      .map(mapOpen5eAction),
+    traits: undefIfEmpty(traits),
+    actions: undefIfEmpty(actionsOfType('ACTION')),
+    bonusActions: undefIfEmpty(actionsOfType('BONUS_ACTION')),
+    reactions: undefIfEmpty(actionsOfType('REACTION')),
+    legendaryActions: legendary.length
+      ? { perRound: DEFAULT_LEGENDARY_PER_ROUND, actions: legendary }
+      : undefined,
+    lairActions: undefIfEmpty(actionsOfType('LAIR_ACTION')),
   }
 }

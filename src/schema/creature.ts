@@ -44,6 +44,12 @@ export interface LegendaryActions {
   actions: Action[]
 }
 
+/** A passive feature (Amphibious, Legendary Resistance, etc.). Prose may be markdown. */
+export interface Trait {
+  name: string
+  text: string
+}
+
 /** A reference from a spellcaster to a compendium spell entry. */
 export interface SpellRef {
   level: number
@@ -90,7 +96,11 @@ export interface Creature {
   /** Challenge rating. */
   cr?: number
 
+  /** Passive features shown above the actions. */
+  traits?: Trait[]
   actions?: Action[]
+  bonusActions?: Action[]
+  reactions?: Action[]
   legendaryActions?: LegendaryActions
   /** Fire on initiative count 20. */
   lairActions?: Action[]
