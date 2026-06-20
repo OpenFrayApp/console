@@ -31,6 +31,15 @@ flat modifiers, reminders; monster resources (spell slots, legendary/lair action
 recharge); concentration, initiative, HP, turn/round tracking; dice and group
 saves.
 
+**Two flavours of lightweight combatant** (neither is a character sheet): a **PC**
+holds the board facts the DM chooses to jot — AC, HP, conditions, and optionally an
+initiative modifier, passive perception, languages, speed, and damage
+resistances/immunities/vulnerabilities (these feed damage like a monster's). A
+**Quick Add** is just name/HP/AC for a throwaway NPC. The test still holds: the DM
+*transcribes* these facts; the app never knows class/level/spells or derives a
+build. DM-entered defenses are "what damage this takes" — a board consequence — not
+a sheet we read.
+
 If a feature is useful but fails the test, it is still a no. When a request tempts
 you toward "it should really *know* X about the player," stop — that temptation is
 the signal, not a reason to proceed. Flag it rather than building it.

@@ -41,8 +41,13 @@ The test for any feature, contribution, or idea:
 This isn't a limitation to work around — it's the design. A few of its
 consequences, so the spirit is clear:
 
-- **Players are lightweight.** Name, AC, HP, passive perception, conditions. That's
-  ~95% of what a DM needs at the table. No class, no level, no spell list.
+- **Players are lightweight, and it's the DM's call what to jot.** A PC carries the
+  board facts the DM wants — AC, HP, conditions, and optionally an initiative
+  modifier, passive perception, languages, speed, and damage
+  resistances/immunities/vulnerabilities (the app applies those when you deal
+  damage). A **Quick Add** is even lighter — name, HP, AC — for a throwaway NPC or a
+  creature dropped in mid-fight. Still no class, level, or spell list: OpenFray
+  transcribes the consequences a DM declares, it never derives a character's build.
 - **Effects model the *result*, not the cause.** There are only ~6 shapes of
   consequence in all of 5e (a condition, advantage, disadvantage, a flat modifier,
   a reminder, a save-ends effect). We model those six. We never model the hundreds
@@ -60,12 +65,16 @@ the field.
 
 ## Status
 
-🚧 Early development. The **single-DM combat console works**: initiative loop,
-HP/resources, conditions & effects, honest dice with an effect-aware roll log,
-mass saves, a SRD compendium, and rollable spells — all running locally in the
-browser. Still to come: accounts and persistence (your custom content saved
-across devices), then a shared read-only player view; content imports remain a
-best-effort, later layer. The UI is functional but still evolving.
+🚧 Early development. The **single-DM combat console works**: roll a creature's
+attacks and saves straight from its stat block (pick targets, auto-apply
+resistances, edit and apply damage), track monster resources including recharge
+abilities, run the initiative loop, manage HP/conditions/effects and
+concentration, roll group saves, and roll honest dice with an effect-aware,
+clearable log. Players and quick NPCs are lightweight; the SRD compendium and
+rollable spells are built in — all running locally in the browser. Still to come:
+accounts and persistence (your custom content saved across devices), then a
+shared read-only player view; content imports remain a best-effort, later layer.
+The UI is functional but still evolving.
 
 ## Content & licensing
 
