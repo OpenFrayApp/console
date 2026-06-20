@@ -32,12 +32,19 @@ export function EncounterPlayback({
   paused,
   canBegin,
   dispatch,
+  onBegin,
+  onNextTurn,
 }: {
   started: boolean
   paused: boolean
   canBegin: boolean
   dispatch: (action: EncounterAction) => void
+  /** Overrides for begin / next turn so the caller can also move the selection. */
+  onBegin?: () => void
+  onNextTurn?: () => void
 }) {
+  const begin = onBegin ?? (() => dispatch({ type: 'begin' }))
+  const advance = onNextTurn ?? (() => dispatch({ type: 'nextTurn' }))
   const green = 'border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950'
   const grey = 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
   const red = 'border-rose-500 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950'
@@ -49,7 +56,7 @@ export function EncounterPlayback({
         aria-label="Begin"
         title="Begin"
         disabled={!canBegin}
-        onClick={() => dispatch({ type: 'begin' })}
+        onClick={begin}
         className={`${ICON_BTN} ${green}`}
       >
         <PlayIcon />
@@ -73,7 +80,7 @@ export function EncounterPlayback({
         <>
           <button
             type="button"
-            onClick={() => dispatch({ type: 'nextTurn' })}
+            onClick={advance}
             className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Next turn

@@ -21,6 +21,19 @@ vi.mock('../../src/compendium/srd.ts', () => ({
         senses: { passivePerception: 9 },
         cr: 0.25,
       },
+      {
+        id: 'srd-5.2:ogre',
+        name: 'Ogre',
+        source: 'srd-5.2',
+        size: 'Large',
+        type: 'giant',
+        ac: 11,
+        maxHp: 59,
+        speed: { walk: 40 },
+        abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
+        senses: { passivePerception: 8 },
+        cr: 2,
+      },
     ]),
   loadSrdSpells: () => Promise.resolve([]),
 }))
@@ -36,6 +49,12 @@ async function addGoblin() {
   fireEvent.click(screen.getByText('+ Add creature'))
   await waitFor(() => screen.getByText('Goblin'))
   fireEvent.click(screen.getByText('Goblin'))
+}
+
+async function addCreature(name: string) {
+  fireEvent.click(screen.getByText('+ Add creature'))
+  await waitFor(() => screen.getByText(name))
+  fireEvent.click(screen.getByText(name))
 }
 
 describe('Encounter flow', () => {
@@ -62,6 +81,23 @@ describe('Encounter flow', () => {
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
     expect(begin()).toBeInTheDocument()
+  })
+
+  it('Next turn moves the selection to the active combatant', async () => {
+    const { container } = render(<App />)
+    await addCreature('Goblin')
+    await addCreature('Ogre')
+    fireEvent.click(begin())
+
+    // The center section's stat-block heading reflects the active combatant.
+    const centerName = () =>
+      container.querySelectorAll('section')[1]?.querySelector('h3')?.textContent
+    const before = centerName()
+    fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
+    const after = centerName()
+
+    expect(before).not.toBe(after)
+    expect([before, after].sort()).toEqual(['Goblin', 'Ogre'])
   })
 
   it('applies damage through the controls', async () => {

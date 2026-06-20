@@ -4,7 +4,9 @@
 import { useEffect, useReducer, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
 import { instantiate } from './combat/combatant.ts'
+import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { roll } from './dice/roll.ts'
+import type { Encounter } from './schema/encounter.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
@@ -56,6 +58,20 @@ function App() {
     setSelectedId(combatant.combatantId)
   }
 
+  // Advancing the turn moves the center panel to whoever's turn it now is.
+  const selectActive = (next: Encounter) => {
+    const active = next.combatants[next.activeIndex]
+    if (active) setSelectedId(active.combatantId)
+  }
+  const handleBegin = () => {
+    selectActive(beginEncounter(encounter))
+    dispatch({ type: 'begin' })
+  }
+  const handleNextTurn = () => {
+    selectActive(nextTurn(encounter))
+    dispatch({ type: 'nextTurn' })
+  }
+
   const started = encounter.round > 0
   const paused = encounter.paused === true
 
@@ -77,6 +93,8 @@ function App() {
               paused={paused}
               canBegin={encounter.combatants.length > 0}
               dispatch={dispatch}
+              onBegin={handleBegin}
+              onNextTurn={handleNextTurn}
             />
           )}
         </div>
