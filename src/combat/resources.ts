@@ -7,6 +7,7 @@ import type {
   MonsterCombatant,
 } from '../schema/combatant.ts'
 import type { SpellLevel } from '../schema/creature.ts'
+import { markDeathSaveFailure } from './deathsaves.ts'
 
 /**
  * Resource mutations on a Combatant — HP/damage/heal, spell slots, legendary
@@ -60,9 +61,22 @@ function statusForHp(
   return overkill >= c.hp.max ? 'dead' : 'down'
 }
 
+export interface DamageOptions {
+  /** A critical hit — doubles death-save failures dealt to an already-downed PC. */
+  crit?: boolean
+}
+
 /** Apply damage: temporary HP absorbs first, then current HP floors at 0. */
-export function applyDamage(c: Combatant, amount: number): Combatant {
+export function applyDamage(
+  c: Combatant,
+  amount: number,
+  opts: DamageOptions = {},
+): Combatant {
   const dmg = clampNonNegativeInt(amount)
+  // Damage to an already-downed PC causes death-save failures (two on a crit).
+  if (c.isPC && c.status === 'down' && dmg > 0) {
+    return markDeathSaveFailure(c, opts.crit ? 2 : 1)
+  }
   const fromTemp = Math.min(c.hp.temp, dmg)
   const temp = c.hp.temp - fromTemp
   const toHp = dmg - fromTemp
@@ -74,8 +88,17 @@ export function applyDamage(c: Combatant, amount: number): Combatant {
 /** Heal up to max HP. Healing above 0 revives a downed/dead creature (revivify). */
 export function applyHealing(c: Combatant, amount: number): Combatant {
   const current = Math.min(c.hp.max, c.hp.current + clampNonNegativeInt(amount))
-  const status = current > 0 ? 'active' : c.status
-  return { ...c, hp: { ...c.hp, current }, status }
+  if (current <= 0) return { ...c, hp: { ...c.hp, current } }
+  // Back above 0: conscious again, and a revived PC's death saves reset.
+  if (c.isPC) {
+    return {
+      ...c,
+      hp: { ...c.hp, current },
+      status: 'active',
+      deathSaves: { successes: 0, failures: 0 },
+    }
+  }
+  return { ...c, hp: { ...c.hp, current }, status: 'active' }
 }
 
 /** Grant temporary HP. Temp HP does not stack — the higher value wins (5e rule). */

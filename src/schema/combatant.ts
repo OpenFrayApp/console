@@ -29,6 +29,12 @@ export interface LimitedUseState {
 /** Death is non-destructive: the combatant stays in order, greyed and skipped. */
 export type CombatantStatus = 'active' | 'down' | 'dead'
 
+/** A downed PC's death-save tally (3 successes → stable, 3 failures → dead). */
+export interface DeathSaves {
+  successes: number
+  failures: number
+}
+
 // Per-field visibility for the phase-2 player view. The flags exist now so the
 // data model never needs migration; they are not rendered in phase 1.
 export type NameVisibility = 'shown' | 'hidden' | 'unknown'
@@ -81,6 +87,8 @@ export interface PlayerCharacter extends CombatantBase {
   name: string
   ac: number
   passivePerception: number
+  /** Present once the PC is downed; absent/zeroed when conscious. */
+  deathSaves?: DeathSaves
 }
 
 /** Discriminated on `isPC`. */

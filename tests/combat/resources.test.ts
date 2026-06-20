@@ -116,6 +116,16 @@ describe('applyDamage', () => {
     expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 39).status).toBe('down')
   })
 
+  it('adds a death-save failure when an already-downed PC takes damage', () => {
+    const downed = pc({ status: 'down', hp: { current: 0, max: 30, temp: 0 } })
+    const hit = applyDamage(downed, 5)
+    expect(hit.hp.current).toBe(0)
+    expect(hit.isPC && hit.deathSaves).toEqual({ successes: 0, failures: 1 })
+    // A crit deals two failures.
+    const crit = applyDamage(downed, 5, { crit: true })
+    expect(crit.isPC && crit.deathSaves).toEqual({ successes: 0, failures: 2 })
+  })
+
   it('consumes temporary HP before current HP', () => {
     const c = applyDamage(monster({ hp: { current: 40, max: 40, temp: 5 } }), 8)
     expect(c.hp.temp).toBe(0)
@@ -148,6 +158,17 @@ describe('applyHealing', () => {
     )
     expect(c.hp.current).toBe(5)
     expect(c.status).toBe('active')
+  })
+
+  it('clears a revived PC’s death saves', () => {
+    const downed = pc({
+      status: 'down',
+      hp: { current: 0, max: 30, temp: 0 },
+      deathSaves: { successes: 1, failures: 2 },
+    })
+    const healed = applyHealing(downed, 6)
+    expect(healed.status).toBe('active')
+    expect(healed.isPC && healed.deathSaves).toEqual({ successes: 0, failures: 0 })
   })
 
   it('leaves temp HP untouched', () => {
