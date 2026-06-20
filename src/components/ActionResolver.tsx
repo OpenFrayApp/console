@@ -547,6 +547,9 @@ function SaveResolver({
   const [onSave, setOnSave] = useState<SaveOutcome>(save?.onSave ?? 'half')
   const [dc, setDc] = useState(String(save?.dc ?? 15))
   const [baseDamage, setBaseDamage] = useState('')
+  // The base damage for a standalone group save, rolled once when saves are rolled
+  // (a formula like "2d6" is rolled; a bare number is taken flat).
+  const [genericBase, setGenericBase] = useState(0)
   const [magical, setMagical] = useState(false)
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
   const [area, setArea] = useState<RolledDamage[]>([])
@@ -577,8 +580,7 @@ function SaveResolver({
         return sum + adjustForDefense(afterSave, damageRelation(target, comp.type))
       }, 0)
     }
-    const base = toNum(baseDamage)
-    return result === 'save' ? (onSave === 'half' ? Math.floor(base / 2) : 0) : base
+    return result === 'save' ? (onSave === 'half' ? Math.floor(genericBase / 2) : 0) : genericBase
   }
 
   const damageValue = (target: Combatant): string => {
@@ -592,6 +594,16 @@ function SaveResolver({
       const components = rollDamageComponents(action, false)
       setArea(components)
       if (attacker) logDamage(components, attacker, action, onRoll)
+    } else {
+      // Standalone group save: roll the damage formula (or take a bare number flat).
+      const entry = baseDamage.trim()
+      if (/d/i.test(entry)) {
+        const r = roll(entry, { kind: 'damage' })
+        onRoll('Group save: damage', r)
+        setGenericBase(Math.max(0, r.total))
+      } else {
+        setGenericBase(toNum(baseDamage))
+      }
     }
     const next: Record<string, SaveRow> = {}
     for (const c of selectedTargets) {
@@ -736,8 +748,8 @@ function SaveResolver({
               value={baseDamage}
               onChange={(e) => setBaseDamage(e.target.value)}
               aria-label="Damage"
-              inputMode="numeric"
-              className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+              placeholder="2d6 or 3"
+              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
         )}
