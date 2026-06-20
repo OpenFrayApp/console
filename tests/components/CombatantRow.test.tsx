@@ -130,6 +130,11 @@ describe('CombatantRow', () => {
     expect(screen.getByText('2 of 3 failures')).toBeInTheDocument()
   })
 
+  it('shows full HP in the healthy color', () => {
+    render(<CombatantRow combatant={pc({ hp: { current: 38, max: 38, temp: 0 } })} />)
+    expect(screen.getByText('38/38').className).toContain('text-emerald')
+  })
+
   it('shows 0 HP in the critical color', () => {
     render(
       <CombatantRow

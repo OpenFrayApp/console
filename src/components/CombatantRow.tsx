@@ -24,6 +24,7 @@ function hpToneFor(tier: HpTier): string {
     case 'critical':
       return 'font-bold text-red-700 dark:text-red-400'
     case 'healthy':
+      return 'text-emerald-600 dark:text-emerald-400'
     default:
       return 'text-slate-900 dark:text-slate-100'
   }
