@@ -130,6 +130,15 @@ describe('CombatantRow', () => {
     expect(screen.getByText('2 of 3 failures')).toBeInTheDocument()
   })
 
+  it('shows 0 HP in the critical color', () => {
+    render(
+      <CombatantRow
+        combatant={pc({ status: 'unconscious', hp: { current: 0, max: 28, temp: 0 } })}
+      />,
+    )
+    expect(screen.getByText('0/28').className).toContain('text-red')
+  })
+
   it('flags a stabilized PC', () => {
     render(
       <CombatantRow

@@ -109,12 +109,7 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
 
       <div className="text-right text-sm">
         <div>
-          <span
-            className={cx(
-              'tabular-nums',
-              downed ? 'text-slate-900 dark:text-slate-100' : hpToneFor(tier),
-            )}
-          >
+          <span className={cx('tabular-nums', hpToneFor(tier))}>
             {hp.current}/{hp.max}
           </span>
           {hp.temp > 0 && (
