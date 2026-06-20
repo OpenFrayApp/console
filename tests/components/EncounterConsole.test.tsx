@@ -46,7 +46,7 @@ afterEach(cleanup)
 const begin = () => screen.getByRole('button', { name: 'Begin' })
 
 async function addGoblin() {
-  fireEvent.click(screen.getByText('+ Add creature'))
+  fireEvent.click(screen.getByText('Add creature'))
   await waitFor(() => screen.getByText('Goblin'))
   fireEvent.click(screen.getByText('Goblin'))
 }
@@ -54,7 +54,7 @@ async function addGoblin() {
 async function addCreature(name: string) {
   // The picker stays open across picks, so only open it if it isn't already.
   if (!screen.queryByLabelText('Search SRD creatures')) {
-    fireEvent.click(screen.getByText('+ Add creature'))
+    fireEvent.click(screen.getByText('Add creature'))
   }
   await waitFor(() => screen.getByText(name))
   fireEvent.click(screen.getByText(name))
@@ -125,7 +125,7 @@ describe('Encounter flow', () => {
   it('applies an effect from the picker to a combatant', async () => {
     render(<App />)
     await addGoblin()
-    fireEvent.click(screen.getByText('+ Effect'))
+    fireEvent.click(screen.getByText('Effect'))
     fireEvent.click(screen.getByText('Prone'))
     expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row
   })

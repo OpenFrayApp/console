@@ -12,7 +12,7 @@ describe('AddPcForm', () => {
   it('builds a lightweight PC from the form', () => {
     const onAdd = vi.fn()
     render(<AddPcForm onAdd={onAdd} />)
-    fireEvent.click(screen.getByText('+ Add PC'))
+    fireEvent.click(screen.getByText('Add PC'))
     fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
     fireEvent.change(screen.getByLabelText('AC'), { target: { value: '16' } })
     fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '38' } })
@@ -31,7 +31,7 @@ describe('AddPcForm', () => {
   it('does not submit without a name', () => {
     const onAdd = vi.fn()
     render(<AddPcForm onAdd={onAdd} />)
-    fireEvent.click(screen.getByText('+ Add PC'))
+    fireEvent.click(screen.getByText('Add PC'))
     fireEvent.click(screen.getByText('Add'))
     expect(onAdd).not.toHaveBeenCalled()
   })
@@ -43,7 +43,7 @@ describe('AddPcForm', () => {
         <button type="button">outside</button>
       </div>,
     )
-    fireEvent.click(screen.getByText('+ Add PC'))
+    fireEvent.click(screen.getByText('Add PC'))
     expect(screen.getByLabelText('PC name')).toBeInTheDocument()
     fireEvent.pointerDown(screen.getByText('outside'))
     expect(screen.queryByLabelText('PC name')).toBeNull()
@@ -51,7 +51,7 @@ describe('AddPcForm', () => {
 
   it('closes on Escape', () => {
     render(<AddPcForm onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('+ Add PC'))
+    fireEvent.click(screen.getByText('Add PC'))
     expect(screen.getByLabelText('PC name')).toBeInTheDocument()
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByLabelText('PC name')).toBeNull()

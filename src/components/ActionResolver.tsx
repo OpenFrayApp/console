@@ -469,12 +469,6 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
               Apply to {nameOf(attack.target)}
             </button>
           </div>
-          {attack.target.isPC && (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              PC resistances aren’t tracked (they’re part of the sheet) — adjust the number if the
-              player is resistant or immune.
-            </p>
-          )}
           {!hit && (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Missed — adjust or apply only if you intend to.

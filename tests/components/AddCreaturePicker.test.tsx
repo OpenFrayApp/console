@@ -34,7 +34,7 @@ describe('AddCreaturePicker', () => {
     const onPick = vi.fn()
     render(<AddCreaturePicker onPick={onPick} />)
 
-    fireEvent.click(screen.getByText('+ Add creature'))
+    fireEvent.click(screen.getByText('Add creature'))
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.change(screen.getByLabelText('Search SRD creatures'), {
       target: { value: 'gob' },

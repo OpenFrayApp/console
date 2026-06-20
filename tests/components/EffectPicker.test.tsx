@@ -12,7 +12,7 @@ describe('EffectPicker', () => {
   it('applies a condition', () => {
     const onApply = vi.fn()
     render(<EffectPicker onApply={onApply} />)
-    fireEvent.click(screen.getByText('+ Effect'))
+    fireEvent.click(screen.getByText('Effect'))
     fireEvent.click(screen.getByText('Prone'))
     expect(onApply).toHaveBeenCalledOnce()
     expect(onApply.mock.calls[0][0]).toMatchObject({ name: 'Prone', icon: 'condition' })
@@ -21,7 +21,7 @@ describe('EffectPicker', () => {
   it('applies Bless as a flat bonus', () => {
     const onApply = vi.fn()
     render(<EffectPicker onApply={onApply} />)
-    fireEvent.click(screen.getByText('+ Effect'))
+    fireEvent.click(screen.getByText('Effect'))
     fireEvent.click(screen.getByText('Bless +1d4'))
     expect(onApply.mock.calls[0][0].modifier).toMatchObject({ mode: 'flatBonus', value: '1d4' })
   })
@@ -29,7 +29,7 @@ describe('EffectPicker', () => {
   it('applies a custom reminder', () => {
     const onApply = vi.fn()
     render(<EffectPicker onApply={onApply} />)
-    fireEvent.click(screen.getByText('+ Effect'))
+    fireEvent.click(screen.getByText('Effect'))
     fireEvent.change(screen.getByLabelText('Custom reminder'), {
       target: { value: 'Hex: +1d6 necrotic' },
     })

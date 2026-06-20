@@ -3,6 +3,7 @@
 
 import type { Creature, SpellLevel } from './creature.ts'
 import type { Effect } from './effect.ts'
+import type { Speeds } from './primitives.ts'
 
 export interface HitPoints {
   current: number
@@ -82,13 +83,29 @@ export interface MonsterCombatant extends CombatantBase {
  * A player character — deliberately lightweight. These few fields cover ~95% of
  * what a DM needs at the table; the player's sheet owns everything else.
  */
+/**
+ * A lightweight, non-snapshot combatant. Two flavours:
+ * - `pc` — a player character: the combat-relevant fields the DM wants on the
+ *   board (defenses, speed, etc.). Players roll their own dice.
+ * - `quick` — a generic quick add (an NPC or a creature dropped in mid-fight):
+ *   just name / HP / AC. Shown as "Quick add".
+ * Defaults to `pc` when `kind` is absent.
+ */
 export interface PlayerCharacter extends CombatantBase {
   isPC: true
+  kind?: 'pc' | 'quick'
   name: string
   ac: number
-  passivePerception: number
+  /** Initiative modifier; used to roll at combat start when no value is entered. */
+  initiativeMod?: number
+  passivePerception?: number
   /** Languages the PC speaks, entered by the DM. Free-form. */
   languages?: string[]
+  /** Damage resistances / immunities / vulnerabilities, entered by the DM. */
+  resistances?: string[]
+  immunities?: string[]
+  vulnerabilities?: string[]
+  speed?: Speeds
   /** Present once the PC is downed; absent/zeroed when conscious. */
   deathSaves?: DeathSaves
 }

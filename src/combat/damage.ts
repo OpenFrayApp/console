@@ -8,21 +8,17 @@ import type { DamageType } from '../schema/primitives.ts'
 export type DamageRelation = 'normal' | 'resistant' | 'immune' | 'vulnerable'
 
 /**
- * A target's relation to a damage type, from its stat block.
- *
- * Monster resistances/immunities/vulnerabilities are board data we have, so they
- * are applied automatically. A **PC's** resistances come from race/class — their
- * *build* — which OpenFray deliberately does not track (the scope rule). So PC
- * damage is never auto-adjusted; the DM edits it from what the player declares.
+ * A target's relation to a damage type. Monster defenses come from the stat
+ * block; a PC's come from what the DM entered on the Add-PC form. A quick add
+ * (no defenses) is always `normal`.
  */
 export function damageRelation(target: Combatant, type: DamageType): DamageRelation {
-  if (target.isPC) return 'normal'
+  const src = target.isPC ? target : target.creature
   const has = (list?: string[]): boolean =>
     (list ?? []).some((entry) => entry.toLowerCase() === type)
-  const { creature } = target
-  if (has(creature.immunities)) return 'immune'
-  if (has(creature.vulnerabilities)) return 'vulnerable'
-  if (has(creature.resistances)) return 'resistant'
+  if (has(src.immunities)) return 'immune'
+  if (has(src.vulnerabilities)) return 'vulnerable'
+  if (has(src.resistances)) return 'resistant'
   return 'normal'
 }
 
