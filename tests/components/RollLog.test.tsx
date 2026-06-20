@@ -29,8 +29,8 @@ describe('RollLog', () => {
     expect(screen.getByText(/CRIT/)).toBeInTheDocument()
   })
 
-  it('lists the applied effects', () => {
-    const result = roll('1d20+5', { rand: faceSeq(10) })
+  it('names an adv/disadv cause without repeating the state word', () => {
+    const result = roll('1d20adv+5', { rand: faceSeq(10, 18) })
     render(
       <RollLog
         entries={[
@@ -43,6 +43,32 @@ describe('RollLog', () => {
         ]}
       />,
     )
-    expect(screen.getByText(/Reckless Attack: advantage/)).toBeInTheDocument()
+    // The cause is named, but the redundant ": advantage" is dropped (the
+    // breakdown already prints the advantage state).
+    expect(screen.getByText(/Reckless Attack/)).toBeInTheDocument()
+    expect(screen.queryByText(/Reckless Attack: advantage/)).toBeNull()
+  })
+
+  it('drops a generic Advantage effect (already shown by the state) but keeps bonuses', () => {
+    const result = roll('1d20adv+5', { rand: faceSeq(10, 18) })
+    render(
+      <RollLog
+        entries={[
+          {
+            id: 'r3',
+            label: 'attack',
+            result,
+            applied: [
+              { source: 'Advantage', effect: 'advantage' },
+              { source: 'Bless', effect: '+1d4 (3)' },
+            ],
+          },
+        ]}
+      />,
+    )
+    const line = screen.getByText(/Bless: \+1d4 \(3\)/)
+    expect(line).toBeInTheDocument()
+    // The generic "Advantage" reason is not repeated after the state.
+    expect(line.textContent).not.toMatch(/· Advantage,|Advantage, Bless/)
   })
 })

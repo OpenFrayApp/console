@@ -28,6 +28,16 @@ export interface AppliedEffect {
   effect: string
 }
 
+/**
+ * A human label for an applied effect. The "Adv against" / "Disadv on" quick
+ * chips name the effect after its own mode, so a naive `name: mode` would read
+ * "Disadvantage: disadvantage" — collapse that to just the name.
+ */
+export function describeApplied(a: AppliedEffect): string {
+  if (a.source.toLowerCase() === a.effect.toLowerCase()) return a.source
+  return `${a.source}: ${a.effect}`
+}
+
 export interface EffectRollOptions {
   roller?: Combatant
   target?: Combatant

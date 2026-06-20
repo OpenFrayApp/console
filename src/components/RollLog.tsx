@@ -2,7 +2,20 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { RollResult } from '../dice/roll.ts'
-import type { AppliedEffect } from '../combat/effectroll.ts'
+import { describeApplied, type AppliedEffect } from '../combat/effectroll.ts'
+
+/**
+ * How an applied effect reads in the log, where `describeRoll` already prints the
+ * advantage/disadvantage state. So an adv/disadv effect only needs to name its
+ * *cause* (e.g. "Reckless Attack"); a generic "Advantage"/"Disadvantage" chip adds
+ * nothing over the state and is dropped. Flat bonuses (Bless) keep their detail.
+ */
+function describeAppliedForLog(a: AppliedEffect): string | null {
+  if (a.effect === 'advantage' || a.effect === 'disadvantage') {
+    return a.source.toLowerCase() === a.effect.toLowerCase() ? null : a.source
+  }
+  return describeApplied(a)
+}
 
 export interface RollEntry {
   id: string
@@ -17,14 +30,19 @@ export type OnRoll = (
   applied?: AppliedEffect[],
 ) => void
 
-/** A one-line breakdown of a roll — the transparency that builds trust. */
+/**
+ * A one-line breakdown of a roll — the transparency that builds trust. Each die
+ * group reads `NdM [v, v, …]`; when dice are dropped (advantage / keep-highest)
+ * the kept ones follow as `→ k`. The grand total is shown separately, so the
+ * per-die values aren't repeated as a sum.
+ */
 function describeRoll(result: RollResult): string {
   const dice = result.dice.map((g) => {
-    const rolled =
-      g.results.length > 1
-        ? `${g.results.join('/')}→${g.kept.join('+')}`
-        : g.kept.join('+')
-    return `${g.sign < 0 ? '−' : ''}d${g.sides}(${rolled})`
+    const head = `${g.sign < 0 ? '−' : ''}${g.results.length}d${g.sides}`
+    const rolls = `[${g.results.join(', ')}]`
+    return g.results.length === g.kept.length
+      ? `${head} ${rolls}`
+      : `${head} ${rolls} → ${g.kept.join(', ')}`
   })
   let line = dice.join(' + ')
   if (result.modifier) line += ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
@@ -61,9 +79,10 @@ export function RollLog({ entries }: { entries: RollEntry[] }) {
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400">
             {describeRoll(entry.result)}
-            {entry.applied && entry.applied.length > 0 && (
-              <> · {entry.applied.map((a) => `${a.source}: ${a.effect}`).join(', ')}</>
-            )}
+            {(() => {
+              const reasons = (entry.applied ?? []).map(describeAppliedForLog).filter(Boolean)
+              return reasons.length > 0 ? <> · {reasons.join(', ')}</> : null
+            })()}
           </div>
         </li>
       ))}
