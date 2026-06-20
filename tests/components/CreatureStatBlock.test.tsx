@@ -43,7 +43,16 @@ const GOBLIN: Creature = {
   ],
   legendaryActions: {
     perRound: 3,
-    actions: [{ id: 'pounce', name: 'Pounce', kind: 'utility', toHit: null, text: 'It pounces.' }],
+    actions: [
+      {
+        id: 'pounce',
+        name: 'Pounce',
+        kind: 'utility',
+        toHit: null,
+        recharge: { type: 'dice', value: 5 },
+        text: 'It pounces.',
+      },
+    ],
   },
 }
 
@@ -63,12 +72,14 @@ describe('CreatureStatBlock', () => {
     expect(screen.getAllByText('8 (-1)').length).toBeGreaterThan(0)
   })
 
-  it('renders every stat-block section', () => {
-    render(<CreatureStatBlock creature={GOBLIN} />)
+  it('renders every stat-block section and the Legendary badge', () => {
+    const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Traits')).toBeInTheDocument()
     expect(screen.getByText('Actions')).toBeInTheDocument()
     expect(screen.getByText('Bonus Actions')).toBeInTheDocument()
     expect(screen.getByText('Legendary Actions (3/round)')).toBeInTheDocument()
+    expect(screen.getByText('Legendary')).toBeInTheDocument() // header badge
+    expect(container.textContent).toContain('Pounce (Recharge 5–6)') // recharge surfaced
   })
 
   it('renders defenses, speeds, skills, senses, and languages', () => {

@@ -13,7 +13,7 @@ import type {
   Skill,
   Speeds,
 } from '../schema/primitives.ts'
-import type { Action, DamageRoll, SaveOutcome } from '../schema/action.ts'
+import type { Action, DamageRoll, Recharge, SaveOutcome } from '../schema/action.ts'
 import type { Creature, Trait } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 
@@ -125,7 +125,21 @@ interface Open5eAction {
   name: string
   desc: string
   action_type: string
+  order_in_statblock?: number
+  usage_limits?: { type: string; param: number | null } | null
   attacks?: Open5eAttack[]
+}
+
+function mapUsage(ul: Open5eAction['usage_limits']): Recharge | undefined {
+  if (!ul || ul.param == null) return undefined
+  switch (ul.type) {
+    case 'RECHARGE_ON_ROLL':
+      return { type: 'dice', value: ul.param }
+    case 'PER_DAY':
+      return { type: 'perDay', value: ul.param }
+    default:
+      return undefined
+  }
 }
 
 export interface Open5eCreature {
@@ -231,6 +245,7 @@ function parseSaveDamage(desc: string): DamageRoll[] | undefined {
 
 export function mapOpen5eAction(raw: Open5eAction): Action {
   const id = slugify(raw.name)
+  const recharge = mapUsage(raw.usage_limits)
   const attack = raw.attacks?.[0]
   if (attack && attack.to_hit_mod != null) {
     const ranged = attack.reach == null && attack.range != null
@@ -245,6 +260,7 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
           ? { normal: attack.range, long: attack.long_range ?? undefined }
           : undefined,
       damage: attackDamage(attack),
+      recharge,
       text: raw.desc,
     }
   }
@@ -258,11 +274,12 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
       toHit: null,
       save,
       damage: parseSaveDamage(raw.desc),
+      recharge,
       text: raw.desc,
     }
   }
 
-  return { id, name: raw.name, kind: 'utility', toHit: null, text: raw.desc }
+  return { id, name: raw.name, kind: 'utility', toHit: null, recharge, text: raw.desc }
 }
 
 function mapSpeed(speed: Record<string, number | string>): Speeds {
@@ -333,7 +350,10 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
   const a = raw.ability_scores
 
   const actionsOfType = (type: string): Action[] =>
-    (raw.actions ?? []).filter((act) => act.action_type === type).map(mapOpen5eAction)
+    (raw.actions ?? [])
+      .filter((act) => act.action_type === type)
+      .sort((x, y) => (x.order_in_statblock ?? 0) - (y.order_in_statblock ?? 0))
+      .map(mapOpen5eAction)
 
   const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: t.desc }))
   const legendary = actionsOfType('LEGENDARY_ACTION')

@@ -117,6 +117,7 @@ const ABOLETH: Open5eCreature = {
     {
       name: 'Tentacle',
       action_type: 'ACTION',
+      order_in_statblock: 1,
       desc: 'Melee Attack Roll: +9, reach 15 ft. 12 (2d6 + 5) Bludgeoning damage.',
       attacks: [
         {
@@ -138,12 +139,15 @@ const ABOLETH: Open5eCreature = {
     {
       name: 'Consume Memories',
       action_type: 'ACTION',
+      order_in_statblock: 0,
+      usage_limits: { type: 'RECHARGE_ON_ROLL', param: 5 },
       desc: 'Intelligence Saving Throw: DC 16, one creature within 30 feet. Failure: 10 (3d6) Psychic damage. Success: Half damage.',
       attacks: [],
     },
     {
       name: 'Rend',
       action_type: 'ACTION',
+      order_in_statblock: 2,
       desc: 'Melee Attack Roll: +11, reach 10 ft. 13 (2d6 + 6) Slashing damage plus 4 (1d8) Acid damage.',
       attacks: [
         {
@@ -185,12 +189,17 @@ describe('mapOpen5eCreature', () => {
     expect(c.senses).toEqual({ passivePerception: 20, darkvision: 120 })
   })
 
-  it('partitions actions by type', () => {
-    expect(c.actions?.map((a) => a.name)).toEqual(['Tentacle', 'Consume Memories', 'Rend'])
+  it('partitions actions by type, ordered by order_in_statblock', () => {
+    expect(c.actions?.map((a) => a.name)).toEqual(['Consume Memories', 'Tentacle', 'Rend'])
     expect(c.bonusActions?.map((a) => a.name)).toEqual(['Nimble Dodge'])
     expect(c.legendaryActions?.actions.map((a) => a.name)).toEqual(['Psychic Drain'])
     expect(c.legendaryActions?.perRound).toBe(3)
     expect(c.reactions).toBeUndefined()
+  })
+
+  it('captures an action recharge', () => {
+    const recharging = c.actions?.find((a) => a.name === 'Consume Memories')
+    expect(recharging?.recharge).toEqual({ type: 'dice', value: 5 })
   })
 
   it('maps traits', () => {

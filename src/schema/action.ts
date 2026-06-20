@@ -38,6 +38,17 @@ export interface Range {
  * (`toHit`, `damage[].formula`, `save.dc`); prose lives in `text` for display
  * only. Never parse `text` back into numbers.
  */
+/**
+ * How a limited-use ability comes back:
+ * - `dice`     — recharge on a die roll, e.g. "Recharge 5–6" → `value: 5`
+ * - `perDay`   — N uses per day
+ * - `perRound` — N uses per round
+ */
+export type Recharge =
+  | { type: 'dice'; value: number }
+  | { type: 'perDay'; value: number }
+  | { type: 'perRound'; value: number }
+
 export interface Action {
   id: string
   name: string
@@ -51,6 +62,8 @@ export interface Action {
   damage?: DamageRoll[]
   /** Present for save-based actions; `null`/absent for attacks. */
   save?: SaveRequirement | null
+  /** Usage limit, e.g. Recharge 5–6 — matters for the roller, so never dropped. */
+  recharge?: Recharge
   /** Original stat-block prose. Display only — never parsed for mechanics. */
   text?: string
 }

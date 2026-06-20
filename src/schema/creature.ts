@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { Action } from './action.ts'
+import type { Action, Recharge } from './action.ts'
 import type {
   Ability,
   AbilityScores,
@@ -19,17 +19,6 @@ export type SpellLevel = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 /** Max spell slots per level. */
 export type SpellSlots = Partial<Record<SpellLevel, number>>
-
-/**
- * How a limited-use ability comes back:
- * - `dice`     — recharge on a die roll, e.g. "Recharge 5–6" → `value: 5`
- * - `perDay`   — N uses per day
- * - `perRound` — N uses per round
- */
-export type Recharge =
-  | { type: 'dice'; value: number }
-  | { type: 'perDay'; value: number }
-  | { type: 'perRound'; value: number }
 
 /** Recharge / x-per-day abilities (the headline monster-resource feature). */
 export interface LimitedUse {

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Ability, SaveBonuses, Senses, SkillBonuses, Speeds } from '../schema/primitives.ts'
+import type { Action, Recharge } from '../schema/action.ts'
 import type { Creature } from '../schema/creature.ts'
 import { formatCr } from '../compendium/format.ts'
 import { Markdown } from './Markdown.tsx'
@@ -39,10 +40,19 @@ function titleCase(skill: string): string {
 }
 
 function formatSkills(skills: SkillBonuses): string {
+  // Source order — stat-block order matters; do not sort.
   return Object.entries(skills)
     .map(([skill, bonus]) => `${titleCase(skill)} ${signed(bonus as number)}`)
-    .sort()
     .join(', ')
+}
+
+function rechargeLabel(recharge: Recharge | undefined): string | undefined {
+  if (!recharge) return undefined
+  if (recharge.type === 'dice') {
+    return recharge.value >= 6 ? 'Recharge 6' : `Recharge ${recharge.value}–6`
+  }
+  if (recharge.type === 'perDay') return `${recharge.value}/Day`
+  return `${recharge.value}/Round`
 }
 
 function formatSenses(senses: Senses): string {
@@ -67,6 +77,17 @@ function MetaRow({ label, value }: { label: string; value?: string }) {
 interface Entry {
   name: string
   text?: string
+  /** Suffix after the name, e.g. "Recharge 5–6". */
+  note?: string
+}
+
+/** Map actions to entries, preserving order and surfacing recharge. */
+function actionEntries(actions: Action[] | undefined): Entry[] | undefined {
+  return actions?.map((a) => ({
+    name: a.name,
+    text: a.text,
+    note: rechargeLabel(a.recharge),
+  }))
 }
 
 function Section({ title, items }: { title: string; items?: Entry[] }) {
@@ -78,7 +99,9 @@ function Section({ title, items }: { title: string; items?: Entry[] }) {
       </h4>
       <div className="space-y-1.5 text-sm text-slate-700 dark:text-slate-300">
         {items.map((entry) => (
-          <Markdown key={entry.name}>{`**${entry.name}.** ${entry.text ?? ''}`}</Markdown>
+          <Markdown key={entry.name}>
+            {`**${entry.name}${entry.note ? ` (${entry.note})` : ''}.** ${entry.text ?? ''}`}
+          </Markdown>
         ))}
       </div>
     </div>
@@ -93,7 +116,14 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-lg font-semibold">{creature.name}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold">{creature.name}</h3>
+          {creature.legendaryActions && (
+            <span className="rounded bg-amber-200 px-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              Legendary
+            </span>
+          )}
+        </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           {creature.size} {creature.type} · CR {formatCr(creature.cr)}
         </p>
@@ -146,11 +176,11 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
       </div>
 
       <Section title="Traits" items={creature.traits} />
-      <Section title="Actions" items={creature.actions} />
-      <Section title="Bonus Actions" items={creature.bonusActions} />
-      <Section title="Reactions" items={creature.reactions} />
-      <Section title={legendaryTitle} items={creature.legendaryActions?.actions} />
-      <Section title="Lair Actions" items={creature.lairActions} />
+      <Section title="Actions" items={actionEntries(creature.actions)} />
+      <Section title="Bonus Actions" items={actionEntries(creature.bonusActions)} />
+      <Section title="Reactions" items={actionEntries(creature.reactions)} />
+      <Section title={legendaryTitle} items={actionEntries(creature.legendaryActions?.actions)} />
+      <Section title="Lair Actions" items={actionEntries(creature.lairActions)} />
     </div>
   )
 }
