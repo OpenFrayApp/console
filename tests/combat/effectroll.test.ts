@@ -11,6 +11,7 @@ import type { Effect } from '../../src/schema/effect.ts'
 import type { RandomSource } from '../../src/dice/rng.ts'
 import {
   advantageAgainst,
+  condition,
   disadvantageOn,
   flatBonus,
 } from '../../src/combat/effects.ts'
@@ -149,5 +150,58 @@ describe('rollWithEffects', () => {
       rand: faceSeq(10, 2),
     })
     expect(result.total).toBe(13) // 10 + 1 + 2
+  })
+
+  it('gives a melee attacker advantage against a Prone target', () => {
+    const target = combatant('t', [condition('Prone')])
+    const { result, applied } = rollWithEffects('1d20+5', {
+      target,
+      kind: 'attack',
+      range: 'melee',
+      rand: faceSeq(4, 18),
+    })
+    expect(result.advantageState).toBe('advantage')
+    expect(applied).toContainEqual({ source: 'Prone', effect: 'advantage' })
+  })
+
+  it('gives a ranged attacker disadvantage against a Prone target', () => {
+    const target = combatant('t', [condition('Prone')])
+    const { result } = rollWithEffects('1d20+5', {
+      target,
+      kind: 'attack',
+      range: 'ranged',
+      rand: faceSeq(18, 4),
+    })
+    expect(result.advantageState).toBe('disadvantage')
+    expect(result.dice[0].kept).toEqual([4])
+  })
+
+  it('defaults a Prone target to melee (advantage) when range is unspecified', () => {
+    const target = combatant('t', [condition('Prone')])
+    const r = rollWithEffects('1d20', { target, kind: 'attack', rand: faceSeq(4, 18) })
+    expect(r.result.advantageState).toBe('advantage')
+  })
+
+  it('gives a Prone attacker disadvantage on its own attack', () => {
+    const roller = combatant('r', [condition('Prone')])
+    const { result } = rollWithEffects('1d20+5', {
+      roller,
+      kind: 'attack',
+      rand: faceSeq(18, 4),
+    })
+    expect(result.advantageState).toBe('disadvantage')
+  })
+
+  it('cancels Prone-melee advantage against the attacker’s disadvantage', () => {
+    const roller = combatant('r', [disadvantageOn('Vicious Mockery')])
+    const target = combatant('t', [condition('Prone')])
+    const { result } = rollWithEffects('1d20', {
+      roller,
+      target,
+      kind: 'attack',
+      range: 'melee',
+      rand: faceSeq(11),
+    })
+    expect(result.advantageState).toBe('normal')
   })
 })

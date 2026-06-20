@@ -3,6 +3,7 @@
 
 import type { Combatant } from '../schema/combatant.ts'
 import type {
+  ConditionName,
   Effect,
   EffectApplies,
   EffectModifier,
@@ -10,6 +11,7 @@ import type {
 import type { AdvantageState } from '../dice/formula.ts'
 import type { RandomSource } from '../dice/rng.ts'
 import { roll, type CritRule, type RollKind, type RollResult } from '../dice/roll.ts'
+import { conditionAttackAdvantage, type AttackRange } from './conditionrules.ts'
 
 /**
  * Effect-aware rolling — the differentiator. A roll consults the roller's
@@ -30,6 +32,8 @@ export interface EffectRollOptions {
   roller?: Combatant
   target?: Combatant
   kind: RollKind
+  /** Attack range — drives Prone (melee = advantage, ranged = disadvantage). */
+  range?: AttackRange
   crit?: boolean | CritRule
   rand?: RandomSource
 }
@@ -102,23 +106,47 @@ export function rollWithEffects(
   const bonuses: (number | string)[] = []
   const applied: AppliedEffect[] = []
 
-  for (const { effect, modifier } of applicable) {
-    if (modifier.mode === 'advantage') {
+  const addAdvantage = (state: AdvantageState | null, source: string): void => {
+    if (state === 'advantage') {
       advCount += 1
-      applied.push({ source: effect.name, effect: 'advantage' })
-    } else if (modifier.mode === 'disadvantage') {
+      applied.push({ source, effect: 'advantage' })
+    } else if (state === 'disadvantage') {
       disCount += 1
-      applied.push({ source: effect.name, effect: 'disadvantage' })
+      applied.push({ source, effect: 'disadvantage' })
+    }
+  }
+
+  // Manual mechanical effects (advantageAgainst, disadvantageOn, flatBonus).
+  for (const { effect, modifier } of applicable) {
+    if (modifier.mode === 'advantage' || modifier.mode === 'disadvantage') {
+      addAdvantage(modifier.mode, effect.name)
     } else if (modifier.mode === 'flatBonus' && modifier.value != null) {
       bonuses.push(modifier.value)
       applied.push({ source: effect.name, effect: describeBonus(modifier.value) })
     }
   }
 
-  // An attack against an Unconscious creature has advantage (no manual effect needed).
-  if (kind === 'attack' && target?.status === 'unconscious') {
-    advCount += 1
-    applied.push({ source: 'Unconscious', effect: 'advantage' })
+  // Condition-driven attack advantage/disadvantage (Prone is range-dependent).
+  if (kind === 'attack') {
+    const range = opts.range ?? 'melee'
+    for (const effect of roller?.effects ?? []) {
+      if (effect.icon === 'condition') {
+        addAdvantage(
+          conditionAttackAdvantage(effect.name as ConditionName, 'attacker', range),
+          effect.name,
+        )
+      }
+    }
+    for (const effect of target?.effects ?? []) {
+      if (effect.icon === 'condition') {
+        addAdvantage(
+          conditionAttackAdvantage(effect.name as ConditionName, 'defender', range),
+          effect.name,
+        )
+      }
+    }
+    // The Unconscious life-state grants advantage to attackers, regardless of range.
+    if (target?.status === 'unconscious') addAdvantage('advantage', 'Unconscious')
   }
 
   const advantage: AdvantageState =
