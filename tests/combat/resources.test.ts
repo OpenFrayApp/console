@@ -20,7 +20,7 @@ import {
   setCurrentHp,
   slotsRemaining,
   spendLegendary,
-  useLimited,
+  spendLimited,
   useSlot,
 } from '../../src/combat/resources.ts'
 
@@ -298,7 +298,7 @@ describe('spendLegendary', () => {
 
 describe('limited-use abilities', () => {
   it('marks an ability used, then recharged', () => {
-    const used = useLimited(monster(), 'fire-breath')
+    const used = spendLimited(monster(), 'fire-breath')
     expect(isLimitedAvailable(used, 'fire-breath')).toBe(false)
     const back = rechargeLimited(used, 'fire-breath')
     expect(isLimitedAvailable(back, 'fire-breath')).toBe(true)

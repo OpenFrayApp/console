@@ -7,6 +7,7 @@ import type {
   LimitedUseState,
   MonsterCombatant,
 } from '../schema/combatant.ts'
+import { rechargeActions } from './recharge.ts'
 
 export interface InstantiateOptions {
   combatantId: string
@@ -40,6 +41,10 @@ export function instantiate(
   const limitedUseState: Record<string, LimitedUseState> = {}
   for (const lu of snapshot.limitedUse ?? []) {
     limitedUseState[lu.id] = { available: true }
+  }
+  // Rechargeable actions (e.g. "Recharge 5–6") start charged and are tracked by id.
+  for (const action of rechargeActions(snapshot)) {
+    limitedUseState[action.id] = { available: true }
   }
 
   return {

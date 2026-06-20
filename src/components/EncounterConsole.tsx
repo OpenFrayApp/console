@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { Action } from '../schema/action.ts'
 import type { Combatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { EncounterAction } from '../state/encounter.ts'
@@ -10,14 +11,18 @@ import {
   applyHealing,
   hpTierOf,
   parseHpInput,
+  rechargeLimited,
   setCurrentHp,
+  spendLimited,
 } from '../combat/resources.ts'
+import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import {
   applyConcentrationResult,
   breakConcentration,
   concentrationPromptDC,
   rollConcentrationCheck,
 } from '../combat/concentration.ts'
+import { ActionResolver } from './ActionResolver.tsx'
 import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
@@ -25,12 +30,21 @@ import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { hpToneFor } from './hpTone.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
+import { MetaTable } from './CreatureStatBlock.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+
+/** id → charged? for a monster's tracked recharge abilities (undefined for PCs). */
+function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
+  if (c.isPC) return undefined
+  const out: Record<string, boolean> = {}
+  for (const [id, state] of Object.entries(c.limitedUseState)) out[id] = state.available
+  return out
+}
 
 /** PC detail panel — same header style as the creature stat block, lighter body. */
 function PcSummary({
@@ -78,15 +92,17 @@ function PcSummary({
               edit={{ initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }}
             />
             <HeaderStat label="Init" value={pc.initiative} />
-            <HeaderStat label="PP" value={pc.passivePerception} />
           </>
         }
       />
-      {pc.languages && pc.languages.length > 0 && (
-        <p className="text-sm">
-          <span className="font-semibold">Languages</span> {pc.languages.join(', ')}
-        </p>
-      )}
+      <div className="min-w-[16rem] flex-1">
+        <MetaTable
+          rows={[
+            ['Senses', `Passive Perception ${pc.passivePerception}`],
+            ['Languages', pc.languages?.join(', ')],
+          ]}
+        />
+      </div>
     </div>
   )
 }
@@ -123,6 +139,11 @@ export function EncounterConsole({
   const [concPrompt, setConcPrompt] = useState<{ id: string; dc: number; damage: number } | null>(
     null,
   )
+
+  // The action whose resolver modal is open (the selected creature is the attacker).
+  const [actionFor, setActionFor] = useState<Action | null>(null)
+  // Switching the selected combatant closes a stale resolver.
+  useEffect(() => setActionFor(null), [selected?.combatantId])
 
   // Apply an HP/temp edit ("12", "+5", "-3"); HP damage to a concentrator prompts a save.
   const applyHpInput = (c: Combatant, raw: string, isTemp: boolean) => {
@@ -170,6 +191,30 @@ export function EncounterConsole({
       dispatch({ type: 'update', id: concPrompt.id, update })
     }
     setConcPrompt(null)
+  }
+
+  // Roll a recharge die for a spent ability; on success it becomes usable again.
+  const rollRechargeFor = (c: Combatant, action: Action) => {
+    if (c.isPC) return
+    const { recharged, roll } = rollRecharge(action)
+    onRoll(`${c.label}: ${action.name} recharge`, roll)
+    if (recharged) {
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) => (cc.isPC ? cc : rechargeLimited(cc, action.id)),
+      })
+    }
+  }
+
+  // Spend a rechargeable action when it's used from the resolver.
+  const consumeIfRechargeable = (c: Combatant, action: Action) => {
+    if (c.isPC || !isRechargeable(action)) return
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : spendLimited(cc, action.id)),
+    })
   }
 
   return (
@@ -241,6 +286,9 @@ export function EncounterConsole({
                   }
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}
                   onTempInput={(raw) => applyHpInput(selected, raw, true)}
+                  onAction={setActionFor}
+                  rechargeState={rechargeStateOf(selected)}
+                  onRecharge={(action) => rollRechargeFor(selected, action)}
                 />
               )}
             </div>
@@ -264,10 +312,8 @@ export function EncounterConsole({
               )}
               <CombatantControls
                 combatant={selected}
-                combatants={combatants}
                 round={encounter.round}
                 dispatch={dispatch}
-                onRoll={onRoll}
               />
             </div>
           </>
@@ -299,6 +345,18 @@ export function EncounterConsole({
           </div>
         </div>
       </aside>
+
+      {actionFor && selected && !selected.isPC && (
+        <ActionResolver
+          attacker={selected}
+          action={actionFor}
+          combatants={combatants}
+          dispatch={dispatch}
+          onRoll={onRoll}
+          onUse={() => consumeIfRechargeable(selected, actionFor)}
+          onClose={() => setActionFor(null)}
+        />
+      )}
     </div>
   )
 }

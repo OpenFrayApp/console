@@ -5,6 +5,8 @@ import { useEffect, useReducer, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
 import { instantiate } from './combat/combatant.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
+import { rechargeActions, rollRecharge } from './combat/recharge.ts'
+import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
@@ -63,13 +65,36 @@ function App() {
     const active = next.combatants[next.activeIndex]
     if (active) setSelectedId(active.combatantId)
   }
+  // At the start of a creature's turn, roll the recharge die for each of its spent
+  // recharge abilities (each separately, each logged); a success makes it usable.
+  const autoRecharge = (next: Encounter) => {
+    const active = next.combatants[next.activeIndex]
+    if (!active || active.isPC) return
+    for (const action of rechargeActions(active.creature)) {
+      if (active.limitedUseState[action.id]?.available === false) {
+        const { recharged, roll: result } = rollRecharge(action)
+        pushRoll(`${active.label}: ${action.name} recharge`, result)
+        if (recharged) {
+          dispatch({
+            type: 'update',
+            id: active.combatantId,
+            update: (c) => (c.isPC ? c : rechargeLimited(c, action.id)),
+          })
+        }
+      }
+    }
+  }
   const handleBegin = () => {
-    selectActive(beginEncounter(encounter))
+    const next = beginEncounter(encounter)
+    selectActive(next)
     dispatch({ type: 'begin' })
+    autoRecharge(next)
   }
   const handleNextTurn = () => {
-    selectActive(nextTurn(encounter))
+    const next = nextTurn(encounter)
+    selectActive(next)
     dispatch({ type: 'nextTurn' })
+    autoRecharge(next)
   }
 
   const started = encounter.round > 0

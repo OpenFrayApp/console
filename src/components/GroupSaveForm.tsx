@@ -210,9 +210,9 @@ export function GroupSaveForm({
           aria-label="On save"
           className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value="half">save: half</option>
-          <option value="none">save: none</option>
-          <option value="negates">save: negates</option>
+          <option value="half">save → half damage</option>
+          <option value="none">save → no damage</option>
+          <option value="negates">save → negates effect</option>
         </select>
       </div>
 

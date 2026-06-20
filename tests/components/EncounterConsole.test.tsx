@@ -52,7 +52,10 @@ async function addGoblin() {
 }
 
 async function addCreature(name: string) {
-  fireEvent.click(screen.getByText('+ Add creature'))
+  // The picker stays open across picks, so only open it if it isn't already.
+  if (!screen.queryByLabelText('Search SRD creatures')) {
+    fireEvent.click(screen.getByText('+ Add creature'))
+  }
   await waitFor(() => screen.getByText(name))
   fireEvent.click(screen.getByText(name))
 }

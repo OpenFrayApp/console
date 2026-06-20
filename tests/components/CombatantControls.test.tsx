@@ -20,16 +20,6 @@ function creature(): Creature {
     speed: { walk: 30 },
     abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     senses: { passivePerception: 9 },
-    actions: [
-      {
-        id: 'scimitar',
-        name: 'Scimitar',
-        kind: 'melee',
-        toHit: 4,
-        damage: [{ formula: '1d6+2', type: 'slashing' }],
-        text: 'Melee Attack Roll: +4.',
-      },
-    ],
   }
 }
 
@@ -74,57 +64,23 @@ afterEach(cleanup)
 describe('CombatantControls', () => {
   it('dispatches a remove', () => {
     const dispatch = vi.fn()
-    render(
-      <CombatantControls
-        combatant={monster()}
-        combatants={[monster()]}
-        round={1}
-        dispatch={dispatch}
-        onRoll={() => {}}
-      />,
-    )
+    render(<CombatantControls combatant={monster()} round={1} dispatch={dispatch} />)
     fireEvent.click(screen.getByText('Remove'))
     expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'm' })
-  })
-
-  it('rolls a monster attack through onRoll', () => {
-    const onRoll = vi.fn()
-    render(
-      <CombatantControls
-        combatant={monster()}
-        combatants={[monster()]}
-        round={1}
-        dispatch={vi.fn()}
-        onRoll={onRoll}
-      />,
-    )
-    fireEvent.click(screen.getByText('Scimitar +4'))
-    expect(onRoll).toHaveBeenCalledOnce()
-    const [label, result] = onRoll.mock.calls[0]
-    expect(label).toBe('Goblin: Scimitar')
-    expect(result.kind).toBe('attack')
   })
 
   it('shows death-save controls for an unconscious PC, hidden once stable', () => {
     const dispatch = vi.fn()
     const { rerender } = render(
-      <CombatantControls
-        combatant={downedPc()}
-        combatants={[downedPc()]}
-        round={1}
-        dispatch={dispatch}
-        onRoll={() => {}}
-      />,
+      <CombatantControls combatant={downedPc()} round={1} dispatch={dispatch} />,
     )
     expect(screen.getByText('Roll death save')).toBeInTheDocument()
 
     rerender(
       <CombatantControls
         combatant={downedPc({ deathSaves: { successes: 3, failures: 0 } })}
-        combatants={[downedPc()]}
         round={1}
         dispatch={dispatch}
-        onRoll={() => {}}
       />,
     )
     expect(screen.queryByText('Roll death save')).toBeNull()
@@ -132,15 +88,7 @@ describe('CombatantControls', () => {
 
   it('marks a combatant as concentrating', () => {
     const dispatch = vi.fn()
-    render(
-      <CombatantControls
-        combatant={monster()}
-        combatants={[monster()]}
-        round={3}
-        dispatch={dispatch}
-        onRoll={() => {}}
-      />,
-    )
+    render(<CombatantControls combatant={monster()} round={3} dispatch={dispatch} />)
     fireEvent.click(screen.getByText('Concentrate'))
     fireEvent.change(screen.getByLabelText(/Concentration spell/), {
       target: { value: 'Hold Person' },
@@ -150,68 +98,5 @@ describe('CombatantControls', () => {
     const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
     const updated = call?.update(monster())
     expect(updated?.concentration).toEqual({ spell: 'Hold Person', saveDc: 0, round: 3 })
-  })
-
-  it('opens a seeded group save for a save action (breath weapon)', () => {
-    const onRoll = vi.fn()
-    const dragon = (): MonsterCombatant => ({
-      ...monster(),
-      creature: {
-        ...creature(),
-        actions: [
-          {
-            id: 'fire-breath',
-            name: 'Fire Breath',
-            kind: 'save',
-            toHit: null,
-            save: { ability: 'dex', dc: 21, onSave: 'half' },
-            damage: [{ formula: '2d6', type: 'fire' }],
-            text: 'Dexterity Saving Throw: DC 21.',
-          },
-        ],
-      },
-    })
-    render(
-      <CombatantControls
-        combatant={dragon()}
-        combatants={[dragon()]}
-        round={1}
-        dispatch={vi.fn()}
-        onRoll={onRoll}
-      />,
-    )
-    fireEvent.click(screen.getByText(/Fire Breath/))
-    // Damage is rolled and logged, and the seeded group save appears.
-    expect(onRoll).toHaveBeenCalled()
-    const dc = screen.getByLabelText('Save DC') as HTMLInputElement
-    expect(dc.value).toBe('21')
-    const ability = screen.getByLabelText('Save ability') as HTMLSelectElement
-    expect(ability.value).toBe('dex')
-  })
-
-  it('aims an attack at a selected target and notes it in the log', () => {
-    const onRoll = vi.fn()
-    const targetMon: MonsterCombatant = {
-      ...monster(),
-      combatantId: 't',
-      label: 'Ogre',
-      status: 'unconscious',
-    }
-    render(
-      <CombatantControls
-        combatant={monster()}
-        combatants={[monster(), targetMon]}
-        round={1}
-        dispatch={vi.fn()}
-        onRoll={onRoll}
-      />,
-    )
-    fireEvent.change(screen.getByLabelText(/Attack target/), { target: { value: 't' } })
-    fireEvent.click(screen.getByText('Scimitar +4'))
-
-    const [label, , applied] = onRoll.mock.calls[0]
-    expect(label).toBe('Goblin: Scimitar → Ogre')
-    // An unconscious target grants advantage.
-    expect(applied).toEqual([{ source: 'Unconscious', effect: 'advantage' }])
   })
 })

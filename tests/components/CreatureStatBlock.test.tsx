@@ -64,7 +64,7 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText(/Small humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
     expect(screen.getByText('AC')).toBeInTheDocument()
-    expect(screen.getByText('HP')).toBeInTheDocument()
+    expect(screen.getByText('HP (3d6)')).toBeInTheDocument() // HP formula shown at the top
     expect(screen.getByText('Init')).toBeInTheDocument()
     expect(container.textContent).toContain('10/10') // HP current/max
   })

@@ -68,7 +68,7 @@ function formatSenses(senses: Senses): string {
 }
 
 /** A two-column "label / value" table that always renders, showing "—" if empty. */
-function MetaTable({ rows }: { rows: [string, string | undefined][] }) {
+export function MetaTable({ rows }: { rows: [string, string | undefined][] }) {
   return (
     <table className="w-full text-sm">
       <tbody>
@@ -160,15 +160,6 @@ interface Entry {
   note?: string
 }
 
-/** Map actions to entries, preserving order and surfacing recharge. */
-function actionEntries(actions: Action[] | undefined): Entry[] | undefined {
-  return actions?.map((a) => ({
-    name: a.name,
-    text: a.text,
-    note: rechargeLabel(a.recharge),
-  }))
-}
-
 function Section({ title, items }: { title: string; items?: Entry[] }) {
   if (!items || items.length === 0) return null
   return (
@@ -187,6 +178,86 @@ function Section({ title, items }: { title: string; items?: Entry[] }) {
   )
 }
 
+/** An action can be resolved (rolled) if it has a to-hit, a save, or damage. */
+function isRollable(a: Action): boolean {
+  return a.toHit != null || a.save != null || (a.damage?.length ?? 0) > 0
+}
+
+const SECTION_HEADING =
+  'mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300'
+
+/**
+ * Renders a list of actions. When `onAction` is supplied (i.e. in combat), the
+ * name of each rollable action becomes a button that opens the resolver; the
+ * prose follows inline so the stat-block reads the same. In the reference
+ * compendium no handler is passed, so names stay plain text.
+ */
+function ActionSection({
+  title,
+  actions,
+  onAction,
+  rechargeState,
+  onRecharge,
+}: {
+  title: string
+  actions?: Action[]
+  onAction?: (a: Action) => void
+  /** id → charged? A rechargeable action that is `false` can't be used until it recharges. */
+  rechargeState?: Record<string, boolean>
+  onRecharge?: (a: Action) => void
+}) {
+  if (!actions || actions.length === 0) return null
+  return (
+    <div>
+      <h4 className={SECTION_HEADING}>{title}</h4>
+      <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        {actions.map((a) => {
+          const note = rechargeLabel(a.recharge)
+          const heading = `${a.name}${note ? ` (${note})` : ''}`
+          const charged = rechargeState?.[a.id] !== false
+          if (onAction && isRollable(a) && charged) {
+            return (
+              <p key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => onAction(a)}
+                  title="Roll this action"
+                  className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  {heading}.
+                </button>{' '}
+                {a.text ? <Markdown inline>{a.text}</Markdown> : null}
+              </p>
+            )
+          }
+          // Spent recharge ability — not usable until it recharges. Offer a roll.
+          if (onAction && isRollable(a) && !charged) {
+            return (
+              <p key={a.id} className="opacity-60">
+                <span className="font-semibold">{heading}.</span>{' '}
+                {onRecharge && (
+                  <button
+                    type="button"
+                    onClick={() => onRecharge(a)}
+                    title="Roll the recharge die"
+                    className="rounded border border-slate-300 px-1.5 py-0.5 align-middle text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Roll recharge
+                  </button>
+                )}{' '}
+                {a.text ? <Markdown inline>{a.text}</Markdown> : null}
+              </p>
+            )
+          }
+          return (
+            <Markdown key={a.id}>{`**${heading}.** ${a.text ?? ''}`}</Markdown>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function CreatureStatBlock({
   creature,
   hp,
@@ -195,6 +266,9 @@ export function CreatureStatBlock({
   onRename,
   onHpInput,
   onTempInput,
+  onAction,
+  rechargeState,
+  onRecharge,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -209,6 +283,12 @@ export function CreatureStatBlock({
   onHpInput?: (raw: string) => void
   /** Edit temp HP from a raw input. */
   onTempInput?: (raw: string) => void
+  /** Resolve an action (roll to-hit / save and apply damage). Combat only. */
+  onAction?: (action: Action) => void
+  /** id → charged? Spent recharge abilities render disabled with a recharge button. */
+  rechargeState?: Record<string, boolean>
+  /** Roll the recharge die for a spent ability. */
+  onRecharge?: (action: Action) => void
 }) {
   const displayName = label ?? creature.name
   const legendaryTitle = creature.legendaryActions
@@ -251,7 +331,7 @@ export function CreatureStatBlock({
           <>
             <HeaderStat label="AC" value={creature.ac} />
             <HeaderStat
-              label="HP"
+              label={creature.hpFormula ? `HP (${creature.hpFormula})` : 'HP'}
               value={hpValue}
               edit={onHpInput ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' } : undefined}
             />
@@ -302,11 +382,11 @@ export function CreatureStatBlock({
       </div>
 
       <Section title="Traits" items={creature.traits} />
-      <Section title="Actions" items={actionEntries(creature.actions)} />
-      <Section title="Bonus Actions" items={actionEntries(creature.bonusActions)} />
-      <Section title="Reactions" items={actionEntries(creature.reactions)} />
-      <Section title={legendaryTitle} items={actionEntries(creature.legendaryActions?.actions)} />
-      <Section title="Lair Actions" items={actionEntries(creature.lairActions)} />
+      <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
+      <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
+      <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
+      <ActionSection title={legendaryTitle} actions={creature.legendaryActions?.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
+      <ActionSection title="Lair Actions" actions={creature.lairActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
 
       <SourceLink source={creature.source} />
     </div>

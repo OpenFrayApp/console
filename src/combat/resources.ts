@@ -187,7 +187,7 @@ export function isLimitedAvailable(c: MonsterCombatant, id: string): boolean {
   return c.limitedUseState[id]?.available ?? false
 }
 
-export function useLimited(c: MonsterCombatant, id: string): MonsterCombatant {
+export function spendLimited(c: MonsterCombatant, id: string): MonsterCombatant {
   return {
     ...c,
     limitedUseState: { ...c.limitedUseState, [id]: { available: false } },
