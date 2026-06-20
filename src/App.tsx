@@ -15,6 +15,7 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { EncounterPlayback } from './components/EncounterPlayback.tsx'
+import { InitiativePrompt } from './components/InitiativePrompt.tsx'
 import { type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
@@ -30,6 +31,8 @@ function App() {
   const [encounter, dispatch] = useReducer(encounterReducer, undefined, emptyEncounter)
   const [rollLog, setRollLog] = useState<RollEntry[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Monster initiatives held while the DM enters the players' rolled numbers.
+  const [pcInitPrompt, setPcInitPrompt] = useState<Record<string, number> | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -44,16 +47,15 @@ function App() {
   }
 
   const handlePick = (creature: Creature) => {
-    // Auto-label duplicates ("Goblin", "Goblin 2", …) and roll initiative.
+    // Auto-label duplicates ("Goblin", "Goblin 2", …). Initiative stays 0 until
+    // combat begins, when it's rolled for everyone at once.
     const sameKind = encounter.combatants.filter(
       (c) => !c.isPC && c.creatureId === creature.id,
     ).length
     const label = sameKind > 0 ? `${creature.name} ${sameKind + 1}` : creature.name
-    const mod = dexMod(creature)
-    const initiative = roll(`1d20${mod >= 0 ? `+${mod}` : `${mod}`}`).total
     const combatant = instantiate(creature, {
       combatantId: crypto.randomUUID(),
-      initiative,
+      initiative: 0,
       label,
     })
     dispatch({ type: 'add', combatant })
@@ -84,11 +86,43 @@ function App() {
       }
     }
   }
-  const handleBegin = () => {
-    const next = beginEncounter(encounter)
-    selectActive(next)
+  // Roll initiative for each monster (1d20 + Dex mod), logged; returns id → total.
+  const rollMonsterInitiatives = (): Record<string, number> => {
+    const inits: Record<string, number> = {}
+    for (const c of encounter.combatants) {
+      if (c.isPC) continue
+      const mod = dexMod(c.creature)
+      const result = roll(`1d20${mod >= 0 ? `+${mod}` : `${mod}`}`)
+      pushRoll(`${c.label}: initiative`, result)
+      inits[c.combatantId] = result.total
+    }
+    return inits
+  }
+
+  // Apply all rolled/entered initiatives, sort, and start combat.
+  const startCombat = (initiatives: Record<string, number>) => {
+    for (const [id, initiative] of Object.entries(initiatives)) {
+      dispatch({ type: 'update', id, update: (c) => ({ ...c, initiative }) })
+    }
+    const combatants = encounter.combatants.map((c) => ({
+      ...c,
+      initiative: initiatives[c.combatantId] ?? c.initiative,
+    }))
+    const next = beginEncounter({ ...encounter, combatants })
     dispatch({ type: 'begin' })
+    selectActive(next)
     autoRecharge(next)
+    setPcInitPrompt(null)
+  }
+
+  // Begin: roll monsters now; if there are PCs, collect their rolled numbers first.
+  const handleBegin = () => {
+    const monsterInits = rollMonsterInitiatives()
+    if (encounter.combatants.some((c) => c.isPC)) {
+      setPcInitPrompt(monsterInits)
+    } else {
+      startCombat(monsterInits)
+    }
   }
   const handleNextTurn = () => {
     const next = nextTurn(encounter)
@@ -179,6 +213,14 @@ function App() {
           />
         )}
       </main>
+
+      {pcInitPrompt && (
+        <InitiativePrompt
+          pcs={encounter.combatants.filter((c) => c.isPC)}
+          onStart={(pcInits) => startCombat({ ...pcInitPrompt, ...pcInits })}
+          onCancel={() => setPcInitPrompt(null)}
+        />
+      )}
 
       {/* AGPL §13: a network-deployed copy must offer its source. */}
       <footer className="border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">

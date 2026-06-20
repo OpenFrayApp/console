@@ -16,7 +16,6 @@ describe('AddPcForm', () => {
     fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
     fireEvent.change(screen.getByLabelText('AC'), { target: { value: '16' } })
     fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '38' } })
-    fireEvent.change(screen.getByLabelText('Initiative'), { target: { value: '18' } })
     fireEvent.click(screen.getByText('Add'))
 
     expect(onAdd).toHaveBeenCalledOnce()
@@ -24,7 +23,7 @@ describe('AddPcForm', () => {
       isPC: true,
       name: 'Thalia',
       ac: 16,
-      initiative: 18,
+      initiative: 0, // entered when combat begins, not on the add form
       hp: { current: 38, max: 38, temp: 0 },
     })
   })

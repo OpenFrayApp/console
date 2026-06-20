@@ -17,7 +17,6 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
   const [name, setName] = useState('')
   const [ac, setAc] = useState('')
   const [hp, setHp] = useState('')
-  const [initiative, setInitiative] = useState('')
   const [pp, setPp] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
@@ -27,7 +26,6 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
     setName('')
     setAc('')
     setHp('')
-    setInitiative('')
     setPp('')
   }
 
@@ -39,7 +37,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       isPC: true,
       combatantId: crypto.randomUUID(),
       name: name.trim(),
-      initiative: num(initiative),
+      initiative: 0, // rolled/entered when combat begins
       ac: num(ac),
       passivePerception: num(pp) || 10,
       status: 'active',
@@ -76,7 +74,6 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
           <div className="grid grid-cols-2 gap-2">
             <input value={ac} onChange={(e) => setAc(e.target.value)} placeholder="AC" aria-label="AC" inputMode="numeric" className={FIELD} />
             <input value={hp} onChange={(e) => setHp(e.target.value)} placeholder="HP" aria-label="Max HP" inputMode="numeric" className={FIELD} />
-            <input value={initiative} onChange={(e) => setInitiative(e.target.value)} placeholder="Init" aria-label="Initiative" inputMode="numeric" className={FIELD} />
             <input value={pp} onChange={(e) => setPp(e.target.value)} placeholder="Pass. Perc." aria-label="Passive Perception" inputMode="numeric" className={FIELD} />
           </div>
           <button
