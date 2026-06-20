@@ -5,6 +5,7 @@
 .env.*
 !.env.example
 *.local
+local/
 
 # ───────────────────────────────────────────────────────────────
 # Dependencies
@@ -61,6 +62,11 @@ Thumbs.db
 supabase/.branches
 supabase/.temp
 supabase/.env
+
+# ───────────────────────────────────────────────────────────────
+# Local-only scratch (session notes, handoff docs) — never committed.
+# ───────────────────────────────────────────────────────────────
+local/
 
 # ───────────────────────────────────────────────────────────────
 # Misc
