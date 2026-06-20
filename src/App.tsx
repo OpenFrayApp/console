@@ -223,6 +223,7 @@ function App() {
             paused={paused}
             onBegin={handleBegin}
             onNextTurn={handleNextTurn}
+            onClearLog={() => setRollLog([])}
           />
         )}
       </main>

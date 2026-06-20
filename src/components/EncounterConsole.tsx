@@ -112,7 +112,11 @@ function PcSummary({
               value={tmpValue}
               edit={{ initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }}
             />
-            <HeaderStat label="Init" value={pc.initiative} />
+            {/* The modifier, like a creature's Init bonus — the rolled value lives in the tracker. */}
+            <HeaderStat
+              label="Init"
+              value={`${(pc.initiativeMod ?? 0) >= 0 ? '+' : ''}${pc.initiativeMod ?? 0}`}
+            />
           </>
         }
       />
@@ -136,6 +140,7 @@ export function EncounterConsole({
   paused,
   onBegin,
   onNextTurn,
+  onClearLog,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
@@ -147,6 +152,7 @@ export function EncounterConsole({
   paused: boolean
   onBegin: () => void
   onNextTurn: () => void
+  onClearLog: () => void
 }) {
   const { combatants, activeIndex } = encounter
   const running = started && !paused
@@ -394,7 +400,18 @@ export function EncounterConsole({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <h3 className={`mb-1 ${COLUMN_HEADING}`}>Roll log</h3>
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className={COLUMN_HEADING}>Roll log</h3>
+            {rollLog.length > 0 && (
+              <button
+                type="button"
+                onClick={onClearLog}
+                className="text-xs text-slate-500 hover:underline dark:text-slate-400"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <div className="min-h-0 flex-1 overflow-auto">
             <RollLog entries={rollLog} />
           </div>
