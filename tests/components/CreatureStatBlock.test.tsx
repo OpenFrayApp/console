@@ -59,18 +59,18 @@ const GOBLIN: Creature = {
 afterEach(cleanup)
 
 describe('CreatureStatBlock', () => {
-  it('renders the header, CR with XP, and the AC/HP icons', () => {
+  it('renders the header, CR with XP, and the AC/HP widgets', () => {
     render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText(/Small humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
     expect(screen.getByTitle('Armor Class 15')).toBeInTheDocument()
-    expect(screen.getByTitle('10 HP')).toBeInTheDocument() // max HP (no live combat HP)
+    expect(screen.getByTitle('10 / 10 HP')).toBeInTheDocument() // max HP (no live combat HP)
   })
 
-  it('tints the HP heart by wound tier when live combat HP is given', () => {
+  it('tints current HP by wound tier when live combat HP is given', () => {
     render(<CreatureStatBlock creature={GOBLIN} hp={{ current: 2, max: 10, temp: 0 }} />)
-    const heart = screen.getByTitle('2 of 10 HP')
-    expect(heart.querySelector('.text-red-700')).not.toBeNull() // critical tier
+    const panel = screen.getByTitle('2 / 10 HP')
+    expect(panel.querySelector('.text-red-700')).not.toBeNull() // critical tier
   })
 
   it('shows ability scores with modifiers and proficient saves', () => {
@@ -100,7 +100,7 @@ describe('CreatureStatBlock', () => {
   it('renders initiative, speeds, skills, senses, and languages', () => {
     const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     const text = container.textContent ?? ''
-    expect(text).toContain('Init +2')
+    expect(screen.getByText('Init')).toBeInTheDocument()
     expect(screen.getByTitle('Walk 30 ft.')).toBeInTheDocument()
     expect(screen.getByTitle('Climb 30 ft.')).toBeInTheDocument()
     expect(screen.getByText('Stealth')).toBeInTheDocument() // skills table

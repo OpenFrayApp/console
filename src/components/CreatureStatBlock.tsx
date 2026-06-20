@@ -57,52 +57,73 @@ function MetaRow({ label, value }: { label: string; value?: string }) {
 
 // --- AC / HP / speed icons --------------------------------------------------
 
-/** A shield holding the AC number. */
+const STAT_LABEL = 'text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500'
+
+/** A shield filled with the AC number and a small "AC" label. */
 function ShieldStat({ value }: { value: number }) {
   return (
     <div
-      className="relative inline-flex h-12 w-11 items-center justify-center text-slate-400 dark:text-slate-500"
+      className="relative inline-flex h-16 w-14 flex-col items-center justify-center"
       title={`Armor Class ${value}`}
     >
       <svg
         viewBox="0 0 24 24"
-        className="absolute inset-0 h-full w-full"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.4}
+        className="absolute inset-0 h-full w-full text-slate-200 dark:text-slate-800"
+        fill="currentColor"
         aria-hidden="true"
       >
-        <path d="M12 2.5 4.5 5v6.2c0 4.4 3.2 7.6 7.5 8.8 4.3-1.2 7.5-4.4 7.5-8.8V5L12 2.5z" />
+        <path d="M12 2 4 4.7v6.6c0 4.7 3.4 8.1 8 9.3 4.6-1.2 8-4.6 8-9.3V4.7L12 2z" />
       </svg>
-      <span className="relative text-sm font-bold tabular-nums text-slate-900 dark:text-slate-100">
+      <span className={`relative -mb-1 ${STAT_LABEL}`}>AC</span>
+      <span className="relative text-xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
         {value}
       </span>
     </div>
   )
 }
 
-/** A heart holding the current HP, tinted by wound tier when in combat. */
-function HeartStat({ current, max, live }: { current: number; max: number; live: boolean }) {
-  const tone = live ? hpToneFor(hpTierOf(current, max)) : 'text-slate-400 dark:text-slate-500'
+/** A labelled badge for a single value (e.g. Initiative). */
+function StatBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="inline-flex h-16 min-w-[3.5rem] flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-100 px-3 dark:border-slate-700 dark:bg-slate-800/40">
+      <span className="text-xl font-bold tabular-nums">{value}</span>
+      <span className={STAT_LABEL}>{label}</span>
+    </div>
+  )
+}
+
+/** The hit-points panel: Current / Max / Temp, current tinted by wound tier. */
+function HpPanel({
+  current,
+  max,
+  temp,
+  live,
+}: {
+  current: number
+  max: number
+  temp: number
+  live: boolean
+}) {
+  const currentTone = live ? hpToneFor(hpTierOf(current, max)) : 'text-slate-900 dark:text-slate-100'
+  const Col = ({ label, value, tone }: { label: string; value: string; tone: string }) => (
+    <div className="text-center">
+      <div className={`text-xl font-bold leading-none tabular-nums ${tone}`}>{value}</div>
+      <div className={`mt-1 ${STAT_LABEL}`}>{label}</div>
+    </div>
+  )
   return (
     <div
-      className="inline-flex flex-col items-center"
-      title={live ? `${current} of ${max} HP` : `${max} HP`}
+      className="inline-flex h-16 items-center gap-3 rounded-lg border border-slate-200 bg-slate-100 px-4 dark:border-slate-700 dark:bg-slate-800/40"
+      title={`${current} / ${max} HP`}
     >
-      <div className={`relative inline-flex h-12 w-12 items-center justify-center ${tone}`}>
-        <svg
-          viewBox="0 0 24 24"
-          className="absolute inset-0 h-full w-full"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.4}
-          aria-hidden="true"
-        >
-          <path d="M12 20.5 4.2 12.7a4.6 4.6 0 0 1 6.5-6.5l1.3 1.3 1.3-1.3a4.6 4.6 0 0 1 6.5 6.5L12 20.5z" />
-        </svg>
-        <span className="relative text-sm font-bold tabular-nums">{current}</span>
-      </div>
-      <span className="text-[10px] text-slate-400 dark:text-slate-500">/ {max}</span>
+      <Col label="Current" value={String(current)} tone={currentTone} />
+      <div className="text-lg text-slate-300 dark:text-slate-600">/</div>
+      <Col label="Max" value={String(max)} tone="text-slate-900 dark:text-slate-100" />
+      <Col
+        label="Temp"
+        value={temp > 0 ? String(temp) : '—'}
+        tone={temp > 0 ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}
+      />
     </div>
   )
 }
@@ -300,25 +321,22 @@ export function CreatureStatBlock({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-        <AbilityScores creature={creature} />
-        <div className="flex flex-col gap-2">
-          <div className="flex items-start gap-4">
-            <ShieldStat value={creature.ac} />
-            <HeartStat
-              current={hp ? hp.current : creature.maxHp}
-              max={hp ? hp.max : creature.maxHp}
-              live={hp != null}
-            />
-            {creature.initiative != null && (
-              <div className="pt-1 text-sm">
-                <span className="font-semibold">Init</span> {signed(creature.initiative)}
-              </div>
-            )}
-          </div>
-          <SpeedIcons speed={creature.speed} />
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <ShieldStat value={creature.ac} />
+        <HpPanel
+          current={hp ? hp.current : creature.maxHp}
+          max={hp ? hp.max : creature.maxHp}
+          temp={hp ? hp.temp : 0}
+          live={hp != null}
+        />
+        {creature.initiative != null && (
+          <StatBadge label="Init" value={signed(creature.initiative)} />
+        )}
       </div>
+
+      <SpeedIcons speed={creature.speed} />
+
+      <AbilityScores creature={creature} />
 
       {creature.skills && <SkillsTable skills={creature.skills} />}
 
