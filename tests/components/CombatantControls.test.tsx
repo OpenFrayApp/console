@@ -20,6 +20,16 @@ function creature(): Creature {
     speed: { walk: 30 },
     abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     senses: { passivePerception: 9 },
+    actions: [
+      {
+        id: 'scimitar',
+        name: 'Scimitar',
+        kind: 'melee',
+        toHit: 4,
+        damage: [{ formula: '1d6+2', type: 'slashing' }],
+        text: 'Melee Attack Roll: +4.',
+      },
+    ],
   }
 }
 
@@ -64,7 +74,7 @@ afterEach(cleanup)
 describe('CombatantControls', () => {
   it('dispatches a damage update with the entered amount', () => {
     const dispatch = vi.fn()
-    render(<CombatantControls combatant={monster()} dispatch={dispatch} />)
+    render(<CombatantControls combatant={monster()} dispatch={dispatch} onRoll={() => {}} />)
     fireEvent.change(screen.getByLabelText(/HP amount/), { target: { value: '3' } })
     fireEvent.click(screen.getByText('Damage'))
 
@@ -75,20 +85,33 @@ describe('CombatantControls', () => {
 
   it('dispatches a remove', () => {
     const dispatch = vi.fn()
-    render(<CombatantControls combatant={monster()} dispatch={dispatch} />)
+    render(<CombatantControls combatant={monster()} dispatch={dispatch} onRoll={() => {}} />)
     fireEvent.click(screen.getByText('Remove'))
     expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'm' })
   })
 
+  it('rolls a monster attack through onRoll', () => {
+    const onRoll = vi.fn()
+    render(<CombatantControls combatant={monster()} dispatch={vi.fn()} onRoll={onRoll} />)
+    fireEvent.click(screen.getByText('Scimitar +4'))
+    expect(onRoll).toHaveBeenCalledOnce()
+    const [label, result] = onRoll.mock.calls[0]
+    expect(label).toBe('Goblin: Scimitar')
+    expect(result.kind).toBe('attack')
+  })
+
   it('shows death-save controls for an unconscious PC, hidden once stable', () => {
     const dispatch = vi.fn()
-    const { rerender } = render(<CombatantControls combatant={downedPc()} dispatch={dispatch} />)
+    const { rerender } = render(
+      <CombatantControls combatant={downedPc()} dispatch={dispatch} onRoll={() => {}} />,
+    )
     expect(screen.getByText('Roll death save')).toBeInTheDocument()
 
     rerender(
       <CombatantControls
         combatant={downedPc({ deathSaves: { successes: 3, failures: 0 } })}
         dispatch={dispatch}
+        onRoll={() => {}}
       />,
     )
     expect(screen.queryByText('Roll death save')).toBeNull()

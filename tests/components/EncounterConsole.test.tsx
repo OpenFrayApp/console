@@ -62,4 +62,12 @@ describe('EncounterConsole', () => {
     fireEvent.click(screen.getByText('Damage'))
     expect(screen.getByText('4/7')).toBeInTheDocument() // 7 - 3
   })
+
+  it('logs a quick roll', () => {
+    render(<EncounterConsole />)
+    expect(screen.getByText('No rolls yet.')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('d20'))
+    expect(screen.getByText('1d20')).toBeInTheDocument()
+    expect(screen.queryByText('No rolls yet.')).toBeNull()
+  })
 })
