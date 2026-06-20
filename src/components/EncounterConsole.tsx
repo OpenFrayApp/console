@@ -8,6 +8,7 @@ import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
+import { SourceLink } from './SourceLink.tsx'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
@@ -106,16 +107,19 @@ export function EncounterConsole({
         </div>
       </section>
 
-      {/* Center — the selected combatant: stat block + controls */}
-      <section className="min-h-0 overflow-auto">
+      {/* Center — stat block scrolls; Source + controls stay pinned at the bottom. */}
+      <section className="flex min-h-0 flex-col">
         {selected ? (
-          <div className="space-y-4">
-            {selected.isPC ? (
-              <PcSummary pc={selected} />
-            ) : (
-              <CreatureStatBlock creature={selected.creature} />
-            )}
-            <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+          <>
+            <div className="min-h-0 flex-1 overflow-auto">
+              {selected.isPC ? (
+                <PcSummary pc={selected} />
+              ) : (
+                <CreatureStatBlock creature={selected.creature} showSource={false} />
+              )}
+            </div>
+            <div className="shrink-0 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+              {!selected.isPC && <SourceLink source={selected.creature.source} />}
               <CombatantControls
                 combatant={selected}
                 combatants={combatants}
@@ -124,7 +128,7 @@ export function EncounterConsole({
                 onRoll={onRoll}
               />
             </div>
-          </div>
+          </>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Add a combatant, then select it to see its stat block and actions.

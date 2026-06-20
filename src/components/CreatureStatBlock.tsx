@@ -150,7 +150,14 @@ function AbilityScores({ creature }: { creature: Creature }) {
   )
 }
 
-export function CreatureStatBlock({ creature }: { creature: Creature }) {
+export function CreatureStatBlock({
+  creature,
+  showSource = true,
+}: {
+  creature: Creature
+  /** Render the Source/License line. Off when the caller pins it elsewhere. */
+  showSource?: boolean
+}) {
   const legendaryTitle = creature.legendaryActions
     ? `Legendary Actions (${creature.legendaryActions.perRound}/round)`
     : 'Legendary Actions'
@@ -213,7 +220,7 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
       <Section title={legendaryTitle} items={actionEntries(creature.legendaryActions?.actions)} />
       <Section title="Lair Actions" items={actionEntries(creature.lairActions)} />
 
-      <SourceLink source={creature.source} />
+      {showSource && <SourceLink source={creature.source} />}
     </div>
   )
 }
