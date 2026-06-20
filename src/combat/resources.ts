@@ -82,7 +82,10 @@ export function applyDamage(
   const toHp = dmg - fromTemp
   const current = Math.max(0, c.hp.current - toHp)
   const overkill = Math.max(0, toHp - c.hp.current)
-  return { ...c, hp: { ...c.hp, current, temp }, status: statusForHp(c, current, overkill) }
+  const status = statusForHp(c, current, overkill)
+  // Being knocked out or killed ends concentration immediately.
+  const concentration = status === 'active' ? c.concentration : null
+  return { ...c, hp: { ...c.hp, current, temp }, status, concentration }
 }
 
 /** Heal up to max HP. Healing above 0 revives a downed/dead creature (revivify). */
