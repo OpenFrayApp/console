@@ -60,9 +60,12 @@ the field.
 
 ## Status
 
-🚧 Early development. The build order is the single-DM tracker first (initiative,
-resources, effects, dice, SRD compendium), with a shared read-only player view and
-content imports as later, additive layers.
+🚧 Early development. The **single-DM combat console works**: initiative loop,
+HP/resources, conditions & effects, honest dice with an effect-aware roll log,
+mass saves, a SRD compendium, and rollable spells — all running locally in the
+browser. Still to come: accounts and persistence (your custom content saved
+across devices), then a shared read-only player view; content imports remain a
+best-effort, later layer. The UI is functional but still evolving.
 
 ## Content & licensing
 
