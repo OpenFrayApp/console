@@ -33,7 +33,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export function SpellCard({ spell }: { spell: Spell }) {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-1 flex-col space-y-3">
       <div>
         <h3 className="text-lg font-semibold">{spell.name}</h3>
         <p className="text-sm italic text-slate-500 dark:text-slate-400">

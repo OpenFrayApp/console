@@ -11,21 +11,32 @@ export function formatCr(cr: number | undefined): string {
 }
 
 export interface SourceInfo {
-  label: string
-  /** Where the content came from; absent for user-authored content. */
+  /** Which ruleset the content is from, e.g. "Core Rules 2024 (SRD 5.2)". */
+  ruleset: string
+  /** Content license, e.g. "CC-BY-4.0"; absent for user-authored content. */
+  license?: string
+  /** Link to the source/attribution page. */
   url?: string
 }
 
-/** Human label + link for a content source (see CREDITS.md for attribution). */
+/** Ruleset + license + link for a content source (see CREDITS.md for attribution). */
 export function sourceInfo(source: string): SourceInfo {
   switch (source) {
     case 'srd-5.2':
-      return { label: 'SRD 5.2 (CC-BY-4.0)', url: 'https://www.dndbeyond.com/srd' }
+      return {
+        ruleset: 'Core Rules 2024 (SRD 5.2)',
+        license: 'CC-BY-4.0',
+        url: 'https://www.dndbeyond.com/srd',
+      }
     case 'srd-5.1':
-      return { label: 'SRD 5.1 (CC-BY-4.0)', url: 'https://www.dndbeyond.com/srd' }
+      return {
+        ruleset: 'Core Rules 2014 (SRD 5.1)',
+        license: 'CC-BY-4.0',
+        url: 'https://www.dndbeyond.com/srd',
+      }
     case 'custom':
-      return { label: 'Custom (you)' }
+      return { ruleset: 'Custom (you)' }
     default:
-      return { label: source }
+      return { ruleset: source }
   }
 }

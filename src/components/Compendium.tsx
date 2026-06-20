@@ -137,7 +137,7 @@ export function Compendium() {
         )}
       </div>
 
-      <div className="min-w-0 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <div className="flex min-h-[24rem] min-w-0 flex-col rounded-lg border border-slate-200 p-4 dark:border-slate-800">
         {selectedCreature ? (
           <CreatureStatBlock creature={selectedCreature} />
         ) : selectedSpell ? (

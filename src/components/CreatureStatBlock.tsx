@@ -115,7 +115,7 @@ export function CreatureStatBlock({ creature }: { creature: Creature }) {
     : 'Legendary Actions'
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-1 flex-col space-y-3">
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">{creature.name}</h3>
