@@ -10,6 +10,7 @@ import { AddCreaturePicker } from './AddCreaturePicker.tsx'
 import { AddPcForm } from './AddPcForm.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
+import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
 
@@ -73,6 +74,10 @@ export function EncounterConsole() {
           )}
         </div>
       </div>
+
+      {encounter.combatants.length > 0 && (
+        <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} />
+      )}
 
       <div className="grid gap-4 md:grid-cols-[1fr_18rem]">
         <div>
