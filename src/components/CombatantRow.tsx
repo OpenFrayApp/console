@@ -48,7 +48,8 @@ interface CombatantRowProps {
  */
 export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
   const { hp, status } = combatant
-  const downed = status === 'dead' || status === 'down'
+  const dead = status === 'dead'
+  const downed = dead || status === 'down'
   const tier = hpTier(combatant)
   const showTier = !downed && tier !== 'healthy'
 
@@ -60,7 +61,7 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
         active
           ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
-        downed && 'opacity-50',
+        dead && 'opacity-50',
       )}
     >
       <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
@@ -69,7 +70,7 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className={cx('truncate font-medium', downed && 'line-through')}>
+          <span className={cx('truncate font-medium', dead && 'line-through')}>
             {displayName(combatant)}
           </span>
           {status === 'dead' && (

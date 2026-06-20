@@ -119,7 +119,6 @@ function App() {
                 {c.combatantId === 'p2' && c.isPC && c.status === 'down' && !isStable(c) && (
                   <div className="pl-10">
                     <DeathSaveControls
-                      saves={c.deathSaves ?? { successes: 0, failures: 0 }}
                       onSave={() => setBorin(markDeathSaveSuccess)}
                       onFail={() => setBorin((p) => markDeathSaveFailure(p))}
                       onRoll={() => setBorin((p) => rollDeathSave(p).pc)}

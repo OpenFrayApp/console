@@ -37,7 +37,6 @@ export function DeathSavePips({ saves }: { saves: DeathSaves }) {
 }
 
 interface DeathSaveControlsProps {
-  saves: DeathSaves
   /** The player rolled a success themselves. */
   onSave: () => void
   /** The player rolled a failure themselves. */
@@ -51,17 +50,15 @@ const BTN = 'rounded border px-2 py-1 text-xs font-medium'
 /**
  * Death-save controls. The app never rolls for the player: Save and Fail record
  * the player's own result; "Roll death save" is the fallback when they can't roll.
+ * The running tally lives on the combatant row (DeathSavePips), not here.
  */
 export function DeathSaveControls({
-  saves,
   onSave,
   onFail,
   onRoll,
 }: DeathSaveControlsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <DeathSavePips saves={saves} />
-      <div className="flex gap-1">
+    <div className="flex gap-1">
         <button
           type="button"
           onClick={onSave}
@@ -83,7 +80,6 @@ export function DeathSaveControls({
         >
           Roll death save
         </button>
-      </div>
     </div>
   )
 }
