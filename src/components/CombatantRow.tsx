@@ -49,7 +49,7 @@ interface CombatantRowProps {
 export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
   const { hp, status } = combatant
   const dead = status === 'dead'
-  const downed = dead || status === 'down'
+  const downed = dead || status === 'unconscious'
   const tier = hpTier(combatant)
   const showTier = !downed && tier !== 'healthy'
 
@@ -78,9 +78,9 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
               Dead
             </span>
           )}
-          {status === 'down' && (
+          {status === 'unconscious' && (
             <span className="rounded bg-amber-200 px-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-              Down
+              Unconscious
             </span>
           )}
           {combatant.isPC && isStable(combatant) && (
@@ -98,7 +98,7 @@ export function CombatantRow({ combatant, active = false }: CombatantRowProps) {
           </div>
         )}
 
-        {combatant.isPC && combatant.status === 'down' && (
+        {combatant.isPC && combatant.status === 'unconscious' && (
           <div className="mt-1">
             <DeathSavePips
               saves={combatant.deathSaves ?? { successes: 0, failures: 0 }}

@@ -29,7 +29,7 @@ function downedPc(overrides: Partial<PlayerCharacter> = {}): PlayerCharacter {
     initiative: 18,
     ac: 16,
     passivePerception: 14,
-    status: 'down',
+    status: 'unconscious',
     hp: { current: 0, max: 30, temp: 0 },
     concentration: null,
     effects: [],
@@ -46,7 +46,7 @@ describe('manual death-save results', () => {
     expect(isStable(pc)).toBe(false)
     pc = markDeathSaveSuccess(pc)
     expect(isStable(pc)).toBe(true)
-    expect(pc.status).toBe('down')
+    expect(pc.status).toBe('unconscious')
   })
 
   it('dies at three failures', () => {
@@ -58,7 +58,7 @@ describe('manual death-save results', () => {
   it('stabilize() sets three successes without killing', () => {
     const pc = stabilize(downedPc({ deathSaves: { successes: 0, failures: 2 } }))
     expect(isStable(pc)).toBe(true)
-    expect(pc.status).toBe('down')
+    expect(pc.status).toBe('unconscious')
   })
 
   it('reviveAtOneHp wakes the PC and clears the tally', () => {

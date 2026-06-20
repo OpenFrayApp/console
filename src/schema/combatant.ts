@@ -27,7 +27,7 @@ export interface LimitedUseState {
 }
 
 /** Death is non-destructive: the combatant stays in order, greyed and skipped. */
-export type CombatantStatus = 'active' | 'down' | 'dead'
+export type CombatantStatus = 'active' | 'unconscious' | 'dead'
 
 /** A downed PC's death-save tally (3 successes → stable, 3 failures → dead). */
 export interface DeathSaves {

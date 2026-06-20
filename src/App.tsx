@@ -68,7 +68,7 @@ const BORIN_START: PlayerCharacter = {
   initiative: 14,
   ac: 18,
   passivePerception: 12,
-  status: 'down',
+  status: 'unconscious',
   hp: { current: 0, max: 28, temp: 0 },
   concentration: null,
   effects: [],
@@ -116,7 +116,7 @@ function App() {
             {roster.map((c, i) => (
               <div key={c.combatantId} className="space-y-1">
                 <CombatantRow combatant={c} active={i === 0} />
-                {c.combatantId === 'p2' && c.isPC && c.status === 'down' && !isStable(c) && (
+                {c.combatantId === 'p2' && c.isPC && c.status === 'unconscious' && !isStable(c) && (
                   <div className="pl-10">
                     <DeathSaveControls
                       onSave={() => setBorin(markDeathSaveSuccess)}

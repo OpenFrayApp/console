@@ -119,12 +119,13 @@ describe('CombatantRow', () => {
     render(
       <CombatantRow
         combatant={pc({
-          status: 'down',
+          status: 'unconscious',
           hp: { current: 0, max: 30, temp: 0 },
           deathSaves: { successes: 1, failures: 2 },
         })}
       />,
     )
+    expect(screen.getByText('Unconscious')).toBeInTheDocument()
     expect(screen.getByText('1 of 3 successes')).toBeInTheDocument()
     expect(screen.getByText('2 of 3 failures')).toBeInTheDocument()
   })
@@ -133,7 +134,7 @@ describe('CombatantRow', () => {
     render(
       <CombatantRow
         combatant={pc({
-          status: 'down',
+          status: 'unconscious',
           hp: { current: 0, max: 30, temp: 0 },
           deathSaves: { successes: 3, failures: 0 },
         })}

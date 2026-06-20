@@ -58,7 +58,7 @@ function statusForHp(
 ): CombatantStatus {
   if (current > 0) return 'active'
   if (!c.isPC) return 'dead'
-  return overkill >= c.hp.max ? 'dead' : 'down'
+  return overkill >= c.hp.max ? 'dead' : 'unconscious'
 }
 
 export interface DamageOptions {
@@ -73,8 +73,8 @@ export function applyDamage(
   opts: DamageOptions = {},
 ): Combatant {
   const dmg = clampNonNegativeInt(amount)
-  // Damage to an already-downed PC causes death-save failures (two on a crit).
-  if (c.isPC && c.status === 'down' && dmg > 0) {
+  // Damage to an already-unconscious PC causes death-save failures (two on a crit).
+  if (c.isPC && c.status === 'unconscious' && dmg > 0) {
     return markDeathSaveFailure(c, opts.crit ? 2 : 1)
   }
   const fromTemp = Math.min(c.hp.temp, dmg)

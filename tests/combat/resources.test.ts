@@ -106,18 +106,18 @@ describe('applyDamage', () => {
   it('downs a PC at 0 HP rather than killing', () => {
     const downed = applyDamage(pc({ hp: { current: 4, max: 30, temp: 0 } }), 10)
     expect(downed.hp.current).toBe(0)
-    expect(downed.status).toBe('down')
+    expect(downed.status).toBe('unconscious')
   })
 
   it('kills a PC outright when overkill >= max HP (massive damage)', () => {
     // 20/20 PC takes 40: reduced to 0 with 20 leftover, which equals max -> dead.
     expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 40).status).toBe('dead')
     // 39 leaves 19 overkill, just under max -> still only downed.
-    expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 39).status).toBe('down')
+    expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 39).status).toBe('unconscious')
   })
 
   it('adds a death-save failure when an already-downed PC takes damage', () => {
-    const downed = pc({ status: 'down', hp: { current: 0, max: 30, temp: 0 } })
+    const downed = pc({ status: 'unconscious', hp: { current: 0, max: 30, temp: 0 } })
     const hit = applyDamage(downed, 5)
     expect(hit.hp.current).toBe(0)
     expect(hit.isPC && hit.deathSaves).toEqual({ successes: 0, failures: 1 })
@@ -162,7 +162,7 @@ describe('applyHealing', () => {
 
   it('clears a revived PC’s death saves', () => {
     const downed = pc({
-      status: 'down',
+      status: 'unconscious',
       hp: { current: 0, max: 30, temp: 0 },
       deathSaves: { successes: 1, failures: 2 },
     })

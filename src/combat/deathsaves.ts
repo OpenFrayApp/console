@@ -54,7 +54,7 @@ export function stabilize(pc: PlayerCharacter): PlayerCharacter {
 }
 
 export function isStable(pc: PlayerCharacter): boolean {
-  return pc.status === 'down' && tally(pc).successes >= NEEDED
+  return pc.status === 'unconscious' && tally(pc).successes >= NEEDED
 }
 
 /** Natural 20 on a death save: regain 1 HP and wake up. */
