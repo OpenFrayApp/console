@@ -58,10 +58,29 @@ describe('roll', () => {
     expect(r.total).toBe(14)
   })
 
-  it('doubles dice but not modifiers on a crit', () => {
+  it('doubles dice but not modifiers on a crit (RAW, crit: true)', () => {
     const r = roll('2d10+8', { crit: true, rand: faceSeq(10, 10, 1, 1) })
     expect(r.dice[0].results).toHaveLength(4)
     expect(r.total).toBe(30) // (10+10+1+1) + 8
+  })
+
+  it('supports the double-total crit rule', () => {
+    const r = roll('2d6+5', { crit: 'double-total', rand: faceSeq(3, 4) })
+    expect(r.dice[0].results).toHaveLength(2) // rolled once
+    expect(r.dice[0].total).toBe(14) // (3+4) doubled
+    expect(r.total).toBe(19) // dice doubled, modifier untouched
+  })
+
+  it('supports the max-plus-roll crit rule', () => {
+    const r = roll('2d6', { crit: 'max-plus-roll', rand: faceSeq(3, 4) })
+    expect(r.dice[0].results).toHaveLength(2)
+    expect(r.total).toBe(19) // 2*6 (max) + (3+4)
+  })
+
+  it('does not apply crit rules to attack/keep dice', () => {
+    const r = roll('1d20adv', { crit: 'double-dice', rand: faceSeq(4, 18) })
+    expect(r.dice[0].results).toHaveLength(2) // advantage's two dice, not doubled
+    expect(r.total).toBe(18)
   })
 
   it('carries the damage type tag', () => {
