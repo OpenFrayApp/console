@@ -20,7 +20,8 @@ function describeAppliedForLog(a: AppliedEffect): string | null {
 export interface RollEntry {
   id: string
   label: string
-  result: RollResult
+  /** Absent for a note-only entry (e.g. "Mage casts Fireball"), which has no dice. */
+  result?: RollResult
   applied?: AppliedEffect[]
 }
 
@@ -29,6 +30,9 @@ export type OnRoll = (
   result: RollResult,
   applied?: AppliedEffect[],
 ) => void
+
+/** Record a roll-less line in the log (a cast, a spent ability, a board note). */
+export type OnNote = (label: string) => void
 
 /**
  * A one-line breakdown of a roll — the transparency that builds trust. Each die
@@ -63,27 +67,34 @@ export function RollLog({ entries }: { entries: RollEntry[] }) {
           key={entry.id}
           className="rounded border border-slate-200 px-3 py-1.5 dark:border-slate-800"
         >
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-sm">{entry.label}</span>
-            <span
-              className={`text-lg font-bold tabular-nums ${
-                entry.result.crit
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : entry.result.fumble
-                    ? 'text-red-600 dark:text-red-400'
-                    : ''
-              }`}
-            >
-              {entry.result.total}
-            </span>
-          </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            {describeRoll(entry.result)}
-            {(() => {
-              const reasons = (entry.applied ?? []).map(describeAppliedForLog).filter(Boolean)
-              return reasons.length > 0 ? <> · {reasons.join(', ')}</> : null
-            })()}
-          </div>
+          {entry.result ? (
+            <>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate text-sm">{entry.label}</span>
+                <span
+                  className={`text-lg font-bold tabular-nums ${
+                    entry.result.crit
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : entry.result.fumble
+                        ? 'text-red-600 dark:text-red-400'
+                        : ''
+                  }`}
+                >
+                  {entry.result.total}
+                </span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {describeRoll(entry.result)}
+                {(() => {
+                  const reasons = (entry.applied ?? []).map(describeAppliedForLog).filter(Boolean)
+                  return reasons.length > 0 ? <> · {reasons.join(', ')}</> : null
+                })()}
+              </div>
+            </>
+          ) : (
+            // A note-only line (no dice): a cast or other board event.
+            <span className="text-sm text-slate-600 dark:text-slate-300">{entry.label}</span>
+          )}
         </li>
       ))}
     </ul>

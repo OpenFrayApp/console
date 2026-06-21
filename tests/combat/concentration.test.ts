@@ -56,6 +56,7 @@ function monster(over: Partial<MonsterCombatant> = {}): MonsterCombatant {
     status: 'active',
     hp: { current: 30, max: 30, temp: 0 },
     slotsUsed: {},
+    spellUsesSpent: {},
     limitedUseState: {},
     legendaryRemaining: 0,
     concentration: HOLD,

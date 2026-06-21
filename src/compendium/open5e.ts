@@ -14,7 +14,13 @@ import type {
   Speeds,
 } from '../schema/primitives.ts'
 import type { Action, DamageRoll, Recharge, SaveOutcome } from '../schema/action.ts'
-import type { Creature, Trait } from '../schema/creature.ts'
+import type {
+  Creature,
+  SpellGroup,
+  Spellcasting,
+  SpellUsage,
+  Trait,
+} from '../schema/creature.ts'
 import type { Spell, SpellMechanics, SpellSave, SpellScaling } from '../schema/spell.ts'
 
 /**
@@ -331,6 +337,61 @@ function parseSaveDamage(desc: string): DamageRoll[] | undefined {
   return [{ formula: m[1].replace(/\s+/g, ''), type: m[2].toLowerCase() as DamageType }]
 }
 
+/**
+ * Parse a monster's "Spellcasting" prose into a structured block. The 2024 SRD
+ * format is uniform: a lead line naming the ability + save DC (+ optional spell
+ * attack bonus), then markdown lines like `**At Will:** a, b` and
+ * `**2/Day Each:** Fireball, Invisibility`. Each spell name is resolved to a
+ * compendium ref by slug within the same source. Parsing happens here, at ingest
+ * — never at runtime (see docs/AGENTS.md). Returns undefined when the prose isn't
+ * a recognisable spellcasting block.
+ */
+export function parseSpellcasting(
+  desc: string,
+  source: ContentSource,
+): Spellcasting | undefined {
+  const abilityName = /using (\w+) as the spellcasting ability/i.exec(desc)?.[1]
+  const ability = abilityName ? ABILITY_BY_NAME[abilityName.toLowerCase()] : undefined
+  const saveDc = Number(/spell save DC (\d+)/i.exec(desc)?.[1]) || undefined
+  const toHit = (() => {
+    const m = /([+-]?\d+) to hit with spell attacks/i.exec(desc)
+    return m ? Number(m[1]) : undefined
+  })()
+
+  const groups: SpellGroup[] = []
+  for (const line of desc.split('\n')) {
+    const m = /\*\*([^*]+?):\*\*\s*(.*)$/.exec(line)
+    if (!m) continue
+    const header = m[1].trim()
+    const names = m[2]
+      .split(',')
+      .map((s) => s.trim().replace(/\s*\(.*\)$/, ''))
+      .filter(Boolean)
+    if (names.length === 0) continue // e.g. an empty "At Will:" line
+
+    let usage: SpellUsage | undefined
+    if (/at will/i.test(header)) usage = { type: 'atWill' }
+    else {
+      const per = /(\d+)\s*\/\s*day/i.exec(header)
+      if (per) usage = { type: 'perDay', per: Number(per[1]) }
+    }
+    if (!usage) continue
+
+    groups.push({
+      usage,
+      spells: names.map((name) => ({ name, ref: `${source}:${slugify(name)}` })),
+    })
+  }
+
+  if (groups.length === 0) return undefined
+  return {
+    ...(ability && { ability }),
+    ...(saveDc != null && { saveDc }),
+    ...(toHit != null && { toHit }),
+    groups,
+  }
+}
+
 export function mapOpen5eAction(raw: Open5eAction): Action {
   const id = slugify(raw.name)
   const recharge = mapUsage(raw.usage_limits)
@@ -446,6 +507,16 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
   const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: t.desc }))
   const legendary = actionsOfType('LEGENDARY_ACTION')
 
+  // Spellcasting is one of the ACTION-typed entries; lift it into a structured
+  // block and drop the prose action so it isn't rendered twice.
+  const scRaw = (raw.actions ?? []).find(
+    (a) => a.action_type === 'ACTION' && /spellcasting/i.test(a.name),
+  )
+  const spellcasting = scRaw ? parseSpellcasting(scRaw.desc, source) : undefined
+  const actions = actionsOfType('ACTION').filter(
+    (a) => !(spellcasting && scRaw && a.name === scRaw.name),
+  )
+
   return {
     id: `${source}:${slugFromKey(raw.key, documentKey)}`,
     source,
@@ -477,12 +548,13 @@ export function mapOpen5eCreature(raw: Open5eCreature): Creature {
     cr: raw.challenge_rating,
     xp: raw.experience_points ?? undefined,
     traits: undefIfEmpty(traits),
-    actions: undefIfEmpty(actionsOfType('ACTION')),
+    actions: undefIfEmpty(actions),
     bonusActions: undefIfEmpty(actionsOfType('BONUS_ACTION')),
     reactions: undefIfEmpty(actionsOfType('REACTION')),
     legendaryActions: legendary.length
       ? { perRound: DEFAULT_LEGENDARY_PER_ROUND, actions: legendary }
       : undefined,
     lairActions: undefIfEmpty(actionsOfType('LAIR_ACTION')),
+    spellcasting,
   }
 }

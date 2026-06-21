@@ -41,18 +41,35 @@ export interface Trait {
 
 /** A reference from a spellcaster to a compendium spell entry. */
 export interface SpellRef {
-  level: number
   name: string
-  /** Compendium id, e.g. `"srd:fireball"`. */
+  /** Compendium id, e.g. `"srd-5.2:fireball"`; resolves the card + mechanics. */
   ref?: string
 }
 
-export interface Spellcasting {
-  ability: Ability
-  saveDc: number
-  toHit: number
-  slots: SpellSlots
+/**
+ * How often a spell can be cast. The 2024 monster model is "At Will" or
+ * "N/Day Each" — for the latter, *each* spell in the group has its own N uses,
+ * so casting one never spends another's. (`slot` is reserved for the 5.1 slot
+ * model, which the 2024 SRD monsters don't use.)
+ */
+export type SpellUsage = { type: 'atWill' } | { type: 'perDay'; per: number }
+
+/** A usage tier of a spellcaster's list, e.g. "2/Day Each: Fireball, Invisibility". */
+export interface SpellGroup {
+  usage: SpellUsage
   spells: SpellRef[]
+}
+
+export interface Spellcasting {
+  ability?: Ability
+  /** The caster's save DC (used to pre-seed a cast); the spell never owns the DC. */
+  saveDc?: number
+  /** Spell attack bonus, when the block lists one. */
+  toHit?: number
+  /** Spells grouped by usage, in stat-block order. */
+  groups: SpellGroup[]
+  /** Legacy slot model (5.1); unused by 2024 monsters. */
+  slots?: SpellSlots
 }
 
 /**

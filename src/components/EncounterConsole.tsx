@@ -3,18 +3,24 @@
 
 import { useEffect, useState } from 'react'
 import type { Action } from '../schema/action.ts'
-import type { Combatant, PlayerCharacter } from '../schema/combatant.ts'
+import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
+import type { SpellRef } from '../schema/creature.ts'
+import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import {
   applyDamage,
   applyHealing,
+  castSpell,
   hpTierOf,
   parseHpInput,
   rechargeLimited,
+  restoreSpellUse,
   setCurrentHp,
+  spellUsesRemaining,
   spendLimited,
 } from '../combat/resources.ts'
+import { loadSrdSpells } from '../compendium/srd.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import {
@@ -29,6 +35,7 @@ import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
+import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback } from './EncounterPlayback.tsx'
 import { hpToneFor } from './hpTone.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
@@ -36,7 +43,7 @@ import { DefensesAndSenses } from './CreatureStatBlock.tsx'
 import { speedLines } from '../combat/speed.ts'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
-import { RollLog, type OnRoll, type RollEntry } from './RollLog.tsx'
+import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
@@ -136,11 +143,13 @@ export function EncounterConsole({
   onBegin,
   onNextTurn,
   onClearLog,
+  onNote,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
   rollLog: RollEntry[]
   onRoll: OnRoll
+  onNote: OnNote
   selectedId: string | null
   onSelect: (id: string) => void
   started: boolean
@@ -165,8 +174,24 @@ export function EncounterConsole({
 
   // The action whose resolver modal is open (the selected creature is the attacker).
   const [actionFor, setActionFor] = useState<Action | null>(null)
-  // Switching the selected combatant closes a stale resolver.
-  useEffect(() => setActionFor(null), [selected?.combatantId])
+  // The spell being cast from the selected creature's stat block.
+  const [castingSpell, setCastingSpell] = useState<SpellRef | null>(null)
+  // Switching the selected combatant closes a stale resolver / cast modal.
+  useEffect(() => {
+    setActionFor(null)
+    setCastingSpell(null)
+  }, [selected?.combatantId])
+
+  // The SRD spells, loaded once, indexed by id for the hover card + cast resolution.
+  const [spellsById, setSpellsById] = useState<Map<string, Spell>>(new Map())
+  useEffect(() => {
+    loadSrdSpells().then(
+      (spells) => setSpellsById(new Map(spells.map((s) => [s.id, s]))),
+      () => {},
+    )
+  }, [])
+  const resolveSpell = (ref?: string): Spell | undefined =>
+    ref ? spellsById.get(ref) : undefined
 
   // Apply an HP/temp edit ("12", "+5", "-3"); HP damage to a concentrator prompts a save.
   const applyHpInput = (c: Combatant, raw: string, isTemp: boolean) => {
@@ -250,6 +275,25 @@ export function EncounterConsole({
       type: 'update',
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : spendLimited(cc, action.id)),
+    })
+  }
+
+  // Casting a spell from the stat block: spend a use (per-day decrements; at-will
+  // doesn't) and log the cast. The damage/save resolution is in the cast modal.
+  const castSpellFrom = (c: MonsterCombatant, spell: SpellRef) => {
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : castSpell(cc, spell)),
+    })
+    onNote(`${c.label} casts ${spell.name}`)
+  }
+
+  const restoreSpellUseFor = (c: MonsterCombatant, spell: SpellRef) => {
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : restoreSpellUse(cc, spell)),
     })
   }
 
@@ -352,6 +396,11 @@ export function EncounterConsole({
                   rechargeState={rechargeStateOf(selected)}
                   onRecharge={(action) => rollRechargeFor(selected, action)}
                   onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
+                  onCastSpell={setCastingSpell}
+                  spellUsesOf={(spell) =>
+                    selected.isPC ? null : spellUsesRemaining(selected, spell)
+                  }
+                  resolveSpell={resolveSpell}
                 />
               )}
             </div>
@@ -430,6 +479,21 @@ export function EncounterConsole({
           onRoll={onRoll}
           onUse={() => consumeIfRechargeable(selected, actionFor)}
           onClose={() => setActionFor(null)}
+        />
+      )}
+
+      {castingSpell && selected && !selected.isPC && (
+        <SpellCastModal
+          caster={selected}
+          spellRef={castingSpell}
+          spell={resolveSpell(castingSpell.ref)}
+          usesRemaining={spellUsesRemaining(selected, castingSpell)}
+          combatants={combatants}
+          dispatch={dispatch}
+          onRoll={onRoll}
+          onCast={() => castSpellFrom(selected, castingSpell)}
+          onRestore={() => restoreSpellUseFor(selected, castingSpell)}
+          onClose={() => setCastingSpell(null)}
         />
       )}
     </div>

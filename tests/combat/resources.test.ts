@@ -10,6 +10,7 @@ import type {
 import {
   applyDamage,
   applyHealing,
+  castSpell,
   grantTempHp,
   hpTier,
   isBloodied,
@@ -17,12 +18,15 @@ import {
   parseHpInput,
   rechargeLimited,
   restoreSlot,
+  restoreSpellUse,
   setCurrentHp,
   slotsRemaining,
   spendLegendary,
   spendLimited,
+  spellUsesRemaining,
   useSlot,
 } from '../../src/combat/resources.ts'
+import type { Spellcasting } from '../../src/schema/creature.ts'
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -43,7 +47,7 @@ function creature(): Creature {
       saveDc: 14,
       toHit: 6,
       slots: { '1': 4, '3': 3 },
-      spells: [],
+      groups: [],
     },
     limitedUse: [
       {
@@ -67,6 +71,7 @@ function monster(overrides: Partial<MonsterCombatant> = {}): MonsterCombatant {
     status: 'active',
     hp: { current: 40, max: 40, temp: 0 },
     slotsUsed: {},
+    spellUsesSpent: {},
     limitedUseState: { 'fire-breath': { available: true } },
     legendaryRemaining: 3,
     concentration: null,
@@ -279,6 +284,61 @@ describe('spell slots', () => {
   it('restores a spent slot, flooring at zero used', () => {
     expect(restoreSlot(monster({ slotsUsed: { '1': 2 } }), '1').slotsUsed['1']).toBe(1)
     expect(restoreSlot(monster(), '1').slotsUsed['1'] ?? 0).toBe(0)
+  })
+})
+
+// --- spellcasting uses ------------------------------------------------------
+
+describe('spell uses (At Will / N per day, each spell on its own)', () => {
+  const SPELLCASTING: Spellcasting = {
+    ability: 'int',
+    saveDc: 14,
+    groups: [
+      { usage: { type: 'atWill' }, spells: [{ name: 'Mage Hand', ref: 'srd-5.2:mage-hand' }] },
+      {
+        usage: { type: 'perDay', per: 2 },
+        spells: [
+          { name: 'Fireball', ref: 'srd-5.2:fireball' },
+          { name: 'Invisibility', ref: 'srd-5.2:invisibility' },
+        ],
+      },
+    ],
+  }
+  const caster = () =>
+    monster({ creature: { ...creature(), spellcasting: SPELLCASTING } })
+  const fireball = SPELLCASTING.groups[1].spells[0]
+  const invisibility = SPELLCASTING.groups[1].spells[1]
+  const mageHand = SPELLCASTING.groups[0].spells[0]
+
+  it('reports null (unlimited) for an at-will spell', () => {
+    expect(spellUsesRemaining(caster(), mageHand)).toBeNull()
+  })
+
+  it('starts a per-day spell at its full count', () => {
+    expect(spellUsesRemaining(caster(), fireball)).toBe(2)
+  })
+
+  it('spends only the cast spell — each is counted on its own', () => {
+    const after = castSpell(caster(), fireball)
+    expect(spellUsesRemaining(after, fireball)).toBe(1)
+    expect(spellUsesRemaining(after, invisibility)).toBe(2) // untouched
+  })
+
+  it('does not spend an at-will spell', () => {
+    expect(castSpell(caster(), mageHand).spellUsesSpent).toEqual({})
+  })
+
+  it('clamps at zero — a drained spell can be cast no further', () => {
+    let c = castSpell(castSpell(caster(), fireball), fireball)
+    expect(spellUsesRemaining(c, fireball)).toBe(0)
+    c = castSpell(c, fireball)
+    expect(spellUsesRemaining(c, fireball)).toBe(0)
+  })
+
+  it('restores one spent use, flooring at zero', () => {
+    const spent = castSpell(caster(), fireball)
+    expect(spellUsesRemaining(restoreSpellUse(spent, fireball), fireball)).toBe(2)
+    expect(spellUsesRemaining(restoreSpellUse(caster(), fireball), fireball)).toBe(2)
   })
 })
 

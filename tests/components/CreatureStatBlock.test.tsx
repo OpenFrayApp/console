@@ -2,9 +2,9 @@
 // Copyright (C) 2026 OpenFray contributors
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
-import type { Creature } from '../../src/schema/creature.ts'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import type { Creature, SpellRef } from '../../src/schema/creature.ts'
 import { CreatureStatBlock } from '../../src/components/CreatureStatBlock.tsx'
 
 const GOBLIN: Creature = {
@@ -119,5 +119,55 @@ describe('CreatureStatBlock', () => {
     expect(container.textContent).toContain('advantage')
     expect(container.textContent).not.toContain('**')
     expect(container.querySelector('strong')).not.toBeNull()
+  })
+})
+
+const MAGE: Creature = {
+  ...GOBLIN,
+  id: 'srd-5.2:mage',
+  name: 'Mage',
+  spellcasting: {
+    ability: 'int',
+    saveDc: 14,
+    groups: [
+      { usage: { type: 'atWill' }, spells: [{ name: 'Mage Hand', ref: 'srd-5.2:mage-hand' }] },
+      {
+        usage: { type: 'perDay', per: 2 },
+        spells: [
+          { name: 'Fireball', ref: 'srd-5.2:fireball' },
+          { name: 'Invisibility', ref: 'srd-5.2:invisibility' },
+        ],
+      },
+    ],
+  },
+}
+
+describe('CreatureStatBlock — spellcasting', () => {
+  it('renders the header, usage groups, and per-day remaining uses', () => {
+    const usesOf = (s: SpellRef): number | null =>
+      s.ref === 'srd-5.2:mage-hand' ? null : s.ref === 'srd-5.2:fireball' ? 1 : 2
+    render(<CreatureStatBlock creature={MAGE} onCastSpell={vi.fn()} spellUsesOf={usesOf} />)
+    expect(screen.getByText('Spellcasting')).toBeInTheDocument()
+    expect(screen.getByText(/spell save DC 14/)).toBeInTheDocument()
+    expect(screen.getByText('At Will')).toBeInTheDocument()
+    expect(screen.getByText('2/Day Each')).toBeInTheDocument()
+    // At-will shows no count; per-day shows its own remaining (Fireball 1, Invisibility 2).
+    expect(screen.getByRole('button', { name: 'Mage Hand' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Fireball (1)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Invisibility (2)' })).toBeInTheDocument()
+  })
+
+  it('casts a spell on click', () => {
+    const onCast = vi.fn()
+    render(<CreatureStatBlock creature={MAGE} onCastSpell={onCast} spellUsesOf={() => 2} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Fireball (2)' }))
+    expect(onCast).toHaveBeenCalledWith({ name: 'Fireball', ref: 'srd-5.2:fireball' })
+  })
+
+  it('renders spells as plain text in the reference compendium (no onCast)', () => {
+    render(<CreatureStatBlock creature={MAGE} />)
+    expect(screen.getByText('Spellcasting')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Fireball/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Fireball')).toBeInTheDocument()
   })
 })

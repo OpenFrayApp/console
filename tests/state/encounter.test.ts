@@ -33,6 +33,7 @@ function monster(id: string, initiative: number): MonsterCombatant {
     status: 'active',
     hp: { current: 7, max: 7, temp: 0 },
     slotsUsed: {},
+    spellUsesSpent: {},
     limitedUseState: {},
     legendaryRemaining: 0,
     concentration: null,

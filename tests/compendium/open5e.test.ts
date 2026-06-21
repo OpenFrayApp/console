@@ -6,6 +6,7 @@ import {
   mapOpen5eCreature,
   mapOpen5eSpell,
   mapSource,
+  parseSpellcasting,
   slugFromKey,
   type Open5eCreature,
   type Open5eSpell,
@@ -354,5 +355,79 @@ describe('mapOpen5eCreature', () => {
     expect(save?.toHit).toBeNull()
     expect(save?.save).toEqual({ ability: 'int', dc: 16, onSave: 'half' })
     expect(save?.damage).toEqual([{ formula: '3d6', type: 'psychic' }])
+  })
+})
+
+describe('parseSpellcasting', () => {
+  const MAGE =
+    'The mage casts one of the following spells, using Intelligence as the spellcasting ability (spell save DC 14):\n\n' +
+    '- **At Will:** Detect Magic, Light, Mage Armor, Mage Hand, Prestidigitation\n' +
+    '- **2/Day Each:** Fireball, Invisibility\n' +
+    '- **1/Day Each:** Cone of Cold, Fly'
+
+  it('parses the caster header — ability and save DC', () => {
+    const sc = parseSpellcasting(MAGE, 'srd-5.2')
+    expect(sc?.ability).toBe('int')
+    expect(sc?.saveDc).toBe(14)
+    expect(sc?.toHit).toBeUndefined()
+  })
+
+  it('groups spells by usage in stat-block order, with per-day counts', () => {
+    const sc = parseSpellcasting(MAGE, 'srd-5.2')!
+    expect(sc.groups.map((g) => g.usage)).toEqual([
+      { type: 'atWill' },
+      { type: 'perDay', per: 2 },
+      { type: 'perDay', per: 1 },
+    ])
+    expect(sc.groups[1].spells).toEqual([
+      { name: 'Fireball', ref: 'srd-5.2:fireball' },
+      { name: 'Invisibility', ref: 'srd-5.2:invisibility' },
+    ])
+    // The ref is built within the given source, so 5.1 content keys differently.
+    expect(parseSpellcasting(MAGE, 'srd-5.1')!.groups[1].spells[0].ref).toBe('srd-5.1:fireball')
+  })
+
+  it('captures a spell attack bonus when the block lists one', () => {
+    const sc = parseSpellcasting(
+      'casts using Charisma as the spellcasting ability (spell save DC 17, +9 to hit with spell attacks):\n\n- **At Will:** Fire Bolt',
+      'srd-5.2',
+    )
+    expect(sc?.toHit).toBe(9)
+    expect(sc?.saveDc).toBe(17)
+  })
+
+  it('drops an empty usage line (e.g. an unused "At Will:")', () => {
+    const oni =
+      'The oni casts, using Charisma as the spellcasting ability (spell save DC 13):\n\n' +
+      '- **At Will:**\n' +
+      '- **1/Day Each:** Charm Person, Darkness, Gaseous Form, Sleep'
+    const sc = parseSpellcasting(oni, 'srd-5.2')!
+    expect(sc.groups).toHaveLength(1)
+    expect(sc.groups[0].usage).toEqual({ type: 'perDay', per: 1 })
+    expect(sc.groups[0].spells).toHaveLength(4)
+  })
+
+  it('returns undefined for prose with no usage groups', () => {
+    expect(
+      parseSpellcasting('The pit fiend casts Fireball (level 5 version) twice.', 'srd-5.2'),
+    ).toBeUndefined()
+  })
+
+  it('lifts spellcasting off the actions and drops the prose action', () => {
+    const caster = mapOpen5eCreature({
+      ...ABOLETH,
+      actions: [
+        ...ABOLETH.actions!,
+        {
+          name: 'Spellcasting',
+          action_type: 'ACTION',
+          order_in_statblock: 5,
+          desc: MAGE,
+          attacks: [],
+        },
+      ],
+    })
+    expect(caster.spellcasting?.groups).toHaveLength(3)
+    expect(caster.actions?.some((a) => a.name === 'Spellcasting')).toBe(false)
   })
 })

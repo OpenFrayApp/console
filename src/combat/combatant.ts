@@ -57,6 +57,7 @@ export function instantiate(
     status: 'active',
     hp: { current: max, max, temp: 0 },
     slotsUsed: {},
+    spellUsesSpent: {},
     limitedUseState,
     legendaryRemaining: snapshot.legendaryActions?.perRound ?? 0,
     concentration: null,

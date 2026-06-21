@@ -73,6 +73,8 @@ export interface MonsterCombatant extends CombatantBase {
   /** Disambiguates duplicates, e.g. `"Goblin (B)"`. */
   label: string
   slotsUsed: SlotsUsed
+  /** Per-spell uses spent, keyed by spell ref (or name). At-will spells aren't tracked. */
+  spellUsesSpent: Record<string, number>
   limitedUseState: Record<string, LimitedUseState>
   /** Resets to `creature.legendaryActions.perRound` at the end of its turn. */
   legendaryRemaining: number

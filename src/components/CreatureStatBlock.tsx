@@ -1,17 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import { useState } from 'react'
 import type { Ability, Senses, SkillBonuses } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
-import type { Creature } from '../schema/creature.ts'
+import type { Creature, SpellGroup, Spellcasting, SpellRef } from '../schema/creature.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
+import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
 import { formatCr } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
+import { SpellCard } from './SpellCard.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
+
+/** Resolve a spell's compendium entry (for the hover preview + cast card). */
+export type ResolveSpell = (ref?: string) => Spell | undefined
+/** Uses left for a spell on the live combatant: null when unlimited (at-will). */
+export type SpellUsesOf = (spell: SpellRef) => number | null
 
 const ABILITY_LABEL: Record<Ability, string> = {
   str: 'Str',
@@ -346,6 +354,104 @@ function ActionSection({
   )
 }
 
+function usageLabel(group: SpellGroup): string {
+  if (group.usage.type === 'atWill') return 'At Will'
+  return `${group.usage.per}/Day Each`
+}
+
+function spellcastingHeader(sc: Spellcasting): string {
+  const bits: string[] = []
+  if (sc.ability) bits.push(`${ABILITY_LABEL[sc.ability]} as the spellcasting ability`)
+  if (sc.saveDc != null) bits.push(`spell save DC ${sc.saveDc}`)
+  if (sc.toHit != null) bits.push(`${signed(sc.toHit)} to hit with spell attacks`)
+  return bits.length ? `Casts using ${bits.join(', ')}.` : 'Casts the following spells.'
+}
+
+/**
+ * A monster's spellcasting, grouped by usage. Each spell is a button that opens
+ * the cast modal; hovering it (desktop) previews the spell card. Per-day spells
+ * show their remaining uses and grey out when spent. In the reference compendium
+ * (no `onCast`) the spells render as plain text.
+ */
+function SpellcastingSection({
+  spellcasting,
+  onCast,
+  usesOf,
+  resolveSpell,
+}: {
+  spellcasting: Spellcasting
+  onCast?: (spell: SpellRef) => void
+  usesOf?: SpellUsesOf
+  resolveSpell?: ResolveSpell
+}) {
+  // The hover preview is anchored with a fixed position so it isn't clipped by
+  // the scrolling stat-block column. Touch devices don't fire hover, so they
+  // simply tap to open the cast modal (which shows the same card).
+  const [preview, setPreview] = useState<{ spell: Spell; x: number; y: number } | null>(null)
+
+  const showPreview = (spell: SpellRef, el: HTMLElement) => {
+    const found = resolveSpell?.(spell.ref)
+    if (!found) return
+    const r = el.getBoundingClientRect()
+    setPreview({ spell: found, x: Math.min(r.left, window.innerWidth - 340), y: r.bottom + 6 })
+  }
+
+  return (
+    <div>
+      <h4 className={SECTION_HEADING}>Spellcasting</h4>
+      <p className="mb-2 text-sm italic text-slate-500 dark:text-slate-400">
+        {spellcastingHeader(spellcasting)}
+      </p>
+      <div className="space-y-2">
+        {spellcasting.groups.map((group, i) => (
+          <div key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              {usageLabel(group)}
+            </span>
+            {group.spells.map((spell) => {
+              const remaining = usesOf?.(spell) ?? null
+              const drained = remaining === 0
+              const label = remaining == null ? spell.name : `${spell.name} (${remaining})`
+              if (!onCast) {
+                return (
+                  <span key={spell.ref ?? spell.name} className="text-slate-600 dark:text-slate-300">
+                    {label}
+                  </span>
+                )
+              }
+              return (
+                <button
+                  key={spell.ref ?? spell.name}
+                  type="button"
+                  onClick={() => onCast(spell)}
+                  onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
+                  onMouseLeave={() => setPreview(null)}
+                  title={`Cast ${spell.name}`}
+                  className={
+                    drained
+                      ? 'text-slate-400 line-through hover:no-underline dark:text-slate-600'
+                      : 'font-medium text-indigo-600 hover:underline dark:text-indigo-400'
+                  }
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      {preview && (
+        <div
+          className="pointer-events-none fixed z-40 w-80 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
+          style={{ left: preview.x, top: preview.y }}
+        >
+          <SpellCard spell={preview.spell} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function CreatureStatBlock({
   creature,
   hp,
@@ -358,6 +464,9 @@ export function CreatureStatBlock({
   rechargeState,
   onRecharge,
   onCheck,
+  onCastSpell,
+  spellUsesOf,
+  resolveSpell,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -380,6 +489,12 @@ export function CreatureStatBlock({
   onRecharge?: (action: Action) => void
   /** Roll an ability check / save / skill (d20 + modifier). Combat only. */
   onCheck?: OnCheck
+  /** Cast a spell from the spellcasting block. Combat only. */
+  onCastSpell?: (spell: SpellRef) => void
+  /** Uses left for a spell on the live combatant (null = unlimited). Combat only. */
+  spellUsesOf?: SpellUsesOf
+  /** Resolve a spell's compendium entry for the hover preview / cast card. */
+  resolveSpell?: ResolveSpell
 }) {
   const displayName = label ?? creature.name
   const legendaryTitle = creature.legendaryActions
@@ -461,6 +576,14 @@ export function CreatureStatBlock({
       />
 
       <Section title="Traits" items={creature.traits} />
+      {creature.spellcasting && (
+        <SpellcastingSection
+          spellcasting={creature.spellcasting}
+          onCast={onCastSpell}
+          usesOf={spellUsesOf}
+          resolveSpell={resolveSpell}
+        />
+      )}
       <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
       <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
       <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />

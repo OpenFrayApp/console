@@ -6,7 +6,7 @@ import type {
   CombatantStatus,
   MonsterCombatant,
 } from '../schema/combatant.ts'
-import type { SpellLevel } from '../schema/creature.ts'
+import type { SpellLevel, SpellRef, SpellUsage } from '../schema/creature.ts'
 import { markDeathSaveFailure } from './deathsaves.ts'
 
 /**
@@ -146,7 +146,7 @@ export function grantTempHp(c: Combatant, amount: number): Combatant {
 // --- spell slots (monsters/NPCs; PCs track their own on their sheet) --------
 
 export function slotMax(c: MonsterCombatant, level: SpellLevel): number {
-  return c.creature.spellcasting?.slots[level] ?? 0
+  return c.creature.spellcasting?.slots?.[level] ?? 0
 }
 
 export function slotsRemaining(c: MonsterCombatant, level: SpellLevel): number {
@@ -199,4 +199,58 @@ export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombata
     ...c,
     limitedUseState: { ...c.limitedUseState, [id]: { available: true } },
   }
+}
+
+// --- spellcasting uses (At Will / N per day, each spell counted on its own) --
+
+/** The state key for a spell: its compendium ref, falling back to its name. */
+export function spellKey(spell: SpellRef): string {
+  return spell.ref ?? spell.name
+}
+
+/** The usage tier a spell belongs to, or undefined if it isn't in the block. */
+export function spellUsage(
+  c: MonsterCombatant,
+  spell: SpellRef,
+): SpellUsage | undefined {
+  const key = spellKey(spell)
+  for (const group of c.creature.spellcasting?.groups ?? []) {
+    if (group.spells.some((s) => spellKey(s) === key)) return group.usage
+  }
+  return undefined
+}
+
+/**
+ * Uses left for a spell: `null` when unlimited (at-will, or a spell not gated by
+ * a per-day limit), otherwise the per-day count minus what's been spent.
+ */
+export function spellUsesRemaining(
+  c: MonsterCombatant,
+  spell: SpellRef,
+): number | null {
+  const usage = spellUsage(c, spell)
+  if (!usage || usage.type === 'atWill') return null
+  return Math.max(0, usage.per - (c.spellUsesSpent[spellKey(spell)] ?? 0))
+}
+
+/** Spend one use of a per-day spell; a no-op for at-will spells or when drained. */
+export function castSpell(c: MonsterCombatant, spell: SpellRef): MonsterCombatant {
+  const remaining = spellUsesRemaining(c, spell)
+  if (remaining == null || remaining <= 0) return c
+  const key = spellKey(spell)
+  return {
+    ...c,
+    spellUsesSpent: { ...c.spellUsesSpent, [key]: (c.spellUsesSpent[key] ?? 0) + 1 },
+  }
+}
+
+/** Give back one spent use of a per-day spell; a no-op if none are spent. */
+export function restoreSpellUse(
+  c: MonsterCombatant,
+  spell: SpellRef,
+): MonsterCombatant {
+  const key = spellKey(spell)
+  const spent = c.spellUsesSpent[key] ?? 0
+  if (spent <= 0) return c
+  return { ...c, spellUsesSpent: { ...c.spellUsesSpent, [key]: spent - 1 } }
 }

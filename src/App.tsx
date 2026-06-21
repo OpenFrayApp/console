@@ -17,7 +17,7 @@ import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
-import { type OnRoll, type RollEntry } from './components/RollLog.tsx'
+import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
@@ -48,6 +48,10 @@ function App() {
     setRollLog((prev) =>
       [{ id: crypto.randomUUID(), label, result, applied }, ...prev].slice(0, 25),
     )
+  }
+
+  const pushNote: OnNote = (label) => {
+    setRollLog((prev) => [{ id: crypto.randomUUID(), label }, ...prev].slice(0, 25))
   }
 
   const handlePick = (creature: Creature) => {
@@ -217,6 +221,7 @@ function App() {
             dispatch={dispatch}
             rollLog={rollLog}
             onRoll={pushRoll}
+            onNote={pushNote}
             selectedId={selectedId}
             onSelect={setSelectedId}
             started={started}

@@ -36,6 +36,7 @@ function monster(c: Creature): MonsterCombatant {
     status: 'active',
     hp: { current: c.maxHp, max: c.maxHp, temp: 0 },
     slotsUsed: {},
+    spellUsesSpent: {},
     limitedUseState: {},
     legendaryRemaining: 3,
     concentration: null,
