@@ -1,6 +1,6 @@
 # OpenFray
 
-**A free, open-source D&D 5e combat tracker for Dungeon Masters.**
+**A free, open-source DnD 5e combat tracker for Dungeon Masters.**
 
 5.5e/2024-first, with 5.0 support. Built for the table — fast, glanceable, and
 focused on the one job other trackers do badly: keeping hold of what's actually
@@ -12,7 +12,7 @@ happening in a fight.
 
 ## What it is
 
-OpenFray is a combat console for running D&D 5e encounters: initiative order,
+OpenFray is a combat console for running DnD 5e encounters: initiative order,
 monster resources (spell slots, legendary & lair actions, recharge abilities),
 concentration, conditions, the relational state between combatants (who has
 advantage on whom, who's debuffed), mass saves, and dice — with a built-in SRD

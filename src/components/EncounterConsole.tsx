@@ -45,7 +45,6 @@ import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { DefensesAndSenses } from './CreatureStatBlock.tsx'
 import { speedLines } from '../combat/speed.ts'
 import { MassSavePanel } from './MassSavePanel.tsx'
-import { QuickRoll } from './QuickRoll.tsx'
 import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
@@ -396,11 +395,16 @@ export function EncounterConsole({
         </div>
       </section>
 
-      {/* Center — stat block scrolls; Source + controls stay pinned at the bottom. */}
+      {/* Center — Group save / Cast spell toolbar over the selected stat block. */}
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800">
+        {combatants.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <MassSavePanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
+            <CastSpellPanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
+          </div>
+        )}
         {selected ? (
-          <>
-            <div className="min-h-0 flex-1 overflow-auto pr-4">
+          <div className="min-h-0 flex-1 overflow-auto pr-4">
               {selected.isPC ? (
                 <PcSummary
                   pc={selected}
@@ -451,7 +455,19 @@ export function EncounterConsole({
                 />
               )}
             </div>
-            <div className="shrink-0 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Add a combatant, then select it to see its stat block and actions.
+          </p>
+        )}
+      </section>
+
+      {/* Right — tools: the selected combatant's controls, then the roll log. */}
+      <aside className="flex min-h-0 flex-col gap-4 overflow-auto lg:pl-4">
+        {selected && (
+          <div className="shrink-0">
+            <h3 className={COLUMN_HEADING}>Controls</h3>
+            <div className="mt-2 space-y-2">
               {concPrompt && concPrompt.id === selected.combatantId && (
                 <ConcentrationPrompt
                   dc={concPrompt.dc}
@@ -476,27 +492,8 @@ export function EncounterConsole({
                 onRoll={onRoll}
               />
             </div>
-          </>
-        ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Add a combatant, then select it to see its stat block and actions.
-          </p>
-        )}
-      </section>
-
-      {/* Right — combat actions, dice, roll log */}
-      <aside className="flex min-h-0 flex-col gap-3 overflow-auto lg:pl-4">
-        {combatants.length > 0 && (
-          <div className="flex flex-wrap items-start gap-2">
-            <MassSavePanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
-            <CastSpellPanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
           </div>
         )}
-
-        <div>
-          <h3 className={`mb-1 ${COLUMN_HEADING}`}>Dice</h3>
-          <QuickRoll onRoll={onRoll} />
-        </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="mb-1 flex items-center justify-between">

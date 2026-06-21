@@ -17,6 +17,7 @@ import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
+import { QuickRoll } from './components/QuickRoll.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
@@ -179,7 +180,7 @@ function App() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            D&amp;D 5e combat console
+            DnD 5e combat console
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -255,18 +256,24 @@ function App() {
         />
       )}
 
-      {/* AGPL §13: a network-deployed copy must offer its source. */}
-      <footer className="border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <a
-          href={REPO_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-200"
-        >
-          Source
-        </a>
-        <span className="mx-2">·</span>
-        <span>AGPL-3.0</span>
+      {/* Footer: dice roller centered under the stat block; AGPL §13 source link right. */}
+      <footer className="grid grid-cols-3 items-center gap-4 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div />
+        <div className="flex justify-center">
+          {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-200"
+          >
+            Source
+          </a>
+          <span>·</span>
+          <span>AGPL-3.0</span>
+        </div>
       </footer>
     </div>
   )

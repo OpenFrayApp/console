@@ -13,6 +13,7 @@ import {
 import { breakConcentration, startConcentration } from '../combat/concentration.ts'
 import {
   legendaryResistanceLeft,
+  legendaryResistanceMax,
   setInLair,
   spendLegendaryResistance,
 } from '../combat/resources.ts'
@@ -125,6 +126,10 @@ export function CombatantControls({
 
         {!combatant.isPC && combatant.creature.legendaryResistance != null && (
           <span className="inline-flex items-center gap-2">
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+              Legendary Resistance {legendaryResistanceLeft(combatant)} of{' '}
+              {legendaryResistanceMax(combatant)} left
+            </span>
             <button
               type="button"
               onClick={() => apply((c) => (c.isPC ? c : spendLegendaryResistance(c)))}
@@ -132,7 +137,7 @@ export function CombatantControls({
               title="Turn a failed save into a success; spends one use"
               className="rounded border border-amber-400 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
             >
-              Legendary Resistance ({legendaryResistanceLeft(combatant)})
+              Use Legendary Resistance
             </button>
             {combatant.creature.legendaryResistanceLair != null && (
               <label className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
