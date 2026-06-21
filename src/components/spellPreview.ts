@@ -3,7 +3,7 @@
 
 import type { CSSProperties } from 'react'
 
-const CARD_WIDTH = 320 // matches w-80
+const CARD_WIDTH = 384 // matches w-96
 
 /**
  * Position a floating spell-preview card next to an anchor rect, kept inside the
@@ -21,4 +21,4 @@ export function floatingCardStyle(rect: DOMRect): CSSProperties {
 }
 
 export const FLOATING_CARD =
-  'pointer-events-none fixed z-40 w-80 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900'
+  'pointer-events-none fixed z-40 w-96 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900'

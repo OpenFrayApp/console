@@ -16,6 +16,7 @@ export type SaveBonuses = Partial<Record<Ability, number>>
 export type Size =
   | 'Tiny'
   | 'Small'
+  | 'Medium or Small'
   | 'Medium'
   | 'Large'
   | 'Huge'

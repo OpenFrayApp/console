@@ -3,8 +3,10 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  averageHp,
   buildAction,
   buildCreature,
+  buildHpFormula,
   emptyActionDraft,
   emptyDraft,
   emptySpellGroupDraft,
@@ -16,6 +18,11 @@ import {
 
 function draft(overrides: Partial<MonsterDraft> = {}): MonsterDraft {
   return { ...emptyDraft(), name: 'Test Beast', ...overrides }
+}
+
+const CTX = {
+  abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+  pb: 2,
 }
 
 describe('buildCreature', () => {
@@ -39,16 +46,16 @@ describe('buildCreature', () => {
   })
 
   it('parses core stats and trims the name', () => {
-    const c = buildCreature(draft({ name: '  Frost Worm  ', ac: '18', hp: '120', size: 'Huge', type: 'monstrosity' }))
+    const c = buildCreature(draft({ name: '  Frost Worm  ', ac: '18', hpDieCount: '16', hpDie: '10', hpMod: '32', size: 'Huge', type: 'monstrosity' }))
     expect(c.name).toBe('Frost Worm')
     expect(c.ac).toBe(18)
-    expect(c.maxHp).toBe(120)
+    expect(c.maxHp).toBe(120) // 16 × 5.5 + 32
     expect(c.size).toBe('Huge')
     expect(c.type).toBe('monstrosity')
   })
 
-  it('floors max HP at 1 even when blank', () => {
-    expect(buildCreature(draft({ hp: '' })).maxHp).toBe(1)
+  it('floors max HP at 1 when there are no hit dice', () => {
+    expect(buildCreature(draft()).maxHp).toBe(1)
   })
 
   it('defaults abilities to 10 and derives save bonuses from CR proficiency', () => {
@@ -95,26 +102,43 @@ describe('buildCreature', () => {
     expect(c.speed).toEqual({ walk: 40, fly: 80, hover: true })
   })
 
-  it('keeps only named actions and assembles an attack', () => {
-    const named = { ...emptyActionDraft(), name: 'Bite', kind: 'melee' as const, toHit: '7', reach: '5', damage: [{ id: 'd', formula: '2d6+4', type: 'piercing' as const }] }
+  it('keeps only named actions and derives the attack to-hit from ability + CR', () => {
+    // str 18 (mod +4) at CR 5 (pb +3) → to hit +7, derived not typed.
+    const named = { ...emptyActionDraft(), name: 'Bite', kind: 'melee' as const, reach: '5', damage: [{ id: 'd', formula: '2d6+4', type: 'piercing' as const }] }
     const blank = emptyActionDraft() // no name → dropped
-    const c = buildCreature(draft({ actions: [named, blank] }))
+    const c = buildCreature(draft({
+      cr: '5',
+      abilities: { str: '18', dex: '', con: '', int: '', wis: '', cha: '' },
+      actions: [named, blank],
+    }))
     expect(c.actions).toHaveLength(1)
     expect(c.actions?.[0]).toMatchObject({ name: 'Bite', kind: 'melee', toHit: 7, reach: 5, damage: [{ formula: '2d6+4', type: 'piercing' }] })
   })
 
   it('builds a save action with no to-hit', () => {
     const save = { ...emptyActionDraft('save'), name: 'Frost Breath', saveAbility: 'con' as const, saveDc: '16', saveOutcome: 'half' as const, damage: [{ id: 'd', formula: '10d6', type: 'cold' as const }] }
-    const action = buildAction(save)
+    const action = buildAction(save, CTX)
     expect(action.toHit).toBeNull()
     expect(action.save).toEqual({ ability: 'con', dc: 16, onSave: 'half' })
   })
 
   it('maps a dice recharge with a default threshold of 6 when blank', () => {
-    const a = buildAction({ ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '' })
+    const a = buildAction({ ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '' }, CTX)
     expect(a.recharge).toEqual({ type: 'dice', value: 6 })
-    const b = buildAction({ ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '5' })
+    const b = buildAction({ ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '5' }, CTX)
     expect(b.recharge).toEqual({ type: 'dice', value: 5 })
+  })
+
+  it('derives skill bonuses; expertise doubles the proficiency bonus', () => {
+    const c = buildCreature(draft({
+      cr: '5', // pb +3
+      abilities: { str: '', dex: '18', con: '', int: '', wis: '14', cha: '' },
+      skills: [
+        { id: 's1', skill: 'stealth', expertise: false }, // dex +4 + pb 3 = 7
+        { id: 's2', skill: 'perception', expertise: true }, // wis +2 + 2×pb 6 = 8
+      ],
+    }))
+    expect(c.skills).toEqual({ stealth: 7, perception: 8 })
   })
 
   it('assembles legendary actions with a per-round budget', () => {
@@ -123,19 +147,66 @@ describe('buildCreature', () => {
     expect(c.legendaryActions).toMatchObject({ perRound: 3, actions: [{ name: 'Tail Swipe' }] })
   })
 
-  it('builds spellcasting groups and ignores empty ones', () => {
-    const filled = { ...emptySpellGroupDraft(), usage: 'perDay' as const, per: '3', spells: 'Fireball, Counterspell' }
+  it('builds spellcasting groups, ignores empty ones, and auto-calculates DC + attack', () => {
+    const filled = {
+      ...emptySpellGroupDraft(),
+      usage: 'perDay' as const,
+      per: '3',
+      spells: [
+        { name: 'Fireball', ref: 'srd-5.2:fireball' },
+        { name: 'Counterspell', ref: 'srd-5.2:counterspell' },
+      ],
+    }
     const empty = emptySpellGroupDraft() // no spells → ignored
-    const c = buildCreature(draft({ spellAbility: 'int', spellSaveDc: '17', spellGroups: [filled, empty] }))
+    const c = buildCreature(draft({
+      cr: '9', // pb +4
+      abilities: { str: '', dex: '', con: '', int: '18', wis: '', cha: '' }, // int mod +4
+      spellAbility: 'int',
+      spellGroups: [filled, empty],
+    }))
     expect(c.spellcasting?.ability).toBe('int')
-    expect(c.spellcasting?.saveDc).toBe(17)
+    expect(c.spellcasting?.saveDc).toBe(16) // 8 + 4 + 4
+    expect(c.spellcasting?.toHit).toBe(8) // 4 + 4
     expect(c.spellcasting?.groups).toHaveLength(1)
-    expect(c.spellcasting?.groups[0]).toEqual({ usage: { type: 'perDay', per: 3 }, spells: [{ name: 'Fireball' }, { name: 'Counterspell' }] })
+    expect(c.spellcasting?.groups[0]).toEqual({
+      usage: { type: 'perDay', per: 3 },
+      spells: [
+        { name: 'Fireball', ref: 'srd-5.2:fireball' },
+        { name: 'Counterspell', ref: 'srd-5.2:counterspell' },
+      ],
+    })
   })
 
   it('keeps named traits and drops nameless ones', () => {
     const c = buildCreature(draft({ traits: [{ ...emptyTraitDraft(), name: 'Amphibious', text: 'Breathes air and water.' }, emptyTraitDraft()] }))
     expect(c.traits).toHaveLength(1)
     expect(c.traits?.[0]).toEqual({ name: 'Amphibious', text: 'Breathes air and water.' })
+  })
+})
+
+describe('structured HP', () => {
+  it('averageHp = count × (die + 1) / 2 + mod, floored; 0 when incomplete', () => {
+    expect(averageHp(14, 12, 56)).toBe(147)
+    expect(averageHp(8, 10, 0)).toBe(44)
+    expect(averageHp(1, 6, -1)).toBe(2) // floor(3.5 − 1)
+    expect(averageHp(0, 12, 5)).toBe(0)
+    expect(averageHp(5, 0, 5)).toBe(0)
+  })
+
+  it('buildHpFormula renders the sign and blanks when incomplete', () => {
+    expect(buildHpFormula(14, 12, 56)).toBe('14d12+56')
+    expect(buildHpFormula(2, 6, -1)).toBe('2d6-1')
+    expect(buildHpFormula(3, 8, 0)).toBe('3d8')
+    expect(buildHpFormula(0, 8, 3)).toBe('')
+  })
+
+  it('derives maxHp + hpFormula from the hit dice', () => {
+    const c = buildCreature(draft({ hpDieCount: '14', hpDie: '12', hpMod: '56' }))
+    expect(c.maxHp).toBe(147)
+    expect(c.hpFormula).toBe('14d12+56')
+  })
+
+  it('omits hpFormula when there are no dice', () => {
+    expect(buildCreature(draft()).hpFormula).toBeUndefined()
   })
 })

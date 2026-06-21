@@ -6,6 +6,7 @@ import type {
   Creature,
   LegendaryActions,
   SpellGroup,
+  SpellRef,
   Spellcasting,
   Trait,
 } from '../schema/creature.ts'
@@ -27,6 +28,10 @@ import type {
  * wants numbers and trimmed optionals, so the draft stays string-shaped and
  * `buildCreature` does the parsing in one place. Empty fields drop out rather than
  * becoming `0`/`""`, so a sparse stat block stays sparse.
+ *
+ * Several numbers the DM shouldn't have to compute are derived instead: attack
+ * to-hit, save/skill bonuses, and the spell save DC / attack bonus all come from
+ * an ability modifier plus the proficiency bonus (which itself comes from the CR).
  */
 
 export type RechargeKind = 'none' | 'dice' | 'perDay' | 'perRound'
@@ -41,8 +46,8 @@ export interface ActionDraft {
   id: string
   name: string
   kind: ActionKind
-  /** Empty → no attack roll (save/utility actions). */
-  toHit: string
+  /** Which ability the attack uses; to-hit is derived (mod + proficiency). */
+  attackAbility: Ability
   reach: string
   rangeNormal: string
   rangeLong: string
@@ -66,7 +71,8 @@ export interface TraitDraft {
 export interface SkillDraft {
   id: string
   skill: Skill
-  bonus: string
+  /** Being in the list means proficient; this doubles the proficiency bonus. */
+  expertise: boolean
 }
 
 export interface SpellGroupDraft {
@@ -74,14 +80,14 @@ export interface SpellGroupDraft {
   usage: 'atWill' | 'perDay'
   /** Uses per day for the `perDay` tier. */
   per: string
-  /** Comma-separated spell names. */
-  spells: string
+  /** Chosen spells, restricted to real compendium entries (name + resolving ref). */
+  spells: SpellRef[]
 }
 
 export interface MonsterDraft {
   name: string
   size: Size
-  /** Creature type / "race" (humanoid, dragon, …); `unknown` / `any` allowed. */
+  /** Creature type (humanoid, dragon, …); empty = unspecified. */
   type: string
   alignment: string
   /** Free-text origin label (book, "Homebrew"); stored as `source`, still user content. */
@@ -90,12 +96,13 @@ export interface MonsterDraft {
   cr: string
   xp: string
   ac: string
-  hp: string
-  hpFormula: string
+  hpDieCount: string
+  /** Hit-die size as a number string: '4' | '6' | '8' | '10' | '12' | '20'. */
+  hpDie: string
+  hpMod: string
   speed: { walk: string; fly: string; swim: string; climb: string; burrow: string; hover: boolean }
   abilities: Record<Ability, string>
-  /** Whether the creature is proficient in each save; the bonus is derived from
-   *  the ability modifier + proficiency bonus (from CR). */
+  /** Whether the creature is proficient in each save; the bonus is derived. */
   saves: Record<Ability, boolean>
   skills: SkillDraft[]
   senses: {
@@ -119,26 +126,37 @@ export interface MonsterDraft {
   lairActions: ActionDraft[]
   legendaryResistance: string
   legendaryResistanceLair: string
+  /** Spellcasting ability; the save DC and attack bonus derive from it + CR. */
   spellAbility: Ability | ''
-  spellSaveDc: string
-  spellToHit: string
   spellGroups: SpellGroupDraft[]
 }
 
-export const SIZES: Size[] = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan']
-/** Standard 5e creature types, plus the catch-alls the DM asked for. Stored lowercase. */
+export const SIZES: Size[] = [
+  'Tiny', 'Small', 'Medium or Small', 'Medium', 'Large', 'Huge', 'Gargantuan',
+]
+/** Standard 5e creature types, plus the "any" catch-all. Stored lowercase. */
 export const CREATURE_TYPES: string[] = [
   'aberration', 'beast', 'celestial', 'construct', 'dragon', 'elemental', 'fey',
-  'fiend', 'giant', 'humanoid', 'monstrosity', 'ooze', 'plant', 'undead',
-  'unknown', 'any',
+  'fiend', 'giant', 'humanoid', 'monstrosity', 'ooze', 'plant', 'undead', 'any',
 ]
+// The full D&D Beyond alignment vocabulary, lowercased to match SRD stat-block
+// rendering. Display only — nothing branches on it.
 export const ALIGNMENTS: string[] = [
   'lawful good', 'neutral good', 'chaotic good',
   'lawful neutral', 'neutral', 'chaotic neutral',
   'lawful evil', 'neutral evil', 'chaotic evil',
-  'unaligned', 'any alignment',
+  'unaligned',
+  'typically lawful good', 'typically neutral good', 'typically chaotic good',
+  'typically lawful neutral', 'typically neutral', 'typically chaotic neutral',
+  'typically lawful evil', 'typically neutral evil', 'typically chaotic evil',
+  'any alignment',
+  'any lawful alignment', 'any chaotic alignment',
+  'any good alignment', 'any evil alignment', 'any neutral alignment',
+  'any non-lawful alignment', 'any non-chaotic alignment', 'any non-good alignment',
 ]
 export const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+/** Hit-die sizes, as number strings. */
+export const HP_DICE: string[] = ['4', '6', '8', '10', '12', '20']
 export const ACTION_KINDS: ActionKind[] = ['melee', 'ranged', 'save', 'utility']
 export const SAVE_OUTCOMES: SaveOutcome[] = ['half', 'none', 'negates']
 export const DAMAGE_TYPES: DamageType[] = [
@@ -150,6 +168,23 @@ export const SKILLS: Skill[] = [
   'insight', 'intimidation', 'investigation', 'medicine', 'nature', 'perception',
   'performance', 'persuasion', 'religion', 'sleightOfHand', 'stealth', 'survival',
 ]
+/** Display labels for the camelCase skill keys. */
+export const SKILL_LABELS: Record<Skill, string> = {
+  acrobatics: 'Acrobatics', animalHandling: 'Animal Handling', arcana: 'Arcana',
+  athletics: 'Athletics', deception: 'Deception', history: 'History', insight: 'Insight',
+  intimidation: 'Intimidation', investigation: 'Investigation', medicine: 'Medicine',
+  nature: 'Nature', perception: 'Perception', performance: 'Performance',
+  persuasion: 'Persuasion', religion: 'Religion', sleightOfHand: 'Sleight of Hand',
+  stealth: 'Stealth', survival: 'Survival',
+}
+/** The ability each skill is based on — used to derive a proficient skill bonus. */
+export const SKILL_ABILITY: Record<Skill, Ability> = {
+  acrobatics: 'dex', animalHandling: 'wis', arcana: 'int', athletics: 'str',
+  deception: 'cha', history: 'int', insight: 'wis', intimidation: 'cha',
+  investigation: 'int', medicine: 'wis', nature: 'int', perception: 'wis',
+  performance: 'cha', persuasion: 'cha', religion: 'int', sleightOfHand: 'dex',
+  stealth: 'dex', survival: 'wis',
+}
 
 const uid = (): string => crypto.randomUUID()
 
@@ -162,7 +197,8 @@ export function emptyActionDraft(kind: ActionKind = 'melee'): ActionDraft {
     id: uid(),
     name: '',
     kind,
-    toHit: '',
+    // Ranged attacks default to Dex, everything else to Str — the DM can change it.
+    attackAbility: kind === 'ranged' ? 'dex' : 'str',
     reach: '',
     rangeNormal: '',
     rangeLong: '',
@@ -182,28 +218,29 @@ export function emptyTraitDraft(): TraitDraft {
 }
 
 export function emptySkillDraft(): SkillDraft {
-  return { id: uid(), skill: 'perception', bonus: '' }
+  return { id: uid(), skill: 'perception', expertise: false }
 }
 
 export function emptySpellGroupDraft(): SpellGroupDraft {
-  return { id: uid(), usage: 'atWill', per: '', spells: '' }
+  return { id: uid(), usage: 'atWill', per: '', spells: [] }
 }
 
 export function emptyDraft(): MonsterDraft {
   return {
     name: '',
     size: 'Medium',
-    type: 'unknown',
+    type: '',
     alignment: '',
-    sourceName: 'Homebrew',
+    sourceName: '',
     edition: '5.5',
     cr: '',
     xp: '',
     ac: '',
-    hp: '',
-    hpFormula: '',
+    hpDieCount: '',
+    hpDie: '8',
+    hpMod: '',
     speed: { walk: '', fly: '', swim: '', climb: '', burrow: '', hover: false },
-    abilities: { str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10' },
+    abilities: { str: '', dex: '', con: '', int: '', wis: '', cha: '' },
     saves: { str: false, dex: false, con: false, int: false, wis: false, cha: false },
     skills: [],
     senses: { passivePerception: '', darkvision: '', blindsight: '', tremorsense: '', truesight: '' },
@@ -222,8 +259,6 @@ export function emptyDraft(): MonsterDraft {
     legendaryResistance: '',
     legendaryResistanceLair: '',
     spellAbility: '',
-    spellSaveDc: '',
-    spellToHit: '',
     spellGroups: [],
   }
 }
@@ -235,14 +270,13 @@ const signed = (v: string): number => Math.floor(Number(v) || 0)
 const has = (v: string): boolean => v.trim() !== ''
 const numOpt = (v: string): number | undefined => (has(v) ? num(v) : undefined)
 
-/** A 5e ability modifier, floored. */
+/** A 5e ability modifier, floored. A blank score is treated as 10 (mod 0). */
 export const abilityMod = (score: number): number => Math.floor((score - 10) / 2)
 
 /**
  * Proficiency bonus by challenge rating (2024 DMG table). Fractional CRs (1/8–1/2)
- * and CR 0 all sit at +2; it then steps +1 every four CR. Used to derive save
- * (and could derive skill) bonuses from a proficiency flag, so the DM marks
- * "proficient" instead of doing the arithmetic.
+ * and CR 0 all sit at +2; it then steps +1 every four CR. Drives derived save,
+ * skill, attack, and spell DC numbers so the DM marks intent, not arithmetic.
  */
 export function proficiencyBonus(cr: number | undefined): number {
   if (cr == null || cr <= 4) return 2
@@ -253,6 +287,19 @@ export function proficiencyBonus(cr: number | undefined): number {
   if (cr <= 24) return 7
   if (cr <= 28) return 8
   return 9
+}
+
+/** Average HP for a hit-dice pool: count × (die + 1) / 2 + modifier, floored. */
+export function averageHp(count: number, die: number, mod: number): number {
+  if (count <= 0 || die <= 0) return 0
+  return Math.floor((count * (die + 1)) / 2 + mod)
+}
+
+/** Render a hit-dice pool as a formula string, e.g. `"14d12+56"` / `"2d6-1"`. */
+export function buildHpFormula(count: number, die: number, mod: number): string {
+  if (count <= 0 || die <= 0) return ''
+  const sign = mod > 0 ? `+${mod}` : mod < 0 ? `${mod}` : ''
+  return `${count}d${die}${sign}`
 }
 
 /** Parse a CR field, accepting decimals and fractions ("1/2", "0.5"). */
@@ -266,11 +313,23 @@ export function parseCr(v: string): number | undefined {
   const n = Number(s)
   return Number.isFinite(n) ? Math.max(0, n) : undefined
 }
+
 const list = (v: string): string[] =>
   v.split(',').map((s) => s.trim()).filter(Boolean)
 const listOpt = (v: string): string[] | undefined => {
   const out = list(v)
   return out.length ? out : undefined
+}
+
+/** The derived combat context shared by attacks, saves, skills, and spellcasting. */
+export interface DeriveContext {
+  abilities: AbilityScores
+  pb: number
+}
+
+/** A monster's attack bonus for an ability: its modifier + proficiency. */
+export function attackBonus(ability: Ability, ctx: DeriveContext): number {
+  return abilityMod(ctx.abilities[ability]) + ctx.pb
 }
 
 function buildRecharge(kind: RechargeKind, value: string): Recharge | undefined {
@@ -287,13 +346,14 @@ function buildDamage(rows: DamageDraft[]): DamageRoll[] | undefined {
 }
 
 /** Assemble one Action from a draft. Caller filters out unnamed actions. */
-export function buildAction(d: ActionDraft): Action {
+export function buildAction(d: ActionDraft, ctx: DeriveContext): Action {
   const isAttack = d.kind === 'melee' || d.kind === 'ranged'
   const action: Action = {
     id: d.id,
     name: d.name.trim(),
     kind: d.kind,
-    toHit: isAttack && has(d.toHit) ? signed(d.toHit) : null,
+    // Attacks derive to-hit from the chosen ability + proficiency; others don't roll.
+    toHit: isAttack ? attackBonus(d.attackAbility, ctx) : null,
   }
   if (has(d.reach)) action.reach = num(d.reach)
   if (has(d.rangeNormal)) {
@@ -312,24 +372,27 @@ export function buildAction(d: ActionDraft): Action {
   return action
 }
 
-const namedActions = (rows: ActionDraft[]): Action[] =>
-  rows.filter((a) => has(a.name)).map(buildAction)
+const namedActions = (rows: ActionDraft[], ctx: DeriveContext): Action[] =>
+  rows.filter((a) => has(a.name)).map((a) => buildAction(a, ctx))
 
-function buildSpellcasting(draft: MonsterDraft): Spellcasting | undefined {
+function buildSpellcasting(draft: MonsterDraft, ctx: DeriveContext): Spellcasting | undefined {
   const groups: SpellGroup[] = draft.spellGroups
     .map((g) => ({
       usage:
         g.usage === 'atWill'
           ? ({ type: 'atWill' } as const)
           : ({ type: 'perDay' as const, per: has(g.per) ? num(g.per) : 1 }),
-      spells: list(g.spells).map((name) => ({ name })),
+      spells: g.spells.map((s) => ({ ...s })),
     }))
     .filter((g) => g.spells.length > 0)
   if (groups.length === 0 && !draft.spellAbility) return undefined
   const sc: Spellcasting = { groups }
-  if (draft.spellAbility) sc.ability = draft.spellAbility
-  if (has(draft.spellSaveDc)) sc.saveDc = num(draft.spellSaveDc)
-  if (has(draft.spellToHit)) sc.toHit = signed(draft.spellToHit)
+  if (draft.spellAbility) {
+    // Save DC = 8 + ability mod + proficiency; spell attack = ability mod + proficiency.
+    sc.ability = draft.spellAbility
+    sc.saveDc = 8 + attackBonus(draft.spellAbility, ctx)
+    sc.toHit = attackBonus(draft.spellAbility, ctx)
+  }
   return sc
 }
 
@@ -344,6 +407,10 @@ export function buildCreature(draft: MonsterDraft): Creature {
     return acc
   }, {} as AbilityScores)
 
+  const cr = parseCr(draft.cr)
+  const pb = proficiencyBonus(cr)
+  const ctx: DeriveContext = { abilities, pb }
+
   const speed: Speeds = {}
   if (has(draft.speed.walk)) speed.walk = num(draft.speed.walk)
   if (has(draft.speed.fly)) speed.fly = num(draft.speed.fly)
@@ -353,15 +420,16 @@ export function buildCreature(draft: MonsterDraft): Creature {
   if (draft.speed.hover) speed.hover = true
 
   // A proficient save = ability modifier + proficiency bonus (from CR). The DM
-  // only marks proficiency; we do the arithmetic. Non-proficient saves are absent
-  // and the stat block falls back to the bare ability modifier.
-  const cr = parseCr(draft.cr)
-  const pb = proficiencyBonus(cr)
+  // only marks proficiency; non-proficient saves are absent and the stat block
+  // falls back to the bare ability modifier.
   const saves: SaveBonuses = {}
   for (const a of ABILITIES) if (draft.saves[a]) saves[a] = abilityMod(abilities[a]) + pb
 
+  // A skill in the list is proficient; expertise doubles the proficiency bonus.
   const skills: SkillBonuses = {}
-  for (const s of draft.skills) if (has(s.bonus)) skills[s.skill] = signed(s.bonus)
+  for (const s of draft.skills) {
+    skills[s.skill] = abilityMod(abilities[SKILL_ABILITY[s.skill]]) + pb + (s.expertise ? pb : 0)
+  }
 
   const senses: Senses = { passivePerception: has(draft.senses.passivePerception) ? num(draft.senses.passivePerception) : 10 }
   if (has(draft.senses.darkvision)) senses.darkvision = num(draft.senses.darkvision)
@@ -373,7 +441,13 @@ export function buildCreature(draft: MonsterDraft): Creature {
     .filter((t) => has(t.name))
     .map((t) => ({ name: t.name.trim(), text: t.text.trim() }))
 
-  const legendaryRows = namedActions(draft.legendaryActions)
+  const legendaryRows = namedActions(draft.legendaryActions, ctx)
+
+  const hpCount = num(draft.hpDieCount)
+  const hpDie = num(draft.hpDie)
+  const hpMod = signed(draft.hpMod)
+  const hpFormula = buildHpFormula(hpCount, hpDie, hpMod)
+  const maxHp = Math.max(1, averageHp(hpCount, hpDie, hpMod))
 
   const creature: Creature = {
     id: `custom:${uid()}`,
@@ -383,16 +457,16 @@ export function buildCreature(draft: MonsterDraft): Creature {
     edition: draft.edition,
     name: draft.name.trim(),
     size: draft.size,
-    type: draft.type.trim() || 'unknown',
+    type: draft.type.trim(),
     ac: num(draft.ac),
-    maxHp: Math.max(1, num(draft.hp)),
+    maxHp,
     speed,
     abilities,
     senses,
   }
 
   if (has(draft.alignment)) creature.alignment = draft.alignment
-  if (has(draft.hpFormula)) creature.hpFormula = draft.hpFormula.trim()
+  if (hpFormula) creature.hpFormula = hpFormula
   if (Object.keys(saves).length) creature.saves = saves
   if (Object.keys(skills).length) creature.skills = skills
   creature.languages = listOpt(draft.languages)
@@ -404,11 +478,11 @@ export function buildCreature(draft: MonsterDraft): Creature {
   creature.xp = numOpt(draft.xp)
   if (traits.length) creature.traits = traits
 
-  const actions = namedActions(draft.actions)
+  const actions = namedActions(draft.actions, ctx)
   if (actions.length) creature.actions = actions
-  const bonus = namedActions(draft.bonusActions)
+  const bonus = namedActions(draft.bonusActions, ctx)
   if (bonus.length) creature.bonusActions = bonus
-  const reactions = namedActions(draft.reactions)
+  const reactions = namedActions(draft.reactions, ctx)
   if (reactions.length) creature.reactions = reactions
   if (legendaryRows.length) {
     const legendary: LegendaryActions = {
@@ -417,13 +491,13 @@ export function buildCreature(draft: MonsterDraft): Creature {
     }
     creature.legendaryActions = legendary
   }
-  const lair = namedActions(draft.lairActions)
+  const lair = namedActions(draft.lairActions, ctx)
   if (lair.length) creature.lairActions = lair
   if (has(draft.legendaryResistance)) creature.legendaryResistance = num(draft.legendaryResistance)
   if (has(draft.legendaryResistanceLair)) {
     creature.legendaryResistanceLair = num(draft.legendaryResistanceLair)
   }
-  const spellcasting = buildSpellcasting(draft)
+  const spellcasting = buildSpellcasting(draft, ctx)
   if (spellcasting) creature.spellcasting = spellcasting
 
   return creature
