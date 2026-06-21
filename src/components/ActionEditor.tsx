@@ -5,7 +5,6 @@ import {
   ACTION_KINDS,
   ABILITIES,
   DAMAGE_TYPES,
-  SAVE_OUTCOMES,
   emptyDamageDraft,
   type ActionDraft,
   type RechargeKind,
@@ -37,7 +36,6 @@ export function ActionEditor({
   onRemove,
   label,
   showLegendaryCost = false,
-  toHitPreview = null,
 }: {
   action: ActionDraft
   onChange: (next: ActionDraft) => void
@@ -46,24 +44,23 @@ export function ActionEditor({
   label: string
   /** Only legendary actions spend from the per-round budget, so only they show cost. */
   showLegendaryCost?: boolean
-  /** The derived to-hit (ability mod + proficiency), shown so the DM sees the result. */
-  toHitPreview?: number | null
 }) {
   const set = <K extends keyof ActionDraft>(key: K, value: ActionDraft[K]) =>
     onChange({ ...action, [key]: value })
 
   const isAttack = action.kind === 'melee' || action.kind === 'ranged'
-  const fmtBonus = (n: number | null) => (n == null ? '' : n >= 0 ? `+${n}` : `${n}`)
 
   return (
     <div className="space-y-2 rounded-md border border-slate-200 p-2 dark:border-slate-700">
+      {/* Row 1 — what it is: name, kind, remove. To-hit isn't shown; it's derived
+          from the ability + proficiency and rendered on the stat block. */}
       <div className="flex items-center gap-2">
         <input
           value={action.name}
           onChange={(e) => set('name', e.target.value)}
           placeholder={`${label[0].toUpperCase()}${label.slice(1)} name`}
           aria-label={`${label} name`}
-          className={FIELD}
+          className={`${FIELD_W} min-w-0 flex-1`}
         />
         <select
           value={action.kind}
@@ -87,55 +84,68 @@ export function ActionEditor({
         </button>
       </div>
 
-      {/* One wrapping mechanics row: attack (ability + derived to-hit + reach/range)
-          or a save (ability/DC/outcome), then the damage components inline after.
-          To-hit is derived from the ability + proficiency, never typed. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {isAttack && (
-          <>
-            <select value={action.attackAbility} onChange={(e) => set('attackAbility', e.target.value as ActionDraft['attackAbility'])} aria-label="Attack ability" className={`${FIELD_W} w-20`}>
-              {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
-            </select>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              to hit <span className="font-medium tabular-nums">{fmtBonus(toHitPreview)}</span>
+      {/* Attack — which ability it uses, and reach (melee) or range (ranged). */}
+      {isAttack && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`${LABEL} w-16`}>Attack</span>
+          <select value={action.attackAbility} onChange={(e) => set('attackAbility', e.target.value as ActionDraft['attackAbility'])} aria-label="Attack ability" className={`${FIELD_W} w-20`}>
+            {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
+          </select>
+          {action.kind === 'melee' && (
+            <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+              reach
+              <input value={action.reach} onChange={(e) => set('reach', e.target.value)} placeholder="ft" aria-label="Reach" inputMode="numeric" className={`${FIELD_W} w-16`} />
             </span>
-            {action.kind === 'melee' && (
-              <input value={action.reach} onChange={(e) => set('reach', e.target.value)} placeholder="Reach ft" aria-label="Reach" inputMode="numeric" className={`${FIELD_W} w-20`} />
-            )}
-            {action.kind === 'ranged' && (
-              <>
-                <input value={action.rangeNormal} onChange={(e) => set('rangeNormal', e.target.value)} placeholder="Short" aria-label="Short range" inputMode="numeric" className={`${FIELD_W} w-24`} />
-                <input value={action.rangeLong} onChange={(e) => set('rangeLong', e.target.value)} placeholder="Long" aria-label="Long range" inputMode="numeric" className={`${FIELD_W} w-24`} />
-              </>
-            )}
-          </>
-        )}
-        {action.kind === 'save' && (
-          <>
-            <select value={action.saveAbility} onChange={(e) => set('saveAbility', e.target.value as ActionDraft['saveAbility'])} aria-label="Save ability" className={`${FIELD_W} w-28`}>
-              <option value="">Save…</option>
-              {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
-            </select>
-            <input value={action.saveDc} onChange={(e) => set('saveDc', e.target.value)} placeholder="DC" aria-label="Save DC" inputMode="numeric" className={`${FIELD_W} w-14`} />
-            <select value={action.saveOutcome} onChange={(e) => set('saveOutcome', e.target.value as ActionDraft['saveOutcome'])} aria-label="On save" className={`${FIELD_W} w-36`}>
-              {SAVE_OUTCOMES.map((o) => (<option key={o} value={o}>on save: {o}</option>))}
-            </select>
-          </>
-        )}
+          )}
+          {action.kind === 'ranged' && (
+            <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+              range
+              <input value={action.rangeNormal} onChange={(e) => set('rangeNormal', e.target.value)} placeholder="near" aria-label="Short range" inputMode="numeric" className={`${FIELD_W} w-16`} />
+              /
+              <input value={action.rangeLong} onChange={(e) => set('rangeLong', e.target.value)} placeholder="far" aria-label="Long range" inputMode="numeric" className={`${FIELD_W} w-16`} />
+              ft
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Save — ability, DC, and what a success does. */}
+      {action.kind === 'save' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`${LABEL} w-16`}>Save</span>
+          <select value={action.saveAbility} onChange={(e) => set('saveAbility', e.target.value as ActionDraft['saveAbility'])} aria-label="Save ability" className={`${FIELD_W} w-20`}>
+            {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
+          </select>
+          <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+            DC
+            <input value={action.saveDc} onChange={(e) => set('saveDc', e.target.value)} placeholder="#" aria-label="Save DC" inputMode="numeric" className={`${FIELD_W} w-14`} />
+          </span>
+          {/* Outcome labels mirror the mass-save modal (GroupSaveForm). */}
+          <select value={action.saveOutcome} onChange={(e) => set('saveOutcome', e.target.value as ActionDraft['saveOutcome'])} aria-label="On save" className={`${FIELD_W} min-w-0 flex-1`}>
+            <option value="half">save → half damage</option>
+            <option value="none">save → no damage</option>
+            <option value="negates">save → negates effect</option>
+          </select>
+        </div>
+      )}
+
+      {/* Damage — one component per row, stacked. */}
+      <div className="space-y-1">
+        <span className={LABEL}>Damage</span>
         {action.damage.map((d, i) => (
-          <span key={d.id} className="flex items-center gap-1">
+          <div key={d.id} className="flex items-center gap-2">
             <input
               value={d.formula}
               onChange={(e) => set('damage', action.damage.map((x) => (x.id === d.id ? { ...x, formula: e.target.value } : x)))}
               placeholder="2d6+3"
               aria-label="Damage formula"
-              className={`${FIELD_W} w-24`}
+              className={`${FIELD_W} w-28 shrink-0`}
             />
             <select
               value={d.type}
               onChange={(e) => set('damage', action.damage.map((x) => (x.id === d.id ? { ...x, type: e.target.value as typeof x.type } : x)))}
               aria-label="Damage type"
-              className={`${FIELD_W} w-32`}
+              className={`${FIELD_W} min-w-0 flex-1`}
             >
               {DAMAGE_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
             </select>
@@ -148,18 +158,20 @@ export function ActionEditor({
             >
               ✕
             </button>
-          </span>
+          </div>
         ))}
         <button
           type="button"
           onClick={() => set('damage', [...action.damage, emptyDamageDraft()])}
           className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
         >
-          + damage
+          + Add damage
         </button>
       </div>
 
+      {/* Recharge / limited uses. */}
       <div className="flex flex-wrap items-center gap-2">
+        <span className={`${LABEL} w-16`}>Recharge</span>
         <select value={action.rechargeKind} onChange={(e) => set('rechargeKind', e.target.value as RechargeKind)} aria-label="Recharge kind" className={`${FIELD_W} w-40`}>
           {RECHARGE_KINDS.map((r) => (
             <option key={r.value} value={r.value}>

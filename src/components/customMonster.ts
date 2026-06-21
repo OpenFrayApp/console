@@ -203,7 +203,9 @@ export function emptyActionDraft(kind: ActionKind = 'melee'): ActionDraft {
     rangeNormal: '',
     rangeLong: '',
     damage: [emptyDamageDraft()],
-    saveAbility: '',
+    // A real default (matching the mass-save modal) so the save ability needs no
+    // "choose…" placeholder; only the save kind uses it.
+    saveAbility: 'dex',
     saveDc: '',
     saveOutcome: 'half',
     rechargeKind: 'none',

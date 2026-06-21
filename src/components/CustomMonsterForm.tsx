@@ -56,15 +56,12 @@ function ActionList({
   label,
   items,
   onChange,
-  ctx,
   defaultKind = 'melee',
   showLegendaryCost = false,
 }: {
   label: string
   items: ActionDraft[]
   onChange: (next: ActionDraft[]) => void
-  /** Abilities + proficiency, to preview each attack's derived to-hit. */
-  ctx: DeriveContext
   defaultKind?: ActionKind
   showLegendaryCost?: boolean
 }) {
@@ -76,7 +73,6 @@ function ActionList({
           action={a}
           label={label}
           showLegendaryCost={showLegendaryCost}
-          toHitPreview={a.kind === 'melee' || a.kind === 'ranged' ? attackBonus(a.attackAbility, ctx) : null}
           onChange={(next) => onChange(items.map((x) => (x.id === a.id ? next : x)))}
           onRemove={() => onChange(items.filter((x) => x.id !== a.id))}
         />
@@ -156,7 +152,7 @@ export function CustomMonsterForm({ onCreate }: { onCreate: (creature: Creature)
             role="dialog"
             aria-label="Create custom monster"
             onClick={(e) => e.stopPropagation()}
-            className="my-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            className="my-auto w-full max-w-xl rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <h2 className="text-lg font-semibold">Custom monster</h2>
@@ -323,15 +319,15 @@ export function CustomMonsterForm({ onCreate }: { onCreate: (creature: Creature)
               </Section>
 
               <Section title="Actions">
-                <ActionList label="action" items={d.actions} onChange={(actions) => patch({ actions })} ctx={ctx} />
+                <ActionList label="action" items={d.actions} onChange={(actions) => patch({ actions })} />
               </Section>
 
               <Section title="Bonus actions">
-                <ActionList label="bonus action" items={d.bonusActions} onChange={(bonusActions) => patch({ bonusActions })} ctx={ctx} />
+                <ActionList label="bonus action" items={d.bonusActions} onChange={(bonusActions) => patch({ bonusActions })} />
               </Section>
 
               <Section title="Reactions">
-                <ActionList label="reaction" items={d.reactions} onChange={(reactions) => patch({ reactions })} ctx={ctx} />
+                <ActionList label="reaction" items={d.reactions} onChange={(reactions) => patch({ reactions })} />
               </Section>
 
               <Section title="Legendary & lair">
@@ -340,11 +336,11 @@ export function CustomMonsterForm({ onCreate }: { onCreate: (creature: Creature)
                     <label className="text-sm" htmlFor="legendary-per-round">Legendary actions per round</label>
                     <input id="legendary-per-round" value={d.legendaryPerRound} onChange={(e) => patch({ legendaryPerRound: e.target.value })} aria-label="Legendary actions per round" inputMode="numeric" className={`${FIELD_W} w-20`} />
                   </div>
-                  <ActionList label="legendary action" items={d.legendaryActions} onChange={(legendaryActions) => patch({ legendaryActions })} ctx={ctx} showLegendaryCost />
+                  <ActionList label="legendary action" items={d.legendaryActions} onChange={(legendaryActions) => patch({ legendaryActions })} showLegendaryCost />
                 </div>
                 <div className="space-y-1">
                   <p className={LABEL}>Lair actions (initiative count 20)</p>
-                  <ActionList label="lair action" items={d.lairActions} onChange={(lairActions) => patch({ lairActions })} ctx={ctx} defaultKind="utility" />
+                  <ActionList label="lair action" items={d.lairActions} onChange={(lairActions) => patch({ lairActions })} defaultKind="utility" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <input value={d.legendaryResistance} onChange={(e) => patch({ legendaryResistance: e.target.value })} placeholder="Legendary Resistance / day" aria-label="Legendary Resistance per day" inputMode="numeric" className={FIELD} />
