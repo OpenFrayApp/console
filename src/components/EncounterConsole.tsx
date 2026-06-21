@@ -24,6 +24,7 @@ import {
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
+import { isFoe } from '../combat/combatant.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { durationRounds } from '../combat/casting.ts'
 import {
@@ -349,8 +350,9 @@ export function EncounterConsole({
       onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
     />
   )
-  const players = combatants.filter((c) => c.isPC)
-  const creatures = combatants.filter((c) => !c.isPC)
+  // Group by disposition, not isPC: a foe quick add belongs with the Creatures.
+  const players = combatants.filter((c) => !isFoe(c))
+  const creatures = combatants.filter((c) => isFoe(c))
   const living = combatants.filter((c) => c.status !== 'dead')
   const dead = combatants.filter((c) => c.status === 'dead')
 

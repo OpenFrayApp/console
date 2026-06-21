@@ -3,6 +3,7 @@
 
 import type { Combatant } from '../schema/combatant.ts'
 import { hpTier, type HpTier } from '../combat/resources.ts'
+import { isFoe } from '../combat/combatant.ts'
 import { isStable } from '../combat/deathsaves.ts'
 import { EffectBadge } from './EffectBadge.tsx'
 import { DeathSavePips } from './DeathSaveControls.tsx'
@@ -78,8 +79,8 @@ export function CombatantRow({
       }
       className={cx(
         'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2',
-        // Type-coded left edge: PCs sky, monsters rose.
-        combatant.isPC ? 'border-l-sky-400 dark:border-l-sky-500' : 'border-l-rose-400 dark:border-l-rose-500',
+        // Disposition-coded left edge: friends sky, foes rose.
+        isFoe(combatant) ? 'border-l-rose-400 dark:border-l-rose-500' : 'border-l-sky-400 dark:border-l-sky-500',
         onSelect && 'cursor-pointer',
         active
           ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'

@@ -3,11 +3,22 @@
 
 import type { Creature } from '../schema/creature.ts'
 import type {
+  Combatant,
   CombatantVisibility,
   LimitedUseState,
   MonsterCombatant,
 } from '../schema/combatant.ts'
 import { rechargeActions } from './recharge.ts'
+
+/**
+ * Whether a combatant sits on the enemy side for colouring and grouping. Monsters
+ * are always foes; a lightweight combatant (PC / quick add) is a foe only when it
+ * was explicitly marked one. This is a board/display notion, separate from `isPC`
+ * (which drives mechanics).
+ */
+export function isFoe(c: Combatant): boolean {
+  return c.isPC ? c.side === 'foe' : true
+}
 
 export interface InstantiateOptions {
   combatantId: string

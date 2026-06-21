@@ -108,6 +108,13 @@ export interface MonsterCombatant extends CombatantBase {
 export interface PlayerCharacter extends CombatantBase {
   isPC: true
   kind?: 'pc' | 'quick'
+  /**
+   * Friend vs foe for a quick add — drives the row colour and the pre-combat
+   * grouping (a foe quick add sits with the Creatures, not the players). Absent
+   * means friend; a `pc` is always a friend. Independent of `isPC`, which governs
+   * mechanics (lightweight, rolls its own dice, no creature snapshot).
+   */
+  side?: 'friend' | 'foe'
   name: string
   ac: number
   /** Initiative modifier; used to roll at combat start when no value is entered. */

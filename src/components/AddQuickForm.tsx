@@ -7,8 +7,9 @@ import { useDismiss } from '../hooks/useDismiss.ts'
 
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
 
-const FIELD =
-  'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
+const FIELD_BASE =
+  'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
+const FIELD = `w-full ${FIELD_BASE}`
 
 /**
  * Quick add — a generic combatant (an NPC, or a creature dropped in mid-fight)
@@ -19,6 +20,8 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
   const [name, setName] = useState('')
   const [ac, setAc] = useState('')
   const [hp, setHp] = useState('')
+  // Quick adds are most often an enemy dropped in mid-fight, so default to foe.
+  const [side, setSide] = useState<'friend' | 'foe'>('foe')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
@@ -30,6 +33,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
     onAdd({
       isPC: true,
       kind: 'quick',
+      side,
       combatantId: crypto.randomUUID(),
       name: name.trim(),
       initiative: 0, // rolled when combat begins
@@ -42,6 +46,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
     setName('')
     setAc('')
     setHp('')
+    setSide('foe')
     setOpen(false)
   }
 
@@ -57,16 +62,30 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
       {open && (
         <form
           onSubmit={submit}
-          className="absolute right-0 z-30 mt-1 w-56 space-y-2 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          className="absolute right-0 z-30 mt-1 w-72 space-y-2 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
-            aria-label="Quick add name"
-            className={FIELD}
-          />
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name"
+              aria-label="Quick add name"
+              autoComplete="off"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              className={`${FIELD_BASE} min-w-0 flex-1`}
+            />
+            <select
+              value={side}
+              onChange={(e) => setSide(e.target.value as 'friend' | 'foe')}
+              aria-label="Side"
+              className={`${FIELD_BASE} w-24 shrink-0`}
+            >
+              <option value="foe">Foe</option>
+              <option value="friend">Friend</option>
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <input value={ac} onChange={(e) => setAc(e.target.value)} placeholder="AC" aria-label="AC" inputMode="numeric" className={FIELD} />
             <input value={hp} onChange={(e) => setHp(e.target.value)} placeholder="HP" aria-label="Max HP" inputMode="numeric" className={FIELD} />
