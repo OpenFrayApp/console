@@ -7,8 +7,9 @@ import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import type { RollResult } from '../dice/roll.ts'
+import type { CritRule, RollResult } from '../dice/roll.ts'
 import { roll } from '../dice/roll.ts'
+import { useCampaignRules } from '../state/campaignRules.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { applyDamage, legendaryResistanceLeft, spendLegendaryResistance } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
@@ -51,7 +52,7 @@ interface RolledDamage {
   result: RollResult
 }
 
-function rollDamageComponents(action: Action, crit: boolean): RolledDamage[] {
+function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledDamage[] {
   return (action.damage ?? []).map((d) => {
     const result = roll(d.formula, { kind: 'damage', crit })
     return { type: d.type, amount: Math.max(0, result.total), result }
@@ -338,6 +339,8 @@ function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combat
 // --- attacks: single target, animated to-hit -------------------------------
 
 function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse, onClose }: ResolverProps) {
+  // On a crit, the campaign's crit rule governs how the damage dice are rolled.
+  const { crit: critRule } = useCampaignRules()
   const targets = targetsFor(attacker, combatants)
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(targets.length === 1 ? [targets[0].combatantId] : []),
@@ -382,7 +385,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
       dispatch({ type: 'update', id: target.combatantId, update: (c) => ({ ...c, effects }) })
     }
     const d20 = result.dice.find((g) => g.sides === 20)?.kept[0] ?? result.total
-    const components = rollDamageComponents(action, result.crit)
+    const components = rollDamageComponents(action, result.crit ? critRule : false)
     const dmg = damageAgainst(target, components)
     setAttack({ result, applied, target, d20, damage: dmg })
     setDamage(String(dmg.reduce((s, d) => s + d.amount, 0)))

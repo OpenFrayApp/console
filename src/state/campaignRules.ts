@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 OpenFray contributors
+
+import { createContext, useContext } from 'react'
+import { DEFAULT_CAMPAIGN_RULES, type CampaignRules } from '../schema/campaign.ts'
+
+/**
+ * The active campaign's house rules, made available to deeply-nested combat
+ * components (e.g. the action resolver's crit handling) without prop threading.
+ * The default is the standard ruleset, so anonymous users, signed-in users with no
+ * campaign selected, and components rendered bare in tests all behave exactly as
+ * before — the rules only ever override the defaults when a campaign is active.
+ */
+export const CampaignRulesContext = createContext<CampaignRules>(DEFAULT_CAMPAIGN_RULES)
+
+export function useCampaignRules(): CampaignRules {
+  return useContext(CampaignRulesContext)
+}

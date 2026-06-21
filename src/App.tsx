@@ -5,12 +5,14 @@ import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
 import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
 import { instantiate } from './combat/combatant.ts'
+import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
-import type { Campaign } from './schema/campaign.ts'
+import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
+import { CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
 import { loadCloudEncounter, saveCloudEncounter } from './state/cloudEncounter.ts'
@@ -36,6 +38,7 @@ import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/MassSavePanel.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
+import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
@@ -132,6 +135,17 @@ function App() {
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   // The signed-in user's campaigns (empty when anonymous), managed in the compendium.
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  // Which campaign the DM is running; its house rules drive the console. Null for
+  // anonymous users and signed-in users with no campaign selected (→ standard rules).
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
+    () => restored?.activeCampaignId ?? null,
+  )
+  // The active campaign's house rules, or the standard defaults when none is set —
+  // so the console behaves exactly as before unless a campaign is actively running.
+  const activeCampaign = activeCampaignId
+    ? campaigns.find((c) => c.id === activeCampaignId)
+    : undefined
+  const activeRules = activeCampaign?.rules ?? DEFAULT_CAMPAIGN_RULES
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -146,6 +160,7 @@ function App() {
     if (!user) {
       setCustomCreatures([])
       setCampaigns([])
+      setActiveCampaignId(null)
       return
     }
     let active = true
@@ -184,7 +199,7 @@ function App() {
   // (one JSONB blob, RLS-isolated). The UI never waits on this — it's background.
   useEffect(() => {
     const handle = setTimeout(() => {
-      saveSession({ encounter, rollLog, theme, view, selectedId })
+      saveSession({ encounter, rollLog, theme, view, selectedId, activeCampaignId })
       if (user) {
         saveCloudEncounter(cloudId.current, encounter).then((id) => {
           if (id) cloudId.current = id
@@ -192,7 +207,7 @@ function App() {
       }
     }, 600)
     return () => clearTimeout(handle)
-  }, [encounter, rollLog, theme, view, selectedId, user])
+  }, [encounter, rollLog, theme, view, selectedId, activeCampaignId, user])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
@@ -228,6 +243,8 @@ function App() {
       combatantId: crypto.randomUUID(),
       initiative: 0,
       label,
+      // The campaign's HP method decides how this instance's max HP is rolled.
+      maxHp: resolveMaxHp(creature, activeRules.hp),
     })
     dispatch({ type: 'add', combatant })
     setSelectedId(combatant.combatantId)
@@ -360,6 +377,7 @@ function App() {
   const paused = encounter.paused === true
 
   return (
+    <CampaignRulesContext.Provider value={activeRules}>
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div className="flex items-center gap-4 lg:gap-0">
@@ -449,7 +467,16 @@ function App() {
           source link at the right. Columns mirror the console grid. */}
       <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
         <div className="hidden lg:block" aria-hidden="true" />
-        <div className="lg:pl-4">{view === 'encounter' && <QuickRoll onRoll={pushRoll} />}</div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:pl-4">
+          {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
+          {view === 'encounter' && user && (
+            <CampaignPicker
+              campaigns={campaigns}
+              activeId={activeCampaignId}
+              onChange={setActiveCampaignId}
+            />
+          )}
+        </div>
         <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
           <a
             href={REPO_URL}
@@ -464,6 +491,7 @@ function App() {
         </div>
       </footer>
     </div>
+    </CampaignRulesContext.Provider>
   )
 }
 

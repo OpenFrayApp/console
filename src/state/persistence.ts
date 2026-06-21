@@ -24,6 +24,8 @@ export interface SessionSnapshot {
   view: View
   /** Which combatant's stat block was open; dropped if it no longer exists. */
   selectedId: string | null
+  /** The active campaign driving house rules (signed-in only); absent in old blobs. */
+  activeCampaignId?: string | null
 }
 
 const KEY = 'openfray:session'
