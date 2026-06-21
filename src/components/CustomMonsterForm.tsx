@@ -94,15 +94,23 @@ function ActionList({
  * flows into the encounter like any picked creature. Every custom creature is an
  * independent entity; nothing here is matched or deduped against existing content.
  */
+const DEFAULT_TRIGGER =
+  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+
 export function CustomMonsterForm({
   onCreate,
   gated = false,
   onGated,
+  triggerLabel = 'Custom monster',
+  triggerClassName = DEFAULT_TRIGGER,
 }: {
   onCreate: (creature: Creature) => void
   /** When true (anonymous), the button prompts sign-up instead of opening the form. */
   gated?: boolean
   onGated?: () => void
+  /** The trigger button's text and style, so it can suit different placements. */
+  triggerLabel?: string
+  triggerClassName?: string
 }) {
   const [open, setOpen] = useState(false)
   const [d, setD] = useState<MonsterDraft>(emptyDraft)
@@ -148,9 +156,9 @@ export function CustomMonsterForm({
         type="button"
         onClick={() => (gated ? onGated?.() : setOpen(true))}
         title={gated ? 'Sign up to create custom monsters' : undefined}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className={triggerClassName}
       >
-        Custom monster
+        {triggerLabel}
       </button>
 
       {open && (

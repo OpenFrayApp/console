@@ -17,7 +17,6 @@ import { useAuth } from './auth/useAuth.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
-import { CustomMonsterForm } from './components/CustomMonsterForm.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
@@ -314,7 +313,6 @@ function App() {
               <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
               <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
               <AddCreaturePicker onPick={handlePick} />
-              <CustomMonsterForm onCreate={handlePick} gated={!user} onGated={() => setAuthOpen(true)} />
             </div>
           )}
           <CampaignSettings onSignUp={() => setAuthOpen(true)} />
@@ -334,7 +332,11 @@ function App() {
       <main className="min-h-0 flex-1 overflow-hidden">
         {view === 'compendium' ? (
           <div className="h-full w-full overflow-hidden px-6 py-6">
-            <Compendium />
+            <Compendium
+              onCreateCreature={handlePick}
+              createGated={!user}
+              onGated={() => setAuthOpen(true)}
+            />
           </div>
         ) : (
           <EncounterConsole

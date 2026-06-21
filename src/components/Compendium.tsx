@@ -7,6 +7,7 @@ import type { Spell } from '../schema/spell.ts'
 import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
+import { CustomMonsterForm } from './CustomMonsterForm.tsx'
 import { SpellCard } from './SpellCard.tsx'
 
 type Tab = 'creatures' | 'spells'
@@ -40,7 +41,17 @@ function TabButton({
   )
 }
 
-export function Compendium() {
+export function Compendium({
+  onCreateCreature,
+  createGated = false,
+  onGated,
+}: {
+  /** Add a freshly-created custom creature to the encounter. */
+  onCreateCreature: (creature: Creature) => void
+  /** When anonymous, the create button prompts sign-up instead. */
+  createGated?: boolean
+  onGated?: () => void
+}) {
   const [tab, setTab] = useState<Tab>('creatures')
   const [query, setQuery] = useState('')
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
@@ -140,16 +151,44 @@ export function Compendium() {
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
         {selectedCreature ? (
           // The stat block carries its own sticky header (with top padding inside
-          // its solid background); spells and the empty state get plain top spacing.
+          // its solid background).
           <CreatureStatBlock creature={selectedCreature} />
-        ) : (
+        ) : selectedSpell ? (
           <div className="pt-4">
-            {selectedSpell ? (
-              <SpellCard spell={selectedSpell} />
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Select a {tab === 'creatures' ? 'creature' : 'spell'} to view it.
-              </p>
+            <SpellCard spell={selectedSpell} />
+          </div>
+        ) : (
+          // Nothing selected: a centered prompt. On the Creatures tab it doubles as
+          // the entry point for building a custom creature.
+          <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+            <div className="rounded-full bg-slate-100 p-5 dark:bg-slate-800/70">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-10 w-10 text-slate-400 dark:text-slate-500"
+                aria-hidden="true"
+              >
+                <path d="M12 7v14" />
+                <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+              </svg>
+            </div>
+            <p className="max-w-sm text-slate-500 dark:text-slate-400">
+              {tab === 'creatures'
+                ? 'Select a creature to view it, or create a custom one.'
+                : 'Select a spell to view it.'}
+            </p>
+            {tab === 'creatures' && (
+              <CustomMonsterForm
+                onCreate={onCreateCreature}
+                gated={createGated}
+                onGated={onGated}
+                triggerLabel="Create custom creature"
+                triggerClassName="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              />
             )}
           </div>
         )}

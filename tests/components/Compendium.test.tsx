@@ -62,7 +62,7 @@ afterEach(cleanup)
 
 describe('Compendium', () => {
   it('lists creatures and filters by search', async () => {
-    render(<Compendium />)
+    render(<Compendium onCreateCreature={() => {}} />)
     await waitFor(() => expect(screen.getByText('Aboleth')).toBeInTheDocument())
     expect(screen.getByText('Goblin')).toBeInTheDocument()
 
@@ -74,14 +74,14 @@ describe('Compendium', () => {
   })
 
   it('shows a stat block when a creature is selected', async () => {
-    render(<Compendium />)
+    render(<Compendium onCreateCreature={() => {}} />)
     await waitFor(() => screen.getByText('Aboleth'))
     fireEvent.click(screen.getByText('Aboleth'))
     expect(screen.getByText(/Large aberration · CR 10/)).toBeInTheDocument()
   })
 
   it('switches to the spells tab and opens a spell', async () => {
-    render(<Compendium />)
+    render(<Compendium onCreateCreature={() => {}} />)
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.click(screen.getByText('Spells'))
     await waitFor(() => screen.getByText('Fireball'))
