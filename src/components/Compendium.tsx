@@ -7,7 +7,8 @@ import type { Spell } from '../schema/spell.ts'
 import type { Campaign } from '../schema/campaign.ts'
 import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
-import { CampaignEditor } from './CampaignEditor.tsx'
+import { CampaignCard } from './CampaignCard.tsx'
+import { CampaignFormModal } from './CampaignFormModal.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
@@ -44,134 +45,58 @@ function TabButton({
   )
 }
 
-/** Left column for the Campaigns tab: a "New campaign" button + the user's list. */
+/** Left column for the Campaigns tab: the user's list (filtered by the shared
+ *  search box). Creating a campaign is the right pane's empty-state action. */
 function CampaignList({
   campaigns,
   gated,
   selectedId,
-  onNew,
   onSelect,
 }: {
   campaigns: Campaign[]
   gated: boolean
-  selectedId: string | 'new' | null
-  onNew: () => void
+  selectedId: string | null
   onSelect: (id: string) => void
-}) {
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onNew}
-        className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
-      >
-        New campaign
-      </button>
-
-      {gated ? (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-          Sign up to create and manage campaigns.
-        </p>
-      ) : (
-        <>
-          <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-            {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
-          </p>
-          <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-            {campaigns.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(c.id)}
-                  className={cx(
-                    'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
-                    c.id === selectedId
-                      ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-900',
-                  )}
-                >
-                  <span className="truncate">{c.name}</span>
-                  <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
-                    {c.edition}
-                  </span>
-                </button>
-              </li>
-            ))}
-            {campaigns.length === 0 && (
-              <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
-                No campaigns yet
-              </li>
-            )}
-          </ul>
-        </>
-      )}
-    </>
-  )
-}
-
-/** Right column for the Campaigns tab: the editor, a sign-up prompt, or an empty state. */
-function CampaignDetail({
-  gated,
-  mode,
-  campaign,
-  onNew,
-  onGated,
-  onSave,
-  onDelete,
-  onCancel,
-}: {
-  gated: boolean
-  mode: string | 'new' | null
-  campaign?: Campaign | null
-  onNew: () => void
-  onGated: () => void
-  onSave: (campaign: Campaign) => void
-  onDelete: (id: string) => void
-  onCancel: () => void
 }) {
   if (gated) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
-        <p className="max-w-sm text-slate-500 dark:text-slate-400">
-          Campaigns are saved to your account. Sign up to create one and set its edition.
-        </p>
-        <button
-          type="button"
-          onClick={onGated}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-        >
-          Sign up
-        </button>
-      </div>
-    )
-  }
-
-  if (mode === 'new' || campaign) {
-    return (
-      <CampaignEditor
-        key={mode}
-        campaign={campaign}
-        onSave={onSave}
-        onDelete={campaign ? onDelete : undefined}
-        onCancel={onCancel}
-      />
-    )
-  }
-
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
-      <p className="max-w-sm text-slate-500 dark:text-slate-400">
-        Select a campaign to edit it, or create a new one. Each campaign has its own
-        edition.
+      <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        Sign up to create and manage campaigns.
       </p>
-      <button
-        type="button"
-        onClick={onNew}
-        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-      >
-        Create campaign
-      </button>
-    </div>
+    )
+  }
+  return (
+    <>
+      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+        {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
+      </p>
+      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        {campaigns.map((c) => (
+          <li key={c.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(c.id)}
+              className={cx(
+                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
+                c.id === selectedId
+                  ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-900',
+              )}
+            >
+              <span className="truncate">{c.name}</span>
+              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                {c.edition}
+              </span>
+            </button>
+          </li>
+        ))}
+        {campaigns.length === 0 && (
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+            No matches
+          </li>
+        )}
+      </ul>
+    </>
   )
 }
 
@@ -215,22 +140,30 @@ export function Compendium({
   // The editor modal: null = closed; otherwise the draft to edit and an id when
   // updating an existing creature (vs creating a new one).
   const [editor, setEditor] = useState<{ draft: MonsterDraft; editId: string | null } | null>(null)
-  // Campaigns tab: which campaign is open in the editor — a campaign id, 'new', or
-  // null (nothing open).
-  const [campaignEdit, setCampaignEdit] = useState<string | 'new' | null>(null)
+  // The campaign create/edit modal: null = closed; otherwise the campaign to edit
+  // (or null inside to create a new one).
+  const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
 
   useEffect(() => {
     loadSrdCreatures().then(setCreatures, () => setCreatures([]))
     loadSrdSpells().then(setSpells, () => setSpells([]))
   }, [])
 
-  const loading = tab === 'creatures' ? creatures === null : spells === null
+  const loading =
+    tab === 'creatures' ? creatures === null : tab === 'spells' ? spells === null : false
 
   // The user's custom creatures sit alongside the SRD in one searchable list.
   const allCreatures = useMemo(
     () => [...customCreatures, ...(creatures ?? [])],
     [customCreatures, creatures],
   )
+
+  // Campaigns share the same search box as the other tabs, filtered by name.
+  const filteredCampaigns = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const list = q ? campaigns.filter((c) => c.name.toLowerCase().includes(q)) : campaigns
+    return [...list].sort((a, b) => a.name.localeCompare(b.name))
+  }, [campaigns, query])
 
   const entries = useMemo(() => {
     const list =
@@ -256,31 +189,27 @@ export function Compendium({
     tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined
   const selectedSpell =
     tab === 'spells' ? (spells ?? []).find((s) => s.id === selectedId) : undefined
+  const selectedCampaign =
+    tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
 
   const switchTab = (next: Tab) => {
     setTab(next)
     setSelectedId(null)
     setQuery('')
-    setCampaignEdit(null)
   }
 
-  // Campaigns are signed-up-only; for anonymous users every entry point prompts
-  // sign-up instead of opening the editor.
-  const editingCampaign =
-    campaignEdit && campaignEdit !== 'new'
-      ? campaigns.find((c) => c.id === campaignEdit)
-      : null
-  const startNewCampaign = () => (createGated ? onGated?.() : setCampaignEdit('new'))
-  const saveCampaign = (campaign: Campaign) => {
-    if (campaignEdit === 'new') onCreateCampaign?.(campaign)
-    else onUpdateCampaign?.(campaign)
-    setCampaignEdit(null)
+  // Campaigns are signed-up-only; for anonymous users the create action prompts
+  // sign-up instead of opening the modal. Create/edit both go through the modal.
+  const startNewCampaign = () => (createGated ? onGated?.() : setCampaignForm({ campaign: null }))
+  const submitCampaign = (campaign: Campaign) => {
+    if (campaignForm?.campaign) onUpdateCampaign?.(campaign)
+    else onCreateCampaign?.(campaign)
+    setSelectedId(campaign.id)
   }
-  const removeCampaign = (id: string) => {
-    const campaign = campaigns.find((c) => c.id === id)
-    if (window.confirm(`Delete “${campaign?.name ?? 'this campaign'}”?`)) {
-      onDeleteCampaign?.(id)
-      setCampaignEdit(null)
+  const removeCampaign = (campaign: Campaign) => {
+    if (window.confirm(`Delete “${campaign.name}”?`)) {
+      if (selectedId === campaign.id) setSelectedId(null)
+      onDeleteCampaign?.(campaign.id)
     }
   }
 
@@ -314,29 +243,26 @@ export function Compendium({
           </TabButton>
         </div>
 
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Search ${tab}…`}
+          aria-label={`Search ${tab}`}
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        />
+
         {tab === 'campaigns' ? (
           <CampaignList
-            campaigns={campaigns}
+            campaigns={filteredCampaigns}
             gated={createGated}
-            selectedId={campaignEdit}
-            onNew={startNewCampaign}
-            onSelect={(id) => setCampaignEdit(id)}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
           />
+        ) : loading ? (
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         ) : (
           <>
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${tab}…`}
-              aria-label={`Search ${tab}`}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            />
-
-            {loading ? (
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-            ) : (
-              <>
             <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
               {entries.length} {tab}
             </p>
@@ -371,24 +297,25 @@ export function Compendium({
                 </li>
               )}
             </ul>
-              </>
-            )}
           </>
         )}
       </div>
 
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
-        {tab === 'campaigns' ? (
-          <CampaignDetail
-            gated={createGated}
-            mode={campaignEdit}
-            campaign={editingCampaign}
-            onNew={startNewCampaign}
-            onGated={() => onGated?.()}
-            onSave={saveCampaign}
-            onDelete={removeCampaign}
-            onCancel={() => setCampaignEdit(null)}
-          />
+        {tab === 'campaigns' && createGated ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+            <p className="max-w-sm text-slate-500 dark:text-slate-400">
+              Campaigns are saved to your account. Sign up to create one and set its
+              edition and house rules.
+            </p>
+            <button
+              type="button"
+              onClick={() => onGated?.()}
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              Sign up
+            </button>
+          </div>
         ) : selectedCreature ? (
           // The stat block carries its own sticky header (with top padding inside
           // its solid background). Custom creatures get Edit / Delete in the source row.
@@ -401,9 +328,15 @@ export function Compendium({
           <div className="pt-4">
             <SpellCard spell={selectedSpell} />
           </div>
+        ) : selectedCampaign ? (
+          <CampaignCard
+            campaign={selectedCampaign}
+            onEdit={() => setCampaignForm({ campaign: selectedCampaign })}
+            onDelete={() => removeCampaign(selectedCampaign)}
+          />
         ) : (
-          // Nothing selected: a centered prompt. On the Creatures tab it doubles as
-          // the entry point for building a custom creature.
+          // Nothing selected: a centered prompt that doubles as the create entry
+          // point on the Creatures and Campaigns tabs.
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <div className="rounded-full bg-slate-100 p-5 dark:bg-slate-800/70">
               <svg
@@ -423,7 +356,9 @@ export function Compendium({
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'creatures'
                 ? 'Select a creature to view it, or create a custom one.'
-                : 'Select a spell to view it.'}
+                : tab === 'campaigns'
+                  ? 'Select a campaign to view it, or create a new one.'
+                  : 'Select a spell to view it.'}
             </p>
             {tab === 'creatures' && (
               <button
@@ -432,6 +367,15 @@ export function Compendium({
                 className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
               >
                 Create custom creature
+              </button>
+            )}
+            {tab === 'campaigns' && (
+              <button
+                type="button"
+                onClick={startNewCampaign}
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Create campaign
               </button>
             )}
           </div>
@@ -444,6 +388,13 @@ export function Compendium({
         editId={editor?.editId ?? null}
         onClose={() => setEditor(null)}
         onSubmit={submitEditor}
+      />
+
+      <CampaignFormModal
+        open={campaignForm != null}
+        campaign={campaignForm?.campaign}
+        onClose={() => setCampaignForm(null)}
+        onSubmit={submitCampaign}
       />
     </div>
   )

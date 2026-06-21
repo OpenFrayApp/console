@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 
 vi.mock('../../src/compendium/srd.ts', () => ({
   loadSrdCreatures: () =>
@@ -89,27 +89,90 @@ describe('Compendium', () => {
     expect(screen.getByText('3rd-level Evocation')).toBeInTheDocument()
   })
 
-  it('lists campaigns and creates one from the campaigns tab', async () => {
+  it('lists and searches campaigns, and creates one through the modal', async () => {
     const onCreateCampaign = vi.fn()
     render(
       <Compendium
         onCreateCreature={() => {}}
-        campaigns={[{ id: 'c1', name: 'Existing Campaign', edition: '5.5' }]}
+        campaigns={[
+          { id: 'c1', name: 'Curse of Strahd', edition: '5.5' },
+          { id: 'c2', name: 'Tomb of Annihilation', edition: '5.0' },
+        ]}
         onCreateCampaign={onCreateCampaign}
       />,
     )
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.click(screen.getByText('Campaigns'))
-    expect(screen.getByText('Existing Campaign')).toBeInTheDocument()
+    expect(screen.getByText('Curse of Strahd')).toBeInTheDocument()
+    expect(screen.getByText('Tomb of Annihilation')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'New campaign' }))
-    fireEvent.change(screen.getByLabelText('Campaign name'), {
-      target: { value: 'Tomb of Annihilation' },
-    })
+    // The shared search box filters the campaign list, like the other tabs.
+    fireEvent.change(screen.getByLabelText('Search campaigns'), { target: { value: 'strahd' } })
+    expect(screen.getByText('Curse of Strahd')).toBeInTheDocument()
+    expect(screen.queryByText('Tomb of Annihilation')).toBeNull()
+
+    // No sidebar "New campaign" button; create opens a modal from the empty state.
+    expect(screen.queryByRole('button', { name: 'New campaign' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }))
+    const dialog = screen.getByRole('dialog', { name: 'New campaign' })
+    fireEvent.change(within(dialog).getByLabelText('Campaign name'), {
+      target: { value: 'Out of the Abyss' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create campaign' }))
 
     expect(onCreateCampaign).toHaveBeenCalledTimes(1)
-    expect(onCreateCampaign.mock.calls[0][0].name).toBe('Tomb of Annihilation')
+    expect(onCreateCampaign.mock.calls[0][0].name).toBe('Out of the Abyss')
+  })
+
+  it('views a campaign read-only and edits it from the source row', async () => {
+    const onUpdateCampaign = vi.fn()
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        campaigns={[{ id: 'c1', name: 'Curse of Strahd', edition: '5.5' }]}
+        onUpdateCampaign={onUpdateCampaign}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Campaigns'))
+
+    // Clicking the campaign shows the read-only card (no form fields yet).
+    fireEvent.click(screen.getByRole('button', { name: /Curse of Strahd/ }))
+    expect(screen.getByText('DnD 5.5 (2024)')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    // Edit in the source row reopens the modal, prefilled.
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const dialog = screen.getByRole('dialog', { name: 'Edit campaign' })
+    fireEvent.change(within(dialog).getByLabelText('Campaign name'), {
+      target: { value: 'Curse of Strahd (revised)' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    expect(onUpdateCampaign).toHaveBeenCalledTimes(1)
+    expect(onUpdateCampaign.mock.calls[0][0]).toMatchObject({
+      id: 'c1',
+      name: 'Curse of Strahd (revised)',
+    })
+  })
+
+  it('deletes a campaign from the source row', async () => {
+    const onDeleteCampaign = vi.fn()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        campaigns={[{ id: 'c1', name: 'Curse of Strahd', edition: '5.5' }]}
+        onDeleteCampaign={onDeleteCampaign}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Campaigns'))
+    fireEvent.click(screen.getByRole('button', { name: /Curse of Strahd/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(onDeleteCampaign).toHaveBeenCalledWith('c1')
+    vi.restoreAllMocks()
   })
 
   it('prompts sign-up on the campaigns tab when gated', async () => {
@@ -127,7 +190,7 @@ describe('Compendium', () => {
     fireEvent.click(screen.getByText('Campaigns'))
     expect(screen.getByText(/Sign up to create and manage campaigns/)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'New campaign' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign up' }))
     expect(onGated).toHaveBeenCalled()
     expect(onCreateCampaign).not.toHaveBeenCalled()
   })
