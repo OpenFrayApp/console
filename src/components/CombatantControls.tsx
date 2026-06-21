@@ -75,9 +75,16 @@ export function CombatantControls({
         <EffectPicker onApply={addEffect} />
 
         {combatant.concentration ? (
-          <button type="button" className={BTN} onClick={() => apply(breakConcentration)}>
-            End concentration
-          </button>
+          <span className="inline-flex items-center gap-2">
+            <span className="text-xs text-violet-700 dark:text-violet-300">
+              Concentrating
+              {combatant.concentration.spell ? `: ${combatant.concentration.spell}` : ''}
+              {combatant.concentration.rounds != null ? ` · ${combatant.concentration.rounds} rd` : ''}
+            </span>
+            <button type="button" className={BTN} onClick={() => apply(breakConcentration)}>
+              End
+            </button>
+          </span>
         ) : concInput === null ? (
           <button type="button" className={BTN} onClick={() => setConcInput('')}>
             Concentrate

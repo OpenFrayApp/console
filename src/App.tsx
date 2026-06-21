@@ -54,6 +54,17 @@ function App() {
     setRollLog((prev) => [{ id: crypto.randomUUID(), label }, ...prev].slice(0, 25))
   }
 
+  // Renaming a combatant rewrites its name in the existing roll-log lines, so the
+  // log stays consistent with the tracker (entries bake the name in at roll time).
+  const renameInLog = (oldName: string, newName: string) => {
+    if (!oldName || oldName === newName) return
+    setRollLog((prev) =>
+      prev.map((e) =>
+        e.label.includes(oldName) ? { ...e, label: e.label.split(oldName).join(newName) } : e,
+      ),
+    )
+  }
+
   const handlePick = (creature: Creature) => {
     // Auto-label duplicates ("Goblin", "Goblin 2", …). Initiative stays 0 until
     // combat begins, when it's rolled for everyone at once.
@@ -222,6 +233,7 @@ function App() {
             rollLog={rollLog}
             onRoll={pushRoll}
             onNote={pushNote}
+            onRename={renameInLog}
             selectedId={selectedId}
             onSelect={setSelectedId}
             started={started}

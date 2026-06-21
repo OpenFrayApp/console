@@ -50,6 +50,19 @@ export function damageTypes(damage: DamageRoll[]): string[] {
   return [...new Set(damage.map((d) => d.type))]
 }
 
+const ROUNDS_PER = { round: 1, minute: 10 } as const
+
+/**
+ * A spell's duration in combat rounds — for the concentration timer. Only
+ * round/minute durations convert (1 minute = 10 rounds); hours and longer outlast
+ * any fight, so they return undefined (tracked as indefinite).
+ */
+export function durationRounds(duration: string): number | undefined {
+  const m = /(\d+)\s*(round|minute)s?/i.exec(duration)
+  if (!m) return undefined
+  return Number(m[1]) * ROUNDS_PER[m[2].toLowerCase() as 'round' | 'minute']
+}
+
 /**
  * Turn a spell into a resolvable Action so casting reuses the same attack / group
  * save modals as a monster's other actions. The caster supplies the DC and spell

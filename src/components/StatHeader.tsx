@@ -7,6 +7,11 @@ import { EditableField } from './EditableField.tsx'
 
 const STAT_LABEL = 'text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
+function concentrationTitle(c: Concentration): string {
+  const base = c.spell ? `Concentrating: ${c.spell}` : 'Concentrating'
+  return c.rounds != null ? `${base} (${c.rounds} round${c.rounds === 1 ? '' : 's'} left)` : base
+}
+
 interface StatEdit {
   initial: string
   onCommit: (value: string) => void
@@ -94,10 +99,13 @@ export function StatHeader({
             )}
             {concentration && (
               <span
-                title={concentration.spell ? `Concentrating: ${concentration.spell}` : 'Concentrating'}
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-violet-200 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-200"
+                title={concentrationTitle(concentration)}
+                className="inline-flex h-5 shrink-0 items-center gap-1 rounded bg-violet-200 px-1 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-200"
               >
                 C
+                {concentration.rounds != null && (
+                  <span className="font-medium tabular-nums">{concentration.rounds}</span>
+                )}
               </span>
             )}
             {originalName && (

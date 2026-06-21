@@ -18,11 +18,13 @@ import {
   restoreSpellUse,
   setCurrentHp,
   spellUsesRemaining,
+  spendLegendary,
   spendLimited,
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
+import { durationRounds } from '../combat/casting.ts'
 import {
   applyConcentrationResult,
   breakConcentration,
@@ -145,12 +147,15 @@ export function EncounterConsole({
   onNextTurn,
   onClearLog,
   onNote,
+  onRename,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
   rollLog: RollEntry[]
   onRoll: OnRoll
   onNote: OnNote
+  /** Keep the roll log in sync when a combatant is renamed. */
+  onRename: (oldName: string, newName: string) => void
   selectedId: string | null
   onSelect: (id: string) => void
   started: boolean
@@ -301,6 +306,7 @@ export function EncounterConsole({
                 spell: full.name,
                 saveDc: c.creature.spellcasting?.saveDc ?? 0,
                 round: encounter.round,
+                rounds: durationRounds(full.duration),
               }),
       })
     }
@@ -313,6 +319,19 @@ export function EncounterConsole({
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : restoreSpellUse(cc, spell)),
     })
+  }
+
+  // Using a legendary action spends one from this round's budget, then resolves
+  // it like any other action when it has an attack or save.
+  const applyLegendaryAction = (c: MonsterCombatant, action: Action) => {
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : spendLegendary(cc)),
+    })
+    onNote(`${c.label} uses ${action.name}`)
+    const rollable = action.toHit != null || action.save != null || (action.damage?.length ?? 0) > 0
+    if (rollable) setActionFor(action)
   }
 
   const renderRow = (c: Combatant) => (
@@ -385,13 +404,14 @@ export function EncounterConsole({
               {selected.isPC ? (
                 <PcSummary
                   pc={selected}
-                  onRename={(name) =>
+                  onRename={(name) => {
+                    onRename(selected.name, name)
                     dispatch({
                       type: 'update',
                       id: selected.combatantId,
                       update: (c) => (c.isPC ? { ...c, name } : c),
                     })
-                  }
+                  }}
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}
                   onTempInput={(raw) => applyHpInput(selected, raw, true)}
                 />
@@ -401,13 +421,14 @@ export function EncounterConsole({
                   hp={selected.hp}
                   concentration={selected.concentration}
                   label={selected.label}
-                  onRename={(label) =>
+                  onRename={(label) => {
+                    onRename(selected.label, label)
                     dispatch({
                       type: 'update',
                       id: selected.combatantId,
                       update: (c) => (c.isPC ? c : { ...c, label }),
                     })
-                  }
+                  }}
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}
                   onTempInput={(raw) => applyHpInput(selected, raw, true)}
                   onAction={setActionFor}
@@ -419,6 +440,14 @@ export function EncounterConsole({
                     selected.isPC ? null : spellUsesRemaining(selected, spell)
                   }
                   resolveSpell={resolveSpell}
+                  onLegendaryAction={
+                    selected.creature.legendaryActions
+                      ? (action) => applyLegendaryAction(selected, action)
+                      : undefined
+                  }
+                  legendaryRemaining={
+                    selected.creature.legendaryActions ? selected.legendaryRemaining : undefined
+                  }
                 />
               )}
             </div>

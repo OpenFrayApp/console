@@ -304,6 +304,8 @@ function ActionSection({
   rechargeState,
   onRecharge,
   resolveSpell,
+  clickAll,
+  disabled,
 }: {
   title: string
   actions?: Action[]
@@ -312,6 +314,11 @@ function ActionSection({
   rechargeState?: Record<string, boolean>
   onRecharge?: (a: Action) => void
   resolveSpell?: ResolveSpell
+  /** Make every action clickable (not just rollable ones) — used for legendary
+   *  actions, where clicking spends one regardless of attack/save. */
+  clickAll?: boolean
+  /** No actions can be used right now (e.g. no legendary actions left). */
+  disabled?: boolean
 }) {
   if (!actions || actions.length === 0) return null
   return (
@@ -322,6 +329,23 @@ function ActionSection({
           const note = rechargeLabel(a.recharge)
           const heading = `${a.name}${note ? ` (${note})` : ''}`
           const charged = rechargeState?.[a.id] !== false
+          // Legendary actions: every entry is clickable (clicking spends one).
+          if (onAction && clickAll) {
+            return (
+              <p key={a.id} className={disabled ? 'opacity-50' : undefined}>
+                <button
+                  type="button"
+                  onClick={() => onAction(a)}
+                  disabled={disabled}
+                  title="Use this action (spends one)"
+                  className="font-semibold text-indigo-600 hover:underline disabled:no-underline disabled:hover:no-underline dark:text-indigo-400"
+                >
+                  {heading}.
+                </button>{' '}
+                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+              </p>
+            )
+          }
           if (onAction && isRollable(a) && charged) {
             return (
               <p key={a.id}>
@@ -474,6 +498,8 @@ export function CreatureStatBlock({
   onCastSpell,
   spellUsesOf,
   resolveSpell,
+  onLegendaryAction,
+  legendaryRemaining,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -502,11 +528,18 @@ export function CreatureStatBlock({
   spellUsesOf?: SpellUsesOf
   /** Resolve a spell's compendium entry for the hover preview / cast card. */
   resolveSpell?: ResolveSpell
+  /** Use a legendary action (spends one, then resolves it if it's rollable). Combat only. */
+  onLegendaryAction?: (action: Action) => void
+  /** Legendary actions left this round, when in combat. */
+  legendaryRemaining?: number
 }) {
   const displayName = label ?? creature.name
-  const legendaryTitle = creature.legendaryActions
-    ? `Legendary Actions (${creature.legendaryActions.perRound}/round)`
-    : 'Legendary Actions'
+  const perRound = creature.legendaryActions?.perRound
+  const legendaryTitle = !creature.legendaryActions
+    ? 'Legendary Actions'
+    : legendaryRemaining != null
+      ? `Legendary Actions (${legendaryRemaining} of ${perRound} left)`
+      : `Legendary Actions (${perRound}/round)`
 
   const current = hp ? hp.current : creature.maxHp
   const max = hp ? hp.max : creature.maxHp
@@ -594,7 +627,16 @@ export function CreatureStatBlock({
       <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
       <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
       <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
-      <ActionSection title={legendaryTitle} actions={creature.legendaryActions?.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection
+        title={legendaryTitle}
+        actions={creature.legendaryActions?.actions}
+        onAction={onLegendaryAction ?? onAction}
+        clickAll={onLegendaryAction != null}
+        disabled={legendaryRemaining != null && legendaryRemaining <= 0}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+      />
       <ActionSection title="Lair Actions" actions={creature.lairActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
 
       <SourceLink source={creature.source} />

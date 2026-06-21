@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
-import type { ConditionName } from '../schema/effect.ts'
+import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
@@ -260,19 +260,58 @@ const QUICK_CONDITIONS: ConditionName[] = [
   'Paralyzed',
 ]
 
-/** Apply a condition to the targets the action affected (one tap). */
-function ConditionChips({ onApply }: { onApply: (name: ConditionName) => void }) {
+type DurationChoice = 'manual' | 'untilSource' | 'r1' | 'r10'
+
+function toDuration(choice: DurationChoice): EffectDuration {
+  switch (choice) {
+    case 'untilSource':
+      return { type: 'untilSourceTurn' }
+    case 'r1':
+      return { type: 'rounds', rounds: 1 }
+    case 'r10':
+      return { type: 'rounds', rounds: 10 }
+    default:
+      return { type: 'manual' }
+  }
+}
+
+/**
+ * Apply a condition to the targets the action affected (one tap), with a chosen
+ * duration. "Until {source}'s turn" (e.g. the Assassin's Poisoned-until-its-next-
+ * turn) is offered when there's a source to key it to.
+ */
+function ConditionChips({
+  onApply,
+  sourceName,
+}: {
+  onApply: (name: ConditionName, duration: EffectDuration) => void
+  sourceName?: string
+}) {
+  const [choice, setChoice] = useState<DurationChoice>('manual')
   return (
     <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-        Apply condition
-      </p>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          Apply condition
+        </p>
+        <select
+          value={choice}
+          onChange={(e) => setChoice(e.target.value as DurationChoice)}
+          aria-label="Condition duration"
+          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs dark:border-slate-700 dark:bg-slate-900"
+        >
+          <option value="manual">until removed</option>
+          {sourceName && <option value="untilSource">until {sourceName}’s turn</option>}
+          <option value="r1">1 round</option>
+          <option value="r10">10 rounds</option>
+        </select>
+      </div>
       <div className="flex flex-wrap gap-1.5">
         {QUICK_CONDITIONS.map((c) => (
           <button
             key={c}
             type="button"
-            onClick={() => onApply(c)}
+            onClick={() => onApply(c, toDuration(choice))}
             className="rounded border border-slate-300 px-1.5 py-0.5 text-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             {c}
@@ -366,12 +405,15 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     else onClose()
   }
 
-  const applyCondition = (name: ConditionName) => {
+  const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     if (!attack) return
     dispatch({
       type: 'update',
       id: attack.target.combatantId,
-      update: (c) => ({ ...c, effects: [...c.effects, condition(name)] }),
+      update: (c) => ({
+        ...c,
+        effects: [...c.effects, condition(name, { source: attacker.combatantId, duration })],
+      }),
     })
     setNote(`${name} → ${nameOf(attack.target)}`)
   }
@@ -505,7 +547,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
 
       {revealed && attack && (
         <>
-          <ConditionChips onApply={applyCondition} />
+          <ConditionChips onApply={applyCondition} sourceName={nameOf(attacker)} />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}
@@ -655,7 +697,7 @@ export function SaveResolver({
     else onClose()
   }
 
-  const applyCondition = (name: ConditionName) => {
+  const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     // Conditions land on the targets that failed (or all selected pre-roll).
     const affected = resolved
       ? selectedTargets.filter((c) => rows[c.combatantId]?.result === 'fail')
@@ -665,7 +707,10 @@ export function SaveResolver({
       dispatch({
         type: 'update',
         id: c.combatantId,
-        update: (cc) => ({ ...cc, effects: [...cc.effects, condition(name)] }),
+        update: (cc) => ({
+          ...cc,
+          effects: [...cc.effects, condition(name, { source: attacker?.combatantId, duration })],
+        }),
       })
     }
     setNote(`${name} → ${affected.map(nameOf).join(', ')}`)
@@ -883,7 +928,7 @@ export function SaveResolver({
             Apply damage
           </button>
 
-          <ConditionChips onApply={applyCondition} />
+          <ConditionChips onApply={applyCondition} sourceName={attacker ? nameOf(attacker) : undefined} />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}

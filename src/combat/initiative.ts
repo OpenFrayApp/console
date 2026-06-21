@@ -124,15 +124,20 @@ export function nextTurn(e: Encounter): Encounter {
   const round = wrapped ? e.round + 1 : e.round
   const activeId = combatants[index]?.combatantId
 
-  combatants = combatants.map((c) => ({
-    ...c,
-    effects: c.effects.filter(
-      (eff) =>
-        !(eff.duration.type === 'untilSourceTurn' && eff.source === activeId),
-    ),
-    // The newly-active creature regains its reaction at the start of its turn.
-    reactionUsed: c.combatantId === activeId ? false : c.reactionUsed,
-  }))
+  combatants = combatants.map((c) => {
+    const effects = c.effects.filter(
+      (eff) => !(eff.duration.type === 'untilSourceTurn' && eff.source === activeId),
+    )
+    if (c.combatantId !== activeId) return { ...c, effects }
+    // The newly-active creature regains its reaction and ticks its concentration
+    // timer at the start of its turn; concentration lapses when it reaches zero.
+    let concentration = c.concentration
+    if (concentration?.rounds != null) {
+      const left = concentration.rounds - 1
+      concentration = left <= 0 ? null : { ...concentration, rounds: left }
+    }
+    return { ...c, effects, reactionUsed: false, concentration }
+  })
 
   return { ...e, combatants, activeIndex: index, round }
 }

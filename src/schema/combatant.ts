@@ -17,6 +17,8 @@ export interface Concentration {
   saveDc: number
   /** Round the concentration began. */
   round: number
+  /** Rounds left before it lapses (ticked at the caster's turn); absent = indefinite. */
+  rounds?: number | null
 }
 
 /** Spell slots consumed so far, keyed by level (decremented from template maxes). */

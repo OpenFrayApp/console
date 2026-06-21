@@ -7,6 +7,7 @@ import {
   damageFormula,
   damageTypes,
   damageVariants,
+  durationRounds,
   spellAction,
 } from '../../src/combat/casting.ts'
 
@@ -135,5 +136,20 @@ describe('spellAction', () => {
   it('returns null for a utility spell (nothing to resolve — just spend a use)', () => {
     const mageHand: Spell = { ...base, id: 'srd-5.2:mage-hand', name: 'Mage Hand', level: 0 }
     expect(spellAction(mageHand, {})).toBeNull()
+  })
+})
+
+describe('durationRounds', () => {
+  it('converts round and minute durations to rounds (1 minute = 10 rounds)', () => {
+    expect(durationRounds('1 minute')).toBe(10)
+    expect(durationRounds('10 minutes')).toBe(100)
+    expect(durationRounds('1 round')).toBe(1)
+    expect(durationRounds('6 rounds')).toBe(6)
+  })
+
+  it('leaves hours/instantaneous/special undefined (they outlast a fight)', () => {
+    expect(durationRounds('1 hour')).toBeUndefined()
+    expect(durationRounds('instantaneous')).toBeUndefined()
+    expect(durationRounds('until dispelled')).toBeUndefined()
   })
 })

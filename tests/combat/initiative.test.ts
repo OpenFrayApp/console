@@ -44,6 +44,7 @@ interface MonsterOpts {
   perRound?: number
   legendaryRemaining?: number
   reactionUsed?: boolean
+  concentration?: MonsterCombatant['concentration']
 }
 
 function monster(
@@ -65,7 +66,7 @@ function monster(
     spellUsesSpent: {},
     limitedUseState: {},
     legendaryRemaining: opts.legendaryRemaining ?? perRound,
-    concentration: null,
+    concentration: opts.concentration ?? null,
     effects: opts.effects ?? [],
     reactionUsed: opts.reactionUsed,
     visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
@@ -230,6 +231,16 @@ describe('nextTurn', () => {
     const e = nextTurn(encounter([a, b], 1, 0)) // b becomes active
     expect(byId(e, 'b').reactionUsed).toBe(false) // refreshed at the start of its turn
     expect(byId(e, 'a').reactionUsed).toBe(true) // untouched until a's turn
+  })
+
+  it("ticks the active creature's concentration timer, lapsing it at zero", () => {
+    const conc = (rounds: number) => ({ spell: 'Detect Thoughts', saveDc: 13, round: 1, rounds })
+    // b becomes active: its 2-round timer drops to 1.
+    const e1 = nextTurn(encounter([monster('a', 20), monster('b', 10, { concentration: conc(2) })], 1, 0))
+    expect((byId(e1, 'b') as MonsterCombatant).concentration?.rounds).toBe(1)
+    // a 1-round timer lapses to no concentration as b's turn begins.
+    const e2 = nextTurn(encounter([monster('a', 20), monster('b', 10, { concentration: conc(1) })], 1, 0))
+    expect((byId(e2, 'b') as MonsterCombatant).concentration).toBeNull()
   })
 
   it('does not mutate the input encounter', () => {
