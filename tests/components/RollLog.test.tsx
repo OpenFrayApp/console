@@ -29,6 +29,14 @@ describe('RollLog', () => {
     expect(screen.getByText(/CRIT/)).toBeInTheDocument()
   })
 
+  it('surfaces a max-plus-roll crit bonus so the breakdown reconciles', () => {
+    // 1d6 rolls a 2; max-plus-roll adds the maximised die (6): 6 + 2 + 1 = 9.
+    const result = roll('1d6+1', { kind: 'damage', crit: 'max-plus-roll', rand: faceSeq(2) })
+    render(<RollLog entries={[{ id: 'rc', label: 'Scimitar damage', result }]} />)
+    expect(screen.getByText(/1d6 \[2\] \+6 crit \+1/)).toBeInTheDocument()
+    expect(screen.getByText('9')).toBeInTheDocument()
+  })
+
   it('names an adv/disadv cause without repeating the state word', () => {
     const result = roll('1d20adv+5', { rand: faceSeq(10, 18) })
     render(

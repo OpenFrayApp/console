@@ -44,9 +44,15 @@ function describeRoll(result: RollResult): string {
   const dice = result.dice.map((g) => {
     const head = `${g.sign < 0 ? '−' : ''}${g.results.length}d${g.sides}`
     const rolls = `[${g.results.join(', ')}]`
-    return g.results.length === g.kept.length
-      ? `${head} ${rolls}`
-      : `${head} ${rolls} → ${g.kept.join(', ')}`
+    const base =
+      g.results.length === g.kept.length
+        ? `${head} ${rolls}`
+        : `${head} ${rolls} → ${g.kept.join(', ')}`
+    // A crit rule (maximised normal dice, or a doubled total) adds to this group
+    // beyond the kept dice — surface it so the breakdown reconciles with the total.
+    const keptSum = g.sign * g.kept.reduce((a, b) => a + b, 0)
+    const critBonus = g.total - keptSum
+    return critBonus === 0 ? base : `${base} ${critBonus >= 0 ? '+' : '−'}${Math.abs(critBonus)} crit`
   })
   let line = dice.join(' + ')
   if (result.modifier) line += ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`

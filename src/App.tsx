@@ -318,9 +318,17 @@ function App() {
   }
 
   const initLabel = (c: Combatant): string => (c.isPC ? c.name : c.label)
-  // The initiative modifier: a PC's own, a monster's Dex mod, 0 for a quick add.
+  // The initiative modifier: a PC's own, 0 for a quick add, and for a monster its
+  // listed Initiative bonus (2024 stat blocks carry one that can exceed the Dex
+  // mod — e.g. an Adult Brass Dragon is +10 with Dex 10), falling back to Dex.
   const initMod = (c: Combatant): number =>
-    isPlayer(c) ? (c.isPC ? c.initiativeMod ?? 0 : 0) : c.isPC ? 0 : dexMod(c.creature)
+    isPlayer(c)
+      ? c.isPC
+        ? c.initiativeMod ?? 0
+        : 0
+      : c.isPC
+        ? 0
+        : c.creature.initiative ?? dexMod(c.creature)
 
   // One-round skip effect for the 2014 surprise rule (cleared on the round wrap).
   const surprisedEffect = (): Effect => ({
