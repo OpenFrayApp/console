@@ -9,6 +9,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import {
   applySaveDamage,
   damageForResult,
+  evasionApplies,
   rollSave,
   type SaveResult,
 } from '../combat/masssave.ts'
@@ -111,13 +112,14 @@ export function GroupSaveForm({
     for (const c of combatants) {
       const result = rows[c.combatantId]?.result
       if (!result) continue
-      const dealt = damageForResult(full, result, onSave)
-      const promptDc = concentrationPromptDC(c, applySaveDamage(c, full, result, onSave), dealt)
+      const evasion = evasionApplies(c, ability, onSave)
+      const dealt = damageForResult(full, result, onSave, evasion)
+      const promptDc = concentrationPromptDC(c, applySaveDamage(c, full, result, onSave, evasion), dealt)
       if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: dealt })
       dispatch({
         type: 'update',
         id: c.combatantId,
-        update: (cc) => applySaveDamage(cc, full, result, onSave),
+        update: (cc) => applySaveDamage(cc, full, result, onSave, evasion),
       })
     }
     // Surviving concentrators that took damage owe a concentration save next.

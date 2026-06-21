@@ -57,6 +57,21 @@ export function hasMagicResistance(c: Combatant): boolean {
 }
 
 /**
+ * Evasion — on a Dexterity save against an effect that deals half damage on a
+ * success, the creature takes *no* damage on a success and *half* on a failure.
+ * A creature trait (Assassin, etc.), so it's board data we can read.
+ */
+export function hasEvasion(c: Combatant): boolean {
+  if (c.isPC) return false
+  return (c.creature.traits ?? []).some((t) => /^evasion\b/i.test(t.name))
+}
+
+/** Whether Evasion changes the outcome here: only Dex saves that halve on success. */
+export function evasionApplies(c: Combatant, ability: Ability, onSave: SaveOutcome): boolean {
+  return ability === 'dex' && onSave === 'half' && hasEvasion(c)
+}
+
+/**
  * Auto-roll a save for a combatant that has a save bonus (monsters/NPCs). Folds
  * in any savingThrows effects (Bless, etc.). Pass `magicResistance` to grant
  * advantage when the effect is magical and the creature resists magic. Throws
@@ -88,13 +103,19 @@ export function rollSave(
   }
 }
 
-/** Damage a creature takes given its result and the on-save rule. */
+/**
+ * Damage a creature takes given its result and the on-save rule. With `evasion`
+ * (a Dex, half-on-success effect against a creature with Evasion), a success
+ * takes nothing and a failure takes half.
+ */
 export function damageForResult(
   full: number,
   result: SaveResult,
   onSave: SaveOutcome,
+  evasion = false,
 ): number {
   const dmg = Math.max(0, Math.floor(full))
+  if (evasion) return result === 'fail' ? Math.floor(dmg / 2) : 0
   if (result === 'fail') return dmg
   return onSave === 'half' ? Math.floor(dmg / 2) : 0
 }
@@ -105,7 +126,8 @@ export function applySaveDamage(
   full: number,
   result: SaveResult,
   onSave: SaveOutcome,
+  evasion = false,
   opts: DamageOptions = {},
 ): Combatant {
-  return applyDamage(c, damageForResult(full, result, onSave), opts)
+  return applyDamage(c, damageForResult(full, result, onSave, evasion), opts)
 }

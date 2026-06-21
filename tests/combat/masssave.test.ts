@@ -14,6 +14,8 @@ import {
   abilityModifier,
   applySaveDamage,
   damageForResult,
+  evasionApplies,
+  hasEvasion,
   hasMagicResistance,
   rollSave,
   saveBonus,
@@ -157,6 +159,27 @@ describe('damageForResult', () => {
   it('saves take none when onSave is none or negates', () => {
     expect(damageForResult(24, 'save', 'none')).toBe(0)
     expect(damageForResult(24, 'save', 'negates')).toBe(0)
+  })
+
+  it('with Evasion, a success takes none and a failure takes half', () => {
+    expect(damageForResult(24, 'save', 'half', true)).toBe(0)
+    expect(damageForResult(25, 'fail', 'half', true)).toBe(12) // floored
+  })
+})
+
+describe('hasEvasion / evasionApplies', () => {
+  const assassin = monster({}, creature({ traits: [{ name: 'Evasion', text: '' }] }))
+  it('detects the trait on a monster, never on a PC', () => {
+    expect(hasEvasion(assassin)).toBe(true)
+    expect(hasEvasion(monster())).toBe(false)
+    expect(hasEvasion(pc())).toBe(false)
+  })
+
+  it('applies only to Dex saves that halve on success', () => {
+    expect(evasionApplies(assassin, 'dex', 'half')).toBe(true)
+    expect(evasionApplies(assassin, 'wis', 'half')).toBe(false) // not Dex
+    expect(evasionApplies(assassin, 'dex', 'negates')).toBe(false) // not half-on-success
+    expect(evasionApplies(monster(), 'dex', 'half')).toBe(false) // no Evasion
   })
 })
 

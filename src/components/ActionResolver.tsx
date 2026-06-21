@@ -12,7 +12,13 @@ import { roll } from '../dice/roll.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { applyDamage, legendaryResistanceLeft, spendLegendaryResistance } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
-import { hasMagicResistance, rollSave, type SaveResult } from '../combat/masssave.ts'
+import {
+  damageForResult,
+  evasionApplies,
+  hasMagicResistance,
+  rollSave,
+  type SaveResult,
+} from '../combat/masssave.ts'
 import { condition } from '../combat/effects.ts'
 import {
   applyConcentrationResult,
@@ -625,13 +631,15 @@ export function SaveResolver({
   // it's the single number the DM typed (no type, so no resistance applies).
   const defaultDamage = (target: Combatant, result?: SaveResult): number => {
     if (!result) return 0
+    // Evasion (Dex, half-on-success): nothing on a success, half on a failure.
+    const evasion = evasionApplies(target, ability, onSave)
     if (area.length > 0) {
       return area.reduce((sum, comp) => {
-        const afterSave = result === 'save' ? (onSave === 'half' ? Math.floor(comp.amount / 2) : 0) : comp.amount
+        const afterSave = damageForResult(comp.amount, result, onSave, evasion)
         return sum + adjustForDefense(afterSave, damageRelation(target, comp.type))
       }, 0)
     }
-    return result === 'save' ? (onSave === 'half' ? Math.floor(genericBase / 2) : 0) : genericBase
+    return damageForResult(genericBase, result, onSave, evasion)
   }
 
   const damageValue = (target: Combatant): string => {
@@ -905,6 +913,14 @@ export function SaveResolver({
                     )}
                   </span>
                   <span className="flex items-center gap-1">
+                    {evasionApplies(c, ability, onSave) && (
+                      <span
+                        className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
+                        title="Evasion: no damage on a success, half on a failure"
+                      >
+                        Evasion
+                      </span>
+                    )}
                     {defenses.map((d, i) => (
                       <span key={i} className="text-[11px] text-slate-400 dark:text-slate-500">
                         {d.label}
