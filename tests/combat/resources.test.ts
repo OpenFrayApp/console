@@ -15,6 +15,7 @@ import {
   hpTier,
   isBloodied,
   isLimitedAvailable,
+  legendaryResistanceLeft,
   parseHpInput,
   rechargeLimited,
   restoreSlot,
@@ -22,6 +23,7 @@ import {
   setCurrentHp,
   slotsRemaining,
   spendLegendary,
+  spendLegendaryResistance,
   spendLimited,
   spellUsesRemaining,
   useSlot,
@@ -339,6 +341,26 @@ describe('spell uses (At Will / N per day, each spell on its own)', () => {
     const spent = castSpell(caster(), fireball)
     expect(spellUsesRemaining(restoreSpellUse(spent, fireball), fireball)).toBe(2)
     expect(spellUsesRemaining(restoreSpellUse(caster(), fireball), fireball)).toBe(2)
+  })
+})
+
+// --- legendary resistance ---------------------------------------------------
+
+describe('legendary resistance', () => {
+  const lichLike = (left?: number) =>
+    monster({
+      creature: { ...creature(), legendaryResistance: 4 },
+      legendaryResistanceRemaining: left,
+    })
+
+  it('reports remaining uses, defaulting to 0 when absent', () => {
+    expect(legendaryResistanceLeft(lichLike(3))).toBe(3)
+    expect(legendaryResistanceLeft(monster())).toBe(0)
+  })
+
+  it('spends one use, flooring at zero', () => {
+    expect(spendLegendaryResistance(lichLike(2)).legendaryResistanceRemaining).toBe(1)
+    expect(spendLegendaryResistance(lichLike(0)).legendaryResistanceRemaining).toBe(0)
   })
 })
 

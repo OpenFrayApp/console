@@ -340,6 +340,14 @@ function parseSaveDamage(desc: string): DamageRoll[] | undefined {
   return [{ formula: m[1].replace(/\s+/g, ''), type: m[2].toLowerCase() as DamageType }]
 }
 
+/** Automatic area damage with no save or attack, e.g. the Lich's Deathly Teleport
+ *  ("each creature within 10 feet … takes 11 (2d10) Necrotic damage"). */
+function parseAreaDamage(desc: string): DamageRoll[] | undefined {
+  const m = /takes\s+\d+\s*\(([^)]+)\)\s*(\w+) damage/i.exec(desc)
+  if (!m) return undefined
+  return [{ formula: m[1].replace(/\s+/g, ''), type: m[2].toLowerCase() as DamageType }]
+}
+
 const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
@@ -459,6 +467,13 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
     }
   }
 
+  // No attack and no save, but the prose deals automatic area damage: keep it
+  // rollable (targets just take the damage; resolved without a save).
+  const areaDamage = parseAreaDamage(raw.desc)
+  if (areaDamage) {
+    return { id, name: raw.name, kind: 'utility', toHit: null, damage: areaDamage, recharge, text: raw.desc }
+  }
+
   return { id, name: raw.name, kind: 'utility', toHit: null, recharge, text: raw.desc }
 }
 
@@ -544,6 +559,13 @@ export function mapOpen5eCreature(
       .map(linkAction)
 
   const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: link(t.desc) }))
+
+  // Legendary Resistance is a trait ("Legendary Resistance (3/Day, or 4/Day in
+  // Lair): …"); track its base per-day count so the DM can spend it.
+  const lrTrait = traits.find((t) => /^Legendary Resistance/i.test(t.name))
+  const legendaryResistance = lrTrait
+    ? Number(/\((\d+)\s*\/\s*day/i.exec(lrTrait.name + ' ' + lrTrait.text)?.[1]) || undefined
+    : undefined
   const legendary = actionsOfType('LEGENDARY_ACTION')
 
   // Spellcasting is one of the ACTION-typed entries; lift it into a structured
@@ -595,5 +617,6 @@ export function mapOpen5eCreature(
       : undefined,
     lairActions: undefIfEmpty(actionsOfType('LAIR_ACTION')),
     spellcasting,
+    legendaryResistance,
   }
 }

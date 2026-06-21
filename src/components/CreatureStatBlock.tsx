@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { Ability, Senses, SkillBonuses } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
@@ -14,6 +14,7 @@ import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
 import { SpellCard } from './SpellCard.tsx'
+import { FLOATING_CARD, floatingCardStyle } from './spellPreview.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 
 /** Resolve a spell's compendium entry (for the hover preview + cast card). */
@@ -371,7 +372,7 @@ function usageLabel(group: SpellGroup): string {
 
 function spellcastingHeader(sc: Spellcasting): string {
   const bits: string[] = []
-  if (sc.ability) bits.push(`${ABILITY_LABEL[sc.ability]} as the spellcasting ability`)
+  if (sc.ability) bits.push(`${sc.ability.toUpperCase()} as the spellcasting ability`)
   if (sc.saveDc != null) bits.push(`spell save DC ${sc.saveDc}`)
   if (sc.toHit != null) bits.push(`${signed(sc.toHit)} to hit with spell attacks`)
   return bits.length ? `Casts using ${bits.join(', ')}.` : 'Casts the following spells.'
@@ -394,16 +395,15 @@ function SpellcastingSection({
   usesOf?: SpellUsesOf
   resolveSpell?: ResolveSpell
 }) {
-  // The hover preview is anchored with a fixed position so it isn't clipped by
-  // the scrolling stat-block column. Touch devices don't fire hover, so they
-  // simply tap to open the cast modal (which shows the same card).
-  const [preview, setPreview] = useState<{ spell: Spell; x: number; y: number } | null>(null)
+  // The hover preview is anchored with a fixed, viewport-clamped position so it
+  // isn't clipped by the scrolling stat-block column. Touch devices don't fire
+  // hover, so they simply tap to open the cast modal (which shows the same card).
+  const [preview, setPreview] = useState<{ spell: Spell; style: CSSProperties } | null>(null)
 
   const showPreview = (spell: SpellRef, el: HTMLElement) => {
     const found = resolveSpell?.(spell.ref)
     if (!found) return
-    const r = el.getBoundingClientRect()
-    setPreview({ spell: found, x: Math.min(r.left, window.innerWidth - 340), y: r.bottom + 6 })
+    setPreview({ spell: found, style: floatingCardStyle(el.getBoundingClientRect()) })
   }
 
   return (
@@ -451,10 +451,7 @@ function SpellcastingSection({
         ))}
       </div>
       {preview && (
-        <div
-          className="pointer-events-none fixed z-40 w-80 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
-          style={{ left: preview.x, top: preview.y }}
-        >
+        <div className={FLOATING_CARD} style={preview.style}>
           <SpellCard spell={preview.spell} />
         </div>
       )}
@@ -477,6 +474,7 @@ export function CreatureStatBlock({
   onCastSpell,
   spellUsesOf,
   resolveSpell,
+  legendaryResistance,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -505,6 +503,8 @@ export function CreatureStatBlock({
   spellUsesOf?: SpellUsesOf
   /** Resolve a spell's compendium entry for the hover preview / cast card. */
   resolveSpell?: ResolveSpell
+  /** Legendary Resistance, when the creature has it and is in combat. */
+  legendaryResistance?: { left: number; onUse: () => void }
 }) {
   const displayName = label ?? creature.name
   const legendaryTitle = creature.legendaryActions
@@ -584,6 +584,18 @@ export function CreatureStatBlock({
         senses={formatSenses(creature.senses)}
         languages={creature.languages?.join(', ')}
       />
+
+      {legendaryResistance && (
+        <button
+          type="button"
+          onClick={legendaryResistance.onUse}
+          disabled={legendaryResistance.left <= 0}
+          title="Turn a failed save into a success; spends one use"
+          className="self-start rounded-md border border-amber-400 bg-amber-50 px-2.5 py-1 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
+        >
+          Legendary Resistance · {legendaryResistance.left} left
+        </button>
+      )}
 
       <Section title="Traits" items={creature.traits} resolveSpell={resolveSpell} />
       {creature.spellcasting && (

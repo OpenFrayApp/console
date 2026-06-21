@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { Spell } from '../schema/spell.ts'
 import { SpellCard } from './SpellCard.tsx'
+import { FLOATING_CARD, floatingCardStyle } from './spellPreview.ts'
 
 /**
  * Wraps a label and shows the spell's card on hover, anchored with a fixed
@@ -19,24 +20,18 @@ export function HoverSpell({
   children: ReactNode
   className?: string
 }) {
-  const [point, setPoint] = useState<{ x: number; y: number } | null>(null)
+  const [style, setStyle] = useState<CSSProperties | null>(null)
   return (
     <>
       <span
         className={className}
-        onMouseEnter={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          setPoint({ x: Math.min(r.left, window.innerWidth - 340), y: r.bottom + 6 })
-        }}
-        onMouseLeave={() => setPoint(null)}
+        onMouseEnter={(e) => setStyle(floatingCardStyle(e.currentTarget.getBoundingClientRect()))}
+        onMouseLeave={() => setStyle(null)}
       >
         {children}
       </span>
-      {point && (
-        <div
-          className="pointer-events-none fixed z-40 w-80 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
-          style={{ left: point.x, top: point.y }}
-        >
+      {style && (
+        <div className={FLOATING_CARD} style={style}>
           <SpellCard spell={spell} />
         </div>
       )}

@@ -124,4 +124,6 @@ export interface Creature {
   spellcasting?: Spellcasting
   /** Recharge / x-per-day / x-per-round abilities. */
   limitedUse?: LimitedUse[]
+  /** Uses per day of Legendary Resistance (turn a failed save into a success). */
+  legendaryResistance?: number
 }

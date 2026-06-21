@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
+import { spellAction } from '../combat/casting.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
+import { SaveResolver } from './ActionResolver.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
@@ -111,7 +113,25 @@ export function CastSpellPanel({
     )
   }
 
-  // --- Cast card (spell selected) -----------------------------------------
+  // --- Cast (spell selected) ----------------------------------------------
+  // A save spell opens the same mass-save modal as a monster's save action,
+  // seeded from the spell (the DM enters the DC; magical effect is pre-checked).
+  const action = spellAction(spell, {})
+  if (action?.save) {
+    return (
+      <SaveResolver
+        action={action}
+        combatants={combatants}
+        dispatch={dispatch}
+        onRoll={onRoll}
+        defaultMagical
+        onClose={reset}
+      />
+    )
+  }
+
+  // Attack / utility spells have no caster here to roll for, so keep the inline
+  // reference card (damage roll + attack note).
   return (
     <div className="w-full space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
       <div className="flex items-center justify-between">

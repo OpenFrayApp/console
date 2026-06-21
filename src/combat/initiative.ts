@@ -130,6 +130,8 @@ export function nextTurn(e: Encounter): Encounter {
       (eff) =>
         !(eff.duration.type === 'untilSourceTurn' && eff.source === activeId),
     ),
+    // The newly-active creature regains its reaction at the start of its turn.
+    reactionUsed: c.combatantId === activeId ? false : c.reactionUsed,
   }))
 
   return { ...e, combatants, activeIndex: index, round }

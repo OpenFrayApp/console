@@ -201,6 +201,19 @@ export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombata
   }
 }
 
+// --- legendary resistance (turn a failed save into a success, N/day) --------
+
+export function legendaryResistanceLeft(c: MonsterCombatant): number {
+  return c.legendaryResistanceRemaining ?? 0
+}
+
+/** Spend one Legendary Resistance; a no-op if none remain. */
+export function spendLegendaryResistance(c: MonsterCombatant): MonsterCombatant {
+  const left = legendaryResistanceLeft(c)
+  if (left <= 0) return c
+  return { ...c, legendaryResistanceRemaining: left - 1 }
+}
+
 // --- spellcasting uses (At Will / N per day, each spell counted on its own) --
 
 /** The state key for a spell: its compendium ref, falling back to its name. */

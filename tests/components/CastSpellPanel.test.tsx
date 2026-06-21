@@ -85,7 +85,7 @@ function monster(): MonsterCombatant {
 afterEach(cleanup)
 
 describe('CastSpellPanel', () => {
-  it('lists only castable spells and casts a save spell into the group save', async () => {
+  it('lists only castable spells and opens a save spell in the mass-save modal', async () => {
     const onRoll = vi.fn()
     const dispatch = vi.fn()
     render(<CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={onRoll} />)
@@ -96,18 +96,13 @@ describe('CastSpellPanel', () => {
     expect(screen.queryByText('Light')).toBeNull()
 
     fireEvent.click(screen.getByText('Fireball'))
-    // The cast level options come from the spell's scaling.
-    expect(screen.getByLabelText('Cast level')).toBeTruthy()
-
-    // Rolling damage logs a roll and reveals the seeded save.
-    expect(screen.queryByLabelText('Save DC')).toBeNull()
-    fireEvent.click(screen.getByText('Roll damage'))
-    expect(onRoll).toHaveBeenCalledTimes(1)
-    expect(onRoll.mock.calls[0][0]).toContain('Fireball')
-
-    const ability = screen.getByLabelText('Save ability') as HTMLSelectElement
-    expect(ability.value).toBe('dex')
+    // A save spell opens the same group-save modal a monster's save action uses,
+    // seeded from the spell (DEX save, DM-editable DC) — no upcast selector.
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getAllByText(/DEX save/i).length).toBeGreaterThan(0)
     expect(screen.getByLabelText('Save DC')).toBeTruthy()
+    expect(screen.queryByLabelText('Cast level')).toBeNull()
+    expect(screen.getByText('Roll saves')).toBeTruthy()
   })
 
   it('disables casting with no combatants', () => {

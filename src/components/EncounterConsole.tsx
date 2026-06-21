@@ -13,12 +13,14 @@ import {
   applyHealing,
   castSpell,
   hpTierOf,
+  legendaryResistanceLeft,
   parseHpInput,
   rechargeLimited,
   restoreSpellUse,
   setCurrentHp,
   spellUsesRemaining,
   spendLimited,
+  spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
@@ -401,6 +403,19 @@ export function EncounterConsole({
                     selected.isPC ? null : spellUsesRemaining(selected, spell)
                   }
                   resolveSpell={resolveSpell}
+                  legendaryResistance={
+                    selected.creature.legendaryResistance != null
+                      ? {
+                          left: legendaryResistanceLeft(selected),
+                          onUse: () =>
+                            dispatch({
+                              type: 'update',
+                              id: selected.combatantId,
+                              update: (c) => (c.isPC ? c : spendLegendaryResistance(c)),
+                            }),
+                        }
+                      : undefined
+                  }
                 />
               )}
             </div>

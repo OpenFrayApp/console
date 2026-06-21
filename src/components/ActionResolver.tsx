@@ -10,7 +10,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import { roll } from '../dice/roll.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
-import { applyDamage } from '../combat/resources.ts'
+import { applyDamage, legendaryResistanceLeft, spendLegendaryResistance } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
 import { hasMagicResistance, rollSave, type SaveResult } from '../combat/masssave.ts'
 import { condition } from '../combat/effects.ts'
@@ -83,6 +83,8 @@ interface ResolverProps {
   onRoll: OnRoll
   /** Called when the action is actually rolled — spends a recharge ability. */
   onUse?: () => void
+  /** Pre-check the "Magical Effect" toggle (a spell is always a magical effect). */
+  defaultMagical?: boolean
   onClose: () => void
 }
 
@@ -101,6 +103,9 @@ export function ActionResolver(props: ResolverProps) {
     <SaveResolver {...props} />
   )
 }
+
+/** An action with no to-hit and no save deals automatic area damage (e.g. the
+ *  Lich's Deathly Teleport): targets just take the damage, no save roll. */
 
 /**
  * The standalone "Group save" — the same save modal with no preset action: the DM
@@ -519,13 +524,14 @@ interface SaveRow {
   edited?: string
 }
 
-function SaveResolver({
+export function SaveResolver({
   attacker,
   action,
   combatants,
   dispatch,
   onRoll,
   onUse,
+  defaultMagical,
   onClose,
 }: {
   attacker?: MonsterCombatant
@@ -534,9 +540,12 @@ function SaveResolver({
   dispatch: (a: EncounterAction) => void
   onRoll: OnRoll
   onUse?: () => void
+  defaultMagical?: boolean
   onClose: () => void
 }) {
   const save = action?.save ?? null
+  // An action with damage but no save deals automatic area damage — no save roll.
+  const noSave = !!action && !save && (action.damage?.length ?? 0) > 0
   // A standalone group save (no action) targets everyone and lets the DM type
   // the damage; an action's save excludes the attacker and rolls its damage.
   const targets = attacker
@@ -550,7 +559,7 @@ function SaveResolver({
   // The base damage for a standalone group save, rolled once when saves are rolled
   // (a formula like "2d6" is rolled; a bare number is taken flat).
   const [genericBase, setGenericBase] = useState(0)
-  const [magical, setMagical] = useState(false)
+  const [magical, setMagical] = useState(defaultMagical ?? false)
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
   const [area, setArea] = useState<RolledDamage[]>([])
   const [resolved, setResolved] = useState(false)
@@ -558,7 +567,7 @@ function SaveResolver({
   const [pending, setPending] = useState<{ combatant: Combatant; dc: number; damage: number }[]>([])
   const [note, setNote] = useState<string | null>(null)
 
-  const title = attacker && action ? `${nameOf(attacker)} · ${action.name}` : 'Group save'
+  const title = action ? (attacker ? `${nameOf(attacker)} · ${action.name}` : action.name) : 'Group save'
   const selectedTargets = targets.filter((t) => selected.has(t.combatantId))
 
   const toggle = (id: string) =>
@@ -607,7 +616,9 @@ function SaveResolver({
     }
     const next: Record<string, SaveRow> = {}
     for (const c of selectedTargets) {
-      if (c.isPC) {
+      if (noSave) {
+        next[c.combatantId] = { result: 'fail' } // no save — full damage to everyone
+      } else if (c.isPC) {
         next[c.combatantId] = {} // the player rolls; recorded below
       } else {
         const saveRoll = rollSave(c, request, {
@@ -703,64 +714,72 @@ function SaveResolver({
   return (
     <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose}>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-        {action ? (
+        {noSave ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-            {ability.toUpperCase()} save
+            Automatic area damage — no save
           </span>
         ) : (
-          <select
-            value={ability}
-            onChange={(e) => setAbility(e.target.value as Ability)}
-            aria-label="Save ability"
-            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
-          >
-            {ABILITIES.map((a) => (
-              <option key={a} value={a}>
-                {a.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        )}
-        <label className="flex items-center gap-1">
-          DC
-          <input
-            value={dc}
-            onChange={(e) => setDc(e.target.value)}
-            aria-label="Save DC"
-            inputMode="numeric"
-            className="w-14 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-        </label>
-        <select
-          value={onSave}
-          onChange={(e) => setOnSave(e.target.value as SaveOutcome)}
-          aria-label="On save"
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
-        >
-          <option value="half">save → half damage</option>
-          <option value="none">save → no damage</option>
-          <option value="negates">save → negates effect</option>
-        </select>
-        {!action && (
-          <label className="flex items-center gap-1">
-            Damage
-            <input
-              value={baseDamage}
-              onChange={(e) => setBaseDamage(e.target.value)}
-              aria-label="Damage"
-              placeholder="2d6 or 3"
-              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
-            />
-          </label>
-        )}
-        {targets.some(hasMagicResistance) && (
-          <label
-            className="flex items-center gap-1"
-            title="Magic Resistance grants advantage on saves against spells and other magical effects"
-          >
-            <input type="checkbox" checked={magical} onChange={(e) => setMagical(e.target.checked)} />
-            Magical
-          </label>
+          <>
+            {action ? (
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                {ability.toUpperCase()} save
+              </span>
+            ) : (
+              <select
+                value={ability}
+                onChange={(e) => setAbility(e.target.value as Ability)}
+                aria-label="Save ability"
+                className="rounded border border-slate-300 bg-white px-2 py-1 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
+              >
+                {ABILITIES.map((a) => (
+                  <option key={a} value={a}>
+                    {a.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            )}
+            <label className="flex items-center gap-1">
+              DC
+              <input
+                value={dc}
+                onChange={(e) => setDc(e.target.value)}
+                aria-label="Save DC"
+                inputMode="numeric"
+                className="w-14 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+              />
+            </label>
+            <select
+              value={onSave}
+              onChange={(e) => setOnSave(e.target.value as SaveOutcome)}
+              aria-label="On save"
+              className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="half">save → half damage</option>
+              <option value="none">save → no damage</option>
+              <option value="negates">save → negates effect</option>
+            </select>
+            {!action && (
+              <label className="flex items-center gap-1">
+                Damage
+                <input
+                  value={baseDamage}
+                  onChange={(e) => setBaseDamage(e.target.value)}
+                  aria-label="Damage"
+                  placeholder="2d6 or 3"
+                  className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+            )}
+            {targets.some(hasMagicResistance) && (
+              <label
+                className="flex items-center gap-1"
+                title="Magic Resistance grants advantage on saves against spells and other magical effects"
+              >
+                <input type="checkbox" checked={magical} onChange={(e) => setMagical(e.target.checked)} />
+                Magical Effect
+              </label>
+            )}
+          </>
         )}
       </div>
 
@@ -778,7 +797,7 @@ function SaveResolver({
           disabled={selectedTargets.length === 0}
           className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
         >
-          Roll saves
+          {noSave ? 'Roll damage' : 'Roll saves'}
         </button>
       ) : (
         <>
@@ -796,28 +815,49 @@ function SaveResolver({
                     {row?.total != null && (
                       <span className="tabular-nums text-slate-500 dark:text-slate-400">{row.total}</span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setResult(c.combatantId, 'save')}
-                      className={
-                        row?.result === 'save'
-                          ? 'rounded border border-emerald-400 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300'
-                          : 'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                      }
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setResult(c.combatantId, 'fail')}
-                      className={
-                        row?.result === 'fail'
-                          ? 'rounded border border-rose-400 px-1.5 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300'
-                          : 'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                      }
-                    >
-                      Fail
-                    </button>
+                    {!noSave && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setResult(c.combatantId, 'save')}
+                          className={
+                            row?.result === 'save'
+                              ? 'rounded border border-emerald-400 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300'
+                              : 'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400'
+                          }
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setResult(c.combatantId, 'fail')}
+                          className={
+                            row?.result === 'fail'
+                              ? 'rounded border border-rose-400 px-1.5 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300'
+                              : 'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400'
+                          }
+                        >
+                          Fail
+                        </button>
+                        {!c.isPC && row?.result === 'fail' && legendaryResistanceLeft(c) > 0 && (
+                          <button
+                            type="button"
+                            title="Legendary Resistance: turn this failed save into a success"
+                            onClick={() => {
+                              setResult(c.combatantId, 'save')
+                              dispatch({
+                                type: 'update',
+                                id: c.combatantId,
+                                update: (cc) => (cc.isPC ? cc : spendLegendaryResistance(cc)),
+                              })
+                            }}
+                            className="rounded border border-amber-400 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                          >
+                            Legendary Resistance ({legendaryResistanceLeft(c)})
+                          </button>
+                        )}
+                      </>
+                    )}
                   </span>
                   <span className="flex items-center gap-1">
                     {defenses.map((d, i) => (

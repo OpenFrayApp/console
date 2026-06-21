@@ -43,6 +43,7 @@ interface MonsterOpts {
   effects?: Effect[]
   perRound?: number
   legendaryRemaining?: number
+  reactionUsed?: boolean
 }
 
 function monster(
@@ -66,6 +67,7 @@ function monster(
     legendaryRemaining: opts.legendaryRemaining ?? perRound,
     concentration: null,
     effects: opts.effects ?? [],
+    reactionUsed: opts.reactionUsed,
     visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
   }
 }
@@ -220,6 +222,14 @@ describe('nextTurn', () => {
     const b = monster('b', 10)
     const e = nextTurn(encounter([a, b], 1, 0))
     expect(byId(e, 'a').effects.map((x) => x.id)).toEqual(['other'])
+  })
+
+  it("refreshes the newly-active creature's reaction, leaving others' alone", () => {
+    const a = monster('a', 20, { reactionUsed: true })
+    const b = monster('b', 10, { reactionUsed: true })
+    const e = nextTurn(encounter([a, b], 1, 0)) // b becomes active
+    expect(byId(e, 'b').reactionUsed).toBe(false) // refreshed at the start of its turn
+    expect(byId(e, 'a').reactionUsed).toBe(true) // untouched until a's turn
   })
 
   it('does not mutate the input encounter', () => {

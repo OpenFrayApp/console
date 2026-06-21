@@ -114,6 +114,7 @@ export function SpellCastModal({
         combatants={combatants}
         dispatch={dispatch}
         onRoll={onRoll}
+        defaultMagical
         onClose={onClose}
       />
     )

@@ -97,6 +97,20 @@ export function CombatantControls({
           </span>
         )}
 
+        <button
+          type="button"
+          onClick={() => apply((c) => ({ ...c, reactionUsed: !c.reactionUsed }))}
+          aria-pressed={combatant.reactionUsed === true}
+          title="One reaction per round (opportunity attack, readied action, Shield, …). Refreshes at the start of this combatant's turn."
+          className={
+            combatant.reactionUsed
+              ? 'rounded border px-2 py-1 text-xs font-medium border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+              : BTN
+          }
+        >
+          {combatant.reactionUsed ? 'Reaction used' : 'Reaction'}
+        </button>
+
         {showDeathSaves && (
           <DeathSaveControls
             onSave={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c) })}

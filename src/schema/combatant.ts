@@ -57,6 +57,12 @@ interface CombatantBase {
   concentration: Concentration | null
   /** Unified effect list — conditions are Effects too: one system, not two. */
   effects: Effect[]
+  /**
+   * Whether this combatant has spent its one reaction this round (opportunity
+   * attack, readied action, Shield, …). Refreshes at the start of its turn.
+   * Undefined = available. Independent of any specific reaction in the stat block.
+   */
+  reactionUsed?: boolean
 }
 
 /**
@@ -78,6 +84,8 @@ export interface MonsterCombatant extends CombatantBase {
   limitedUseState: Record<string, LimitedUseState>
   /** Resets to `creature.legendaryActions.perRound` at the end of its turn. */
   legendaryRemaining: number
+  /** Legendary Resistance uses left (per day; not reset each round). */
+  legendaryResistanceRemaining?: number
   visibility: CombatantVisibility
 }
 

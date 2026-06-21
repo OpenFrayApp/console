@@ -374,6 +374,37 @@ describe('mapOpen5eCreature', () => {
     expect(save?.save).toEqual({ ability: 'int', dc: 16, onSave: 'half' })
     expect(save?.damage).toEqual([{ formula: '3d6', type: 'psychic' }])
   })
+
+  it('extracts area damage from a save-less action (Deathly Teleport)', () => {
+    const teleport = mapOpen5eCreature({
+      ...ABOLETH,
+      actions: [
+        {
+          name: 'Deathly Teleport',
+          action_type: 'ACTION',
+          order_in_statblock: 0,
+          desc: 'The lich teleports up to 60 feet, and each creature within 10 feet of the space it left takes 11 (2d10) Necrotic damage.',
+          attacks: [],
+        },
+      ],
+    }).actions?.[0]
+    expect(teleport?.toHit).toBeNull()
+    expect(teleport?.save).toBeUndefined()
+    expect(teleport?.damage).toEqual([{ formula: '2d10', type: 'necrotic' }])
+  })
+
+  it('tracks Legendary Resistance per day from the trait', () => {
+    const lich = mapOpen5eCreature({
+      ...ABOLETH,
+      traits: [
+        {
+          name: 'Legendary Resistance (4/Day, or 5/Day in Lair)',
+          desc: 'If the lich fails a saving throw, it can choose to succeed instead.',
+        },
+      ],
+    })
+    expect(lich.legendaryResistance).toBe(4)
+  })
 })
 
 describe('parseSpellcasting', () => {

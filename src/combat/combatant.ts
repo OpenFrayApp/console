@@ -60,8 +60,10 @@ export function instantiate(
     spellUsesSpent: {},
     limitedUseState,
     legendaryRemaining: snapshot.legendaryActions?.perRound ?? 0,
+    legendaryResistanceRemaining: snapshot.legendaryResistance,
     concentration: null,
     effects: [],
+    reactionUsed: false,
     visibility: { ...DEFAULT_VISIBILITY, ...opts.visibility },
   }
 }
