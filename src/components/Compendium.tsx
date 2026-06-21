@@ -8,6 +8,7 @@ import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
+import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
 import { SpellCard } from './SpellCard.tsx'
 
 type Tab = 'creatures' | 'spells'
@@ -44,6 +45,8 @@ function TabButton({
 export function Compendium({
   customCreatures = [],
   onCreateCreature,
+  onUpdateCreature,
+  onDeleteCreature,
   createGated = false,
   onGated,
 }: {
@@ -51,6 +54,10 @@ export function Compendium({
   customCreatures?: Creature[]
   /** Save a freshly-authored creature to the library. */
   onCreateCreature: (creature: Creature) => void
+  /** Replace an edited creature in the library. */
+  onUpdateCreature?: (creature: Creature) => void
+  /** Remove a creature from the library. */
+  onDeleteCreature?: (id: string) => void
   /** When anonymous, the create button prompts sign-up instead. */
   createGated?: boolean
   onGated?: () => void
@@ -60,6 +67,9 @@ export function Compendium({
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // The editor modal: null = closed; otherwise the draft to edit and an id when
+  // updating an existing creature (vs creating a new one).
+  const [editor, setEditor] = useState<{ draft: MonsterDraft; editId: string | null } | null>(null)
 
   useEffect(() => {
     loadSrdCreatures().then(setCreatures, () => setCreatures([]))
@@ -104,6 +114,21 @@ export function Compendium({
     setSelectedId(null)
     setQuery('')
   }
+
+  const startCreate = () => (createGated ? onGated?.() : setEditor({ draft: emptyDraft(), editId: null }))
+  const startEdit = (c: Creature) => setEditor({ draft: creatureToDraft(c), editId: c.id })
+  const submitEditor = (creature: Creature) => {
+    if (editor?.editId) onUpdateCreature?.(creature)
+    else onCreateCreature(creature)
+  }
+  const deleteCreature = (c: Creature) => {
+    if (window.confirm(`Delete “${c.name}” from your library?`)) {
+      if (selectedId === c.id) setSelectedId(null)
+      onDeleteCreature?.(c.id)
+    }
+  }
+  // Edit/Delete only on the user's own custom creatures.
+  const isCustom = (c: Creature) => c.id.startsWith('custom:')
 
   return (
     <div className="grid h-full min-h-0 gap-4 md:grid-cols-[20rem_1fr]">
@@ -171,8 +196,12 @@ export function Compendium({
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
         {selectedCreature ? (
           // The stat block carries its own sticky header (with top padding inside
-          // its solid background).
-          <CreatureStatBlock creature={selectedCreature} />
+          // its solid background). Custom creatures get Edit / Delete in the source row.
+          <CreatureStatBlock
+            creature={selectedCreature}
+            onEdit={isCustom(selectedCreature) ? () => startEdit(selectedCreature) : undefined}
+            onDelete={isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined}
+          />
         ) : selectedSpell ? (
           <div className="pt-4">
             <SpellCard spell={selectedSpell} />
@@ -202,17 +231,25 @@ export function Compendium({
                 : 'Select a spell to view it.'}
             </p>
             {tab === 'creatures' && (
-              <CustomMonsterForm
-                onCreate={onCreateCreature}
-                gated={createGated}
-                onGated={onGated}
-                triggerLabel="Create custom creature"
-                triggerClassName="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-              />
+              <button
+                type="button"
+                onClick={startCreate}
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Create custom creature
+              </button>
             )}
           </div>
         )}
       </div>
+
+      <CustomMonsterForm
+        open={editor != null}
+        initialDraft={editor?.draft ?? emptyDraft()}
+        editId={editor?.editId ?? null}
+        onClose={() => setEditor(null)}
+        onSubmit={submitEditor}
+      />
     </div>
   )
 }

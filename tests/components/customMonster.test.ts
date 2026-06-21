@@ -7,6 +7,7 @@ import {
   buildAction,
   buildCreature,
   buildHpFormula,
+  creatureToDraft,
   emptyActionDraft,
   emptyDraft,
   emptySpellGroupDraft,
@@ -202,6 +203,42 @@ describe('buildCreature', () => {
     const c = buildCreature(draft({ traits: [{ ...emptyTraitDraft(), name: 'Amphibious', text: 'Breathes air and water.' }, emptyTraitDraft()] }))
     expect(c.traits).toHaveLength(1)
     expect(c.traits?.[0]).toEqual({ name: 'Amphibious', text: 'Breathes air and water.' })
+  })
+})
+
+describe('creatureToDraft (edit round-trip)', () => {
+  it('round-trips core stats, derived saves/skills, and an attack', () => {
+    const original = buildCreature(draft({
+      cr: '5', // pb +3
+      ac: '15',
+      hpDieCount: '8', hpDie: '10', hpMod: '8',
+      abilities: { str: '18', dex: '14', con: '16', int: '8', wis: '12', cha: '10' },
+      saves: { str: true, dex: false, con: true, int: false, wis: false, cha: false },
+      skills: [{ id: 's', skill: 'athletics', expertise: false }],
+      actions: [{ ...emptyActionDraft(), name: 'Slam', kind: 'melee', damage: [{ id: 'd', formula: '2d8', type: 'bludgeoning' }] }],
+    }))
+    // Reverse to a draft, then rebuild — the result should match the original.
+    const back = buildCreature(creatureToDraft(original))
+    expect(back.ac).toBe(15)
+    expect(back.maxHp).toBe(original.maxHp)
+    expect(back.hpFormula).toBe('8d10+8')
+    expect(back.abilities).toEqual(original.abilities)
+    expect(back.saves).toEqual(original.saves) // str/con proficient
+    expect(back.skills).toEqual(original.skills)
+    expect(back.actions?.[0]).toMatchObject({
+      name: 'Slam',
+      toHit: original.actions?.[0].toHit, // str +4 + pb +3 = +7
+      damage: original.actions?.[0].damage, // 2d8+4 (mod stripped then re-derived)
+    })
+  })
+
+  it('reverses expertise skills back to expertise', () => {
+    const original = buildCreature(draft({
+      cr: '5',
+      abilities: { str: '', dex: '18', con: '', int: '', wis: '', cha: '' },
+      skills: [{ id: 's', skill: 'stealth', expertise: true }],
+    }))
+    expect(creatureToDraft(original).skills[0]).toMatchObject({ skill: 'stealth', expertise: true })
   })
 })
 

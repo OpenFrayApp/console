@@ -21,7 +21,6 @@ import {
   averageHp,
   buildCreature,
   emptyActionDraft,
-  emptyDraft,
   emptySkillDraft,
   emptySpellGroupDraft,
   emptyTraitDraft,
@@ -89,42 +88,41 @@ function ActionList({
 }
 
 /**
- * Create a custom (homebrew / SRD-excluded) creature — a full stat-block editor
- * over the Creature schema. The result is `source:'custom'` with a fresh id and is
- * handed to `onCreate` (which saves it to the library); every custom creature is an
- * independent entity, never matched or deduped against existing content.
+ * The custom-creature editor — a controlled modal over the full Creature schema,
+ * opened for "create" (an empty draft) or "edit" (a creature's draft + its id, so
+ * the rebuilt creature keeps that id). On save it hands the Creature to `onSubmit`.
  */
-const DEFAULT_TRIGGER =
-  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
-
 export function CustomMonsterForm({
-  onCreate,
-  gated = false,
-  onGated,
-  triggerLabel = 'Custom creature',
-  triggerClassName = DEFAULT_TRIGGER,
+  open,
+  initialDraft,
+  editId = null,
+  onClose,
+  onSubmit,
 }: {
-  onCreate: (creature: Creature) => void
-  /** When true (anonymous), the button prompts sign-up instead of opening the form. */
-  gated?: boolean
-  onGated?: () => void
-  /** The trigger button's text and style, so it can suit different placements. */
-  triggerLabel?: string
-  triggerClassName?: string
+  open: boolean
+  initialDraft: MonsterDraft
+  /** Set when editing — the rebuilt creature keeps this id instead of a fresh one. */
+  editId?: string | null
+  onClose: () => void
+  onSubmit: (creature: Creature) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const [d, setD] = useState<MonsterDraft>(emptyDraft)
+  const [d, setD] = useState<MonsterDraft>(initialDraft)
   // The SRD spell list, loaded once the modal opens, for the spellcasting picker.
   const [spells, setSpells] = useState<Spell[]>([])
+
+  // Seed the form each time it opens (create → empty, edit → the creature's draft).
+  useEffect(() => {
+    if (open) setD(initialDraft)
+  }, [open, initialDraft])
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, onClose])
 
   useEffect(() => {
     if (open && spells.length === 0) loadSrdSpells().then(setSpells, () => setSpells([]))
@@ -145,38 +143,29 @@ export function CustomMonsterForm({
 
   const submit = () => {
     if (!d.name.trim()) return
-    onCreate(buildCreature(d))
-    setD(emptyDraft())
-    setOpen(false)
+    const creature = buildCreature(d)
+    onSubmit(editId ? { ...creature, id: editId } : creature)
+    onClose()
   }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => (gated ? onGated?.() : setOpen(true))}
-        title={gated ? 'Sign up to create custom creatures' : undefined}
-        className={triggerClassName}
-      >
-        {triggerLabel}
-      </button>
-
       {open && (
         <div
           className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
-          onClick={() => setOpen(false)}
+          onClick={onClose}
         >
           <div
             role="dialog"
-            aria-label="Create custom creature"
+            aria-label={editId ? 'Edit creature' : 'Create custom creature'}
             onClick={(e) => e.stopPropagation()}
             className="my-auto w-full max-w-xl rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-              <h2 className="text-lg font-semibold">Custom creature</h2>
+              <h2 className="text-lg font-semibold">{editId ? 'Edit creature' : 'Custom creature'}</h2>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={onClose}
                 aria-label="Close"
                 className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               >
@@ -410,7 +399,7 @@ export function CustomMonsterForm({
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={onClose}
                 className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Cancel
@@ -421,7 +410,7 @@ export function CustomMonsterForm({
                 disabled={!d.name.trim()}
                 className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
               >
-                Create
+                {editId ? 'Save' : 'Create'}
               </button>
             </div>
           </div>

@@ -516,3 +516,135 @@ export function buildCreature(draft: MonsterDraft): Creature {
 
   return creature
 }
+
+// --- reverse: Creature → draft (for the Edit flow) ----------------------------
+
+const str = (n: number | undefined): string => (n == null ? '' : String(n))
+
+const crToString = (cr: number): string =>
+  cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr)
+
+/** Pull dice (`14d12+56`) back into the count/die/mod fields. */
+function hpFromFormula(formula: string | undefined): { hpDieCount: string; hpDie: string; hpMod: string } {
+  const m = formula?.match(/^(\d+)d(\d+)([+-]\d+)?$/)
+  if (!m) return { hpDieCount: '', hpDie: '8', hpMod: '' }
+  return { hpDieCount: m[1], hpDie: m[2], hpMod: m[3] ? m[3].replace(/^\+/, '') : '' }
+}
+
+/** Drop a trailing flat modifier — the form re-derives and re-adds it. */
+const stripMod = (formula: string): string => formula.replace(/[+-]\d+$/, '')
+
+/**
+ * Which ability an attack used isn't stored, so infer it: the to-hit is
+ * `mod + proficiency`, so find the ability whose modifier matches (preferring the
+ * usual combat ability for the kind). Good enough to round-trip; the DM can adjust.
+ */
+function inferAttackAbility(action: Action, abilities: AbilityScores, pb: number): Ability {
+  const fallback: Ability = action.kind === 'ranged' ? 'dex' : 'str'
+  if (action.toHit == null) return fallback
+  const target = action.toHit - pb
+  const order: Ability[] =
+    action.kind === 'ranged'
+      ? ['dex', 'str', 'con', 'int', 'wis', 'cha']
+      : ['str', 'dex', 'con', 'int', 'wis', 'cha']
+  return order.find((a) => abilityMod(abilities[a]) === target) ?? fallback
+}
+
+function actionToDraft(action: Action, abilities: AbilityScores, pb: number): ActionDraft {
+  const isAttack = action.kind === 'melee' || action.kind === 'ranged'
+  const damage = (action.damage ?? []).map((d, i) => ({
+    id: uid(),
+    formula: i === 0 ? stripMod(d.formula) : d.formula,
+    type: d.type,
+  }))
+  return {
+    id: uid(),
+    name: action.name,
+    kind: action.kind,
+    attackAbility: isAttack ? inferAttackAbility(action, abilities, pb) : 'str',
+    reach: str(action.reach),
+    rangeNormal: str(action.range?.normal),
+    rangeLong: str(action.range?.long),
+    damage: damage.length ? damage : [emptyDamageDraft()],
+    saveAbility: action.save?.ability ?? 'dex',
+    saveDc: str(action.save?.dc),
+    saveOutcome: action.save?.onSave ?? 'half',
+    rechargeKind: action.recharge?.type ?? 'none',
+    rechargeValue: action.recharge ? String(action.recharge.value) : '',
+    legendaryCost: str(action.legendaryCost),
+    text: action.text ?? '',
+  }
+}
+
+/**
+ * Reconstruct an editable draft from a saved Creature, for the Edit flow. Most
+ * fields round-trip exactly; saves/skills come back as proficiency flags, the
+ * baked damage/attack modifiers are stripped (the form re-derives them), and the
+ * attack ability is inferred from the to-hit.
+ */
+export function creatureToDraft(c: Creature): MonsterDraft {
+  const pb = proficiencyBonus(c.cr)
+  const speed = c.speed ?? {}
+  const skills = (Object.entries(c.skills ?? {}) as [Skill, number][]).map(([skill, bonus]) => ({
+    id: uid(),
+    skill,
+    expertise: bonus - abilityMod(c.abilities[SKILL_ABILITY[skill]]) >= 2 * pb,
+  }))
+  return {
+    name: c.name,
+    size: c.size,
+    type: c.type,
+    alignment: c.alignment ?? '',
+    sourceName: c.source === 'custom' ? '' : c.source,
+    edition: c.edition ?? '5.5',
+    cr: c.cr == null ? '' : crToString(c.cr),
+    xp: str(c.xp),
+    ac: str(c.ac),
+    ...hpFromFormula(c.hpFormula),
+    speed: {
+      walk: str(speed.walk),
+      fly: str(speed.fly),
+      swim: str(speed.swim),
+      climb: str(speed.climb),
+      burrow: str(speed.burrow),
+      hover: Boolean(speed.hover),
+    },
+    abilities: ABILITIES.reduce((acc, a) => {
+      acc[a] = String(c.abilities[a])
+      return acc
+    }, {} as Record<Ability, string>),
+    saves: ABILITIES.reduce((acc, a) => {
+      acc[a] = c.saves?.[a] != null
+      return acc
+    }, {} as Record<Ability, boolean>),
+    skills,
+    senses: {
+      passivePerception: str(c.senses?.passivePerception),
+      darkvision: str(c.senses?.darkvision),
+      blindsight: str(c.senses?.blindsight),
+      tremorsense: str(c.senses?.tremorsense),
+      truesight: str(c.senses?.truesight),
+    },
+    languages: (c.languages ?? []).join(', '),
+    resistances: (c.resistances ?? []).join(', '),
+    immunities: (c.immunities ?? []).join(', '),
+    vulnerabilities: (c.vulnerabilities ?? []).join(', '),
+    conditionImmunities: (c.conditionImmunities ?? []).join(', '),
+    traits: (c.traits ?? []).map((t) => ({ id: uid(), name: t.name, text: t.text })),
+    actions: (c.actions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
+    bonusActions: (c.bonusActions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
+    reactions: (c.reactions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
+    legendaryPerRound: str(c.legendaryActions?.perRound) || '3',
+    legendaryActions: (c.legendaryActions?.actions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
+    lairActions: (c.lairActions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
+    legendaryResistance: str(c.legendaryResistance),
+    legendaryResistanceLair: str(c.legendaryResistanceLair),
+    spellAbility: c.spellcasting?.ability ?? '',
+    spellGroups: (c.spellcasting?.groups ?? []).map((g) => ({
+      id: uid(),
+      usage: g.usage.type === 'perDay' ? ('perDay' as const) : ('atWill' as const),
+      per: g.usage.type === 'perDay' ? String(g.usage.per) : '',
+      spells: g.spells.map((s) => ({ ...s })),
+    })),
+  }
+}

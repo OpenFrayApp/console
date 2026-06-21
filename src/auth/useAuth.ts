@@ -31,8 +31,19 @@ export interface AuthState {
 
 export const AuthContext = createContext<AuthState | null>(null)
 
+/** Anonymous fallback when there's no provider — auth is additive, so the app
+ *  (and tests rendering it bare) still work, just signed-out. */
+const ANONYMOUS: AuthState = {
+  user: null,
+  loading: false,
+  configured: false,
+  campaign: {},
+  signUp: async () => ({ error: 'Sign-in is not configured yet.' }),
+  signIn: async () => ({ error: 'Sign-in is not configured yet.' }),
+  signOut: async () => {},
+  updateCampaign: async () => ({ error: 'Sign-in is not configured yet.' }),
+}
+
 export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>')
-  return ctx
+  return useContext(AuthContext) ?? ANONYMOUS
 }

@@ -13,7 +13,12 @@ import type { Encounter } from './schema/encounter.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
 import { loadCloudEncounter, saveCloudEncounter } from './state/cloudEncounter.ts'
-import { loadCustomCreatures, saveCustomCreature } from './state/cloudCreatures.ts'
+import {
+  deleteCustomCreature,
+  loadCustomCreatures,
+  saveCustomCreature,
+  updateCustomCreature,
+} from './state/cloudCreatures.ts'
 import { useAuth } from './auth/useAuth.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
@@ -223,6 +228,16 @@ function App() {
     saveCustomCreature(creature)
   }
 
+  const handleUpdateCreature = (creature: Creature) => {
+    setCustomCreatures((prev) => prev.map((c) => (c.id === creature.id ? creature : c)))
+    updateCustomCreature(creature)
+  }
+
+  const handleDeleteCreature = (id: string) => {
+    setCustomCreatures((prev) => prev.filter((c) => c.id !== id))
+    deleteCustomCreature(id)
+  }
+
   // Advancing the turn moves the center panel to whoever's turn it now is.
   const selectActive = (next: Encounter) => {
     const active = next.combatants[next.activeIndex]
@@ -361,6 +376,8 @@ function App() {
             <Compendium
               customCreatures={customCreatures}
               onCreateCreature={handleCreateCreature}
+              onUpdateCreature={handleUpdateCreature}
+              onDeleteCreature={handleDeleteCreature}
               createGated={!user}
               onGated={() => setAuthOpen(true)}
             />
