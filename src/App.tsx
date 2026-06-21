@@ -236,15 +236,16 @@ function App() {
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-        <div className="flex items-center gap-4">
-          <div>
+        <div className="flex items-center gap-4 lg:gap-0">
+          {/* Title spans the initiative column so Group/Cast line up with the stat block. */}
+          <div className="lg:w-[28rem] lg:shrink-0 lg:pr-4">
             <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               DnD 5e combat console
             </p>
           </div>
           {view === 'encounter' && encounter.combatants.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 lg:pl-4">
               <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
               <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
             </div>

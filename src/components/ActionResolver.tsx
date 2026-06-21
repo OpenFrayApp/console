@@ -140,11 +140,14 @@ function Modal({
   subtitle,
   onClose,
   children,
+  wide = false,
 }: {
   title: string
   subtitle?: ReactNode
   onClose: () => void
   children: ReactNode
+  /** Wider modal for the multi-target group save, so each row fits on one line. */
+  wide?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useDismiss(ref, true, onClose)
@@ -155,7 +158,7 @@ function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-full w-full max-w-md overflow-auto rounded-lg border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+        className={`max-h-full w-full overflow-auto rounded-lg border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900 ${wide ? 'max-w-3xl' : 'max-w-md'}`}
       >
         <div className="mb-1 flex items-start justify-between gap-3">
           <h3 className="text-base font-semibold">{title}</h3>
@@ -735,7 +738,7 @@ export function SaveResolver({
 
   if (pending.length > 0) {
     return (
-      <Modal title={title} subtitle="Concentration checks" onClose={onClose}>
+      <Modal title={title} subtitle="Concentration checks" onClose={onClose} wide>
         <ul className="space-y-2">
           {pending.map((p) => (
             <li key={p.combatant.combatantId} className="flex flex-wrap items-center justify-between gap-2">
@@ -765,7 +768,7 @@ export function SaveResolver({
   }
 
   return (
-    <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose}>
+    <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose} wide>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         {noSave ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
