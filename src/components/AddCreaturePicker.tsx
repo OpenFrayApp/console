@@ -7,8 +7,14 @@ import { loadSrdCreatures } from '../compendium/srd.ts'
 import { formatCr } from '../compendium/format.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
-/** A search popover to pick an SRD creature to add to the encounter. */
-export function AddCreaturePicker({ onPick }: { onPick: (c: Creature) => void }) {
+/** A search popover to pick a creature (SRD + the user's custom library) to add. */
+export function AddCreaturePicker({
+  onPick,
+  customCreatures = [],
+}: {
+  onPick: (c: Creature) => void
+  customCreatures?: Creature[]
+}) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
@@ -23,7 +29,8 @@ export function AddCreaturePicker({ onPick }: { onPick: (c: Creature) => void })
   }, [open, creatures])
 
   const q = query.trim().toLowerCase()
-  const matches = (creatures ?? [])
+  // The user's custom creatures come first, then the SRD.
+  const matches = [...customCreatures, ...(creatures ?? [])]
     .filter((c) => !q || c.name.toLowerCase().includes(q))
     .slice(0, 50)
 

@@ -90,9 +90,9 @@ function ActionList({
 
 /**
  * Create a custom (homebrew / SRD-excluded) creature — a full stat-block editor
- * over the Creature schema. The result is `source:'custom'` with a fresh id and
- * flows into the encounter like any picked creature. Every custom creature is an
- * independent entity; nothing here is matched or deduped against existing content.
+ * over the Creature schema. The result is `source:'custom'` with a fresh id and is
+ * handed to `onCreate` (which saves it to the library); every custom creature is an
+ * independent entity, never matched or deduped against existing content.
  */
 const DEFAULT_TRIGGER =
   'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
@@ -421,7 +421,7 @@ export function CustomMonsterForm({
                 disabled={!d.name.trim()}
                 className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
               >
-                Create & add
+                Create
               </button>
             </div>
           </div>

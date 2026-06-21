@@ -42,11 +42,14 @@ function TabButton({
 }
 
 export function Compendium({
+  customCreatures = [],
   onCreateCreature,
   createGated = false,
   onGated,
 }: {
-  /** Add a freshly-created custom creature to the encounter. */
+  /** The user's custom creature library, listed alongside the SRD. */
+  customCreatures?: Creature[]
+  /** Save a freshly-authored creature to the library. */
   onCreateCreature: (creature: Creature) => void
   /** When anonymous, the create button prompts sign-up instead. */
   createGated?: boolean
@@ -65,22 +68,34 @@ export function Compendium({
 
   const loading = tab === 'creatures' ? creatures === null : spells === null
 
+  // The user's custom creatures sit alongside the SRD in one searchable list.
+  const allCreatures = useMemo(
+    () => [...customCreatures, ...(creatures ?? [])],
+    [customCreatures, creatures],
+  )
+
   const entries = useMemo(() => {
     const list =
       tab === 'creatures'
-        ? (creatures ?? []).map((c) => ({ id: c.id, name: c.name, meta: `CR ${formatCr(c.cr)}` }))
+        ? allCreatures.map((c) => ({
+            id: c.id,
+            name: c.name,
+            meta: `CR ${formatCr(c.cr)}`,
+            custom: c.id.startsWith('custom:'),
+          }))
         : (spells ?? []).map((s) => ({
             id: s.id,
             name: s.name,
             meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
+            custom: false,
           }))
     const q = query.trim().toLowerCase()
     const filtered = q ? list.filter((e) => e.name.toLowerCase().includes(q)) : list
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
-  }, [tab, creatures, spells, query])
+  }, [tab, allCreatures, spells, query])
 
   const selectedCreature =
-    tab === 'creatures' ? (creatures ?? []).find((c) => c.id === selectedId) : undefined
+    tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined
   const selectedSpell =
     tab === 'spells' ? (spells ?? []).find((s) => s.id === selectedId) : undefined
 
@@ -132,7 +147,12 @@ export function Compendium({
                     )}
                   >
                     <span className="truncate">{e.name}</span>
-                    <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                      {e.custom && (
+                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                          Custom
+                        </span>
+                      )}
                       {e.meta}
                     </span>
                   </button>

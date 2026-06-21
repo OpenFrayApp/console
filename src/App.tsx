@@ -13,6 +13,7 @@ import type { Encounter } from './schema/encounter.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
 import { loadCloudEncounter, saveCloudEncounter } from './state/cloudEncounter.ts'
+import { loadCustomCreatures, saveCustomCreature } from './state/cloudCreatures.ts'
 import { useAuth } from './auth/useAuth.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
@@ -115,6 +116,9 @@ function App() {
   // Whether the full-screen sign-up page is showing (opened from the header or a
   // gated feature); it closes itself once the user is signed in.
   const [authOpen, setAuthOpen] = useState(false)
+  // The signed-in user's custom creature library (empty when anonymous), shown in
+  // the compendium and pickable into encounters.
+  const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -122,6 +126,21 @@ function App() {
 
   useEffect(() => {
     if (user) setAuthOpen(false)
+  }, [user])
+
+  // Load the custom creature library on sign-in; clear it on sign-out.
+  useEffect(() => {
+    if (!user) {
+      setCustomCreatures([])
+      return
+    }
+    let active = true
+    loadCustomCreatures().then((list) => {
+      if (active) setCustomCreatures(list)
+    })
+    return () => {
+      active = false
+    }
   }, [user])
 
   // On sign-in, hydrate the live encounter from the cloud (the authoritative copy);
@@ -195,6 +214,13 @@ function App() {
     })
     dispatch({ type: 'add', combatant })
     setSelectedId(combatant.combatantId)
+  }
+
+  // Creating a custom creature saves it to the library (it shows in the compendium
+  // and is pickable into encounters) — it does not drop into the current fight.
+  const handleCreateCreature = (creature: Creature) => {
+    setCustomCreatures((prev) => [creature, ...prev])
+    saveCustomCreature(creature)
   }
 
   // Advancing the turn moves the center panel to whoever's turn it now is.
@@ -312,7 +338,7 @@ function App() {
             <div className="flex items-center gap-2">
               <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
               <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
-              <AddCreaturePicker onPick={handlePick} />
+              <AddCreaturePicker onPick={handlePick} customCreatures={customCreatures} />
             </div>
           )}
           <CampaignSettings onSignUp={() => setAuthOpen(true)} />
@@ -333,7 +359,8 @@ function App() {
         {view === 'compendium' ? (
           <div className="h-full w-full overflow-hidden px-6 py-6">
             <Compendium
-              onCreateCreature={handlePick}
+              customCreatures={customCreatures}
+              onCreateCreature={handleCreateCreature}
               createGated={!user}
               onGated={() => setAuthOpen(true)}
             />
