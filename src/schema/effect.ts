@@ -89,6 +89,11 @@ export interface Effect {
   /** The mechanical effect the dice engine reads; `null` = reminder-only. */
   modifier: EffectModifier | null
   duration: EffectDuration
+  /**
+   * When set, the combatant is skipped in the initiative loop while this effect is
+   * active — e.g. a Surprised creature under the 2014 rule, skipped on round 1.
+   */
+  skipsTurn?: boolean
   /** Always shown to the DM as a plain reminder. */
   note?: string
 }

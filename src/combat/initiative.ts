@@ -42,22 +42,27 @@ export function activeCombatant(e: Encounter): Combatant | undefined {
 
 /**
  * A creature takes turns while active. A downed (unconscious) PC still gets its
- * turn so the DM can roll/mark a death save; only the truly dead are skipped.
+ * turn so the DM can roll/mark a death save; only the truly dead are skipped. A
+ * `skipsTurn` effect (e.g. Surprised on round 1) also takes a creature out of the
+ * rotation until that effect clears.
  */
 function takesTurn(c: Combatant): boolean {
+  if (c.effects.some((e) => e.skipsTurn)) return false
   return c.status === 'active' || (c.isPC && c.status === 'unconscious')
 }
 
 /**
- * Start combat: sort into initiative order, round 1, top of the list active.
- * (Surprise is deferred — a one-round skip effect, per the loop spec.)
+ * Start combat: sort into initiative order, round 1, and make the first creature
+ * that actually takes a turn active (skipping any surprised/dead leaders).
  */
 export function beginEncounter(e: Encounter): Encounter {
+  const combatants = sortByInitiative(e.combatants)
+  const first = combatants.findIndex(takesTurn)
   return {
     ...e,
-    combatants: sortByInitiative(e.combatants),
+    combatants,
     round: 1,
-    activeIndex: 0,
+    activeIndex: first < 0 ? 0 : first,
   }
 }
 
@@ -110,18 +115,29 @@ export function nextTurn(e: Encounter): Encounter {
     c.combatantId === endingId ? endTurn(c) : c,
   )
 
-  let index = e.activeIndex
-  let wrapped = false
-  for (let step = 0; step < combatants.length; step++) {
-    index += 1
-    if (index >= combatants.length) {
-      index = 0
-      wrapped = true
+  // The next taker in the remainder of this round.
+  let index = -1
+  for (let i = e.activeIndex + 1; i < combatants.length; i++) {
+    if (takesTurn(combatants[i])) {
+      index = i
+      break
     }
-    if (takesTurn(combatants[index])) break
   }
 
-  const round = wrapped ? e.round + 1 : e.round
+  let round = e.round
+  if (index === -1) {
+    // Wrap into a new round: surprise (skip) effects clear *first*, so a creature
+    // surprised on round 1 is back in the rotation and can lead off round 2.
+    round = e.round + 1
+    combatants = combatants.map((c) =>
+      c.effects.some((eff) => eff.skipsTurn)
+        ? { ...c, effects: c.effects.filter((eff) => !eff.skipsTurn) }
+        : c,
+    )
+    index = combatants.findIndex(takesTurn)
+    if (index < 0) index = 0
+  }
+
   const activeId = combatants[index]?.combatantId
 
   combatants = combatants.map((c) => {

@@ -107,6 +107,14 @@ const untilSourceEffect = (id: string, source: string): Effect => ({
   duration: { type: 'untilSourceTurn' },
 })
 
+const skipEffect = (id: string): Effect => ({
+  id,
+  name: 'Surprised',
+  modifier: null,
+  duration: { type: 'rounds', rounds: 1 },
+  skipsTurn: true,
+})
+
 const ids = (e: Encounter) => e.combatants.map((c) => c.combatantId)
 const byId = (e: Encounter, id: string) =>
   e.combatants.find((c) => c.combatantId === id)!
@@ -147,6 +155,31 @@ describe('beginEncounter', () => {
     expect(e.round).toBe(1)
     expect(e.activeIndex).toBe(0)
     expect(activeCombatant(e)?.combatantId).toBe('b')
+  })
+
+  it('starts on the first non-surprised creature, skipping a surprised leader', () => {
+    // 'a' has the highest initiative but is surprised, so 'b' leads off round 1.
+    const e = beginEncounter(
+      encounter([monster('a', 25, { effects: [skipEffect('s1')] }), monster('b', 10)], 0, 0),
+    )
+    expect(activeCombatant(e)?.combatantId).toBe('b')
+  })
+})
+
+describe('surprise (skipsTurn)', () => {
+  it('skips a surprised creature on round 1, then it acts on round 2 with the effect cleared', () => {
+    let e = beginEncounter(
+      encounter([monster('a', 25, { effects: [skipEffect('s1')] }), monster('b', 10)], 0, 0),
+    )
+    // Round 1: 'a' is skipped, 'b' is active.
+    expect(e.round).toBe(1)
+    expect(activeCombatant(e)?.combatantId).toBe('b')
+
+    // Advancing wraps to round 2; surprise clears and 'a' (init 25) leads.
+    e = nextTurn(e)
+    expect(e.round).toBe(2)
+    expect(activeCombatant(e)?.combatantId).toBe('a')
+    expect(byId(e, 'a').effects).toEqual([])
   })
 })
 

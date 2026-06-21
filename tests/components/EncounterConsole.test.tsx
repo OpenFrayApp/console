@@ -45,6 +45,12 @@ afterEach(cleanup)
 
 const begin = () => screen.getByRole('button', { name: 'Begin' })
 
+// Begin now opens the Roll Initiative modal; confirm it to actually start combat.
+const beginCombat = () => {
+  fireEvent.click(begin())
+  fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+}
+
 async function addGoblin() {
   fireEvent.click(screen.getByText('Add creature'))
   await waitFor(() => screen.getByText('Goblin'))
@@ -75,7 +81,7 @@ describe('Encounter flow', () => {
     expect(screen.getAllByText('Goblin').length).toBeGreaterThan(0)
     expect(begin()).toBeEnabled()
 
-    fireEvent.click(begin())
+    beginCombat()
     expect(screen.getByText('Round 1')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Next turn' })).toBeInTheDocument()
 
@@ -90,7 +96,7 @@ describe('Encounter flow', () => {
     const { container } = render(<App />)
     await addCreature('Goblin')
     await addCreature('Ogre')
-    fireEvent.click(begin())
+    beginCombat()
 
     // The center section's stat-block heading reflects the active combatant.
     const centerName = () =>

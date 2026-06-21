@@ -3,7 +3,8 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
-import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
+import type { Combatant } from './schema/combatant.ts'
+import type { Effect } from './schema/effect.ts'
 import { instantiate } from './combat/combatant.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
@@ -120,8 +121,9 @@ function App() {
   )
   const [rollLog, setRollLog] = useState<RollEntry[]>(() => restored?.rollLog ?? [])
   const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
-  // Monster initiatives held while the DM enters the players' rolled numbers.
-  const [pcInitPrompt, setPcInitPrompt] = useState<Record<string, number> | null>(null)
+  // Pre-rolled initiative values (blank for players) held while the Roll Initiative
+  // modal is open; null when it's closed.
+  const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
 
   const { user } = useAuth()
   // The DB row id of the signed-in user's encounter; a ref so the autosave effect
@@ -308,63 +310,85 @@ function App() {
       }
     }
   }
-  const rollInit = (label: string, mod: number): number => {
-    const result = roll(`1d20${mod >= 0 ? `+${mod}` : `${mod}`}`)
-    pushRoll(`${label}: initiative`, result)
+  const rollInit = (label: string, mod: number, disadvantage = false): number => {
+    const dice = `1d20${disadvantage ? 'dis' : ''}${mod >= 0 ? `+${mod}` : `${mod}`}`
+    const result = roll(dice)
+    pushRoll(`${label}: initiative${disadvantage ? ' (surprised)' : ''}`, result)
     return result.total
   }
 
-  // Auto-roll initiative for everyone who isn't a player: monsters (1d20 + Dex)
-  // and quick adds (flat 1d20). Players roll their own — see resolvePlayerInits.
-  const rollAutoInitiatives = (): Record<string, number> => {
-    const inits: Record<string, number> = {}
-    for (const c of encounter.combatants) {
-      if (isPlayer(c)) continue
-      const label = c.isPC ? c.name : c.label
-      inits[c.combatantId] = rollInit(label, c.isPC ? 0 : dexMod(c.creature))
-    }
-    return inits
-  }
+  const initLabel = (c: Combatant): string => (c.isPC ? c.name : c.label)
+  // The initiative modifier: a PC's own, a monster's Dex mod, 0 for a quick add.
+  const initMod = (c: Combatant): number =>
+    isPlayer(c) ? (c.isPC ? c.initiativeMod ?? 0 : 0) : c.isPC ? 0 : dexMod(c.creature)
 
-  // Resolve the players' initiative fields: a typed value is used flat; a blank
-  // field rolls d20 + that player's modifier (logged).
-  const resolvePlayerInits = (raw: Record<string, string>): Record<string, number> => {
-    const inits: Record<string, number> = {}
-    for (const c of encounter.combatants) {
-      if (!isPlayer(c) || !c.isPC) continue
-      const entered = (raw[c.combatantId] ?? '').trim()
-      inits[c.combatantId] = entered
-        ? Math.floor(Number(entered) || 0)
-        : rollInit(c.name, c.initiativeMod ?? 0)
-    }
-    return inits
-  }
+  // One-round skip effect for the 2014 surprise rule (cleared on the round wrap).
+  const surprisedEffect = (): Effect => ({
+    id: crypto.randomUUID(),
+    name: 'Surprised',
+    icon: 'condition',
+    modifier: null,
+    duration: { type: 'rounds', rounds: 1 },
+    skipsTurn: true,
+    note: 'Surprised — skips this round',
+  })
 
-  // Apply all rolled/entered initiatives, sort, and start combat.
-  const startCombat = (initiatives: Record<string, number>) => {
-    for (const [id, initiative] of Object.entries(initiatives)) {
-      dispatch({ type: 'update', id, update: (c) => ({ ...c, initiative }) })
+  // Confirm the Roll Initiative modal: resolve every initiative and apply the
+  // campaign's surprise rule to the marked combatants, then start combat.
+  const startCombat = (result: { values: Record<string, string>; surprised: string[] }) => {
+    const surprised = new Set(result.surprised)
+    const rule = activeRules.surprise
+
+    const initiatives: Record<string, number> = {}
+    for (const c of encounter.combatants) {
+      const id = c.combatantId
+      const raw = (result.values[id] ?? '').trim()
+      const isSurprised = surprised.has(id)
+      const disadvantage = isSurprised && rule === 'disadvantage'
+      // Roll when the field is blank, or to apply 5.5 disadvantage to an unedited
+      // app-rolled value; a value the DM typed (or edited) is always respected.
+      const unedited = raw !== '' && raw === (initPrompt?.[id] ?? '')
+      if (raw === '' || (disadvantage && unedited && !isPlayer(c))) {
+        initiatives[id] = rollInit(initLabel(c), initMod(c), disadvantage)
+      } else {
+        initiatives[id] = Math.floor(Number(raw) || 0)
+      }
+    }
+
+    // 2014 rule: surprised creatures skip round 1 via a one-round skip effect.
+    const withSurprise = (c: Combatant): Effect[] =>
+      rule === 'skip' && surprised.has(c.combatantId)
+        ? [...c.effects, surprisedEffect()]
+        : c.effects
+
+    for (const c of encounter.combatants) {
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (x) => ({ ...x, initiative: initiatives[x.combatantId] ?? x.initiative, effects: withSurprise(x) }),
+      })
     }
     const combatants = encounter.combatants.map((c) => ({
       ...c,
       initiative: initiatives[c.combatantId] ?? c.initiative,
+      effects: withSurprise(c),
     }))
     const next = beginEncounter({ ...encounter, combatants })
     dispatch({ type: 'begin' })
     selectActive(next)
     autoRecharge(next)
-    setPcInitPrompt(null)
+    setInitPrompt(null)
   }
 
-  // Begin: auto-roll monsters/quick-adds now; if there are players, collect their
-  // numbers first, otherwise start immediately.
+  // Begin: pre-roll monsters/quick-adds, then open the Roll Initiative modal so the
+  // DM enters players' rolls and (optionally) marks surprised combatants.
   const handleBegin = () => {
-    const autoInits = rollAutoInitiatives()
-    if (encounter.combatants.some(isPlayer)) {
-      setPcInitPrompt(autoInits)
-    } else {
-      startCombat(autoInits)
+    if (encounter.combatants.length === 0) return
+    const initial: Record<string, string> = {}
+    for (const c of encounter.combatants) {
+      initial[c.combatantId] = isPlayer(c) ? '' : String(rollInit(initLabel(c), initMod(c)))
     }
+    setInitPrompt(initial)
   }
   const handleNextTurn = () => {
     const next = nextTurn(encounter)
@@ -453,13 +477,12 @@ function App() {
 
       {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
 
-      {pcInitPrompt && (
+      {initPrompt && (
         <InitiativePrompt
-          pcs={encounter.combatants.filter(
-            (c): c is PlayerCharacter => c.isPC && c.kind !== 'quick',
-          )}
-          onStart={(raw) => startCombat({ ...pcInitPrompt, ...resolvePlayerInits(raw) })}
-          onCancel={() => setPcInitPrompt(null)}
+          combatants={encounter.combatants}
+          initial={initPrompt}
+          onStart={startCombat}
+          onCancel={() => setInitPrompt(null)}
         />
       )}
 
