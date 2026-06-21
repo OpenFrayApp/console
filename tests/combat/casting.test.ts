@@ -7,6 +7,7 @@ import {
   damageFormula,
   damageTypes,
   damageVariants,
+  spellAction,
 } from '../../src/combat/casting.ts'
 
 const base = {
@@ -100,5 +101,39 @@ describe('damageTypes', () => {
         { formula: '1d8', type: 'fire' },
       ]),
     ).toEqual(['fire'])
+  })
+})
+
+describe('spellAction', () => {
+  it('builds a save action at the base level, seeded with the caster DC (no upcast)', () => {
+    const action = spellAction(FIREBALL, { saveDc: 17 })
+    expect(action).toEqual({
+      id: 'spell:srd-5.2:fireball',
+      name: 'Fireball',
+      kind: 'save',
+      toHit: null,
+      save: { ability: 'dex', dc: 17, onSave: 'half' },
+      damage: [{ formula: '8d6', type: 'fire' }], // base only — never the 9d6/10d6 upcasts
+      text: '',
+    })
+  })
+
+  it('builds a ranged attack action with the caster spell attack bonus', () => {
+    const action = spellAction(FIRE_BOLT, { toHit: 9 })
+    expect(action?.kind).toBe('ranged')
+    expect(action?.toHit).toBe(9)
+    expect(action?.damage).toEqual([{ formula: '1d10', type: 'fire' }])
+  })
+
+  it('builds a save action with no damage for a control spell', () => {
+    const action = spellAction(HOLD_PERSON, { saveDc: 14 })
+    expect(action?.kind).toBe('save')
+    expect(action?.save).toEqual({ ability: 'wis', dc: 14, onSave: 'negates' })
+    expect(action?.damage).toBeUndefined()
+  })
+
+  it('returns null for a utility spell (nothing to resolve — just spend a use)', () => {
+    const mageHand: Spell = { ...base, id: 'srd-5.2:mage-hand', name: 'Mage Hand', level: 0 }
+    expect(spellAction(mageHand, {})).toBeNull()
   })
 })

@@ -125,7 +125,10 @@ function spellMechanics(raw: Open5eSpell): SpellMechanics | undefined {
   const save: SpellSave | undefined = ability
     ? { ability, ...(onSave && { onSave }) }
     : undefined
-  const attackRoll = raw.attack_roll ? true : undefined
+  // Open5e's `attack_roll` flag is set on many non-attack spells (Invisibility,
+  // Bless, Faerie Fire, …) — it keyword-matches "attack" in the prose. An attack
+  // roll only exists to land damage, so we trust it only alongside damage.
+  const attackRoll = raw.attack_roll && damage ? true : undefined
   const scaling = spellScaling(raw.casting_options, raw.damage_types)
 
   if (!damage && !save && !attackRoll && !scaling) return undefined
@@ -337,6 +340,34 @@ function parseSaveDamage(desc: string): DamageRoll[] | undefined {
   return [{ formula: m[1].replace(/\s+/g, ''), type: m[2].toLowerCase() as DamageType }]
 }
 
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Build a function that wraps known spell names in cast-flavoured prose as
+ * `[Name](spell:ref)` markdown links, so the UI can hover-preview them (e.g. a
+ * dragon's "uses Spellcasting to cast Command", the Archmage's "casts Counterspell
+ * or Shield"). Scoped to prose containing the word "cast" to avoid linkifying the
+ * many spell names that are also common words. Built once over the spell list,
+ * then applied to every creature's action/trait text.
+ */
+export function makeSpellLinker(
+  spells: { name: string; ref: string }[],
+): (text: string) => string {
+  const refByLower = new Map(spells.map((s) => [s.name.toLowerCase(), s.ref]))
+  const names = [...new Set(spells.map((s) => s.name))]
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+  if (names.length === 0) return (text) => text
+  const re = new RegExp(`\\b(${names.join('|')})\\b`, 'gi')
+  return (text) => {
+    if (!text || !/\bcasts?\b/i.test(text)) return text
+    return text.replace(re, (m) => {
+      const ref = refByLower.get(m.toLowerCase())
+      return ref ? `[${m}](spell:${ref})` : m
+    })
+  }
+}
+
 /**
  * Parse a monster's "Spellcasting" prose into a structured block. The 2024 SRD
  * format is uniform: a lead line naming the ability + save DC (+ optional spell
@@ -493,18 +524,26 @@ function mapSenses(raw: Open5eCreature): Senses {
 
 const undefIfEmpty = <T>(arr: T[]): T[] | undefined => (arr.length ? arr : undefined)
 
-export function mapOpen5eCreature(raw: Open5eCreature): Creature {
+export function mapOpen5eCreature(
+  raw: Open5eCreature,
+  opts: { linkSpells?: (text: string) => string } = {},
+): Creature {
   const documentKey = raw.document.key
   const { source, edition } = mapSource(documentKey)
   const a = raw.ability_scores
 
+  // Linkify spell names in action/trait prose for hover-preview (no-op by default).
+  const link = opts.linkSpells ?? ((t: string) => t)
+  const linkAction = (act: Action): Action =>
+    act.text ? { ...act, text: link(act.text) } : act
   const actionsOfType = (type: string): Action[] =>
     (raw.actions ?? [])
       .filter((act) => act.action_type === type)
       .sort((x, y) => (x.order_in_statblock ?? 0) - (y.order_in_statblock ?? 0))
       .map(mapOpen5eAction)
+      .map(linkAction)
 
-  const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: t.desc }))
+  const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: link(t.desc) }))
   const legendary = actionsOfType('LEGENDARY_ACTION')
 
   // Spellcasting is one of the ACTION-typed entries; lift it into a structured

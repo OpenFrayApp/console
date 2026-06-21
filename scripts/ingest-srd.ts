@@ -11,6 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  makeSpellLinker,
   mapOpen5eCreature,
   mapOpen5eSpell,
   type Open5eCreature,
@@ -58,17 +59,20 @@ function mapAll<R, T>(items: R[], fn: (r: R) => T, label: string): T[] {
 const outDir = resolve(dirname(fileURLToPath(import.meta.url)), '../public/compendium')
 mkdirSync(outDir, { recursive: true })
 
-console.log('Fetching creatures…')
-const creatures = mapAll(
-  (await fetchAll('creatures')) as Open5eCreature[],
-  mapOpen5eCreature,
-  'creatures',
-)
+// Spells first: the creature mapper links spell names in cast-prose to them.
 console.log('Fetching spells…')
 const spells = mapAll(
   (await fetchAll('spells')) as Open5eSpell[],
   mapOpen5eSpell,
   'spells',
+)
+const linkSpells = makeSpellLinker(spells.map((s) => ({ name: s.name, ref: s.id })))
+
+console.log('Fetching creatures…')
+const creatures = mapAll(
+  (await fetchAll('creatures')) as Open5eCreature[],
+  (raw) => mapOpen5eCreature(raw, { linkSpells }),
+  'creatures',
 )
 
 writeFileSync(resolve(outDir, 'srd-creatures.json'), JSON.stringify(creatures))

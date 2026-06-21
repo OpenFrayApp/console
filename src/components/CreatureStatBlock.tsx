@@ -256,7 +256,15 @@ interface Entry {
   note?: string
 }
 
-function Section({ title, items }: { title: string; items?: Entry[] }) {
+function Section({
+  title,
+  items,
+  resolveSpell,
+}: {
+  title: string
+  items?: Entry[]
+  resolveSpell?: ResolveSpell
+}) {
   if (!items || items.length === 0) return null
   return (
     <div>
@@ -265,7 +273,7 @@ function Section({ title, items }: { title: string; items?: Entry[] }) {
       </h4>
       <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {items.map((entry) => (
-          <Markdown key={entry.name}>
+          <Markdown key={entry.name} resolveSpell={resolveSpell}>
             {`**${entry.name}${entry.note ? ` (${entry.note})` : ''}.** ${entry.text ?? ''}`}
           </Markdown>
         ))}
@@ -294,6 +302,7 @@ function ActionSection({
   onAction,
   rechargeState,
   onRecharge,
+  resolveSpell,
 }: {
   title: string
   actions?: Action[]
@@ -301,6 +310,7 @@ function ActionSection({
   /** id → charged? A rechargeable action that is `false` can't be used until it recharges. */
   rechargeState?: Record<string, boolean>
   onRecharge?: (a: Action) => void
+  resolveSpell?: ResolveSpell
 }) {
   if (!actions || actions.length === 0) return null
   return (
@@ -322,7 +332,7 @@ function ActionSection({
                 >
                   {heading}.
                 </button>{' '}
-                {a.text ? <Markdown inline>{a.text}</Markdown> : null}
+                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
             )
           }
@@ -341,12 +351,12 @@ function ActionSection({
                     Roll recharge
                   </button>
                 )}{' '}
-                {a.text ? <Markdown inline>{a.text}</Markdown> : null}
+                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
             )
           }
           return (
-            <Markdown key={a.id}>{`**${heading}.** ${a.text ?? ''}`}</Markdown>
+            <Markdown key={a.id} resolveSpell={resolveSpell}>{`**${heading}.** ${a.text ?? ''}`}</Markdown>
           )
         })}
       </div>
@@ -575,7 +585,7 @@ export function CreatureStatBlock({
         languages={creature.languages?.join(', ')}
       />
 
-      <Section title="Traits" items={creature.traits} />
+      <Section title="Traits" items={creature.traits} resolveSpell={resolveSpell} />
       {creature.spellcasting && (
         <SpellcastingSection
           spellcasting={creature.spellcasting}
@@ -584,11 +594,11 @@ export function CreatureStatBlock({
           resolveSpell={resolveSpell}
         />
       )}
-      <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
-      <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
-      <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
-      <ActionSection title={legendaryTitle} actions={creature.legendaryActions?.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
-      <ActionSection title="Lair Actions" actions={creature.lairActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />
+      <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection title={legendaryTitle} actions={creature.legendaryActions?.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection title="Lair Actions" actions={creature.lairActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
 
       <SourceLink source={creature.source} />
     </div>

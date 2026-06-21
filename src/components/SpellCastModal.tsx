@@ -6,9 +6,10 @@ import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
+import { spellAction } from '../combat/casting.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
+import { ActionResolver } from './ActionResolver.tsx'
 import { SpellCard } from './SpellCard.tsx'
-import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 function Modal({
@@ -52,10 +53,12 @@ function Modal({
 /**
  * Cast a spell from a monster's stat block. Shows the spell card for reference,
  * then "Cast" spends a use (a per-day spell decrements; at-will doesn't) and logs
- * the cast. If the spell carries mechanics, the damage/save resolution follows,
- * seeded with the caster's save DC. A spell with no mechanics (Mage Hand) is
- * still castable — it just spends the use. The caster is always a monster, so no
- * roll is ever made on a player's behalf.
+ * the cast. If the spell resolves to an attack or a save, the matching resolver
+ * modal (the same ones a monster's other actions use) opens — seeded with the
+ * caster's DC / spell attack bonus, at the spell's fixed level (no upcasting). A
+ * spell with no resolvable mechanics (Mage Hand, Invisibility) is still castable;
+ * it just spends the use. The caster is always a monster, so no roll is ever made
+ * on a player's behalf.
  */
 export function SpellCastModal({
   caster,
@@ -86,7 +89,13 @@ export function SpellCastModal({
 }) {
   const [cast, setCast] = useState(false)
   const drained = usesRemaining === 0
-  const saveDc = caster.creature.spellcasting?.saveDc
+
+  const action = spell
+    ? spellAction(spell, {
+        saveDc: caster.creature.spellcasting?.saveDc,
+        toHit: caster.creature.spellcasting?.toHit,
+      })
+    : null
 
   const usageLabel =
     usesRemaining == null ? 'At will' : `${usesRemaining} use${usesRemaining === 1 ? '' : 's'} left`
@@ -94,6 +103,20 @@ export function SpellCastModal({
   const doCast = () => {
     onCast()
     setCast(true)
+  }
+
+  // Once cast, an attack/save spell hands off to the shared resolver modal.
+  if (cast && action) {
+    return (
+      <ActionResolver
+        attacker={caster}
+        action={action}
+        combatants={combatants}
+        dispatch={dispatch}
+        onRoll={onRoll}
+        onClose={onClose}
+      />
+    )
   }
 
   return (
@@ -135,19 +158,9 @@ export function SpellCastModal({
             </span>
           )}
         </div>
-      ) : spell?.mechanics ? (
-        <SpellResolution
-          spell={spell}
-          combatants={combatants}
-          dispatch={dispatch}
-          onRoll={onRoll}
-          onClose={onClose}
-          saveDc={saveDc}
-        />
       ) : (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">
-          Cast — no automatic effect on the board.
-        </p>
+        // Cast, but nothing to resolve on the board (a utility spell).
+        <p className="text-sm text-emerald-600 dark:text-emerald-400">Cast — spent a use.</p>
       )}
     </Modal>
   )

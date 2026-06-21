@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  makeSpellLinker,
   mapOpen5eCreature,
   mapOpen5eSpell,
   mapSource,
@@ -180,6 +181,23 @@ describe('mapOpen5eSpell — mechanics', () => {
     expect(mechanics?.scaling).toEqual([
       { level: 5, by: 'character', damage: [{ formula: '2d10', type: 'fire' }] },
     ])
+  })
+
+  it('ignores a spurious attack_roll on a no-damage spell (Invisibility et al.)', () => {
+    // Open5e flags many non-attack spells (Invisibility, Bless, Faerie Fire) with
+    // attack_roll=true by keyword-matching "attack" in the prose. With no damage,
+    // there's nothing to resolve, so the spell has no mechanics at all.
+    const spell = mapOpen5eSpell({
+      ...FIRE_BOLT,
+      name: 'Invisibility',
+      desc: 'A creature you touch has the Invisible condition. It ends if the target makes an attack roll.',
+      damage_roll: null,
+      damage_types: [],
+      saving_throw_ability: '',
+      attack_roll: true,
+      casting_options: null,
+    })
+    expect(spell.mechanics).toBeUndefined()
   })
 })
 
@@ -411,6 +429,28 @@ describe('parseSpellcasting', () => {
     expect(
       parseSpellcasting('The pit fiend casts Fireball (level 5 version) twice.', 'srd-5.2'),
     ).toBeUndefined()
+  })
+
+  it('links spell names in cast-prose, leaving non-spell words alone', () => {
+    const link = makeSpellLinker([
+      { name: 'Command', ref: 'srd-5.2:command' },
+      { name: 'Counterspell', ref: 'srd-5.2:counterspell' },
+      { name: 'Shield', ref: 'srd-5.2:shield' },
+    ])
+    expect(link('The dragon uses Spellcasting to cast Command (level 2 version).')).toBe(
+      'The dragon uses Spellcasting to cast [Command](spell:srd-5.2:command) (level 2 version).',
+    )
+    expect(link('The archmage casts Counterspell or Shield.')).toBe(
+      'The archmage casts [Counterspell](spell:srd-5.2:counterspell) or [Shield](spell:srd-5.2:shield).',
+    )
+  })
+
+  it('does not link spell names outside cast-prose (avoids common-word false hits)', () => {
+    const link = makeSpellLinker([{ name: 'Shield', ref: 'srd-5.2:shield' }])
+    // No "cast" in the sentence → left untouched even though "Shield" is a spell name.
+    expect(link('The knight raises its Shield as a bonus action.')).toBe(
+      'The knight raises its Shield as a bonus action.',
+    )
   })
 
   it('lifts spellcasting off the actions and drops the prose action', () => {

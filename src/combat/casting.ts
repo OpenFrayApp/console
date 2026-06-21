@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { DamageRoll } from '../schema/action.ts'
+import type { Action, DamageRoll } from '../schema/action.ts'
 import type { Spell } from '../schema/spell.ts'
 
 /**
@@ -48,4 +48,45 @@ export function damageFormula(damage: DamageRoll[]): string {
 /** The distinct damage types in a set of components, for display (e.g. "fire"). */
 export function damageTypes(damage: DamageRoll[]): string[] {
   return [...new Set(damage.map((d) => d.type))]
+}
+
+/**
+ * Turn a spell into a resolvable Action so casting reuses the same attack / group
+ * save modals as a monster's other actions. The caster supplies the DC and spell
+ * attack bonus (a monster's `Spellcasting`); damage is the spell's **base** level —
+ * 2024 monster spells are fixed to their listed level, so we never upcast here.
+ * Returns null when there's nothing to resolve (a utility spell): the caller just
+ * spends the use. Only attack-with-damage and save spells are auto-resolved; the
+ * "damage only" Open5e shape is too noisy to trust, so it falls through to null.
+ */
+export function spellAction(
+  spell: Spell,
+  caster: { saveDc?: number; toHit?: number },
+): Action | null {
+  const m = spell.mechanics
+  if (!m) return null
+  const id = `spell:${spell.id}`
+  const damage = m.damage // base level only
+  if (m.attackRoll && damage) {
+    return {
+      id,
+      name: spell.name,
+      kind: 'ranged',
+      toHit: caster.toHit ?? 0,
+      damage,
+      text: spell.text,
+    }
+  }
+  if (m.save) {
+    return {
+      id,
+      name: spell.name,
+      kind: 'save',
+      toHit: null,
+      save: { ability: m.save.ability, dc: caster.saveDc ?? 10, onSave: m.save.onSave ?? 'half' },
+      ...(damage && { damage }),
+      text: spell.text,
+    }
+  }
+  return null
 }
