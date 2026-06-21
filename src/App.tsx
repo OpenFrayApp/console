@@ -10,6 +10,7 @@ import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
+import type { Campaign } from './schema/campaign.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
 import { loadCloudEncounter, saveCloudEncounter } from './state/cloudEncounter.ts'
@@ -19,6 +20,12 @@ import {
   saveCustomCreature,
   updateCustomCreature,
 } from './state/cloudCreatures.ts'
+import {
+  deleteCampaign,
+  loadCampaigns,
+  saveCampaign,
+  updateCampaign,
+} from './state/cloudCampaigns.ts'
 import { useAuth } from './auth/useAuth.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
@@ -30,7 +37,6 @@ import { InitiativePrompt } from './components/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/MassSavePanel.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
-import { CampaignSettings } from './components/CampaignSettings.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
@@ -124,6 +130,8 @@ function App() {
   // The signed-in user's custom creature library (empty when anonymous), shown in
   // the compendium and pickable into encounters.
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
+  // The signed-in user's campaigns (empty when anonymous), managed in the compendium.
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
@@ -133,15 +141,19 @@ function App() {
     if (user) setAuthOpen(false)
   }, [user])
 
-  // Load the custom creature library on sign-in; clear it on sign-out.
+  // Load the custom creature library + campaigns on sign-in; clear them on sign-out.
   useEffect(() => {
     if (!user) {
       setCustomCreatures([])
+      setCampaigns([])
       return
     }
     let active = true
     loadCustomCreatures().then((list) => {
       if (active) setCustomCreatures(list)
+    })
+    loadCampaigns().then((list) => {
+      if (active) setCampaigns(list)
     })
     return () => {
       active = false
@@ -236,6 +248,23 @@ function App() {
   const handleDeleteCreature = (id: string) => {
     setCustomCreatures((prev) => prev.filter((c) => c.id !== id))
     deleteCustomCreature(id)
+  }
+
+  // Campaigns persist to the user's account (signed-up only). Optimistic in-memory
+  // update first; the cloud write is background and best-effort.
+  const handleCreateCampaign = (campaign: Campaign) => {
+    setCampaigns((prev) => [campaign, ...prev])
+    saveCampaign(campaign)
+  }
+
+  const handleUpdateCampaign = (campaign: Campaign) => {
+    setCampaigns((prev) => prev.map((c) => (c.id === campaign.id ? campaign : c)))
+    updateCampaign(campaign)
+  }
+
+  const handleDeleteCampaign = (id: string) => {
+    setCampaigns((prev) => prev.filter((c) => c.id !== id))
+    deleteCampaign(id)
   }
 
   // Advancing the turn moves the center panel to whoever's turn it now is.
@@ -356,7 +385,6 @@ function App() {
               <AddCreaturePicker onPick={handlePick} customCreatures={customCreatures} />
             </div>
           )}
-          <CampaignSettings onSignUp={() => setAuthOpen(true)} />
           <ViewToggle view={view} onChange={setView} />
           <button
             type="button"
@@ -378,6 +406,10 @@ function App() {
               onCreateCreature={handleCreateCreature}
               onUpdateCreature={handleUpdateCreature}
               onDeleteCreature={handleDeleteCreature}
+              campaigns={campaigns}
+              onCreateCampaign={handleCreateCampaign}
+              onUpdateCampaign={handleUpdateCampaign}
+              onDeleteCampaign={handleDeleteCampaign}
               createGated={!user}
               onGated={() => setAuthOpen(true)}
             />

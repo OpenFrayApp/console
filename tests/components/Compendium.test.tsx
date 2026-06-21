@@ -88,4 +88,47 @@ describe('Compendium', () => {
     fireEvent.click(screen.getByText('Fireball'))
     expect(screen.getByText('3rd-level Evocation')).toBeInTheDocument()
   })
+
+  it('lists campaigns and creates one from the campaigns tab', async () => {
+    const onCreateCampaign = vi.fn()
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        campaigns={[{ id: 'c1', name: 'Existing Campaign', edition: '5.5' }]}
+        onCreateCampaign={onCreateCampaign}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Campaigns'))
+    expect(screen.getByText('Existing Campaign')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'New campaign' }))
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Tomb of Annihilation' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }))
+
+    expect(onCreateCampaign).toHaveBeenCalledTimes(1)
+    expect(onCreateCampaign.mock.calls[0][0].name).toBe('Tomb of Annihilation')
+  })
+
+  it('prompts sign-up on the campaigns tab when gated', async () => {
+    const onGated = vi.fn()
+    const onCreateCampaign = vi.fn()
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        createGated
+        onGated={onGated}
+        onCreateCampaign={onCreateCampaign}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Campaigns'))
+    expect(screen.getByText(/Sign up to create and manage campaigns/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'New campaign' }))
+    expect(onGated).toHaveBeenCalled()
+    expect(onCreateCampaign).not.toHaveBeenCalled()
+  })
 })
