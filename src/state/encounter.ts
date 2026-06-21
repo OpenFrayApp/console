@@ -21,6 +21,8 @@ export type EncounterAction =
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
   | { type: 'log'; message: string }
+  /** Replace the whole encounter — used when hydrating from the cloud on sign-in. */
+  | { type: 'load'; encounter: Encounter }
 
 const activeId = (e: Encounter): string | undefined =>
   e.combatants[e.activeIndex]?.combatantId
@@ -84,6 +86,9 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
           },
         ],
       }
+
+    case 'load':
+      return action.encounter
 
     default:
       return state
