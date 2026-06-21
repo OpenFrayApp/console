@@ -16,7 +16,7 @@ const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
   },
   {
     title: 'Custom creatures',
-    body: 'Build homebrew and SRD-excluded monsters (Beholder, Mind Flayer…) with the full stat-block editor.',
+    body: 'Build homebrew and SRD-excluded creatures (Beholder, Mind Flayer…) with the full stat-block editor.',
     icon: <path d="m14.5 17.5 4 4M11 3 8 6m0 0L3 11l3 3 5-5M8 6l3 3m6.5 1.5L21 7l-4-4-3.5 3.5m4 4-9 9-3-3 9-9" />,
   },
   {

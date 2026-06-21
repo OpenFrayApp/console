@@ -89,7 +89,7 @@ function ActionList({
 }
 
 /**
- * Create a custom (homebrew / SRD-excluded) monster — a full stat-block editor
+ * Create a custom (homebrew / SRD-excluded) creature — a full stat-block editor
  * over the Creature schema. The result is `source:'custom'` with a fresh id and
  * flows into the encounter like any picked creature. Every custom creature is an
  * independent entity; nothing here is matched or deduped against existing content.
@@ -101,7 +101,7 @@ export function CustomMonsterForm({
   onCreate,
   gated = false,
   onGated,
-  triggerLabel = 'Custom monster',
+  triggerLabel = 'Custom creature',
   triggerClassName = DEFAULT_TRIGGER,
 }: {
   onCreate: (creature: Creature) => void
@@ -155,7 +155,7 @@ export function CustomMonsterForm({
       <button
         type="button"
         onClick={() => (gated ? onGated?.() : setOpen(true))}
-        title={gated ? 'Sign up to create custom monsters' : undefined}
+        title={gated ? 'Sign up to create custom creatures' : undefined}
         className={triggerClassName}
       >
         {triggerLabel}
@@ -168,12 +168,12 @@ export function CustomMonsterForm({
         >
           <div
             role="dialog"
-            aria-label="Create custom monster"
+            aria-label="Create custom creature"
             onClick={(e) => e.stopPropagation()}
-            className="my-auto w-full max-w-xl rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            className="my-auto w-full max-w-xl rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-              <h2 className="text-lg font-semibold">Custom monster</h2>
+              <h2 className="text-lg font-semibold">Custom creature</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -191,7 +191,7 @@ export function CustomMonsterForm({
                   value={d.name}
                   onChange={(e) => patch({ name: e.target.value })}
                   placeholder="Name"
-                  aria-label="Monster name"
+                  aria-label="Creature name"
                   autoComplete="off"
                   data-1p-ignore="true"
                   data-lpignore="true"
