@@ -11,6 +11,11 @@ import { hpToneFor } from './hpTone.ts'
 const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const armorClass = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
 
+function concentrationTitle(c: NonNullable<Combatant['concentration']>): string {
+  const base = c.spell ? `Concentrating: ${c.spell}` : 'Concentrating'
+  return c.rounds != null ? `${base} (${c.rounds} round${c.rounds === 1 ? '' : 's'} left)` : base
+}
+
 function cx(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
@@ -108,6 +113,14 @@ export function CombatantRow({
           <span className={cx('truncate font-medium', dead && 'line-through')}>
             {displayName(combatant)}
           </span>
+          {combatant.concentration && (
+            <span
+              title={concentrationTitle(combatant.concentration)}
+              className="inline-flex h-5 shrink-0 items-center justify-center rounded bg-violet-200 px-1 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-200"
+            >
+              C
+            </span>
+          )}
           {status === 'dead' && (
             <span className="rounded bg-slate-200 px-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-300">
               Dead
@@ -142,13 +155,6 @@ export function CombatantRow({
             <DeathSavePips
               saves={combatant.deathSaves ?? { successes: 0, failures: 0 }}
             />
-          </div>
-        )}
-
-        {combatant.concentration && (
-          <div className="mt-1 text-xs text-violet-600 dark:text-violet-400">
-            Concentrating
-            {combatant.concentration.spell ? `: ${combatant.concentration.spell}` : ''}
           </div>
         )}
       </div>

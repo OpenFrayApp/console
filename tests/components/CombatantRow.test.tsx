@@ -123,13 +123,13 @@ describe('CombatantRow', () => {
     expect(screen.getByText('+5')).toBeInTheDocument()
   })
 
-  it('shows a concentration indicator', () => {
+  it('shows a concentration C badge with the spell in its tooltip', () => {
     render(
       <CombatantRow
         combatant={pc({ concentration: { spell: 'Hold Person', saveDc: 13, round: 2 } })}
       />,
     )
-    expect(screen.getByText('Concentrating: Hold Person')).toBeInTheDocument()
+    expect(screen.getByTitle('Concentrating: Hold Person')).toBeInTheDocument()
   })
 
   it('marks the active combatant with aria-current', () => {
