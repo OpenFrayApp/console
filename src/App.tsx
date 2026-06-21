@@ -16,7 +16,9 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
+import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
+import { MassSavePanel } from './components/MassSavePanel.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
@@ -191,6 +193,12 @@ function App() {
                 <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
                 <AddCreaturePicker onPick={handlePick} />
               </div>
+              {encounter.combatants.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+                  <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+                </div>
+              )}
               <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
             </>
           )}
@@ -256,13 +264,10 @@ function App() {
         />
       )}
 
-      {/* Footer: dice roller centered under the stat block; AGPL §13 source link right. */}
-      <footer className="grid grid-cols-3 items-center gap-4 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <div />
-        <div className="flex justify-center">
-          {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
-        </div>
-        <div className="flex items-center justify-end gap-2">
+      {/* Footer: dice roller on the left under the stat block; AGPL §13 source link right. */}
+      <footer className="flex items-center justify-between gap-4 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div>{view === 'encounter' && <QuickRoll onRoll={pushRoll} />}</div>
+        <div className="flex items-center gap-2">
           <a
             href={REPO_URL}
             target="_blank"

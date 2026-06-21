@@ -503,6 +503,7 @@ export function CreatureStatBlock({
   resolveSpell,
   onLegendaryAction,
   legendaryRemaining,
+  legendaryResistance,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -535,8 +536,20 @@ export function CreatureStatBlock({
   onLegendaryAction?: (action: Action) => void
   /** Legendary actions left this round, when in combat. */
   legendaryRemaining?: number
+  /** Legendary Resistance, shown as its own section when in combat. */
+  legendaryResistance?: {
+    left: number
+    inLair: boolean
+    onUse: () => void
+    onToggleLair: (inLair: boolean) => void
+  }
 }) {
   const displayName = label ?? creature.name
+  // Legendary Resistance renders as its own interactive section in combat; pull its
+  // trait out of the plain Traits list so it isn't shown twice.
+  const lrTrait = creature.traits?.find((t) => /^Legendary Resistance/i.test(t.name))
+  const showLrSection = legendaryResistance != null && lrTrait != null
+  const traits = showLrSection ? creature.traits?.filter((t) => t !== lrTrait) : creature.traits
   const perRound = creature.legendaryActions?.perRound
   const legendaryTitle = !creature.legendaryActions
     ? 'Legendary Actions'
@@ -618,7 +631,33 @@ export function CreatureStatBlock({
         languages={creature.languages?.join(', ')}
       />
 
-      <Section title="Traits" items={creature.traits} resolveSpell={resolveSpell} />
+      {showLrSection && legendaryResistance && lrTrait && (
+        <div>
+          <h4 className={`${SECTION_HEADING} flex items-center justify-between gap-2`}>
+            <span>Legendary Resistance ({legendaryResistance.left} left)</span>
+            {creature.legendaryResistanceLair != null && (
+              <label className="flex items-center gap-1 text-xs font-normal normal-case tracking-normal text-slate-500 dark:text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={legendaryResistance.inLair}
+                  onChange={(e) => legendaryResistance.onToggleLair(e.target.checked)}
+                />
+                In lair
+              </label>
+            )}
+          </h4>
+          <button
+            type="button"
+            onClick={legendaryResistance.onUse}
+            disabled={legendaryResistance.left <= 0}
+            title="Use Legendary Resistance (spends one)"
+            className="w-full rounded px-1 py-0.5 text-left text-sm leading-relaxed text-slate-600 hover:bg-amber-50 disabled:cursor-default disabled:opacity-60 dark:text-slate-300 dark:hover:bg-amber-950/30"
+          >
+            {lrTrait.text}
+          </button>
+        </div>
+      )}
+      <Section title="Traits" items={traits} resolveSpell={resolveSpell} />
       {creature.spellcasting && (
         <SpellcastingSection
           spellcasting={creature.spellcasting}

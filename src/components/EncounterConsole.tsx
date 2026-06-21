@@ -13,12 +13,15 @@ import {
   applyHealing,
   castSpell,
   hpTierOf,
+  legendaryResistanceLeft,
   parseHpInput,
   rechargeLimited,
   restoreSpellUse,
   setCurrentHp,
+  setInLair,
   spellUsesRemaining,
   spendLegendary,
+  spendLegendaryResistance,
   spendLimited,
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
@@ -33,7 +36,6 @@ import {
   startConcentration,
 } from '../combat/concentration.ts'
 import { ActionResolver } from './ActionResolver.tsx'
-import { CastSpellPanel } from './CastSpellPanel.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
@@ -44,7 +46,6 @@ import { hpToneFor } from './hpTone.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { DefensesAndSenses } from './CreatureStatBlock.tsx'
 import { speedLines } from '../combat/speed.ts'
-import { MassSavePanel } from './MassSavePanel.tsx'
 import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
@@ -395,14 +396,8 @@ export function EncounterConsole({
         </div>
       </section>
 
-      {/* Center — Group save / Cast spell toolbar over the selected stat block. */}
+      {/* Center — the selected combatant's stat block. */}
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800">
-        {combatants.length > 0 && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <MassSavePanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
-            <CastSpellPanel combatants={combatants} dispatch={dispatch} onRoll={onRoll} />
-          </div>
-        )}
         {selected ? (
           <div className="min-h-0 flex-1 overflow-auto pr-4">
               {selected.isPC ? (
@@ -451,6 +446,26 @@ export function EncounterConsole({
                   }
                   legendaryRemaining={
                     selected.creature.legendaryActions ? selected.legendaryRemaining : undefined
+                  }
+                  legendaryResistance={
+                    selected.creature.legendaryResistance != null
+                      ? {
+                          left: legendaryResistanceLeft(selected),
+                          inLair: !!selected.inLair,
+                          onUse: () =>
+                            dispatch({
+                              type: 'update',
+                              id: selected.combatantId,
+                              update: (c) => (c.isPC ? c : spendLegendaryResistance(c)),
+                            }),
+                          onToggleLair: (v) =>
+                            dispatch({
+                              type: 'update',
+                              id: selected.combatantId,
+                              update: (c) => (c.isPC ? c : setInLair(c, v)),
+                            }),
+                        }
+                      : undefined
                   }
                 />
               )}
