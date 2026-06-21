@@ -305,7 +305,7 @@ function ActionSection({
   onRecharge,
   resolveSpell,
   clickAll,
-  disabled,
+  legendaryRemaining,
 }: {
   title: string
   actions?: Action[]
@@ -317,8 +317,8 @@ function ActionSection({
   /** Make every action clickable (not just rollable ones) — used for legendary
    *  actions, where clicking spends one regardless of attack/save. */
   clickAll?: boolean
-  /** No actions can be used right now (e.g. no legendary actions left). */
-  disabled?: boolean
+  /** Legendary actions left — disables actions that cost more than this. */
+  legendaryRemaining?: number
 }) {
   if (!actions || actions.length === 0) return null
   return (
@@ -329,18 +329,21 @@ function ActionSection({
           const note = rechargeLabel(a.recharge)
           const heading = `${a.name}${note ? ` (${note})` : ''}`
           const charged = rechargeState?.[a.id] !== false
-          // Legendary actions: every entry is clickable (clicking spends one).
+          // Legendary actions: every entry is clickable (clicking spends its cost).
           if (onAction && clickAll) {
+            const cost = a.legendaryCost ?? 1
+            const cantAfford = legendaryRemaining != null && legendaryRemaining < cost
+            const legendaryHeading = `${a.name}${cost > 1 ? ` (Costs ${cost})` : ''}`
             return (
-              <p key={a.id} className={disabled ? 'opacity-50' : undefined}>
+              <p key={a.id} className={cantAfford ? 'opacity-50' : undefined}>
                 <button
                   type="button"
                   onClick={() => onAction(a)}
-                  disabled={disabled}
-                  title="Use this action (spends one)"
+                  disabled={cantAfford}
+                  title={cost > 1 ? `Use this action (spends ${cost})` : 'Use this action (spends one)'}
                   className="font-semibold text-indigo-600 hover:underline disabled:no-underline disabled:hover:no-underline dark:text-indigo-400"
                 >
-                  {heading}.
+                  {legendaryHeading}.
                 </button>{' '}
                 {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
@@ -632,7 +635,7 @@ export function CreatureStatBlock({
         actions={creature.legendaryActions?.actions}
         onAction={onLegendaryAction ?? onAction}
         clickAll={onLegendaryAction != null}
-        disabled={legendaryRemaining != null && legendaryRemaining <= 0}
+        legendaryRemaining={legendaryRemaining}
         rechargeState={rechargeState}
         onRecharge={onRecharge}
         resolveSpell={resolveSpell}

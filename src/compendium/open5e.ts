@@ -205,6 +205,7 @@ interface Open5eAction {
   action_type: string
   order_in_statblock?: number
   usage_limits?: { type: string; param: number | null } | null
+  legendary_action_cost?: number | null
   attacks?: Open5eAttack[]
 }
 
@@ -434,6 +435,9 @@ export function parseSpellcasting(
 export function mapOpen5eAction(raw: Open5eAction): Action {
   const id = slugify(raw.name)
   const recharge = mapUsage(raw.usage_limits)
+  // Some legendary actions cost 2+ of the round's budget; default (1) is left off.
+  const cost = raw.legendary_action_cost ?? 1
+  const legendaryCost = cost > 1 ? cost : undefined
   const attack = raw.attacks?.[0]
   if (attack && attack.to_hit_mod != null) {
     const ranged = attack.reach == null && attack.range != null
@@ -449,6 +453,7 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
           : undefined,
       damage: attackDamage(attack, raw.desc),
       recharge,
+      legendaryCost,
       text: raw.desc,
     }
   }
@@ -463,6 +468,7 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
       save,
       damage: parseSaveDamage(raw.desc),
       recharge,
+      legendaryCost,
       text: raw.desc,
     }
   }
@@ -471,10 +477,10 @@ export function mapOpen5eAction(raw: Open5eAction): Action {
   // rollable (targets just take the damage; resolved without a save).
   const areaDamage = parseAreaDamage(raw.desc)
   if (areaDamage) {
-    return { id, name: raw.name, kind: 'utility', toHit: null, damage: areaDamage, recharge, text: raw.desc }
+    return { id, name: raw.name, kind: 'utility', toHit: null, damage: areaDamage, recharge, legendaryCost, text: raw.desc }
   }
 
-  return { id, name: raw.name, kind: 'utility', toHit: null, recharge, text: raw.desc }
+  return { id, name: raw.name, kind: 'utility', toHit: null, recharge, legendaryCost, text: raw.desc }
 }
 
 function mapSpeed(speed: Record<string, number | string>): Speeds {

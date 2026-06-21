@@ -64,6 +64,8 @@ export interface Action {
   save?: SaveRequirement | null
   /** Usage limit, e.g. Recharge 5–6 — matters for the roller, so never dropped. */
   recharge?: Recharge
+  /** Legendary actions this one costs (default 1); some cost 2+ of the round's budget. */
+  legendaryCost?: number
   /** Original stat-block prose. Display only — never parsed for mechanics. */
   text?: string
 }

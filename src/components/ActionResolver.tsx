@@ -301,7 +301,7 @@ function ConditionChips({
           className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs dark:border-slate-700 dark:bg-slate-900"
         >
           <option value="manual">until removed</option>
-          {sourceName && <option value="untilSource">until {sourceName}’s turn</option>}
+          {sourceName && <option value="untilSource">until {sourceName}’s next turn</option>}
           <option value="r1">1 round</option>
           <option value="r10">10 rounds</option>
         </select>

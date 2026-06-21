@@ -327,7 +327,7 @@ export function EncounterConsole({
     dispatch({
       type: 'update',
       id: c.combatantId,
-      update: (cc) => (cc.isPC ? cc : spendLegendary(cc)),
+      update: (cc) => (cc.isPC ? cc : spendLegendary(cc, action.legendaryCost ?? 1)),
     })
     onNote(`${c.label} uses ${action.name}`)
     const rollable = action.toHit != null || action.save != null || (action.damage?.length ?? 0) > 0

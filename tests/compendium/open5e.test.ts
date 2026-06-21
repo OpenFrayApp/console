@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   makeSpellLinker,
+  mapOpen5eAction,
   mapOpen5eCreature,
   mapOpen5eSpell,
   mapSource,
@@ -365,6 +366,11 @@ describe('mapOpen5eCreature', () => {
       { formula: '2d6+6', type: 'slashing' },
       { formula: '1d8', type: 'acid' },
     ])
+  })
+
+  it('maps a legendary action cost above 1, leaving the default (1) unset', () => {
+    expect(mapOpen5eAction({ name: 'Wing', action_type: 'LEGENDARY_ACTION', desc: 'Flap.', legendary_action_cost: 2 }).legendaryCost).toBe(2)
+    expect(mapOpen5eAction({ name: 'Tail', action_type: 'LEGENDARY_ACTION', desc: 'Swipe.', legendary_action_cost: 1 }).legendaryCost).toBeUndefined()
   })
 
   it('parses a save action from prose', () => {
