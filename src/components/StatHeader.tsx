@@ -70,7 +70,7 @@ export function StatHeader({
   speeds?: string[]
 }) {
   return (
-    <div className="sticky top-0 z-10 border-b border-slate-200 bg-white pb-2 pt-1 dark:border-slate-800 dark:bg-slate-950">
+    <div className="sticky top-0 z-10 border-b border-slate-200 bg-white pb-2 pt-4 dark:border-slate-800 dark:bg-slate-950">
       <div className="flex flex-col gap-2 @3xl:flex-row @3xl:items-center @3xl:justify-between @3xl:gap-x-6">
         <div className="min-w-0 @3xl:flex-1">
           <div className="flex min-w-0 items-center gap-2">

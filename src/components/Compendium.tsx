@@ -80,8 +80,8 @@ export function Compendium() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-[20rem_1fr]">
-      <div className="min-w-0">
+    <div className="grid h-full min-h-0 gap-4 md:grid-cols-[20rem_1fr]">
+      <div className="flex min-h-0 min-w-0 flex-col">
         <div className="mb-2 flex gap-1">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
@@ -107,7 +107,7 @@ export function Compendium() {
             <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
               {entries.length} {tab}
             </p>
-            <ul className="mt-1 max-h-[60vh] divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+            <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
               {entries.map((e) => (
                 <li key={e.id}>
                   <button
@@ -137,15 +137,21 @@ export function Compendium() {
         )}
       </div>
 
-      <div className="flex min-h-[24rem] min-w-0 flex-col rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
         {selectedCreature ? (
+          // The stat block carries its own sticky header (with top padding inside
+          // its solid background); spells and the empty state get plain top spacing.
           <CreatureStatBlock creature={selectedCreature} />
-        ) : selectedSpell ? (
-          <SpellCard spell={selectedSpell} />
         ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Select a {tab === 'creatures' ? 'creature' : 'spell'} to view it.
-          </p>
+          <div className="pt-4">
+            {selectedSpell ? (
+              <SpellCard spell={selectedSpell} />
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Select a {tab === 'creatures' ? 'creature' : 'spell'} to view it.
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
