@@ -561,10 +561,14 @@ export function mapOpen5eCreature(
   const traits: Trait[] = (raw.traits ?? []).map((t) => ({ name: t.name, text: link(t.desc) }))
 
   // Legendary Resistance is a trait ("Legendary Resistance (3/Day, or 4/Day in
-  // Lair): …"); track its base per-day count so the DM can spend it.
+  // Lair): …"); track its base per-day count and the higher in-lair count.
   const lrTrait = traits.find((t) => /^Legendary Resistance/i.test(t.name))
+  const lrText = lrTrait ? `${lrTrait.name} ${lrTrait.text}` : ''
   const legendaryResistance = lrTrait
-    ? Number(/\((\d+)\s*\/\s*day/i.exec(lrTrait.name + ' ' + lrTrait.text)?.[1]) || undefined
+    ? Number(/\((\d+)\s*\/\s*day/i.exec(lrText)?.[1]) || undefined
+    : undefined
+  const legendaryResistanceLair = lrTrait
+    ? Number(/(\d+)\s*\/\s*day\s+in\s+lair/i.exec(lrText)?.[1]) || undefined
     : undefined
   const legendary = actionsOfType('LEGENDARY_ACTION')
 
@@ -618,5 +622,6 @@ export function mapOpen5eCreature(
     lairActions: undefIfEmpty(actionsOfType('LAIR_ACTION')),
     spellcasting,
     legendaryResistance,
+    legendaryResistanceLair,
   }
 }

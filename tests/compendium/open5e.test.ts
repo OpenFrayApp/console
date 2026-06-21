@@ -393,7 +393,7 @@ describe('mapOpen5eCreature', () => {
     expect(teleport?.damage).toEqual([{ formula: '2d10', type: 'necrotic' }])
   })
 
-  it('tracks Legendary Resistance per day from the trait', () => {
+  it('tracks Legendary Resistance per day, plus the higher in-lair count', () => {
     const lich = mapOpen5eCreature({
       ...ABOLETH,
       traits: [
@@ -404,6 +404,18 @@ describe('mapOpen5eCreature', () => {
       ],
     })
     expect(lich.legendaryResistance).toBe(4)
+    expect(lich.legendaryResistanceLair).toBe(5)
+  })
+
+  it('leaves the lair count undefined when the creature has no lair clause', () => {
+    const c2 = mapOpen5eCreature({
+      ...ABOLETH,
+      traits: [
+        { name: 'Legendary Resistance (3/Day)', desc: 'It can choose to succeed instead.' },
+      ],
+    })
+    expect(c2.legendaryResistance).toBe(3)
+    expect(c2.legendaryResistanceLair).toBeUndefined()
   })
 })
 

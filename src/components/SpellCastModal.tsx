@@ -88,6 +88,7 @@ export function SpellCastModal({
   onClose: () => void
 }) {
   const [cast, setCast] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const drained = usesRemaining === 0
 
   const action = spell
@@ -100,9 +101,18 @@ export function SpellCastModal({
   const usageLabel =
     usesRemaining == null ? 'At will' : `${usesRemaining} use${usesRemaining === 1 ? '' : 's'} left`
 
-  const doCast = () => {
+  // Casting a concentration spell while already concentrating needs confirmation.
+  const conflictsConcentration = spell?.concentration === true && caster.concentration != null
+
+  const proceed = () => {
+    setConfirming(false)
     onCast()
     setCast(true)
+  }
+
+  const doCast = () => {
+    if (conflictsConcentration) setConfirming(true)
+    else proceed()
   }
 
   // Once cast, an attack/save spell hands off to the shared resolver modal.
@@ -140,7 +150,31 @@ export function SpellCastModal({
         </p>
       )}
 
-      {!cast ? (
+      {confirming ? (
+        <div className="space-y-2">
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            {caster.concentration?.spell
+              ? `You are already concentrating on ${caster.concentration.spell}. Are you sure you want to cast ${spellRef.name}?`
+              : `You're already concentrating. Are you sure you want to cast ${spellRef.name}?`}
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={proceed}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+            >
+              Cast anyway
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="text-sm text-slate-500 hover:underline dark:text-slate-400"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : !cast ? (
         <div className="flex items-center gap-3">
           <button
             type="button"

@@ -13,14 +13,12 @@ import {
   applyHealing,
   castSpell,
   hpTierOf,
-  legendaryResistanceLeft,
   parseHpInput,
   rechargeLimited,
   restoreSpellUse,
   setCurrentHp,
   spellUsesRemaining,
   spendLimited,
-  spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
@@ -30,6 +28,7 @@ import {
   breakConcentration,
   concentrationPromptDC,
   rollConcentrationCheck,
+  startConcentration,
 } from '../combat/concentration.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { CastSpellPanel } from './CastSpellPanel.tsx'
@@ -288,6 +287,23 @@ export function EncounterConsole({
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : castSpell(cc, spell)),
     })
+    // A concentration spell makes the caster start concentrating on it (replacing
+    // any current concentration). The cast modal warns first if already busy.
+    const full = resolveSpell(spell.ref)
+    if (full?.concentration) {
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) =>
+          cc.isPC
+            ? cc
+            : startConcentration(cc, {
+                spell: full.name,
+                saveDc: c.creature.spellcasting?.saveDc ?? 0,
+                round: encounter.round,
+              }),
+      })
+    }
     onNote(`${c.label} casts ${spell.name}`)
   }
 
@@ -403,19 +419,6 @@ export function EncounterConsole({
                     selected.isPC ? null : spellUsesRemaining(selected, spell)
                   }
                   resolveSpell={resolveSpell}
-                  legendaryResistance={
-                    selected.creature.legendaryResistance != null
-                      ? {
-                          left: legendaryResistanceLeft(selected),
-                          onUse: () =>
-                            dispatch({
-                              type: 'update',
-                              id: selected.combatantId,
-                              update: (c) => (c.isPC ? c : spendLegendaryResistance(c)),
-                            }),
-                        }
-                      : undefined
-                  }
                 />
               )}
             </div>

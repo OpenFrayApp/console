@@ -474,7 +474,6 @@ export function CreatureStatBlock({
   onCastSpell,
   spellUsesOf,
   resolveSpell,
-  legendaryResistance,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -503,8 +502,6 @@ export function CreatureStatBlock({
   spellUsesOf?: SpellUsesOf
   /** Resolve a spell's compendium entry for the hover preview / cast card. */
   resolveSpell?: ResolveSpell
-  /** Legendary Resistance, when the creature has it and is in combat. */
-  legendaryResistance?: { left: number; onUse: () => void }
 }) {
   const displayName = label ?? creature.name
   const legendaryTitle = creature.legendaryActions
@@ -584,18 +581,6 @@ export function CreatureStatBlock({
         senses={formatSenses(creature.senses)}
         languages={creature.languages?.join(', ')}
       />
-
-      {legendaryResistance && (
-        <button
-          type="button"
-          onClick={legendaryResistance.onUse}
-          disabled={legendaryResistance.left <= 0}
-          title="Turn a failed save into a success; spends one use"
-          className="self-start rounded-md border border-amber-400 bg-amber-50 px-2.5 py-1 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70"
-        >
-          Legendary Resistance · {legendaryResistance.left} left
-        </button>
-      )}
 
       <Section title="Traits" items={creature.traits} resolveSpell={resolveSpell} />
       {creature.spellcasting && (

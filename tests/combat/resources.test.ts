@@ -347,20 +347,34 @@ describe('spell uses (At Will / N per day, each spell on its own)', () => {
 // --- legendary resistance ---------------------------------------------------
 
 describe('legendary resistance', () => {
-  const lichLike = (left?: number) =>
+  const lichLike = (overrides: Partial<MonsterCombatant> = {}) =>
     monster({
-      creature: { ...creature(), legendaryResistance: 4 },
-      legendaryResistanceRemaining: left,
+      creature: { ...creature(), legendaryResistance: 4, legendaryResistanceLair: 5 },
+      legendaryResistanceSpent: 0,
+      ...overrides,
     })
 
-  it('reports remaining uses, defaulting to 0 when absent', () => {
-    expect(legendaryResistanceLeft(lichLike(3))).toBe(3)
+  it('reports remaining uses from the base count, 0 when the creature has none', () => {
+    expect(legendaryResistanceLeft(lichLike())).toBe(4)
+    expect(legendaryResistanceLeft(lichLike({ legendaryResistanceSpent: 1 }))).toBe(3)
     expect(legendaryResistanceLeft(monster())).toBe(0)
   })
 
-  it('spends one use, flooring at zero', () => {
-    expect(spendLegendaryResistance(lichLike(2)).legendaryResistanceRemaining).toBe(1)
-    expect(spendLegendaryResistance(lichLike(0)).legendaryResistanceRemaining).toBe(0)
+  it('uses the higher count when in the creature’s lair', () => {
+    expect(legendaryResistanceLeft(lichLike({ inLair: true }))).toBe(5)
+    expect(legendaryResistanceLeft(lichLike({ inLair: true, legendaryResistanceSpent: 2 }))).toBe(3)
+  })
+
+  it('spends one use, never below zero', () => {
+    expect(spendLegendaryResistance(lichLike()).legendaryResistanceSpent).toBe(1)
+    expect(
+      spendLegendaryResistance(lichLike({ legendaryResistanceSpent: 4 })).legendaryResistanceSpent,
+    ).toBe(4) // out of base uses
+    // …but in the lair the 5th use is allowed.
+    expect(
+      spendLegendaryResistance(lichLike({ inLair: true, legendaryResistanceSpent: 4 }))
+        .legendaryResistanceSpent,
+    ).toBe(5)
   })
 })
 

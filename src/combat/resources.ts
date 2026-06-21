@@ -203,15 +203,26 @@ export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombata
 
 // --- legendary resistance (turn a failed save into a success, N/day) --------
 
+/** Per-day uses available — the higher in-lair count when the fight is in its lair. */
+export function legendaryResistanceMax(c: MonsterCombatant): number {
+  const base = c.creature.legendaryResistance ?? 0
+  const lair = c.creature.legendaryResistanceLair
+  return c.inLair && lair != null ? lair : base
+}
+
 export function legendaryResistanceLeft(c: MonsterCombatant): number {
-  return c.legendaryResistanceRemaining ?? 0
+  return Math.max(0, legendaryResistanceMax(c) - (c.legendaryResistanceSpent ?? 0))
 }
 
 /** Spend one Legendary Resistance; a no-op if none remain. */
 export function spendLegendaryResistance(c: MonsterCombatant): MonsterCombatant {
-  const left = legendaryResistanceLeft(c)
-  if (left <= 0) return c
-  return { ...c, legendaryResistanceRemaining: left - 1 }
+  if (legendaryResistanceLeft(c) <= 0) return c
+  return { ...c, legendaryResistanceSpent: (c.legendaryResistanceSpent ?? 0) + 1 }
+}
+
+/** Toggle whether the fight is in this creature's lair (raises its max LR). */
+export function setInLair(c: MonsterCombatant, inLair: boolean): MonsterCombatant {
+  return { ...c, inLair }
 }
 
 // --- spellcasting uses (At Will / N per day, each spell counted on its own) --

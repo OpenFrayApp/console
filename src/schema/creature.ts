@@ -126,4 +126,6 @@ export interface Creature {
   limitedUse?: LimitedUse[]
   /** Uses per day of Legendary Resistance (turn a failed save into a success). */
   legendaryResistance?: number
+  /** Higher Legendary Resistance count while in the creature's lair, when it has one. */
+  legendaryResistanceLair?: number
 }

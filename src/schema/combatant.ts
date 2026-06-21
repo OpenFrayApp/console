@@ -84,8 +84,10 @@ export interface MonsterCombatant extends CombatantBase {
   limitedUseState: Record<string, LimitedUseState>
   /** Resets to `creature.legendaryActions.perRound` at the end of its turn. */
   legendaryRemaining: number
-  /** Legendary Resistance uses left (per day; not reset each round). */
-  legendaryResistanceRemaining?: number
+  /** Legendary Resistance uses spent (per day; the max depends on `inLair`). */
+  legendaryResistanceSpent?: number
+  /** Whether the fight is in this creature's lair (raises its Legendary Resistance). */
+  inLair?: boolean
   visibility: CombatantVisibility
 }
 
