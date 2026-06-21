@@ -74,6 +74,53 @@ export function MetaTable({ rows }: { rows: [string, string | undefined][] }) {
   )
 }
 
+/**
+ * Defenses (resistances/immunities/vulnerabilities) and senses/languages, laid
+ * out the same way for every stat block — creatures and PCs alike. Only the rows
+ * we actually have are shown; an empty table (e.g. a PC with no defenses) is
+ * dropped entirely, so a lightweight combatant doesn't render a wall of "—".
+ */
+export function DefensesAndSenses({
+  resistances,
+  immunities,
+  vulnerabilities,
+  senses,
+  languages,
+}: {
+  resistances?: string
+  immunities?: string
+  vulnerabilities?: string
+  senses?: string
+  languages?: string
+}) {
+  const present = (label: string, value?: string): [string, string][] =>
+    value && value.length ? [[label, value]] : []
+  const defenseRows: [string, string][] = [
+    ...present('Resistances', resistances),
+    ...present('Immunities', immunities),
+    ...present('Vulnerabilities', vulnerabilities),
+  ]
+  const senseRows: [string, string][] = [
+    ...present('Senses', senses),
+    ...present('Languages', languages),
+  ]
+  if (defenseRows.length === 0 && senseRows.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+      {defenseRows.length > 0 && (
+        <div className="min-w-[16rem] flex-1">
+          <MetaTable rows={defenseRows} />
+        </div>
+      )}
+      {senseRows.length > 0 && (
+        <div className="min-w-[16rem] flex-1">
+          <MetaTable rows={senseRows} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // --- ability / skill tables -------------------------------------------------
 
 const ABILITY_GROUPS: Ability[][] = [
@@ -402,28 +449,16 @@ export function CreatureStatBlock({
         )}
       </div>
 
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
-        <div className="min-w-[16rem] flex-1">
-          <MetaTable
-            rows={[
-              ['Resistances', creature.resistances?.join(', ')],
-              [
-                'Immunities',
-                [...(creature.immunities ?? []), ...(creature.conditionImmunities ?? [])].join(', '),
-              ],
-              ['Vulnerabilities', creature.vulnerabilities?.join(', ')],
-            ]}
-          />
-        </div>
-        <div className="min-w-[16rem] flex-1">
-          <MetaTable
-            rows={[
-              ['Senses', formatSenses(creature.senses)],
-              ['Languages', creature.languages?.join(', ')],
-            ]}
-          />
-        </div>
-      </div>
+      <DefensesAndSenses
+        resistances={creature.resistances?.join(', ')}
+        immunities={[
+          ...(creature.immunities ?? []),
+          ...(creature.conditionImmunities ?? []),
+        ].join(', ')}
+        vulnerabilities={creature.vulnerabilities?.join(', ')}
+        senses={formatSenses(creature.senses)}
+        languages={creature.languages?.join(', ')}
+      />
 
       <Section title="Traits" items={creature.traits} />
       <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} />

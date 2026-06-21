@@ -32,7 +32,7 @@ import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { EncounterPlayback } from './EncounterPlayback.tsx'
 import { hpToneFor } from './hpTone.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
-import { MetaTable } from './CreatureStatBlock.tsx'
+import { DefensesAndSenses } from './CreatureStatBlock.tsx'
 import { speedLines } from '../combat/speed.ts'
 import { MassSavePanel } from './MassSavePanel.tsx'
 import { QuickRoll } from './QuickRoll.tsx'
@@ -82,15 +82,6 @@ function PcSummary({
     ) : (
       <span className="text-slate-400 dark:text-slate-500">—</span>
     )
-  const rows: [string, string | undefined][] = []
-  if (pc.passivePerception != null) {
-    rows.push(['Senses', `Passive Perception ${pc.passivePerception}`])
-  }
-  if (pc.languages?.length) rows.push(['Languages', pc.languages.join(', ')])
-  if (pc.resistances?.length) rows.push(['Resistances', pc.resistances.join(', ')])
-  if (pc.immunities?.length) rows.push(['Immunities', pc.immunities.join(', ')])
-  if (pc.vulnerabilities?.length) rows.push(['Vulnerabilities', pc.vulnerabilities.join(', ')])
-
   return (
     <div className="@container flex flex-1 flex-col space-y-4">
       <StatHeader
@@ -120,11 +111,15 @@ function PcSummary({
           </>
         }
       />
-      {rows.length > 0 && (
-        <div className="min-w-[16rem] flex-1">
-          <MetaTable rows={rows} />
-        </div>
-      )}
+      <DefensesAndSenses
+        resistances={pc.resistances?.join(', ')}
+        immunities={pc.immunities?.join(', ')}
+        vulnerabilities={pc.vulnerabilities?.join(', ')}
+        senses={
+          pc.passivePerception != null ? `Passive Perception ${pc.passivePerception}` : undefined
+        }
+        languages={pc.languages?.join(', ')}
+      />
     </div>
   )
 }
