@@ -102,9 +102,9 @@ describe('buildCreature', () => {
     expect(c.speed).toEqual({ walk: 40, fly: 80, hover: true })
   })
 
-  it('keeps only named actions and derives the attack to-hit from ability + CR', () => {
-    // str 18 (mod +4) at CR 5 (pb +3) → to hit +7, derived not typed.
-    const named = { ...emptyActionDraft(), name: 'Bite', kind: 'melee' as const, reach: '5', damage: [{ id: 'd', formula: '2d6+4', type: 'piercing' as const }] }
+  it('keeps only named actions and derives the attack to-hit + damage mod', () => {
+    // str 18 (mod +4) at CR 5 (pb +3) → to hit +7; the +4 also rides on damage.
+    const named = { ...emptyActionDraft(), name: 'Bite', kind: 'melee' as const, reach: '5', damage: [{ id: 'd', formula: '2d6', type: 'piercing' as const }] }
     const blank = emptyActionDraft() // no name → dropped
     const c = buildCreature(draft({
       cr: '5',
@@ -115,11 +115,32 @@ describe('buildCreature', () => {
     expect(c.actions?.[0]).toMatchObject({ name: 'Bite', kind: 'melee', toHit: 7, reach: 5, damage: [{ formula: '2d6+4', type: 'piercing' }] })
   })
 
-  it('builds a save action with no to-hit', () => {
+  it('adds the ability mod to primary damage only; not rider damage', () => {
+    // dex 12 (mod +1) ranged attack with a fire rider.
+    const a = buildAction(
+      {
+        ...emptyActionDraft('ranged'),
+        name: 'Scimitar',
+        attackAbility: 'dex',
+        damage: [
+          { id: 'd1', formula: '2d6', type: 'slashing' },
+          { id: 'd2', formula: '1d6', type: 'fire' },
+        ],
+      },
+      { abilities: { str: 10, dex: 12, con: 10, int: 10, wis: 10, cha: 10 }, pb: 2 },
+    )
+    expect(a.damage).toEqual([
+      { formula: '2d6+1', type: 'slashing' }, // +1 from DEX
+      { formula: '1d6', type: 'fire' }, // rider: no mod
+    ])
+  })
+
+  it('builds a save action with no to-hit and unmodified damage', () => {
     const save = { ...emptyActionDraft('save'), name: 'Frost Breath', saveAbility: 'con' as const, saveDc: '16', saveOutcome: 'half' as const, damage: [{ id: 'd', formula: '10d6', type: 'cold' as const }] }
     const action = buildAction(save, CTX)
     expect(action.toHit).toBeNull()
     expect(action.save).toEqual({ ability: 'con', dc: 16, onSave: 'half' })
+    expect(action.damage).toEqual([{ formula: '10d6', type: 'cold' }]) // no ability mod on saves
   })
 
   it('maps a dice recharge with a default threshold of 6 when blank', () => {

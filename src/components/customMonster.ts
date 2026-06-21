@@ -342,8 +342,18 @@ function buildRecharge(kind: RechargeKind, value: string): Recharge | undefined 
   return { type: kind, value: v }
 }
 
-function buildDamage(rows: DamageDraft[]): DamageRoll[] | undefined {
-  const out = rows.filter((d) => has(d.formula)).map((d) => ({ formula: d.formula.trim(), type: d.type }))
+/** Append a flat modifier to a dice formula: `"2d6"` + 1 → `"2d6+1"`, + −1 → `"2d6-1"`. */
+function appendMod(formula: string, mod: number): string {
+  if (mod === 0) return formula
+  return mod > 0 ? `${formula}+${mod}` : `${formula}${mod}`
+}
+
+function buildDamage(rows: DamageDraft[], mod: number): DamageRoll[] | undefined {
+  // The attack's ability modifier rides on the *primary* damage only — rider
+  // damage ("plus 1d6 fire") and save damage (mod 0) get just their dice.
+  const out = rows
+    .filter((d) => has(d.formula))
+    .map((d, i) => ({ formula: appendMod(d.formula.trim(), i === 0 ? mod : 0), type: d.type }))
   return out.length ? out : undefined
 }
 
@@ -362,7 +372,9 @@ export function buildAction(d: ActionDraft, ctx: DeriveContext): Action {
     action.range = { normal: num(d.rangeNormal) }
     if (has(d.rangeLong)) action.range.long = num(d.rangeLong)
   }
-  const damage = buildDamage(d.damage)
+  // Attacks add the ability modifier to damage (like the to-hit); saves don't.
+  const damageMod = isAttack ? abilityMod(ctx.abilities[d.attackAbility]) : 0
+  const damage = buildDamage(d.damage, damageMod)
   if (damage) action.damage = damage
   if (d.saveAbility && has(d.saveDc)) {
     action.save = { ability: d.saveAbility, dc: num(d.saveDc), onSave: d.saveOutcome }

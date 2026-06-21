@@ -137,7 +137,7 @@ export function ActionEditor({
             <input
               value={d.formula}
               onChange={(e) => set('damage', action.damage.map((x) => (x.id === d.id ? { ...x, formula: e.target.value } : x)))}
-              placeholder="2d6+3"
+              placeholder="2d6"
               aria-label="Damage formula"
               className={`${FIELD_W} w-28 shrink-0`}
             />

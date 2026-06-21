@@ -599,9 +599,11 @@ export function CreatureStatBlock({
               value={tmpValue}
               edit={onTempInput ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' } : undefined}
             />
-            {creature.initiative != null && (
-              <HeaderStat label="Init" value={signed(creature.initiative)} />
-            )}
+            {/* Initiative bonus: the creature's own if set, else derived from DEX. */}
+            <HeaderStat
+              label="Init"
+              value={signed(creature.initiative ?? abilityMod(creature.abilities.dex))}
+            />
           </>
         }
       />
