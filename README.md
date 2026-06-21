@@ -67,14 +67,17 @@ the field.
 
 🚧 Early development. The **single-DM combat console works**: roll a creature's
 attacks and saves straight from its stat block (pick targets, auto-apply
-resistances, edit and apply damage), track monster resources including recharge
-abilities, run the initiative loop, manage HP/conditions/effects and
-concentration, roll group saves, and roll honest dice with an effect-aware,
-clearable log. Players and quick NPCs are lightweight; the SRD compendium and
-rollable spells are built in — all running locally in the browser. Still to come:
-accounts and persistence (your custom content saved across devices), then a
-shared read-only player view; content imports remain a best-effort, later layer.
-The UI is functional but still evolving.
+resistances, immunities, Magic Resistance and Evasion, edit and apply damage),
+**cast spells from the stat block** (per-spell daily uses tracked, concentration
+auto-set with a round timer), and track the full spread of monster resources —
+recharge abilities, legendary actions, Legendary Resistance (in-lair counts), and
+a per-round reaction. Run the initiative loop, manage HP/conditions/effects (with
+source-relative durations) and concentration, roll group saves, and roll honest
+dice with an effect-aware, clearable log. Players and quick NPCs are lightweight;
+the SRD compendium and rollable spells are built in — all running locally in the
+browser. Still to come: accounts and persistence (your custom content saved across
+devices), then a shared read-only player view; content imports remain a
+best-effort, later layer. The UI is functional but still evolving.
 
 ## Content & licensing
 
