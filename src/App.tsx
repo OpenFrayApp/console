@@ -333,7 +333,7 @@ function App() {
 
       <main className="min-h-0 flex-1 overflow-hidden">
         {view === 'compendium' ? (
-          <div className="mx-auto h-full w-full max-w-5xl overflow-auto px-6 py-6">
+          <div className="h-full w-full overflow-auto px-6 py-6">
             <Compendium />
           </div>
         ) : (
