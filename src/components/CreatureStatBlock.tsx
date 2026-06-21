@@ -578,7 +578,8 @@ export function CreatureStatBlock({
         originalName={label && label !== creature.name ? creature.name : undefined}
         subtitle={
           <>
-            {creature.size} {creature.type} · CR {formatCr(creature.cr)}
+            {creature.size} {creature.type}
+            {creature.alignment ? `, ${creature.alignment}` : ''} · CR {formatCr(creature.cr)}
             {creature.xp != null ? ` (${creature.xp.toLocaleString('en-US')} XP)` : ''}
           </>
         }

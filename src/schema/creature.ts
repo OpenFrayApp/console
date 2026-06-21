@@ -90,6 +90,8 @@ export interface Creature {
   size: Size
   /** Creature type, e.g. `"dragon"`, `"humanoid"`. */
   type: string
+  /** Alignment, e.g. `"chaotic evil"`, `"unaligned"`, `"any alignment"`. Display only. */
+  alignment?: string
   ac: number
   maxHp: number
   /** Optional dice formula to roll HP per instance, e.g. `"19d12+133"`. */

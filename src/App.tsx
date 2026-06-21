@@ -15,6 +15,7 @@ import { loadSession, saveSession, type Theme, type View } from './state/persist
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
+import { CustomMonsterForm } from './components/CustomMonsterForm.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
@@ -274,6 +275,7 @@ function App() {
               <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
               <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
               <AddCreaturePicker onPick={handlePick} />
+              <CustomMonsterForm onCreate={handlePick} />
             </div>
           )}
           <ViewToggle view={view} onChange={setView} />
