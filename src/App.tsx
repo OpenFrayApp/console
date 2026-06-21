@@ -30,6 +30,63 @@ const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
 type Theme = 'dark' | 'light'
 type View = 'encounter' | 'compendium'
 
+function SwordIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M14.5 17.5 4 7V4h3l10.5 10.5" />
+      <path d="m13 19 6-6" />
+      <path d="m16 16 4 4" />
+      <path d="m19 21 2-2" />
+    </svg>
+  )
+}
+
+function BookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M12 7v14" />
+      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+    </svg>
+  )
+}
+
+/** Encounter / Compendium as an icon segmented control. */
+function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  const cell = (active: boolean) =>
+    `flex items-center justify-center px-3 py-1.5 ${
+      active
+        ? 'bg-indigo-600 text-white'
+        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+    }`
+  return (
+    <nav
+      className="flex overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
+      aria-label="View"
+    >
+      <button
+        type="button"
+        onClick={() => onChange('encounter')}
+        aria-current={view === 'encounter' ? 'page' : undefined}
+        aria-label="Encounter"
+        title="Encounter"
+        className={cell(view === 'encounter')}
+      >
+        <SwordIcon />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('compendium')}
+        aria-current={view === 'compendium' ? 'page' : undefined}
+        aria-label="Compendium"
+        title="Compendium"
+        className={`border-l border-slate-300 dark:border-slate-700 ${cell(view === 'compendium')}`}
+      >
+        <BookIcon />
+      </button>
+    </nav>
+  )
+}
+
 const dexMod = (creature: Creature): number => Math.floor((creature.abilities.dex - 10) / 2)
 
 function App() {
@@ -179,46 +236,29 @@ function App() {
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            DnD 5e combat console
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              DnD 5e combat console
+            </p>
+          </div>
+          {view === 'encounter' && encounter.combatants.length > 0 && (
+            <div className="flex items-center gap-2">
+              <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+              <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {view === 'encounter' && (
-            <>
-              <div className="flex items-center gap-2">
-                <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
-                <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
-                <AddCreaturePicker onPick={handlePick} />
-              </div>
-              {encounter.combatants.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
-                  <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
-                </div>
-              )}
-              <span className="h-6 w-px bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
-            </>
+            <div className="flex items-center gap-2">
+              <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
+              <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
+              <AddCreaturePicker onPick={handlePick} />
+            </div>
           )}
-          <nav className="flex gap-1" aria-label="View">
-            {(['encounter', 'compendium'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                aria-current={view === v ? 'page' : undefined}
-                className={
-                  view === v
-                    ? 'rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium capitalize text-white'
-                    : 'rounded-md px-3 py-1.5 text-sm font-medium capitalize text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                }
-              >
-                {v}
-              </button>
-            ))}
-          </nav>
+          <ViewToggle view={view} onChange={setView} />
           <button
             type="button"
             onClick={toggleTheme}
@@ -264,10 +304,12 @@ function App() {
         />
       )}
 
-      {/* Footer: dice roller on the left under the stat block; AGPL §13 source link right. */}
-      <footer className="flex items-center justify-between gap-4 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <div>{view === 'encounter' && <QuickRoll onRoll={pushRoll} />}</div>
-        <div className="flex items-center gap-2">
+      {/* Footer: dice roller aligned under the stat block (center column); AGPL §13
+          source link at the right. Columns mirror the console grid. */}
+      <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
+        <div className="hidden lg:block" aria-hidden="true" />
+        <div className="lg:pl-4">{view === 'encounter' && <QuickRoll onRoll={pushRoll} />}</div>
+        <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
           <a
             href={REPO_URL}
             target="_blank"

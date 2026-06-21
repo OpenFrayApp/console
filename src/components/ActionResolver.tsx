@@ -906,7 +906,7 @@ export function SaveResolver({
                             }}
                             className="rounded border border-amber-400 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
                           >
-                            Legendary Resistance ({legendaryResistanceLeft(c)})
+                            Use LR ({legendaryResistanceLeft(c)})
                           </button>
                         )}
                       </>

@@ -45,7 +45,7 @@ consequences, so the spirit is clear:
   board facts the DM wants — AC, HP, conditions, and optionally an initiative
   modifier, passive perception, languages, speed, and damage
   resistances/immunities/vulnerabilities (the app applies those when you deal
-  damage). A **Quick Add** is even lighter — name, HP, AC — for a throwaway NPC or a
+  damage). A **Quick add** is even lighter — name, HP, AC — for a throwaway NPC or a
   creature dropped in mid-fight. Still no class, level, or spell list: OpenFray
   transcribes the consequences a DM declares, it never derives a character's build.
 - **Effects model the *result*, not the cause.** There are only ~6 shapes of

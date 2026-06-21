@@ -63,11 +63,14 @@ function downedPc(over: Partial<PlayerCharacter> = {}): PlayerCharacter {
 afterEach(cleanup)
 
 describe('CombatantControls', () => {
-  it('dispatches a remove', () => {
+  it('toggles the reaction', () => {
     const dispatch = vi.fn()
     render(<CombatantControls combatant={monster()} round={1} dispatch={dispatch} onRoll={() => {}} />)
-    fireEvent.click(screen.getByText('Remove'))
-    expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'm' })
+    fireEvent.click(screen.getByText('Use reaction'))
+    const call = dispatch.mock.calls[0][0]
+    expect(call.type).toBe('update')
+    expect(call.id).toBe('m')
+    expect(call.update(monster()).reactionUsed).toBe(true)
   })
 
   it('shows death-save controls for an unconscious PC, hidden once stable', () => {

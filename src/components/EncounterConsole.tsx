@@ -18,10 +18,8 @@ import {
   rechargeLimited,
   restoreSpellUse,
   setCurrentHp,
-  setInLair,
   spellUsesRemaining,
   spendLegendary,
-  spendLegendaryResistance,
   spendLimited,
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
@@ -348,6 +346,7 @@ export function EncounterConsole({
           update: (cc) => ({ ...cc, effects: cc.effects.filter((e) => e.id !== effectId) }),
         })
       }
+      onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
     />
   )
   const players = combatants.filter((c) => c.isPC)
@@ -447,24 +446,9 @@ export function EncounterConsole({
                   legendaryRemaining={
                     selected.creature.legendaryActions ? selected.legendaryRemaining : undefined
                   }
-                  legendaryResistance={
+                  legendaryResistanceLeft={
                     selected.creature.legendaryResistance != null
-                      ? {
-                          left: legendaryResistanceLeft(selected),
-                          inLair: !!selected.inLair,
-                          onUse: () =>
-                            dispatch({
-                              type: 'update',
-                              id: selected.combatantId,
-                              update: (c) => (c.isPC ? c : spendLegendaryResistance(c)),
-                            }),
-                          onToggleLair: (v) =>
-                            dispatch({
-                              type: 'update',
-                              id: selected.combatantId,
-                              update: (c) => (c.isPC ? c : setInLair(c, v)),
-                            }),
-                        }
+                      ? legendaryResistanceLeft(selected)
                       : undefined
                   }
                 />

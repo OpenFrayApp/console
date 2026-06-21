@@ -11,6 +11,11 @@ import {
   rollDeathSave,
 } from '../combat/deathsaves.ts'
 import { breakConcentration, startConcentration } from '../combat/concentration.ts'
+import {
+  legendaryResistanceLeft,
+  setInLair,
+  spendLegendaryResistance,
+} from '../combat/resources.ts'
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectPicker } from './EffectPicker.tsx'
@@ -63,23 +68,16 @@ export function CombatantControls({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <button type="button" className={BTN} onClick={() => dispatch({ type: 'remove', id })}>
-          Remove
-        </button>
-
         <EffectPicker onApply={addEffect} />
 
         {combatant.concentration ? (
-          <span className="inline-flex items-center gap-2">
-            <span className="text-xs text-violet-700 dark:text-violet-300">
-              Concentrating
-              {combatant.concentration.spell ? `: ${combatant.concentration.spell}` : ''}
-              {combatant.concentration.rounds != null ? ` · ${combatant.concentration.rounds} rd` : ''}
-            </span>
-            <button type="button" className={BTN} onClick={() => apply(breakConcentration)}>
-              End
-            </button>
-          </span>
+          <button
+            type="button"
+            onClick={() => apply(breakConcentration)}
+            className="rounded border border-violet-400 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+          >
+            End concentration
+          </button>
         ) : concInput === null ? (
           <button type="button" className={BTN} onClick={() => setConcInput('')}>
             Concentrate
@@ -115,8 +113,32 @@ export function CombatantControls({
               : BTN
           }
         >
-          {combatant.reactionUsed ? 'Reaction used' : 'Reaction'}
+          {combatant.reactionUsed ? 'Reaction used' : 'Use reaction'}
         </button>
+
+        {!combatant.isPC && combatant.creature.legendaryResistance != null && (
+          <>
+            <button
+              type="button"
+              onClick={() => apply((c) => (c.isPC ? c : spendLegendaryResistance(c)))}
+              disabled={legendaryResistanceLeft(combatant) <= 0}
+              title="Turn a failed save into a success; spends one use"
+              className="rounded border border-amber-400 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
+            >
+              Use Legendary Resistance
+            </button>
+            {combatant.creature.legendaryResistanceLair != null && (
+              <label className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={!!combatant.inLair}
+                  onChange={(e) => apply((c) => (c.isPC ? c : setInLair(c, e.target.checked)))}
+                />
+                In lair
+              </label>
+            )}
+          </>
+        )}
 
         {showDeathSaves && (
           <DeathSaveControls

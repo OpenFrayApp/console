@@ -125,7 +125,7 @@ describe('Encounter flow', () => {
   it('applies an effect from the picker to a combatant', async () => {
     render(<App />)
     await addGoblin()
-    fireEvent.click(screen.getByText('Effect'))
+    fireEvent.click(screen.getByText('Apply condition'))
     fireEvent.click(screen.getByText('Prone'))
     expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row
   })

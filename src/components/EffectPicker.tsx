@@ -66,7 +66,7 @@ export function EffectPicker({ onApply }: { onApply: (effect: Effect) => void })
         onClick={toggle}
         className="rounded border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
       >
-        Effect
+        Apply condition
       </button>
       {open && (
         <div

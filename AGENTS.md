@@ -35,7 +35,7 @@ saves.
 holds the board facts the DM chooses to jot — AC, HP, conditions, and optionally an
 initiative modifier, passive perception, languages, speed, and damage
 resistances/immunities/vulnerabilities (these feed damage like a monster's). A
-**Quick Add** is just name/HP/AC for a throwaway NPC. The test still holds: the DM
+**Quick add** is just name/HP/AC for a throwaway NPC. The test still holds: the DM
 *transcribes* these facts; the app never knows class/level/spells or derives a
 build. DM-entered defenses are "what damage this takes" — a board consequence — not
 a sheet we read.

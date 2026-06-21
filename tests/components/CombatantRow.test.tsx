@@ -137,13 +137,19 @@ describe('CombatantRow', () => {
     expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
   })
 
-  it('marks the combatant type with an icon', () => {
-    const { rerender } = render(<CombatantRow combatant={monster()} />)
-    expect(screen.getByRole('img', { name: 'Monster' })).toBeInTheDocument()
-    expect(screen.queryByRole('img', { name: 'Player character' })).toBeNull()
+  it('colour-codes the row border by type (rose for monsters, sky for PCs)', () => {
+    const { container, rerender } = render(<CombatantRow combatant={monster()} />)
+    expect(container.firstElementChild?.className).toMatch(/border-l-rose-400/)
 
     rerender(<CombatantRow combatant={pc()} />)
-    expect(screen.getByRole('img', { name: 'Player character' })).toBeInTheDocument()
+    expect(container.firstElementChild?.className).toMatch(/border-l-sky-400/)
+  })
+
+  it('removes the combatant via the hover X when onRemove is provided', () => {
+    const onRemove = vi.fn()
+    render(<CombatantRow combatant={monster()} onRemove={onRemove} />)
+    fireEvent.click(screen.getByRole('button', { name: /Remove/ }))
+    expect(onRemove).toHaveBeenCalledOnce()
   })
 
   it('selects on click when onSelect is provided', () => {

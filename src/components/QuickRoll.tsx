@@ -23,7 +23,7 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center gap-4">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -45,16 +45,18 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
           Roll
         </button>
       </form>
-      {DICE.map((die) => (
-        <button
-          key={die}
-          type="button"
-          onClick={() => submit(`1${die}`)}
-          className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          {die}
-        </button>
-      ))}
+      <div className="flex gap-1">
+        {DICE.map((die) => (
+          <button
+            key={die}
+            type="button"
+            onClick={() => submit(`1${die}`)}
+            className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            {die}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
