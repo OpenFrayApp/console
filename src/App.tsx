@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
 import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
 import { instantiate } from './combat/combatant.ts'
@@ -12,6 +12,8 @@ import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
+import { loadCloudEncounter, saveCloudEncounter } from './state/cloudEncounter.ts'
+import { useAuth } from './auth/useAuth.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
@@ -22,6 +24,9 @@ import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/MassSavePanel.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
+import { AccountControl } from './components/AccountControl.tsx'
+import { CampaignSettings } from './components/CampaignSettings.tsx'
+import { SignUpPage } from './components/SignUpPage.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
@@ -104,21 +109,55 @@ function App() {
   // Monster initiatives held while the DM enters the players' rolled numbers.
   const [pcInitPrompt, setPcInitPrompt] = useState<Record<string, number> | null>(null)
 
+  const { user } = useAuth()
+  // The DB row id of the signed-in user's encounter; a ref so the autosave effect
+  // doesn't re-subscribe when it changes after the first cloud write.
+  const cloudId = useRef<string | null>(null)
+  // Whether the full-screen sign-up page is showing (opened from the header or a
+  // gated feature); it closes itself once the user is signed in.
+  const [authOpen, setAuthOpen] = useState(false)
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
-  // Local-first autosave: mirror the live session to sessionStorage in the
-  // background, debounced so a burst of mutations writes once. This is the
-  // ephemeral anonymous tier — never the DB. See src/state/persistence.ts.
-  // (A beforeunload "unsaved work" warning belongs with the sign-up/durable tier,
-  // where it has a real call to action; here a reload restores, so it'd only nag.)
+  useEffect(() => {
+    if (user) setAuthOpen(false)
+  }, [user])
+
+  // On sign-in, hydrate the live encounter from the cloud (the authoritative copy);
+  // on sign-out, forget the row id so we stop writing to it.
+  useEffect(() => {
+    if (!user) {
+      cloudId.current = null
+      return
+    }
+    let active = true
+    loadCloudEncounter().then((res) => {
+      if (!active || !res) return
+      cloudId.current = res.id
+      dispatch({ type: 'load', encounter: res.encounter })
+      setSelectedId(null)
+    })
+    return () => {
+      active = false
+    }
+  }, [user])
+
+  // Local-first autosave (debounced): always mirror the session to sessionStorage
+  // for per-device restore; when signed in, also persist the encounter to the cloud
+  // (one JSONB blob, RLS-isolated). The UI never waits on this — it's background.
   useEffect(() => {
     const handle = setTimeout(() => {
       saveSession({ encounter, rollLog, theme, view, selectedId })
-    }, 400)
+      if (user) {
+        saveCloudEncounter(cloudId.current, encounter).then((id) => {
+          if (id) cloudId.current = id
+        })
+      }
+    }, 600)
     return () => clearTimeout(handle)
-  }, [encounter, rollLog, theme, view, selectedId])
+  }, [encounter, rollLog, theme, view, selectedId, user])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
@@ -275,9 +314,10 @@ function App() {
               <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
               <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
               <AddCreaturePicker onPick={handlePick} />
-              <CustomMonsterForm onCreate={handlePick} />
+              <CustomMonsterForm onCreate={handlePick} gated={!user} onGated={() => setAuthOpen(true)} />
             </div>
           )}
+          <CampaignSettings onSignUp={() => setAuthOpen(true)} />
           <ViewToggle view={view} onChange={setView} />
           <button
             type="button"
@@ -287,6 +327,7 @@ function App() {
           >
             {theme === 'dark' ? 'Light' : 'Dark'} mode
           </button>
+          <AccountControl onSignUp={() => setAuthOpen(true)} />
         </div>
       </header>
 
@@ -313,6 +354,8 @@ function App() {
           />
         )}
       </main>
+
+      {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
 
       {pcInitPrompt && (
         <InitiativePrompt

@@ -94,7 +94,16 @@ function ActionList({
  * flows into the encounter like any picked creature. Every custom creature is an
  * independent entity; nothing here is matched or deduped against existing content.
  */
-export function CustomMonsterForm({ onCreate }: { onCreate: (creature: Creature) => void }) {
+export function CustomMonsterForm({
+  onCreate,
+  gated = false,
+  onGated,
+}: {
+  onCreate: (creature: Creature) => void
+  /** When true (anonymous), the button prompts sign-up instead of opening the form. */
+  gated?: boolean
+  onGated?: () => void
+}) {
   const [open, setOpen] = useState(false)
   const [d, setD] = useState<MonsterDraft>(emptyDraft)
   // The SRD spell list, loaded once the modal opens, for the spellcasting picker.
@@ -137,7 +146,8 @@ export function CustomMonsterForm({ onCreate }: { onCreate: (creature: Creature)
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => (gated ? onGated?.() : setOpen(true))}
+        title={gated ? 'Sign up to create custom monsters' : undefined}
         className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         Custom monster
