@@ -11,6 +11,7 @@ import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
+import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
@@ -26,9 +27,6 @@ const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
 /** A player rolls their own initiative; monsters and quick adds are auto-rolled. */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
-
-type Theme = 'dark' | 'light'
-type View = 'encounter' | 'compendium'
 
 function SwordIcon() {
   return (
@@ -90,17 +88,36 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
 const dexMod = (creature: Creature): number => Math.floor((creature.abilities.dex - 10) / 2)
 
 function App() {
-  const [theme, setTheme] = useState<Theme>('dark')
-  const [view, setView] = useState<View>('encounter')
-  const [encounter, dispatch] = useReducer(encounterReducer, undefined, emptyEncounter)
-  const [rollLog, setRollLog] = useState<RollEntry[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Restore the previous session (reload/crash insurance) once, on mount. Null
+  // when there's nothing valid to restore, so every field falls back to its default.
+  const [restored] = useState(loadSession)
+  const [theme, setTheme] = useState<Theme>(() => restored?.theme ?? 'dark')
+  const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
+  const [encounter, dispatch] = useReducer(
+    encounterReducer,
+    undefined,
+    () => restored?.encounter ?? emptyEncounter(),
+  )
+  const [rollLog, setRollLog] = useState<RollEntry[]>(() => restored?.rollLog ?? [])
+  const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
   // Monster initiatives held while the DM enters the players' rolled numbers.
   const [pcInitPrompt, setPcInitPrompt] = useState<Record<string, number> | null>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  // Local-first autosave: mirror the live session to sessionStorage in the
+  // background, debounced so a burst of mutations writes once. This is the
+  // ephemeral anonymous tier — never the DB. See src/state/persistence.ts.
+  // (A beforeunload "unsaved work" warning belongs with the sign-up/durable tier,
+  // where it has a real call to action; here a reload restores, so it'd only nag.)
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      saveSession({ encounter, rollLog, theme, view, selectedId })
+    }, 400)
+    return () => clearTimeout(handle)
+  }, [encounter, rollLog, theme, view, selectedId])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
