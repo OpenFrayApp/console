@@ -59,15 +59,17 @@ function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledD
   })
 }
 
-/** Log each rolled damage component (one entry per type) to the roll log. */
+/** Log each rolled damage component (one entry per type) to the roll log. The
+ *  actor prefix is dropped for a casterless cast. */
 function logDamage(
   components: RolledDamage[],
-  attacker: Combatant,
+  attacker: Combatant | undefined,
   action: Action,
   onRoll: OnRoll,
 ): void {
+  const prefix = attacker ? `${attacker.isPC ? attacker.name : attacker.label}: ` : ''
   for (const c of components) {
-    onRoll(`${attacker.isPC ? attacker.name : attacker.label}: ${action.name} ${c.type} damage`, c.result)
+    onRoll(`${prefix}${action.name} ${c.type} damage`, c.result)
   }
 }
 
@@ -83,7 +85,9 @@ function damageAgainst(
 }
 
 interface ResolverProps {
-  attacker: MonsterCombatant
+  /** The acting creature. Absent for a casterless cast (the "Cast spell" panel),
+   *  where the DM supplies the spell attack bonus / save DC instead. */
+  attacker?: MonsterCombatant
   action: Action
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
@@ -341,10 +345,15 @@ function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combat
 function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse, onClose }: ResolverProps) {
   // On a crit, the campaign's crit rule governs how the damage dice are rolled.
   const { crit: critRule } = useCampaignRules()
-  const targets = targetsFor(attacker, combatants)
+  const targets = attacker
+    ? targetsFor(attacker, combatants)
+    : combatants.filter((c) => c.status !== 'dead')
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(targets.length === 1 ? [targets[0].combatantId] : []),
   )
+  // Casterless cast: the DM supplies the spell attack bonus (the spell doesn't own
+  // it, the caster does). With an attacker, the action already carries its to-hit.
+  const [bonus, setBonus] = useState(String(action.toHit ?? 0))
   const [spinKey, setSpinKey] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [attack, setAttack] = useState<{
@@ -362,12 +371,13 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
   useEffect(() => () => window.clearTimeout(timer.current), [])
 
   const target = targets.find((t) => selected.has(t.combatantId)) ?? null
-  const title = `${nameOf(attacker)} · ${action.name}`
+  const title = attacker ? `${nameOf(attacker)} · ${action.name}` : `Cast ${action.name}`
 
   const doRoll = () => {
     if (!target) return
     const range = action.kind === 'ranged' ? 'ranged' : 'melee'
-    const rolled = rollWithEffects(`1d20${signed(action.toHit ?? 0)}`, {
+    const toHit = attacker ? (action.toHit ?? 0) : toNum(bonus)
+    const rolled = rollWithEffects(`1d20${signed(toHit)}`, {
       roller: attacker,
       target,
       kind: 'attack',
@@ -376,7 +386,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     const { result, applied } = rolled
     // Persist any consumeOnRoll effects that fired (e.g. "disadvantage on its
     // next attack") — rollWithEffects returns the combatant with them stripped.
-    if (rolled.roller && rolled.roller !== attacker) {
+    if (attacker && rolled.roller && rolled.roller !== attacker) {
       const effects = rolled.roller.effects
       dispatch({ type: 'update', id: attacker.combatantId, update: (c) => ({ ...c, effects }) })
     }
@@ -393,7 +403,11 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     setRevealed(false)
     setConc(null)
     setNote(null)
-    onRoll(`${nameOf(attacker)}: ${action.name} → ${nameOf(target)}`, result, applied)
+    onRoll(
+      `${attacker ? `${nameOf(attacker)}: ` : ''}${action.name} → ${nameOf(target)}`,
+      result,
+      applied,
+    )
     logDamage(components, attacker, action, onRoll)
     onUse?.()
     window.clearTimeout(timer.current)
@@ -424,7 +438,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
       id: attack.target.combatantId,
       update: (c) => ({
         ...c,
-        effects: [...c.effects, condition(name, { source: attacker.combatantId, duration })],
+        effects: [...c.effects, condition(name, { source: attacker?.combatantId, duration })],
       }),
     })
     setNote(`${name} → ${nameOf(attack.target)}`)
@@ -477,6 +491,19 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
           onToggle={(id) => setSelected(new Set([id]))}
         />
       </fieldset>
+
+      {!attacker && (
+        <label className="mb-3 flex items-center gap-2 text-sm">
+          Spell attack bonus
+          <input
+            value={bonus}
+            onChange={(e) => setBonus(e.target.value)}
+            inputMode="numeric"
+            aria-label="Spell attack bonus"
+            className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+          />
+        </label>
+      )}
 
       <div className="flex items-center gap-3">
         <button
@@ -559,7 +586,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
 
       {revealed && attack && (
         <>
-          <ConditionChips onApply={applyCondition} sourceName={nameOf(attacker)} />
+          <ConditionChips onApply={applyCondition} sourceName={attacker ? nameOf(attacker) : undefined} />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}

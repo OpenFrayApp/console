@@ -8,7 +8,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { spellAction } from '../combat/casting.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
-import { SaveResolver } from './ActionResolver.tsx'
+import { ActionResolver } from './ActionResolver.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
@@ -121,12 +121,14 @@ export function CastSpellPanel({
   }
 
   // --- Cast (spell selected) ----------------------------------------------
-  // A save spell opens the same mass-save modal as a monster's save action,
-  // seeded from the spell (the DM enters the DC; magical effect is pre-checked).
+  // An attack or save spell opens the same modal as a monster's action: a save
+  // spell → the mass-save modal, an attack spell → the attack modal. There's no
+  // caster here, so the DM supplies the spell attack bonus / save DC; magical
+  // effect is pre-checked for saves.
   const action = spellAction(spell, {})
-  if (action?.save) {
+  if (action) {
     return (
-      <SaveResolver
+      <ActionResolver
         action={action}
         combatants={combatants}
         dispatch={dispatch}
@@ -137,8 +139,8 @@ export function CastSpellPanel({
     )
   }
 
-  // Attack / utility spells have no caster here to roll for, so keep the inline
-  // reference card (damage roll + attack note).
+  // Damage-only / utility spells have nothing to roll to-hit or save, so keep the
+  // inline reference card (damage roll + any note).
   return (
     <div className="w-full space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
       <div className="flex items-center justify-between">
