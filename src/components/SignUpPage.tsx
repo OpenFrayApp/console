@@ -166,7 +166,7 @@ export function SignUpPage({
               <p className="text-center text-xs text-slate-400 dark:text-slate-500">
                 {mode === 'up'
                   ? 'Free. Your data is private to your account.'
-                  : 'Welcome back, DM.'}
+                  : "Welcome back, let's go on an adventure!"}
               </p>
             </div>
           </form>
