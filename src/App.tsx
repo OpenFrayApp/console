@@ -49,6 +49,7 @@ import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/MassSavePanel.tsx'
+import { RestControls } from './components/RestControls.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
@@ -544,6 +545,13 @@ function App() {
           </div>
           {view === 'encounter' && encounter.combatants.length > 0 && (
             <div className="flex items-center gap-2 lg:pl-4">
+              <RestControls
+                combatants={encounter.combatants}
+                dispatch={dispatch}
+                disabled={started}
+                shortRests={encounter.shortRests ?? 0}
+                showCounter={!!user}
+              />
               <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
               <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
             </div>

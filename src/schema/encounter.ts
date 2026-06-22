@@ -24,6 +24,8 @@ export interface Encounter {
   paused?: boolean
   /** Index into the initiative-sorted combatants of whose turn it is. */
   activeIndex: number
+  /** Short rests taken since the last long rest (reset to 0 on a long rest). */
+  shortRests?: number
   /** Sorted by initiative descending. */
   combatants: Combatant[]
   log: EncounterLogEntry[]

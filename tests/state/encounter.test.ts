@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
-import type { MonsterCombatant } from '../../src/schema/combatant.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { applyDamage } from '../../src/combat/resources.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 
@@ -39,6 +39,21 @@ function monster(id: string, initiative: number): MonsterCombatant {
     concentration: null,
     effects: [],
     visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
+  }
+}
+
+function pc(id: string, current: number, max: number): PlayerCharacter {
+  return {
+    isPC: true,
+    kind: 'pc',
+    combatantId: id,
+    name: id,
+    initiative: 0,
+    ac: 15,
+    status: current > 0 ? 'active' : 'unconscious',
+    hp: { current, max, temp: 0 },
+    concentration: null,
+    effects: [],
   }
 }
 
@@ -106,6 +121,27 @@ describe('encounterReducer', () => {
     expect(e.activeIndex).toBe(0)
     expect(e.paused).toBe(false)
     expect(e.combatants.map((c) => c.combatantId)).toEqual(['a', 'b'])
+  })
+
+  it('long rest restores friendly combatants to full HP, leaves foes, resets the count', () => {
+    let e = withCombatants(monster('foe', 10))
+    e = encounterReducer(e, { type: 'add', combatant: pc('hero', 4, 20) })
+    e = encounterReducer(e, { type: 'shortRest', hp: {} }) // count = 1
+    e = encounterReducer(e, { type: 'update', id: 'foe', update: (c) => applyDamage(c, 3) }) // foe 4/7
+    e = encounterReducer(e, { type: 'longRest' })
+
+    expect(e.combatants.find((c) => c.combatantId === 'hero')!.hp.current).toBe(20)
+    expect(e.combatants.find((c) => c.combatantId === 'foe')!.hp.current).toBe(4) // untouched
+    expect(e.shortRests).toBe(0)
+  })
+
+  it('short rest sets the given HP (clamped) and counts the rest', () => {
+    let e = encounterReducer(emptyEncounter(), { type: 'add', combatant: pc('hero', 4, 20) })
+    e = encounterReducer(e, { type: 'shortRest', hp: { hero: 15 } })
+    expect(e.combatants[0].hp.current).toBe(15)
+    expect(e.shortRests).toBe(1)
+    e = encounterReducer(e, { type: 'shortRest', hp: {} })
+    expect(e.shortRests).toBe(2)
   })
 
   it('appends log entries', () => {

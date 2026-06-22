@@ -4,6 +4,8 @@
 import type { Combatant } from '../schema/combatant.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import { beginEncounter, nextTurn, sortByInitiative } from '../combat/initiative.ts'
+import { isFoe } from '../combat/combatant.ts'
+import { setCurrentHp } from '../combat/resources.ts'
 
 /**
  * The encounter store as a pure reducer over the tested combat functions. The UI
@@ -21,6 +23,10 @@ export type EncounterAction =
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
   | { type: 'log'; message: string }
+  /** Long rest: restore every friendly combatant to full HP; reset the short-rest count. */
+  | { type: 'longRest' }
+  /** Short rest: set new current HP for the given combatants; bump the short-rest count. */
+  | { type: 'shortRest'; hp: Record<string, number> }
   /** Replace the whole encounter — used when hydrating from the cloud on sign-in. */
   | { type: 'load'; encounter: Encounter }
 
@@ -85,6 +91,27 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
             message: action.message,
           },
         ],
+      }
+
+    // A long rest restores all player characters and friendly NPCs to full HP
+    // (setCurrentHp also clears death saves and wakes the unconscious); foes are
+    // untouched. The short-rest tally resets.
+    case 'longRest':
+      return {
+        ...state,
+        shortRests: 0,
+        combatants: state.combatants.map((c) => (isFoe(c) ? c : setCurrentHp(c, c.hp.max))),
+      }
+
+    // A short rest applies the DM-entered current HP per combatant and counts one
+    // rest. Only the listed combatants change.
+    case 'shortRest':
+      return {
+        ...state,
+        shortRests: (state.shortRests ?? 0) + 1,
+        combatants: state.combatants.map((c) =>
+          action.hp[c.combatantId] != null ? setCurrentHp(c, action.hp[c.combatantId]) : c,
+        ),
       }
 
     case 'load':
