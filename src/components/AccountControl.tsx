@@ -7,40 +7,80 @@ import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
 import { LoginPopover } from './LoginPopover.tsx'
 
+function UserIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+
 /**
- * Header account control: the signed-in email (click to manage the account) +
- * Sign out, or a "Sign in" button that opens a compact log-in popover (with a link
- * to the full sign-up flow) when anonymous. Renders nothing until Supabase is
- * configured, so an unconfigured build stays anonymous-only.
+ * Header account control. Signed in: a user-icon button opening a menu with
+ * Settings (the account panel) and Sign out. Anonymous: a "Sign in" button that
+ * opens a compact log-in popover (with a link to the full sign-up flow). Renders
+ * nothing until Supabase is configured, so an unconfigured build stays anon-only.
  */
 export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
   const { user, loading, configured, signOut } = useAuth()
   const [accountOpen, setAccountOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const loginRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const closeLogin = useCallback(() => setLoginOpen(false), [])
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
   useDismiss(loginRef, loginOpen, closeLogin)
+  useDismiss(menuRef, menuOpen, closeMenu)
 
   if (!configured || loading) return null
 
   if (user) {
+    const item =
+      'block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
     return (
-      <div className="flex items-center gap-2">
+      <div className="relative" ref={menuRef}>
         <button
           type="button"
-          onClick={() => setAccountOpen(true)}
-          className="hidden max-w-[12rem] truncate text-sm text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200 sm:inline"
-          title="Manage your account"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Account menu"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title={user.email}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
-          {user.email}
+          <UserIcon />
         </button>
-        <button
-          type="button"
-          onClick={() => signOut()}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          Sign out
-        </button>
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false)
+                setAccountOpen(true)
+              }}
+              className={item}
+            >
+              Settings
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false)
+                signOut()
+              }}
+              className={item}
+            >
+              Sign out
+            </button>
+          </div>
+        )}
         {accountOpen && <AccountPanel onClose={() => setAccountOpen(false)} />}
       </div>
     )
