@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { isFoe } from '../combat/combatant.ts'
-import { parseHpInput } from '../combat/resources.ts'
+import { hpTierOf, parseHpInput } from '../combat/resources.ts'
+import { hpToneFor } from './hpTone.ts'
 
 /** A campfire — short rest. */
 function BonfireIcon() {
@@ -106,8 +107,9 @@ function ShortRestModal({
             combatants.map((c) => (
               <div key={c.combatantId} className="flex items-center gap-3">
                 <span className="min-w-0 flex-1 truncate text-sm">{label(c)}</span>
-                <span className="shrink-0 text-xs tabular-nums text-slate-400 dark:text-slate-500">
-                  {c.hp.current}/{c.hp.max}
+                <span className="shrink-0 text-xs tabular-nums">
+                  <span className={hpToneFor(hpTierOf(c.hp.current, c.hp.max))}>{c.hp.current}</span>
+                  <span className="text-slate-400 dark:text-slate-500">/{c.hp.max}</span>
                 </span>
                 <input
                   value={values[c.combatantId] ?? ''}
