@@ -32,6 +32,14 @@ describe('AddPcPicker', () => {
     expect(screen.queryByText('Grog')).toBeNull()
   })
 
+  it('filters the saved characters with the search box', () => {
+    render(<AddPcPicker rosterPcs={rosterPcs} onPick={() => {}} onCreate={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
+    fireEvent.change(screen.getByLabelText('Search your characters'), { target: { value: 'gro' } })
+    expect(screen.getByText('Grog')).toBeInTheDocument()
+    expect(screen.queryByText('Thalia')).toBeNull()
+  })
+
   it('routes to the compendium to create a character', () => {
     const onCreate = vi.fn()
     render(<AddPcPicker rosterPcs={rosterPcs} onPick={() => {}} onCreate={onCreate} />)

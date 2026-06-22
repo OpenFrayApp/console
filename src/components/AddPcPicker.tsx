@@ -22,9 +22,13 @@ export function AddPcPicker({
   onCreate: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
+
+  const q = query.trim().toLowerCase()
+  const matches = rosterPcs.filter((pc) => !q || pc.name.toLowerCase().includes(q))
 
   const pick = (pc: RosterPc) => {
     onPick(pc)
@@ -46,9 +50,22 @@ export function AddPcPicker({
       </button>
       {open && (
         <div className="absolute right-0 z-30 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-          {rosterPcs.length > 0 ? (
-            <ul className="max-h-64 overflow-auto">
-              {rosterPcs.map((pc) => (
+          <input
+            autoFocus
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your characters…"
+            aria-label="Search your characters"
+            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+          />
+          {rosterPcs.length === 0 ? (
+            <p className="mt-2 px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
+              No saved characters yet.
+            </p>
+          ) : (
+            <ul className="mt-1 max-h-64 overflow-auto">
+              {matches.map((pc) => (
                 <li key={pc.id}>
                   <button
                     type="button"
@@ -60,11 +77,10 @@ export function AddPcPicker({
                   </button>
                 </li>
               ))}
+              {matches.length === 0 && (
+                <li className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">No matches</li>
+              )}
             </ul>
-          ) : (
-            <p className="px-2 py-2 text-xs text-slate-500 dark:text-slate-400">
-              No saved characters yet.
-            </p>
           )}
           <button
             type="button"
