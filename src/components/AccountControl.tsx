@@ -1,18 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
+import { LoginPopover } from './LoginPopover.tsx'
 
 /**
  * Header account control: the signed-in email (click to manage the account) +
- * Sign out, or a "Sign up" button when anonymous. Renders nothing until Supabase
- * is configured, so an unconfigured build stays anonymous-only.
+ * Sign out, or a "Sign in" button that opens a compact log-in popover (with a link
+ * to the full sign-up flow) when anonymous. Renders nothing until Supabase is
+ * configured, so an unconfigured build stays anonymous-only.
  */
 export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
   const { user, loading, configured, signOut } = useAuth()
   const [accountOpen, setAccountOpen] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
+  const loginRef = useRef<HTMLDivElement>(null)
+  const closeLogin = useCallback(() => setLoginOpen(false), [])
+  useDismiss(loginRef, loginOpen, closeLogin)
 
   if (!configured || loading) return null
 
@@ -40,12 +47,23 @@ export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={onSignUp}
-      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-    >
-      Sign up
-    </button>
+    <div className="relative" ref={loginRef}>
+      <button
+        type="button"
+        onClick={() => setLoginOpen((o) => !o)}
+        className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+      >
+        Sign in
+      </button>
+      {loginOpen && (
+        <LoginPopover
+          onSignUp={() => {
+            setLoginOpen(false)
+            onSignUp()
+          }}
+          onClose={closeLogin}
+        />
+      )}
+    </div>
   )
 }
