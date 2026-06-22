@@ -74,25 +74,29 @@ fine; computing what a character can do is not.
 🚧 Early development. The **single-DM combat console works**: roll a creature's
 attacks and saves straight from its stat block (pick targets, auto-apply
 resistances, immunities, Magic Resistance and Evasion, edit and apply damage),
-**cast spells from the stat block** (per-spell daily uses tracked, concentration
-auto-set with a round timer), and track the full spread of monster resources —
-recharge abilities, legendary actions, Legendary Resistance (in-lair counts), and
-a per-round reaction. Run the initiative loop (**drag to reorder it mid-fight**),
-manage HP/conditions/effects (with source-relative durations) and concentration,
-**edit HP inline from the tracker**, take **short and long rests**, roll group saves,
-and roll honest dice with an effect-aware, clearable log; **sweep all foes off the
-board** between encounters. Players and quick NPCs are lightweight; the SRD compendium
-and rollable spells are built in. **Accounts are live:** the app runs fully anonymous
-in the browser, and signing up (free, email + password) saves your in-progress fights
-and your **custom creatures** to the cloud and syncs them across devices — build a
+**cast spells** — from a creature's stat block or a standalone picker, with
+attack-roll spells resolved through the same attack modal — and track the full
+spread of monster resources: recharge abilities, legendary actions, Legendary
+Resistance (in-lair counts), and a per-round reaction. Run the initiative loop
+(**drag to reorder it mid-fight**, with campaign-configurable tie-breaking), manage
+HP/conditions/effects (with source-relative durations) and concentration —
+conditions auto-apply their advantage/disadvantage, and a **melee hit on a
+Paralyzed or Unconscious target auto-crits**. Death saves track honestly (a stable
+character un-stabilizes when hit). **Edit HP inline from the tracker**, take
+**short and long rests**, roll group saves, and roll honest dice with an
+effect-aware, clearable log; **sweep foes — or the whole board — clear** between
+encounters. Players and quick NPCs are lightweight; the SRD compendium and rollable
+spells are built in. **Accounts are live:** the app runs fully anonymous in the
+browser, and signing up (free, email + password) saves your in-progress fights and
+your **custom creatures** to the cloud and syncs them across devices — build a
 custom boss once, add it to any encounter. Signed-in DMs also keep a durable
 **Characters** roster — reusable player characters (ability scores, senses, defenses,
 plus race, alignment, faith, and private DM notes) dropped into any fight. **Campaigns**
 carry their own edition and house rules (critical-hit damage, surprise handling,
-creature HP) that drive the console when one is active, and you can manage your
-account in-app — change email or password, or delete the account and all its data.
-Still to come: a shared read-only player view; content imports remain a best-effort,
-later layer. The UI is functional but still evolving.
+creature HP, initiative ties) that drive the console when one is active, and you can
+manage your account in-app — change email or password, or delete the account and all
+its data. Still to come: a shared read-only player view; content imports remain a
+best-effort, later layer. The UI is functional but still evolving.
 
 ## Content & licensing
 
