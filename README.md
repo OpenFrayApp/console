@@ -77,18 +77,22 @@ resistances, immunities, Magic Resistance and Evasion, edit and apply damage),
 **cast spells from the stat block** (per-spell daily uses tracked, concentration
 auto-set with a round timer), and track the full spread of monster resources —
 recharge abilities, legendary actions, Legendary Resistance (in-lair counts), and
-a per-round reaction. Run the initiative loop, manage HP/conditions/effects (with
-source-relative durations) and concentration, roll group saves, and roll honest
-dice with an effect-aware, clearable log. Players and quick NPCs are lightweight;
-the SRD compendium and rollable spells are built in. **Accounts are live:** the app
-runs fully anonymous in the browser, and signing up (free, email + password) saves
-your in-progress fights and your **custom creatures** to the cloud and syncs them
-across devices — build a custom boss once, add it to any encounter. **Campaigns**
+a per-round reaction. Run the initiative loop (**drag to reorder it mid-fight**),
+manage HP/conditions/effects (with source-relative durations) and concentration,
+**edit HP inline from the tracker**, take **short and long rests**, roll group saves,
+and roll honest dice with an effect-aware, clearable log; **sweep all foes off the
+board** between encounters. Players and quick NPCs are lightweight; the SRD compendium
+and rollable spells are built in. **Accounts are live:** the app runs fully anonymous
+in the browser, and signing up (free, email + password) saves your in-progress fights
+and your **custom creatures** to the cloud and syncs them across devices — build a
+custom boss once, add it to any encounter. Signed-in DMs also keep a durable
+**Characters** roster — reusable player characters (ability scores, senses, defenses,
+plus race, alignment, faith, and private DM notes) dropped into any fight. **Campaigns**
 carry their own edition and house rules (critical-hit damage, surprise handling,
 creature HP) that drive the console when one is active, and you can manage your
 account in-app — change email or password, or delete the account and all its data.
-Still to come: a shared read-only player view and a saved party roster; content
-imports remain a best-effort, later layer. The UI is functional but still evolving.
+Still to come: a shared read-only player view; content imports remain a best-effort,
+later layer. The UI is functional but still evolving.
 
 ## Content & licensing
 
