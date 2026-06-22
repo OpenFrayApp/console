@@ -543,6 +543,7 @@ function App() {
               {user ? (
                 <AddPcPicker
                   rosterPcs={rosterPcs}
+                  campaigns={campaigns}
                   onPick={handleAddPcToEncounter}
                   onCreate={openRosterCreate}
                 />

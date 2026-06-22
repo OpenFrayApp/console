@@ -10,21 +10,22 @@ import type { RosterPc } from '../../src/schema/roster.ts'
 afterEach(cleanup)
 
 const rosterPcs: RosterPc[] = [
-  { id: 'p1', name: 'Thalia', ac: 16, maxHp: 38 },
+  { id: 'p1', name: 'Thalia', ac: 16, maxHp: 38, campaignId: 'c1' },
   { id: 'p2', name: 'Grog', ac: 14, maxHp: 60 },
 ]
+const campaigns = [{ id: 'c1', name: 'Sands of Eternity', edition: '5.5' as const }]
 
 describe('AddPcPicker', () => {
-  it('opens a popover listing saved characters and adds the picked one', () => {
+  it('opens a popover listing saved characters with their campaign acronym', () => {
     const onPick = vi.fn()
-    render(<AddPcPicker rosterPcs={rosterPcs} onPick={onPick} onCreate={() => {}} />)
+    render(<AddPcPicker rosterPcs={rosterPcs} campaigns={campaigns} onPick={onPick} onCreate={() => {}} />)
 
     // The list is behind the toggle.
     expect(screen.queryByText('Thalia')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
     expect(screen.getByText('Thalia')).toBeInTheDocument()
     expect(screen.getByText('Grog')).toBeInTheDocument()
-    expect(screen.getByText('AC 16')).toBeInTheDocument()
+    expect(screen.getByText('SoE')).toBeInTheDocument() // Sands of Eternity
 
     fireEvent.click(screen.getByRole('button', { name: /Thalia/ }))
     expect(onPick).toHaveBeenCalledWith(rosterPcs[0])

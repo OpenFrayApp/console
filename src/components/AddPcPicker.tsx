@@ -3,7 +3,9 @@
 
 import { useCallback, useRef, useState } from 'react'
 import type { RosterPc } from '../schema/roster.ts'
+import type { Campaign } from '../schema/campaign.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
+import { campaignAcronym } from './campaignLabels.ts'
 
 /**
  * The signed-in "Add PC" control: a popover to drop one of the user's saved roster
@@ -12,13 +14,16 @@ import { useDismiss } from '../hooks/useDismiss.ts'
  */
 export function AddPcPicker({
   rosterPcs,
+  campaigns = [],
   onPick,
   onCreate,
 }: {
   rosterPcs: RosterPc[]
+  /** The user's campaigns, to show each PC's campaign acronym. */
+  campaigns?: Campaign[]
   /** Add a saved roster PC to the current encounter. */
   onPick: (pc: RosterPc) => void
-  /** Open the compendium's Players tab to create a character. */
+  /** Open the compendium's Characters tab to create a character. */
   onCreate: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -29,6 +34,8 @@ export function AddPcPicker({
 
   const q = query.trim().toLowerCase()
   const matches = rosterPcs.filter((pc) => !q || pc.name.toLowerCase().includes(q))
+  const campaignName = (id?: string | null): string | undefined =>
+    campaigns.find((c) => c.id === id)?.name
 
   const pick = (pc: RosterPc) => {
     onPick(pc)
@@ -73,7 +80,15 @@ export function AddPcPicker({
                     className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     <span className="truncate">{pc.name}</span>
-                    <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">AC {pc.ac}</span>
+                    <span
+                      className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
+                      title={campaignName(pc.campaignId)}
+                    >
+                      {(() => {
+                        const name = campaignName(pc.campaignId)
+                        return name ? campaignAcronym(name) : ''
+                      })()}
+                    </span>
                   </button>
                 </li>
               ))}

@@ -10,6 +10,7 @@ import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import { CampaignCard } from './CampaignCard.tsx'
 import { CampaignFormModal } from './CampaignFormModal.tsx'
+import { campaignAcronym } from './campaignLabels.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
@@ -106,15 +107,6 @@ function CampaignList({
 
 /** Left column for the Players tab: the user's roster (filtered by the shared
  *  search box). Creating a PC is the right pane's empty-state action. */
-/** Acronym from a campaign name's word initials, e.g. "Sands of Eternity" → "SoE". */
-function campaignAcronym(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-}
-
 function PcList({
   pcs,
   campaigns,

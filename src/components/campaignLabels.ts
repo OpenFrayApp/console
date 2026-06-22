@@ -48,3 +48,12 @@ export const TIEBREAK_OPTIONS: Option<InitiativeTiebreak>[] = [
 export function labelOf<T extends string>(options: Option<T>[], value: T): string {
   return options.find((o) => o.value === value)?.label ?? value
 }
+
+/** Acronym from a campaign name's word initials, e.g. "Sands of Eternity" → "SoE". */
+export function campaignAcronym(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+}
