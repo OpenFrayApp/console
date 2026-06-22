@@ -380,17 +380,7 @@ export function EncounterConsole({
                       ? (text) => onEditPcDmNotes(selected, text)
                       : undefined
                   }
-                  footer={
-                    selected.rosterId && onEditPc ? (
-                      <button
-                        type="button"
-                        onClick={() => onEditPc(selected)}
-                        className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                      >
-                        Edit character
-                      </button>
-                    ) : undefined
-                  }
+                  onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
                 />
               ) : (
                 <CreatureStatBlock
@@ -469,11 +459,20 @@ export function EncounterConsole({
                 dispatch={dispatch}
                 onRoll={onRoll}
               />
+              {selected.isPC && selected.rosterId && onEditPc && (
+                <button
+                  type="button"
+                  onClick={() => onEditPc(selected)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Edit character
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800">
           <div className="mb-1 flex items-center justify-between">
             <h3 className={COLUMN_HEADING}>Roll log</h3>
             {rollLog.length > 0 && (

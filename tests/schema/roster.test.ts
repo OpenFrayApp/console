@@ -98,4 +98,18 @@ describe('syncCombatantFromRoster', () => {
     expect(synced.combatantId).toBe(inFight.combatantId)
     expect(synced.rosterId).toBe('pc-1')
   })
+
+  it('carries an edited max HP to the board, clamping current on a decrease', () => {
+    const inFight = { ...rosterPcToCombatant(base), hp: { current: 30, max: 38, temp: 0 } }
+    expect(syncCombatantFromRoster(inFight, { ...base, maxHp: 50 }).hp).toEqual({
+      current: 30,
+      max: 50,
+      temp: 0,
+    })
+    expect(syncCombatantFromRoster(inFight, { ...base, maxHp: 20 }).hp).toEqual({
+      current: 20,
+      max: 20,
+      temp: 0,
+    })
+  })
 })

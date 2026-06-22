@@ -90,18 +90,21 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
 
 /**
  * Re-apply an edited roster character onto its in-fight combatant — updates the
- * durable character fields (name, abilities, notes, …) while preserving all combat
- * state (HP, initiative, effects, concentration, status). Editing the saved
- * character never disrupts the fight: HP and other board state stay put.
+ * durable character fields (name, abilities, max HP, notes, …) while preserving
+ * volatile combat state (current/temp HP, initiative, effects, concentration,
+ * status). Max HP does carry to the board (it can change mid-fight); current HP is
+ * only clamped down if it now exceeds the new max.
  */
 export function syncCombatantFromRoster(
   combatant: PlayerCharacter,
   pc: RosterPc,
 ): PlayerCharacter {
+  const max = Math.max(1, Math.floor(pc.maxHp) || 1)
   return {
     ...combatant,
     name: pc.name,
     ac: Math.max(0, Math.floor(pc.ac) || 0),
+    hp: { ...combatant.hp, max, current: Math.min(combatant.hp.current, max) },
     initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : combatant.initiativeMod,
     speed: pc.speed,
     abilities: pc.abilities,

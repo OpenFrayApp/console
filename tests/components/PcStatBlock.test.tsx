@@ -68,6 +68,18 @@ describe('PcStatBlock', () => {
     expect(screen.getByText('Passive Perception 12')).toBeInTheDocument()
   })
 
+  it('rolls an ability check when a modifier is clicked (combat)', () => {
+    const onCheck = vi.fn()
+    render(<PcStatBlock {...base} onCheck={onCheck} />)
+    fireEvent.click(screen.getByTitle('Roll DEX check'))
+    expect(onCheck).toHaveBeenCalledWith('DEX check', 2, 'check')
+  })
+
+  it('leaves modifiers as plain text when not in combat', () => {
+    render(<PcStatBlock {...base} />)
+    expect(screen.queryByTitle('Roll DEX check')).toBeNull()
+  })
+
   it('edits DM notes inline and commits the text on blur', () => {
     const onEditDmNotes = vi.fn()
     render(<PcStatBlock {...base} dmNotes={'Old note'} onEditDmNotes={onEditDmNotes} />)

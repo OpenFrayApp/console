@@ -106,17 +106,32 @@ function CampaignList({
 
 /** Left column for the Players tab: the user's roster (filtered by the shared
  *  search box). Creating a PC is the right pane's empty-state action. */
+/** Acronym from a campaign name's word initials, e.g. "Sands of Eternity" → "SoE". */
+function campaignAcronym(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+}
+
 function PcList({
   pcs,
+  campaigns,
   gated,
   selectedId,
   onSelect,
 }: {
   pcs: RosterPc[]
+  campaigns: Campaign[]
   gated: boolean
   selectedId: string | null
   onSelect: (id: string) => void
 }) {
+  const tag = (campaignId?: string | null): string => {
+    const name = campaigns.find((c) => c.id === campaignId)?.name
+    return name ? campaignAcronym(name) : ''
+  }
   if (gated) {
     return (
       <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
@@ -143,7 +158,12 @@ function PcList({
               )}
             >
               <span className="truncate">{p.name}</span>
-              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">AC {p.ac}</span>
+              <span
+                className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
+                title={campaigns.find((c) => c.id === p.campaignId)?.name}
+              >
+                {tag(p.campaignId)}
+              </span>
             </button>
           </li>
         ))}
@@ -363,6 +383,7 @@ export function Compendium({
         ) : tab === 'characters' ? (
           <PcList
             pcs={filteredPcs}
+            campaigns={campaigns}
             gated={createGated}
             selectedId={selectedId}
             onSelect={setSelectedId}

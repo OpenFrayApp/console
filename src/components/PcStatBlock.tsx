@@ -8,7 +8,7 @@ import { speedLines } from '../combat/speed.ts'
 import { hpTierOf } from '../combat/resources.ts'
 import { hpToneFor } from './hpTone.ts'
 import { formatSenses } from '../compendium/format.ts'
-import { AbilityTable, DefensesAndSenses, SECTION_HEADING } from './CreatureStatBlock.tsx'
+import { AbilityTable, DefensesAndSenses, SECTION_HEADING, type OnCheck } from './CreatureStatBlock.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { Markdown } from './Markdown.tsx'
 
@@ -123,6 +123,7 @@ export function PcStatBlock({
   onRename,
   onHpInput,
   onTempInput,
+  onCheck,
   onEditDmNotes,
   footer,
 }: {
@@ -153,6 +154,8 @@ export function PcStatBlock({
   onRename?: (name: string) => void
   onHpInput?: (raw: string) => void
   onTempInput?: (raw: string) => void
+  /** Roll an ability check (d20 + modifier) when a modifier is clicked. Combat only. */
+  onCheck?: OnCheck
   /** Make DM Notes click-to-edit, committing the new text (persisted by the caller). */
   onEditDmNotes?: (text: string) => void
   /** Bottom source-style row (e.g. Add to encounter / Edit / Delete). */
@@ -204,7 +207,7 @@ export function PcStatBlock({
       {abilities && (
         <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
           <div className="min-w-[20rem] flex-1">
-            <AbilityTable abilities={abilities} />
+            <AbilityTable abilities={abilities} onCheck={onCheck} />
           </div>
         </div>
       )}
