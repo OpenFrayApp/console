@@ -194,7 +194,7 @@ describe('Compendium', () => {
     expect(screen.queryByText('Thalia')).toBeNull()
     fireEvent.change(screen.getByLabelText('Search characters'), { target: { value: '' } })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add player character' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create character' }))
     const dialog = screen.getByRole('dialog', { name: 'New player character' })
     fireEvent.change(within(dialog).getByLabelText('PC name'), { target: { value: 'Grog' } })
     // The campaign dropdown is populated from the user's campaigns.

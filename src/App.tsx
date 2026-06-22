@@ -165,7 +165,11 @@ function App() {
   // modal is open; null when it's closed.
   const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
 
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  // The auth `user` object gets a fresh reference on every token refresh, so depend
+  // on the stable id (not the object) to keep load/clear effects from re-firing —
+  // and from clobbering restored state — when nothing about who's signed in changed.
+  const userId = user?.id ?? null
   // The DB row id of the signed-in user's encounter; a ref so the autosave effect
   // doesn't re-subscribe when it changes after the first cloud write.
   const cloudId = useRef<string | null>(null)
@@ -202,9 +206,12 @@ function App() {
   }, [user])
 
   // Load the custom creature library + campaigns + party roster on sign-in; clear
-  // them on sign-out.
+  // them on sign-out. Wait for the initial session lookup before deciding — otherwise
+  // the first render (user still null) would run the sign-out branch and wipe the
+  // active campaign restored from the session.
   useEffect(() => {
-    if (!user) {
+    if (authLoading) return
+    if (!userId) {
       setCustomCreatures([])
       setCampaigns([])
       setRosterPcs([])
@@ -224,12 +231,13 @@ function App() {
     return () => {
       active = false
     }
-  }, [user])
+  }, [userId, authLoading])
 
   // On sign-in, hydrate the live encounter from the cloud (the authoritative copy);
   // on sign-out, forget the row id so we stop writing to it.
   useEffect(() => {
-    if (!user) {
+    if (authLoading) return
+    if (!userId) {
       cloudId.current = null
       return
     }
@@ -243,7 +251,7 @@ function App() {
     return () => {
       active = false
     }
-  }, [user])
+  }, [userId, authLoading])
 
   // Local-first autosave (debounced): always mirror the session to sessionStorage
   // for per-device restore; when signed in, also persist the encounter to the cloud
@@ -251,14 +259,14 @@ function App() {
   useEffect(() => {
     const handle = setTimeout(() => {
       saveSession({ encounter, rollLog, theme, view, selectedId, activeCampaignId })
-      if (user) {
+      if (userId) {
         saveCloudEncounter(cloudId.current, encounter).then((id) => {
           if (id) cloudId.current = id
         })
       }
     }, 600)
     return () => clearTimeout(handle)
-  }, [encounter, rollLog, theme, view, selectedId, activeCampaignId, user])
+  }, [encounter, rollLog, theme, view, selectedId, activeCampaignId, userId])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 

@@ -538,7 +538,7 @@ export function Compendium({
                 : tab === 'campaigns'
                   ? 'Select a campaign to view it, or create a new one.'
                   : tab === 'characters'
-                    ? 'Select a player character to view it, or add one to your roster.'
+                    ? 'Select a player character to view it, or create one.'
                     : 'Select a spell to view it.'}
             </p>
             {tab === 'creatures' && (
@@ -565,7 +565,7 @@ export function Compendium({
                 onClick={startNewPc}
                 className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
               >
-                Add player character
+                Create character
               </button>
             )}
           </div>
