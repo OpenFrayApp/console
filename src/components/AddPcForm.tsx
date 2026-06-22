@@ -18,6 +18,11 @@ const FIELD =
   'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
 const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
+// None of these are credential fields — keep password managers (1Password's
+// `data-1p-ignore`) and browser autofill off them so their popups don't cover the
+// inputs. Spread onto the form and every field.
+const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
+
 /**
  * Add a player character — the combat-relevant fields the DM wants on the board.
  * The initiative field is a *modifier*: at combat start it's rolled (d20 + this)
@@ -96,6 +101,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       {open && (
         <form
           onSubmit={submit}
+          {...NO_AUTOFILL}
           className="absolute right-0 z-30 mt-1 max-h-[70vh] w-72 space-y-2 overflow-auto rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
         >
           <input
@@ -104,23 +110,24 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
             onChange={set('name')}
             placeholder="Name"
             aria-label="PC name"
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <div className="grid grid-cols-3 gap-2">
-            <input value={f.ac} onChange={set('ac')} placeholder="AC" aria-label="AC" inputMode="numeric" className={FIELD} />
-            <input value={f.hp} onChange={set('hp')} placeholder="HP" aria-label="Max HP" inputMode="numeric" className={FIELD} />
-            <input value={f.init} onChange={set('init')} placeholder="Init +" aria-label="Initiative modifier" inputMode="numeric" className={FIELD} />
+            <input value={f.ac} onChange={set('ac')} placeholder="AC" aria-label="AC" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.hp} onChange={set('hp')} placeholder="HP" aria-label="Max HP" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.init} onChange={set('init')} placeholder="Init +" aria-label="Initiative modifier" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input value={f.pp} onChange={set('pp')} placeholder="Pass. Perc." aria-label="Passive Perception" inputMode="numeric" className={FIELD} />
-            <input value={f.speed} onChange={set('speed')} placeholder="Speed (30, Climb 12)" aria-label="Speed" className={FIELD} />
+            <input value={f.pp} onChange={set('pp')} placeholder="Pass. Perc." aria-label="Passive Perception" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.speed} onChange={set('speed')} placeholder="Speed (30, Climb 12)" aria-label="Speed" {...NO_AUTOFILL} className={FIELD} />
           </div>
-          <input value={f.languages} onChange={set('languages')} placeholder="Languages (comma-separated)" aria-label="Languages" className={FIELD} />
+          <input value={f.languages} onChange={set('languages')} placeholder="Languages (comma-separated)" aria-label="Languages" {...NO_AUTOFILL} className={FIELD} />
           <div className="space-y-1">
             <p className={LABEL}>Defenses (comma-separated)</p>
-            <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" className={FIELD} />
-            <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" className={FIELD} />
-            <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" className={FIELD} />
+            <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...NO_AUTOFILL} className={FIELD} />
           </div>
           <button
             type="submit"

@@ -11,6 +11,11 @@ const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
 const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
+// None of these are credential fields, so keep password managers (1Password's
+// `data-1p-ignore`) and browser autofill off them — their popups otherwise cover
+// the inputs. Spread onto the form and every field.
+const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
+
 const ABILITY_ORDER: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const ABILITY_LABEL: Record<Ability, string> = {
   str: 'STR',
@@ -153,6 +158,7 @@ export function PcFormModal({
         aria-label={editing ? 'Edit player character' : 'New player character'}
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
+        {...NO_AUTOFILL}
         className="my-auto w-full max-w-md rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
@@ -178,7 +184,7 @@ export function PcFormModal({
               placeholder="e.g. Thalia"
               aria-label="PC name"
               autoFocus
-              autoComplete="off"
+              {...NO_AUTOFILL}
               className={FIELD}
             />
           </label>
@@ -186,26 +192,26 @@ export function PcFormModal({
           <div className="grid grid-cols-3 gap-2">
             <label className="block space-y-1">
               <span className={LABEL}>AC</span>
-              <input value={f.ac} onChange={set('ac')} aria-label="AC" inputMode="numeric" className={FIELD} />
+              <input value={f.ac} onChange={set('ac')} aria-label="AC" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
             </label>
             <label className="block space-y-1">
               <span className={LABEL}>Max HP</span>
-              <input value={f.hp} onChange={set('hp')} aria-label="Max HP" inputMode="numeric" className={FIELD} />
+              <input value={f.hp} onChange={set('hp')} aria-label="Max HP" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
             </label>
             <label className="block space-y-1">
               <span className={LABEL}>Init +</span>
-              <input value={f.init} onChange={set('init')} aria-label="Initiative modifier" inputMode="numeric" className={FIELD} />
+              <input value={f.init} onChange={set('init')} aria-label="Initiative modifier" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <label className="block space-y-1">
               <span className={LABEL}>Passive Perception</span>
-              <input value={f.pp} onChange={set('pp')} aria-label="Passive Perception" inputMode="numeric" className={FIELD} />
+              <input value={f.pp} onChange={set('pp')} aria-label="Passive Perception" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
             </label>
             <label className="block space-y-1">
               <span className={LABEL}>Speed</span>
-              <input value={f.speed} onChange={set('speed')} placeholder="30, Climb 12" aria-label="Speed" className={FIELD} />
+              <input value={f.speed} onChange={set('speed')} placeholder="30, Climb 12" aria-label="Speed" {...NO_AUTOFILL} className={FIELD} />
             </label>
           </div>
 
@@ -222,6 +228,7 @@ export function PcFormModal({
                     onChange={setAbility(a)}
                     aria-label={ABILITY_LABEL[a]}
                     inputMode="numeric"
+                    {...NO_AUTOFILL}
                     className={`${FIELD} px-1 text-center`}
                   />
                 </label>
@@ -231,19 +238,19 @@ export function PcFormModal({
 
           <label className="block space-y-1">
             <span className={LABEL}>Languages (comma-separated)</span>
-            <input value={f.languages} onChange={set('languages')} aria-label="Languages" className={FIELD} />
+            <input value={f.languages} onChange={set('languages')} aria-label="Languages" {...NO_AUTOFILL} className={FIELD} />
           </label>
 
           <div className="space-y-1">
             <span className={LABEL}>Defenses (comma-separated)</span>
-            <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" className={FIELD} />
-            <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" className={FIELD} />
-            <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" className={FIELD} />
+            <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" {...NO_AUTOFILL} className={FIELD} />
+            <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...NO_AUTOFILL} className={FIELD} />
           </div>
 
           <label className="block space-y-1">
             <span className={LABEL}>Campaign</span>
-            <select value={f.campaignId} onChange={set('campaignId')} aria-label="Campaign" className={FIELD}>
+            <select value={f.campaignId} onChange={set('campaignId')} aria-label="Campaign" {...NO_AUTOFILL} className={FIELD}>
               <option value="">No campaign</option>
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>
