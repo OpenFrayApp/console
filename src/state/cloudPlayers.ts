@@ -10,7 +10,17 @@ import type { RosterPc } from '../schema/roster.ts'
  * A roster PC is reusable across encounters; adding it to a fight instantiates a
  * fresh combatant. Anonymous users add ephemeral PCs at the table instead, so they
  * never reach this; every call no-ops when Supabase isn't configured.
+ *
+ * Writes are best-effort and never block the UI, but a failure is logged — a silent
+ * failure here means "I saved my party" but nothing persisted. The most common cause
+ * is the `players` table not matching the `{ id, owner_id default auth.uid(), name,
+ * data, updated_at }` + RLS shape (see `local/deploy.md`).
  */
+
+/** Surface a Supabase write error without throwing (the UI already updated optimistically). */
+function warn(action: string, error: unknown): void {
+  if (error) console.error(`[openfray] ${action} roster PC failed`, error)
+}
 
 /** Every roster PC the user owns, newest first. */
 export async function loadRosterPcs(): Promise<RosterPc[]> {
@@ -19,24 +29,33 @@ export async function loadRosterPcs(): Promise<RosterPc[]> {
     .from('players')
     .select('data')
     .order('updated_at', { ascending: false })
-  if (error || !data) return []
-  return data.map((row) => row.data as RosterPc)
+  if (error) {
+    warn('loading', error)
+    return []
+  }
+  return (data ?? []).map((row) => row.data as RosterPc)
 }
 
 /** Save a new roster PC. Best-effort; never blocks the UI. */
 export async function saveRosterPc(pc: RosterPc): Promise<void> {
   if (!supabase) return
-  await supabase.from('players').insert({ name: pc.name, data: pc })
+  const { error } = await supabase.from('players').insert({ name: pc.name, data: pc })
+  warn('saving', error)
 }
 
 /** Replace an edited roster PC in place (matched by its stable id, RLS-scoped). */
 export async function updateRosterPc(pc: RosterPc): Promise<void> {
   if (!supabase) return
-  await supabase.from('players').update({ name: pc.name, data: pc }).eq('data->>id', pc.id)
+  const { error } = await supabase
+    .from('players')
+    .update({ name: pc.name, data: pc })
+    .eq('data->>id', pc.id)
+  warn('updating', error)
 }
 
 /** Remove a roster PC by its stable id (RLS-scoped to the owner). */
 export async function deleteRosterPc(id: string): Promise<void> {
   if (!supabase) return
-  await supabase.from('players').delete().eq('data->>id', id)
+  const { error } = await supabase.from('players').delete().eq('data->>id', id)
+  warn('deleting', error)
 }
