@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<!--
+  OpenFray — coming-soon holding page.
+  Self-contained static page (no build step) deployed to Cloudflare Pages while the
+  app is in development. When the app ships, point the Pages project at the Vite
+  build (`npm run build` → `dist/`) instead of this directory.
+-->
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenFray — a DnD 5e combat tracker for DMs</title>
+    <meta
+      name="description"
+      content="OpenFray is a free, open-source DnD 5e combat console for Dungeon Masters — monster resources, relational effects, mass saves, and honest dice. Coming soon."
+    />
+    <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23818cf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'&gt;&lt;path d='M14.5 17.5 4 7V4h3l10.5 10.5'/&gt;&lt;path d='m13 19 6-6'/&gt;&lt;path d='m16 16 4 4'/&gt;&lt;path d='m19 21 2-2'/&gt;&lt;/svg&gt;" />
+
+    <!-- Open Graph / social preview -->
+    <meta property="og:title" content="OpenFray — a DnD 5e combat tracker for DMs" />
+    <meta
+      property="og:description"
+      content="A free, open-source combat console for running D&D 5e fights. Coming soon."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://openfray.app" />
+
+    <style>
+      :root {
+        --bg: #020617;
+        --panel: #0b1222;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --faint: #64748b;
+        --accent: #818cf8;
+        --accent-strong: #6366f1;
+        --border: #1e293b;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f8fafc;
+          --panel: #ffffff;
+          --text: #0f172a;
+          --muted: #475569;
+          --faint: #94a3b8;
+          --accent: #4f46e5;
+          --accent-strong: #4338ca;
+          --border: #e2e8f0;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(1100px 600px at 50% -10%, rgba(99, 102, 241, 0.18), transparent 60%),
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+      }
+
+      .mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        color: var(--accent);
+        margin-bottom: 1.75rem;
+      }
+      .mark svg { width: 2rem; height: 2rem; }
+
+      .badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: var(--accent);
+        border: 1px solid var(--border);
+        background: var(--panel);
+        border-radius: 999px;
+        padding: 0.35rem 0.85rem;
+        margin-bottom: 1.5rem;
+      }
+
+      h1 {
+        font-size: clamp(2.6rem, 8vw, 4.5rem);
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        margin: 0 0 1rem;
+        font-weight: 800;
+      }
+      h1 .o { color: var(--accent); }
+
+      .tagline {
+        max-width: 36rem;
+        font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+        color: var(--muted);
+        line-height: 1.5;
+        margin: 0 0 2rem;
+      }
+
+      ul.points {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 2.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        justify-content: center;
+        max-width: 40rem;
+      }
+      ul.points li {
+        font-size: 0.85rem;
+        color: var(--text);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.4rem 0.9rem;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent-strong);
+        border-radius: 0.6rem;
+        padding: 0.7rem 1.25rem;
+        text-decoration: none;
+        transition: background 0.15s ease;
+      }
+      .cta:hover { background: var(--accent); }
+      @media (prefers-color-scheme: light) { .cta { color: #fff; } }
+
+      footer {
+        text-align: center;
+        padding: 1.5rem;
+        font-size: 0.8rem;
+        color: var(--faint);
+        line-height: 1.7;
+      }
+      footer a { color: var(--muted); text-decoration: none; }
+      footer a:hover { color: var(--text); text-decoration: underline; }
+      footer .sep { margin: 0 0.5rem; opacity: 0.5; }
+      .disclaimer { margin-top: 0.5rem; max-width: 38rem; margin-left: auto; margin-right: auto; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.5 17.5 4 7V4h3l10.5 10.5" />
+          <path d="m13 19 6-6" />
+          <path d="m16 16 4 4" />
+          <path d="m19 21 2-2" />
+        </svg>
+      </span>
+
+      <span class="badge">Coming soon</span>
+
+      <h1><span class="o">Open</span>Fray</h1>
+
+      <p class="tagline">
+        A free, open-source <strong>DnD&nbsp;5e</strong> combat tracker for Dungeon
+        Masters. Fast, glanceable, and focused on the one job other trackers do badly:
+        keeping hold of what's actually happening in a fight.
+      </p>
+
+      <ul class="points">
+        <li>Monster resource tracking</li>
+        <li>Relational effects &amp; reminders</li>
+        <li>One-tap mass saves</li>
+        <li>Honest, transparent dice</li>
+        <li>SRD compendium</li>
+      </ul>
+
+      <a class="cta" href="https://github.com/SirDarcanos/openfray" target="_blank" rel="noreferrer">
+        Follow development on GitHub →
+      </a>
+    </main>
+
+    <footer>
+      <span>openfray.app</span>
+      <span class="sep">·</span>
+      <a href="https://github.com/SirDarcanos/openfray" target="_blank" rel="noreferrer">Source</a>
+      <span class="sep">·</span>
+      <span>AGPL-3.0</span>
+      <p class="disclaimer">
+        Compatible with fifth edition. Not affiliated with, endorsed, sponsored, or
+        specifically approved by Wizards of the Coast LLC.
+      </p>
+    </footer>
+  </body>
+</html>
