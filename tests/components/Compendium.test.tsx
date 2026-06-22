@@ -175,7 +175,7 @@ describe('Compendium', () => {
     vi.restoreAllMocks()
   })
 
-  it('prompts sign-up on the campaigns tab when gated', async () => {
+  it('prompts sign-in on the campaigns tab when gated', async () => {
     const onGated = vi.fn()
     const onCreateCampaign = vi.fn()
     render(
@@ -188,9 +188,9 @@ describe('Compendium', () => {
     )
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.click(screen.getByText('Campaigns'))
-    expect(screen.getByText(/Sign up to create and manage campaigns/)).toBeInTheDocument()
+    expect(screen.getByText(/Sign in to create and manage campaigns/)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sign up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(onGated).toHaveBeenCalled()
     expect(onCreateCampaign).not.toHaveBeenCalled()
   })

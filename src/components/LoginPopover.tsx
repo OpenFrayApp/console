@@ -61,7 +61,7 @@ export function LoginPopover({ onSignUp, onClose }: { onSignUp: () => void; onCl
           disabled={busy}
           className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
         >
-          {busy ? 'Signing in…' : 'Log in'}
+          {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
       <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">

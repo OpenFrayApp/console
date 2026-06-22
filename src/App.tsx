@@ -163,9 +163,10 @@ function App() {
   // The DB row id of the signed-in user's encounter; a ref so the autosave effect
   // doesn't re-subscribe when it changes after the first cloud write.
   const cloudId = useRef<string | null>(null)
-  // Whether the full-screen sign-up page is showing (opened from the header or a
-  // gated feature); it closes itself once the user is signed in.
-  const [authOpen, setAuthOpen] = useState(false)
+  // The full-screen auth page: null (closed), 'in' (sign-in tab first, the default
+  // for gated features), or 'up' (sign-up tab first, from the log-in popover's link).
+  // It closes itself once the user is signed in.
+  const [authMode, setAuthMode] = useState<'in' | 'up' | null>(null)
   // The signed-in user's custom creature library (empty when anonymous), shown in
   // the compendium and pickable into encounters.
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
@@ -188,7 +189,7 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    if (user) setAuthOpen(false)
+    if (user) setAuthMode(null)
   }, [user])
 
   // Load the custom creature library + campaigns on sign-in; clear them on sign-out.
@@ -475,7 +476,7 @@ function App() {
             </div>
           )}
           <ViewToggle view={view} onChange={setView} />
-          <AccountControl onSignUp={() => setAuthOpen(true)} />
+          <AccountControl onSignUp={() => setAuthMode('up')} />
           <button
             type="button"
             onClick={toggleTheme}
@@ -501,7 +502,7 @@ function App() {
               onUpdateCampaign={handleUpdateCampaign}
               onDeleteCampaign={handleDeleteCampaign}
               createGated={!user}
-              onGated={() => setAuthOpen(true)}
+              onGated={() => setAuthMode('in')}
             />
           </div>
         ) : (
@@ -523,7 +524,7 @@ function App() {
         )}
       </main>
 
-      {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
+      {authMode && <SignUpPage initialMode={authMode} onClose={() => setAuthMode(null)} />}
 
       {initPrompt && (
         <InitiativePrompt

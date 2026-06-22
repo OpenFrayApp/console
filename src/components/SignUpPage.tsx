@@ -36,9 +36,16 @@ const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
  * email/password form on the right (sign up by default, with a log-in toggle for
  * returning DMs). Shown full-screen over the app; closes itself on success.
  */
-export function SignUpPage({ onClose }: { onClose: () => void }) {
+export function SignUpPage({
+  initialMode = 'in',
+  onClose,
+}: {
+  /** Which tab opens first — 'in' (sign in) by default; 'up' for the sign-up link. */
+  initialMode?: 'up' | 'in'
+  onClose: () => void
+}) {
   const { signUp, signIn } = useAuth()
-  const [mode, setMode] = useState<'up' | 'in'>('up')
+  const [mode, setMode] = useState<'up' | 'in'>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -114,17 +121,17 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
             <div className="mb-4 flex gap-1 rounded-lg bg-slate-200 p-1 dark:bg-slate-800">
               <button
                 type="button"
+                onClick={() => setMode('in')}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'in' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
                 onClick={() => setMode('up')}
                 className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'up' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 Sign up
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('in')}
-                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'in' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
-              >
-                Log in
               </button>
             </div>
             <div className="space-y-3">
@@ -154,7 +161,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
                 disabled={busy}
                 className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
               >
-                {busy ? 'Working…' : mode === 'up' ? 'Create account' : 'Log in'}
+                {busy ? 'Working…' : mode === 'up' ? 'Create account' : 'Sign in'}
               </button>
               <p className="text-center text-xs text-slate-400 dark:text-slate-500">
                 {mode === 'up'

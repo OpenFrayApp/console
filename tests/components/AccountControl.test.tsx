@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { User } from '@supabase/supabase-js'
 import { AuthContext, type AuthState } from '../../src/auth/useAuth.ts'
 import { AccountControl } from '../../src/components/AccountControl.tsx'
@@ -47,7 +47,9 @@ describe('AccountControl (anonymous)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'dm@openfray.app' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-pass' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
+    // The popover's submit button is also "Sign in" — scope to the form.
+    const form = screen.getByLabelText('Email').closest('form')!
+    fireEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
     await waitFor(() => expect(value.signIn).toHaveBeenCalledWith('dm@openfray.app', 'secret-pass'))
   })
 
@@ -56,7 +58,8 @@ describe('AccountControl (anonymous)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'dm@openfray.app' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
+    const form = screen.getByLabelText('Email').closest('form')!
+    fireEvent.click(within(form).getByRole('button', { name: 'Sign in' }))
     await waitFor(() => expect(value.signIn).toHaveBeenCalled())
     expect(screen.getByText('Invalid login credentials')).toBeInTheDocument()
   })

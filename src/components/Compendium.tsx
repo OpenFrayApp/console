@@ -61,7 +61,7 @@ function CampaignList({
   if (gated) {
     return (
       <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-        Sign up to create and manage campaigns.
+        Sign in to create and manage campaigns.
       </p>
     )
   }
@@ -305,14 +305,14 @@ export function Compendium({
         {tab === 'campaigns' && createGated ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
-              Campaigns are saved to your account. Sign up to create one.
+              Sign into your account to create a campaign.
             </p>
             <button
               type="button"
               onClick={() => onGated?.()}
               className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
             >
-              Sign up
+              Sign in
             </button>
           </div>
         ) : selectedCreature ? (
@@ -354,7 +354,9 @@ export function Compendium({
             </div>
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'creatures'
-                ? 'Select a creature to view it, or create a custom one.'
+                ? createGated
+                  ? 'Select a creature to view it, or sign into your account to create a custom one.'
+                  : 'Select a creature to view it, or create a custom one.'
                 : tab === 'campaigns'
                   ? 'Select a campaign to view it, or create a new one.'
                   : 'Select a spell to view it.'}
@@ -365,7 +367,7 @@ export function Compendium({
                 onClick={startCreate}
                 className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
               >
-                Create custom creature
+                {createGated ? 'Sign in' : 'Create custom creature'}
               </button>
             )}
             {tab === 'campaigns' && (
