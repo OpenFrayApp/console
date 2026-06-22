@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 
 vi.mock('../../src/compendium/srd.ts', () => ({
   loadSrdCreatures: () =>
@@ -41,7 +41,12 @@ vi.mock('../../src/compendium/srd.ts', () => ({
 // The encounter flow spans the header toolbar (App) and the console body.
 const { default: App } = await import('../../src/App.tsx')
 
-afterEach(cleanup)
+// Clear sessionStorage too: the debounced autosave can fire during longer tests and
+// would otherwise restore stale combatants/log into the next test's fresh App.
+afterEach(() => {
+  cleanup()
+  sessionStorage.clear()
+})
 
 const begin = () => screen.getByRole('button', { name: 'Begin' })
 
@@ -119,6 +124,22 @@ describe('Encounter flow', () => {
     fireEvent.change(input, { target: { value: '-3' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(screen.getAllByText('4').length).toBeGreaterThan(0) // current HP: 7 - 3
+  })
+
+  it('rolls initiative for a combatant added mid-combat', async () => {
+    const { container } = render(<App />)
+    await addGoblin()
+    beginCombat()
+    // A reinforcement joins mid-fight — it should roll initiative, not sit at 0. The
+    // picker stays open; click its Goblin (scoped, since the tracker also shows one).
+    const picker = screen.getByLabelText('Search SRD creatures').parentElement as HTMLElement
+    fireEvent.click(within(picker).getByText('Goblin')) // auto-labelled "Goblin 2"
+    // Read the new combatant's initiative from its tracker row (the stat block also
+    // shows the name, so scope to the left section).
+    const tracker = container.querySelector('section') as HTMLElement
+    const row = within(tracker).getByText('Goblin 2').closest('[role="button"]') as HTMLElement
+    const init = Number(row.querySelector('.w-7')?.textContent)
+    expect(init).toBeGreaterThan(0) // Goblin's +2 init mod → d20+2, always ≥ 3
   })
 
   it('logs a quick roll', () => {

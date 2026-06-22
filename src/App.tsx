@@ -284,21 +284,21 @@ function App() {
   }
 
   const handlePick = (creature: Creature) => {
-    // Auto-label duplicates ("Goblin", "Goblin 2", …). Initiative stays 0 until
-    // combat begins, when it's rolled for everyone at once.
+    // Auto-label duplicates ("Goblin", "Goblin 2", …). Initiative is rolled on add
+    // mid-combat, else stays 0 until Begin rolls for everyone at once (see addCombatant).
     const sameKind = encounter.combatants.filter(
       (c) => !c.isPC && c.creatureId === creature.id,
     ).length
     const label = sameKind > 0 ? `${creature.name} ${sameKind + 1}` : creature.name
-    const combatant = instantiate(creature, {
-      combatantId: crypto.randomUUID(),
-      initiative: 0,
-      label,
-      // The campaign's HP method decides how this instance's max HP is rolled.
-      maxHp: resolveMaxHp(creature, activeRules.hp),
-    })
-    dispatch({ type: 'add', combatant })
-    setSelectedId(combatant.combatantId)
+    addCombatant(
+      instantiate(creature, {
+        combatantId: crypto.randomUUID(),
+        initiative: 0,
+        label,
+        // The campaign's HP method decides how this instance's max HP is rolled.
+        maxHp: resolveMaxHp(creature, activeRules.hp),
+      }),
+    )
   }
 
   // Creating a custom creature saves it to the library (it shows in the compendium
@@ -355,9 +355,7 @@ function App() {
   // Add a roster PC to the current fight: instantiate a fresh combatant (the roster
   // entry is a reusable template), then jump to the encounter and select it.
   const handleAddPcToEncounter = (pc: RosterPc) => {
-    const combatant = rosterPcToCombatant(pc)
-    dispatch({ type: 'add', combatant })
-    setSelectedId(combatant.combatantId)
+    addCombatant(rosterPcToCombatant(pc))
     setView('encounter')
   }
 
@@ -445,6 +443,16 @@ function App() {
       : c.isPC
         ? 0
         : c.creature.initiative ?? dexMod(c.creature)
+
+  // Add a combatant to the encounter and select it. Mid-combat it rolls initiative
+  // straight away (like Begin) so a reinforcement slots into the order instead of
+  // sitting at 0; before combat, initiative waits for Begin to roll everyone together.
+  const addCombatant = (c: Combatant) => {
+    const combatant =
+      encounter.round > 0 ? { ...c, initiative: rollInit(initLabel(c), initMod(c)) } : c
+    dispatch({ type: 'add', combatant })
+    setSelectedId(combatant.combatantId)
+  }
 
   // One-round skip effect for the 2014 surprise rule (cleared on the round wrap).
   const surprisedEffect = (): Effect => ({
@@ -560,7 +568,7 @@ function App() {
         <div className="flex items-center gap-3">
           {view === 'encounter' && (
             <div className="flex items-center gap-2">
-              <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
+              <AddQuickForm onAdd={addCombatant} />
               {user ? (
                 <AddPcPicker
                   rosterPcs={rosterPcs}
@@ -569,7 +577,7 @@ function App() {
                   onCreate={openRosterCreate}
                 />
               ) : (
-                <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
+                <AddPcForm onAdd={addCombatant} />
               )}
               <AddCreaturePicker onPick={handlePick} customCreatures={customCreatures} />
             </div>
