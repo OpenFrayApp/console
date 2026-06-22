@@ -4,6 +4,7 @@
 import type { Combatant } from '../schema/combatant.ts'
 import type { Effect } from '../schema/effect.ts'
 import type { Encounter } from '../schema/encounter.ts'
+import type { InitiativeTiebreak } from '../schema/campaign.ts'
 
 /**
  * The initiative loop. Turn ownership is by `combatantId`, never raw array
@@ -12,27 +13,45 @@ import type { Encounter } from '../schema/encounter.ts'
  * bugs. All functions are pure — they return a new Encounter, never mutate.
  */
 
-/** Dex score for tie-breaking; PCs don't carry one in the lightweight shape. */
+/**
+ * Dex score for tie-breaking. Monsters always carry one; PCs only do when added
+ * from the durable roster (anon header-form PCs and quick adds have none, so this
+ * returns undefined and the Dex tiebreak falls through to stable order for them).
+ */
 function dexScore(c: Combatant): number | undefined {
-  return c.isPC ? undefined : c.creature.abilities.dex
+  return c.isPC ? c.abilities?.dex : c.creature.abilities.dex
 }
 
 /**
- * Initiative order: highest first; ties broken by Dex, then PCs before monsters,
- * then stable insertion order (`Array.prototype.sort` is stable). Deterministic,
- * so reordering is never surprising.
+ * Initiative order: highest first, then the campaign's chosen tiebreak (defaulting
+ * to Dex, the standard ruleset used by anonymous users and tests). The modes are
+ * mutually exclusive primary tiebreaks:
+ *   - `dex`: higher Dexterity wins (then stable insertion order).
+ *   - `pcs-first`: players act before monsters (then stable order).
+ *   - `manual`: leave ties in insertion order for the DM to drag.
+ * `Array.prototype.sort` is stable, so equal entries keep their order in every mode.
  */
-export function compareInitiative(a: Combatant, b: Combatant): number {
+export function compareInitiative(
+  a: Combatant,
+  b: Combatant,
+  tiebreak: InitiativeTiebreak = 'dex',
+): number {
   if (b.initiative !== a.initiative) return b.initiative - a.initiative
-  const ad = dexScore(a)
-  const bd = dexScore(b)
-  if (ad !== undefined && bd !== undefined && ad !== bd) return bd - ad
-  if (a.isPC !== b.isPC) return a.isPC ? -1 : 1
+  if (tiebreak === 'dex') {
+    const ad = dexScore(a)
+    const bd = dexScore(b)
+    if (ad !== undefined && bd !== undefined && ad !== bd) return bd - ad
+  } else if (tiebreak === 'pcs-first' && a.isPC !== b.isPC) {
+    return a.isPC ? -1 : 1
+  }
   return 0
 }
 
-export function sortByInitiative(combatants: readonly Combatant[]): Combatant[] {
-  return [...combatants].sort(compareInitiative)
+export function sortByInitiative(
+  combatants: readonly Combatant[],
+  tiebreak: InitiativeTiebreak = 'dex',
+): Combatant[] {
+  return [...combatants].sort((a, b) => compareInitiative(a, b, tiebreak))
 }
 
 /** Whose turn it is, or `undefined` if the encounter is empty. */
@@ -55,8 +74,11 @@ function takesTurn(c: Combatant): boolean {
  * Start combat: sort into initiative order, round 1, and make the first creature
  * that actually takes a turn active (skipping any surprised/dead leaders).
  */
-export function beginEncounter(e: Encounter): Encounter {
-  const combatants = sortByInitiative(e.combatants)
+export function beginEncounter(
+  e: Encounter,
+  tiebreak: InitiativeTiebreak = 'dex',
+): Encounter {
+  const combatants = sortByInitiative(e.combatants, tiebreak)
   const first = combatants.findIndex(takesTurn)
   return {
     ...e,

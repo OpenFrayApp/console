@@ -73,7 +73,7 @@ function monster(
   }
 }
 
-function pc(id: string, initiative: number): PlayerCharacter {
+function pc(id: string, initiative: number, dex?: number): PlayerCharacter {
   return {
     isPC: true,
     combatantId: id,
@@ -85,6 +85,8 @@ function pc(id: string, initiative: number): PlayerCharacter {
     hp: { current: 20, max: 20, temp: 0 },
     concentration: null,
     effects: [],
+    // Roster PCs carry ability scores; anon/quick PCs leave this undefined.
+    ...(dex !== undefined ? { abilities: { str: 10, dex, con: 10, int: 10, wis: 10, cha: 10 } } : {}),
   }
 }
 
@@ -127,7 +129,7 @@ describe('compareInitiative / sortByInitiative', () => {
     expect(sorted.map((c) => c.combatantId)).toEqual(['b', 'a'])
   })
 
-  it('breaks ties by Dex score (higher first)', () => {
+  it('breaks ties by Dex score (higher first) by default', () => {
     const lowDex = monster('low', 15, { dex: 8 })
     const highDex = monster('high', 15, { dex: 18 })
     expect(sortByInitiative([lowDex, highDex]).map((c) => c.combatantId)).toEqual([
@@ -136,9 +138,28 @@ describe('compareInitiative / sortByInitiative', () => {
     ])
   })
 
-  it('puts a PC before a monster on a tie', () => {
-    const sorted = sortByInitiative([monster('m', 15, { dex: 20 }), pc('p', 15)])
+  it('compares a roster PC and a monster by Dex in dex mode', () => {
+    // The roster PC carries abilities now, so its Dex tie-breaks against a monster.
+    const sorted = sortByInitiative([monster('m', 15, { dex: 8 }), pc('p', 15, 18)])
     expect(sorted.map((c) => c.combatantId)).toEqual(['p', 'm'])
+  })
+
+  it('tolerates a PC with no abilities in dex mode (falls to stable order)', () => {
+    // Anon / quick PCs have no Dex; the tie falls through to insertion order.
+    const sorted = sortByInitiative([monster('m', 15, { dex: 20 }), pc('p', 15)])
+    expect(sorted.map((c) => c.combatantId)).toEqual(['m', 'p'])
+  })
+
+  it('pcs-first mode puts a PC before a monster on a tie, ignoring Dex', () => {
+    const sorted = sortByInitiative([monster('m', 15, { dex: 20 }), pc('p', 15)], 'pcs-first')
+    expect(sorted.map((c) => c.combatantId)).toEqual(['p', 'm'])
+  })
+
+  it('manual mode leaves ties in insertion order', () => {
+    const hi = monster('hi', 15, { dex: 20 })
+    const lo = monster('lo', 15, { dex: 8 })
+    // Higher Dex would win in dex mode; manual keeps insertion order instead.
+    expect(sortByInitiative([lo, hi], 'manual').map((c) => c.combatantId)).toEqual(['lo', 'hi'])
   })
 
   it('is stable for fully-equal entries', () => {

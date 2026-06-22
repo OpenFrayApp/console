@@ -458,7 +458,7 @@ function App() {
   const addCombatant = (c: Combatant) => {
     const combatant =
       encounter.round > 0 ? { ...c, initiative: rollInit(initLabel(c), initMod(c)) } : c
-    dispatch({ type: 'add', combatant })
+    dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
     setSelectedId(combatant.combatantId)
   }
 
@@ -513,8 +513,8 @@ function App() {
       initiative: initiatives[c.combatantId] ?? c.initiative,
       effects: withSurprise(c),
     }))
-    const next = beginEncounter({ ...encounter, combatants })
-    dispatch({ type: 'begin' })
+    const next = beginEncounter({ ...encounter, combatants }, activeRules.initiativeTiebreak)
+    dispatch({ type: 'begin', tiebreak: activeRules.initiativeTiebreak })
     selectActive(next)
     autoRecharge(next)
     setInitPrompt(null)

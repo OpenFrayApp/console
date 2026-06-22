@@ -3,6 +3,7 @@
 
 import type { Combatant } from '../schema/combatant.ts'
 import type { Encounter } from '../schema/encounter.ts'
+import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import { beginEncounter, nextTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { setCurrentHp } from '../combat/resources.ts'
@@ -14,12 +15,14 @@ import { setCurrentHp } from '../combat/resources.ts'
  */
 
 export type EncounterAction =
-  | { type: 'begin' }
+  // `tiebreak` carries the active campaign's initiative-tie rule into the sort
+  // (defaults to 'dex' — the standard ruleset — when omitted, e.g. anon users).
+  | { type: 'begin'; tiebreak?: InitiativeTiebreak }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'stop' }
   | { type: 'nextTurn' }
-  | { type: 'add'; combatant: Combatant }
+  | { type: 'add'; combatant: Combatant; tiebreak?: InitiativeTiebreak }
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
   | { type: 'log'; message: string }
@@ -70,7 +73,7 @@ const indexOfId = (combatants: Combatant[], id: string | undefined): number => {
 export function encounterReducer(state: Encounter, action: EncounterAction): Encounter {
   switch (action.type) {
     case 'begin':
-      return { ...beginEncounter(state), paused: false }
+      return { ...beginEncounter(state, action.tiebreak), paused: false }
 
     case 'pause':
       return { ...state, paused: true }
@@ -87,7 +90,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
 
     case 'add': {
       const keepActive = activeId(state)
-      const combatants = sortByInitiative([...state.combatants, action.combatant])
+      const combatants = sortByInitiative([...state.combatants, action.combatant], action.tiebreak)
       return { ...state, combatants, activeIndex: indexOfId(combatants, keepActive) }
     }
 
