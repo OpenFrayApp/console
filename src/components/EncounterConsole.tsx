@@ -78,6 +78,7 @@ export function EncounterConsole({
   onRename,
   onEditPc,
   onEditPcDmNotes,
+  onEditCreature,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
@@ -88,6 +89,8 @@ export function EncounterConsole({
   onEditPc?: (pc: PlayerCharacter) => void
   /** Commit edited DM notes for a roster-backed PC (saves to the board + the DB). */
   onEditPcDmNotes?: (pc: PlayerCharacter, text: string) => void
+  /** Open the editor for a custom creature (saves to the library; the fight is untouched). */
+  onEditCreature?: (creature: MonsterCombatant) => void
   /** Keep the roll log in sync when a combatant is renamed. */
   onRename: (oldName: string, newName: string) => void
   selectedId: string | null
@@ -466,6 +469,15 @@ export function EncounterConsole({
                   className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Edit character
+                </button>
+              )}
+              {!selected.isPC && selected.creatureId.startsWith('custom:') && onEditCreature && (
+                <button
+                  type="button"
+                  onClick={() => onEditCreature(selected)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Edit creature
                 </button>
               )}
             </div>

@@ -3,7 +3,7 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
-import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
+import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
 import { instantiate } from './combat/combatant.ts'
 import { resolveMaxHp } from './combat/hp.ts'
@@ -43,6 +43,8 @@ import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
+import { CustomMonsterForm } from './components/CustomMonsterForm.tsx'
+import { creatureToDraft, emptyDraft, type MonsterDraft } from './components/customMonster.ts'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
@@ -148,6 +150,9 @@ function App() {
   // Editing a roster-backed PC from the encounter: the saved character to edit and the
   // on-board combatant to re-sync on save. Null when the editor is closed.
   const [encounterPcEdit, setEncounterPcEdit] = useState<{ pc: RosterPc; combatantId: string } | null>(null)
+  // Editing a custom creature from the encounter: the library creature's draft + id. The
+  // in-progress fight is NOT mutated (snapshot rule); only the library/DB is updated.
+  const [encounterCreatureEdit, setEncounterCreatureEdit] = useState<{ draft: MonsterDraft; editId: string } | null>(null)
   const [encounter, dispatch] = useReducer(
     encounterReducer,
     undefined,
@@ -381,6 +386,14 @@ function App() {
     if (pc) handleUpdatePc({ ...pc, dmNotes: notes })
   }
 
+  // Edit a custom creature from the encounter: open the editor seeded from the library
+  // creature. Saving updates the library/DB only — the on-board snapshot stays put
+  // (AGENTS.md rule #4). A no-op if the creature was deleted from the library.
+  const handleEditEncounterCreature = (c: MonsterCombatant) => {
+    const creature = customCreatures.find((cr) => cr.id === c.creatureId)
+    if (creature) setEncounterCreatureEdit({ draft: creatureToDraft(creature), editId: creature.id })
+  }
+
   // The view toggle opens the compendium on its default (creatures) tab; only the
   // create-a-character flow targets the Players tab.
   const handleViewChange = (next: View) => {
@@ -599,6 +612,7 @@ function App() {
             onRename={renameInLog}
             onEditPc={handleEditEncounterPc}
             onEditPcDmNotes={handleEditEncounterPcDmNotes}
+            onEditCreature={handleEditEncounterCreature}
             selectedId={selectedId}
             onSelect={setSelectedId}
             started={started}
@@ -629,6 +643,16 @@ function App() {
             })
           }
         }}
+      />
+
+      {/* Editing a custom creature from the encounter: saves to the library/DB only;
+          the in-progress fight keeps its snapshot (AGENTS.md rule #4). */}
+      <CustomMonsterForm
+        open={encounterCreatureEdit != null}
+        initialDraft={encounterCreatureEdit?.draft ?? emptyDraft()}
+        editId={encounterCreatureEdit?.editId ?? null}
+        onClose={() => setEncounterCreatureEdit(null)}
+        onSubmit={handleUpdateCreature}
       />
 
       {initPrompt && (
