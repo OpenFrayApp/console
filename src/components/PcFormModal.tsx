@@ -70,6 +70,7 @@ interface PcDraft {
   campaignId: string
   name: string
   alignment: string
+  faith: string
   edition: Edition
   ac: string
   hp: string
@@ -92,6 +93,7 @@ function emptyDraft(): PcDraft {
     campaignId: '',
     name: '',
     alignment: '',
+    faith: '',
     edition: '5.5',
     ac: '',
     hp: '',
@@ -116,6 +118,7 @@ function draftFromPc(pc: RosterPc): PcDraft {
     campaignId: pc.campaignId ?? '',
     name: pc.name,
     alignment: pc.alignment ?? '',
+    faith: pc.faith ?? '',
     edition: pc.edition ?? '5.5',
     ac: str(pc.ac),
     hp: str(pc.maxHp),
@@ -181,6 +184,7 @@ function buildPc(d: PcDraft, id: string): RosterPc {
     id,
     name: d.name.trim(),
     alignment: d.alignment || undefined,
+    faith: d.faith.trim() || undefined,
     edition: d.edition,
     ac: num(d.ac),
     maxHp: Math.max(1, num(d.hp)),
@@ -430,6 +434,17 @@ export function PcFormModal({
           </Section>
 
           <Section title="Personality & backstory">
+            <label className="block space-y-1">
+              <span className={LABEL}>Faith</span>
+              <input
+                value={d.faith}
+                onChange={(e) => patch({ faith: e.target.value })}
+                placeholder="Deity or faith (clerics, paladins…)"
+                aria-label="Faith"
+                {...OFF}
+                className={FIELD}
+              />
+            </label>
             <LineList label="Personality Traits" addLabel="+ Add trait" items={d.personalityTraits} onChange={setList('personalityTraits')} />
             <LineList label="Ideals" addLabel="+ Add ideal" items={d.ideals} onChange={setList('ideals')} />
             <LineList label="Bonds" addLabel="+ Add bond" items={d.bonds} onChange={setList('bonds')} />

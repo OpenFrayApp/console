@@ -349,6 +349,7 @@ export function EncounterConsole({
                   languages={selected.languages}
                   senses={selected.senses}
                   passivePerception={selected.passivePerception}
+                  faith={selected.faith}
                   personalityTraits={selected.personalityTraits}
                   ideals={selected.ideals}
                   bonds={selected.bonds}

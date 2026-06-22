@@ -463,6 +463,7 @@ export function Compendium({
             vulnerabilities={selectedPc.vulnerabilities}
             languages={selectedPc.languages}
             senses={selectedPc.senses}
+            faith={selectedPc.faith}
             personalityTraits={selectedPc.personalityTraits}
             ideals={selectedPc.ideals}
             bonds={selectedPc.bonds}

@@ -37,6 +37,8 @@ export interface LimitedUseState {
  */
 export interface CharacterDetails {
   alignment?: string
+  /** Deity / faith the character follows — matters for clerics & paladins. */
+  faith?: string
   personalityTraits?: string[]
   ideals?: string[]
   bonds?: string[]

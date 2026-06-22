@@ -35,6 +35,7 @@ describe('PcStatBlock', () => {
     render(
       <PcStatBlock
         {...base}
+        faith={'Lathander'}
         personalityTraits={['Brave to a fault']}
         ideals={['Protect the weak']}
         bonds={['My village']}
@@ -43,6 +44,8 @@ describe('PcStatBlock', () => {
       />,
     )
     expect(screen.getByText('Personality')).toBeInTheDocument()
+    expect(screen.getByText('Faith')).toBeInTheDocument()
+    expect(screen.getByText('Lathander')).toBeInTheDocument()
     expect(screen.getByText('Personality Traits')).toBeInTheDocument()
     expect(screen.getByText('Brave to a fault')).toBeInTheDocument()
     expect(screen.getByText('Protect the weak')).toBeInTheDocument()

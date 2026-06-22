@@ -53,6 +53,7 @@ export function PcStatBlock({
   languages,
   senses,
   passivePerception,
+  faith,
   personalityTraits,
   ideals,
   bonds,
@@ -79,6 +80,7 @@ export function PcStatBlock({
   senses?: Senses
   /** Passive Perception only (anonymous quick PCs, which carry no full senses). */
   passivePerception?: number
+  faith?: string
   personalityTraits?: string[]
   ideals?: string[]
   bonds?: string[]
@@ -105,7 +107,7 @@ export function PcStatBlock({
       <span className="text-slate-400 dark:text-slate-500">—</span>
     )
   const hasPersonality =
-    !!(personalityTraits?.length || ideals?.length || bonds?.length || flaws?.length)
+    !!(faith?.trim() || personalityTraits?.length || ideals?.length || bonds?.length || flaws?.length)
 
   return (
     <div className="@container flex flex-1 flex-col space-y-4">
@@ -160,6 +162,14 @@ export function PcStatBlock({
         <div>
           <h4 className={SECTION_HEADING}>Personality</h4>
           <div className="space-y-2">
+            {faith?.trim() && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                  Faith
+                </p>
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{faith}</p>
+              </div>
+            )}
             <LineGroup label="Personality Traits" items={personalityTraits} />
             <LineGroup label="Ideals" items={ideals} />
             <LineGroup label="Bonds" items={bonds} />

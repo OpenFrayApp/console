@@ -72,6 +72,7 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     // Carry the DM's character notes onto the combatant so the encounter shows the
     // same stat block as the compendium (display-only; the campaign tag stays behind).
     alignment: pc.alignment,
+    faith: pc.faith,
     personalityTraits: pc.personalityTraits,
     ideals: pc.ideals,
     bonds: pc.bonds,
