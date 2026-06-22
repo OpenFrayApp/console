@@ -144,6 +144,14 @@ describe('encounterReducer', () => {
     expect(e.shortRests).toBe(2)
   })
 
+  it('clears all foes but keeps the party', () => {
+    let e = withCombatants(monster('foe1', 12), monster('foe2', 8))
+    e = encounterReducer(e, { type: 'add', combatant: pc('hero', 20, 20) })
+    e = encounterReducer(e, { type: 'clearFoes' })
+    expect(e.combatants.map((c) => c.combatantId)).toEqual(['hero'])
+    expect(e.activeIndex).toBe(0)
+  })
+
   it('appends log entries', () => {
     let e = encounterReducer(emptyEncounter(), { type: 'log', message: 'Goblin hits' })
     e = encounterReducer(e, { type: 'log', message: 'Goblin misses' })

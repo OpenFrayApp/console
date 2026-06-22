@@ -307,6 +307,7 @@ export function EncounterConsole({
             started={started}
             paused={paused}
             canBegin={combatants.length > 0}
+            hasFoes={creatures.length > 0}
             dispatch={dispatch}
             onBegin={onBegin}
             onNextTurn={onNextTurn}

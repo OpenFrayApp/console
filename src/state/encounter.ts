@@ -27,6 +27,8 @@ export type EncounterAction =
   | { type: 'longRest' }
   /** Short rest: set new current HP for the given combatants; bump the short-rest count. */
   | { type: 'shortRest'; hp: Record<string, number> }
+  /** Clear the board of enemies — remove every foe, keeping friendly combatants. */
+  | { type: 'clearFoes' }
   /** Replace the whole encounter — used when hydrating from the cloud on sign-in. */
   | { type: 'load'; encounter: Encounter }
 
@@ -113,6 +115,11 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
           action.hp[c.combatantId] != null ? setCurrentHp(c, action.hp[c.combatantId]) : c,
         ),
       }
+
+    // Sweep the board between fights: drop every foe, keep the party. Only offered
+    // outside combat, so the turn cursor resets to the top.
+    case 'clearFoes':
+      return { ...state, activeIndex: 0, combatants: state.combatants.filter((c) => !isFoe(c)) }
 
     case 'load':
       return action.encounter
