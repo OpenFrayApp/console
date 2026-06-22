@@ -454,7 +454,9 @@ function App() {
               <CrossedSwordsIcon />
             </span>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
+              <h1 className="text-xl font-semibold tracking-tight">
+                <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+              </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 DnD 5e combat console
               </p>

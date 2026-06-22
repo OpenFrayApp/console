@@ -67,7 +67,9 @@ export function SignUpPage({
       <div className="mx-auto flex min-h-full max-w-5xl flex-col px-6 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">OpenFray</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+            </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">DnD 5e combat console</p>
           </div>
           <button
