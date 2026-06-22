@@ -22,12 +22,14 @@ const StopIcon = () => (
   </svg>
 )
 const BroomIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 3 13 11" />
-    <path d="M10.5 8.5 15.5 13.5" />
-    <path d="M12 13 9 20" />
-    <path d="M14 14 12.5 20.5" />
-    <path d="M9.6 10.9 6.5 17.5" />
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {/* handle */}
+    <path d="M20 4 12 12" />
+    {/* bristle head (bound at the top, flaring to the sweeping edge) */}
+    <path d="M9.5 9.5 14.5 14.5 8 21 2.5 15.5Z" />
+    {/* bristle lines */}
+    <path d="M11 11 5 17" />
+    <path d="M12.5 12.5 6.5 18.5" />
   </svg>
 )
 
