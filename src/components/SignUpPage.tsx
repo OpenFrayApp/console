@@ -17,12 +17,12 @@ const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
   },
   {
     title: 'Custom creatures',
-    body: 'Build homebrew and SRD-excluded creatures (Beholder, Mind Flayer…) with the full stat-block editor.',
+    body: 'Build your own homebrew creatures with the full stat-block editor — anything the SRD leaves out.',
     icon: <path d="m14.5 17.5 4 4M11 3 8 6m0 0L3 11l3 3 5-5M8 6l3 3m6.5 1.5L21 7l-4-4-3.5 3.5m4 4-9 9-3-3 9-9" />,
   },
   {
-    title: 'Campaign settings',
-    body: 'Pick your edition — DnD 5.5 (2024) or 5.0 (2014) — and name your campaign.',
+    title: 'Campaigns',
+    body: 'Run campaigns with their own edition and house rules — crit damage, surprise, creature HP — applied across your fights.',
     icon: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />,
   },
   {
