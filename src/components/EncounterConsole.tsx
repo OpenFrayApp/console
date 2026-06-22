@@ -7,7 +7,7 @@ import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/com
 import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
-import type { EncounterAction } from '../state/encounter.ts'
+import { moveById, type EncounterAction } from '../state/encounter.ts'
 import {
   applyDamage,
   applyHealing,
@@ -117,8 +117,9 @@ export function EncounterConsole({
 
   // The action whose resolver modal is open (the selected creature is the attacker).
   const [actionFor, setActionFor] = useState<Action | null>(null)
-  // The combatant being dragged to manually reorder the turn order (combat only).
-  const [dragId, setDragId] = useState<string | null>(null)
+  // Manual reorder drag (combat only): the dragged combatant and the row it's hovering,
+  // so the list can show a live preview before the drop commits.
+  const [drag, setDrag] = useState<{ id: string; overId: string | null } | null>(null)
   // The spell being cast from the selected creature's stat block.
   const [castingSpell, setCastingSpell] = useState<SpellRef | null>(null)
   // Switching the selected combatant closes a stale resolver / cast modal.
@@ -290,21 +291,33 @@ export function EncounterConsole({
       onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
       onHpInput={(raw) => applyHpInput(c, raw, false)}
       reorderable={started && c.status !== 'dead'}
-      onReorderStart={() => setDragId(c.combatantId)}
-      onReorderEnd={() => setDragId(null)}
-      onReorderDrop={() => {
-        if (dragId && dragId !== c.combatantId) {
-          dispatch({ type: 'reorder', id: dragId, toId: c.combatantId })
-        }
-        setDragId(null)
-      }}
+      dragging={drag?.id === c.combatantId}
+      onReorderStart={() => setDrag({ id: c.combatantId, overId: null })}
+      onReorderEnd={() => setDrag(null)}
+      onReorderOver={() =>
+        setDrag((d) =>
+          d && d.id !== c.combatantId && d.overId !== c.combatantId
+            ? { ...d, overId: c.combatantId }
+            : d,
+        )
+      }
     />
   )
+  // While dragging, render a preview order (the dragged row moved to where it hovers)
+  // so the list visibly makes space; the drop then commits the same move.
+  const view =
+    drag?.overId && drag.id !== drag.overId ? moveById(combatants, drag.id, drag.overId) : combatants
+  const commitReorder = () => {
+    if (drag?.overId && drag.id !== drag.overId) {
+      dispatch({ type: 'reorder', id: drag.id, toId: drag.overId })
+    }
+    setDrag(null)
+  }
   // Group by disposition, not isPC: a foe quick add belongs with the Creatures.
-  const players = combatants.filter((c) => !isFoe(c))
-  const creatures = combatants.filter((c) => isFoe(c))
-  const living = combatants.filter((c) => c.status !== 'dead')
-  const dead = combatants.filter((c) => c.status === 'dead')
+  const players = view.filter((c) => !isFoe(c))
+  const creatures = view.filter((c) => isFoe(c))
+  const living = view.filter((c) => c.status !== 'dead')
+  const dead = view.filter((c) => c.status === 'dead')
 
   return (
     <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
@@ -324,7 +337,18 @@ export function EncounterConsole({
             onNextTurn={onNextTurn}
           />
         </div>
-        <div className="mt-2 flex-1 space-y-2 overflow-auto px-1 py-1">
+        <div
+          className="mt-2 flex-1 space-y-2 overflow-auto px-1 py-1"
+          onDragOver={drag ? (e) => e.preventDefault() : undefined}
+          onDrop={
+            drag
+              ? (e) => {
+                  e.preventDefault()
+                  commitReorder()
+                }
+              : undefined
+          }
+        >
           {combatants.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Add creatures to build the encounter.

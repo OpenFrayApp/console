@@ -38,6 +38,27 @@ export type EncounterAction =
 const activeId = (e: Encounter): string | undefined =>
   e.combatants[e.activeIndex]?.combatantId
 
+/**
+ * Move `id` to where `toId` sits — dragging down drops below the target, up drops
+ * above it. Returns the same array reference when nothing moves. Pure; shared by the
+ * reorder reducer and the drag-preview in the UI so both order rows identically.
+ */
+export function moveById<T extends { combatantId: string }>(
+  list: T[],
+  id: string,
+  toId: string,
+): T[] {
+  if (id === toId) return list
+  const from = list.findIndex((c) => c.combatantId === id)
+  const to = list.findIndex((c) => c.combatantId === toId)
+  if (from < 0 || to < 0) return list
+  const dragged = list[from]
+  const without = list.filter((c) => c.combatantId !== id)
+  const targetIdx = without.findIndex((c) => c.combatantId === toId)
+  const insertAt = from < to ? targetIdx + 1 : targetIdx
+  return [...without.slice(0, insertAt), dragged, ...without.slice(insertAt)]
+}
+
 const indexOfId = (combatants: Combatant[], id: string | undefined): number => {
   if (!id) return 0
   const i = combatants.findIndex((c) => c.combatantId === id)
@@ -128,19 +149,13 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     // initiative to sit between its new neighbours, so the order holds (and turn
     // ownership is re-derived by id, never index — the loop rule).
     case 'reorder': {
-      const { id, toId } = action
-      if (id === toId) return state
-      const from = state.combatants.findIndex((c) => c.combatantId === id)
-      const to = state.combatants.findIndex((c) => c.combatantId === toId)
-      if (from < 0 || to < 0) return state
-      const dragged = state.combatants[from]
-      const without = state.combatants.filter((c) => c.combatantId !== id)
-      const targetIdx = without.findIndex((c) => c.combatantId === toId)
-      // Dragging down drops below the target; dragging up drops above it.
-      const insertAt = from < to ? targetIdx + 1 : targetIdx
-      const order = [...without.slice(0, insertAt), dragged, ...without.slice(insertAt)]
-      const above = order[insertAt - 1]
-      const below = order[insertAt + 1]
+      const order = moveById(state.combatants, action.id, action.toId)
+      if (order === state.combatants) return state
+      const at = order.findIndex((c) => c.combatantId === action.id)
+      const above = order[at - 1]
+      const below = order[at + 1]
+      // Sit between the new neighbours (a midpoint is fractional but the UI floors it,
+      // so it just ranks above the lower neighbour and never alters anyone else).
       const initiative =
         above && below
           ? (above.initiative + below.initiative) / 2
@@ -148,9 +163,9 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
             ? above.initiative - 1
             : below
               ? below.initiative + 1
-              : dragged.initiative
+              : order[at].initiative
       const combatants = order.map((c) =>
-        c.combatantId === id ? { ...c, initiative } : c,
+        c.combatantId === action.id ? { ...c, initiative } : c,
       )
       return { ...state, combatants, activeIndex: indexOfId(combatants, activeId(state)) }
     }

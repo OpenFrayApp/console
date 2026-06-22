@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { useRef } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import { hpTier, type HpTier } from '../combat/resources.ts'
 import { isFoe } from '../combat/combatant.ts'
@@ -44,14 +44,16 @@ interface CombatantRowProps {
   onRemove?: () => void
   /** Click-to-edit current HP from a raw input ("12", "+5", "-3"). */
   onHpInput?: (raw: string) => void
-  /** Show a drag handle and accept drops, to manually reorder the turn order. */
+  /** Show a drag handle, to manually reorder the turn order. */
   reorderable?: boolean
+  /** This row is the one currently being dragged (rendered as a faint placeholder). */
+  dragging?: boolean
   /** This row's handle started a drag. */
   onReorderStart?: () => void
   /** A drag ended (committed or cancelled). */
   onReorderEnd?: () => void
-  /** Something was dropped onto this row — move the dragged combatant here. */
-  onReorderDrop?: () => void
+  /** The drag is hovering this row — the parent moves the dragged row here as a preview. */
+  onReorderOver?: () => void
 }
 
 /**
@@ -68,19 +70,21 @@ export function CombatantRow({
   onRemove,
   onHpInput,
   reorderable = false,
+  dragging = false,
   onReorderStart,
   onReorderEnd,
-  onReorderDrop,
+  onReorderOver,
 }: CombatantRowProps) {
   const { hp, status } = combatant
   const dead = status === 'dead'
   const downed = dead || status === 'unconscious'
   const tier = hpTier(combatant)
   const showTier = !downed && tier !== 'healthy'
-  const [dropOver, setDropOver] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
 
   return (
     <div
+      ref={rowRef}
       aria-current={active ? 'true' : undefined}
       role={onSelect ? 'button' : undefined}
       tabIndex={onSelect ? 0 : undefined}
@@ -95,19 +99,18 @@ export function CombatantRow({
             }
           : undefined
       }
-      onDragOver={reorderable ? (e) => { e.preventDefault(); setDropOver(true) } : undefined}
-      onDragLeave={reorderable ? () => setDropOver(false) : undefined}
-      onDrop={
+      // The whole list is the drop zone; each row reports when the drag hovers it so
+      // the parent can move the dragged row here as a live preview.
+      onDragOver={
         reorderable
           ? (e) => {
               e.preventDefault()
-              setDropOver(false)
-              onReorderDrop?.()
+              onReorderOver?.()
             }
           : undefined
       }
       className={cx(
-        'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2',
+        'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2 transition-opacity',
         // Disposition-coded left edge: friends sky, foes rose.
         isFoe(combatant) ? 'border-l-rose-400 dark:border-l-rose-500' : 'border-l-sky-400 dark:border-l-sky-500',
         onSelect && 'cursor-pointer',
@@ -115,7 +118,7 @@ export function CombatantRow({
           ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
         selected && 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-950',
-        dropOver && 'outline outline-2 outline-indigo-400',
+        dragging && 'opacity-40',
         dead && 'opacity-50',
       )}
     >
@@ -125,6 +128,8 @@ export function CombatantRow({
           onDragStart={(e) => {
             e.dataTransfer.effectAllowed = 'move'
             e.dataTransfer.setData('text/plain', combatant.combatantId)
+            // Drag a snapshot of the whole row, not just the grip.
+            if (rowRef.current) e.dataTransfer.setDragImage(rowRef.current, 24, 20)
             onReorderStart?.()
           }}
           onDragEnd={() => onReorderEnd?.()}
@@ -145,7 +150,8 @@ export function CombatantRow({
       )}
 
       <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
-        {combatant.initiative}
+        {/* Manual reorder can store a fractional rank; the DM only ever sees the integer. */}
+        {Math.floor(combatant.initiative)}
       </div>
 
       <div className="min-w-0 flex-1">

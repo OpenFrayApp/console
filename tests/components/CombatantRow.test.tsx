@@ -206,20 +206,22 @@ describe('CombatantRow', () => {
 
   it('shows a drag handle and fires reorder callbacks when reorderable', () => {
     const onReorderStart = vi.fn()
-    const onReorderDrop = vi.fn()
+    const onReorderOver = vi.fn()
     const { container } = render(
       <CombatantRow
         combatant={monster()}
         reorderable
         onReorderStart={onReorderStart}
-        onReorderDrop={onReorderDrop}
+        onReorderOver={onReorderOver}
       />,
     )
     const handle = screen.getByLabelText(/Drag to reorder/)
-    fireEvent.dragStart(handle, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
+    fireEvent.dragStart(handle, {
+      dataTransfer: { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' },
+    })
     expect(onReorderStart).toHaveBeenCalledOnce()
-    fireEvent.drop(container.firstElementChild as Element)
-    expect(onReorderDrop).toHaveBeenCalledOnce()
+    fireEvent.dragOver(container.firstElementChild as Element)
+    expect(onReorderOver).toHaveBeenCalledOnce()
   })
 
   it('has no drag handle when not reorderable', () => {
