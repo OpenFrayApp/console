@@ -77,9 +77,12 @@ dice with an effect-aware, clearable log. Players and quick NPCs are lightweight
 the SRD compendium and rollable spells are built in. **Accounts are live:** the app
 runs fully anonymous in the browser, and signing up (free, email + password) saves
 your in-progress fights and your **custom creatures** to the cloud and syncs them
-across devices — build a custom boss once, add it to any encounter. Still to
-come: a shared read-only player view and a saved party roster; content imports
-remain a best-effort, later layer. The UI is functional but still evolving.
+across devices — build a custom boss once, add it to any encounter. **Campaigns**
+carry their own edition and house rules (critical-hit damage, surprise handling,
+creature HP) that drive the console when one is active, and you can manage your
+account in-app — change email or password, or delete the account and all its data.
+Still to come: a shared read-only player view and a saved party roster; content
+imports remain a best-effort, later layer. The UI is functional but still evolving.
 
 ## Content & licensing
 
