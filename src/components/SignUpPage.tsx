@@ -85,7 +85,7 @@ export function SignUpPage({
           {/* Value proposition */}
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Create an account to keep your table.
+              Save your table to the cloud.
             </h2>
             <p className="mt-2 max-w-xl text-slate-600 dark:text-slate-400">
               OpenFray runs great without an account — SRD monsters, quick adds, your party, and the
@@ -113,7 +113,7 @@ export function SignUpPage({
                 </li>
               ))}
             </ul>
-            <p className="mt-8 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
+            <p className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
               <span className="font-semibold">Free, and always will be.</span> No ads, no
               paywall, no premium tier — OpenFray is a passion project for the table.
             </p>
