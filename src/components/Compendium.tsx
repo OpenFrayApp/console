@@ -305,8 +305,7 @@ export function Compendium({
         {tab === 'campaigns' && createGated ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
-              Campaigns are saved to your account. Sign up to create one and set its
-              edition and house rules.
+              Campaigns are saved to your account. Sign up to create one.
             </p>
             <button
               type="button"
