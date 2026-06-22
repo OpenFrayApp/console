@@ -69,6 +69,22 @@ function BookIcon() {
   )
 }
 
+/** The OpenFray brand mark — crossed swords, matching the site favicon/logo. */
+function CrossedSwordsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7" aria-hidden="true">
+      <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+      <line x1="13" y1="19" x2="19" y2="13" />
+      <line x1="16" y1="16" x2="20" y2="20" />
+      <line x1="19" y1="21" x2="21" y2="19" />
+      <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+      <line x1="5" y1="14" x2="9" y2="18" />
+      <line x1="7" y1="17" x2="4" y2="20" />
+      <line x1="3" y1="19" x2="5" y2="21" />
+    </svg>
+  )
+}
+
 /** Encounter / Compendium as an icon segmented control. */
 function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
   const cell = (active: boolean) =>
@@ -414,11 +430,16 @@ function App() {
       <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div className="flex items-center gap-4 lg:gap-0">
           {/* Title spans the initiative column so Group/Cast line up with the stat block. */}
-          <div className="lg:w-[28rem] lg:shrink-0 lg:pr-4">
-            <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              DnD 5e combat console
-            </p>
+          <div className="flex items-center gap-2.5 lg:w-[28rem] lg:shrink-0 lg:pr-4">
+            <span className="text-indigo-500 dark:text-indigo-400">
+              <CrossedSwordsIcon />
+            </span>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">OpenFray</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                DnD 5e combat console
+              </p>
+            </div>
           </div>
           {view === 'encounter' && encounter.combatants.length > 0 && (
             <div className="flex items-center gap-2 lg:pl-4">
