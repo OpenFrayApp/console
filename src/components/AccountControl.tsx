@@ -1,27 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import { useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { AccountPanel } from './AccountPanel.tsx'
 
 /**
- * Header account control: the signed-in email + Sign out, or a "Sign up" button
- * that opens the sign-up page when anonymous. Renders nothing until Supabase is
- * configured, so an unconfigured build stays anonymous-only.
+ * Header account control: the signed-in email (click to manage the account) +
+ * Sign out, or a "Sign up" button when anonymous. Renders nothing until Supabase
+ * is configured, so an unconfigured build stays anonymous-only.
  */
 export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
   const { user, loading, configured, signOut } = useAuth()
+  const [accountOpen, setAccountOpen] = useState(false)
 
   if (!configured || loading) return null
 
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        <span
-          className="hidden max-w-[12rem] truncate text-sm text-slate-500 dark:text-slate-400 sm:inline"
-          title={user.email}
+        <button
+          type="button"
+          onClick={() => setAccountOpen(true)}
+          className="hidden max-w-[12rem] truncate text-sm text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200 sm:inline"
+          title="Manage your account"
         >
           {user.email}
-        </span>
+        </button>
         <button
           type="button"
           onClick={() => signOut()}
@@ -29,6 +34,7 @@ export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
         >
           Sign out
         </button>
+        {accountOpen && <AccountPanel onClose={() => setAccountOpen(false)} />}
       </div>
     )
   }

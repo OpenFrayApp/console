@@ -17,6 +17,12 @@ export interface AuthState {
   signUp: (email: string, password: string) => Promise<AuthResult>
   signIn: (email: string, password: string) => Promise<AuthResult>
   signOut: () => Promise<void>
+  /** Change the account email (Supabase emails a confirmation link first). */
+  updateEmail: (email: string) => Promise<AuthResult>
+  /** Set a new password (subject to the project's strength/leaked-password rules). */
+  updatePassword: (password: string) => Promise<AuthResult>
+  /** Permanently delete the account and all its data, then sign out (GDPR erasure). */
+  deleteAccount: () => Promise<AuthResult>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)
@@ -30,6 +36,9 @@ const ANONYMOUS: AuthState = {
   signUp: async () => ({ error: 'Sign-in is not configured yet.' }),
   signIn: async () => ({ error: 'Sign-in is not configured yet.' }),
   signOut: async () => {},
+  updateEmail: async () => ({ error: 'Sign-in is not configured yet.' }),
+  updatePassword: async () => ({ error: 'Sign-in is not configured yet.' }),
+  deleteAccount: async () => ({ error: 'Sign-in is not configured yet.' }),
 }
 
 export function useAuth(): AuthState {

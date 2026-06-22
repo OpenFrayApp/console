@@ -50,9 +50,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase?.auth.signOut()
   }
 
+  const updateEmail = async (email: string): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Sign-in is not configured yet.' }
+    // Supabase doesn't change the email until the user confirms via the link(s) it
+    // sends; success here just means the confirmation email is on its way.
+    const { error } = await supabase.auth.updateUser({ email })
+    return { error: error?.message ?? null }
+  }
+
+  const updatePassword = async (password: string): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Sign-in is not configured yet.' }
+    const { error } = await supabase.auth.updateUser({ password })
+    return { error: error?.message ?? null }
+  }
+
+  const deleteAccount = async (): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Sign-in is not configured yet.' }
+    // Self-delete can't use the admin API from the browser, so this calls a
+    // security-definer SQL function (delete_account) that erases the caller's data
+    // and auth row. On success we sign out — the session is already invalid.
+    const { error } = await supabase.rpc('delete_account')
+    if (error) return { error: error.message }
+    await supabase.auth.signOut()
+    return { error: null }
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, configured: Boolean(supabase), signUp, signIn, signOut }}
+      value={{
+        user,
+        loading,
+        configured: Boolean(supabase),
+        signUp,
+        signIn,
+        signOut,
+        updateEmail,
+        updatePassword,
+        deleteAccount,
+      }}
     >
       {children}
     </AuthContext.Provider>
