@@ -27,7 +27,6 @@ const ABILITY_LABEL: Record<Ability, string> = {
 }
 
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
-const signed = (v: string): number => Math.floor(Number(v) || 0)
 const score = (v: string): number => Math.max(1, Math.min(30, Math.floor(Number(v) || 10)))
 const list = (v: string): string[] =>
   v
@@ -72,7 +71,6 @@ export function PcFormModal({
     name: '',
     ac: '',
     hp: '',
-    init: '',
     pp: '',
     speed: '',
     languages: '',
@@ -90,7 +88,6 @@ export function PcFormModal({
       name: pc?.name ?? '',
       ac: pc?.ac != null ? String(pc.ac) : '',
       hp: pc?.maxHp != null ? String(pc.maxHp) : '',
-      init: pc?.initiativeMod != null ? String(pc.initiativeMod) : '',
       pp: pc?.passivePerception != null ? String(pc.passivePerception) : '',
       speed: pc?.speed ? speedLines(pc.speed).join(', ') : '',
       languages: pc?.languages?.join(', ') ?? '',
@@ -128,7 +125,6 @@ export function PcFormModal({
       name,
       ac: num(f.ac),
       maxHp: Math.max(1, num(f.hp)),
-      initiativeMod: f.init ? signed(f.init) : undefined,
       passivePerception: f.pp ? num(f.pp) : undefined,
       speed: Object.keys(speed).length ? speed : undefined,
       languages: list(f.languages).length ? list(f.languages) : undefined,
@@ -199,21 +195,15 @@ export function PcFormModal({
               <input value={f.hp} onChange={set('hp')} aria-label="Max HP" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
             </label>
             <label className="block space-y-1">
-              <span className={LABEL}>Init +</span>
-              <input value={f.init} onChange={set('init')} aria-label="Initiative modifier" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block space-y-1">
               <span className={LABEL}>Passive Perception</span>
               <input value={f.pp} onChange={set('pp')} aria-label="Passive Perception" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
             </label>
-            <label className="block space-y-1">
-              <span className={LABEL}>Speed</span>
-              <input value={f.speed} onChange={set('speed')} placeholder="30, Climb 12" aria-label="Speed" {...NO_AUTOFILL} className={FIELD} />
-            </label>
           </div>
+
+          <label className="block space-y-1">
+            <span className={LABEL}>Speed</span>
+            <input value={f.speed} onChange={set('speed')} placeholder="30, Climb 12" aria-label="Speed" {...NO_AUTOFILL} className={FIELD} />
+          </label>
 
           <div className="space-y-1">
             <span className={LABEL}>Ability scores</span>

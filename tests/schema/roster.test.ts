@@ -9,7 +9,6 @@ const base: RosterPc = {
   name: 'Thalia',
   ac: 16,
   maxHp: 38,
-  initiativeMod: 2,
   passivePerception: 14,
   languages: ['Common', 'Elvish'],
   speed: { walk: 30 },
@@ -27,7 +26,7 @@ describe('rosterPcToCombatant', () => {
     expect(c.ac).toBe(16)
     expect(c.hp).toEqual({ current: 38, max: 38, temp: 0 })
     expect(c.initiative).toBe(0)
-    expect(c.initiativeMod).toBe(2)
+    expect(c.initiativeMod).toBe(2) // derived from DEX 14
     expect(c.status).toBe('active')
     expect(c.concentration).toBeNull()
     expect(c.effects).toEqual([])
@@ -49,10 +48,16 @@ describe('rosterPcToCombatant', () => {
     expect('campaignId' in c).toBe(false)
   })
 
-  it('clamps HP and AC to safe minimums', () => {
+  it('derives the initiative modifier from Dexterity', () => {
+    expect(rosterPcToCombatant({ ...base, abilities: { ...base.abilities!, dex: 20 } }).initiativeMod).toBe(5)
+    expect(rosterPcToCombatant({ ...base, abilities: { ...base.abilities!, dex: 7 } }).initiativeMod).toBe(-2)
+  })
+
+  it('clamps HP and AC, and defaults initiative to 0 without abilities', () => {
     const c = rosterPcToCombatant({ id: 'p', name: 'Weak', ac: 0, maxHp: 0 })
     expect(c.hp).toEqual({ current: 1, max: 1, temp: 0 })
     expect(c.ac).toBe(0)
+    expect(c.initiativeMod).toBe(0)
   })
 
   it('gives each instantiation a distinct combatant id', () => {

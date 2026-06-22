@@ -14,7 +14,6 @@ const pc: RosterPc = {
   name: 'Thalia',
   ac: 16,
   maxHp: 38,
-  initiativeMod: 2,
   passivePerception: 14,
   languages: ['Common'],
   speed: { walk: 30, climb: 15 },

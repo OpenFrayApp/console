@@ -68,9 +68,7 @@ export function PcCard({
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
         <Row label="Armor Class" value={String(pc.ac)} />
         <Row label="Hit Points" value={String(pc.maxHp)} />
-        {pc.initiativeMod != null && (
-          <Row label="Initiative" value={pc.initiativeMod >= 0 ? `+${pc.initiativeMod}` : String(pc.initiativeMod)} />
-        )}
+        {pc.abilities && <Row label="Initiative" value={modOf(pc.abilities.dex)} />}
         {pc.passivePerception != null && (
           <Row label="Passive Perception" value={String(pc.passivePerception)} />
         )}

@@ -4,6 +4,11 @@
 import type { AbilityScores, Speeds } from './primitives.ts'
 import type { PlayerCharacter } from './combatant.ts'
 
+/** The 5e ability modifier for a score (10–11 → 0, 14 → +2, 8 → −1). */
+export function abilityMod(score: number): number {
+  return Math.floor((score - 10) / 2)
+}
+
 /**
  * A durable player character a signed-up user keeps in their party roster — the
  * board facts the DM wants on a PC, saved once and reused across encounters.
@@ -26,8 +31,6 @@ export interface RosterPc {
   ac: number
   /** Maximum hit points; a fresh combatant starts at full. */
   maxHp: number
-  /** Initiative modifier; rolled as d20 + this at combat start unless overridden. */
-  initiativeMod?: number
   passivePerception?: number
   languages?: string[]
   speed?: Speeds
@@ -43,8 +46,8 @@ export interface RosterPc {
 /**
  * Instantiate a roster PC into a fresh combatant for the encounter — a new id, full
  * HP, no carried-over combat state. The template stays untouched (snapshot, don't
- * reference). The campaign tag is roster metadata and does not travel onto the
- * combatant.
+ * reference). The initiative modifier is derived from Dexterity; the campaign tag is
+ * roster metadata and does not travel onto the combatant.
  */
 export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
   const maxHp = Math.max(1, Math.floor(pc.maxHp) || 1)
@@ -54,7 +57,7 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     combatantId: crypto.randomUUID(),
     name: pc.name,
     initiative: 0, // rolled/entered when combat begins
-    initiativeMod: pc.initiativeMod,
+    initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : 0,
     ac: Math.max(0, Math.floor(pc.ac) || 0),
     passivePerception: pc.passivePerception,
     languages: pc.languages,

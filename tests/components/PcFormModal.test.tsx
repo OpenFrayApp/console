@@ -29,7 +29,6 @@ describe('PcFormModal', () => {
     fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
     fireEvent.change(screen.getByLabelText('AC'), { target: { value: '16' } })
     fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '38' } })
-    fireEvent.change(screen.getByLabelText('Initiative modifier'), { target: { value: '2' } })
     fireEvent.change(screen.getByLabelText('DEX'), { target: { value: '14' } })
     fireEvent.change(screen.getByLabelText('Campaign'), { target: { value: 'camp-1' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
@@ -39,7 +38,8 @@ describe('PcFormModal', () => {
     expect(saved.name).toBe('Thalia')
     expect(saved.ac).toBe(16)
     expect(saved.maxHp).toBe(38)
-    expect(saved.initiativeMod).toBe(2)
+    // No Init field — the modifier is derived from DEX at instantiation time.
+    expect('initiativeMod' in saved).toBe(false)
     expect(saved.abilities).toEqual({ str: 10, dex: 14, con: 10, int: 10, wis: 10, cha: 10 })
     expect(saved.campaignId).toBe('camp-1')
     expect(typeof saved.id).toBe('string')
