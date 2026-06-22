@@ -204,6 +204,29 @@ describe('CombatantRow', () => {
     expect(onHpInput).toHaveBeenCalledWith('-5')
   })
 
+  it('shows a drag handle and fires reorder callbacks when reorderable', () => {
+    const onReorderStart = vi.fn()
+    const onReorderDrop = vi.fn()
+    const { container } = render(
+      <CombatantRow
+        combatant={monster()}
+        reorderable
+        onReorderStart={onReorderStart}
+        onReorderDrop={onReorderDrop}
+      />,
+    )
+    const handle = screen.getByLabelText(/Drag to reorder/)
+    fireEvent.dragStart(handle, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
+    expect(onReorderStart).toHaveBeenCalledOnce()
+    fireEvent.drop(container.firstElementChild as Element)
+    expect(onReorderDrop).toHaveBeenCalledOnce()
+  })
+
+  it('has no drag handle when not reorderable', () => {
+    render(<CombatantRow combatant={monster()} />)
+    expect(screen.queryByLabelText(/Drag to reorder/)).toBeNull()
+  })
+
   it('flags a stabilized PC', () => {
     render(
       <CombatantRow

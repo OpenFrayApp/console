@@ -117,6 +117,8 @@ export function EncounterConsole({
 
   // The action whose resolver modal is open (the selected creature is the attacker).
   const [actionFor, setActionFor] = useState<Action | null>(null)
+  // The combatant being dragged to manually reorder the turn order (combat only).
+  const [dragId, setDragId] = useState<string | null>(null)
   // The spell being cast from the selected creature's stat block.
   const [castingSpell, setCastingSpell] = useState<SpellRef | null>(null)
   // Switching the selected combatant closes a stale resolver / cast modal.
@@ -287,6 +289,15 @@ export function EncounterConsole({
       }
       onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
       onHpInput={(raw) => applyHpInput(c, raw, false)}
+      reorderable={started && c.status !== 'dead'}
+      onReorderStart={() => setDragId(c.combatantId)}
+      onReorderEnd={() => setDragId(null)}
+      onReorderDrop={() => {
+        if (dragId && dragId !== c.combatantId) {
+          dispatch({ type: 'reorder', id: dragId, toId: c.combatantId })
+        }
+        setDragId(null)
+      }}
     />
   )
   // Group by disposition, not isPC: a foe quick add belongs with the Creatures.

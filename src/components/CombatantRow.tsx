@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import { useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import { hpTier, type HpTier } from '../combat/resources.ts'
 import { isFoe } from '../combat/combatant.ts'
@@ -43,6 +44,14 @@ interface CombatantRowProps {
   onRemove?: () => void
   /** Click-to-edit current HP from a raw input ("12", "+5", "-3"). */
   onHpInput?: (raw: string) => void
+  /** Show a drag handle and accept drops, to manually reorder the turn order. */
+  reorderable?: boolean
+  /** This row's handle started a drag. */
+  onReorderStart?: () => void
+  /** A drag ended (committed or cancelled). */
+  onReorderEnd?: () => void
+  /** Something was dropped onto this row — move the dragged combatant here. */
+  onReorderDrop?: () => void
 }
 
 /**
@@ -58,12 +67,17 @@ export function CombatantRow({
   onRemoveEffect,
   onRemove,
   onHpInput,
+  reorderable = false,
+  onReorderStart,
+  onReorderEnd,
+  onReorderDrop,
 }: CombatantRowProps) {
   const { hp, status } = combatant
   const dead = status === 'dead'
   const downed = dead || status === 'unconscious'
   const tier = hpTier(combatant)
   const showTier = !downed && tier !== 'healthy'
+  const [dropOver, setDropOver] = useState(false)
 
   return (
     <div
@@ -81,6 +95,17 @@ export function CombatantRow({
             }
           : undefined
       }
+      onDragOver={reorderable ? (e) => { e.preventDefault(); setDropOver(true) } : undefined}
+      onDragLeave={reorderable ? () => setDropOver(false) : undefined}
+      onDrop={
+        reorderable
+          ? (e) => {
+              e.preventDefault()
+              setDropOver(false)
+              onReorderDrop?.()
+            }
+          : undefined
+      }
       className={cx(
         'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2',
         // Disposition-coded left edge: friends sky, foes rose.
@@ -90,9 +115,35 @@ export function CombatantRow({
           ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
         selected && 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-950',
+        dropOver && 'outline outline-2 outline-indigo-400',
         dead && 'opacity-50',
       )}
     >
+      {reorderable && (
+        <span
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', combatant.combatantId)
+            onReorderStart?.()
+          }}
+          onDragEnd={() => onReorderEnd?.()}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Drag to reorder ${displayName(combatant)}`}
+          title="Drag to reorder"
+          className="shrink-0 cursor-grab text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+            <circle cx="9" cy="6" r="1.4" />
+            <circle cx="15" cy="6" r="1.4" />
+            <circle cx="9" cy="12" r="1.4" />
+            <circle cx="15" cy="12" r="1.4" />
+            <circle cx="9" cy="18" r="1.4" />
+            <circle cx="15" cy="18" r="1.4" />
+          </svg>
+        </span>
+      )}
+
       <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
         {combatant.initiative}
       </div>

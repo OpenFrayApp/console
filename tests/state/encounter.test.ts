@@ -152,6 +152,37 @@ describe('encounterReducer', () => {
     expect(e.activeIndex).toBe(0)
   })
 
+  it('reorders down: initiative drops below the new lower neighbour', () => {
+    let e = withCombatants(monster('a', 20), monster('b', 15), monster('c', 10))
+    e = encounterReducer(e, { type: 'reorder', id: 'a', toId: 'c' })
+    expect(e.combatants.map((c) => c.combatantId)).toEqual(['b', 'c', 'a'])
+    expect(e.combatants.find((c) => c.combatantId === 'a')!.initiative).toBe(9)
+  })
+
+  it('reorders up to the top: initiative rises above the new top', () => {
+    let e = withCombatants(monster('a', 20), monster('b', 15), monster('c', 10))
+    e = encounterReducer(e, { type: 'reorder', id: 'c', toId: 'a' })
+    expect(e.combatants.map((c) => c.combatantId)).toEqual(['c', 'a', 'b'])
+    expect(e.combatants[0].initiative).toBe(21)
+  })
+
+  it('reorders into the middle, sitting between the new neighbours', () => {
+    let e = withCombatants(monster('a', 20), monster('b', 15), monster('c', 10))
+    e = encounterReducer(e, { type: 'reorder', id: 'a', toId: 'b' })
+    expect(e.combatants.map((c) => c.combatantId)).toEqual(['b', 'a', 'c'])
+    expect(e.combatants.find((c) => c.combatantId === 'a')!.initiative).toBe(12.5)
+  })
+
+  it('keeps turn ownership by id across a reorder', () => {
+    let e = encounterReducer(
+      withCombatants(monster('a', 20), monster('b', 15), monster('c', 10)),
+      { type: 'begin' },
+    )
+    expect(e.combatants[e.activeIndex].combatantId).toBe('a')
+    e = encounterReducer(e, { type: 'reorder', id: 'a', toId: 'c' })
+    expect(e.combatants[e.activeIndex].combatantId).toBe('a') // still a's turn
+  })
+
   it('appends log entries', () => {
     let e = encounterReducer(emptyEncounter(), { type: 'log', message: 'Goblin hits' })
     e = encounterReducer(e, { type: 'log', message: 'Goblin misses' })

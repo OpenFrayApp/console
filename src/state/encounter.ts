@@ -29,6 +29,9 @@ export type EncounterAction =
   | { type: 'shortRest'; hp: Record<string, number> }
   /** Clear the board of enemies — remove every foe, keeping friendly combatants. */
   | { type: 'clearFoes' }
+  /** Manual reorder (drag): move `id` to where `toId` sits; its initiative is reset
+   *  to sit between its new neighbours. */
+  | { type: 'reorder'; id: string; toId: string }
   /** Replace the whole encounter — used when hydrating from the cloud on sign-in. */
   | { type: 'load'; encounter: Encounter }
 
@@ -120,6 +123,37 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     // outside combat, so the turn cursor resets to the top.
     case 'clearFoes':
       return { ...state, activeIndex: 0, combatants: state.combatants.filter((c) => !isFoe(c)) }
+
+    // Drag-to-reorder: move the dragged combatant to the target's slot and reset its
+    // initiative to sit between its new neighbours, so the order holds (and turn
+    // ownership is re-derived by id, never index — the loop rule).
+    case 'reorder': {
+      const { id, toId } = action
+      if (id === toId) return state
+      const from = state.combatants.findIndex((c) => c.combatantId === id)
+      const to = state.combatants.findIndex((c) => c.combatantId === toId)
+      if (from < 0 || to < 0) return state
+      const dragged = state.combatants[from]
+      const without = state.combatants.filter((c) => c.combatantId !== id)
+      const targetIdx = without.findIndex((c) => c.combatantId === toId)
+      // Dragging down drops below the target; dragging up drops above it.
+      const insertAt = from < to ? targetIdx + 1 : targetIdx
+      const order = [...without.slice(0, insertAt), dragged, ...without.slice(insertAt)]
+      const above = order[insertAt - 1]
+      const below = order[insertAt + 1]
+      const initiative =
+        above && below
+          ? (above.initiative + below.initiative) / 2
+          : above
+            ? above.initiative - 1
+            : below
+              ? below.initiative + 1
+              : dragged.initiative
+      const combatants = order.map((c) =>
+        c.combatantId === id ? { ...c, initiative } : c,
+      )
+      return { ...state, combatants, activeIndex: indexOfId(combatants, activeId(state)) }
+    }
 
     case 'load':
       return action.encounter
