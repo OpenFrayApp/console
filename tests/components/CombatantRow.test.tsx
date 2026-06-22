@@ -70,7 +70,8 @@ describe('CombatantRow', () => {
   it('shows the name, HP, and AC', () => {
     render(<CombatantRow combatant={monster()} />)
     expect(screen.getByText('Goblin (A)')).toBeInTheDocument()
-    expect(screen.getByText('7/7')).toBeInTheDocument()
+    expect(screen.getByText('7')).toBeInTheDocument() // current HP
+    expect(screen.getByText('/7')).toBeInTheDocument() // max
     expect(screen.getByText('AC 15')).toBeInTheDocument()
   })
 
@@ -176,9 +177,10 @@ describe('CombatantRow', () => {
     expect(screen.getByText('2 of 3 failures')).toBeInTheDocument()
   })
 
-  it('shows full HP in the healthy color', () => {
+  it('tints only the current HP by wound tier (the max stays muted)', () => {
     render(<CombatantRow combatant={pc({ hp: { current: 38, max: 38, temp: 0 } })} />)
-    expect(screen.getByText('38/38').className).toContain('text-emerald')
+    expect(screen.getByText('38').className).toContain('text-emerald') // current, healthy
+    expect(screen.getByText('/38').className).toContain('text-slate-400') // max, muted
   })
 
   it('shows 0 HP in the critical color', () => {
@@ -187,7 +189,19 @@ describe('CombatantRow', () => {
         combatant={pc({ status: 'unconscious', hp: { current: 0, max: 28, temp: 0 } })}
       />,
     )
-    expect(screen.getByText('0/28').className).toContain('text-red')
+    expect(screen.getByText('0').className).toContain('text-red')
+  })
+
+  it('edits current HP inline when onHpInput is provided', () => {
+    const onHpInput = vi.fn()
+    const { container } = render(
+      <CombatantRow combatant={pc({ hp: { current: 20, max: 38, temp: 0 } })} onHpInput={onHpInput} />,
+    )
+    fireEvent.click(screen.getByTitle('Set HP, or +N / −N'))
+    const input = container.querySelector('input') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '-5' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onHpInput).toHaveBeenCalledWith('-5')
   })
 
   it('flags a stabilized PC', () => {

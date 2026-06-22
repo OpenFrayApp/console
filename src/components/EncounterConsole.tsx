@@ -286,6 +286,7 @@ export function EncounterConsole({
         })
       }
       onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
+      onHpInput={(raw) => applyHpInput(c, raw, false)}
     />
   )
   // Group by disposition, not isPC: a foe quick add belongs with the Creatures.

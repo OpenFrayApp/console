@@ -7,6 +7,7 @@ import { isFoe } from '../combat/combatant.ts'
 import { isStable } from '../combat/deathsaves.ts'
 import { EffectBadge } from './EffectBadge.tsx'
 import { DeathSavePips } from './DeathSaveControls.tsx'
+import { EditableField } from './EditableField.tsx'
 import { hpToneFor } from './hpTone.ts'
 
 const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
@@ -40,6 +41,8 @@ interface CombatantRowProps {
   onRemoveEffect?: (effectId: string) => void
   /** Removes this combatant from the encounter (the on-hover X). */
   onRemove?: () => void
+  /** Click-to-edit current HP from a raw input ("12", "+5", "-3"). */
+  onHpInput?: (raw: string) => void
 }
 
 /**
@@ -54,6 +57,7 @@ export function CombatantRow({
   onSelect,
   onRemoveEffect,
   onRemove,
+  onHpInput,
 }: CombatantRowProps) {
   const { hp, status } = combatant
   const dead = status === 'dead'
@@ -162,8 +166,25 @@ export function CombatantRow({
 
       <div className="text-right text-sm">
         <div>
-          <span className={cx('tabular-nums', hpToneFor(tier))}>
-            {hp.current}/{hp.max}
+          <span className="tabular-nums">
+            {onHpInput ? (
+              // Edit HP inline (damage/heal/set), like the stat block. Stop key events
+              // from reaching the row so Enter commits the edit instead of selecting.
+              <span onKeyDown={(e) => e.stopPropagation()}>
+                <EditableField
+                  initial=""
+                  onCommit={onHpInput}
+                  title="Set HP, or +N / −N"
+                  inputMode="numeric"
+                  inputClassName="w-12 rounded border border-slate-300 bg-white px-1 text-right tabular-nums dark:border-slate-600 dark:bg-slate-800"
+                >
+                  <span className={hpToneFor(tier)}>{hp.current}</span>
+                </EditableField>
+              </span>
+            ) : (
+              <span className={hpToneFor(tier)}>{hp.current}</span>
+            )}
+            <span className="text-slate-400 dark:text-slate-500">/{hp.max}</span>
           </span>
           {hp.temp > 0 && (
             <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>

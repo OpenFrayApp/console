@@ -112,12 +112,13 @@ describe('Encounter flow', () => {
   it('edits HP by clicking it in the stat block (+N / -N / set)', async () => {
     const { container } = render(<App />)
     await addGoblin()
-    // Click the HP widget, type a delta, commit with Enter.
-    fireEvent.click(screen.getByTitle(/Set HP/))
-    const input = container.querySelector('input.w-14') as HTMLInputElement
+    // The tracker row and the stat block both have an HP editor; target the stat block.
+    const center = container.querySelectorAll('section')[1]
+    fireEvent.click(center.querySelector('button[title^="Set HP"]') as HTMLElement)
+    const input = center.querySelector('input.w-14') as HTMLInputElement
     fireEvent.change(input, { target: { value: '-3' } })
     fireEvent.keyDown(input, { key: 'Enter' })
-    expect(screen.getAllByText('4/7').length).toBeGreaterThan(0) // 7 - 3
+    expect(screen.getAllByText('4').length).toBeGreaterThan(0) // current HP: 7 - 3
   })
 
   it('logs a quick roll', () => {
