@@ -462,7 +462,7 @@ export function Compendium({
             immunities={selectedPc.immunities}
             vulnerabilities={selectedPc.vulnerabilities}
             languages={selectedPc.languages}
-            passivePerception={selectedPc.passivePerception}
+            senses={selectedPc.senses}
             personalityTraits={selectedPc.personalityTraits}
             ideals={selectedPc.ideals}
             bonds={selectedPc.bonds}

@@ -72,12 +72,56 @@ describe('PcFormModal', () => {
     expect((screen.getByLabelText('PC name') as HTMLInputElement).value).toBe('Thalia')
     expect((screen.getByLabelText('Campaign') as HTMLSelectElement).value).toBe('camp-1')
     fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia the Bold' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     const saved = onSubmit.mock.calls[0][0] as RosterPc
     expect(saved.id).toBe('pc-9')
     expect(saved.name).toBe('Thalia the Bold')
     expect(saved.abilities).toMatchObject({ dex: 14, cha: 16 })
+  })
+
+  it('captures edition, structured speed, and senses', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
+    fireEvent.change(screen.getByLabelText('Edition'), { target: { value: '5.0' } })
+    fireEvent.change(screen.getByLabelText('walk speed'), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText('climb speed'), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText('Darkvision'), { target: { value: '60' } })
+    fireEvent.change(screen.getByLabelText('WIS'), { target: { value: '14' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+
+    const saved = onSubmit.mock.calls[0][0] as RosterPc
+    expect(saved.edition).toBe('5.0')
+    expect(saved.speed).toEqual({ walk: 30, climb: 20 })
+    // Passive Perception defaults to 10 + Wis mod (14 → +2) when left blank.
+    expect(saved.senses).toEqual({ passivePerception: 12, darkvision: 60 })
+  })
+
+  it('offers only the nine alignments plus none (no "typically…" hedges)', () => {
+    render(<PcFormModal open onClose={() => {}} onSubmit={() => {}} />)
+    const select = screen.getByLabelText('Alignment') as HTMLSelectElement
+    const options = [...select.options].map((o) => o.textContent)
+    expect(options).toEqual([
+      'No alignment',
+      'Lawful Good',
+      'Neutral Good',
+      'Chaotic Good',
+      'Lawful Neutral',
+      'Neutral',
+      'Chaotic Neutral',
+      'Lawful Evil',
+      'Neutral Evil',
+      'Chaotic Evil',
+    ])
+  })
+
+  it('shows one roleplay line per category by default', () => {
+    render(<PcFormModal open onClose={() => {}} onSubmit={() => {}} />)
+    expect(screen.getByLabelText('Personality Traits 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Ideals 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bonds 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Flaws 1')).toBeInTheDocument()
   })
 
   it('captures alignment, roleplay lines, and markdown backstory', () => {

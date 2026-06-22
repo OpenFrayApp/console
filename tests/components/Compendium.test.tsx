@@ -229,7 +229,7 @@ describe('Compendium', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     const dialog = screen.getByRole('dialog', { name: 'Edit player character' })
     fireEvent.change(within(dialog).getByLabelText('PC name'), { target: { value: 'Thalia II' } })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
     expect(onUpdatePc.mock.calls[0][0]).toMatchObject({ id: 'p1', name: 'Thalia II' })
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))

@@ -2,14 +2,14 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useState, type CSSProperties } from 'react'
-import type { Ability, AbilityScores as AbilityScoreMap, Senses, SaveBonuses, SkillBonuses } from '../schema/primitives.ts'
+import type { Ability, AbilityScores as AbilityScoreMap, SaveBonuses, SkillBonuses } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
 import type { Creature, SpellGroup, Spellcasting, SpellRef } from '../schema/creature.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
-import { formatCr } from '../compendium/format.ts'
+import { formatCr, formatSenses } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -51,16 +51,6 @@ function rechargeLabel(recharge: Recharge | undefined): string | undefined {
   }
   if (recharge.type === 'perDay') return `${recharge.value}/Day`
   return `${recharge.value}/Round`
-}
-
-function formatSenses(senses: Senses): string {
-  const parts: string[] = []
-  if (senses.darkvision) parts.push(`Darkvision ${senses.darkvision} ft.`)
-  if (senses.blindsight) parts.push(`Blindsight ${senses.blindsight} ft.`)
-  if (senses.tremorsense) parts.push(`Tremorsense ${senses.tremorsense} ft.`)
-  if (senses.truesight) parts.push(`Truesight ${senses.truesight} ft.`)
-  parts.push(`Passive Perception ${senses.passivePerception}`)
-  return parts.join(', ')
 }
 
 /** A two-column "label / value" table that always renders, showing "—" if empty. */

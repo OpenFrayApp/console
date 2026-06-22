@@ -2,11 +2,12 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { ReactNode } from 'react'
-import type { AbilityScores, Speeds } from '../schema/primitives.ts'
+import type { AbilityScores, Senses, Speeds } from '../schema/primitives.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import { speedLines } from '../combat/speed.ts'
 import { hpTierOf } from '../combat/resources.ts'
 import { hpToneFor } from './hpTone.ts'
+import { formatSenses } from '../compendium/format.ts'
 import { AbilityTable, DefensesAndSenses, SECTION_HEADING } from './CreatureStatBlock.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { Markdown } from './Markdown.tsx'
@@ -50,6 +51,7 @@ export function PcStatBlock({
   immunities,
   vulnerabilities,
   languages,
+  senses,
   passivePerception,
   personalityTraits,
   ideals,
@@ -73,6 +75,9 @@ export function PcStatBlock({
   immunities?: string[]
   vulnerabilities?: string[]
   languages?: string[]
+  /** Full senses (roster PCs); rendered like a creature's. */
+  senses?: Senses
+  /** Passive Perception only (anonymous quick PCs, which carry no full senses). */
   passivePerception?: number
   personalityTraits?: string[]
   ideals?: string[]
@@ -141,7 +146,13 @@ export function PcStatBlock({
         resistances={resistances?.join(', ')}
         immunities={immunities?.join(', ')}
         vulnerabilities={vulnerabilities?.join(', ')}
-        senses={passivePerception != null ? `Passive Perception ${passivePerception}` : undefined}
+        senses={
+          senses
+            ? formatSenses(senses)
+            : passivePerception != null
+              ? `Passive Perception ${passivePerception}`
+              : undefined
+        }
         languages={languages?.join(', ')}
       />
 

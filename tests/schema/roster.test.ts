@@ -9,7 +9,7 @@ const base: RosterPc = {
   name: 'Thalia',
   ac: 16,
   maxHp: 38,
-  passivePerception: 14,
+  senses: { passivePerception: 14, darkvision: 60 },
   languages: ['Common', 'Elvish'],
   speed: { walk: 30 },
   resistances: ['fire'],
@@ -36,7 +36,7 @@ describe('rosterPcToCombatant', () => {
 
   it('carries the durable board facts and ability scores onto the combatant', () => {
     const c = rosterPcToCombatant(base)
-    expect(c.passivePerception).toBe(14)
+    expect(c.senses).toEqual({ passivePerception: 14, darkvision: 60 })
     expect(c.languages).toEqual(['Common', 'Elvish'])
     expect(c.speed).toEqual({ walk: 30 })
     expect(c.resistances).toEqual(['fire'])

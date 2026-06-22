@@ -1,23 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useState, type FormEvent } from 'react'
-import type { Ability, AbilityScores } from '../schema/primitives.ts'
+import { useEffect, useState } from 'react'
+import type { Ability, AbilityScores, Edition, Senses, Speeds } from '../schema/primitives.ts'
 import type { Campaign } from '../schema/campaign.ts'
-import type { RosterPc } from '../schema/roster.ts'
-import { parseSpeedInput, speedLines } from '../combat/speed.ts'
-import { ALIGNMENTS } from './customMonster.ts'
+import { abilityMod, type RosterPc } from '../schema/roster.ts'
+import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { FormSection as Section } from './FormSection.tsx'
 
-const FIELD =
-  'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+// Keep password managers / browser autofill off the free-text fields.
+const OFF = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
-// None of these are credential fields, so keep password managers (1Password's
-// `data-1p-ignore`) and browser autofill off them — their popups otherwise cover
-// the inputs. Spread onto the form and every field.
-const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
-
-const ABILITY_ORDER: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const ABILITY_LABEL: Record<Ability, string> = {
   str: 'STR',
   dex: 'DEX',
@@ -26,14 +20,38 @@ const ABILITY_LABEL: Record<Ability, string> = {
   wis: 'WIS',
   cha: 'CHA',
 }
+const SPEED_KEYS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const
+const SENSE_KEYS = [
+  { key: 'passivePerception', label: 'Passive Perception', placeholder: 'Passive Perc.' },
+  { key: 'darkvision', label: 'Darkvision', placeholder: 'Darkvision' },
+  { key: 'blindsight', label: 'Blindsight', placeholder: 'Blindsight' },
+  { key: 'tremorsense', label: 'Tremorsense', placeholder: 'Tremorsense' },
+  { key: 'truesight', label: 'Truesight', placeholder: 'Truesight' },
+] as const
+
+// Just the nine alignments plus "No alignment" — PCs don't use the "typically…" /
+// "any…" hedges that monster blocks do.
+const PC_ALIGNMENTS = [
+  'lawful good',
+  'neutral good',
+  'chaotic good',
+  'lawful neutral',
+  'neutral',
+  'chaotic neutral',
+  'lawful evil',
+  'neutral evil',
+  'chaotic evil',
+]
 
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
 const score = (v: string): number => Math.max(1, Math.min(30, Math.floor(Number(v) || 10)))
+const has = (v: string): boolean => v.trim().length > 0
 const list = (v: string): string[] =>
   v
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+const orUndef = (xs: string[]): string[] | undefined => (xs.length ? xs : undefined)
 /** Trim a line-list to its non-empty entries, or undefined when there are none. */
 const clean = (xs: string[]): string[] | undefined => {
   const out = xs.map((s) => s.trim()).filter(Boolean)
@@ -41,11 +59,146 @@ const clean = (xs: string[]): string[] | undefined => {
 }
 /** Capitalize each word of a lowercase alignment for the dropdown label. */
 const cap = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase())
+/** Seed a roleplay list with at least one (empty) field so a row always shows. */
+const seedList = (xs?: string[]): string[] => (xs && xs.length ? [...xs] : [''])
 
-/** The four roleplay categories share one repeatable-line editor. */
+type SpeedKey = (typeof SPEED_KEYS)[number]
+type SenseKey = (typeof SENSE_KEYS)[number]['key']
 type ListKey = 'personalityTraits' | 'ideals' | 'bonds' | 'flaws'
-type Lists = Record<ListKey, string[]>
-const EMPTY_LISTS: Lists = { personalityTraits: [], ideals: [], bonds: [], flaws: [] }
+
+interface PcDraft {
+  campaignId: string
+  name: string
+  alignment: string
+  edition: Edition
+  ac: string
+  hp: string
+  speed: Record<SpeedKey, string> & { hover: boolean }
+  abilities: Record<Ability, string>
+  senses: Record<SenseKey, string>
+  languages: string
+  resistances: string
+  immunities: string
+  vulnerabilities: string
+  personalityTraits: string[]
+  ideals: string[]
+  bonds: string[]
+  flaws: string[]
+  backstory: string
+}
+
+function emptyDraft(): PcDraft {
+  return {
+    campaignId: '',
+    name: '',
+    alignment: '',
+    edition: '5.5',
+    ac: '',
+    hp: '',
+    speed: { walk: '', fly: '', swim: '', climb: '', burrow: '', hover: false },
+    abilities: { str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10' },
+    senses: { passivePerception: '', darkvision: '', blindsight: '', tremorsense: '', truesight: '' },
+    languages: '',
+    resistances: '',
+    immunities: '',
+    vulnerabilities: '',
+    personalityTraits: [''],
+    ideals: [''],
+    bonds: [''],
+    flaws: [''],
+    backstory: '',
+  }
+}
+
+function draftFromPc(pc: RosterPc): PcDraft {
+  const str = (n?: number): string => (n != null ? String(n) : '')
+  return {
+    campaignId: pc.campaignId ?? '',
+    name: pc.name,
+    alignment: pc.alignment ?? '',
+    edition: pc.edition ?? '5.5',
+    ac: str(pc.ac),
+    hp: str(pc.maxHp),
+    speed: {
+      walk: str(pc.speed?.walk),
+      fly: str(pc.speed?.fly),
+      swim: str(pc.speed?.swim),
+      climb: str(pc.speed?.climb),
+      burrow: str(pc.speed?.burrow),
+      hover: Boolean(pc.speed?.hover),
+    },
+    abilities: {
+      str: str(pc.abilities?.str) || '10',
+      dex: str(pc.abilities?.dex) || '10',
+      con: str(pc.abilities?.con) || '10',
+      int: str(pc.abilities?.int) || '10',
+      wis: str(pc.abilities?.wis) || '10',
+      cha: str(pc.abilities?.cha) || '10',
+    },
+    senses: {
+      passivePerception: str(pc.senses?.passivePerception),
+      darkvision: str(pc.senses?.darkvision),
+      blindsight: str(pc.senses?.blindsight),
+      tremorsense: str(pc.senses?.tremorsense),
+      truesight: str(pc.senses?.truesight),
+    },
+    languages: pc.languages?.join(', ') ?? '',
+    resistances: pc.resistances?.join(', ') ?? '',
+    immunities: pc.immunities?.join(', ') ?? '',
+    vulnerabilities: pc.vulnerabilities?.join(', ') ?? '',
+    personalityTraits: seedList(pc.personalityTraits),
+    ideals: seedList(pc.ideals),
+    bonds: seedList(pc.bonds),
+    flaws: seedList(pc.flaws),
+    backstory: pc.backstory ?? '',
+  }
+}
+
+function buildPc(d: PcDraft, id: string): RosterPc {
+  const abilities: AbilityScores = {
+    str: score(d.abilities.str),
+    dex: score(d.abilities.dex),
+    con: score(d.abilities.con),
+    int: score(d.abilities.int),
+    wis: score(d.abilities.wis),
+    cha: score(d.abilities.cha),
+  }
+  const speed: Speeds = {}
+  for (const k of SPEED_KEYS) if (has(d.speed[k])) speed[k] = num(d.speed[k])
+  if (d.speed.hover) speed.hover = true
+  // Passive Perception defaults to 10 + Wis mod when the DM leaves it blank.
+  const senses: Senses = {
+    passivePerception: has(d.senses.passivePerception)
+      ? num(d.senses.passivePerception)
+      : 10 + abilityMod(abilities.wis),
+  }
+  if (has(d.senses.darkvision)) senses.darkvision = num(d.senses.darkvision)
+  if (has(d.senses.blindsight)) senses.blindsight = num(d.senses.blindsight)
+  if (has(d.senses.tremorsense)) senses.tremorsense = num(d.senses.tremorsense)
+  if (has(d.senses.truesight)) senses.truesight = num(d.senses.truesight)
+
+  return {
+    id,
+    name: d.name.trim(),
+    alignment: d.alignment || undefined,
+    edition: d.edition,
+    ac: num(d.ac),
+    maxHp: Math.max(1, num(d.hp)),
+    speed: Object.keys(speed).length ? speed : undefined,
+    abilities,
+    senses,
+    languages: orUndef(list(d.languages)),
+    resistances: orUndef(list(d.resistances)),
+    immunities: orUndef(list(d.immunities)),
+    vulnerabilities: orUndef(list(d.vulnerabilities)),
+    personalityTraits: clean(d.personalityTraits),
+    ideals: clean(d.ideals),
+    bonds: clean(d.bonds),
+    flaws: clean(d.flaws),
+    backstory: d.backstory.trim() || undefined,
+    campaignId: d.campaignId || null,
+  }
+}
 
 /** A repeatable list of one-line text fields, with a "+ Add" button (like damage rows). */
 function LineList({
@@ -68,12 +221,12 @@ function LineList({
             value={v}
             onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))}
             aria-label={`${label} ${i + 1}`}
-            {...NO_AUTOFILL}
+            {...OFF}
             className={FIELD}
           />
           <button
             type="button"
-            onClick={() => onChange(items.filter((_, j) => j !== i))}
+            onClick={() => onChange(items.length > 1 ? items.filter((_, j) => j !== i) : [''])}
             aria-label={`Remove ${label} ${i + 1}`}
             className="shrink-0 rounded border border-slate-300 px-2 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
           >
@@ -84,7 +237,7 @@ function LineList({
       <button
         type="button"
         onClick={() => onChange([...items, ''])}
-        className="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+        className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
       >
         {addLabel}
       </button>
@@ -92,22 +245,11 @@ function LineList({
   )
 }
 
-type AbilityStrings = Record<Ability, string>
-const DEFAULT_ABILITIES: AbilityStrings = { str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10' }
-
-function abilitiesToStrings(a?: AbilityScores): AbilityStrings {
-  if (!a) return { ...DEFAULT_ABILITIES }
-  return { str: String(a.str), dex: String(a.dex), con: String(a.con), int: String(a.int), wis: String(a.wis), cha: String(a.cha) }
-}
-
 /**
- * Modal to create or edit a durable roster PC — the board facts a DM wants on a
- * player character, plus the six ability scores and an optional campaign tag.
- * Mirrors the campaign form: controlled via `open`, seeded from `pc` (null =
- * create), handing the built RosterPc to `onSubmit`. Editing keeps the id.
- *
- * This is the signed-in, expanded form. It is not a character sheet — no class,
- * level, or spell list; the DM transcribes what they want on the board.
+ * Create / edit a durable roster PC. Same accordion format as the custom-creature
+ * form: collapsible sections, the structured speed and senses editors, edition and
+ * alignment dropdowns. Still not a character sheet — no class, level, or spells; the
+ * DM transcribes the board facts plus the roleplay notes they want to keep.
  */
 export function PcFormModal({
   open,
@@ -125,47 +267,10 @@ export function PcFormModal({
   onSubmit: (pc: RosterPc) => void
 }) {
   const editing = pc != null
-  const [f, setF] = useState({
-    name: '',
-    alignment: '',
-    ac: '',
-    hp: '',
-    pp: '',
-    speed: '',
-    languages: '',
-    resistances: '',
-    immunities: '',
-    vulnerabilities: '',
-    backstory: '',
-    campaignId: '',
-  })
-  const [abilities, setAbilities] = useState<AbilityStrings>({ ...DEFAULT_ABILITIES })
-  const [lists, setLists] = useState<Lists>({ ...EMPTY_LISTS })
+  const [d, setD] = useState<PcDraft>(emptyDraft)
 
-  // Seed the form each time it opens (create → blank/defaults, edit → the PC's values).
   useEffect(() => {
-    if (!open) return
-    setF({
-      name: pc?.name ?? '',
-      alignment: pc?.alignment ?? '',
-      ac: pc?.ac != null ? String(pc.ac) : '',
-      hp: pc?.maxHp != null ? String(pc.maxHp) : '',
-      pp: pc?.passivePerception != null ? String(pc.passivePerception) : '',
-      speed: pc?.speed ? speedLines(pc.speed).join(', ') : '',
-      languages: pc?.languages?.join(', ') ?? '',
-      resistances: pc?.resistances?.join(', ') ?? '',
-      immunities: pc?.immunities?.join(', ') ?? '',
-      vulnerabilities: pc?.vulnerabilities?.join(', ') ?? '',
-      backstory: pc?.backstory ?? '',
-      campaignId: pc?.campaignId ?? '',
-    })
-    setAbilities(abilitiesToStrings(pc?.abilities))
-    setLists({
-      personalityTraits: pc?.personalityTraits ?? [],
-      ideals: pc?.ideals ?? [],
-      bonds: pc?.bonds ?? [],
-      flaws: pc?.flaws ?? [],
-    })
+    if (open) setD(pc ? draftFromPc(pc) : emptyDraft())
   }, [open, pc])
 
   useEffect(() => {
@@ -179,43 +284,12 @@ export function PcFormModal({
 
   if (!open) return null
 
-  const set = (key: keyof typeof f) => (e: { target: { value: string } }) =>
-    setF((prev) => ({ ...prev, [key]: e.target.value }))
-  const setAbility = (a: Ability) => (e: { target: { value: string } }) =>
-    setAbilities((prev) => ({ ...prev, [a]: e.target.value }))
+  const patch = (p: Partial<PcDraft>) => setD((prev) => ({ ...prev, ...p }))
+  const setList = (key: ListKey) => (next: string[]) => patch({ [key]: next } as Partial<PcDraft>)
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const name = f.name.trim()
-    if (!name) return
-    const speed = parseSpeedInput(f.speed)
-    onSubmit({
-      id: pc?.id ?? crypto.randomUUID(),
-      name,
-      alignment: f.alignment || undefined,
-      ac: num(f.ac),
-      maxHp: Math.max(1, num(f.hp)),
-      passivePerception: f.pp ? num(f.pp) : undefined,
-      speed: Object.keys(speed).length ? speed : undefined,
-      languages: list(f.languages).length ? list(f.languages) : undefined,
-      resistances: list(f.resistances).length ? list(f.resistances) : undefined,
-      immunities: list(f.immunities).length ? list(f.immunities) : undefined,
-      vulnerabilities: list(f.vulnerabilities).length ? list(f.vulnerabilities) : undefined,
-      abilities: {
-        str: score(abilities.str),
-        dex: score(abilities.dex),
-        con: score(abilities.con),
-        int: score(abilities.int),
-        wis: score(abilities.wis),
-        cha: score(abilities.cha),
-      },
-      personalityTraits: clean(lists.personalityTraits),
-      ideals: clean(lists.ideals),
-      bonds: clean(lists.bonds),
-      flaws: clean(lists.flaws),
-      backstory: f.backstory.trim() || undefined,
-      campaignId: f.campaignId || null,
-    })
+  const submit = () => {
+    if (!d.name.trim()) return
+    onSubmit(buildPc(d, pc?.id ?? crypto.randomUUID()))
     onClose()
   }
 
@@ -224,13 +298,11 @@ export function PcFormModal({
       className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
       onClick={onClose}
     >
-      <form
+      <div
         role="dialog"
         aria-label={editing ? 'Edit player character' : 'New player character'}
         onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-        {...NO_AUTOFILL}
-        className="my-auto w-full max-w-md rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
+        className="my-auto w-full max-w-xl rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <h2 className="text-lg font-semibold">
@@ -246,154 +318,155 @@ export function PcFormModal({
           </button>
         </div>
 
-        <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
-          <label className="block space-y-1">
-            <span className={LABEL}>Name</span>
+        <div className="max-h-[70vh] space-y-3 overflow-auto p-4">
+          <Section title="Identity" open>
+            <label className="block space-y-1">
+              <span className={LABEL}>Campaign</span>
+              <select value={d.campaignId} onChange={(e) => patch({ campaignId: e.target.value })} aria-label="Campaign" className={FIELD}>
+                <option value="">No campaign</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <input
-              value={f.name}
-              onChange={set('name')}
-              placeholder="e.g. Thalia"
-              aria-label="PC name"
               autoFocus
-              {...NO_AUTOFILL}
+              value={d.name}
+              onChange={(e) => patch({ name: e.target.value })}
+              placeholder="Name"
+              aria-label="PC name"
+              {...OFF}
               className={FIELD}
             />
-          </label>
+            <div className="grid grid-cols-2 gap-2">
+              <select value={d.alignment} onChange={(e) => patch({ alignment: e.target.value })} aria-label="Alignment" className={FIELD}>
+                <option value="">No alignment</option>
+                {PC_ALIGNMENTS.map((a) => (
+                  <option key={a} value={a}>
+                    {cap(a)}
+                  </option>
+                ))}
+              </select>
+              <select value={d.edition} onChange={(e) => patch({ edition: e.target.value as Edition })} aria-label="Edition" className={FIELD}>
+                <option value="5.5">DnD 5.5 (2024)</option>
+                <option value="5.0">DnD 5.0 (2014)</option>
+              </select>
+            </div>
+          </Section>
 
-          <label className="block space-y-1">
-            <span className={LABEL}>Alignment</span>
-            <select value={f.alignment} onChange={set('alignment')} aria-label="Alignment" {...NO_AUTOFILL} className={FIELD}>
-              <option value="">No alignment</option>
-              {ALIGNMENTS.map((a) => (
-                <option key={a} value={a}>
-                  {cap(a)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="grid grid-cols-3 gap-2">
-            <label className="block space-y-1">
+          <Section title="Defense & HP" open>
+            <div className="flex flex-wrap items-center gap-2">
               <span className={LABEL}>AC</span>
-              <input value={f.ac} onChange={set('ac')} aria-label="AC" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            </label>
-            <label className="block space-y-1">
+              <input value={d.ac} onChange={(e) => patch({ ac: e.target.value })} placeholder="AC" aria-label="AC" inputMode="numeric" className={`${FIELD_W} w-16`} />
               <span className={LABEL}>Max HP</span>
-              <input value={f.hp} onChange={set('hp')} aria-label="Max HP" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            </label>
-            <label className="block space-y-1">
-              <span className={LABEL}>Passive Perception</span>
-              <input value={f.pp} onChange={set('pp')} aria-label="Passive Perception" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            </label>
-          </div>
+              <input value={d.hp} onChange={(e) => patch({ hp: e.target.value })} placeholder="HP" aria-label="Max HP" inputMode="numeric" className={`${FIELD_W} w-20`} />
+            </div>
+          </Section>
 
-          <label className="block space-y-1">
-            <span className={LABEL}>Speed</span>
-            <input value={f.speed} onChange={set('speed')} placeholder="30, Climb 12" aria-label="Speed" {...NO_AUTOFILL} className={FIELD} />
-          </label>
-
-          <div className="space-y-1">
-            <span className={LABEL}>Ability scores</span>
-            <div className="grid grid-cols-6 gap-2">
-              {ABILITY_ORDER.map((a) => (
-                <label key={a} className="block space-y-1 text-center">
-                  <span className="block text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                    {ABILITY_LABEL[a]}
-                  </span>
-                  <input
-                    value={abilities[a]}
-                    onChange={setAbility(a)}
-                    aria-label={ABILITY_LABEL[a]}
-                    inputMode="numeric"
-                    {...NO_AUTOFILL}
-                    className={`${FIELD} px-1 text-center`}
-                  />
-                </label>
+          <Section title="Speed" open>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {SPEED_KEYS.map((k) => (
+                <input
+                  key={k}
+                  value={d.speed[k]}
+                  onChange={(e) => patch({ speed: { ...d.speed, [k]: e.target.value } })}
+                  placeholder={k}
+                  aria-label={`${k} speed`}
+                  inputMode="numeric"
+                  className={FIELD}
+                />
               ))}
             </div>
-          </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={d.speed.hover} onChange={(e) => patch({ speed: { ...d.speed, hover: e.target.checked } })} />
+              Can hover
+            </label>
+          </Section>
 
-          <label className="block space-y-1">
-            <span className={LABEL}>Languages (comma-separated)</span>
-            <input value={f.languages} onChange={set('languages')} aria-label="Languages" {...NO_AUTOFILL} className={FIELD} />
-          </label>
+          <Section title="Abilities" open>
+            <div className="grid grid-cols-6 gap-2">
+              {ABILITIES.map((a) => (
+                <div key={a} className="space-y-1">
+                  <p className={`${LABEL} text-center`}>{ABILITY_LABEL[a]}</p>
+                  <input
+                    value={d.abilities[a]}
+                    onChange={(e) => patch({ abilities: { ...d.abilities, [a]: e.target.value } })}
+                    aria-label={ABILITY_LABEL[a]}
+                    inputMode="numeric"
+                    className={`${FIELD} text-center`}
+                  />
+                </div>
+              ))}
+            </div>
+          </Section>
 
-          <div className="space-y-1">
-            <span className={LABEL}>Defenses (comma-separated)</span>
-            <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...NO_AUTOFILL} className={FIELD} />
-          </div>
+          <Section title="Senses & languages">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {SENSE_KEYS.map((s) => (
+                <input
+                  key={s.key}
+                  value={d.senses[s.key]}
+                  onChange={(e) => patch({ senses: { ...d.senses, [s.key]: e.target.value } })}
+                  placeholder={s.placeholder}
+                  aria-label={s.label}
+                  inputMode="numeric"
+                  className={FIELD}
+                />
+              ))}
+            </div>
+            <input value={d.languages} onChange={(e) => patch({ languages: e.target.value })} placeholder="Languages" aria-label="Languages" {...OFF} className={FIELD} />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Languages are comma-separated. Passive Perception defaults to 10 + your Wisdom modifier.
+            </p>
+          </Section>
 
-          <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-            <LineList
-              label="Personality Traits"
-              addLabel="+ Add trait"
-              items={lists.personalityTraits}
-              onChange={(next) => setLists((p) => ({ ...p, personalityTraits: next }))}
-            />
-            <LineList
-              label="Ideals"
-              addLabel="+ Add ideal"
-              items={lists.ideals}
-              onChange={(next) => setLists((p) => ({ ...p, ideals: next }))}
-            />
-            <LineList
-              label="Bonds"
-              addLabel="+ Add bond"
-              items={lists.bonds}
-              onChange={(next) => setLists((p) => ({ ...p, bonds: next }))}
-            />
-            <LineList
-              label="Flaws"
-              addLabel="+ Add flaw"
-              items={lists.flaws}
-              onChange={(next) => setLists((p) => ({ ...p, flaws: next }))}
-            />
+          <Section title="Defenses">
+            <p className={LABEL}>Comma-separated</p>
+            <input value={d.resistances} onChange={(e) => patch({ resistances: e.target.value })} placeholder="Resistances" aria-label="Resistances" {...OFF} className={FIELD} />
+            <input value={d.immunities} onChange={(e) => patch({ immunities: e.target.value })} placeholder="Immunities" aria-label="Immunities" {...OFF} className={FIELD} />
+            <input value={d.vulnerabilities} onChange={(e) => patch({ vulnerabilities: e.target.value })} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...OFF} className={FIELD} />
+          </Section>
+
+          <Section title="Personality & backstory">
+            <LineList label="Personality Traits" addLabel="+ Add trait" items={d.personalityTraits} onChange={setList('personalityTraits')} />
+            <LineList label="Ideals" addLabel="+ Add ideal" items={d.ideals} onChange={setList('ideals')} />
+            <LineList label="Bonds" addLabel="+ Add bond" items={d.bonds} onChange={setList('bonds')} />
+            <LineList label="Flaws" addLabel="+ Add flaw" items={d.flaws} onChange={setList('flaws')} />
             <label className="block space-y-1">
               <span className={LABEL}>Backstory &amp; Goals (markdown)</span>
               <textarea
-                value={f.backstory}
-                onChange={set('backstory')}
+                value={d.backstory}
+                onChange={(e) => patch({ backstory: e.target.value })}
                 rows={4}
                 placeholder="Goals, history, hooks…"
                 aria-label="Backstory and goals"
-                {...NO_AUTOFILL}
+                {...OFF}
                 className={FIELD}
               />
             </label>
-          </div>
-
-          <label className="block space-y-1">
-            <span className={LABEL}>Campaign</span>
-            <select value={f.campaignId} onChange={set('campaignId')} aria-label="Campaign" {...NO_AUTOFILL} className={FIELD}>
-              <option value="">No campaign</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          </Section>
         </div>
 
-        <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-          <button
-            type="submit"
-            disabled={!f.name.trim()}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
-            {editing ? 'Save changes' : 'Create PC'}
-          </button>
+        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Cancel
           </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!d.name.trim()}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+          >
+            {editing ? 'Save' : 'Create PC'}
+          </button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

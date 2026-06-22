@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import type { ActionKind } from '../schema/action.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { AbilityScores } from '../schema/primitives.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { ActionEditor, FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { FormSection as Section } from './FormSection.tsx'
 import { SpellTagInput } from './SpellTagInput.tsx'
 import {
   ABILITIES,
@@ -30,26 +31,6 @@ import {
   type DeriveContext,
   type MonsterDraft,
 } from './customMonster.ts'
-
-/** A collapsible group of fields. Core sections start open; advanced ones closed. */
-function Section({
-  title,
-  children,
-  open = false,
-}: {
-  title: string
-  children: ReactNode
-  open?: boolean
-}) {
-  return (
-    <details open={open} className="rounded-md border border-slate-200 dark:border-slate-800">
-      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold">
-        {title}
-      </summary>
-      <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">{children}</div>
-    </details>
-  )
-}
 
 function ActionList({
   label,

@@ -3,7 +3,7 @@
 
 import type { Creature, SpellLevel } from './creature.ts'
 import type { Effect } from './effect.ts'
-import type { AbilityScores, Speeds } from './primitives.ts'
+import type { AbilityScores, Senses, Speeds } from './primitives.ts'
 
 export interface HitPoints {
   current: number
@@ -135,7 +135,10 @@ export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   ac: number
   /** Initiative modifier; used to roll at combat start when no value is entered. */
   initiativeMod?: number
+  /** Passive Perception only — the anonymous quick form's lightweight field. */
   passivePerception?: number
+  /** Full senses (PP + darkvision/etc.), carried from a durable roster PC. */
+  senses?: Senses
   /** Languages the PC speaks, entered by the DM. Free-form. */
   languages?: string[]
   /** Damage resistances / immunities / vulnerabilities, entered by the DM. */

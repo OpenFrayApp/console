@@ -347,6 +347,7 @@ export function EncounterConsole({
                   immunities={selected.immunities}
                   vulnerabilities={selected.vulnerabilities}
                   languages={selected.languages}
+                  senses={selected.senses}
                   passivePerception={selected.passivePerception}
                   personalityTraits={selected.personalityTraits}
                   ideals={selected.ideals}

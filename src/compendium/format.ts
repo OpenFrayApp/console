@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import type { Senses } from '../schema/primitives.ts'
+
+/** Senses as a single line, e.g. "Darkvision 60 ft., Passive Perception 14". */
+export function formatSenses(senses: Senses): string {
+  const parts: string[] = []
+  if (senses.darkvision) parts.push(`Darkvision ${senses.darkvision} ft.`)
+  if (senses.blindsight) parts.push(`Blindsight ${senses.blindsight} ft.`)
+  if (senses.tremorsense) parts.push(`Tremorsense ${senses.tremorsense} ft.`)
+  if (senses.truesight) parts.push(`Truesight ${senses.truesight} ft.`)
+  parts.push(`Passive Perception ${senses.passivePerception}`)
+  return parts.join(', ')
+}
+
 /** Display a challenge rating, rendering fractional CRs as fractions. */
 export function formatCr(cr: number | undefined): string {
   if (cr == null) return '—'

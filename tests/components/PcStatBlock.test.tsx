@@ -52,6 +52,16 @@ describe('PcStatBlock', () => {
     expect(screen.getByText('Neverwinter').tagName).toBe('STRONG')
   })
 
+  it('renders full senses like a creature, falling back to bare passive perception', () => {
+    const { rerender } = render(
+      <PcStatBlock {...base} senses={{ passivePerception: 14, darkvision: 60 }} />,
+    )
+    expect(screen.getByText('Darkvision 60 ft., Passive Perception 14')).toBeInTheDocument()
+    // Anonymous quick PCs carry only a passive-perception number.
+    rerender(<PcStatBlock {...base} passivePerception={12} />)
+    expect(screen.getByText('Passive Perception 12')).toBeInTheDocument()
+  })
+
   it('omits sections that have no content and renders the footer', () => {
     render(
       <PcStatBlock

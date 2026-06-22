@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { AbilityScores, Speeds } from './primitives.ts'
+import type { AbilityScores, Edition, Senses, Speeds } from './primitives.ts'
 import type { CharacterDetails, PlayerCharacter } from './combatant.ts'
 
 /** The 5e ability modifier for a score (10–11 → 0, 14 → +2, 8 → −1). */
@@ -31,7 +31,10 @@ export interface RosterPc extends CharacterDetails {
   ac: number
   /** Maximum hit points; a fresh combatant starts at full. */
   maxHp: number
-  passivePerception?: number
+  /** Edition this PC is written for. Display metadata only; nothing branches on it. */
+  edition?: Edition
+  /** Passive Perception + any darkvision/blindsight/etc., like a creature's senses. */
+  senses?: Senses
   languages?: string[]
   speed?: Speeds
   resistances?: string[]
@@ -59,7 +62,7 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     initiative: 0, // rolled/entered when combat begins
     initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : 0,
     ac: Math.max(0, Math.floor(pc.ac) || 0),
-    passivePerception: pc.passivePerception,
+    senses: pc.senses,
     languages: pc.languages,
     resistances: pc.resistances,
     immunities: pc.immunities,
