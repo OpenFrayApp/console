@@ -3,7 +3,7 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
-import type { Combatant } from './schema/combatant.ts'
+import type { Combatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
 import { instantiate } from './combat/combatant.ts'
 import { resolveMaxHp } from './combat/hp.ts'
@@ -13,7 +13,7 @@ import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
 import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
-import { rosterPcToCombatant, type RosterPc } from './schema/roster.ts'
+import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from './schema/roster.ts'
 import { CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
@@ -42,6 +42,7 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
+import { PcFormModal } from './components/PcFormModal.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
@@ -142,8 +143,11 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => restored?.theme ?? 'dark')
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
   // Which tab the compendium opens on. The view toggle resets it to creatures; the
-  // header "Add PC → create" entry sets it to players before switching views.
+  // header "Add PC → create" entry sets it to characters before switching views.
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
+  // Editing a roster-backed PC from the encounter: the saved character to edit and the
+  // on-board combatant to re-sync on save. Null when the editor is closed.
+  const [encounterPcEdit, setEncounterPcEdit] = useState<{ pc: RosterPc; combatantId: string } | null>(null)
   const [encounter, dispatch] = useReducer(
     encounterReducer,
     undefined,
@@ -355,6 +359,26 @@ function App() {
   const openRosterCreate = () => {
     setCompendiumTab('characters')
     setView('compendium')
+  }
+
+  // Edit a roster-backed PC from the encounter: open the editor seeded from its saved
+  // character (a no-op if the saved character is gone, e.g. deleted from the roster).
+  const handleEditEncounterPc = (c: PlayerCharacter) => {
+    const pc = c.rosterId ? rosterPcs.find((p) => p.id === c.rosterId) : undefined
+    if (pc) setEncounterPcEdit({ pc, combatantId: c.combatantId })
+  }
+
+  // Edit a roster-backed PC's DM notes from the encounter: update the on-board copy
+  // (shows now, autosaves with the encounter) and the saved character (persists).
+  const handleEditEncounterPcDmNotes = (c: PlayerCharacter, text: string) => {
+    const notes = text || undefined
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (x) => (x.isPC ? { ...x, dmNotes: notes } : x),
+    })
+    const pc = c.rosterId ? rosterPcs.find((p) => p.id === c.rosterId) : undefined
+    if (pc) handleUpdatePc({ ...pc, dmNotes: notes })
   }
 
   // The view toggle opens the compendium on its default (creatures) tab; only the
@@ -572,6 +596,8 @@ function App() {
             onRoll={pushRoll}
             onNote={pushNote}
             onRename={renameInLog}
+            onEditPc={handleEditEncounterPc}
+            onEditPcDmNotes={handleEditEncounterPcDmNotes}
             selectedId={selectedId}
             onSelect={setSelectedId}
             started={started}
@@ -584,6 +610,25 @@ function App() {
       </main>
 
       {authMode && <SignUpPage initialMode={authMode} onClose={() => setAuthMode(null)} />}
+
+      {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
+          on-board copy's character fields (HP and combat state stay put). */}
+      <PcFormModal
+        open={encounterPcEdit != null}
+        pc={encounterPcEdit?.pc}
+        campaigns={campaigns}
+        onClose={() => setEncounterPcEdit(null)}
+        onSubmit={(updated) => {
+          handleUpdatePc(updated)
+          if (encounterPcEdit) {
+            dispatch({
+              type: 'update',
+              id: encounterPcEdit.combatantId,
+              update: (x) => (x.isPC ? syncCombatantFromRoster(x, updated) : x),
+            })
+          }
+        }}
+      />
 
       {initPrompt && (
         <InitiativePrompt

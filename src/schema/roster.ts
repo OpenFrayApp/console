@@ -58,6 +58,7 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     isPC: true,
     kind: 'pc',
     combatantId: crypto.randomUUID(),
+    rosterId: pc.id,
     name: pc.name,
     initiative: 0, // rolled/entered when combat begins
     initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : 0,
@@ -84,5 +85,39 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     hp: { current: maxHp, max: maxHp, temp: 0 },
     concentration: null,
     effects: [],
+  }
+}
+
+/**
+ * Re-apply an edited roster character onto its in-fight combatant — updates the
+ * durable character fields (name, abilities, notes, …) while preserving all combat
+ * state (HP, initiative, effects, concentration, status). Editing the saved
+ * character never disrupts the fight: HP and other board state stay put.
+ */
+export function syncCombatantFromRoster(
+  combatant: PlayerCharacter,
+  pc: RosterPc,
+): PlayerCharacter {
+  return {
+    ...combatant,
+    name: pc.name,
+    ac: Math.max(0, Math.floor(pc.ac) || 0),
+    initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : combatant.initiativeMod,
+    speed: pc.speed,
+    abilities: pc.abilities,
+    senses: pc.senses,
+    languages: pc.languages,
+    resistances: pc.resistances,
+    immunities: pc.immunities,
+    vulnerabilities: pc.vulnerabilities,
+    race: pc.race,
+    alignment: pc.alignment,
+    faith: pc.faith,
+    personalityTraits: pc.personalityTraits,
+    ideals: pc.ideals,
+    bonds: pc.bonds,
+    flaws: pc.flaws,
+    backstory: pc.backstory,
+    dmNotes: pc.dmNotes,
   }
 }

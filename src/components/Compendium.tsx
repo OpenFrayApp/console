@@ -471,6 +471,7 @@ export function Compendium({
             flaws={selectedPc.flaws}
             backstory={selectedPc.backstory}
             dmNotes={selectedPc.dmNotes}
+            onEditDmNotes={(text) => onUpdatePc?.({ ...selectedPc, dmNotes: text || undefined })}
             footer={
               <>
                 <button

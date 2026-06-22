@@ -2,8 +2,8 @@
 // Copyright (C) 2026 OpenFray contributors
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { PcStatBlock } from '../../src/components/PcStatBlock.tsx'
 
 afterEach(cleanup)
@@ -66,6 +66,27 @@ describe('PcStatBlock', () => {
     // Anonymous quick PCs carry only a passive-perception number.
     rerender(<PcStatBlock {...base} passivePerception={12} />)
     expect(screen.getByText('Passive Perception 12')).toBeInTheDocument()
+  })
+
+  it('edits DM notes inline and commits the text on blur', () => {
+    const onEditDmNotes = vi.fn()
+    render(<PcStatBlock {...base} dmNotes={'Old note'} onEditDmNotes={onEditDmNotes} />)
+    fireEvent.click(screen.getByTitle(/Click to edit/))
+    const textarea = screen.getByLabelText('DM notes')
+    fireEvent.change(textarea, { target: { value: 'Owes the party 50gp' } })
+    fireEvent.blur(textarea)
+    expect(onEditDmNotes).toHaveBeenCalledWith('Owes the party 50gp')
+  })
+
+  it('prompts to add DM notes when empty but editable', () => {
+    render(<PcStatBlock {...base} onEditDmNotes={() => {}} />)
+    expect(screen.getByText('Add DM notes…')).toBeInTheDocument()
+  })
+
+  it('keeps DM notes read-only when no edit handler is given', () => {
+    render(<PcStatBlock {...base} dmNotes={'Secret'} />)
+    expect(screen.getByText('Secret')).toBeInTheDocument()
+    expect(screen.queryByTitle(/Click to edit/)).toBeNull()
   })
 
   it('omits sections that have no content and renders the footer', () => {

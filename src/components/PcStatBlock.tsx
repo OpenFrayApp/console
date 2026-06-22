@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { AbilityScores, Senses, Speeds } from '../schema/primitives.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import { speedLines } from '../combat/speed.ts'
@@ -13,6 +13,65 @@ import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { Markdown } from './Markdown.tsx'
 
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
+
+/**
+ * DM Notes: read-only markdown, or click-to-edit (a textarea that commits on blur)
+ * when `onCommit` is supplied — mirroring the inline HP edit, but persisted. Shows a
+ * muted prompt when empty so the DM can start typing.
+ */
+function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value ?? '')
+
+  if (!onCommit) {
+    if (!value?.trim()) return null
+    return (
+      <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        <Markdown>{value}</Markdown>
+      </div>
+    )
+  }
+  if (editing) {
+    const commit = () => {
+      onCommit(draft.trim())
+      setEditing(false)
+    }
+    return (
+      <textarea
+        autoFocus
+        value={draft}
+        rows={4}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setEditing(false)
+        }}
+        aria-label="DM notes"
+        placeholder="Markdown supported. Click away to save."
+        className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800"
+      />
+    )
+  }
+  return (
+    <button
+      type="button"
+      title="Click to edit — saved to this character"
+      onClick={() => {
+        setDraft(value ?? '')
+        setEditing(true)
+      }}
+      className="block w-full cursor-text rounded px-1 py-0.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+    >
+      {value?.trim() ? (
+        <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          <Markdown>{value}</Markdown>
+        </div>
+      ) : (
+        <span className="text-sm italic text-slate-400 dark:text-slate-500">Add DM notes…</span>
+      )}
+    </button>
+  )
+}
 
 /** A labelled bullet list of roleplay lines (traits / ideals / bonds / flaws). */
 function LineGroup({ label, items }: { label: string; items?: string[] }) {
@@ -64,6 +123,7 @@ export function PcStatBlock({
   onRename,
   onHpInput,
   onTempInput,
+  onEditDmNotes,
   footer,
 }: {
   name: string
@@ -93,6 +153,8 @@ export function PcStatBlock({
   onRename?: (name: string) => void
   onHpInput?: (raw: string) => void
   onTempInput?: (raw: string) => void
+  /** Make DM Notes click-to-edit, committing the new text (persisted by the caller). */
+  onEditDmNotes?: (text: string) => void
   /** Bottom source-style row (e.g. Add to encounter / Edit / Delete). */
   footer?: ReactNode
 }) {
@@ -161,6 +223,15 @@ export function PcStatBlock({
         languages={languages?.join(', ')}
       />
 
+      {/* DM Notes sit high — the DM's working scratch for this character. When
+          editable, click to edit (saved by the caller); otherwise read-only. */}
+      {(onEditDmNotes || dmNotes?.trim()) && (
+        <div>
+          <h4 className={SECTION_HEADING}>DM Notes</h4>
+          <DmNotes value={dmNotes} onCommit={onEditDmNotes} />
+        </div>
+      )}
+
       {hasPersonality && (
         <div>
           <h4 className={SECTION_HEADING}>Personality</h4>
@@ -181,22 +252,16 @@ export function PcStatBlock({
         </div>
       )}
 
+      {/* Backstory is collapsed by default — reference, not at-a-glance combat info. */}
       {backstory?.trim() && (
-        <div>
-          <h4 className={SECTION_HEADING}>Backstory &amp; Goals</h4>
+        <details>
+          <summary className="mb-2 cursor-pointer select-none border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
+            Backstory &amp; Goals
+          </summary>
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             <Markdown>{backstory}</Markdown>
           </div>
-        </div>
-      )}
-
-      {dmNotes?.trim() && (
-        <div>
-          <h4 className={SECTION_HEADING}>DM Notes</h4>
-          <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-            <Markdown>{dmNotes}</Markdown>
-          </div>
-        </div>
+        </details>
       )}
 
       {footer && (

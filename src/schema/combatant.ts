@@ -131,6 +131,12 @@ export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   isPC: true
   kind?: 'pc' | 'quick'
   /**
+   * The durable roster character this was instantiated from, when added from the
+   * saved roster. Lets the encounter persist character-level edits (e.g. DM notes)
+   * back to the DB. Absent for anonymous quick adds and PCs added at the table.
+   */
+  rosterId?: string
+  /**
    * Friend vs foe for a quick add — drives the row colour and the pre-combat
    * grouping (a foe quick add sits with the Creatures, not the players). Absent
    * means friend; a `pc` is always a friend. Independent of `isPC`, which governs

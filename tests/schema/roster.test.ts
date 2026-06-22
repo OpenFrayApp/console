@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { rosterPcToCombatant, type RosterPc } from '../../src/schema/roster.ts'
+import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from '../../src/schema/roster.ts'
 
 const base: RosterPc = {
   id: 'pc-1',
@@ -62,5 +62,40 @@ describe('rosterPcToCombatant', () => {
 
   it('gives each instantiation a distinct combatant id', () => {
     expect(rosterPcToCombatant(base).combatantId).not.toBe(rosterPcToCombatant(base).combatantId)
+  })
+
+  it('links the combatant back to its saved roster character', () => {
+    expect(rosterPcToCombatant(base).rosterId).toBe('pc-1')
+  })
+})
+
+describe('syncCombatantFromRoster', () => {
+  it('updates character fields but preserves combat state', () => {
+    const inFight = {
+      ...rosterPcToCombatant(base),
+      hp: { current: 5, max: 38, temp: 3 },
+      initiative: 17,
+      status: 'unconscious' as const,
+    }
+    const edited: RosterPc = {
+      ...base,
+      name: 'Thalia the Bold',
+      ac: 18,
+      abilities: { ...base.abilities!, dex: 18 },
+      dmNotes: 'Owes the party gold',
+    }
+    const synced = syncCombatantFromRoster(inFight, edited)
+
+    // Character fields follow the edit…
+    expect(synced.name).toBe('Thalia the Bold')
+    expect(synced.ac).toBe(18)
+    expect(synced.initiativeMod).toBe(4) // derived from DEX 18
+    expect(synced.dmNotes).toBe('Owes the party gold')
+    // …but combat state stays put (HP edits never reach the saved character).
+    expect(synced.hp).toEqual({ current: 5, max: 38, temp: 3 })
+    expect(synced.initiative).toBe(17)
+    expect(synced.status).toBe('unconscious')
+    expect(synced.combatantId).toBe(inFight.combatantId)
+    expect(synced.rosterId).toBe('pc-1')
   })
 })

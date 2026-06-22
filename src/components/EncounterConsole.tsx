@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import type { Action } from '../schema/action.ts'
-import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
+import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
@@ -76,12 +76,18 @@ export function EncounterConsole({
   onClearLog,
   onNote,
   onRename,
+  onEditPc,
+  onEditPcDmNotes,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
   rollLog: RollEntry[]
   onRoll: OnRoll
   onNote: OnNote
+  /** Open the full character editor for a roster-backed PC (saves to the DB). */
+  onEditPc?: (pc: PlayerCharacter) => void
+  /** Commit edited DM notes for a roster-backed PC (saves to the board + the DB). */
+  onEditPcDmNotes?: (pc: PlayerCharacter, text: string) => void
   /** Keep the roll log in sync when a combatant is renamed. */
   onRename: (oldName: string, newName: string) => void
   selectedId: string | null
@@ -369,6 +375,22 @@ export function EncounterConsole({
                   }}
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}
                   onTempInput={(raw) => applyHpInput(selected, raw, true)}
+                  onEditDmNotes={
+                    selected.rosterId && onEditPcDmNotes
+                      ? (text) => onEditPcDmNotes(selected, text)
+                      : undefined
+                  }
+                  footer={
+                    selected.rosterId && onEditPc ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditPc(selected)}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        Edit character
+                      </button>
+                    ) : undefined
+                  }
                 />
               ) : (
                 <CreatureStatBlock
