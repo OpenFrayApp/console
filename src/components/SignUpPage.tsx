@@ -113,6 +113,10 @@ export function SignUpPage({
                 </li>
               ))}
             </ul>
+            <p className="mt-8 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
+              <span className="font-semibold">Free, and always will be.</span> No ads, no
+              paywall, no premium tier — OpenFray is a passion project for the table.
+            </p>
           </div>
 
           {/* Auth form */}
@@ -167,7 +171,7 @@ export function SignUpPage({
               </button>
               <p className="text-center text-xs text-slate-400 dark:text-slate-500">
                 {mode === 'up'
-                  ? 'Free. Your data is private to your account.'
+                  ? 'Free forever — no ads, no paywall. Your data stays private to your account.'
                   : "Welcome back, let's go on an adventure!"}
               </p>
             </div>
