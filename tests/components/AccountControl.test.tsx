@@ -75,7 +75,7 @@ describe('AccountControl (anonymous)', () => {
     expect(screen.queryByRole('menuitem', { name: 'Sign out' })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
     expect(value.signOut).toHaveBeenCalledTimes(1)
   })
@@ -83,7 +83,7 @@ describe('AccountControl (anonymous)', () => {
   it('opens the account settings panel from the menu', () => {
     renderControl({ user: { email: 'dm@openfray.app' } as unknown as User })
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
     // The AccountPanel renders its sections.
     expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument()
     expect(screen.getByText('Change email')).toBeInTheDocument()

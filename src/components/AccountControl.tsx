@@ -18,7 +18,7 @@ function UserIcon() {
 
 /**
  * Header account control. Signed in: a user-icon button opening a menu with
- * Settings (the account panel) and Sign out. Anonymous: a "Sign in" button that
+ * Profile (the account panel) and Sign out. Anonymous: a "Sign in" button that
  * opens a compact log-in popover (with a link to the full sign-up flow). Renders
  * nothing until Supabase is configured, so an unconfigured build stays anon-only.
  */
@@ -66,7 +66,7 @@ export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
               }}
               className={item}
             >
-              Settings
+              Profile
             </button>
             <button
               type="button"
