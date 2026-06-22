@@ -3,6 +3,7 @@
 
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -66,11 +67,16 @@ export function SignUpPage({
     <div className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950">
       <div className="mx-auto flex min-h-full max-w-5xl flex-col px-6 py-8">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">DnD 5e combat console</p>
+          <div className="flex items-center gap-3">
+            <span className="text-indigo-500 dark:text-indigo-400">
+              <CrossedSwordsIcon className="h-8 w-8" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">DnD 5e combat console</p>
+            </div>
           </div>
           <button
             type="button"
@@ -89,7 +95,11 @@ export function SignUpPage({
             </h2>
             <p className="mt-2 max-w-xl text-slate-600 dark:text-slate-400">
               OpenFray runs great without an account — SRD monsters, quick adds, your party, and the
-              dice are all free to use. Sign up to make it <em>yours</em>:
+              dice are all free to use. Sign up to make it <em>yours</em>.
+            </p>
+            <p className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
+              <span className="font-semibold">Free, and always will be.</span> No ads, no
+              paywall, no premium tier — OpenFray is a passion project for the table.
             </p>
             <ul className="mt-8 grid gap-5 sm:grid-cols-2">
               {BENEFITS.map((b) => (
@@ -113,10 +123,6 @@ export function SignUpPage({
                 </li>
               ))}
             </ul>
-            <p className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
-              <span className="font-semibold">Free, and always will be.</span> No ads, no
-              paywall, no premium tier — OpenFray is a passion project for the table.
-            </p>
           </div>
 
           {/* Auth form */}

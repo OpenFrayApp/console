@@ -41,6 +41,7 @@ import { MassSavePanel } from './components/MassSavePanel.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
+import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
 
@@ -83,22 +84,6 @@ function MoonIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-    </svg>
-  )
-}
-
-/** The OpenFray brand mark — crossed swords, matching the site favicon/logo. */
-function CrossedSwordsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7" aria-hidden="true">
-      <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
-      <line x1="13" y1="19" x2="19" y2="13" />
-      <line x1="16" y1="16" x2="20" y2="20" />
-      <line x1="19" y1="21" x2="21" y2="19" />
-      <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
-      <line x1="5" y1="14" x2="9" y2="18" />
-      <line x1="7" y1="17" x2="4" y2="20" />
-      <line x1="3" y1="19" x2="5" y2="21" />
     </svg>
   )
 }
