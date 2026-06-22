@@ -3,7 +3,7 @@
 
 import type { Creature, SpellLevel } from './creature.ts'
 import type { Effect } from './effect.ts'
-import type { Speeds } from './primitives.ts'
+import type { AbilityScores, Speeds } from './primitives.ts'
 
 export interface HitPoints {
   current: number
@@ -127,6 +127,12 @@ export interface PlayerCharacter extends CombatantBase {
   immunities?: string[]
   vulnerabilities?: string[]
   speed?: Speeds
+  /**
+   * The six ability scores, carried from a durable roster PC (signed-in only).
+   * Optional — anonymous PCs added at the table don't have them. Stored for a
+   * future Dexterity-based initiative tiebreak; nothing derives from it yet.
+   */
+  abilities?: AbilityScores
   /** Present once the PC is downed; absent/zeroed when conscious. */
   deathSaves?: DeathSaves
 }

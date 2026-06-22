@@ -13,6 +13,7 @@ import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
 import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
+import { rosterPcToCombatant, type RosterPc } from './schema/roster.ts'
 import { CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
 import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
@@ -29,6 +30,12 @@ import {
   saveCampaign,
   updateCampaign,
 } from './state/cloudCampaigns.ts'
+import {
+  deleteRosterPc,
+  loadRosterPcs,
+  saveRosterPc,
+  updateRosterPc,
+} from './state/cloudPlayers.ts'
 import { useAuth } from './auth/useAuth.ts'
 import { Compendium } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
@@ -157,6 +164,9 @@ function App() {
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   // The signed-in user's campaigns (empty when anonymous), managed in the compendium.
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  // The signed-in user's durable party roster (empty when anonymous), managed in the
+  // compendium and instantiated into encounters on demand.
+  const [rosterPcs, setRosterPcs] = useState<RosterPc[]>([])
   // Which campaign the DM is running; its house rules drive the console. Null for
   // anonymous users and signed-in users with no campaign selected (→ standard rules).
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
@@ -177,11 +187,13 @@ function App() {
     if (user) setAuthMode(null)
   }, [user])
 
-  // Load the custom creature library + campaigns on sign-in; clear them on sign-out.
+  // Load the custom creature library + campaigns + party roster on sign-in; clear
+  // them on sign-out.
   useEffect(() => {
     if (!user) {
       setCustomCreatures([])
       setCampaigns([])
+      setRosterPcs([])
       setActiveCampaignId(null)
       return
     }
@@ -191,6 +203,9 @@ function App() {
     })
     loadCampaigns().then((list) => {
       if (active) setCampaigns(list)
+    })
+    loadRosterPcs().then((list) => {
+      if (active) setRosterPcs(list)
     })
     return () => {
       active = false
@@ -304,6 +319,32 @@ function App() {
   const handleDeleteCampaign = (id: string) => {
     setCampaigns((prev) => prev.filter((c) => c.id !== id))
     deleteCampaign(id)
+  }
+
+  // Roster PCs persist to the user's account (signed-up only). Optimistic in-memory
+  // update first; the cloud write is background and best-effort.
+  const handleCreatePc = (pc: RosterPc) => {
+    setRosterPcs((prev) => [pc, ...prev])
+    saveRosterPc(pc)
+  }
+
+  const handleUpdatePc = (pc: RosterPc) => {
+    setRosterPcs((prev) => prev.map((p) => (p.id === pc.id ? pc : p)))
+    updateRosterPc(pc)
+  }
+
+  const handleDeletePc = (id: string) => {
+    setRosterPcs((prev) => prev.filter((p) => p.id !== id))
+    deleteRosterPc(id)
+  }
+
+  // Add a roster PC to the current fight: instantiate a fresh combatant (the roster
+  // entry is a reusable template), then jump to the encounter and select it.
+  const handleAddPcToEncounter = (pc: RosterPc) => {
+    const combatant = rosterPcToCombatant(pc)
+    dispatch({ type: 'add', combatant })
+    setSelectedId(combatant.combatantId)
+    setView('encounter')
   }
 
   // Advancing the turn moves the center panel to whoever's turn it now is.
@@ -488,6 +529,11 @@ function App() {
               onCreateCampaign={handleCreateCampaign}
               onUpdateCampaign={handleUpdateCampaign}
               onDeleteCampaign={handleDeleteCampaign}
+              rosterPcs={rosterPcs}
+              onCreatePc={handleCreatePc}
+              onUpdatePc={handleUpdatePc}
+              onDeletePc={handleDeletePc}
+              onAddPcToEncounter={handleAddPcToEncounter}
               createGated={!user}
               onGated={() => setAuthMode('in')}
             />

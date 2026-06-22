@@ -175,6 +175,78 @@ describe('Compendium', () => {
     vi.restoreAllMocks()
   })
 
+  it('lists roster PCs and creates one through the modal', async () => {
+    const onCreatePc = vi.fn()
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        campaigns={[{ id: 'camp-1', name: 'Curse of Strahd', edition: '5.5' }]}
+        rosterPcs={[{ id: 'p1', name: 'Thalia', ac: 16, maxHp: 38 }]}
+        onCreatePc={onCreatePc}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Players'))
+    expect(screen.getByText('Thalia')).toBeInTheDocument()
+
+    // The shared search box filters the roster too.
+    fireEvent.change(screen.getByLabelText('Search players'), { target: { value: 'zzz' } })
+    expect(screen.queryByText('Thalia')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Search players'), { target: { value: '' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add player character' }))
+    const dialog = screen.getByRole('dialog', { name: 'New player character' })
+    fireEvent.change(within(dialog).getByLabelText('PC name'), { target: { value: 'Grog' } })
+    // The campaign dropdown is populated from the user's campaigns.
+    expect(within(dialog).getByRole('option', { name: 'Curse of Strahd' })).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create PC' }))
+
+    expect(onCreatePc).toHaveBeenCalledTimes(1)
+    expect(onCreatePc.mock.calls[0][0].name).toBe('Grog')
+  })
+
+  it('adds a roster PC to the encounter, edits, and deletes it from the card', async () => {
+    const onAddPcToEncounter = vi.fn()
+    const onUpdatePc = vi.fn()
+    const onDeletePc = vi.fn()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        rosterPcs={[{ id: 'p1', name: 'Thalia', ac: 16, maxHp: 38 }]}
+        onAddPcToEncounter={onAddPcToEncounter}
+        onUpdatePc={onUpdatePc}
+        onDeletePc={onDeletePc}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Players'))
+    fireEvent.click(screen.getByRole('button', { name: /Thalia/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to encounter' }))
+    expect(onAddPcToEncounter).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const dialog = screen.getByRole('dialog', { name: 'Edit player character' })
+    fireEvent.change(within(dialog).getByLabelText('PC name'), { target: { value: 'Thalia II' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(onUpdatePc.mock.calls[0][0]).toMatchObject({ id: 'p1', name: 'Thalia II' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(onDeletePc).toHaveBeenCalledWith('p1')
+    vi.restoreAllMocks()
+  })
+
+  it('gates the players tab for anonymous users', async () => {
+    const onGated = vi.fn()
+    render(<Compendium onCreateCreature={() => {}} createGated onGated={onGated} />)
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Players'))
+    expect(screen.getByText(/Sign in to build and reuse a party roster/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(onGated).toHaveBeenCalled()
+  })
+
   it('prompts sign-in on the campaigns tab when gated', async () => {
     const onGated = vi.fn()
     const onCreateCampaign = vi.fn()

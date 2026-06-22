@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Campaign } from '../schema/campaign.ts'
+import type { RosterPc } from '../schema/roster.ts'
 import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import { CampaignCard } from './CampaignCard.tsx'
@@ -12,9 +13,11 @@ import { CampaignFormModal } from './CampaignFormModal.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
+import { PcCard } from './PcCard.tsx'
+import { PcFormModal } from './PcFormModal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 
-type Tab = 'creatures' | 'spells' | 'campaigns'
+type Tab = 'creatures' | 'spells' | 'campaigns' | 'players'
 
 function cx(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
@@ -100,6 +103,57 @@ function CampaignList({
   )
 }
 
+/** Left column for the Players tab: the user's roster (filtered by the shared
+ *  search box). Creating a PC is the right pane's empty-state action. */
+function PcList({
+  pcs,
+  gated,
+  selectedId,
+  onSelect,
+}: {
+  pcs: RosterPc[]
+  gated: boolean
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  if (gated) {
+    return (
+      <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        Sign in to build and reuse a party roster.
+      </p>
+    )
+  }
+  return (
+    <>
+      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+        {pcs.length} {pcs.length === 1 ? 'PC' : 'PCs'}
+      </p>
+      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        {pcs.map((p) => (
+          <li key={p.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(p.id)}
+              className={cx(
+                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
+                p.id === selectedId
+                  ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-900',
+              )}
+            >
+              <span className="truncate">{p.name}</span>
+              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">AC {p.ac}</span>
+            </button>
+          </li>
+        ))}
+        {pcs.length === 0 && (
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No matches</li>
+        )}
+      </ul>
+    </>
+  )
+}
+
 export function Compendium({
   customCreatures = [],
   onCreateCreature,
@@ -109,6 +163,11 @@ export function Compendium({
   onCreateCampaign,
   onUpdateCampaign,
   onDeleteCampaign,
+  rosterPcs = [],
+  onCreatePc,
+  onUpdatePc,
+  onDeletePc,
+  onAddPcToEncounter,
   createGated = false,
   onGated,
 }: {
@@ -128,6 +187,16 @@ export function Compendium({
   onUpdateCampaign?: (campaign: Campaign) => void
   /** Remove a campaign. */
   onDeleteCampaign?: (id: string) => void
+  /** The signed-in user's party roster (empty when anonymous). */
+  rosterPcs?: RosterPc[]
+  /** Save a new roster PC. */
+  onCreatePc?: (pc: RosterPc) => void
+  /** Replace an edited roster PC. */
+  onUpdatePc?: (pc: RosterPc) => void
+  /** Remove a roster PC. */
+  onDeletePc?: (id: string) => void
+  /** Drop a roster PC into the current encounter (instantiated as a combatant). */
+  onAddPcToEncounter?: (pc: RosterPc) => void
   /** When anonymous, create actions prompt sign-up instead. */
   createGated?: boolean
   onGated?: () => void
@@ -143,6 +212,8 @@ export function Compendium({
   // The campaign create/edit modal: null = closed; otherwise the campaign to edit
   // (or null inside to create a new one).
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
+  // The PC create/edit modal: null = closed; otherwise the PC to edit (or null to create).
+  const [pcForm, setPcForm] = useState<{ pc: RosterPc | null } | null>(null)
 
   useEffect(() => {
     loadSrdCreatures().then(setCreatures, () => setCreatures([]))
@@ -164,6 +235,13 @@ export function Compendium({
     const list = q ? campaigns.filter((c) => c.name.toLowerCase().includes(q)) : campaigns
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
   }, [campaigns, query])
+
+  // The roster shares the same search box, filtered by name.
+  const filteredPcs = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const list = q ? rosterPcs.filter((p) => p.name.toLowerCase().includes(q)) : rosterPcs
+    return [...list].sort((a, b) => a.name.localeCompare(b.name))
+  }, [rosterPcs, query])
 
   const entries = useMemo(() => {
     const list =
@@ -191,6 +269,7 @@ export function Compendium({
     tab === 'spells' ? (spells ?? []).find((s) => s.id === selectedId) : undefined
   const selectedCampaign =
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
+  const selectedPc = tab === 'players' ? rosterPcs.find((p) => p.id === selectedId) : undefined
 
   const switchTab = (next: Tab) => {
     setTab(next)
@@ -210,6 +289,21 @@ export function Compendium({
     if (window.confirm(`Delete “${campaign.name}”?`)) {
       if (selectedId === campaign.id) setSelectedId(null)
       onDeleteCampaign?.(campaign.id)
+    }
+  }
+
+  // Roster PCs are signed-up-only; anonymous create prompts sign-up. Create/edit
+  // both go through the modal, mirroring campaigns.
+  const startNewPc = () => (createGated ? onGated?.() : setPcForm({ pc: null }))
+  const submitPc = (pc: RosterPc) => {
+    if (pcForm?.pc) onUpdatePc?.(pc)
+    else onCreatePc?.(pc)
+    setSelectedId(pc.id)
+  }
+  const removePc = (pc: RosterPc) => {
+    if (window.confirm(`Delete “${pc.name}” from your roster?`)) {
+      if (selectedId === pc.id) setSelectedId(null)
+      onDeletePc?.(pc.id)
     }
   }
 
@@ -238,6 +332,9 @@ export function Compendium({
           <TabButton active={tab === 'spells'} onClick={() => switchTab('spells')}>
             Spells
           </TabButton>
+          <TabButton active={tab === 'players'} onClick={() => switchTab('players')}>
+            Players
+          </TabButton>
           <TabButton active={tab === 'campaigns'} onClick={() => switchTab('campaigns')}>
             Campaigns
           </TabButton>
@@ -255,6 +352,13 @@ export function Compendium({
         {tab === 'campaigns' ? (
           <CampaignList
             campaigns={filteredCampaigns}
+            gated={createGated}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        ) : tab === 'players' ? (
+          <PcList
+            pcs={filteredPcs}
             gated={createGated}
             selectedId={selectedId}
             onSelect={setSelectedId}
@@ -302,10 +406,12 @@ export function Compendium({
       </div>
 
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
-        {tab === 'campaigns' && createGated ? (
+        {(tab === 'campaigns' || tab === 'players') && createGated ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
-              Sign into your account to create a campaign.
+              {tab === 'players'
+                ? 'Sign into your account to build a reusable party roster.'
+                : 'Sign into your account to create a campaign.'}
             </p>
             <button
               type="button"
@@ -333,6 +439,14 @@ export function Compendium({
             onEdit={() => setCampaignForm({ campaign: selectedCampaign })}
             onDelete={() => removeCampaign(selectedCampaign)}
           />
+        ) : selectedPc ? (
+          <PcCard
+            pc={selectedPc}
+            campaignName={campaigns.find((c) => c.id === selectedPc.campaignId)?.name}
+            onAddToEncounter={() => onAddPcToEncounter?.(selectedPc)}
+            onEdit={() => setPcForm({ pc: selectedPc })}
+            onDelete={() => removePc(selectedPc)}
+          />
         ) : (
           // Nothing selected: a centered prompt that doubles as the create entry
           // point on the Creatures and Campaigns tabs.
@@ -359,7 +473,9 @@ export function Compendium({
                   : 'Select a creature to view it, or create a custom one.'
                 : tab === 'campaigns'
                   ? 'Select a campaign to view it, or create a new one.'
-                  : 'Select a spell to view it.'}
+                  : tab === 'players'
+                    ? 'Select a player character to view it, or add one to your roster.'
+                    : 'Select a spell to view it.'}
             </p>
             {tab === 'creatures' && (
               <button
@@ -379,6 +495,15 @@ export function Compendium({
                 Create campaign
               </button>
             )}
+            {tab === 'players' && (
+              <button
+                type="button"
+                onClick={startNewPc}
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Add player character
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -396,6 +521,14 @@ export function Compendium({
         campaign={campaignForm?.campaign}
         onClose={() => setCampaignForm(null)}
         onSubmit={submitCampaign}
+      />
+
+      <PcFormModal
+        open={pcForm != null}
+        pc={pcForm?.pc}
+        campaigns={campaigns}
+        onClose={() => setPcForm(null)}
+        onSubmit={submitPc}
       />
     </div>
   )
