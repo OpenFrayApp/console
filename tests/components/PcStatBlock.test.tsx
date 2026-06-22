@@ -41,11 +41,14 @@ describe('PcStatBlock', () => {
         bonds={['My village']}
         flaws={['Reckless']}
         backstory={'Raised in **Neverwinter**.'}
+        dmNotes={'Secretly the heir.'}
       />,
     )
     expect(screen.getByText('Personality')).toBeInTheDocument()
     expect(screen.getByText('Faith')).toBeInTheDocument()
     expect(screen.getByText('Lathander')).toBeInTheDocument()
+    expect(screen.getByText('DM Notes')).toBeInTheDocument()
+    expect(screen.getByText('Secretly the heir.')).toBeInTheDocument()
     expect(screen.getByText('Personality Traits')).toBeInTheDocument()
     expect(screen.getByText('Brave to a fault')).toBeInTheDocument()
     expect(screen.getByText('Protect the weak')).toBeInTheDocument()

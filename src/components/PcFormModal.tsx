@@ -69,6 +69,7 @@ type ListKey = 'personalityTraits' | 'ideals' | 'bonds' | 'flaws'
 interface PcDraft {
   campaignId: string
   name: string
+  race: string
   alignment: string
   faith: string
   edition: Edition
@@ -86,12 +87,14 @@ interface PcDraft {
   bonds: string[]
   flaws: string[]
   backstory: string
+  dmNotes: string
 }
 
 function emptyDraft(): PcDraft {
   return {
     campaignId: '',
     name: '',
+    race: '',
     alignment: '',
     faith: '',
     edition: '5.5',
@@ -109,6 +112,7 @@ function emptyDraft(): PcDraft {
     bonds: [''],
     flaws: [''],
     backstory: '',
+    dmNotes: '',
   }
 }
 
@@ -117,6 +121,7 @@ function draftFromPc(pc: RosterPc): PcDraft {
   return {
     campaignId: pc.campaignId ?? '',
     name: pc.name,
+    race: pc.race ?? '',
     alignment: pc.alignment ?? '',
     faith: pc.faith ?? '',
     edition: pc.edition ?? '5.5',
@@ -154,6 +159,7 @@ function draftFromPc(pc: RosterPc): PcDraft {
     bonds: seedList(pc.bonds),
     flaws: seedList(pc.flaws),
     backstory: pc.backstory ?? '',
+    dmNotes: pc.dmNotes ?? '',
   }
 }
 
@@ -183,6 +189,7 @@ function buildPc(d: PcDraft, id: string): RosterPc {
   return {
     id,
     name: d.name.trim(),
+    race: d.race.trim() || undefined,
     alignment: d.alignment || undefined,
     faith: d.faith.trim() || undefined,
     edition: d.edition,
@@ -200,6 +207,7 @@ function buildPc(d: PcDraft, id: string): RosterPc {
     bonds: clean(d.bonds),
     flaws: clean(d.flaws),
     backstory: d.backstory.trim() || undefined,
+    dmNotes: d.dmNotes.trim() || undefined,
     campaignId: d.campaignId || null,
   }
 }
@@ -344,6 +352,14 @@ export function PcFormModal({
               {...OFF}
               className={FIELD}
             />
+            <input
+              value={d.race}
+              onChange={(e) => patch({ race: e.target.value })}
+              placeholder="Race / ancestry (Elf, Dwarf…)"
+              aria-label="Race"
+              {...OFF}
+              className={FIELD}
+            />
             <div className="grid grid-cols-2 gap-2">
               <select value={d.alignment} onChange={(e) => patch({ alignment: e.target.value })} aria-label="Alignment" className={FIELD}>
                 <option value="">No alignment</option>
@@ -439,7 +455,7 @@ export function PcFormModal({
               <input
                 value={d.faith}
                 onChange={(e) => patch({ faith: e.target.value })}
-                placeholder="Deity or faith (clerics, paladins…)"
+                placeholder="Deity or faith"
                 aria-label="Faith"
                 {...OFF}
                 className={FIELD}
@@ -450,13 +466,25 @@ export function PcFormModal({
             <LineList label="Bonds" addLabel="+ Add bond" items={d.bonds} onChange={setList('bonds')} />
             <LineList label="Flaws" addLabel="+ Add flaw" items={d.flaws} onChange={setList('flaws')} />
             <label className="block space-y-1">
-              <span className={LABEL}>Backstory &amp; Goals (markdown)</span>
+              <span className={LABEL}>Backstory &amp; Goals</span>
               <textarea
                 value={d.backstory}
                 onChange={(e) => patch({ backstory: e.target.value })}
                 rows={4}
                 placeholder="Goals, history, hooks…"
                 aria-label="Backstory and goals"
+                {...OFF}
+                className={FIELD}
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className={LABEL}>DM Notes</span>
+              <textarea
+                value={d.dmNotes}
+                onChange={(e) => patch({ dmNotes: e.target.value })}
+                rows={3}
+                placeholder="Private notes for tracking this character…"
+                aria-label="DM notes"
                 {...OFF}
                 className={FIELD}
               />

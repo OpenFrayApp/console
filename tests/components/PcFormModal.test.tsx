@@ -129,8 +129,10 @@ describe('PcFormModal', () => {
     render(<PcFormModal open campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />)
 
     fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
+    fireEvent.change(screen.getByLabelText('Race'), { target: { value: 'Half-Elf' } })
     fireEvent.change(screen.getByLabelText('Alignment'), { target: { value: 'lawful good' } })
     fireEvent.change(screen.getByLabelText('Faith'), { target: { value: 'Lathander' } })
+    fireEvent.change(screen.getByLabelText('DM notes'), { target: { value: 'Owes the party 50gp' } })
 
     // Each roleplay category is a repeatable list: Add a line, then fill it.
     fireEvent.click(screen.getByRole('button', { name: '+ Add trait' }))
@@ -144,8 +146,10 @@ describe('PcFormModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
 
     const saved = onSubmit.mock.calls[0][0] as RosterPc
+    expect(saved.race).toBe('Half-Elf')
     expect(saved.alignment).toBe('lawful good')
     expect(saved.faith).toBe('Lathander')
+    expect(saved.dmNotes).toBe('Owes the party 50gp')
     expect(saved.personalityTraits).toEqual(['Brave'])
     expect(saved.bonds).toEqual(['My village'])
     expect(saved.ideals).toBeUndefined() // empty categories are dropped

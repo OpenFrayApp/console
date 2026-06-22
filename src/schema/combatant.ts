@@ -37,6 +37,8 @@ export interface LimitedUseState {
  */
 export interface CharacterDetails {
   alignment?: string
+  /** Ancestry / race (Elf, Dwarf, …) — free text. */
+  race?: string
   /** Deity / faith the character follows — matters for clerics & paladins. */
   faith?: string
   personalityTraits?: string[]
@@ -45,6 +47,8 @@ export interface CharacterDetails {
   flaws?: string[]
   /** Backstory / goals — longer prose, rendered as markdown. */
   backstory?: string
+  /** Private DM notes for tracking anything about this character — markdown. */
+  dmNotes?: string
 }
 
 /** Death is non-destructive: the combatant stays in order, greyed and skipped. */

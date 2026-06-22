@@ -351,9 +351,9 @@ function App() {
     setView('encounter')
   }
 
-  // Header "Add PC → create": send a signed-in user to the compendium's Players tab.
+  // Header "Add PC → create": send a signed-in user to the compendium's Characters tab.
   const openRosterCreate = () => {
-    setCompendiumTab('players')
+    setCompendiumTab('characters')
     setView('compendium')
   }
 

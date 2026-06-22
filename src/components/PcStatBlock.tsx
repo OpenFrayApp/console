@@ -59,6 +59,7 @@ export function PcStatBlock({
   bonds,
   flaws,
   backstory,
+  dmNotes,
   concentration,
   onRename,
   onHpInput,
@@ -86,6 +87,8 @@ export function PcStatBlock({
   bonds?: string[]
   flaws?: string[]
   backstory?: string
+  /** Private DM notes — shown only to the DM (this is a single-DM tool). */
+  dmNotes?: string
   concentration?: Concentration | null
   onRename?: (name: string) => void
   onHpInput?: (raw: string) => void
@@ -183,6 +186,15 @@ export function PcStatBlock({
           <h4 className={SECTION_HEADING}>Backstory &amp; Goals</h4>
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             <Markdown>{backstory}</Markdown>
+          </div>
+        </div>
+      )}
+
+      {dmNotes?.trim() && (
+        <div>
+          <h4 className={SECTION_HEADING}>DM Notes</h4>
+          <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <Markdown>{dmNotes}</Markdown>
           </div>
         </div>
       )}

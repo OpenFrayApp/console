@@ -336,7 +336,9 @@ export function EncounterConsole({
                   subtitle={
                     selected.kind === 'quick'
                       ? 'Quick add'
-                      : ['Player character', selected.alignment].filter(Boolean).join(' · ')
+                      : ['Player character', selected.race, selected.alignment]
+                          .filter(Boolean)
+                          .join(' · ')
                   }
                   ac={selected.ac}
                   hp={selected.hp}
@@ -355,6 +357,7 @@ export function EncounterConsole({
                   bonds={selected.bonds}
                   flaws={selected.flaws}
                   backstory={selected.backstory}
+                  dmNotes={selected.dmNotes}
                   concentration={selected.concentration}
                   onRename={(name) => {
                     onRename(selected.name, name)

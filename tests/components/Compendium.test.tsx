@@ -186,13 +186,13 @@ describe('Compendium', () => {
       />,
     )
     await waitFor(() => screen.getByText('Goblin'))
-    fireEvent.click(screen.getByText('Players'))
+    fireEvent.click(screen.getByText('Characters'))
     expect(screen.getByText('Thalia')).toBeInTheDocument()
 
     // The shared search box filters the roster too.
-    fireEvent.change(screen.getByLabelText('Search players'), { target: { value: 'zzz' } })
+    fireEvent.change(screen.getByLabelText('Search characters'), { target: { value: 'zzz' } })
     expect(screen.queryByText('Thalia')).toBeNull()
-    fireEvent.change(screen.getByLabelText('Search players'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Search characters'), { target: { value: '' } })
 
     fireEvent.click(screen.getByRole('button', { name: 'Add player character' }))
     const dialog = screen.getByRole('dialog', { name: 'New player character' })
@@ -220,7 +220,7 @@ describe('Compendium', () => {
       />,
     )
     await waitFor(() => screen.getByText('Goblin'))
-    fireEvent.click(screen.getByText('Players'))
+    fireEvent.click(screen.getByText('Characters'))
     fireEvent.click(screen.getByRole('button', { name: /Thalia/ }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Add to encounter' }))
@@ -241,7 +241,7 @@ describe('Compendium', () => {
     const onGated = vi.fn()
     render(<Compendium onCreateCreature={() => {}} createGated onGated={onGated} />)
     await waitFor(() => screen.getByText('Goblin'))
-    fireEvent.click(screen.getByText('Players'))
+    fireEvent.click(screen.getByText('Characters'))
     expect(screen.getByText(/Sign in to build and reuse a party roster/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(onGated).toHaveBeenCalled()

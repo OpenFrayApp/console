@@ -18,7 +18,7 @@ import { PcFormModal } from './PcFormModal.tsx'
 import { abilityMod } from '../schema/roster.ts'
 import { SpellCard } from './SpellCard.tsx'
 
-export type Tab = 'creatures' | 'spells' | 'campaigns' | 'players'
+export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters'
 
 function cx(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
@@ -38,7 +38,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cx(
-        'rounded-md px-3 py-1 text-sm font-medium',
+        'rounded-md px-2.5 py-1 text-sm font-medium',
         active
           ? 'bg-indigo-600 text-white'
           : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
@@ -127,7 +127,7 @@ function PcList({
   return (
     <>
       <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-        {pcs.length} {pcs.length === 1 ? 'PC' : 'PCs'}
+        {pcs.length} {pcs.length === 1 ? 'character' : 'characters'}
       </p>
       <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
         {pcs.map((p) => (
@@ -273,7 +273,7 @@ export function Compendium({
     tab === 'spells' ? (spells ?? []).find((s) => s.id === selectedId) : undefined
   const selectedCampaign =
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
-  const selectedPc = tab === 'players' ? rosterPcs.find((p) => p.id === selectedId) : undefined
+  const selectedPc = tab === 'characters' ? rosterPcs.find((p) => p.id === selectedId) : undefined
 
   const switchTab = (next: Tab) => {
     setTab(next)
@@ -327,7 +327,7 @@ export function Compendium({
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
 
   return (
-    <div className="grid h-full min-h-0 gap-4 md:grid-cols-[20rem_1fr]">
+    <div className="grid h-full min-h-0 gap-4 md:grid-cols-[24rem_1fr]">
       <div className="flex min-h-0 min-w-0 flex-col">
         <div className="mb-2 flex gap-1">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
@@ -336,8 +336,8 @@ export function Compendium({
           <TabButton active={tab === 'spells'} onClick={() => switchTab('spells')}>
             Spells
           </TabButton>
-          <TabButton active={tab === 'players'} onClick={() => switchTab('players')}>
-            Players
+          <TabButton active={tab === 'characters'} onClick={() => switchTab('characters')}>
+            Characters
           </TabButton>
           <TabButton active={tab === 'campaigns'} onClick={() => switchTab('campaigns')}>
             Campaigns
@@ -360,7 +360,7 @@ export function Compendium({
             selectedId={selectedId}
             onSelect={setSelectedId}
           />
-        ) : tab === 'players' ? (
+        ) : tab === 'characters' ? (
           <PcList
             pcs={filteredPcs}
             gated={createGated}
@@ -410,10 +410,10 @@ export function Compendium({
       </div>
 
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
-        {(tab === 'campaigns' || tab === 'players') && createGated ? (
+        {(tab === 'campaigns' || tab === 'characters') && createGated ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
-              {tab === 'players'
+              {tab === 'characters'
                 ? 'Sign into your account to build a reusable party roster.'
                 : 'Sign into your account to create a campaign.'}
             </p>
@@ -448,6 +448,7 @@ export function Compendium({
             name={selectedPc.name}
             subtitle={[
               'Player character',
+              selectedPc.race,
               selectedPc.alignment,
               campaigns.find((c) => c.id === selectedPc.campaignId)?.name,
             ]
@@ -469,6 +470,7 @@ export function Compendium({
             bonds={selectedPc.bonds}
             flaws={selectedPc.flaws}
             backstory={selectedPc.backstory}
+            dmNotes={selectedPc.dmNotes}
             footer={
               <>
                 <button
@@ -521,7 +523,7 @@ export function Compendium({
                   : 'Select a creature to view it, or create a custom one.'
                 : tab === 'campaigns'
                   ? 'Select a campaign to view it, or create a new one.'
-                  : tab === 'players'
+                  : tab === 'characters'
                     ? 'Select a player character to view it, or add one to your roster.'
                     : 'Select a spell to view it.'}
             </p>
@@ -543,7 +545,7 @@ export function Compendium({
                 Create campaign
               </button>
             )}
-            {tab === 'players' && (
+            {tab === 'characters' && (
               <button
                 type="button"
                 onClick={startNewPc}
