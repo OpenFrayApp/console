@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { spellAction } from '../combat/casting.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
+import { useDismiss } from '../hooks/useDismiss.ts'
 import { SaveResolver } from './ActionResolver.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
@@ -35,6 +36,12 @@ export function CastSpellPanel({
   const [query, setQuery] = useState('')
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => {
+    setOpen(false)
+    setQuery('')
+  }, [])
+  useDismiss(ref, open, close)
 
   useEffect(() => {
     if (open && spells === null) {
@@ -62,7 +69,7 @@ export function CastSpellPanel({
       .slice(0, 50)
 
     return (
-      <div className="relative">
+      <div className="relative" ref={ref}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -72,7 +79,7 @@ export function CastSpellPanel({
           Cast spell
         </button>
         {open && (
-          <div className="absolute left-0 z-10 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <div className="absolute left-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
             <input
               autoFocus
               type="search"

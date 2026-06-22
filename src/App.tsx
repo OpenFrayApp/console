@@ -664,21 +664,11 @@ function App() {
         />
       )}
 
-      {/* Footer: dice roller aligned under the stat block (center column); AGPL §13
-          source link at the right. Columns mirror the console grid. */}
+      {/* Footer mirrors the console columns: AGPL §13 source link at the left (under the
+          initiative column), the dice roller under the stat block, and the active-campaign
+          picker at the right border (under the tools column). */}
       <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
-        <div className="hidden lg:block" aria-hidden="true" />
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:pl-4">
-          {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
-          {view === 'encounter' && user && (
-            <CampaignPicker
-              campaigns={campaigns}
-              activeId={activeCampaignId}
-              onChange={setActiveCampaignId}
-            />
-          )}
-        </div>
-        <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
+        <div className="flex items-center gap-2">
           <a
             href={REPO_URL}
             target="_blank"
@@ -689,6 +679,18 @@ function App() {
           </a>
           <span>·</span>
           <span>AGPL-3.0</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:pl-4">
+          {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
+        </div>
+        <div className="flex items-center lg:justify-end lg:pl-4">
+          {view === 'encounter' && user && (
+            <CampaignPicker
+              campaigns={campaigns}
+              activeId={activeCampaignId}
+              onChange={setActiveCampaignId}
+            />
+          )}
         </div>
       </footer>
     </div>

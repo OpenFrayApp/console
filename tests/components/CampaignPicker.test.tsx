@@ -22,12 +22,12 @@ describe('CampaignPicker', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('lists the campaigns plus a "No campaign" option and reflects the active one', () => {
+  it('lists the campaigns plus a "Choose a campaign…" option and reflects the active one', () => {
     render(<CampaignPicker campaigns={campaigns} activeId="c2" onChange={() => {}} />)
     const select = screen.getByLabelText('Active campaign') as HTMLSelectElement
     expect(select.value).toBe('c2')
     expect([...select.options].map((o) => o.text)).toEqual([
-      'No campaign',
+      'Choose a campaign…',
       'Curse of Strahd',
       'Tomb of Annihilation',
     ])

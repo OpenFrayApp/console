@@ -20,21 +20,18 @@ export function CampaignPicker({
 }) {
   if (campaigns.length === 0) return null
   return (
-    <label className="flex items-center gap-1.5 text-xs">
-      <span className="text-slate-400 dark:text-slate-500">Campaign</span>
-      <select
-        value={activeId ?? ''}
-        onChange={(e) => onChange(e.target.value || null)}
-        aria-label="Active campaign"
-        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-      >
-        <option value="">No campaign</option>
-        {campaigns.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      value={activeId ?? ''}
+      onChange={(e) => onChange(e.target.value || null)}
+      aria-label="Active campaign"
+      className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+    >
+      <option value="">Choose a campaign…</option>
+      {campaigns.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+        </option>
+      ))}
+    </select>
   )
 }
