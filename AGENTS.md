@@ -15,11 +15,15 @@ combatants — plus dice and an SRD reference.
 ## The one principle — apply it to every change
 
 > **OpenFray is a fast scratchpad, not a system of record.**
-> We track *consequences on the board*, never *abilities on a character sheet*.
+> We track what happens at the table — plus the reference a DM jots — never the
+> *rules engine* behind a character.
 
 **The test for any feature, before building it:**
 
 > **Does it require knowing a player character's build? If yes, it is out of scope.**
+
+"Knowing the build" means the app having to *model, derive from, or run* class,
+level, features, or spells — not the descriptive facts a DM chooses to type in.
 
 Out of scope (belongs on a character sheet / D&D Beyond, never here): modeling
 class features or what an ability *does*; tracking PC spell slots, resources, or
@@ -32,13 +36,15 @@ recharge); concentration, initiative, HP, turn/round tracking; dice and group
 saves.
 
 **Two flavours of lightweight combatant** (neither is a character sheet): a **PC**
-holds the board facts the DM chooses to jot — AC, HP, conditions, and optionally an
-initiative modifier, passive perception, languages, speed, and damage
-resistances/immunities/vulnerabilities (these feed damage like a monster's). A
-**Quick add** is just name/HP/AC for a throwaway NPC. The test still holds: the DM
-*transcribes* these facts; the app never knows class/level/spells or derives a
-build. DM-entered defenses are "what damage this takes" — a board consequence — not
-a sheet we read.
+holds the board facts plus the reference the DM chooses to jot — AC, HP, conditions;
+optionally ability scores, senses, speed, an initiative modifier, and damage
+resistances/immunities/vulnerabilities (these feed damage like a monster's); and
+character context like race, alignment, faith, personality traits/ideals/bonds/flaws,
+a backstory, and private DM notes. A **Quick add** is just name/HP/AC for a throwaway
+NPC. The test still holds: the DM *transcribes* these facts and the app displays them;
+it never models class/level/spells, derives a build, or runs what a character can do.
+DM-entered defenses are "what damage this takes" — a board consequence — not a sheet
+we read.
 
 If a feature is useful but fails the test, it is still a no. When a request tempts
 you toward "it should really *know* X about the player," stop — that temptation is

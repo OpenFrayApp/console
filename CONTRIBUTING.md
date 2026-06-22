@@ -8,7 +8,8 @@ Before anything else, please read the one rule that matters most.
 ## The scope rule (read this first)
 
 **OpenFray is a fast scratchpad for combat, not a system of record.**
-It tracks *consequences on the board*, never *abilities on a character sheet*.
+It tracks what happens at the table — plus the reference a DM jots (a PC's stats,
+defenses, and character notes) — never the *rules engine* behind a character.
 
 Every contribution is measured against one question:
 
