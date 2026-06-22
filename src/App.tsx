@@ -37,10 +37,11 @@ import {
   updateRosterPc,
 } from './state/cloudPlayers.ts'
 import { useAuth } from './auth/useAuth.ts'
-import { Compendium } from './components/Compendium.tsx'
+import { Compendium, type Tab as CompendiumTab } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { AddPcForm } from './components/AddPcForm.tsx'
+import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
 import { InitiativePrompt } from './components/InitiativePrompt.tsx'
@@ -140,6 +141,9 @@ function App() {
   const [restored] = useState(loadSession)
   const [theme, setTheme] = useState<Theme>(() => restored?.theme ?? 'dark')
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
+  // Which tab the compendium opens on. The view toggle resets it to creatures; the
+  // header "Add PC → create" entry sets it to players before switching views.
+  const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   const [encounter, dispatch] = useReducer(
     encounterReducer,
     undefined,
@@ -347,6 +351,19 @@ function App() {
     setView('encounter')
   }
 
+  // Header "Add PC → create": send a signed-in user to the compendium's Players tab.
+  const openRosterCreate = () => {
+    setCompendiumTab('players')
+    setView('compendium')
+  }
+
+  // The view toggle opens the compendium on its default (creatures) tab; only the
+  // create-a-character flow targets the Players tab.
+  const handleViewChange = (next: View) => {
+    if (next === 'compendium') setCompendiumTab('creatures')
+    setView(next)
+  }
+
   // Advancing the turn moves the center panel to whoever's turn it now is.
   const selectActive = (next: Encounter) => {
     const active = next.combatants[next.activeIndex]
@@ -499,11 +516,19 @@ function App() {
           {view === 'encounter' && (
             <div className="flex items-center gap-2">
               <AddQuickForm onAdd={(c) => dispatch({ type: 'add', combatant: c })} />
-              <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
+              {user ? (
+                <AddPcPicker
+                  rosterPcs={rosterPcs}
+                  onPick={handleAddPcToEncounter}
+                  onCreate={openRosterCreate}
+                />
+              ) : (
+                <AddPcForm onAdd={(pc) => dispatch({ type: 'add', combatant: pc })} />
+              )}
               <AddCreaturePicker onPick={handlePick} customCreatures={customCreatures} />
             </div>
           )}
-          <ViewToggle view={view} onChange={setView} />
+          <ViewToggle view={view} onChange={handleViewChange} />
           <AccountControl onSignUp={() => setAuthMode('up')} />
           <button
             type="button"
@@ -534,6 +559,7 @@ function App() {
               onUpdatePc={handleUpdatePc}
               onDeletePc={handleDeletePc}
               onAddPcToEncounter={handleAddPcToEncounter}
+              initialTab={compendiumTab}
               createGated={!user}
               onGated={() => setAuthMode('in')}
             />

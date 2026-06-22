@@ -17,7 +17,7 @@ import { PcCard } from './PcCard.tsx'
 import { PcFormModal } from './PcFormModal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 
-type Tab = 'creatures' | 'spells' | 'campaigns' | 'players'
+export type Tab = 'creatures' | 'spells' | 'campaigns' | 'players'
 
 function cx(...parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
@@ -168,6 +168,7 @@ export function Compendium({
   onUpdatePc,
   onDeletePc,
   onAddPcToEncounter,
+  initialTab = 'creatures',
   createGated = false,
   onGated,
 }: {
@@ -197,11 +198,13 @@ export function Compendium({
   onDeletePc?: (id: string) => void
   /** Drop a roster PC into the current encounter (instantiated as a combatant). */
   onAddPcToEncounter?: (pc: RosterPc) => void
+  /** Which tab to open on (the component remounts when the view re-enters). */
+  initialTab?: Tab
   /** When anonymous, create actions prompt sign-up instead. */
   createGated?: boolean
   onGated?: () => void
 }) {
-  const [tab, setTab] = useState<Tab>('creatures')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [query, setQuery] = useState('')
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
   const [spells, setSpells] = useState<Spell[] | null>(null)
