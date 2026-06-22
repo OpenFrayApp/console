@@ -135,6 +135,17 @@ describe('applyDamage', () => {
     expect(crit.isPC && crit.deathSaves).toEqual({ successes: 0, failures: 2 })
   })
 
+  it('un-stabilizes a stable PC that takes damage (clears successes, adds a failure)', () => {
+    const stable = pc({
+      status: 'unconscious',
+      hp: { current: 0, max: 30, temp: 0 },
+      deathSaves: { successes: 3, failures: 0 },
+    })
+    const hit = applyDamage(stable, 5)
+    expect(hit.status).toBe('unconscious')
+    expect(hit.isPC && hit.deathSaves).toEqual({ successes: 0, failures: 1 })
+  })
+
   it('consumes temporary HP before current HP', () => {
     const c = applyDamage(monster({ hp: { current: 40, max: 40, temp: 5 } }), 8)
     expect(c.hp.temp).toBe(0)

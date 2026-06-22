@@ -7,7 +7,7 @@ import type {
   MonsterCombatant,
 } from '../schema/combatant.ts'
 import type { SpellLevel, SpellRef, SpellUsage } from '../schema/creature.ts'
-import { markDeathSaveFailure } from './deathsaves.ts'
+import { isStable, markDeathSaveFailure, resetDeathSaves } from './deathsaves.ts'
 
 /**
  * Resource mutations on a Combatant — HP/damage/heal, spell slots, legendary
@@ -77,8 +77,11 @@ export function applyDamage(
 ): Combatant {
   const dmg = clampNonNegativeInt(amount)
   // Damage to an already-unconscious PC causes death-save failures (two on a crit).
+  // A *stable* PC taking damage is no longer stable: clear its three accumulated
+  // successes first, so the hit drops it back into dying with the failure(s) it took.
   if (c.isPC && c.status === 'unconscious' && dmg > 0) {
-    return markDeathSaveFailure(c, opts.crit ? 2 : 1)
+    const base = isStable(c) ? resetDeathSaves(c) : c
+    return markDeathSaveFailure(base, opts.crit ? 2 : 1)
   }
   const fromTemp = Math.min(c.hp.temp, dmg)
   const temp = c.hp.temp - fromTemp
