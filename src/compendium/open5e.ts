@@ -355,25 +355,45 @@ const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\
  * Build a function that wraps known spell names in cast-flavoured prose as
  * `[Name](spell:ref)` markdown links, so the UI can hover-preview them (e.g. a
  * dragon's "uses Spellcasting to cast Command", the Archmage's "casts Counterspell
- * or Shield"). Scoped to prose containing the word "cast" to avoid linkifying the
- * many spell names that are also common words. Built once over the spell list,
- * then applied to every creature's action/trait text.
+ * or Shield"). Built once over the spell list, then applied to every creature's
+ * action/trait text.
+ *
+ * Only spell names *governed by a cast verb* are linked: the match anchors on
+ * `cast` / `casts` / `casting`, then follows the cast target and any spells chained
+ * onto it with commas / "or" / "and" (so "casts Bless, Lesser Restoration, or
+ * Sanctuary" links all three). A spell name that merely appears in prose is left
+ * alone — e.g. the Blue Dragon's "cast Invisibility on itself, and it can fly up to
+ * half its Fly Speed" links only Invisibility, never "fly" / "Fly Speed"; likewise a
+ * dragon's "Sleep Breath" or a "Bright Light" stay plain because no cast verb governs
+ * them.
  */
 export function makeSpellLinker(
   spells: { name: string; ref: string }[],
 ): (text: string) => string {
   const refByLower = new Map(spells.map((s) => [s.name.toLowerCase(), s.ref]))
+  // Longest names first so the alternation prefers "Mirror Image" over "Image".
   const names = [...new Set(spells.map((s) => s.name))]
     .sort((a, b) => b.length - a.length)
     .map(escapeRegExp)
   if (names.length === 0) return (text) => text
-  const re = new RegExp(`\\b(${names.join('|')})\\b`, 'gi')
+  const spellAlt = `(?:${names.join('|')})`
+  const det = `(?:the\\s+|an?\\s+)?` // an optional article before a spell ("casts the Mirror Image")
+  // A cast verb, the first spell, then any spells chained on with ","/"or"/"and".
+  const clauseRe = new RegExp(
+    `\\b(?:casts?|casting)\\b\\s+${det}${spellAlt}\\b` +
+      `(?:[,\\s]+(?:(?:or|and)\\s+)?${det}${spellAlt}\\b)*`,
+    'gi',
+  )
+  const nameRe = new RegExp(`\\b${spellAlt}\\b`, 'gi')
+  const linkName = (m: string) => {
+    const ref = refByLower.get(m.toLowerCase())
+    return ref ? `[${m}](spell:${ref})` : m
+  }
   return (text) => {
-    if (!text || !/\bcasts?\b/i.test(text)) return text
-    return text.replace(re, (m) => {
-      const ref = refByLower.get(m.toLowerCase())
-      return ref ? `[${m}](spell:${ref})` : m
-    })
+    if (!text || !/\bcast(?:s|ing)?\b/i.test(text)) return text
+    // Link spell names only within the cast clause, leaving the rest of the prose
+    // (and any spell-named common words it contains) untouched.
+    return text.replace(clauseRe, (clause) => clause.replace(nameRe, linkName))
   }
 }
 

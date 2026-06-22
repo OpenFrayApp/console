@@ -502,6 +502,44 @@ describe('parseSpellcasting', () => {
     )
   })
 
+  it('links only the cast target, not spell-named words elsewhere in the same sentence', () => {
+    const link = makeSpellLinker([
+      { name: 'Invisibility', ref: 'srd-5.2:invisibility' },
+      { name: 'Fly', ref: 'srd-5.2:fly' },
+      { name: 'Sleep', ref: 'srd-5.2:sleep' },
+    ])
+    // The Blue Dragon's Cloaked Flight: "fly" / "Fly Speed" are not the Fly spell.
+    expect(
+      link(
+        'The dragon uses Spellcasting to cast Invisibility on itself, and it can fly up to half its Fly Speed.',
+      ),
+    ).toBe(
+      'The dragon uses Spellcasting to cast [Invisibility](spell:srd-5.2:invisibility) on itself, and it can fly up to half its Fly Speed.',
+    )
+    // "Sleep Breath" is a breath weapon, not the Sleep spell — no cast verb governs it.
+    expect(
+      link('It can replace one attack with a use of Sleep Breath or Spellcasting to cast Fly.'),
+    ).toBe(
+      'It can replace one attack with a use of Sleep Breath or Spellcasting to cast [Fly](spell:srd-5.2:fly).',
+    )
+  })
+
+  it('links a chain of cast spells (commas, oxford comma, "or"/"and", articles)', () => {
+    const link = makeSpellLinker([
+      { name: 'Bless', ref: 'srd-5.2:bless' },
+      { name: 'Lesser Restoration', ref: 'srd-5.2:lesser-restoration' },
+      { name: 'Sanctuary', ref: 'srd-5.2:sanctuary' },
+      { name: 'Mirror Image', ref: 'srd-5.2:mirror-image' },
+    ])
+    expect(link('The couatl casts Bless, Lesser Restoration, or Sanctuary, requiring no components.')).toBe(
+      'The couatl casts [Bless](spell:srd-5.2:bless), [Lesser Restoration](spell:srd-5.2:lesser-restoration), or [Sanctuary](spell:srd-5.2:sanctuary), requiring no components.',
+    )
+    // Leading article after the cast verb.
+    expect(link('The cloaker casts the Mirror Image spell.')).toBe(
+      'The cloaker casts the [Mirror Image](spell:srd-5.2:mirror-image) spell.',
+    )
+  })
+
   it('lifts spellcasting off the actions and drops the prose action', () => {
     const caster = mapOpen5eCreature({
       ...ABOLETH,
