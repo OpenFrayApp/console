@@ -74,10 +74,12 @@ recharge abilities, legendary actions, Legendary Resistance (in-lair counts), an
 a per-round reaction. Run the initiative loop, manage HP/conditions/effects (with
 source-relative durations) and concentration, roll group saves, and roll honest
 dice with an effect-aware, clearable log. Players and quick NPCs are lightweight;
-the SRD compendium and rollable spells are built in — all running locally in the
-browser. Still to come: accounts and persistence (your custom content saved across
-devices), then a shared read-only player view; content imports remain a
-best-effort, later layer. The UI is functional but still evolving.
+the SRD compendium and rollable spells are built in. **Accounts are live:** the app
+runs fully anonymous in the browser, and signing up (free, email + password) saves
+your in-progress fights and your **custom creatures** to the cloud and syncs them
+across devices — build a custom Beholder once, add it to any encounter. Still to
+come: a shared read-only player view and a saved party roster; content imports
+remain a best-effort, later layer. The UI is functional but still evolving.
 
 ## Content & licensing
 
