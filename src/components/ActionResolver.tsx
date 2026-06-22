@@ -11,6 +11,7 @@ import type { CritRule, RollResult } from '../dice/roll.ts'
 import { roll } from '../dice/roll.ts'
 import { useCampaignRules } from '../state/campaignRules.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
+import { meleeHitAutoCrits } from '../combat/conditionrules.ts'
 import { applyDamage, legendaryResistanceLeft, spendLegendaryResistance } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
 import {
@@ -362,6 +363,10 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     target: Combatant
     d20: number
     damage: { type: DamageType; amount: number; label: string | null }[]
+    /** Effective crit — a natural 20, or a melee hit on a Paralyzed/Unconscious target. */
+    crit: boolean
+    /** True when the crit came from the helpless-target rule, not a natural 20. */
+    autoCrit: boolean
   } | null>(null)
   const [damage, setDamage] = useState('')
   const [conc, setConc] = useState<{ dc: number; damage: number } | null>(null)
@@ -395,9 +400,13 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
       dispatch({ type: 'update', id: target.combatantId, update: (c) => ({ ...c, effects }) })
     }
     const d20 = result.dice.find((g) => g.sides === 20)?.kept[0] ?? result.total
-    const components = rollDamageComponents(action, result.crit ? critRule : false)
+    const hits = result.crit || (!result.fumble && result.total >= acOf(target))
+    // A melee hit on a Paralyzed/Unconscious creature is an automatic critical hit.
+    const autoCrit = hits && action.kind === 'melee' && meleeHitAutoCrits(target)
+    const crit = result.crit || autoCrit
+    const components = rollDamageComponents(action, crit ? critRule : false)
     const dmg = damageAgainst(target, components)
-    setAttack({ result, applied, target, d20, damage: dmg })
+    setAttack({ result, applied, target, d20, damage: dmg, crit, autoCrit })
     setDamage(String(dmg.reduce((s, d) => s + d.amount, 0)))
     setSpinKey((k) => k + 1)
     setRevealed(false)
@@ -425,8 +434,10 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     if (!attack) return
     const amount = toNum(damage)
     const tgt = attack.target
-    const dc = concentrationPromptDC(tgt, applyDamage(tgt, amount), amount)
-    dispatch({ type: 'update', id: tgt.combatantId, update: (c) => applyDamage(c, amount) })
+    // A crit deals two death-save failures to a downed PC (applyDamage reads this).
+    const opts = { crit: attack.crit }
+    const dc = concentrationPromptDC(tgt, applyDamage(tgt, amount, opts), amount)
+    dispatch({ type: 'update', id: tgt.combatantId, update: (c) => applyDamage(c, amount, opts) })
     if (dc != null) setConc({ dc, damage: amount })
     else onClose()
   }
@@ -518,7 +529,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
           <DieRoll
             value={attack.d20}
             spinKey={spinKey}
-            tone={attack.result.crit ? 'crit' : attack.result.fumble ? 'fumble' : 'normal'}
+            tone={attack.crit ? 'crit' : attack.result.fumble ? 'fumble' : 'normal'}
           />
         )}
         {revealed && attack && (
@@ -532,7 +543,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
                   : 'font-semibold text-rose-600 dark:text-rose-400'
               }
             >
-              {attack.result.crit
+              {attack.crit
                 ? 'Critical hit!'
                 : attack.result.fumble
                   ? 'Miss (nat 1)'
@@ -540,6 +551,11 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
                     ? 'Hit'
                     : 'Miss'}
             </span>
+            {attack.autoCrit && (
+              <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">
+                (auto-crit — {attack.target.status === 'unconscious' ? 'Unconscious' : 'Paralyzed'} target)
+              </span>
+            )}
           </span>
         )}
       </div>

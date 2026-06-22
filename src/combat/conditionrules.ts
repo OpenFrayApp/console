@@ -2,9 +2,22 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { ConditionName } from '../schema/effect.ts'
+import type { Combatant } from '../schema/combatant.ts'
 import type { AdvantageState } from '../dice/formula.ts'
 
 export type AttackRange = 'melee' | 'ranged'
+
+/**
+ * Whether a melee hit on this creature is an automatic critical hit — 5e's rule
+ * that any attack hitting a Paralyzed or Unconscious creature from within 5 ft is a
+ * crit. We don't track positioning, but a melee action implies reach, so the caller
+ * pairs this with a melee-kind action. Covers the Unconscious life-state (a downed
+ * PC) and the Paralyzed condition (any creature).
+ */
+export function meleeHitAutoCrits(target: Combatant): boolean {
+  if (target.status === 'unconscious') return true
+  return target.effects.some((e) => e.icon === 'condition' && e.name === 'Paralyzed')
+}
 
 /**
  * How a 5e (2024) condition on a creature affects ATTACK ROLLS — both the
