@@ -29,6 +29,8 @@ export type EncounterAction =
   | { type: 'shortRest'; hp: Record<string, number> }
   /** Clear the board of enemies — remove every foe, keeping friendly combatants. */
   | { type: 'clearFoes' }
+  /** Sweep the whole board — remove every combatant, ending the encounter. */
+  | { type: 'clearAll' }
   /** Manual reorder (drag): move `id` to where `toId` sits; its initiative is reset
    *  to sit between its new neighbours. */
   | { type: 'reorder'; id: string; toId: string }
@@ -144,6 +146,11 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     // outside combat, so the turn cursor resets to the top.
     case 'clearFoes':
       return { ...state, activeIndex: 0, combatants: state.combatants.filter((c) => !isFoe(c)) }
+
+    // Sweep everything off the board: remove all combatants and reset the encounter to
+    // its pre-combat state. Only offered outside combat.
+    case 'clearAll':
+      return { ...state, round: 0, activeIndex: 0, paused: false, combatants: [] }
 
     // Drag-to-reorder: move the dragged combatant to the target's slot and reset its
     // initiative to sit between its new neighbours, so the order holds (and turn

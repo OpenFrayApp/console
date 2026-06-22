@@ -152,6 +152,15 @@ describe('encounterReducer', () => {
     expect(e.activeIndex).toBe(0)
   })
 
+  it('clears all combatants and resets the round', () => {
+    let e = withCombatants(monster('foe1', 12), monster('foe2', 8))
+    e = encounterReducer(e, { type: 'add', combatant: pc('hero', 20, 20) })
+    e = encounterReducer(e, { type: 'clearAll' })
+    expect(e.combatants).toEqual([])
+    expect(e.round).toBe(0)
+    expect(e.activeIndex).toBe(0)
+  })
+
   it('reorders down: initiative drops below the new lower neighbour', () => {
     let e = withCombatants(monster('a', 20), monster('b', 15), monster('c', 10))
     e = encounterReducer(e, { type: 'reorder', id: 'a', toId: 'c' })

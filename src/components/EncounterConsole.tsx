@@ -40,7 +40,7 @@ import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
-import { EncounterPlayback } from './EncounterPlayback.tsx'
+import { EncounterPlayback, EncounterCleanup } from './EncounterPlayback.tsx'
 import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
@@ -324,14 +324,21 @@ export function EncounterConsole({
       {/* Left — initiative tracker */}
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800">
         <div className="flex items-center justify-between gap-2">
-          <h2 className={COLUMN_HEADING}>
-            {started ? `Round ${encounter.round}${paused ? ' · paused' : ''}` : 'Initiative'}
-          </h2>
+          {started ? (
+            <h2 className={COLUMN_HEADING}>
+              {`Round ${encounter.round}${paused ? ' · paused' : ''}`}
+            </h2>
+          ) : (
+            <EncounterCleanup
+              hasCombatants={combatants.length > 0}
+              hasFoes={creatures.length > 0}
+              dispatch={dispatch}
+            />
+          )}
           <EncounterPlayback
             started={started}
             paused={paused}
             canBegin={combatants.length > 0}
-            hasFoes={creatures.length > 0}
             dispatch={dispatch}
             onBegin={onBegin}
             onNextTurn={onNextTurn}
