@@ -80,6 +80,43 @@ describe('PcFormModal', () => {
     expect(saved.abilities).toMatchObject({ dex: 14, cha: 16 })
   })
 
+  it('captures alignment, roleplay lines, and markdown backstory', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />)
+
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
+    fireEvent.change(screen.getByLabelText('Alignment'), { target: { value: 'lawful good' } })
+
+    // Each roleplay category is a repeatable list: Add a line, then fill it.
+    fireEvent.click(screen.getByRole('button', { name: '+ Add trait' }))
+    fireEvent.change(screen.getByLabelText('Personality Traits 1'), { target: { value: 'Brave' } })
+    fireEvent.click(screen.getByRole('button', { name: '+ Add bond' }))
+    fireEvent.change(screen.getByLabelText('Bonds 1'), { target: { value: 'My village' } })
+
+    fireEvent.change(screen.getByLabelText('Backstory and goals'), {
+      target: { value: 'Raised in **Neverwinter**.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+
+    const saved = onSubmit.mock.calls[0][0] as RosterPc
+    expect(saved.alignment).toBe('lawful good')
+    expect(saved.personalityTraits).toEqual(['Brave'])
+    expect(saved.bonds).toEqual(['My village'])
+    expect(saved.ideals).toBeUndefined() // empty categories are dropped
+    expect(saved.backstory).toBe('Raised in **Neverwinter**.')
+  })
+
+  it('removes a roleplay line with its ✕ button', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Grog' } })
+    fireEvent.click(screen.getByRole('button', { name: '+ Add flaw' }))
+    fireEvent.change(screen.getByLabelText('Flaws 1'), { target: { value: 'Greedy' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Flaws 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+    expect((onSubmit.mock.calls[0][0] as RosterPc).flaws).toBeUndefined()
+  })
+
   it('will not submit without a name', () => {
     const onSubmit = vi.fn()
     render(<PcFormModal open campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />)

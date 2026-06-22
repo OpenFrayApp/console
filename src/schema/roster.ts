@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { AbilityScores, Speeds } from './primitives.ts'
-import type { PlayerCharacter } from './combatant.ts'
+import type { CharacterDetails, PlayerCharacter } from './combatant.ts'
 
 /** The 5e ability modifier for a score (10–11 → 0, 14 → +2, 8 → −1). */
 export function abilityMod(score: number): number {
@@ -24,7 +24,7 @@ export function abilityMod(score: number): number {
  * the app never derives class, level, or what an ability does. The ability scores
  * are stored so a PC can carry a real Dexterity for initiative tiebreaks later.
  */
-export interface RosterPc {
+export interface RosterPc extends CharacterDetails {
   /** Stable id, generated client-side; matches the row's `data->>id`. */
   id: string
   name: string
@@ -66,6 +66,14 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     vulnerabilities: pc.vulnerabilities,
     speed: pc.speed,
     abilities: pc.abilities,
+    // Carry the DM's character notes onto the combatant so the encounter shows the
+    // same stat block as the compendium (display-only; the campaign tag stays behind).
+    alignment: pc.alignment,
+    personalityTraits: pc.personalityTraits,
+    ideals: pc.ideals,
+    bonds: pc.bonds,
+    flaws: pc.flaws,
+    backstory: pc.backstory,
     status: 'active',
     hp: { current: maxHp, max: maxHp, temp: 0 },
     concentration: null,

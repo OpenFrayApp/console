@@ -29,6 +29,22 @@ export interface LimitedUseState {
   available: boolean
 }
 
+/**
+ * Free-form character notes a DM keeps on a PC — display-only reference, never
+ * mechanics. Shared by the durable roster PC and the in-combat combatant so both
+ * render the same stat block. The four short lists are roleplay prompts; `backstory`
+ * is longer prose (markdown). Nothing here derives a build or branches logic.
+ */
+export interface CharacterDetails {
+  alignment?: string
+  personalityTraits?: string[]
+  ideals?: string[]
+  bonds?: string[]
+  flaws?: string[]
+  /** Backstory / goals — longer prose, rendered as markdown. */
+  backstory?: string
+}
+
 /** Death is non-destructive: the combatant stays in order, greyed and skipped. */
 export type CombatantStatus = 'active' | 'unconscious' | 'dead'
 
@@ -105,7 +121,7 @@ export interface MonsterCombatant extends CombatantBase {
  *   just name / HP / AC. Shown as "Quick add".
  * Defaults to `pc` when `kind` is absent.
  */
-export interface PlayerCharacter extends CombatantBase {
+export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   isPC: true
   kind?: 'pc' | 'quick'
   /**

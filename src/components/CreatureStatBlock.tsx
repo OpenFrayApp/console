@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useState, type CSSProperties } from 'react'
-import type { Ability, Senses, SkillBonuses } from '../schema/primitives.ts'
+import type { Ability, AbilityScores as AbilityScoreMap, Senses, SaveBonuses, SkillBonuses } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
 import type { Creature, SpellGroup, Spellcasting, SpellRef } from '../schema/creature.ts'
@@ -166,10 +166,24 @@ function RollableValue({
   )
 }
 
-/** The ability block as two MOD/SAVE tables that fill the available width. */
-function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: OnCheck }) {
-  const saveFor = (a: Ability): number =>
-    creature.saves?.[a] ?? abilityMod(creature.abilities[a])
+/**
+ * The ability block as two side-by-side tables that fill the available width.
+ * Shared by creatures and PCs so they look identical. Pass `saves` to show a Save
+ * column (creatures, with a fallback to the ability mod); omit it to show just the
+ * Mod column (PCs, where we only know raw scores). `onCheck` makes the values
+ * rollable (combat); without it they're plain text.
+ */
+export function AbilityTable({
+  abilities,
+  saves,
+  onCheck,
+}: {
+  abilities: AbilityScoreMap
+  saves?: SaveBonuses
+  onCheck?: OnCheck
+}) {
+  const showSaves = saves !== undefined
+  const saveFor = (a: Ability): number => saves?.[a] ?? abilityMod(abilities[a])
   return (
     <div className="flex gap-3 text-sm">
       {ABILITY_GROUPS.map((group, i) => (
@@ -179,34 +193,36 @@ function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: On
               <th />
               <th />
               <th className="px-1 text-right">Mod</th>
-              <th className="px-1 text-right">Save</th>
+              {showSaves && <th className="px-1 text-right">Save</th>}
             </tr>
           </thead>
           <tbody>
             {group.map((a) => (
               <tr key={a} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
                 <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{ABILITY_LABEL[a]}</td>
-                <td className="px-1 py-1 text-right tabular-nums">{creature.abilities[a]}</td>
-                <td className="px-1 py-1 text-right tabular-nums">
+                <td className="px-1 py-1 text-right tabular-nums">{abilities[a]}</td>
+                <td className={`px-1 py-1 text-right tabular-nums ${showSaves ? '' : 'rounded-r pr-2'}`}>
                   <RollableValue
                     label={`${a.toUpperCase()} check`}
-                    modifier={abilityMod(creature.abilities[a])}
+                    modifier={abilityMod(abilities[a])}
                     kind="check"
                     onCheck={onCheck}
                   >
-                    {signed(abilityMod(creature.abilities[a]))}
+                    {signed(abilityMod(abilities[a]))}
                   </RollableValue>
                 </td>
-                <td className="rounded-r px-2 py-1 text-right tabular-nums">
-                  <RollableValue
-                    label={`${a.toUpperCase()} save`}
-                    modifier={saveFor(a)}
-                    kind="save"
-                    onCheck={onCheck}
-                  >
-                    {signed(saveFor(a))}
-                  </RollableValue>
-                </td>
+                {showSaves && (
+                  <td className="rounded-r px-2 py-1 text-right tabular-nums">
+                    <RollableValue
+                      label={`${a.toUpperCase()} save`}
+                      modifier={saveFor(a)}
+                      kind="save"
+                      onCheck={onCheck}
+                    >
+                      {signed(saveFor(a))}
+                    </RollableValue>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -214,6 +230,11 @@ function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: On
       ))}
     </div>
   )
+}
+
+/** The ability block for a creature (always shows the Save column). */
+function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: OnCheck }) {
+  return <AbilityTable abilities={creature.abilities} saves={creature.saves ?? {}} onCheck={onCheck} />
 }
 
 function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCheck }) {
@@ -288,7 +309,7 @@ function isRollable(a: Action): boolean {
   return a.toHit != null || a.save != null || (a.damage?.length ?? 0) > 0
 }
 
-const SECTION_HEADING =
+export const SECTION_HEADING =
   'mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300'
 
 /**

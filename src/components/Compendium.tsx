@@ -13,8 +13,9 @@ import { CampaignFormModal } from './CampaignFormModal.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
-import { PcCard } from './PcCard.tsx'
+import { PcStatBlock } from './PcStatBlock.tsx'
 import { PcFormModal } from './PcFormModal.tsx'
+import { abilityMod } from '../schema/roster.ts'
 import { SpellCard } from './SpellCard.tsx'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'players'
@@ -443,12 +444,55 @@ export function Compendium({
             onDelete={() => removeCampaign(selectedCampaign)}
           />
         ) : selectedPc ? (
-          <PcCard
-            pc={selectedPc}
-            campaignName={campaigns.find((c) => c.id === selectedPc.campaignId)?.name}
-            onAddToEncounter={() => onAddPcToEncounter?.(selectedPc)}
-            onEdit={() => setPcForm({ pc: selectedPc })}
-            onDelete={() => removePc(selectedPc)}
+          <PcStatBlock
+            name={selectedPc.name}
+            subtitle={[
+              'Player character',
+              selectedPc.alignment,
+              campaigns.find((c) => c.id === selectedPc.campaignId)?.name,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            ac={selectedPc.ac}
+            hp={{ current: selectedPc.maxHp, max: selectedPc.maxHp, temp: 0 }}
+            initiativeMod={selectedPc.abilities ? abilityMod(selectedPc.abilities.dex) : 0}
+            speed={selectedPc.speed}
+            abilities={selectedPc.abilities}
+            resistances={selectedPc.resistances}
+            immunities={selectedPc.immunities}
+            vulnerabilities={selectedPc.vulnerabilities}
+            languages={selectedPc.languages}
+            passivePerception={selectedPc.passivePerception}
+            personalityTraits={selectedPc.personalityTraits}
+            ideals={selectedPc.ideals}
+            bonds={selectedPc.bonds}
+            flaws={selectedPc.flaws}
+            backstory={selectedPc.backstory}
+            footer={
+              <>
+                <button
+                  type="button"
+                  onClick={() => onAddPcToEncounter?.(selectedPc)}
+                  className="mr-auto rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                >
+                  Add to encounter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPcForm({ pc: selectedPc })}
+                  className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removePc(selectedPc)}
+                  className="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                >
+                  Delete
+                </button>
+              </>
+            }
           />
         ) : (
           // Nothing selected: a centered prompt that doubles as the create entry

@@ -6,6 +6,7 @@ import type { Ability, AbilityScores } from '../schema/primitives.ts'
 import type { Campaign } from '../schema/campaign.ts'
 import type { RosterPc } from '../schema/roster.ts'
 import { parseSpeedInput, speedLines } from '../combat/speed.ts'
+import { ALIGNMENTS } from './customMonster.ts'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
@@ -33,6 +34,63 @@ const list = (v: string): string[] =>
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+/** Trim a line-list to its non-empty entries, or undefined when there are none. */
+const clean = (xs: string[]): string[] | undefined => {
+  const out = xs.map((s) => s.trim()).filter(Boolean)
+  return out.length ? out : undefined
+}
+/** Capitalize each word of a lowercase alignment for the dropdown label. */
+const cap = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase())
+
+/** The four roleplay categories share one repeatable-line editor. */
+type ListKey = 'personalityTraits' | 'ideals' | 'bonds' | 'flaws'
+type Lists = Record<ListKey, string[]>
+const EMPTY_LISTS: Lists = { personalityTraits: [], ideals: [], bonds: [], flaws: [] }
+
+/** A repeatable list of one-line text fields, with a "+ Add" button (like damage rows). */
+function LineList({
+  label,
+  addLabel,
+  items,
+  onChange,
+}: {
+  label: string
+  addLabel: string
+  items: string[]
+  onChange: (next: string[]) => void
+}) {
+  return (
+    <div className="space-y-1">
+      <span className={LABEL}>{label}</span>
+      {items.map((v, i) => (
+        <div key={i} className="flex gap-2">
+          <input
+            value={v}
+            onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))}
+            aria-label={`${label} ${i + 1}`}
+            {...NO_AUTOFILL}
+            className={FIELD}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(items.filter((_, j) => j !== i))}
+            aria-label={`Remove ${label} ${i + 1}`}
+            className="shrink-0 rounded border border-slate-300 px-2 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...items, ''])}
+        className="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+      >
+        {addLabel}
+      </button>
+    </div>
+  )
+}
 
 type AbilityStrings = Record<Ability, string>
 const DEFAULT_ABILITIES: AbilityStrings = { str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10' }
@@ -69,6 +127,7 @@ export function PcFormModal({
   const editing = pc != null
   const [f, setF] = useState({
     name: '',
+    alignment: '',
     ac: '',
     hp: '',
     pp: '',
@@ -77,15 +136,18 @@ export function PcFormModal({
     resistances: '',
     immunities: '',
     vulnerabilities: '',
+    backstory: '',
     campaignId: '',
   })
   const [abilities, setAbilities] = useState<AbilityStrings>({ ...DEFAULT_ABILITIES })
+  const [lists, setLists] = useState<Lists>({ ...EMPTY_LISTS })
 
   // Seed the form each time it opens (create → blank/defaults, edit → the PC's values).
   useEffect(() => {
     if (!open) return
     setF({
       name: pc?.name ?? '',
+      alignment: pc?.alignment ?? '',
       ac: pc?.ac != null ? String(pc.ac) : '',
       hp: pc?.maxHp != null ? String(pc.maxHp) : '',
       pp: pc?.passivePerception != null ? String(pc.passivePerception) : '',
@@ -94,9 +156,16 @@ export function PcFormModal({
       resistances: pc?.resistances?.join(', ') ?? '',
       immunities: pc?.immunities?.join(', ') ?? '',
       vulnerabilities: pc?.vulnerabilities?.join(', ') ?? '',
+      backstory: pc?.backstory ?? '',
       campaignId: pc?.campaignId ?? '',
     })
     setAbilities(abilitiesToStrings(pc?.abilities))
+    setLists({
+      personalityTraits: pc?.personalityTraits ?? [],
+      ideals: pc?.ideals ?? [],
+      bonds: pc?.bonds ?? [],
+      flaws: pc?.flaws ?? [],
+    })
   }, [open, pc])
 
   useEffect(() => {
@@ -123,6 +192,7 @@ export function PcFormModal({
     onSubmit({
       id: pc?.id ?? crypto.randomUUID(),
       name,
+      alignment: f.alignment || undefined,
       ac: num(f.ac),
       maxHp: Math.max(1, num(f.hp)),
       passivePerception: f.pp ? num(f.pp) : undefined,
@@ -139,6 +209,11 @@ export function PcFormModal({
         wis: score(abilities.wis),
         cha: score(abilities.cha),
       },
+      personalityTraits: clean(lists.personalityTraits),
+      ideals: clean(lists.ideals),
+      bonds: clean(lists.bonds),
+      flaws: clean(lists.flaws),
+      backstory: f.backstory.trim() || undefined,
       campaignId: f.campaignId || null,
     })
     onClose()
@@ -183,6 +258,18 @@ export function PcFormModal({
               {...NO_AUTOFILL}
               className={FIELD}
             />
+          </label>
+
+          <label className="block space-y-1">
+            <span className={LABEL}>Alignment</span>
+            <select value={f.alignment} onChange={set('alignment')} aria-label="Alignment" {...NO_AUTOFILL} className={FIELD}>
+              <option value="">No alignment</option>
+              {ALIGNMENTS.map((a) => (
+                <option key={a} value={a}>
+                  {cap(a)}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="grid grid-cols-3 gap-2">
@@ -236,6 +323,45 @@ export function PcFormModal({
             <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" {...NO_AUTOFILL} className={FIELD} />
             <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" {...NO_AUTOFILL} className={FIELD} />
             <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...NO_AUTOFILL} className={FIELD} />
+          </div>
+
+          <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+            <LineList
+              label="Personality Traits"
+              addLabel="+ Add trait"
+              items={lists.personalityTraits}
+              onChange={(next) => setLists((p) => ({ ...p, personalityTraits: next }))}
+            />
+            <LineList
+              label="Ideals"
+              addLabel="+ Add ideal"
+              items={lists.ideals}
+              onChange={(next) => setLists((p) => ({ ...p, ideals: next }))}
+            />
+            <LineList
+              label="Bonds"
+              addLabel="+ Add bond"
+              items={lists.bonds}
+              onChange={(next) => setLists((p) => ({ ...p, bonds: next }))}
+            />
+            <LineList
+              label="Flaws"
+              addLabel="+ Add flaw"
+              items={lists.flaws}
+              onChange={(next) => setLists((p) => ({ ...p, flaws: next }))}
+            />
+            <label className="block space-y-1">
+              <span className={LABEL}>Backstory &amp; Goals (markdown)</span>
+              <textarea
+                value={f.backstory}
+                onChange={set('backstory')}
+                rows={4}
+                placeholder="Goals, history, hooks…"
+                aria-label="Backstory and goals"
+                {...NO_AUTOFILL}
+                className={FIELD}
+              />
+            </label>
           </div>
 
           <label className="block space-y-1">

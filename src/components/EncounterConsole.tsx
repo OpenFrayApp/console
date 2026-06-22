@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import type { Action } from '../schema/action.ts'
-import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
+import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
@@ -12,7 +12,6 @@ import {
   applyDamage,
   applyHealing,
   castSpell,
-  hpTierOf,
   legendaryResistanceLeft,
   parseHpInput,
   rechargeLimited,
@@ -39,12 +38,9 @@ import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
+import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback } from './EncounterPlayback.tsx'
-import { hpToneFor } from './hpTone.ts'
-import { HeaderStat, StatHeader } from './StatHeader.tsx'
-import { DefensesAndSenses } from './CreatureStatBlock.tsx'
-import { speedLines } from '../combat/speed.ts'
 import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
 
 const COLUMN_HEADING =
@@ -64,73 +60,6 @@ function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
   const out: Record<string, boolean> = {}
   for (const [id, state] of Object.entries(c.limitedUseState)) out[id] = state.available
   return out
-}
-
-/** PC detail panel — same header style as the creature stat block, lighter body. */
-function PcSummary({
-  pc,
-  onRename,
-  onHpInput,
-  onTempInput,
-}: {
-  pc: PlayerCharacter
-  onRename: (name: string) => void
-  onHpInput: (raw: string) => void
-  onTempInput: (raw: string) => void
-}) {
-  const hpTone = hpToneFor(hpTierOf(pc.hp.current, pc.hp.max))
-  const hpValue = (
-    <span>
-      <span className={hpTone}>{pc.hp.current}</span>
-      <span className="text-slate-400 dark:text-slate-500">/{pc.hp.max}</span>
-    </span>
-  )
-  const tmpValue =
-    pc.hp.temp > 0 ? (
-      <span className="text-sky-600 dark:text-sky-400">{pc.hp.temp}</span>
-    ) : (
-      <span className="text-slate-400 dark:text-slate-500">—</span>
-    )
-  return (
-    <div className="@container flex flex-1 flex-col space-y-4">
-      <StatHeader
-        name={pc.name}
-        onRename={onRename}
-        subtitle={pc.kind === 'quick' ? 'Quick add' : 'Player character'}
-        concentration={pc.concentration}
-        speeds={pc.speed ? speedLines(pc.speed) : undefined}
-        stats={
-          <>
-            <HeaderStat label="AC" value={pc.ac} />
-            <HeaderStat
-              label="HP"
-              value={hpValue}
-              edit={{ initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' }}
-            />
-            <HeaderStat
-              label="TMP"
-              value={tmpValue}
-              edit={{ initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }}
-            />
-            {/* The modifier, like a creature's Init bonus — the rolled value lives in the tracker. */}
-            <HeaderStat
-              label="Init"
-              value={`${(pc.initiativeMod ?? 0) >= 0 ? '+' : ''}${pc.initiativeMod ?? 0}`}
-            />
-          </>
-        }
-      />
-      <DefensesAndSenses
-        resistances={pc.resistances?.join(', ')}
-        immunities={pc.immunities?.join(', ')}
-        vulnerabilities={pc.vulnerabilities?.join(', ')}
-        senses={
-          pc.passivePerception != null ? `Passive Perception ${pc.passivePerception}` : undefined
-        }
-        languages={pc.languages?.join(', ')}
-      />
-    </div>
-  )
 }
 
 export function EncounterConsole({
@@ -402,8 +331,29 @@ export function EncounterConsole({
         {selected ? (
           <div className="min-h-0 flex-1 overflow-auto pr-4">
               {selected.isPC ? (
-                <PcSummary
-                  pc={selected}
+                <PcStatBlock
+                  name={selected.name}
+                  subtitle={
+                    selected.kind === 'quick'
+                      ? 'Quick add'
+                      : ['Player character', selected.alignment].filter(Boolean).join(' · ')
+                  }
+                  ac={selected.ac}
+                  hp={selected.hp}
+                  initiativeMod={selected.initiativeMod ?? 0}
+                  speed={selected.speed}
+                  abilities={selected.abilities}
+                  resistances={selected.resistances}
+                  immunities={selected.immunities}
+                  vulnerabilities={selected.vulnerabilities}
+                  languages={selected.languages}
+                  passivePerception={selected.passivePerception}
+                  personalityTraits={selected.personalityTraits}
+                  ideals={selected.ideals}
+                  bonds={selected.bonds}
+                  flaws={selected.flaws}
+                  backstory={selected.backstory}
+                  concentration={selected.concentration}
                   onRename={(name) => {
                     onRename(selected.name, name)
                     dispatch({
