@@ -67,7 +67,7 @@ const CHIP =
 /**
  * The "Apply effect" modal: toggle conditions, build a modifier (advantage /
  * disadvantage / flat bonus), or jot a reminder — all with a chosen duration.
- * Stays open so the DM can stack several; Done (or ✕ / Escape) closes.
+ * Stays open so the GM can stack several; Done (or ✕ / Escape) closes.
  */
 export function EffectModal({
   name,
@@ -80,7 +80,7 @@ export function EffectModal({
   effects: Effect[]
   onApply: (effect: Effect) => void
   onRemove: (id: string) => void
-  /** Re-set the duration on effects added this session (when the DM changes it). */
+  /** Re-set the duration on effects added this session (when the GM changes it). */
   onUpdateDuration: (ids: string[], duration: EffectDuration) => void
 }) {
   const [open, setOpen] = useState(false)

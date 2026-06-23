@@ -86,7 +86,7 @@ function damageAgainst(
 
 interface ResolverProps {
   /** The acting creature. Absent for a casterless cast (the "Cast spell" panel),
-   *  where the DM supplies the spell attack bonus / save DC instead. */
+   *  where the GM supplies the spell attack bonus / save DC instead. */
   attacker?: MonsterCombatant
   action: Action
   combatants: Combatant[]
@@ -102,9 +102,9 @@ interface ResolverProps {
 /**
  * Resolve a creature's action against the board. Attacks pick one target, roll
  * to-hit (animated), then editable damage to apply. Save / area actions pick any
- * number of targets, resolve each save (monsters auto-roll; the DM records a PC's
+ * number of targets, resolve each save (monsters auto-roll; the GM records a PC's
  * own roll), and apply per-target damage. Monster resistances/immunities are
- * applied automatically; a PC's are the DM's to enter. Damage is never applied
+ * applied automatically; a PC's are the GM's to enter. Damage is never applied
  * without a press, and conditions can be applied to the affected targets.
  */
 export function ActionResolver(props: ResolverProps) {
@@ -116,7 +116,7 @@ export function ActionResolver(props: ResolverProps) {
 }
 
 /**
- * The standalone "Group save" — the same save modal with no preset action: the DM
+ * The standalone "Group save" — the same save modal with no preset action: the GM
  * picks the ability, DC, on-save rule, targets, and a damage number.
  */
 export function GroupSaveModal({
@@ -343,7 +343,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(targets.length === 1 ? [targets[0].combatantId] : []),
   )
-  // Casterless cast: the DM supplies the spell attack bonus (the spell doesn't own
+  // Casterless cast: the GM supplies the spell attack bonus (the spell doesn't own
   // it, the caster does). With an attacker, the action already carries its to-hit.
   const [bonus, setBonus] = useState(String(action.toHit ?? 0))
   const [spinKey, setSpinKey] = useState(0)
@@ -606,7 +606,7 @@ interface SaveRow {
   total?: number
   /** The natural d20 of an auto-rolled save, for the die animation. */
   d20?: number
-  /** DM-edited damage; falls back to the computed default. */
+  /** GM-edited damage; falls back to the computed default. */
   edited?: string
 }
 
@@ -632,7 +632,7 @@ export function SaveResolver({
   const save = action?.save ?? null
   // An action with damage but no save deals automatic area damage — no save roll.
   const noSave = !!action && !save && (action.damage?.length ?? 0) > 0
-  // A standalone group save (no action) targets everyone and lets the DM type
+  // A standalone group save (no action) targets everyone and lets the GM type
   // the damage; an action's save excludes the attacker and rolls its damage.
   const targets = attacker
     ? targetsFor(attacker, combatants)
@@ -666,7 +666,7 @@ export function SaveResolver({
 
   // Per-target damage after the save rule and the target's own defenses. With an
   // action, damage is the rolled (typed) components; for a standalone group save
-  // it's the single number the DM typed (no type, so no resistance applies).
+  // it's the single number the GM typed (no type, so no resistance applies).
   const defaultDamage = (target: Combatant, result?: SaveResult): number => {
     if (!result) return 0
     // Evasion (Dex, half-on-success): nothing on a success, half on a failure.

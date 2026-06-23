@@ -29,7 +29,7 @@ export function meleeHitAutoCrits(target: Combatant): boolean {
  *
  * Only the attack-roll consequences are modelled here. Auto-failed STR/DEX saves
  * and crit-on-hit-within-5-ft (Paralyzed/Unconscious) are separate and not folded
- * into the roll. Frightened assumes the source of fear is in sight (DM adjudicates).
+ * into the roll. Frightened assumes the source of fear is in sight (GM adjudicates).
  */
 export function conditionAttackAdvantage(
   condition: ConditionName,

@@ -28,7 +28,7 @@ export function EffectBadge({
   onRemove?: () => void
 }) {
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(effect.icon)}`
-  // Surface a save-ends effect's escape DC so the DM is reminded a save is owed.
+  // Surface a save-ends effect's escape DC so the GM is reminded a save is owed.
   const save = effect.duration.type === 'saveEnds' ? effect.duration.save : null
   const saveTag = save ? (
     <span className="opacity-70" title={`${save.ability.toUpperCase()} save DC ${save.dc} ends it`}>

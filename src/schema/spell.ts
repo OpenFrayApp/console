@@ -14,9 +14,9 @@ export interface SpellComponents {
 
 /**
  * The save a spell forces. The DC is deliberately absent: it belongs to the
- * caster, not the spell (a monster's `Spellcasting.saveDc`, or DM-entered for a
+ * caster, not the spell (a monster's `Spellcasting.saveDc`, or GM-entered for a
  * PC, since a PC's DC depends on a build we don't model). `onSave` is `undefined`
- * when it can't be read from the spell text; the DM confirms it at cast time.
+ * when it can't be read from the spell text; the GM confirms it at cast time.
  */
 export interface SpellSave {
   ability: Ability

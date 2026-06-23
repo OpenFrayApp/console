@@ -90,7 +90,7 @@ export function applyDamage(
 }
 
 /**
- * Set current HP to an exact value (the DM typed a number). Unlike applyDamage,
+ * Set current HP to an exact value (the GM typed a number). Unlike applyDamage,
  * this does not route through temporary HP — it sets `current` directly and
  * recomputes status the same way.
  */

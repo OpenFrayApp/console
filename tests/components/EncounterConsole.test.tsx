@@ -168,7 +168,7 @@ describe('Encounter flow', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
 
-    // The controls now remind the DM a save is owed, with its ability + DC.
+    // The controls now remind the GM a save is owed, with its ability + DC.
     expect(screen.getByText('Save ends')).toBeInTheDocument()
     expect(screen.getByText(/Frightened.*DEX save DC 15/)).toBeInTheDocument()
 

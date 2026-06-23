@@ -42,7 +42,7 @@ function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string
         onKeyDown={(e) => {
           if (e.key === 'Escape') setEditing(false)
         }}
-        aria-label="DM notes"
+        aria-label="GM notes"
         placeholder="Markdown supported. Click away to save."
         className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800"
       />
@@ -63,7 +63,7 @@ function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string
           <Markdown>{value}</Markdown>
         </div>
       ) : (
-        <span className="text-sm italic text-slate-400 dark:text-slate-500">Add DM notes…</span>
+        <span className="text-sm italic text-slate-400 dark:text-slate-500">Add GM notes…</span>
       )}
     </button>
   )
@@ -218,7 +218,7 @@ export function PcStatBlock({
 
       {(onEditDmNotes || dmNotes?.trim()) && (
         <div>
-          <h4 className={SECTION_HEADING}>DM Notes</h4>
+          <h4 className={SECTION_HEADING}>GM Notes</h4>
           <DmNotes value={dmNotes} onCommit={onEditDmNotes} />
         </div>
       )}

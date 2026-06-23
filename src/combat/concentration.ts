@@ -9,7 +9,7 @@ import type { AppliedEffect } from './effectroll.ts'
 
 /**
  * Taking damage forces a CON save (DC 10 or half the damage, whichever is higher) to
- * maintain concentration. Per the never-roll-for-the-player rule, the DM records the
+ * maintain concentration. Per the never-roll-for-the-player rule, the GM records the
  * result (applyConcentrationResult); rollConcentrationCheck is the optional in-app
  * roll for monsters. Being knocked out or killed ends concentration immediately, but
  * that is handled in applyDamage, not here.

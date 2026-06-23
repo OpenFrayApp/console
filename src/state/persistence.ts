@@ -16,7 +16,7 @@ import type { RollEntry } from '../components/RollLog.tsx'
 export type Theme = 'dark' | 'light'
 export type View = 'encounter' | 'compendium'
 
-/** Everything worth restoring to land the DM back where they left off. */
+/** Everything worth restoring to land the GM back where they left off. */
 export interface SessionSnapshot {
   encounter: Encounter
   rollLog: RollEntry[]

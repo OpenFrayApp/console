@@ -28,10 +28,10 @@ those as first-class.
 
 **OpenFray is a fast scratchpad, not a system of record.**
 
-It tracks what's *happening in the fight* and the reference a DM keeps on hand —
+It tracks what's *happening in the fight* and the reference a GM keeps on hand —
 never the *rules engine* behind a character. The player's sheet / D&D Beyond owns
 what a character *can do* and works out the numbers; OpenFray owns what
-*just happened*, what must be *remembered* this round, and the notes a DM jots to
+*just happened*, what must be *remembered* this round, and the notes a GM jots to
 run the table. This line is deliberate, and it's the reason the app stays fast and
 simple instead of becoming a worse copy of a VTT.
 
@@ -40,23 +40,23 @@ The test for any feature, contribution, or idea:
 > **Does it require knowing a player character's build? If yes, it's out of scope.**
 
 "Knowing the build" means the app having to *model, derive from, or run* class,
-level, features, or spells — not the descriptive facts a DM chooses to type in.
+level, features, or spells — not the descriptive facts a GM chooses to type in.
 This isn't a limitation to work around — it's the design. A few of its
 consequences, so the spirit is clear:
 
-- **A PC holds what the DM wants to remember, not a rules engine.** Beyond AC, HP,
-  and conditions, a PC can carry the reference a DM finds handy at the table —
+- **A PC holds what the GM wants to remember, not a rules engine.** Beyond AC, HP,
+  and conditions, a PC can carry the reference a GM finds handy at the table —
   ability scores, senses, speed, defenses, an initiative modifier — plus character
   context like race, alignment, faith, personality traits, ideals, bonds, flaws, a
-  backstory, and private DM notes. It's all the DM's call what to jot. A **Quick add**
+  backstory, and private GM notes. It's all the GM's call what to jot. A **Quick add**
   is the bare minimum — name, HP, AC — for a throwaway NPC or a creature dropped in
   mid-fight. What OpenFray won't do is *run* the character: no class, level, spell
   slots, or feature logic, and it never derives or auto-applies what a PC can do.
-  The DM transcribes; the sheet still owns the mechanics.
+  The GM transcribes; the sheet still owns the mechanics.
 - **Effects model the *result*, not the cause.** There are only ~6 shapes of
   consequence in all of 5e (a condition, advantage, disadvantage, a flat modifier,
   a reminder, a save-ends effect). We model those six. We never model the hundreds
-  of class features that produce them — the DM transcribes the outcome, the app
+  of class features that produce them — the GM transcribes the outcome, the app
   reminds.
 - **Combat is local-first.** State lives in the browser and feels instant;
   persistence happens quietly in the background. The app never makes you wait on
@@ -66,14 +66,14 @@ consequences, so the spirit is clear:
 
 If you're contributing and a change starts to feel like the app needs to *model or
 run* a character's build — class features, spell mechanics, leveling — that's the
-signal to stop and rethink, not to add the field. Storing a fact the DM types is
+signal to stop and rethink, not to add the field. Storing a fact the GM types is
 fine; computing what a character can do is not.
 
 ## Status
 
 🧪 **Alpha — publicly testing at [openfray.app/console](https://openfray.app/console).**
 
-The single-DM combat console is up and running: initiative, monster resources,
+The single-GM combat console is up and running: initiative, monster resources,
 conditions/effects, concentration, group saves, and honest dice with a clear roll log,
 plus the built-in SRD compendium, custom creatures and spells, a durable **Characters**
 roster, and **campaigns** with house rules. It runs fully anonymous in the browser, or

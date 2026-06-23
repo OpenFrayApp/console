@@ -15,7 +15,7 @@ import { applyDamage, type DamageOptions } from './resources.ts'
  *
  * Monsters carry save bonuses, so they can be auto-rolled. PCs are lightweight by
  * design (no ability data) — their saves are rolled by the player and recorded by
- * the DM. The per-creature damage primitive (applySaveDamage) works for both.
+ * the GM. The per-creature damage primitive (applySaveDamage) works for both.
  */
 
 export type SaveResult = 'save' | 'fail'

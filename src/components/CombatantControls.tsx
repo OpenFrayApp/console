@@ -85,7 +85,7 @@ export function CombatantControls({
     })
   }
 
-  // Called when the DM changes the shared duration after already applying some effects this session.
+  // Called when the GM changes the shared duration after already applying some effects this session.
   const setEffectsDuration = (ids: string[], duration: EffectDuration) => {
     const set = new Set(ids)
     dispatch({

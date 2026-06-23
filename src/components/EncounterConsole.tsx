@@ -87,7 +87,7 @@ export function EncounterConsole({
   onNote: OnNote
   /** Open the full character editor for a roster-backed PC (saves to the DB). */
   onEditPc?: (pc: PlayerCharacter) => void
-  /** Commit edited DM notes for a roster-backed PC (saves to the board + the DB). */
+  /** Commit edited GM notes for a roster-backed PC (saves to the board + the DB). */
   onEditPcDmNotes?: (pc: PlayerCharacter, text: string) => void
   /** Open the editor for a custom creature (saves to the library; the fight is untouched). */
   onEditCreature?: (creature: MonsterCombatant) => void

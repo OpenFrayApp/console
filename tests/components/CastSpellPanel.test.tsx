@@ -97,7 +97,7 @@ describe('CastSpellPanel', () => {
 
     fireEvent.click(screen.getByText('Fireball'))
     // A save spell opens the same group-save modal a monster's save action uses,
-    // seeded from the spell (DEX save, DM-editable DC) — no upcast selector.
+    // seeded from the spell (DEX save, GM-editable DC) — no upcast selector.
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.getAllByText(/DEX save/i).length).toBeGreaterThan(0)
     expect(screen.getByLabelText('Save DC')).toBeTruthy()

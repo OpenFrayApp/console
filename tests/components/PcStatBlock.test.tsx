@@ -47,7 +47,7 @@ describe('PcStatBlock', () => {
     expect(screen.getByText('Personality')).toBeInTheDocument()
     expect(screen.getByText('Faith')).toBeInTheDocument()
     expect(screen.getByText('Lathander')).toBeInTheDocument()
-    expect(screen.getByText('DM Notes')).toBeInTheDocument()
+    expect(screen.getByText('GM Notes')).toBeInTheDocument()
     expect(screen.getByText('Secretly the heir.')).toBeInTheDocument()
     expect(screen.getByText('Personality Traits')).toBeInTheDocument()
     expect(screen.getByText('Brave to a fault')).toBeInTheDocument()
@@ -80,22 +80,22 @@ describe('PcStatBlock', () => {
     expect(screen.queryByTitle('Roll DEX check')).toBeNull()
   })
 
-  it('edits DM notes inline and commits the text on blur', () => {
+  it('edits GM notes inline and commits the text on blur', () => {
     const onEditDmNotes = vi.fn()
     render(<PcStatBlock {...base} dmNotes={'Old note'} onEditDmNotes={onEditDmNotes} />)
     fireEvent.click(screen.getByTitle(/Click to edit/))
-    const textarea = screen.getByLabelText('DM notes')
+    const textarea = screen.getByLabelText('GM notes')
     fireEvent.change(textarea, { target: { value: 'Owes the party 50gp' } })
     fireEvent.blur(textarea)
     expect(onEditDmNotes).toHaveBeenCalledWith('Owes the party 50gp')
   })
 
-  it('prompts to add DM notes when empty but editable', () => {
+  it('prompts to add GM notes when empty but editable', () => {
     render(<PcStatBlock {...base} onEditDmNotes={() => {}} />)
-    expect(screen.getByText('Add DM notes…')).toBeInTheDocument()
+    expect(screen.getByText('Add GM notes…')).toBeInTheDocument()
   })
 
-  it('keeps DM notes read-only when no edit handler is given', () => {
+  it('keeps GM notes read-only when no edit handler is given', () => {
     render(<PcStatBlock {...base} dmNotes={'Secret'} />)
     expect(screen.getByText('Secret')).toBeInTheDocument()
     expect(screen.queryByTitle(/Click to edit/)).toBeNull()

@@ -11,7 +11,7 @@ export function abilityMod(score: number): number {
 
 /**
  * A durable player character a signed-up user keeps in their party roster — the
- * board facts the DM wants on a PC, saved once and reused across encounters.
+ * board facts the GM wants on a PC, saved once and reused across encounters.
  * Stored as one JSONB blob per row in the `players` table, isolated to the owner
  * by Row-Level Security. Anonymous users have no roster (they add ephemeral PCs to
  * the current fight instead), so they never create one of these.
@@ -20,7 +20,7 @@ export function abilityMod(score: number): number {
  * a fresh, mutable {@link PlayerCharacter} via {@link rosterPcToCombatant}. Editing
  * the roster entry never touches a fight in progress.
  *
- * Still lightweight, still not a character sheet: the DM transcribes these facts;
+ * Still lightweight, still not a character sheet: the GM transcribes these facts;
  * the app never derives class, level, or what an ability does. Ability scores feed
  * the Dexterity initiative tiebreak and the derived initiative modifier.
  */
@@ -70,7 +70,7 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     vulnerabilities: pc.vulnerabilities,
     speed: pc.speed,
     abilities: pc.abilities,
-    // Carry the DM's character notes onto the combatant so the encounter shows the
+    // Carry the GM's character notes onto the combatant so the encounter shows the
     // same stat block as the compendium (display-only; the campaign tag stays behind).
     alignment: pc.alignment,
     race: pc.race,

@@ -174,7 +174,7 @@ function buildPc(d: PcDraft, id: string): RosterPc {
   const speed: Speeds = {}
   for (const k of SPEED_KEYS) if (has(d.speed[k])) speed[k] = num(d.speed[k])
   if (d.speed.hover) speed.hover = true
-  // Passive Perception defaults to 10 + Wis mod when the DM leaves it blank.
+  // Passive Perception defaults to 10 + Wis mod when the GM leaves it blank.
   const senses: Senses = {
     passivePerception: has(d.senses.passivePerception)
       ? num(d.senses.passivePerception)
@@ -258,7 +258,7 @@ function LineList({
 
 /**
  * Create / edit a durable roster PC. Not a character sheet — no class, level, or
- * spells; the DM transcribes the board facts plus the roleplay notes to keep.
+ * spells; the GM transcribes the board facts plus the roleplay notes to keep.
  */
 export function PcFormModal({
   open,
@@ -475,13 +475,13 @@ export function PcFormModal({
               />
             </label>
             <label className="block space-y-1">
-              <span className={LABEL}>DM Notes</span>
+              <span className={LABEL}>GM Notes</span>
               <textarea
                 value={d.dmNotes}
                 onChange={(e) => patch({ dmNotes: e.target.value })}
                 rows={3}
                 placeholder="Private notes for tracking this character…"
-                aria-label="DM notes"
+                aria-label="GM notes"
                 {...OFF}
                 className={FIELD}
               />

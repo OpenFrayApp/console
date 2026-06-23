@@ -46,7 +46,7 @@ export interface GroupSaveSeed {
 
 /**
  * The save-resolution card: pick combatants, set ability/DC/on-save, roll monster
- * saves (PCs are recorded by the DM), then apply one damage number split by the
+ * saves (PCs are recorded by the GM), then apply one damage number split by the
  * rule. Shared by the standalone Group Save and by casting a save spell, which
  * seeds the ability/on-save from the spell and the DC from the caster.
  */
@@ -94,7 +94,7 @@ export function GroupSaveForm({
     for (const c of combatants) {
       if (!selected.has(c.combatantId)) continue
       if (c.isPC) {
-        next[c.combatantId] = {} // the player rolls; DM records below
+        next[c.combatantId] = {} // the player rolls; GM records below
       } else {
         const { result, total } = rollSave(c, request)
         next[c.combatantId] = { result, total }

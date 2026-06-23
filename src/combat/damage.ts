@@ -9,7 +9,7 @@ export type DamageRelation = 'normal' | 'resistant' | 'immune' | 'vulnerable'
 
 /**
  * A target's relation to a damage type. Monster defenses come from the stat
- * block; a PC's come from what the DM entered on the Add-PC form. A quick add
+ * block; a PC's come from what the GM entered on the Add-PC form. A quick add
  * (no defenses) is always `normal`.
  */
 export function damageRelation(target: Combatant, type: DamageType): DamageRelation {

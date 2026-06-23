@@ -30,7 +30,7 @@ export interface LimitedUseState {
 }
 
 /**
- * Free-form character notes a DM keeps on a PC — display-only reference, never
+ * Free-form character notes a GM keeps on a PC — display-only reference, never
  * mechanics. Shared by the durable roster PC and the in-combat combatant so both
  * render the same stat block. The four short lists are roleplay prompts; `backstory`
  * is longer prose (markdown). Nothing here derives a build or branches logic.
@@ -47,7 +47,7 @@ export interface CharacterDetails {
   flaws?: string[]
   /** Backstory / goals — longer prose, rendered as markdown. */
   backstory?: string
-  /** Private DM notes for tracking anything about this character — markdown. */
+  /** Private GM notes for tracking anything about this character — markdown. */
   dmNotes?: string
 }
 
@@ -116,7 +116,7 @@ export interface MonsterCombatant extends CombatantBase {
 
 /**
  * A lightweight, non-snapshot combatant. Two flavours:
- * - `pc` — a player character: the combat-relevant fields the DM wants on the
+ * - `pc` — a player character: the combat-relevant fields the GM wants on the
  *   board (defenses, speed, etc.). Players roll their own dice.
  * - `quick` — a generic quick add (an NPC or a creature dropped in mid-fight):
  *   just name / HP / AC. Shown as "Quick add".
@@ -127,7 +127,7 @@ export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   kind?: 'pc' | 'quick'
   /**
    * The durable roster character this was instantiated from, when added from the
-   * saved roster. Lets the encounter persist character-level edits (e.g. DM notes)
+   * saved roster. Lets the encounter persist character-level edits (e.g. GM notes)
    * back to the DB. Absent for anonymous quick adds and PCs added at the table.
    */
   rosterId?: string
@@ -146,9 +146,9 @@ export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   passivePerception?: number
   /** Full senses (PP + darkvision/etc.), carried from a durable roster PC. */
   senses?: Senses
-  /** Languages the PC speaks, entered by the DM. Free-form. */
+  /** Languages the PC speaks, entered by the GM. Free-form. */
   languages?: string[]
-  /** Damage resistances / immunities / vulnerabilities, entered by the DM. */
+  /** Damage resistances / immunities / vulnerabilities, entered by the GM. */
   resistances?: string[]
   immunities?: string[]
   vulnerabilities?: string[]

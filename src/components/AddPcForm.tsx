@@ -22,9 +22,9 @@ const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 da
 const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
 /**
- * Add a player character — the combat-relevant fields the DM wants on the board.
+ * Add a player character — the combat-relevant fields the GM wants on the board.
  * The initiative field is a *modifier*: at combat start it's rolled (d20 + this)
- * unless the DM types a flat value into the initiative prompt. Players roll their
+ * unless the GM types a flat value into the initiative prompt. Players roll their
  * own dice, so nothing here is auto-rolled.
  */
 export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {

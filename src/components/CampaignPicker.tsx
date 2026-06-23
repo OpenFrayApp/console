@@ -4,7 +4,7 @@
 import type { Campaign } from '../schema/campaign.ts'
 
 /**
- * Footer control for the DM to pick which campaign they're running. The active
+ * Footer control for the GM to pick which campaign they're running. The active
  * campaign's house rules then drive the console (crit damage, creature HP,
  * initiative ties). "No campaign" returns the console to the standard ruleset.
  * Signed-up-only and only shown when the user has at least one campaign.

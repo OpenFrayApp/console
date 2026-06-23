@@ -89,7 +89,7 @@ function spellDamage(
 /** The on-save rule lives in 2024 prose, not a field. We only assert what the
  *  wording makes clear: "half ... on a success(ful)" → half; a save with no damage
  *  is treated as negates. A damage spell whose text we can't read stays
- *  `undefined` so the DM confirms it rather than us guessing wrong. */
+ *  `undefined` so the GM confirms it rather than us guessing wrong. */
 function spellOnSave(desc: string, hasDamage: boolean): SaveOutcome | undefined {
   if (/\bhalf\b[^.]*success|success[^.]*\bhalf\b/i.test(desc)) return 'half'
   if (!hasDamage) return 'negates'

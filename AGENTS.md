@@ -15,7 +15,7 @@ combatants — plus dice and an SRD reference.
 ## The one principle — apply it to every change
 
 > **OpenFray is a fast scratchpad, not a system of record.**
-> We track what happens at the table — plus the reference a DM jots — never the
+> We track what happens at the table — plus the reference a GM jots — never the
 > *rules engine* behind a character.
 
 **The test for any feature, before building it:**
@@ -23,7 +23,7 @@ combatants — plus dice and an SRD reference.
 > **Does it require knowing a player character's build? If yes, it is out of scope.**
 
 "Knowing the build" means the app having to *model, derive from, or run* class,
-level, features, or spells — not the descriptive facts a DM chooses to type in.
+level, features, or spells — not the descriptive facts a GM chooses to type in.
 
 Out of scope (belongs on a character sheet / D&D Beyond, never here): modeling
 class features or what an ability *does*; tracking PC spell slots, resources, or
@@ -36,14 +36,14 @@ recharge); concentration, initiative, HP, turn/round tracking; dice and group
 saves.
 
 **Two flavours of lightweight combatant** (neither is a character sheet): a **PC**
-holds the board facts plus the reference the DM chooses to jot — AC, HP, conditions;
+holds the board facts plus the reference the GM chooses to jot — AC, HP, conditions;
 optionally ability scores, senses, speed, an initiative modifier, and damage
 resistances/immunities/vulnerabilities (these feed damage like a monster's); and
 character context like race, alignment, faith, personality traits/ideals/bonds/flaws,
-a backstory, and private DM notes. A **Quick add** is just name/HP/AC for a throwaway
-NPC. The test still holds: the DM *transcribes* these facts and the app displays them;
+a backstory, and private GM notes. A **Quick add** is just name/HP/AC for a throwaway
+NPC. The test still holds: the GM *transcribes* these facts and the app displays them;
 it never models class/level/spells, derives a build, or runs what a character can do.
-DM-entered defenses are "what damage this takes" — a board consequence — not a sheet
+GM-entered defenses are "what damage this takes" — a board consequence — not a sheet
 we read.
 
 If a feature is useful but fails the test, it is still a no. When a request tempts
@@ -81,7 +81,7 @@ independent, more local-first option.
    transparent roll log, not from tampering.
 8. **Local-first, never server-read-through.** Mutate in-memory state, render
    immediately, persist to the backend in the **background** (debounced autosave).
-   The UI must never wait on a network round-trip to reflect the DM's own action.
+   The UI must never wait on a network round-trip to reflect the GM's own action.
 9. **Multi-tenant isolation via `owner_id` + Row-Level Security**, from the first
    line of backend code. Every user-owned row carries `owner_id`; the database
    enforces isolation. This is security-critical — treat changes here with extra
@@ -118,7 +118,7 @@ dedup.
 
 ## Phases
 
-- **Phase 1 (now):** single-DM, single-device tracker + differentiators
+- **Phase 1 (now):** single-GM, single-device tracker + differentiators
   (resource tracking, effects, mass save, dice, SRD compendium, custom-creature
   form, identity). No multiplayer.
 - **Phase 2 (later, designed-for now):** read-only shared player view + live

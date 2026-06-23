@@ -132,7 +132,7 @@ describe('PcFormModal', () => {
     fireEvent.change(screen.getByLabelText('Race'), { target: { value: 'Half-Elf' } })
     fireEvent.change(screen.getByLabelText('Alignment'), { target: { value: 'lawful good' } })
     fireEvent.change(screen.getByLabelText('Faith'), { target: { value: 'Lathander' } })
-    fireEvent.change(screen.getByLabelText('DM notes'), { target: { value: 'Owes the party 50gp' } })
+    fireEvent.change(screen.getByLabelText('GM notes'), { target: { value: 'Owes the party 50gp' } })
 
     // Each roleplay category is a repeatable list: Add a line, then fill it.
     fireEvent.click(screen.getByRole('button', { name: '+ Add trait' }))

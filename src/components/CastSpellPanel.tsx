@@ -12,7 +12,7 @@ import { ActionResolver } from './ActionResolver.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
-/** Spells the DM can roll/resolve here — those carrying structured mechanics. */
+/** Spells the GM can roll/resolve here — those carrying structured mechanics. */
 const isCastable = (s: Spell): boolean => s.mechanics != null
 
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
@@ -20,7 +20,7 @@ const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level $
 /**
  * Cast a spell from the compendium: roll its damage (scaled by the chosen level)
  * and, for a save spell, resolve the group save pre-seeded from the spell. The
- * spell owns the dice, damage type, and save ability; the DM supplies the DC (from
+ * spell owns the dice, damage type, and save ability; the GM supplies the DC (from
  * the caster) and the cast level. PCs' own rolls are never made for them.
  */
 export function CastSpellPanel({
@@ -124,7 +124,7 @@ export function CastSpellPanel({
 
   // An attack or save spell opens the same modal as a monster's action: a save
   // spell → the mass-save modal, an attack spell → the attack modal. There's no
-  // caster here, so the DM supplies the spell attack bonus / save DC; magical
+  // caster here, so the GM supplies the spell attack bonus / save DC; magical
   // effect is pre-checked for saves.
   const action = spellAction(spell, {})
   if (action) {

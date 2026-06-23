@@ -22,7 +22,7 @@ import type { Ability, DamageType, Edition } from '../schema/primitives.ts'
 /** How a spell resolves; maps to `attackRoll` / `save` in the mechanics. */
 export type SpellResolution = 'none' | 'attack' | 'save'
 
-/** Increment = "+Xd? per level" (expanded for the DM); manual = explicit per level. */
+/** Increment = "+Xd? per level" (expanded for the GM); manual = explicit per level. */
 export type ScalingMode = 'increment' | 'manual'
 
 export interface SpellDamageDraft {

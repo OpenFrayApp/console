@@ -28,7 +28,7 @@ function dexScore(c: Combatant): number | undefined {
  * mutually exclusive primary tiebreaks:
  *   - `dex`: higher Dexterity wins (then stable insertion order).
  *   - `pcs-first`: players act before monsters (then stable order).
- *   - `manual`: leave ties in insertion order for the DM to drag.
+ *   - `manual`: leave ties in insertion order for the GM to drag.
  * `Array.prototype.sort` is stable, so equal entries keep their order in every mode.
  */
 export function compareInitiative(
@@ -61,7 +61,7 @@ export function activeCombatant(e: Encounter): Combatant | undefined {
 
 /**
  * A creature takes turns while active. A downed (unconscious) PC still gets its
- * turn so the DM can roll/mark a death save; only the truly dead are skipped. A
+ * turn so the GM can roll/mark a death save; only the truly dead are skipped. A
  * `skipsTurn` effect (e.g. Surprised on round 1) also takes a creature out of the
  * rotation until that effect clears.
  */

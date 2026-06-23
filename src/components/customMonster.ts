@@ -29,7 +29,7 @@ import type {
  * `buildCreature` does the parsing in one place. Empty fields drop out rather than
  * becoming `0`/`""`, so a sparse stat block stays sparse.
  *
- * Several numbers the DM shouldn't have to compute are derived instead: attack
+ * Several numbers the GM shouldn't have to compute are derived instead: attack
  * to-hit, save/skill bonuses, and the spell save DC / attack bonus all come from
  * an ability modifier plus the proficiency bonus (which itself comes from the CR).
  */
@@ -270,9 +270,9 @@ const numOpt = (v: string): number | undefined => (has(v) ? num(v) : undefined)
 export const abilityMod = (score: number): number => Math.floor((score - 10) / 2)
 
 /**
- * Proficiency bonus by challenge rating (2024 DMG table). Fractional CRs (1/8–1/2)
+ * Proficiency bonus by challenge rating (2024 core-rules table). Fractional CRs (1/8–1/2)
  * and CR 0 all sit at +2; it then steps +1 every four CR. Drives derived save,
- * skill, attack, and spell DC numbers so the DM marks intent, not arithmetic.
+ * skill, attack, and spell DC numbers so the GM marks intent, not arithmetic.
  */
 export function proficiencyBonus(cr: number | undefined): number {
   if (cr == null || cr <= 4) return 2
@@ -426,7 +426,7 @@ export function buildCreature(draft: MonsterDraft): Creature {
   if (has(draft.speed.burrow)) speed.burrow = num(draft.speed.burrow)
   if (draft.speed.hover) speed.hover = true
 
-  // A proficient save = ability modifier + proficiency bonus (from CR). The DM
+  // A proficient save = ability modifier + proficiency bonus (from CR). The GM
   // only marks proficiency; non-proficient saves are absent and the stat block
   // falls back to the bare ability modifier.
   const saves: SaveBonuses = {}
@@ -458,7 +458,7 @@ export function buildCreature(draft: MonsterDraft): Creature {
 
   const creature: Creature = {
     id: `custom:${uid()}`,
-    // The DM's free-text origin (a book, "Homebrew") is the display source; it's
+    // The GM's free-text origin (a book, "Homebrew") is the display source; it's
     // still user content (the custom: id prefix marks that) and carries no license.
     source: draft.sourceName.trim() || 'custom',
     edition: draft.edition,
@@ -528,7 +528,7 @@ const stripMod = (formula: string): string => formula.replace(/[+-]\d+$/, '')
 /**
  * Which ability an attack used isn't stored, so infer it: the to-hit is
  * `mod + proficiency`, so find the ability whose modifier matches (preferring the
- * usual combat ability for the kind). Good enough to round-trip; the DM can adjust.
+ * usual combat ability for the kind). Good enough to round-trip; the GM can adjust.
  */
 function inferAttackAbility(action: Action, abilities: AbilityScores, pb: number): Ability {
   const fallback: Ability = action.kind === 'ranged' ? 'dex' : 'str'

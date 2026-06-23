@@ -5,12 +5,12 @@ import type { Ability } from './primitives.ts'
 
 /**
  * The Effect is the one abstraction for everything that should change a future
- * roll or remind the DM. Conditions are a *kind* of Effect, so there's one
+ * roll or remind the GM. Conditions are a *kind* of Effect, so there's one
  * system, not two.
  *
  * There are only ~6 shapes of consequence in all of 5e (a condition, advantage,
  * disadvantage, a flat modifier, a reminder, a save-ends effect). We model those
- * six — never the hundreds of class features that produce them. The DM transcribes
+ * six — never the hundreds of class features that produce them. The GM transcribes
  * the outcome; the app reminds.
  */
 
@@ -99,6 +99,6 @@ export interface Effect {
    * active — e.g. a Surprised creature under the 2014 rule, skipped on round 1.
    */
   skipsTurn?: boolean
-  /** Always shown to the DM as a plain reminder. */
+  /** Always shown to the GM as a plain reminder. */
   note?: string
 }

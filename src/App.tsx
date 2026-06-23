@@ -402,7 +402,7 @@ function App() {
     if (pc) setEncounterPcEdit({ pc, combatantId: c.combatantId })
   }
 
-  // Edit a roster-backed PC's DM notes from the encounter: update the on-board copy
+  // Edit a roster-backed PC's GM notes from the encounter: update the on-board copy
   // (shows now, autosaves with the encounter) and the saved character (persists).
   const handleEditEncounterPcDmNotes = (c: PlayerCharacter, text: string) => {
     const notes = text || undefined
@@ -529,7 +529,7 @@ function App() {
       const isSurprised = surprised.has(id)
       const disadvantage = isSurprised && rule === 'disadvantage'
       // Roll when the field is blank, or to apply 5.5 disadvantage to an unedited
-      // app-rolled value; a value the DM typed (or edited) is always respected.
+      // app-rolled value; a value the GM typed (or edited) is always respected.
       const unedited = raw !== '' && raw === (initPrompt?.[id] ?? '')
       if (raw === '' || (disadvantage && unedited && !isPlayer(c))) {
         initiatives[id] = rollInit(initLabel(c), initMod(c), disadvantage)
@@ -564,7 +564,7 @@ function App() {
   }
 
   // Begin: pre-roll monsters/quick-adds, then open the Roll Initiative modal so the
-  // DM enters players' rolls and (optionally) marks surprised combatants.
+  // GM enters players' rolls and (optionally) marks surprised combatants.
   const handleBegin = () => {
     if (encounter.combatants.length === 0) return
     const initial: Record<string, string> = {}

@@ -6,7 +6,7 @@ import type { Spell } from '../schema/spell.ts'
 
 /**
  * A spell supplies dice, damage type, and save ability; the *caster* supplies the
- * DC (a monster's Spellcasting.saveDc, or DM-entered for a PC) and cast level. These
+ * DC (a monster's Spellcasting.saveDc, or GM-entered for a PC) and cast level. These
  * helpers resolve only the spell-owned half and leave the DC to the cast-time UI.
  * See docs/compendium-ingest.md #14.
  */

@@ -68,7 +68,7 @@ function Row({
 
 /**
  * The "Roll Initiative" step. Monsters and quick adds arrive pre-rolled (editable);
- * players start blank — the DM enters each roll, or leaves it blank to roll d20 +
+ * players start blank — the GM enters each roll, or leaves it blank to roll d20 +
  * modifier (the app never rolls a player's dice unless asked). Combatants can be
  * toggled Surprised, applying the campaign's surprise rule on start.
  */

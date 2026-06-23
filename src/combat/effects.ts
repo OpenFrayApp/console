@@ -97,7 +97,7 @@ export function flatBonus(
   }
 }
 
-/** The shape of a built-by-the-DM mechanical effect (the effect modal's output). */
+/** The shape of a built-by-the-GM mechanical effect (the effect modal's output). */
 export interface ModifierSpec {
   name: string
   mode: EffectMode
@@ -126,7 +126,7 @@ function modifierIcon(spec: ModifierSpec): string {
  * A general mechanical modifier built from explicit parts — the effect modal's
  * output. Covers advantage/disadvantage (on its own rolls or rolls against it,
  * scoped to attacks/saves/checks/all) and flat bonuses/penalties (Bless, Bane,
- * Bardic Inspiration, …) without enumerating spells. The DM names it and picks the
+ * Bardic Inspiration, …) without enumerating spells. The GM names it and picks the
  * duration; nothing here knows what feature produced it.
  */
 export function modifierEffect(spec: ModifierSpec, opts: EffectOpts = {}): Effect {

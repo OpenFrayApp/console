@@ -26,7 +26,7 @@ export type HpMethod = 'average' | 'roll' | 'min' | 'max'
  * How initiative ties break.
  * - `dex`: higher Dexterity wins (then stable order).
  * - `pcs-first`: players act before monsters on a tie (common house rule).
- * - `manual`: leave tied creatures in insertion order for the DM to reorder.
+ * - `manual`: leave tied creatures in insertion order for the GM to reorder.
  */
 export type InitiativeTiebreak = 'dex' | 'pcs-first' | 'manual'
 

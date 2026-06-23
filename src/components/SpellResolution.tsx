@@ -16,7 +16,7 @@ const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level $
  * Resolve a spell's mechanics against the board: roll its damage (scaled by the
  * chosen level) and, for a save spell, run the group save pre-seeded from the spell.
  * The spell owns the dice and save ability; the caster owns the DC (`saveDc`, or
- * left for the DM). Spells with no mechanics render nothing — the caller handles it.
+ * left for the GM). Spells with no mechanics render nothing — the caller handles it.
  */
 export function SpellResolution({
   spell,

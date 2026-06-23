@@ -6,7 +6,7 @@ import { roll, type RollContext, type RollResult } from '../dice/roll.ts'
 
 /**
  * Death saves, built as "apply this outcome" primitives. The app never rolls for
- * the player: the DM records Save/Fail directly (markDeathSaveSuccess/Failure);
+ * the player: the GM records Save/Fail directly (markDeathSaveSuccess/Failure);
  * rollDeathSave() is the optional in-app fallback for when the player can't roll.
  */
 

@@ -35,7 +35,7 @@ interface CombatantRowProps {
   combatant: Combatant
   /** Whose turn it is (the initiative cursor). */
   active?: boolean
-  /** The row the DM has selected to inspect in the detail panel. */
+  /** The row the GM has selected to inspect in the detail panel. */
   selected?: boolean
   /** Selects this combatant when the row is clicked. */
   onSelect?: () => void
@@ -150,7 +150,7 @@ export function CombatantRow({
       )}
 
       <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
-        {/* Manual reorder can store a fractional rank; the DM only ever sees the integer. */}
+        {/* Manual reorder can store a fractional rank; the GM only ever sees the integer. */}
         {Math.floor(combatant.initiative)}
       </div>
 
