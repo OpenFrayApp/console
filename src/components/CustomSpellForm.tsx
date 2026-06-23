@@ -7,6 +7,8 @@ import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { FormSection as Section } from './FormSection.tsx'
 import { ABILITIES, DAMAGE_TYPES } from './customMonster.ts'
 import {
+  CASTING_TIMES,
+  DURATIONS,
   SPELL_LEVELS,
   SPELL_SCHOOLS,
   CANTRIP_TIERS,
@@ -65,6 +67,54 @@ function DamageRows({
       >
         + {addLabel}
       </button>
+    </div>
+  )
+}
+
+/** A select of common values with an "Other…" entry that reveals a free-text input
+ *  (e.g. casting time, duration). A value not in the presets opens in Other mode. */
+function PresetField({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  otherPlaceholder,
+}: {
+  value: string
+  options: string[]
+  onChange: (v: string) => void
+  ariaLabel: string
+  otherPlaceholder: string
+}) {
+  const [forceOther, setForceOther] = useState(false)
+  const isOther = forceOther || (value !== '' && !options.includes(value))
+  return (
+    <div className="space-y-1">
+      <select
+        value={isOther ? '__other__' : value}
+        aria-label={ariaLabel}
+        className={FIELD}
+        onChange={(e) => {
+          const v = e.target.value
+          if (v === '__other__') setForceOther(true)
+          else {
+            setForceOther(false)
+            onChange(v)
+          }
+        }}
+      >
+        {options.map((o) => (<option key={o} value={o}>{o}</option>))}
+        <option value="__other__">Other…</option>
+      </select>
+      {isOther && (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={otherPlaceholder}
+          aria-label={`${ariaLabel} (custom)`}
+          className={FIELD}
+        />
+      )}
     </div>
   )
 }
@@ -178,10 +228,22 @@ export function CustomSpellForm({
           </Section>
 
           <Section title="Casting" open>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <input value={d.castingTime} onChange={(e) => patch({ castingTime: e.target.value })} placeholder="Casting time" aria-label="Casting time" className={FIELD} />
+            <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-3">
+              <PresetField
+                value={d.castingTime}
+                options={CASTING_TIMES}
+                onChange={(castingTime) => patch({ castingTime })}
+                ariaLabel="Casting time"
+                otherPlaceholder="Casting time"
+              />
               <input value={d.range} onChange={(e) => patch({ range: e.target.value })} placeholder="Range" aria-label="Range" className={FIELD} />
-              <input value={d.duration} onChange={(e) => patch({ duration: e.target.value })} placeholder="Duration" aria-label="Duration" className={FIELD} />
+              <PresetField
+                value={d.duration}
+                options={DURATIONS}
+                onChange={(duration) => patch({ duration })}
+                ariaLabel="Duration"
+                otherPlaceholder="Duration"
+              />
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <label className="flex items-center gap-1"><input type="checkbox" checked={d.concentration} onChange={(e) => patch({ concentration: e.target.checked })} /> Concentration</label>
@@ -202,7 +264,7 @@ export function CustomSpellForm({
             <textarea
               value={d.text}
               onChange={(e) => patch({ text: e.target.value })}
-              placeholder="Spell description (markdown)"
+              placeholder="Spell description"
               aria-label="Description"
               rows={4}
               className={FIELD}
@@ -211,7 +273,7 @@ export function CustomSpellForm({
 
           <Section title="Mechanics">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Leave empty for a utility spell. The save DC isn’t set here — it comes from the caster.
+              Leave empty for a utility spell.
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <span className={LABEL}>Resolution</span>

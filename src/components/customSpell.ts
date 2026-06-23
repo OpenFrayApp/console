@@ -77,6 +77,14 @@ export const SPELL_SCHOOLS: string[] = [
 export const SPELL_LEVELS: string[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 /** Character levels at which a cantrip's damage steps up (2014/2024 alike). */
 export const CANTRIP_TIERS = [5, 11, 17] as const
+/** Common casting times (the form offers an "Other…" free-text fallback too). */
+export const CASTING_TIMES: string[] = [
+  '1 action', '1 bonus action', '1 reaction', '1 minute', '10 minutes', '1 hour', '8 hours', '24 hours',
+]
+/** Common durations — concentration is a separate flag, so these are bare times. */
+export const DURATIONS: string[] = [
+  'Instantaneous', '1 round', '1 minute', '10 minutes', '1 hour', '8 hours', '24 hours', 'Until dispelled',
+]
 
 const uid = (): string => crypto.randomUUID()
 
@@ -101,8 +109,8 @@ export function emptySpellDraft(): SpellDraft {
     duration: 'Instantaneous',
     concentration: false,
     ritual: false,
-    verbal: true,
-    somatic: true,
+    verbal: false,
+    somatic: false,
     material: false,
     materials: '',
     text: '',
