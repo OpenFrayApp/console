@@ -71,32 +71,15 @@ fine; computing what a character can do is not.
 
 ## Status
 
-🚧 Early development. The **single-DM combat console works**: roll a creature's
-attacks and saves straight from its stat block (pick targets, auto-apply
-resistances, immunities, Magic Resistance and Evasion, edit and apply damage),
-**cast spells** — from a creature's stat block or a standalone picker, with
-attack-roll spells resolved through the same attack modal — and track the full
-spread of monster resources: recharge abilities, legendary actions, Legendary
-Resistance (in-lair counts), and a per-round reaction. Run the initiative loop
-(**drag to reorder it mid-fight**, with campaign-configurable tie-breaking), manage
-HP/conditions/effects (with source-relative durations) and concentration —
-conditions auto-apply their advantage/disadvantage, and a **melee hit on a
-Paralyzed or Unconscious target auto-crits**. Death saves track honestly (a stable
-character un-stabilizes when hit). **Edit HP inline from the tracker**, take
-**short and long rests**, roll group saves, and roll honest dice with an
-effect-aware, clearable log; **sweep foes — or the whole board — clear** between
-encounters. Players and quick NPCs are lightweight; the SRD compendium and rollable
-spells are built in. **Accounts are live:** the app runs fully anonymous in the
-browser, and signing in (free, with **Discord or Google**) saves your in-progress fights and
-your **custom creatures and spells** to the cloud and syncs them across devices —
-build a custom boss or homebrew spell once, add it to any encounter. Signed-in DMs also keep a durable
-**Characters** roster — reusable player characters (ability scores, senses, defenses,
-plus race, alignment, faith, and private DM notes) dropped into any fight. **Campaigns**
-carry their own edition and house rules (critical-hit damage, surprise handling,
-creature HP, initiative ties) that drive the console when one is active, and you can
-manage your account in-app — sign in with an account you already have, or delete the
-account and all its data. Still to come: a shared read-only player view; content imports remain a
-best-effort, later layer. The UI is functional but still evolving.
+🧪 **Alpha — publicly testing at [openfray.app/console](https://openfray.app/console).**
+
+The single-DM combat console is up and running: initiative, monster resources,
+conditions/effects, concentration, group saves, and honest dice with a clear roll log,
+plus the built-in SRD compendium, custom creatures and spells, a durable **Characters**
+roster, and **campaigns** with house rules. It runs fully anonymous in the browser, or
+sign in (free, with **Discord or Google**) to save your fights and custom content to the
+cloud across devices. Still to come: a shared read-only player view, and best-effort
+content imports. Expect rough edges — it's alpha.
 
 ## Content & licensing
 
