@@ -88,8 +88,8 @@ effect-aware, clearable log; **sweep foes — or the whole board — clear** bet
 encounters. Players and quick NPCs are lightweight; the SRD compendium and rollable
 spells are built in. **Accounts are live:** the app runs fully anonymous in the
 browser, and signing up (free, email + password) saves your in-progress fights and
-your **custom creatures** to the cloud and syncs them across devices — build a
-custom boss once, add it to any encounter. Signed-in DMs also keep a durable
+your **custom creatures and spells** to the cloud and syncs them across devices —
+build a custom boss or homebrew spell once, add it to any encounter. Signed-in DMs also keep a durable
 **Characters** roster — reusable player characters (ability scores, senses, defenses,
 plus race, alignment, faith, and private DM notes) dropped into any fight. **Campaigns**
 carry their own edition and house rules (critical-hit damage, surprise handling,
