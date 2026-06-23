@@ -3,6 +3,7 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
+import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
 import { instantiate } from './combat/combatant.ts'
@@ -24,6 +25,12 @@ import {
   saveCustomCreature,
   updateCustomCreature,
 } from './state/cloudCreatures.ts'
+import {
+  deleteCustomSpell,
+  loadCustomSpells,
+  saveCustomSpell,
+  updateCustomSpell,
+} from './state/cloudSpells.ts'
 import {
   deleteCampaign,
   loadCampaigns,
@@ -180,6 +187,8 @@ function App() {
   // The signed-in user's custom creature library (empty when anonymous), shown in
   // the compendium and pickable into encounters.
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
+  // The signed-in user's custom spell library (empty when anonymous).
+  const [customSpells, setCustomSpells] = useState<Spell[]>([])
   // The signed-in user's campaigns (empty when anonymous), managed in the compendium.
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   // The signed-in user's durable party roster (empty when anonymous), managed in the
@@ -213,6 +222,7 @@ function App() {
     if (authLoading) return
     if (!userId) {
       setCustomCreatures([])
+      setCustomSpells([])
       setCampaigns([])
       setRosterPcs([])
       setActiveCampaignId(null)
@@ -221,6 +231,9 @@ function App() {
     let active = true
     loadCustomCreatures().then((list) => {
       if (active) setCustomCreatures(list)
+    })
+    loadCustomSpells().then((list) => {
+      if (active) setCustomSpells(list)
     })
     loadCampaigns().then((list) => {
       if (active) setCampaigns(list)
@@ -324,6 +337,23 @@ function App() {
   const handleDeleteCreature = (id: string) => {
     setCustomCreatures((prev) => prev.filter((c) => c.id !== id))
     deleteCustomCreature(id)
+  }
+
+  // Custom spells mirror custom creatures: saved to the library, shown in the
+  // compendium, and castable from the "Cast spell" picker.
+  const handleCreateSpell = (spell: Spell) => {
+    setCustomSpells((prev) => [spell, ...prev])
+    saveCustomSpell(spell)
+  }
+
+  const handleUpdateSpell = (spell: Spell) => {
+    setCustomSpells((prev) => prev.map((s) => (s.id === spell.id ? spell : s)))
+    updateCustomSpell(spell)
+  }
+
+  const handleDeleteSpell = (id: string) => {
+    setCustomSpells((prev) => prev.filter((s) => s.id !== id))
+    deleteCustomSpell(id)
   }
 
   // Campaigns persist to the user's account (signed-up only). Optimistic in-memory
@@ -569,7 +599,7 @@ function App() {
                 showCounter={!!user}
               />
               <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
-              <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+              <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} customSpells={customSpells} />
             </div>
           )}
         </div>
@@ -612,6 +642,10 @@ function App() {
               onCreateCreature={handleCreateCreature}
               onUpdateCreature={handleUpdateCreature}
               onDeleteCreature={handleDeleteCreature}
+              customSpells={customSpells}
+              onCreateSpell={handleCreateSpell}
+              onUpdateSpell={handleUpdateSpell}
+              onDeleteSpell={handleDeleteSpell}
               campaigns={campaigns}
               onCreateCampaign={handleCreateCampaign}
               onUpdateCampaign={handleUpdateCampaign}

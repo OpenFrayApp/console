@@ -89,6 +89,64 @@ describe('Compendium', () => {
     expect(screen.getByText('3rd-level Evocation')).toBeInTheDocument()
   })
 
+  it('creates a custom spell through the modal', async () => {
+    const onCreateSpell = vi.fn()
+    render(<Compendium onCreateCreature={() => {}} onCreateSpell={onCreateSpell} />)
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Spells'))
+    await waitFor(() => screen.getByText('Fireball'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create custom spell' }))
+    const dialog = screen.getByRole('dialog', { name: 'Create custom spell' })
+    fireEvent.change(within(dialog).getByLabelText('Spell name'), { target: { value: 'Frost Lance' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+
+    expect(onCreateSpell).toHaveBeenCalledTimes(1)
+    expect(onCreateSpell.mock.calls[0][0].name).toBe('Frost Lance')
+    expect(onCreateSpell.mock.calls[0][0].id).toMatch(/^custom:/)
+  })
+
+  it('lists a custom spell with the SRD and edits it from the source row', async () => {
+    const onUpdateSpell = vi.fn()
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        onUpdateSpell={onUpdateSpell}
+        customSpells={[
+          {
+            id: 'custom:abc',
+            name: 'Hex Bolt',
+            source: 'custom',
+            level: 1,
+            school: 'Evocation',
+            castingTime: '1 action',
+            range: '60 feet',
+            components: { verbal: true, somatic: true, material: false },
+            duration: 'Instantaneous',
+            concentration: false,
+            ritual: false,
+            text: 'zap',
+            mechanics: { attackRoll: true, damage: [{ formula: '2d8', type: 'necrotic' }] },
+          },
+        ]}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Spells'))
+    await waitFor(() => screen.getByText('Hex Bolt'))
+    // Custom spell sits alongside the SRD Fireball.
+    expect(screen.getByText('Fireball')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Hex Bolt'))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const dialog = screen.getByRole('dialog', { name: 'Edit spell' })
+    fireEvent.change(within(dialog).getByLabelText('Spell name'), { target: { value: 'Hex Bolt II' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+
+    expect(onUpdateSpell).toHaveBeenCalledTimes(1)
+    expect(onUpdateSpell.mock.calls[0][0]).toMatchObject({ id: 'custom:abc', name: 'Hex Bolt II' })
+  })
+
   it('lists and searches campaigns, and creates one through the modal', async () => {
     const onCreateCampaign = vi.fn()
     render(

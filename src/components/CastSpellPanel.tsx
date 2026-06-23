@@ -27,10 +27,13 @@ export function CastSpellPanel({
   combatants,
   dispatch,
   onRoll,
+  customSpells = [],
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  /** The signed-in user's custom spells, castable alongside the SRD. */
+  customSpells?: Spell[]
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -63,7 +66,7 @@ export function CastSpellPanel({
   // --- Picker (no spell selected) -----------------------------------------
   if (!spell) {
     const q = query.trim().toLowerCase()
-    const matches = (spells ?? [])
+    const matches = [...customSpells, ...(spells ?? [])]
       .filter(isCastable)
       .filter((s) => !q || s.name.toLowerCase().includes(q))
       .slice(0, 50)

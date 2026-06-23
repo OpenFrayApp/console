@@ -18,6 +18,8 @@ import { PcStatBlock } from './PcStatBlock.tsx'
 import { PcFormModal } from './PcFormModal.tsx'
 import { abilityMod } from '../schema/roster.ts'
 import { SpellCard } from './SpellCard.tsx'
+import { CustomSpellForm } from './CustomSpellForm.tsx'
+import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters'
 
@@ -172,6 +174,10 @@ export function Compendium({
   onCreateCreature,
   onUpdateCreature,
   onDeleteCreature,
+  customSpells = [],
+  onCreateSpell,
+  onUpdateSpell,
+  onDeleteSpell,
   campaigns = [],
   onCreateCampaign,
   onUpdateCampaign,
@@ -193,6 +199,14 @@ export function Compendium({
   onUpdateCreature?: (creature: Creature) => void
   /** Remove a creature from the library. */
   onDeleteCreature?: (id: string) => void
+  /** The user's custom spell library, listed alongside the SRD. */
+  customSpells?: Spell[]
+  /** Save a freshly-authored spell to the library. */
+  onCreateSpell?: (spell: Spell) => void
+  /** Replace an edited spell in the library. */
+  onUpdateSpell?: (spell: Spell) => void
+  /** Remove a spell from the library. */
+  onDeleteSpell?: (id: string) => void
   /** The signed-in user's campaigns (empty when anonymous). */
   campaigns?: Campaign[]
   /** Save a new campaign. */
@@ -225,6 +239,8 @@ export function Compendium({
   // The editor modal: null = closed; otherwise the draft to edit and an id when
   // updating an existing creature (vs creating a new one).
   const [editor, setEditor] = useState<{ draft: MonsterDraft; editId: string | null } | null>(null)
+  // The spell create/edit modal, same shape as the creature editor.
+  const [spellEditor, setSpellEditor] = useState<{ draft: SpellDraft; editId: string | null } | null>(null)
   // The campaign create/edit modal: null = closed; otherwise the campaign to edit
   // (or null inside to create a new one).
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
@@ -243,6 +259,12 @@ export function Compendium({
   const allCreatures = useMemo(
     () => [...customCreatures, ...(creatures ?? [])],
     [customCreatures, creatures],
+  )
+
+  // Custom spells likewise sit alongside the SRD spells.
+  const allSpells = useMemo(
+    () => [...customSpells, ...(spells ?? [])],
+    [customSpells, spells],
   )
 
   // Campaigns share the same search box as the other tabs, filtered by name.
@@ -268,21 +290,21 @@ export function Compendium({
             meta: `CR ${formatCr(c.cr)}`,
             custom: c.id.startsWith('custom:'),
           }))
-        : (spells ?? []).map((s) => ({
+        : allSpells.map((s) => ({
             id: s.id,
             name: s.name,
             meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
-            custom: false,
+            custom: s.id.startsWith('custom:'),
           }))
     const q = query.trim().toLowerCase()
     const filtered = q ? list.filter((e) => e.name.toLowerCase().includes(q)) : list
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
-  }, [tab, allCreatures, spells, query])
+  }, [tab, allCreatures, allSpells, query])
 
   const selectedCreature =
     tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined
   const selectedSpell =
-    tab === 'spells' ? (spells ?? []).find((s) => s.id === selectedId) : undefined
+    tab === 'spells' ? allSpells.find((s) => s.id === selectedId) : undefined
   const selectedCampaign =
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
   const selectedPc = tab === 'characters' ? rosterPcs.find((p) => p.id === selectedId) : undefined
@@ -337,6 +359,22 @@ export function Compendium({
   }
   // Edit/Delete only on the user's own custom creatures.
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
+
+  const startCreateSpell = () =>
+    createGated ? onGated?.() : setSpellEditor({ draft: emptySpellDraft(), editId: null })
+  const startEditSpell = (s: Spell) => setSpellEditor({ draft: spellToDraft(s), editId: s.id })
+  const submitSpellEditor = (spell: Spell) => {
+    if (spellEditor?.editId) onUpdateSpell?.(spell)
+    else onCreateSpell?.(spell)
+    setSelectedId(spell.id)
+  }
+  const deleteSpell = (s: Spell) => {
+    if (window.confirm(`Delete “${s.name}” from your library?`)) {
+      if (selectedId === s.id) setSelectedId(null)
+      onDeleteSpell?.(s.id)
+    }
+  }
+  const isCustomSpell = (s: Spell) => s.id.startsWith('custom:')
 
   return (
     <div className="grid h-full min-h-0 gap-4 md:grid-cols-[24rem_1fr]">
@@ -447,8 +485,12 @@ export function Compendium({
             onDelete={isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined}
           />
         ) : selectedSpell ? (
-          <div className="pt-4">
-            <SpellCard spell={selectedSpell} />
+          <div className="flex min-h-0 flex-1 flex-col pt-4">
+            <SpellCard
+              spell={selectedSpell}
+              onEdit={isCustomSpell(selectedSpell) ? () => startEditSpell(selectedSpell) : undefined}
+              onDelete={isCustomSpell(selectedSpell) ? () => deleteSpell(selectedSpell) : undefined}
+            />
           </div>
         ) : selectedCampaign ? (
           <CampaignCard
@@ -539,7 +581,9 @@ export function Compendium({
                   ? 'Select a campaign to view it, or create a new one.'
                   : tab === 'characters'
                     ? 'Select a player character to view it, or create one.'
-                    : 'Select a spell to view it.'}
+                    : createGated
+                      ? 'Select a spell to view it, or sign into your account to create a custom one.'
+                      : 'Select a spell to view it, or create a custom one.'}
             </p>
             {tab === 'creatures' && (
               <button
@@ -568,6 +612,15 @@ export function Compendium({
                 Create character
               </button>
             )}
+            {tab === 'spells' && (
+              <button
+                type="button"
+                onClick={startCreateSpell}
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                {createGated ? 'Sign in' : 'Create custom spell'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -578,6 +631,14 @@ export function Compendium({
         editId={editor?.editId ?? null}
         onClose={() => setEditor(null)}
         onSubmit={submitEditor}
+      />
+
+      <CustomSpellForm
+        open={spellEditor != null}
+        initialDraft={spellEditor?.draft ?? emptySpellDraft()}
+        editId={spellEditor?.editId ?? null}
+        onClose={() => setSpellEditor(null)}
+        onSubmit={submitSpellEditor}
       />
 
       <CampaignFormModal
