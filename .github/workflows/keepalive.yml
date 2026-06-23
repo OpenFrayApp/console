@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Keeps the free-tier Supabase project from pausing after 7 days of inactivity by
+# querying the REST API on a schedule. The query runs against Postgres (via
+# PostgREST), which is what counts as activity — RLS returns no rows to the
+# anonymous key, but the request still executes and touches the database.
+#
+# Setup: add two repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL       e.g. https://<project>.supabase.co
+#   SUPABASE_ANON_KEY  the public anon/publishable key (RLS-gated; safe to use here)
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Daily at 06:17 UTC — well inside the 7-day window, with margin for a missed run.
+    # (An off-round minute avoids the top-of-hour scheduling backlog on Actions.)
+    - cron: '17 6 * * *'
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query a table to keep the database active
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing SUPABASE_URL / SUPABASE_ANON_KEY repository secrets." >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-delay 5 \
+            "$SUPABASE_URL/rest/v1/encounters?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -o /dev/null -w 'keep-alive ping: HTTP %{http_code}\n'
