@@ -38,11 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return { error: 'Sign-in is not configured yet.' }
     // Redirect-based flow: the browser navigates to the provider and returns to
     // the app, where supabase-js detects the session from the callback URL.
-    // `redirectTo` must be in the project's allow-list (Authentication → URL
+    // Return to the app's own path (origin + base, e.g. /console/), not the site
+    // root. `redirectTo` must be in the project's allow-list (Authentication → URL
     // Configuration). The provider verifies the identity — no email sent by us.
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
     })
     return { error: error?.message ?? null }
   }

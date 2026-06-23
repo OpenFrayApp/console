@@ -13,15 +13,19 @@ import type { Spell } from '../schema/spell.ts'
 let creatures: Promise<Creature[]> | undefined
 let spells: Promise<Spell[]> | undefined
 
+// Base-relative so the fetch resolves under the app's path (e.g. /console/) — the
+// data lives in public/compendium and is served alongside the app bundle.
+const COMPENDIUM = `${import.meta.env.BASE_URL}compendium`
+
 export function loadSrdCreatures(): Promise<Creature[]> {
-  creatures ??= fetch('/compendium/srd-creatures.json').then(
+  creatures ??= fetch(`${COMPENDIUM}/srd-creatures.json`).then(
     (r) => r.json() as Promise<Creature[]>,
   )
   return creatures
 }
 
 export function loadSrdSpells(): Promise<Spell[]> {
-  spells ??= fetch('/compendium/srd-spells.json').then(
+  spells ??= fetch(`${COMPENDIUM}/srd-spells.json`).then(
     (r) => r.json() as Promise<Spell[]>,
   )
   return spells
