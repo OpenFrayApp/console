@@ -36,8 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string): Promise<AuthResult> => {
     if (!supabase) return { error: 'Sign-in is not configured yet.' }
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error: error?.message ?? null }
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) return { error: error.message }
+    // When the project requires email confirmation, sign-up returns no session —
+    // the user finishes by clicking the emailed link. Otherwise they're signed in.
+    return { error: null, needsConfirmation: !data.session }
   }
 
   const signIn = async (email: string, password: string): Promise<AuthResult> => {

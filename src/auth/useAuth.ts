@@ -4,8 +4,13 @@
 import { createContext, useContext } from 'react'
 import type { User } from '@supabase/supabase-js'
 
-/** The result of an auth attempt: an error message, or null on success. */
-export type AuthResult = { error: string | null }
+/**
+ * The result of an auth attempt: an error message, or null on success. For sign-up,
+ * `needsConfirmation` is true when the account was created but a session wasn't —
+ * i.e. the project requires email confirmation, so the user must click the link
+ * before they can sign in.
+ */
+export type AuthResult = { error: string | null; needsConfirmation?: boolean }
 
 export interface AuthState {
   /** The signed-in user, or null when anonymous. */

@@ -51,16 +51,35 @@ export function SignUpPage({
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Set after a sign-up that needs email confirmation — the page can't auto-close
+  // (there's no session yet), so we show a "check your inbox" panel instead.
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null)
+
+  const switchMode = (m: 'up' | 'in') => {
+    setMode(m)
+    setError(null)
+    setConfirmEmail(null)
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
     setError(null)
     setBusy(true)
-    const { error } = await (mode === 'up' ? signUp : signIn)(email.trim(), password)
+    const trimmed = email.trim()
+    const result = await (mode === 'up' ? signUp : signIn)(trimmed, password)
     setBusy(false)
-    if (error) setError(error)
-    // On success the auth state flips and the parent unmounts this page.
+    if (result.error) {
+      setError(result.error)
+      return
+    }
+    if (mode === 'up' && result.needsConfirmation) {
+      setConfirmEmail(trimmed)
+      setPassword('')
+      return
+    }
+    // Otherwise a session was created: the auth state flips and the parent unmounts
+    // this page.
   }
 
   return (
@@ -125,7 +144,24 @@ export function SignUpPage({
             </ul>
           </div>
 
-          {/* Auth form */}
+          {/* Sign-up sent a confirmation email — there's no session yet, so show
+              the next step instead of the form. */}
+          {confirmEmail ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Check your inbox</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                We sent a confirmation link to <span className="font-medium text-slate-900 dark:text-slate-100">{confirmEmail}</span>.
+                Click it to finish creating your account, then sign in here.
+              </p>
+              <button
+                type="button"
+                onClick={() => switchMode('in')}
+                className="mt-4 w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
           <form
             onSubmit={submit}
             className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -133,14 +169,14 @@ export function SignUpPage({
             <div className="mb-4 flex gap-1 rounded-lg bg-slate-200 p-1 dark:bg-slate-800">
               <button
                 type="button"
-                onClick={() => setMode('in')}
+                onClick={() => switchMode('in')}
                 className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'in' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 Sign in
               </button>
               <button
                 type="button"
-                onClick={() => setMode('up')}
+                onClick={() => switchMode('up')}
                 className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'up' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 Sign up
@@ -182,6 +218,7 @@ export function SignUpPage({
               </p>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>
