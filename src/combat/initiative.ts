@@ -103,8 +103,9 @@ function tickRoundsEffects(effects: Effect[]): Effect[] {
  * End-of-turn ticks for the creature whose turn is ending: decrement its
  * `rounds` effects and reset its legendary actions.
  *
- * Deferred to the dice engine (steps 5–6): rolling `saveEnds` saves and
- * `Recharge 5–6` dice both need randomness, so they are not resolved here yet.
+ * Randomness stays out of this pure loop: `saveEnds` saves and `Recharge 5–6`
+ * dice are rolled in the App layer when the turn advances (autoRollSaveEnds /
+ * autoRecharge), keyed to the same start/end-of-turn moments.
  */
 function endTurn(c: Combatant): Combatant {
   const effects = tickRoundsEffects(c.effects)

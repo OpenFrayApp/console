@@ -177,4 +177,20 @@ describe('Encounter flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Saved — clear' }))
     expect(screen.queryByText('Save ends')).toBeNull()
   })
+
+  it('auto-rolls a monster save-ends effect at the end of its turn', async () => {
+    render(<App />)
+    await addGoblin()
+    fireEvent.click(screen.getByText('Apply effect'))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
+    fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '12' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+
+    beginCombat()
+    // Ending the goblin's turn rolls its end-of-turn save automatically (logged).
+    fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
+    expect(screen.getByText(/Goblin: Frightened \(DEX save\)/)).toBeInTheDocument()
+  })
 })

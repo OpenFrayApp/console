@@ -74,6 +74,11 @@ export interface EffectDuration {
   rounds?: number | null
   /** For `saveEnds`: the save that clears it. */
   save?: { ability: Ability; dc: number } | null
+  /**
+   * For `saveEnds`: when the escape save is made, relative to the affected
+   * creature's own turn. Defaults to `endOfTurn` (the 5e norm) when absent.
+   */
+  when?: 'startOfTurn' | 'endOfTurn'
 }
 
 export interface Effect {

@@ -43,18 +43,24 @@ const CHIP =
   'rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
 
 /**
- * The "Apply effect" modal: tap a condition, build a mechanical modifier
+ * The "Apply effect" modal: toggle conditions on/off, build a mechanical modifier
  * (advantage / disadvantage / a flat bonus, scoped and directional, in plain
- * language), or jot a free-text reminder — all with a chosen duration. Replaces the
- * cramped popover; one Effect is applied per use, then the modal closes.
+ * language), or jot a free-text reminder — all with a chosen duration. Stays open so
+ * the DM can stack several; Done (or ✕ / Escape) closes. Replaces the cramped popover.
  */
 export function EffectModal({
   name,
+  effects,
   onApply,
+  onRemove,
 }: {
   /** The combatant the effect is applied to, for the title. */
   name: string
+  /** The combatant's current effects, so condition chips reflect/toggle live state. */
+  effects: Effect[]
   onApply: (effect: Effect) => void
+  /** Remove an effect by id (used to toggle a condition back off). */
+  onRemove: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
 
@@ -62,6 +68,7 @@ export function EffectModal({
   const [dur, setDur] = useState<DurChoice>('manual')
   const [saveAbility, setSaveAbility] = useState<Ability>('dex')
   const [saveDc, setSaveDc] = useState('')
+  const [saveWhen, setSaveWhen] = useState<'endOfTurn' | 'startOfTurn'>('endOfTurn')
 
   // Modifier builder.
   const [mode, setMode] = useState<EffectMode>('advantage')
@@ -82,6 +89,7 @@ export function EffectModal({
     setDur('manual')
     setSaveAbility('dex')
     setSaveDc('')
+    setSaveWhen('endOfTurn')
     setMode('advantage')
     setApplies('attackRolls')
     setDirection('incoming')
@@ -121,7 +129,7 @@ export function EffectModal({
       case 'consume':
         return { type: 'consumeOnRoll' }
       case 'save':
-        return { type: 'saveEnds', save: { ability: saveAbility, dc: Number(saveDc) || 10 } }
+        return { type: 'saveEnds', save: { ability: saveAbility, dc: Number(saveDc) || 10 }, when: saveWhen }
       default:
         return { type: 'manual' }
     }
@@ -148,6 +156,16 @@ export function EffectModal({
   const applyEffect = (effect: Effect, label: string) => {
     onApply(effect)
     setAdded((a) => [...a, label])
+  }
+
+  // The condition currently on the combatant, if any (chips act as live toggles).
+  const activeCondition = (c: ConditionName): Effect | undefined =>
+    effects.find((e) => e.icon === 'condition' && e.name === c)
+
+  const toggleCondition = (c: ConditionName) => {
+    const existing = activeCondition(c)
+    if (existing) onRemove(existing.id)
+    else onApply(condition(c, { duration: buildDuration() }))
   }
 
   const dirText = direction === 'outgoing' ? 'it makes' : 'made against it'
@@ -230,26 +248,48 @@ export function EffectModal({
                     <option value="save">Save ends</option>
                   </select>
                   {dur === 'save' && (
-                    <span className="flex items-center gap-1 text-sm">
+                    <span className="flex flex-wrap items-center gap-1 text-sm">
                       <select value={saveAbility} onChange={(e) => setSaveAbility(e.target.value as Ability)} aria-label="Save ability" className={`${FIELD_W} w-20`}>
                         {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
                       </select>
                       DC
                       <input value={saveDc} onChange={(e) => setSaveDc(e.target.value)} placeholder="#" aria-label="Save DC" inputMode="numeric" className={`${FIELD_W} w-14`} />
+                      <select value={saveWhen} onChange={(e) => setSaveWhen(e.target.value as typeof saveWhen)} aria-label="Save timing" className={`${FIELD_W} w-32`}>
+                        <option value="endOfTurn">end of turn</option>
+                        <option value="startOfTurn">start of turn</option>
+                      </select>
                     </span>
                   )}
                 </div>
+                {dur === 'save' && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    A monster rolls this automatically at the chosen moment; a player rolls their own.
+                  </p>
+                )}
               </div>
 
-              {/* Conditions — one tap applies. */}
+              {/* Conditions — tap to toggle on/off; active ones are highlighted. */}
               <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
                 <p className={LABEL}>Condition</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {CONDITIONS.map((c) => (
-                    <button key={c} type="button" className={CHIP} onClick={() => applyEffect(condition(c, { duration: buildDuration() }), `${c}${durSuffix()}`)}>
-                      {c}
-                    </button>
-                  ))}
+                  {CONDITIONS.map((c) => {
+                    const active = activeCondition(c) != null
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleCondition(c)}
+                        className={
+                          active
+                            ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
+                            : CHIP
+                        }
+                      >
+                        {c}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 

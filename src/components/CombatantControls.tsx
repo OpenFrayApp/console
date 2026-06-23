@@ -91,7 +91,7 @@ export function CombatantControls({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <EffectModal name={name} onApply={addEffect} />
+        <EffectModal name={name} effects={combatant.effects} onApply={addEffect} onRemove={removeEffect} />
 
         {combatant.concentration ? (
           <button
@@ -189,6 +189,12 @@ export function CombatantControls({
                 <span className="text-slate-600 dark:text-slate-300">
                   {e.name}
                   {save && ` — ${save.ability.toUpperCase()} save DC ${save.dc}`}
+                  {save && (
+                    <span className="text-slate-400 dark:text-slate-500">
+                      {' '}
+                      ({e.duration.when === 'startOfTurn' ? 'start of turn' : 'end of turn'})
+                    </span>
+                  )}
                 </span>
                 <button
                   type="button"

@@ -10,6 +10,7 @@ import { instantiate } from './combat/combatant.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
+import { saveBonus } from './combat/masssave.ts'
 import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
@@ -462,6 +463,26 @@ function App() {
       }
     }
   }
+  // Auto-roll a monster's save-ends effects at the chosen moment of its turn (PCs
+  // roll their own — never rolled for them). On a success the effect clears.
+  const autoRollSaveEnds = (c: Combatant | undefined, when: 'startOfTurn' | 'endOfTurn') => {
+    if (!c || c.isPC) return
+    for (const e of c.effects) {
+      const save = e.duration.type === 'saveEnds' ? e.duration.save : null
+      if (!save) continue
+      if ((e.duration.when ?? 'endOfTurn') !== when) continue
+      const bonus = saveBonus(c, save.ability) ?? 0
+      const result = roll(`1d20${bonus >= 0 ? `+${bonus}` : `${bonus}`}`, { kind: 'save' })
+      pushRoll(`${c.label}: ${e.name} (${save.ability.toUpperCase()} save)`, result)
+      if (result.total >= save.dc) {
+        dispatch({
+          type: 'update',
+          id: c.combatantId,
+          update: (cc) => ({ ...cc, effects: cc.effects.filter((x) => x.id !== e.id) }),
+        })
+      }
+    }
+  }
   const rollInit = (label: string, mod: number, disadvantage = false): number => {
     const dice = `1d20${disadvantage ? 'dis' : ''}${mod >= 0 ? `+${mod}` : `${mod}`}`
     const result = roll(dice)
@@ -561,10 +582,15 @@ function App() {
     setInitPrompt(initial)
   }
   const handleNextTurn = () => {
+    const ending = encounter.combatants[encounter.activeIndex]
     const next = nextTurn(encounter)
     selectActive(next)
     dispatch({ type: 'nextTurn' })
     autoRecharge(next)
+    // The ending creature's end-of-turn saves resolve now; the new creature's
+    // start-of-turn saves resolve as its turn begins.
+    autoRollSaveEnds(ending, 'endOfTurn')
+    autoRollSaveEnds(next.combatants[next.activeIndex], 'startOfTurn')
   }
 
   const started = encounter.round > 0
