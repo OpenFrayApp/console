@@ -11,6 +11,14 @@ const LABEL =
 
 type Note = { kind: 'ok' | 'err'; text: string } | null
 
+/** Human label for the Supabase `app_metadata.provider` value (the provider the
+ *  user signed in with). Falls back to a generic phrase when it's absent. */
+const PROVIDER_LABELS: Record<string, string> = { google: 'Google', discord: 'Discord' }
+function providerName(provider?: string): string | null {
+  if (!provider || provider === 'email') return null
+  return PROVIDER_LABELS[provider] ?? provider.charAt(0).toUpperCase() + provider.slice(1)
+}
+
 function NoteLine({ note }: { note: Note }) {
   if (!note) return null
   return (
@@ -30,7 +38,8 @@ function NoteLine({ note }: { note: Note }) {
  * user is signed out) or via Done.
  */
 export function AccountPanel({ onClose }: { onClose: () => void }) {
-  const { user, deleteAccount } = useAuth()
+  const { user, signOut, deleteAccount } = useAuth()
+  const provider = providerName(user?.app_metadata?.provider)
 
   const [confirm, setConfirm] = useState('')
   const [delNote, setDelNote] = useState<Note>(null)
@@ -75,10 +84,24 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
           <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Signed in</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              You're signed in with <span className="font-medium text-slate-900 dark:text-slate-100">{user?.email}</span>{' '}
-              via your identity provider. To change the email or password, manage them with that
-              provider (Discord or Google).
+              You're signed in with{' '}
+              <span className="font-medium text-slate-900 dark:text-slate-100">{user?.email}</span>{' '}
+              {provider ? (
+                <>
+                  via <span className="font-medium text-slate-900 dark:text-slate-100">{provider}</span>. To
+                  change your email or password, manage them in your {provider} account.
+                </>
+              ) : (
+                <>via your identity provider. To change your email or password, manage them with that provider.</>
+              )}
             </p>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="mt-3 text-sm font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+            >
+              Sign out
+            </button>
           </section>
 
           <section className="rounded-lg border border-rose-300 p-4 dark:border-rose-900/70">

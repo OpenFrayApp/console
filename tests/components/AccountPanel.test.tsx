@@ -12,7 +12,7 @@ afterEach(cleanup)
 
 function renderPanel(overrides: Partial<AuthState> = {}) {
   const value: AuthState = {
-    user: { email: 'dm@openfray.app' } as unknown as User,
+    user: { email: 'dm@openfray.app', app_metadata: { provider: 'google' } } as unknown as User,
     loading: false,
     configured: true,
     signInWithProvider: vi.fn(async () => ({ error: null })),
@@ -30,13 +30,21 @@ function renderPanel(overrides: Partial<AuthState> = {}) {
 }
 
 describe('AccountPanel', () => {
-  it('shows the signed-in identity and no email/password editing', () => {
+  it('shows the signed-in identity, the provider, and no email/password editing', () => {
     renderPanel()
     expect(screen.getByText('Signed in')).toBeInTheDocument()
     expect(screen.getAllByText(/dm@openfray\.app/).length).toBeGreaterThan(0)
+    // Names the specific provider the user signed in with.
+    expect(screen.getByText('Google')).toBeInTheDocument()
     // Email/password are owned by the provider now — no editing controls.
     expect(screen.queryByLabelText('New email')).toBeNull()
     expect(screen.queryByLabelText('New password')).toBeNull()
+  })
+
+  it('signs out from the panel', () => {
+    const { value } = renderPanel()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(value.signOut).toHaveBeenCalledTimes(1)
   })
 
   it('gates delete behind typing the account email, then deletes', async () => {
