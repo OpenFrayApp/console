@@ -9,6 +9,10 @@
 #   SUPABASE_ANON_KEY  the public anon/publishable key (RLS-gated; safe to use here)
 name: Supabase keep-alive
 
+# This workflow makes no GitHub API calls, so it needs no token permissions.
+# An empty map at the root applies least privilege to every job (CodeQL).
+permissions: {}
+
 on:
   schedule:
     # Daily at 06:17 UTC — well inside the 7-day window, with margin for a missed run.
