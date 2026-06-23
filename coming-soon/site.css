@@ -1,0 +1,76 @@
+/* OpenFray marketing-site template — shared by every page (home, privacy, terms).
+   Dark is the default; the toggle adds .light to <html>. */
+:root {
+  --bg: #020617; --panel: #0b1222; --text: #e2e8f0; --muted: #94a3b8;
+  --faint: #64748b; --accent: #818cf8; --accent-strong: #6366f1; --border: #1e293b;
+}
+:root.light {
+  --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #475569;
+  --faint: #94a3b8; --accent: #4f46e5; --accent-strong: #4338ca; --border: #e2e8f0;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(1100px 600px at 50% -10%, rgba(99, 102, 241, 0.18), transparent 60%), var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; min-height: 100%; line-height: 1.6;
+}
+a { color: var(--accent); }
+
+/* Shared top bar: brand left, theme toggle right. */
+.topbar { width: 100%; max-width: 64rem; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.brand { display: inline-flex; align-items: center; gap: 0.55rem; text-decoration: none; color: var(--text); font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+.brand svg { width: 1.5rem; height: 1.5rem; color: var(--accent); }
+.brand .o, h1 .o { color: var(--accent); }
+
+.theme-toggle { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.6rem; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; transition: color 0.15s ease, border-color 0.15s ease; }
+.theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+.theme-toggle svg { width: 1.15rem; height: 1.15rem; }
+.theme-toggle .moon { display: none; }
+:root.light .theme-toggle .sun { display: none; }
+:root.light .theme-toggle .moon { display: inline; }
+
+/* Shared footer. */
+footer { width: 100%; max-width: 64rem; margin: 0 auto; padding: 1.75rem 1.5rem; text-align: center; font-size: 0.82rem; color: var(--faint); display: flex; align-items: center; justify-content: center; flex-wrap: wrap; border-top: 1px solid var(--border); }
+footer a { color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; }
+footer a:hover { color: var(--text); }
+footer .gh svg { width: 1.05rem; height: 1.05rem; display: block; }
+footer .sep { margin: 0 0.55rem; opacity: 0.5; }
+
+main { flex: 1; width: 100%; }
+
+/* Hero (homepage). */
+.hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 2.5rem 1.5rem 4rem; }
+.badge { display: inline-block; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; color: var(--accent); border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 0.35rem 0.85rem; margin-bottom: 1.5rem; }
+h1 { font-size: clamp(2.6rem, 8vw, 4.5rem); line-height: 1.02; letter-spacing: -0.03em; margin: 0 0 1rem; font-weight: 800; }
+.tagline { max-width: 38rem; font-size: clamp(1.05rem, 2.4vw, 1.25rem); color: var(--muted); line-height: 1.55; margin: 0 0 1.75rem; }
+ul.points { list-style: none; padding: 0; margin: 0 0 2rem; display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: center; max-width: 42rem; }
+ul.points li { font-size: 0.85rem; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 0.4rem 0.9rem; }
+.cta { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.98rem; font-weight: 600; color: #fff; background: var(--accent-strong); border-radius: 0.6rem; padding: 0.8rem 1.4rem; text-decoration: none; transition: background 0.15s ease; }
+.cta:hover { background: var(--accent); }
+
+.features { margin-top: 3.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; max-width: 56rem; width: 100%; text-align: left; }
+.feature { background: var(--panel); border: 1px solid var(--border); border-radius: 0.8rem; padding: 1.1rem 1.2rem; }
+.feature h3 { margin: 0 0 0.35rem; font-size: 0.98rem; color: var(--text); }
+.feature p { margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+
+/* Document pages (privacy, terms): contained but wider than the old layout. */
+.doc { max-width: 54rem; margin: 0 auto; padding: 1rem 1.5rem 3rem; }
+.doc h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); letter-spacing: -0.02em; margin: 0 0 0.4rem; font-weight: 800; }
+.doc .updated { color: var(--faint); font-size: 0.85rem; margin: 0 0 2rem; }
+.doc h2 { font-size: 1.2rem; margin: 2.2rem 0 0.6rem; letter-spacing: -0.01em; }
+.doc h3 { font-size: 1rem; margin: 1.4rem 0 0.3rem; color: var(--text); }
+.doc p, .doc li { color: var(--muted); }
+.doc .lead { color: var(--text); font-size: 1.05rem; }
+.doc ul { padding-left: 1.2rem; }
+.doc li { margin: 0.3rem 0; }
+.doc table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.92rem; }
+.doc th, .doc td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.doc th { color: var(--text); font-weight: 600; }
+.doc td { color: var(--muted); }
+.doc .note { background: var(--panel); border: 1px solid var(--border); border-radius: 0.6rem; padding: 0.9rem 1.1rem; margin: 1.2rem 0; font-size: 0.92rem; color: var(--muted); }
+.doc code { background: var(--panel); border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.05rem 0.3rem; font-size: 0.85em; }
