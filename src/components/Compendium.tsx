@@ -17,7 +17,7 @@ import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { PcFormModal } from './PcFormModal.tsx'
 import { abilityMod } from '../schema/roster.ts'
-import { SpellCard } from './SpellCard.tsx'
+import { SpellCard, SpellTags } from './SpellCard.tsx'
 import { CustomSpellForm } from './CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
 
@@ -289,12 +289,16 @@ export function Compendium({
             name: c.name,
             meta: `CR ${formatCr(c.cr)}`,
             custom: c.id.startsWith('custom:'),
+            concentration: false,
+            ritual: false,
           }))
         : allSpells.map((s) => ({
             id: s.id,
             name: s.name,
             meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
             custom: s.id.startsWith('custom:'),
+            concentration: s.concentration,
+            ritual: s.ritual,
           }))
     const q = query.trim().toLowerCase()
     const filtered = q ? list.filter((e) => e.name.toLowerCase().includes(q)) : list
@@ -438,7 +442,10 @@ export function Compendium({
                         : 'hover:bg-slate-50 dark:hover:bg-slate-900',
                     )}
                   >
-                    <span className="truncate">{e.name}</span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate">{e.name}</span>
+                      <SpellTags concentration={e.concentration} ritual={e.ritual} />
+                    </span>
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                       {e.custom && (
                         <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">

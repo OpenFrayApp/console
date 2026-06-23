@@ -22,6 +22,26 @@ function componentLine(spell: Spell): string {
   return line || '—'
 }
 
+/** Small badges flagging a Concentration (C) and/or Ritual (R) spell. Shown next to
+ *  the spell name in the list and beside the school on the spell card. */
+export function SpellTags({ concentration, ritual }: { concentration?: boolean; ritual?: boolean }) {
+  if (!concentration && !ritual) return null
+  return (
+    <span className="flex shrink-0 items-center gap-1 not-italic">
+      {concentration && (
+        <span title="Concentration" className="rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/60 dark:text-violet-300">
+          C
+        </span>
+      )}
+      {ritual && (
+        <span title="Ritual" className="rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+          R
+        </span>
+      )}
+    </span>
+  )
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <>
@@ -45,9 +65,9 @@ export function SpellCard({
     <div className="flex flex-1 flex-col space-y-3">
       <div>
         <h3 className="text-lg font-semibold">{spell.name}</h3>
-        <p className="text-sm italic text-slate-500 dark:text-slate-400">
-          {levelLine(spell)}
-          {spell.ritual ? ' (ritual)' : ''}
+        <p className="flex items-center gap-1.5 text-sm italic text-slate-500 dark:text-slate-400">
+          <span>{levelLine(spell)}</span>
+          <SpellTags concentration={spell.concentration} ritual={spell.ritual} />
         </p>
       </div>
 
