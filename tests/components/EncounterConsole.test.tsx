@@ -155,6 +155,26 @@ describe('Encounter flow', () => {
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
     fireEvent.click(screen.getByRole('button', { name: 'Prone' })) // condition chip in the modal
-    expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row (modal closed)
+    fireEvent.click(screen.getByRole('button', { name: 'Done' })) // close the modal (stays open for multiple)
+    expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row
+  })
+
+  it('surfaces a save-ends effect with its DC and clears it when saved', async () => {
+    render(<App />)
+    await addGoblin()
+    fireEvent.click(screen.getByText('Apply effect'))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
+    fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '15' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+
+    // The controls now remind the DM a save is owed, with its ability + DC.
+    expect(screen.getByText('Save ends')).toBeInTheDocument()
+    expect(screen.getByText(/Frightened.*DEX save DC 15/)).toBeInTheDocument()
+
+    // Marking it saved clears the effect.
+    fireEvent.click(screen.getByRole('button', { name: 'Saved — clear' }))
+    expect(screen.queryByText('Save ends')).toBeNull()
   })
 })

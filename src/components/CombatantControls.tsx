@@ -16,12 +16,15 @@ import {
   setInLair,
   spendLegendaryResistance,
 } from '../combat/resources.ts'
+import { saveBonus } from '../combat/masssave.ts'
+import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
+const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
 const BTN =
   'rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
@@ -64,6 +67,26 @@ export function CombatantControls({
       id,
       update: (c) => ({ ...c, effects: [...c.effects, effect] }),
     })
+
+  const removeEffect = (effectId: string) =>
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({ ...c, effects: c.effects.filter((e) => e.id !== effectId) }),
+    })
+
+  // Effects that a saving throw ends — surfaced so the DM is reminded one is owed.
+  const saveEndsEffects = combatant.effects.filter((e) => e.duration.type === 'saveEnds')
+
+  // Roll the escape save for a monster (PCs roll their own — never rolled for them).
+  const rollSaveEnds = (effect: Effect) => {
+    const save = effect.duration.save
+    if (combatant.isPC || !save) return
+    const bonus = saveBonus(combatant, save.ability) ?? 0
+    const result = roll(`1d20${signed(bonus)}`, { kind: 'save' })
+    onRoll(`${name}: ${effect.name} (${save.ability.toUpperCase()} save)`, result)
+    if (result.total >= save.dc) removeEffect(effect.id)
+  }
 
   return (
     <div className="space-y-2">
@@ -153,6 +176,38 @@ export function CombatantControls({
           />
         )}
       </div>
+
+      {saveEndsEffects.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            Save ends
+          </p>
+          {saveEndsEffects.map((e) => {
+            const save = e.duration.save
+            return (
+              <div key={e.id} className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-slate-600 dark:text-slate-300">
+                  {e.name}
+                  {save && ` — ${save.ability.toUpperCase()} save DC ${save.dc}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeEffect(e.id)}
+                  title="Mark the save as passed and clear the effect"
+                  className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
+                >
+                  Saved — clear
+                </button>
+                {!combatant.isPC && (
+                  <button type="button" onClick={() => rollSaveEnds(e)} className={BTN}>
+                    Roll save
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

@@ -72,6 +72,10 @@ export function EffectModal({
 
   const [note, setNote] = useState('')
 
+  // Short labels of what's been applied this session, so the DM gets feedback now
+  // that applying no longer closes the modal (apply several, then Done).
+  const [added, setAdded] = useState<string[]>([])
+
   // Reset to defaults each time the modal opens.
   useEffect(() => {
     if (!open) return
@@ -84,6 +88,7 @@ export function EffectModal({
     setAmount('')
     setLabel('')
     setNote('')
+    setAdded([])
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -122,9 +127,27 @@ export function EffectModal({
     }
   }
 
-  const applyEffect = (effect: Effect) => {
+  // A short "(1 rd)" / "(save ends DC 15)" tag describing the chosen duration.
+  const durSuffix = (): string => {
+    switch (dur) {
+      case 'r1':
+        return ' (1 rd)'
+      case 'r10':
+        return ' (10 rds)'
+      case 'consume':
+        return ' (this turn)'
+      case 'save':
+        return ` (save ends DC ${Number(saveDc) || 10})`
+      default:
+        return ''
+    }
+  }
+
+  // Apply now, but keep the modal open so the DM can add several effects; the
+  // running "Added" list is the feedback. Done (or ✕ / Escape) closes.
+  const applyEffect = (effect: Effect, label: string) => {
     onApply(effect)
-    setOpen(false)
+    setAdded((a) => [...a, label])
   }
 
   const dirText = direction === 'outgoing' ? 'it makes' : 'made against it'
@@ -148,12 +171,17 @@ export function EffectModal({
         },
         { duration: buildDuration() },
       ),
+      `${label.trim()}${durSuffix()}`,
     )
+    setLabel('')
+    setAmount('')
   }
 
   const applyReminder = () => {
     const text = note.trim()
-    if (text) applyEffect(reminder(text, text, { duration: buildDuration() }))
+    if (!text) return
+    applyEffect(reminder(text, text, { duration: buildDuration() }), `${text}${durSuffix()}`)
+    setNote('')
   }
 
   return (
@@ -218,7 +246,7 @@ export function EffectModal({
                 <p className={LABEL}>Condition</p>
                 <div className="flex flex-wrap gap-1.5">
                   {CONDITIONS.map((c) => (
-                    <button key={c} type="button" className={CHIP} onClick={() => applyEffect(condition(c, { duration: buildDuration() }))}>
+                    <button key={c} type="button" className={CHIP} onClick={() => applyEffect(condition(c, { duration: buildDuration() }), `${c}${durSuffix()}`)}>
                       {c}
                     </button>
                   ))}
@@ -291,6 +319,19 @@ export function EffectModal({
                   </button>
                 </form>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+              <p className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                {added.length > 0 && `Added: ${added.join(', ')}`}
+              </p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
