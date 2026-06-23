@@ -42,7 +42,6 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className:
   },
 ]
 
-/** What signing up unlocks — the value prop for the page. */
 const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
   {
     title: 'Saved & synced',
@@ -67,15 +66,12 @@ const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
 ]
 
 /**
- * The dedicated sign-in page: the value of an account on the left, the OAuth
- * provider buttons (Discord / Google) on the right. Signing in with a provider
- * for the first time creates the account automatically. Shown full-screen over
- * the app; the provider redirect carries the user away and back on success.
+ * The dedicated sign-in page. Signing in with a provider for the first time creates
+ * the account automatically; the provider redirect carries the user away and back.
  */
 export function SignUpPage({ onClose }: { onClose: () => void }) {
   const { signInWithProvider } = useAuth()
   const [error, setError] = useState<string | null>(null)
-  // Which provider is mid-redirect (disables the buttons while we hand off).
   const [busy, setBusy] = useState<OAuthProvider | null>(null)
 
   const start = async (provider: OAuthProvider) => {
@@ -96,14 +92,19 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
       <div className="mx-auto flex min-h-full max-w-5xl flex-col px-6 py-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-indigo-500 dark:text-indigo-400">
-              <CrossedSwordsIcon className="h-8 w-8" />
-            </span>
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">DnD 5e combat console</p>
+              <a
+                href="/"
+                title="OpenFray home"
+                className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
+              >
+                <span className="text-indigo-500 dark:text-indigo-400">
+                  <CrossedSwordsIcon />
+                </span>
+                <h1 className="text-xl font-semibold tracking-tight">
+                  <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+                </h1>
+              </a>
             </div>
           </div>
           <button
@@ -152,13 +153,8 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
             </ul>
           </div>
 
-          {/* OAuth sign-in: one click per provider, no password to manage. The
-              first sign-in with a provider creates the account. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Sign in to save your table</h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              No new password to remember — sign in with an account you already have.
-            </p>
             <div className="mt-4 space-y-3">
               {PROVIDERS.map((p) => (
                 <button
