@@ -103,6 +103,7 @@ function PresetField({
           }
         }}
       >
+        <option value="">{ariaLabel}…</option>
         {options.map((o) => (<option key={o} value={o}>{o}</option>))}
         <option value="__other__">Other…</option>
       </select>
