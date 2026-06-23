@@ -10,7 +10,10 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+/* Only html is full-height; body uses min-height so it grows with the content.
+   (A fixed height:100% on body would pin it to the viewport, which made the
+   absolutely-positioned bottom glow anchor to the viewport instead of the page.) */
+html { height: 100%; }
 body {
   margin: 0;
   background-color: var(--bg);
