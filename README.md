@@ -87,15 +87,15 @@ character un-stabilizes when hit). **Edit HP inline from the tracker**, take
 effect-aware, clearable log; **sweep foes — or the whole board — clear** between
 encounters. Players and quick NPCs are lightweight; the SRD compendium and rollable
 spells are built in. **Accounts are live:** the app runs fully anonymous in the
-browser, and signing up (free, email + password) saves your in-progress fights and
+browser, and signing in (free, with **Discord or Google**) saves your in-progress fights and
 your **custom creatures and spells** to the cloud and syncs them across devices —
 build a custom boss or homebrew spell once, add it to any encounter. Signed-in DMs also keep a durable
 **Characters** roster — reusable player characters (ability scores, senses, defenses,
 plus race, alignment, faith, and private DM notes) dropped into any fight. **Campaigns**
 carry their own edition and house rules (critical-hit damage, surprise handling,
 creature HP, initiative ties) that drive the console when one is active, and you can
-manage your account in-app — change email or password, or delete the account and all
-its data. Still to come: a shared read-only player view; content imports remain a
+manage your account in-app — sign in with an account you already have, or delete the
+account and all its data. Still to come: a shared read-only player view; content imports remain a
 best-effort, later layer. The UI is functional but still evolving.
 
 ## Content & licensing

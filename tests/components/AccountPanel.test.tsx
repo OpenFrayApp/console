@@ -15,11 +15,8 @@ function renderPanel(overrides: Partial<AuthState> = {}) {
     user: { email: 'dm@openfray.app' } as unknown as User,
     loading: false,
     configured: true,
-    signUp: vi.fn(async () => ({ error: null })),
-    signIn: vi.fn(async () => ({ error: null })),
+    signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),
-    updateEmail: vi.fn(async () => ({ error: null })),
-    updatePassword: vi.fn(async () => ({ error: null })),
     deleteAccount: vi.fn(async () => ({ error: null })),
     ...overrides,
   }
@@ -33,30 +30,13 @@ function renderPanel(overrides: Partial<AuthState> = {}) {
 }
 
 describe('AccountPanel', () => {
-  it('changes the email and tells the user to confirm', async () => {
-    const { value } = renderPanel()
-    fireEvent.change(screen.getByLabelText('New email'), { target: { value: 'new@openfray.app' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Update email' }))
-    await waitFor(() => expect(value.updateEmail).toHaveBeenCalledWith('new@openfray.app'))
-    expect(screen.getByText(/Check your inbox to confirm/)).toBeInTheDocument()
-  })
-
-  it('changes the password', async () => {
-    const { value } = renderPanel()
-    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'Str0ng-Pass!' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Update password' }))
-    await waitFor(() => expect(value.updatePassword).toHaveBeenCalledWith('Str0ng-Pass!'))
-    expect(screen.getByText('Password updated.')).toBeInTheDocument()
-  })
-
-  it('surfaces a password-policy rejection from Supabase', async () => {
-    const { value } = renderPanel({
-      updatePassword: vi.fn(async () => ({ error: 'Password is known to be weak.' })),
-    })
-    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'password' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Update password' }))
-    await waitFor(() => expect(value.updatePassword).toHaveBeenCalled())
-    expect(screen.getByText('Password is known to be weak.')).toBeInTheDocument()
+  it('shows the signed-in identity and no email/password editing', () => {
+    renderPanel()
+    expect(screen.getByText('Signed in')).toBeInTheDocument()
+    expect(screen.getAllByText(/dm@openfray\.app/).length).toBeGreaterThan(0)
+    // Email/password are owned by the provider now — no editing controls.
+    expect(screen.queryByLabelText('New email')).toBeNull()
+    expect(screen.queryByLabelText('New password')).toBeNull()
   })
 
   it('gates delete behind typing the account email, then deletes', async () => {

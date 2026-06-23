@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 
 const FIELD =
@@ -22,61 +22,19 @@ function NoteLine({ note }: { note: Note }) {
   )
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-      <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
-      {children}
-    </section>
-  )
-}
-
 /**
- * Account management for a signed-in user: change email, change password, and
- * permanently delete the account + all its data (GDPR erasure). Shown full-screen
- * over the app; closes on success of a delete (the user is signed out) or via Done.
+ * Account management for a signed-in user. With OAuth sign-in the email and
+ * password are owned by the identity provider, so this panel just shows the
+ * signed-in identity and permanently deletes the account + all its data (GDPR
+ * erasure). Shown full-screen over the app; closes on a successful delete (the
+ * user is signed out) or via Done.
  */
 export function AccountPanel({ onClose }: { onClose: () => void }) {
-  const { user, updateEmail, updatePassword, deleteAccount } = useAuth()
-
-  const [email, setEmail] = useState('')
-  const [emailNote, setEmailNote] = useState<Note>(null)
-  const [emailBusy, setEmailBusy] = useState(false)
-
-  const [password, setPassword] = useState('')
-  const [pwNote, setPwNote] = useState<Note>(null)
-  const [pwBusy, setPwBusy] = useState(false)
+  const { user, deleteAccount } = useAuth()
 
   const [confirm, setConfirm] = useState('')
   const [delNote, setDelNote] = useState<Note>(null)
   const [delBusy, setDelBusy] = useState(false)
-
-  const submitEmail = async (e: FormEvent) => {
-    e.preventDefault()
-    const next = email.trim()
-    if (!next || emailBusy) return
-    setEmailBusy(true)
-    setEmailNote(null)
-    const { error } = await updateEmail(next)
-    setEmailBusy(false)
-    setEmailNote(
-      error
-        ? { kind: 'err', text: error }
-        : { kind: 'ok', text: 'Check your inbox to confirm the change — your email updates once you click the link.' },
-    )
-    if (!error) setEmail('')
-  }
-
-  const submitPassword = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!password || pwBusy) return
-    setPwBusy(true)
-    setPwNote(null)
-    const { error } = await updatePassword(password)
-    setPwBusy(false)
-    setPwNote(error ? { kind: 'err', text: error } : { kind: 'ok', text: 'Password updated.' })
-    if (!error) setPassword('')
-  }
 
   const confirmed = confirm.trim().toLowerCase() === (user?.email ?? '').toLowerCase()
   const submitDelete = async (e: FormEvent) => {
@@ -114,55 +72,14 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-4">
-          <Section title="Change email">
-            <form onSubmit={submitEmail} className="space-y-2">
-              <label className="block space-y-1">
-                <span className={LABEL}>New email</span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  aria-label="New email"
-                  autoComplete="email"
-                  className={FIELD}
-                />
-              </label>
-              <NoteLine note={emailNote} />
-              <button
-                type="submit"
-                disabled={!email.trim() || emailBusy}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-              >
-                {emailBusy ? 'Sending…' : 'Update email'}
-              </button>
-            </form>
-          </Section>
-
-          <Section title="Change password">
-            <form onSubmit={submitPassword} className="space-y-2">
-              <label className="block space-y-1">
-                <span className={LABEL}>New password</span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="New password"
-                  aria-label="New password"
-                  autoComplete="new-password"
-                  className={FIELD}
-                />
-              </label>
-              <NoteLine note={pwNote} />
-              <button
-                type="submit"
-                disabled={!password || pwBusy}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-              >
-                {pwBusy ? 'Saving…' : 'Update password'}
-              </button>
-            </form>
-          </Section>
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Signed in</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              You're signed in with <span className="font-medium text-slate-900 dark:text-slate-100">{user?.email}</span>{' '}
+              via your identity provider. To change the email or password, manage them with that
+              provider (Discord or Google).
+            </p>
+          </section>
 
           <section className="rounded-lg border border-rose-300 p-4 dark:border-rose-900/70">
             <h3 className="mb-1 text-sm font-semibold text-rose-700 dark:text-rose-400">Delete account</h3>

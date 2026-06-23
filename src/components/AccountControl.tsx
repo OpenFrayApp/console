@@ -5,7 +5,6 @@ import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
-import { LoginPopover } from './LoginPopover.tsx'
 
 function UserIcon() {
   return (
@@ -19,19 +18,15 @@ function UserIcon() {
 /**
  * Header account control. Signed in: a user-icon button opening a menu with
  * Profile (the account panel) and Sign out. Anonymous: a "Sign in" button that
- * opens a compact log-in popover (with a link to the full sign-up flow). Renders
- * nothing until Supabase is configured, so an unconfigured build stays anon-only.
+ * opens the full sign-in page (OAuth providers). Renders nothing until Supabase
+ * is configured, so an unconfigured build stays anon-only.
  */
-export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
+export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
   const { user, loading, configured, signOut } = useAuth()
   const [accountOpen, setAccountOpen] = useState(false)
-  const [loginOpen, setLoginOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const loginRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const closeLogin = useCallback(() => setLoginOpen(false), [])
   const closeMenu = useCallback(() => setMenuOpen(false), [])
-  useDismiss(loginRef, loginOpen, closeLogin)
   useDismiss(menuRef, menuOpen, closeMenu)
 
   if (!configured || loading) return null
@@ -87,23 +82,12 @@ export function AccountControl({ onSignUp }: { onSignUp: () => void }) {
   }
 
   return (
-    <div className="relative" ref={loginRef}>
-      <button
-        type="button"
-        onClick={() => setLoginOpen((o) => !o)}
-        className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-      >
-        Sign in
-      </button>
-      {loginOpen && (
-        <LoginPopover
-          onSignUp={() => {
-            setLoginOpen(false)
-            onSignUp()
-          }}
-          onClose={closeLogin}
-        />
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onSignIn}
+      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+    >
+      Sign in
+    </button>
   )
 }

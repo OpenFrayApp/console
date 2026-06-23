@@ -4,10 +4,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
-import { AuthContext, type AuthResult } from './useAuth.ts'
+import { AuthContext, type AuthResult, type OAuthProvider } from './useAuth.ts'
 
 /**
- * Tracks the Supabase auth session and exposes sign-up / sign-in / sign-out.
+ * Tracks the Supabase auth session and exposes OAuth sign-in / sign-out / delete.
  * When Supabase isn't configured, it resolves immediately to the anonymous state
  * so the app runs exactly as before — auth is purely additive.
  */
@@ -34,37 +34,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const signUp = async (email: string, password: string): Promise<AuthResult> => {
+  const signInWithProvider = async (provider: OAuthProvider): Promise<AuthResult> => {
     if (!supabase) return { error: 'Sign-in is not configured yet.' }
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) return { error: error.message }
-    // When the project requires email confirmation, sign-up returns no session —
-    // the user finishes by clicking the emailed link. Otherwise they're signed in.
-    return { error: null, needsConfirmation: !data.session }
-  }
-
-  const signIn = async (email: string, password: string): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Sign-in is not configured yet.' }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    // Redirect-based flow: the browser navigates to the provider and returns to
+    // the app, where supabase-js detects the session from the callback URL.
+    // `redirectTo` must be in the project's allow-list (Authentication → URL
+    // Configuration). The provider verifies the identity — no email sent by us.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin },
+    })
     return { error: error?.message ?? null }
   }
 
   const signOut = async (): Promise<void> => {
     await supabase?.auth.signOut()
-  }
-
-  const updateEmail = async (email: string): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Sign-in is not configured yet.' }
-    // Supabase doesn't change the email until the user confirms via the link(s) it
-    // sends; success here just means the confirmation email is on its way.
-    const { error } = await supabase.auth.updateUser({ email })
-    return { error: error?.message ?? null }
-  }
-
-  const updatePassword = async (password: string): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Sign-in is not configured yet.' }
-    const { error } = await supabase.auth.updateUser({ password })
-    return { error: error?.message ?? null }
   }
 
   const deleteAccount = async (): Promise<AuthResult> => {
@@ -84,11 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         configured: Boolean(supabase),
-        signUp,
-        signIn,
+        signInWithProvider,
         signOut,
-        updateEmail,
-        updatePassword,
         deleteAccount,
       }}
     >

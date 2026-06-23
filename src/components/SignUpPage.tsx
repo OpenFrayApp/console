@@ -1,12 +1,46 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { useAuth } from '../auth/useAuth.ts'
+import { useState, type ReactNode } from 'react'
+import { useAuth, type OAuthProvider } from '../auth/useAuth.ts'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 
-const FIELD =
-  'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
+/** Discord wordmark glyph. */
+function DiscordIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+      <path d="M20.317 4.369A19.79 19.79 0 0 0 15.432 3a13.6 13.6 0 0 0-.617 1.27 18.27 18.27 0 0 0-5.631 0A13.4 13.4 0 0 0 8.567 3 19.74 19.74 0 0 0 3.677 4.37C.533 9.045-.32 13.6.099 18.09a19.9 19.9 0 0 0 6.064 3.058c.488-.665.922-1.37 1.296-2.112a12.9 12.9 0 0 1-2.04-.978c.171-.125.339-.255.5-.389a14.2 14.2 0 0 0 12.16 0c.164.137.332.267.5.39-.652.385-1.336.71-2.043.978.375.74.81 1.447 1.296 2.112a19.8 19.8 0 0 0 6.067-3.058c.49-5.206-.838-9.72-3.518-13.72ZM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.42 0-1.333.955-2.42 2.157-2.42 1.21 0 2.176 1.096 2.157 2.42 0 1.335-.955 2.42-2.157 2.42Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.42 0-1.333.955-2.42 2.157-2.42 1.21 0 2.176 1.096 2.157 2.42 0 1.335-.946 2.42-2.157 2.42Z" />
+    </svg>
+  )
+}
+
+/** Google "G" mark in its brand colors. */
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z" />
+      <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84Z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.51 6.16-4.51Z" />
+    </svg>
+  )
+}
+
+const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className: string }[] = [
+  {
+    id: 'discord',
+    label: 'Continue with Discord',
+    icon: <DiscordIcon />,
+    className: 'bg-[#5865F2] text-white hover:bg-[#4752c4]',
+  },
+  {
+    id: 'google',
+    label: 'Continue with Google',
+    icon: <GoogleIcon />,
+    className:
+      'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700',
+  },
+]
 
 /** What signing up unlocks — the value prop for the page. */
 const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
@@ -33,53 +67,28 @@ const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
 ]
 
 /**
- * The dedicated sign-up page: the value of an account on the left, the
- * email/password form on the right (sign up by default, with a log-in toggle for
- * returning DMs). Shown full-screen over the app; closes itself on success.
+ * The dedicated sign-in page: the value of an account on the left, the OAuth
+ * provider buttons (Discord / Google) on the right. Signing in with a provider
+ * for the first time creates the account automatically. Shown full-screen over
+ * the app; the provider redirect carries the user away and back on success.
  */
-export function SignUpPage({
-  initialMode = 'in',
-  onClose,
-}: {
-  /** Which tab opens first — 'in' (sign in) by default; 'up' for the sign-up link. */
-  initialMode?: 'up' | 'in'
-  onClose: () => void
-}) {
-  const { signUp, signIn } = useAuth()
-  const [mode, setMode] = useState<'up' | 'in'>(initialMode)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+export function SignUpPage({ onClose }: { onClose: () => void }) {
+  const { signInWithProvider } = useAuth()
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  // Set after a sign-up that needs email confirmation — the page can't auto-close
-  // (there's no session yet), so we show a "check your inbox" panel instead.
-  const [confirmEmail, setConfirmEmail] = useState<string | null>(null)
+  // Which provider is mid-redirect (disables the buttons while we hand off).
+  const [busy, setBusy] = useState<OAuthProvider | null>(null)
 
-  const switchMode = (m: 'up' | 'in') => {
-    setMode(m)
-    setError(null)
-    setConfirmEmail(null)
-  }
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const start = async (provider: OAuthProvider) => {
     if (busy) return
     setError(null)
-    setBusy(true)
-    const trimmed = email.trim()
-    const result = await (mode === 'up' ? signUp : signIn)(trimmed, password)
-    setBusy(false)
-    if (result.error) {
-      setError(result.error)
-      return
+    setBusy(provider)
+    const { error } = await signInWithProvider(provider)
+    // On success the browser navigates to the provider, so this component unmounts;
+    // we only land here again if the handoff itself failed.
+    if (error) {
+      setError(error)
+      setBusy(null)
     }
-    if (mode === 'up' && result.needsConfirmation) {
-      setConfirmEmail(trimmed)
-      setPassword('')
-      return
-    }
-    // Otherwise a session was created: the auth state flips and the parent unmounts
-    // this page.
   }
 
   return (
@@ -144,81 +153,33 @@ export function SignUpPage({
             </ul>
           </div>
 
-          {/* Sign-up sent a confirmation email — there's no session yet, so show
-              the next step instead of the form. */}
-          {confirmEmail ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Check your inbox</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                We sent a confirmation link to <span className="font-medium text-slate-900 dark:text-slate-100">{confirmEmail}</span>.
-                Click it to finish creating your account, then sign in here.
-              </p>
-              <button
-                type="button"
-                onClick={() => switchMode('in')}
-                className="mt-4 w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
-                Back to sign in
-              </button>
-            </div>
-          ) : (
-          <form
-            onSubmit={submit}
-            className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="mb-4 flex gap-1 rounded-lg bg-slate-200 p-1 dark:bg-slate-800">
-              <button
-                type="button"
-                onClick={() => switchMode('in')}
-                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'in' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode('up')}
-                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium ${mode === 'up' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}
-              >
-                Sign up
-              </button>
-            </div>
-            <div className="space-y-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                aria-label="Email"
-                autoComplete="email"
-                required
-                className={FIELD}
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                aria-label="Password"
-                autoComplete={mode === 'up' ? 'new-password' : 'current-password'}
-                required
-                className={FIELD}
-              />
+          {/* OAuth sign-in: one click per provider, no password to manage. The
+              first sign-in with a provider creates the account. */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Sign in to save your table</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              No new password to remember — sign in with an account you already have.
+            </p>
+            <div className="mt-4 space-y-3">
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => start(p.id)}
+                  disabled={busy !== null}
+                  className={`flex w-full items-center justify-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 ${p.className}`}
+                >
+                  {p.icon}
+                  {busy === p.id ? 'Redirecting…' : p.label}
+                </button>
+              ))}
               {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
-              <button
-                type="submit"
-                disabled={busy}
-                className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-              >
-                {busy ? 'Working…' : mode === 'up' ? 'Create account' : 'Sign in'}
-              </button>
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                {mode === 'up'
-                  ? 'Free forever — no ads, no paywall. Your data stays private to your account.'
-                  : "Welcome back, let's go on an adventure!"}
-              </p>
             </div>
-          </form>
-          )}
+            <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
+              Free forever — no ads, no paywall. New here? Signing in creates your account
+              automatically. Your data stays private to it.
+            </p>
+          </div>
         </div>
       </div>
     </div>

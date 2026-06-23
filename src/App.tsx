@@ -191,7 +191,7 @@ function App() {
   // The full-screen auth page: null (closed), 'in' (sign-in tab first, the default
   // for gated features), or 'up' (sign-up tab first, from the log-in popover's link).
   // It closes itself once the user is signed in.
-  const [authMode, setAuthMode] = useState<'in' | 'up' | null>(null)
+  const [authOpen, setAuthOpen] = useState(false)
   // The signed-in user's custom creature library (empty when anonymous), shown in
   // the compendium and pickable into encounters.
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
@@ -219,7 +219,7 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    if (user) setAuthMode(null)
+    if (user) setAuthOpen(false)
   }, [user])
 
   // Load the custom creature library + campaigns + party roster on sign-in; clear
@@ -667,7 +667,7 @@ function App() {
             </div>
           )}
           <ViewToggle view={view} onChange={handleViewChange} />
-          <AccountControl onSignUp={() => setAuthMode('up')} />
+          <AccountControl onSignIn={() => setAuthOpen(true)} />
           <button
             type="button"
             onClick={toggleTheme}
@@ -703,7 +703,7 @@ function App() {
               onAddPcToEncounter={handleAddPcToEncounter}
               initialTab={compendiumTab}
               createGated={!user}
-              onGated={() => setAuthMode('in')}
+              onGated={() => setAuthOpen(true)}
             />
           </div>
         ) : (
@@ -728,7 +728,7 @@ function App() {
         )}
       </main>
 
-      {authMode && <SignUpPage initialMode={authMode} onClose={() => setAuthMode(null)} />}
+      {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
 
       {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
           on-board copy's character fields (HP and combat state stay put). */}
