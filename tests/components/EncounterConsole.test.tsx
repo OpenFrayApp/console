@@ -193,4 +193,24 @@ describe('Encounter flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
     expect(screen.getByText(/Goblin: Frightened \(DEX save\)/)).toBeInTheDocument()
   })
+
+  it('rolls one save for conditions that share it', async () => {
+    render(<App />)
+    await addGoblin()
+    fireEvent.click(screen.getByText('Apply effect'))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
+    fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '12' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Restrained' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+
+    // The controls list both conditions on one save-ends line, not two.
+    expect(screen.getByText(/Frightened, Restrained — DEX save DC 12/)).toBeInTheDocument()
+
+    beginCombat()
+    fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
+    // One combined roll for both, not a separate die each.
+    expect(screen.getByText(/Goblin: Frightened, Restrained \(DEX save\)/)).toBeInTheDocument()
+  })
 })

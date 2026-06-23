@@ -6,7 +6,8 @@ import type { Combatant } from '../schema/combatant.ts'
 import { hpTier, type HpTier } from '../combat/resources.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { isStable } from '../combat/deathsaves.ts'
-import { EffectBadge } from './EffectBadge.tsx'
+import { groupSaveEnds } from '../combat/saveEnds.ts'
+import { EffectBadge, SaveEndsBadge } from './EffectBadge.tsx'
 import { DeathSavePips } from './DeathSaveControls.tsx'
 import { EditableField } from './EditableField.tsx'
 import { hpToneFor } from './hpTone.ts'
@@ -200,17 +201,34 @@ export function CombatantRow({
           )}
         </div>
 
-        {combatant.effects.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {combatant.effects.map((e) => (
-              <EffectBadge
-                key={e.id}
-                effect={e}
-                onRemove={onRemoveEffect ? () => onRemoveEffect(e.id) : undefined}
-              />
-            ))}
-          </div>
-        )}
+        {combatant.effects.length > 0 &&
+          (() => {
+            // Save-ends conditions that share a save show as one badge (they roll
+            // and clear together); everything else is its own badge.
+            const groups = groupSaveEnds(combatant.effects).filter((g) => g.effects.length >= 2)
+            const grouped = new Set(groups.flatMap((g) => g.effects.map((e) => e.id)))
+            const loose = combatant.effects.filter((e) => !grouped.has(e.id))
+            return (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {loose.map((e) => (
+                  <EffectBadge
+                    key={e.id}
+                    effect={e}
+                    onRemove={onRemoveEffect ? () => onRemoveEffect(e.id) : undefined}
+                  />
+                ))}
+                {groups.map((g) => (
+                  <SaveEndsBadge
+                    key={`${g.ability}|${g.dc}|${g.when}`}
+                    group={g}
+                    onRemove={
+                      onRemoveEffect ? () => g.effects.forEach((e) => onRemoveEffect(e.id)) : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )
+          })()}
 
         {combatant.isPC && combatant.status === 'unconscious' && (
           <div className="mt-1">

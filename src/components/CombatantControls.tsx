@@ -17,8 +17,9 @@ import {
   spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { saveBonus } from '../combat/masssave.ts'
+import { groupSaveEnds, type SaveEndsGroup } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
-import type { Effect } from '../schema/effect.ts'
+import type { Effect, EffectDuration } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
 import type { OnRoll } from './RollLog.tsx'
@@ -75,23 +76,54 @@ export function CombatantControls({
       update: (c) => ({ ...c, effects: c.effects.filter((e) => e.id !== effectId) }),
     })
 
-  // Effects that a saving throw ends — surfaced so the DM is reminded one is owed.
-  const saveEndsEffects = combatant.effects.filter((e) => e.duration.type === 'saveEnds')
+  const removeEffects = (ids: string[]) => {
+    const set = new Set(ids)
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({ ...c, effects: c.effects.filter((e) => !set.has(e.id)) }),
+    })
+  }
+
+  // Re-set the duration on the given effects — the effect modal calls this when the
+  // DM changes the shared duration after already applying some effects this session.
+  const setEffectsDuration = (ids: string[], duration: EffectDuration) => {
+    const set = new Set(ids)
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({
+        ...c,
+        effects: c.effects.map((e) => (set.has(e.id) ? { ...e, duration } : e)),
+      }),
+    })
+  }
+
+  // Save-ends effects, grouped by their shared save so the DM is reminded one is
+  // owed and a single roll ends every effect that passes (not one die per effect).
+  const saveEndsGroups = groupSaveEnds(combatant.effects)
 
   // Roll the escape save for a monster (PCs roll their own — never rolled for them).
-  const rollSaveEnds = (effect: Effect) => {
-    const save = effect.duration.save
-    if (combatant.isPC || !save) return
-    const bonus = saveBonus(combatant, save.ability) ?? 0
+  // One die per group; every effect whose DC it beats ends together.
+  const rollSaveEnds = (group: SaveEndsGroup) => {
+    if (combatant.isPC) return
+    const bonus = saveBonus(combatant, group.ability) ?? 0
     const result = roll(`1d20${signed(bonus)}`, { kind: 'save' })
-    onRoll(`${name}: ${effect.name} (${save.ability.toUpperCase()} save)`, result)
-    if (result.total >= save.dc) removeEffect(effect.id)
+    const names = group.effects.map((e) => e.name).join(', ')
+    onRoll(`${name}: ${names} (${group.ability.toUpperCase()} save)`, result)
+    if (result.total >= group.dc) removeEffects(group.effects.map((e) => e.id))
   }
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <EffectModal name={name} effects={combatant.effects} onApply={addEffect} onRemove={removeEffect} />
+        <EffectModal
+          name={name}
+          effects={combatant.effects}
+          onApply={addEffect}
+          onRemove={removeEffect}
+          onUpdateDuration={setEffectsDuration}
+        />
 
         {combatant.concentration ? (
           <button
@@ -177,41 +209,36 @@ export function CombatantControls({
         )}
       </div>
 
-      {saveEndsEffects.length > 0 && (
+      {saveEndsGroups.length > 0 && (
         <div className="space-y-1">
           <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
             Save ends
           </p>
-          {saveEndsEffects.map((e) => {
-            const save = e.duration.save
-            return (
-              <div key={e.id} className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-slate-600 dark:text-slate-300">
-                  {e.name}
-                  {save && ` — ${save.ability.toUpperCase()} save DC ${save.dc}`}
-                  {save && (
-                    <span className="text-slate-400 dark:text-slate-500">
-                      {' '}
-                      ({e.duration.when === 'startOfTurn' ? 'start of turn' : 'end of turn'})
-                    </span>
-                  )}
+          {saveEndsGroups.map((group) => (
+            <div key={`${group.ability}|${group.dc}|${group.when}`} className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-slate-600 dark:text-slate-300">
+                {group.effects.map((e) => e.name).join(', ')}
+                {` — ${group.ability.toUpperCase()} save DC ${group.dc}`}
+                <span className="text-slate-400 dark:text-slate-500">
+                  {' '}
+                  ({group.when === 'startOfTurn' ? 'start of turn' : 'end of turn'})
                 </span>
-                <button
-                  type="button"
-                  onClick={() => removeEffect(e.id)}
-                  title="Mark the save as passed and clear the effect"
-                  className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
-                >
-                  Saved — clear
+              </span>
+              <button
+                type="button"
+                onClick={() => removeEffects(group.effects.map((e) => e.id))}
+                title="Mark the save as passed and clear these effects"
+                className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
+              >
+                Saved — clear
+              </button>
+              {!combatant.isPC && (
+                <button type="button" onClick={() => rollSaveEnds(group)} className={BTN}>
+                  Roll save
                 </button>
-                {!combatant.isPC && (
-                  <button type="button" onClick={() => rollSaveEnds(e)} className={BTN}>
-                    Roll save
-                  </button>
-                )}
-              </div>
-            )
-          })}
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

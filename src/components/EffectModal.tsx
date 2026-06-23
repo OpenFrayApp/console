@@ -53,6 +53,7 @@ export function EffectModal({
   effects,
   onApply,
   onRemove,
+  onUpdateDuration,
 }: {
   /** The combatant the effect is applied to, for the title. */
   name: string
@@ -61,8 +62,13 @@ export function EffectModal({
   onApply: (effect: Effect) => void
   /** Remove an effect by id (used to toggle a condition back off). */
   onRemove: (id: string) => void
+  /** Re-set the duration on effects added this session (when the DM changes it). */
+  onUpdateDuration: (ids: string[], duration: EffectDuration) => void
 }) {
   const [open, setOpen] = useState(false)
+  // Ids of effects added during this open session — the shared Duration control
+  // live-updates them, so the DM can add conditions, then choose "Save ends", etc.
+  const [sessionIds, setSessionIds] = useState<string[]>([])
 
   // Shared duration for whatever gets applied.
   const [dur, setDur] = useState<DurChoice>('manual')
@@ -97,6 +103,7 @@ export function EffectModal({
     setLabel('')
     setNote('')
     setAdded([])
+    setSessionIds([])
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -120,8 +127,15 @@ export function EffectModal({
     }
   }
 
-  const buildDuration = (): EffectDuration => {
-    switch (dur) {
+  // Build the duration from the controls. Takes explicit parts so a control's
+  // onChange can compute the new duration before its state has flushed.
+  const makeDuration = (
+    d: DurChoice = dur,
+    ab: Ability = saveAbility,
+    dc: string = saveDc,
+    w: 'endOfTurn' | 'startOfTurn' = saveWhen,
+  ): EffectDuration => {
+    switch (d) {
       case 'r1':
         return { type: 'rounds', rounds: 1 }
       case 'r10':
@@ -129,32 +143,27 @@ export function EffectModal({
       case 'consume':
         return { type: 'consumeOnRoll' }
       case 'save':
-        return { type: 'saveEnds', save: { ability: saveAbility, dc: Number(saveDc) || 10 }, when: saveWhen }
+        return { type: 'saveEnds', save: { ability: ab, dc: Number(dc) || 10 }, when: w }
       default:
         return { type: 'manual' }
     }
   }
 
-  // A short "(1 rd)" / "(save ends DC 15)" tag describing the chosen duration.
-  const durSuffix = (): string => {
-    switch (dur) {
-      case 'r1':
-        return ' (1 rd)'
-      case 'r10':
-        return ' (10 rds)'
-      case 'consume':
-        return ' (this turn)'
-      case 'save':
-        return ` (save ends DC ${Number(saveDc) || 10})`
-      default:
-        return ''
-    }
+  // Push the new duration onto everything added this session (no-op when empty).
+  const updateSession = (duration: EffectDuration) => {
+    if (sessionIds.length) onUpdateDuration(sessionIds, duration)
+  }
+
+  // Apply an effect and remember its id so the Duration control can re-bind it.
+  const track = (effect: Effect) => {
+    onApply(effect)
+    setSessionIds((s) => [...s, effect.id])
   }
 
   // Apply now, but keep the modal open so the DM can add several effects; the
   // running "Added" list is the feedback. Done (or ✕ / Escape) closes.
   const applyEffect = (effect: Effect, label: string) => {
-    onApply(effect)
+    track(effect)
     setAdded((a) => [...a, label])
   }
 
@@ -164,8 +173,12 @@ export function EffectModal({
 
   const toggleCondition = (c: ConditionName) => {
     const existing = activeCondition(c)
-    if (existing) onRemove(existing.id)
-    else onApply(condition(c, { duration: buildDuration() }))
+    if (existing) {
+      onRemove(existing.id)
+      setSessionIds((s) => s.filter((x) => x !== existing.id))
+    } else {
+      track(condition(c, { duration: makeDuration() }))
+    }
   }
 
   const dirText = direction === 'outgoing' ? 'it makes' : 'made against it'
@@ -187,9 +200,9 @@ export function EffectModal({
           applies,
           value: mode === 'flatBonus' ? parseAmount(amount) : null,
         },
-        { duration: buildDuration() },
+        { duration: makeDuration() },
       ),
-      `${label.trim()}${durSuffix()}`,
+      label.trim(),
     )
     setLabel('')
     setAmount('')
@@ -198,7 +211,7 @@ export function EffectModal({
   const applyReminder = () => {
     const text = note.trim()
     if (!text) return
-    applyEffect(reminder(text, text, { duration: buildDuration() }), `${text}${durSuffix()}`)
+    applyEffect(reminder(text, text, { duration: makeDuration() }), text)
     setNote('')
   }
 
@@ -240,7 +253,16 @@ export function EffectModal({
               <div className="space-y-1">
                 <p className={LABEL}>Duration</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <select value={dur} onChange={(e) => setDur(e.target.value as DurChoice)} aria-label="Duration" className={`${FIELD_W} w-48`}>
+                  <select
+                    value={dur}
+                    onChange={(e) => {
+                      const v = e.target.value as DurChoice
+                      setDur(v)
+                      updateSession(makeDuration(v))
+                    }}
+                    aria-label="Duration"
+                    className={`${FIELD_W} w-48`}
+                  >
                     <option value="manual">Until removed</option>
                     <option value="r1">1 round</option>
                     <option value="r10">10 rounds</option>
@@ -249,12 +271,40 @@ export function EffectModal({
                   </select>
                   {dur === 'save' && (
                     <span className="flex flex-wrap items-center gap-1 text-sm">
-                      <select value={saveAbility} onChange={(e) => setSaveAbility(e.target.value as Ability)} aria-label="Save ability" className={`${FIELD_W} w-20`}>
+                      <select
+                        value={saveAbility}
+                        onChange={(e) => {
+                          const v = e.target.value as Ability
+                          setSaveAbility(v)
+                          updateSession(makeDuration(dur, v))
+                        }}
+                        aria-label="Save ability"
+                        className={`${FIELD_W} w-20`}
+                      >
                         {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
                       </select>
                       DC
-                      <input value={saveDc} onChange={(e) => setSaveDc(e.target.value)} placeholder="#" aria-label="Save DC" inputMode="numeric" className={`${FIELD_W} w-14`} />
-                      <select value={saveWhen} onChange={(e) => setSaveWhen(e.target.value as typeof saveWhen)} aria-label="Save timing" className={`${FIELD_W} w-32`}>
+                      <input
+                        value={saveDc}
+                        onChange={(e) => {
+                          setSaveDc(e.target.value)
+                          updateSession(makeDuration(dur, saveAbility, e.target.value))
+                        }}
+                        placeholder="#"
+                        aria-label="Save DC"
+                        inputMode="numeric"
+                        className={`${FIELD_W} w-14`}
+                      />
+                      <select
+                        value={saveWhen}
+                        onChange={(e) => {
+                          const v = e.target.value as typeof saveWhen
+                          setSaveWhen(v)
+                          updateSession(makeDuration(dur, saveAbility, saveDc, v))
+                        }}
+                        aria-label="Save timing"
+                        className={`${FIELD_W} w-32`}
+                      >
                         <option value="endOfTurn">end of turn</option>
                         <option value="startOfTurn">start of turn</option>
                       </select>

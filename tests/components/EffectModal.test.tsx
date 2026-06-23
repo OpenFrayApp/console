@@ -11,14 +11,22 @@ import type { Effect } from '../../src/schema/effect.ts'
 afterEach(cleanup)
 
 /** A stateful wrapper so condition chips reflect/toggle live combatant effects. */
-function Harness() {
+function Harness({ onEffects }: { onEffects?: (e: Effect[]) => void } = {}) {
   const [effects, setEffects] = useState<Effect[]>([])
+  const sync = (next: Effect[]) => {
+    setEffects(next)
+    onEffects?.(next)
+  }
   return (
     <EffectModal
       name="Goblin"
       effects={effects}
-      onApply={(e) => setEffects((prev) => [...prev, e])}
-      onRemove={(id) => setEffects((prev) => prev.filter((x) => x.id !== id))}
+      onApply={(e) => sync([...effects, e])}
+      onRemove={(id) => sync(effects.filter((x) => x.id !== id))}
+      onUpdateDuration={(ids, duration) => {
+        const set = new Set(ids)
+        sync(effects.map((e) => (set.has(e.id) ? { ...e, duration } : e)))
+      }}
     />
   )
 }
@@ -31,7 +39,7 @@ function open() {
 describe('EffectModal', () => {
   it('applies a condition with the chosen duration', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'r10' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
@@ -45,7 +53,7 @@ describe('EffectModal', () => {
 
   it('builds an advantage-against modifier with a clear direction', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     // Defaults: Advantage / attack rolls / made against it.
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), { target: { value: 'Faerie Fire' } })
@@ -58,7 +66,7 @@ describe('EffectModal', () => {
 
   it('builds a flat bonus, dropping a leading + and keeping dice as a string', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), { target: { value: 'flatBonus' } })
     fireEvent.change(within(dialog).getByLabelText('Amount'), { target: { value: '+1d4' } })
@@ -74,7 +82,7 @@ describe('EffectModal', () => {
 
   it('stores a plain numeric amount as a number (Bane −2)', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), { target: { value: 'flatBonus' } })
     fireEvent.change(within(dialog).getByLabelText('Amount'), { target: { value: '-2' } })
@@ -85,14 +93,14 @@ describe('EffectModal', () => {
 
   it('requires a label before applying a modifier', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     expect(within(dialog).getByRole('button', { name: 'Apply modifier' })).toBeDisabled()
   })
 
   it('applies a custom reminder', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), { target: { value: 'Hex: +1d6 necrotic' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add' }))
@@ -101,7 +109,7 @@ describe('EffectModal', () => {
 
   it('builds a save-ends duration with a roll timing (default end of turn)', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save ability'), { target: { value: 'wis' } })
@@ -116,7 +124,7 @@ describe('EffectModal', () => {
 
   it('records a start-of-turn save timing', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save timing'), { target: { value: 'startOfTurn' } })
@@ -133,5 +141,21 @@ describe('EffectModal', () => {
     expect(chip()).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(chip()) // re-click removes it
     expect(chip()).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('binds a later duration change to effects already added this session', () => {
+    let latest: Effect[] = []
+    render(<Harness onEffects={(e) => { latest = e }} />)
+    const dialog = open()
+    // Apply Prone first, with the default "Until removed" duration.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
+    expect(latest[0].duration.type).toBe('manual')
+    // Switching to Save ends + a DC retroactively binds the save to it.
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
+    fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '14' } })
+    expect(latest[0].duration).toMatchObject({ type: 'saveEnds', save: { ability: 'dex', dc: 14 }, when: 'endOfTurn' })
+    // Switching back to a plain duration drops the save again.
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'r10' } })
+    expect(latest[0].duration).toEqual({ type: 'rounds', rounds: 10 })
   })
 })

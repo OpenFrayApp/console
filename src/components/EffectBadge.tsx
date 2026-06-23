@@ -3,6 +3,7 @@
 
 import type { Effect } from '../schema/effect.ts'
 import { badgeLabel } from '../combat/effects.ts'
+import type { SaveEndsGroup } from '../combat/saveEnds.ts'
 
 /** Tone by the effect's badge category — both light and dark. */
 function toneFor(icon: string | undefined): string {
@@ -54,6 +55,39 @@ export function EffectBadge({
     <span title={effect.name} className={className}>
       {badgeLabel(effect)}
       {saveTag}
+    </span>
+  )
+}
+
+/** Several save-ends conditions that share one save, shown as a single badge (they
+ *  roll and end together). Removing it clears the whole group. */
+export function SaveEndsBadge({
+  group,
+  onRemove,
+}: {
+  group: SaveEndsGroup
+  onRemove?: () => void
+}) {
+  const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor('condition')}`
+  const names = group.effects.map((e) => e.name).join(', ')
+  const tag = (
+    <span className="opacity-70" title={`${group.ability.toUpperCase()} save DC ${group.dc} ends them`}>
+      · save DC {group.dc}
+    </span>
+  )
+  if (onRemove) {
+    return (
+      <button type="button" onClick={onRemove} title={`Remove ${names}`} className={`${className} hover:opacity-80`}>
+        {names}
+        {tag}
+        <span aria-hidden>×</span>
+      </button>
+    )
+  }
+  return (
+    <span title={names} className={className}>
+      {names}
+      {tag}
     </span>
   )
 }

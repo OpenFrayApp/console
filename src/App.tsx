@@ -11,6 +11,7 @@ import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { saveBonus } from './combat/masssave.ts'
+import { groupSaveEnds } from './combat/saveEnds.ts'
 import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
@@ -464,21 +465,22 @@ function App() {
     }
   }
   // Auto-roll a monster's save-ends effects at the chosen moment of its turn (PCs
-  // roll their own — never rolled for them). On a success the effect clears.
+  // roll their own — never rolled for them). Effects sharing one save (ability + DC
+  // + timing) roll a single die together and end as a group.
   const autoRollSaveEnds = (c: Combatant | undefined, when: 'startOfTurn' | 'endOfTurn') => {
     if (!c || c.isPC) return
-    for (const e of c.effects) {
-      const save = e.duration.type === 'saveEnds' ? e.duration.save : null
-      if (!save) continue
-      if ((e.duration.when ?? 'endOfTurn') !== when) continue
-      const bonus = saveBonus(c, save.ability) ?? 0
+    for (const group of groupSaveEnds(c.effects)) {
+      if (group.when !== when) continue
+      const bonus = saveBonus(c, group.ability) ?? 0
       const result = roll(`1d20${bonus >= 0 ? `+${bonus}` : `${bonus}`}`, { kind: 'save' })
-      pushRoll(`${c.label}: ${e.name} (${save.ability.toUpperCase()} save)`, result)
-      if (result.total >= save.dc) {
+      const names = group.effects.map((e) => e.name).join(', ')
+      pushRoll(`${c.label}: ${names} (${group.ability.toUpperCase()} save)`, result)
+      if (result.total >= group.dc) {
+        const ids = new Set(group.effects.map((e) => e.id))
         dispatch({
           type: 'update',
           id: c.combatantId,
-          update: (cc) => ({ ...cc, effects: cc.effects.filter((x) => x.id !== e.id) }),
+          update: (cc) => ({ ...cc, effects: cc.effects.filter((x) => !ids.has(x.id)) }),
         })
       }
     }
