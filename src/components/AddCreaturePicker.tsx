@@ -29,7 +29,6 @@ export function AddCreaturePicker({
   }, [open, creatures])
 
   const q = query.trim().toLowerCase()
-  // The user's custom creatures come first, then the SRD.
   const matches = [...customCreatures, ...(creatures ?? [])]
     .filter((c) => !q || c.name.toLowerCase().includes(q))
     .slice(0, 50)

@@ -37,9 +37,7 @@ export function DeathSavePips({ saves }: { saves: DeathSaves }) {
 }
 
 interface DeathSaveControlsProps {
-  /** The player rolled a success themselves. */
   onSave: () => void
-  /** The player rolled a failure themselves. */
   onFail: () => void
   /** Optional in-app roll — only when the player can't roll their own die. */
   onRoll: () => void
@@ -48,9 +46,8 @@ interface DeathSaveControlsProps {
 const BTN = 'rounded border px-2 py-1 text-xs font-medium'
 
 /**
- * Death-save controls. The app never rolls for the player: Save and Fail record
- * the player's own result; "Roll death save" is the fallback when they can't roll.
- * The running tally lives on the combatant row (DeathSavePips), not here.
+ * The app never rolls for the player: Save/Fail record the player's own result;
+ * "Roll death save" is the fallback when they can't roll their own die.
  */
 export function DeathSaveControls({
   onSave,

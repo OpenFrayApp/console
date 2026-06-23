@@ -8,10 +8,10 @@ import type { Ability } from './primitives.ts'
  * roll or remind the DM. Conditions are a *kind* of Effect, so there's one
  * system, not two.
  *
- * Load-bearing principle: there are only ~6 shapes of consequence in all of 5e
- * (a condition, advantage, disadvantage, a flat modifier, a reminder, a
- * save-ends effect). We model those six — never the hundreds of class features
- * that produce them. The DM transcribes the outcome; the app reminds.
+ * There are only ~6 shapes of consequence in all of 5e (a condition, advantage,
+ * disadvantage, a flat modifier, a reminder, a save-ends effect). We model those
+ * six — never the hundreds of class features that produce them. The DM transcribes
+ * the outcome; the app reminds.
  */
 
 /** The 15 standard 5e conditions — the most common Effect shape. */
@@ -43,7 +43,7 @@ export type EffectApplies =
 export type EffectMode = 'advantage' | 'disadvantage' | 'flatBonus'
 
 /**
- * The trick that captures both Reckless Attack and Vicious Mockery with one field:
+ * Captures both Reckless Attack and Vicious Mockery with one field:
  * - `outgoing` — affects *this creature's own* rolls (mocked goblin attacks at disadvantage)
  * - `incoming` — affects rolls made *against* this creature (anyone attacking the
  *   reckless barbarian has advantage)

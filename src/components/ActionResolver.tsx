@@ -60,8 +60,7 @@ function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledD
   })
 }
 
-/** Log each rolled damage component (one entry per type) to the roll log. The
- *  actor prefix is dropped for a casterless cast. */
+/** Logs one roll-log entry per damage type; the actor prefix is dropped for a casterless cast. */
 function logDamage(
   components: RolledDamage[],
   attacker: Combatant | undefined,
@@ -337,7 +336,6 @@ function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combat
 }
 
 function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse, onClose }: ResolverProps) {
-  // On a crit, the campaign's crit rule governs how the damage dice are rolled.
   const { crit: critRule } = useCampaignRules()
   const targets = attacker
     ? targetsFor(attacker, combatants)

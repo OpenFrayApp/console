@@ -34,8 +34,7 @@ export interface SpellScaling {
 /**
  * Structured, rollable mechanics for a spell — present only when the spell has
  * any (damage, a save, or a spell attack). Utility spells (Shield, Detect Magic)
- * have none. Note: only *typed* damage is captured here; healing dice are not
- * modelled yet. Feeds the dice/mass-save flow when casting is wired up.
+ * have none. Only *typed* damage is captured here; healing dice are not modelled yet.
  */
 export interface SpellMechanics {
   /** Base damage at the spell's own level. */
@@ -49,13 +48,9 @@ export interface SpellMechanics {
 }
 
 /**
- * A compendium spell. Today this holds display metadata + the prose body (`text`),
- * which is what the browse/reference UI needs. It is intentionally extensible:
- * Open5e v2 also exposes structured mechanics (damage dice, damage types, save
- * ability, upcast variants) that aren't modelled here yet — add them when spells
- * become rollable so casting can feed the mass-save flow (see
- * docs/compendium-ingest.md #14). The DC is never a spell field: it comes from the
- * caster, not the spell. Shares the source/edition model with Creature.
+ * A compendium spell: display metadata, the prose body (`text`), and optional
+ * structured `mechanics` for rolling. The DC is never a spell field — it comes from
+ * the caster, not the spell. Shares the source/edition model with Creature.
  */
 export interface Spell {
   /** Stable id, e.g. `"srd:fireball"`. */

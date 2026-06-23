@@ -35,10 +35,8 @@ export type OnRoll = (
 export type OnNote = (label: string) => void
 
 /**
- * A one-line breakdown of a roll — the transparency that builds trust. Each die
- * group reads `NdM [v, v, …]`; when dice are dropped (advantage / keep-highest)
- * the kept ones follow as `→ k`. The grand total is shown separately, so the
- * per-die values aren't repeated as a sum.
+ * A one-line breakdown of a roll. Each die group reads `NdM [v, v, …]`; when dice
+ * are dropped (advantage / keep-highest) the kept ones follow as `→ k`.
  */
 function describeRoll(result: RollResult): string {
   const dice = result.dice.map((g) => {
@@ -98,7 +96,6 @@ export function RollLog({ entries }: { entries: RollEntry[] }) {
               </div>
             </>
           ) : (
-            // A note-only line (no dice): a cast or other board event.
             <span className="text-sm text-slate-600 dark:text-slate-300">{entry.label}</span>
           )}
         </li>

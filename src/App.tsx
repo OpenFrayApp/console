@@ -149,12 +149,9 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
 const dexMod = (creature: Creature): number => Math.floor((creature.abilities.dex - 10) / 2)
 
 function App() {
-  // Restore the previous session (reload/crash insurance) once, on mount. Null
-  // when there's nothing valid to restore, so every field falls back to its default.
   const [restored] = useState(loadSession)
   // Theme is shared with the marketing site via the `openfray-theme` localStorage
-  // key, so a light/dark choice on either side carries into the other. Fall back to
-  // the restored session, then dark (the default both surfaces use).
+  // key. Fall back to the restored session, then dark (the default both surfaces use).
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const stored = localStorage.getItem('openfray-theme')
@@ -165,14 +162,8 @@ function App() {
     return restored?.theme ?? 'dark'
   })
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
-  // Which tab the compendium opens on. The view toggle resets it to creatures; the
-  // header "Add PC → create" entry sets it to characters before switching views.
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
-  // Editing a roster-backed PC from the encounter: the saved character to edit and the
-  // on-board combatant to re-sync on save. Null when the editor is closed.
   const [encounterPcEdit, setEncounterPcEdit] = useState<{ pc: RosterPc; combatantId: string } | null>(null)
-  // Editing a custom creature from the encounter: the library creature's draft + id. The
-  // in-progress fight is NOT mutated (snapshot rule); only the library/DB is updated.
   const [encounterCreatureEdit, setEncounterCreatureEdit] = useState<{ draft: MonsterDraft; editId: string } | null>(null)
   const [encounter, dispatch] = useReducer(
     encounterReducer,
@@ -181,45 +172,21 @@ function App() {
   )
   const [rollLog, setRollLog] = useState<RollEntry[]>(() => restored?.rollLog ?? [])
   const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
-  // Pre-rolled initiative values (blank for players) held while the Roll Initiative
-  // modal is open; null when it's closed.
   const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
 
   const { user, loading: authLoading } = useAuth()
-  // The auth `user` object gets a fresh reference on every token refresh, so depend
-  // on the stable id (not the object) to keep load/clear effects from re-firing —
-  // and from clobbering restored state — when nothing about who's signed in changed.
   const userId = user?.id ?? null
-  // The DB row id of the signed-in user's encounter; a ref so the autosave effect
-  // doesn't re-subscribe when it changes after the first cloud write.
   const cloudId = useRef<string | null>(null)
-  // True once the cloud encounter has been loaded for the current user. The autosave
-  // must not write before this, or it would insert a fresh row instead of updating
-  // the existing one (a new orphan row per sign-in). An insert-in-flight latch then
-  // stops a second insert racing the first when there's no row yet.
   const cloudHydrated = useRef(false)
   const cloudInserting = useRef(false)
-  // The full-screen auth page: null (closed), 'in' (sign-in tab first, the default
-  // for gated features), or 'up' (sign-up tab first, from the log-in popover's link).
-  // It closes itself once the user is signed in.
   const [authOpen, setAuthOpen] = useState(false)
-  // The signed-in user's custom creature library (empty when anonymous), shown in
-  // the compendium and pickable into encounters.
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
-  // The signed-in user's custom spell library (empty when anonymous).
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
-  // The signed-in user's campaigns (empty when anonymous), managed in the compendium.
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  // The signed-in user's durable party roster (empty when anonymous), managed in the
-  // compendium and instantiated into encounters on demand.
   const [rosterPcs, setRosterPcs] = useState<RosterPc[]>([])
-  // Which campaign the DM is running; its house rules drive the console. Null for
-  // anonymous users and signed-in users with no campaign selected (→ standard rules).
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
     () => restored?.activeCampaignId ?? null,
   )
-  // The active campaign's house rules, or the standard defaults when none is set —
-  // so the console behaves exactly as before unless a campaign is actively running.
   const activeCampaign = activeCampaignId
     ? campaigns.find((c) => c.id === activeCampaignId)
     : undefined
@@ -239,10 +206,9 @@ function App() {
     if (user) setAuthOpen(false)
   }, [user])
 
-  // Load the custom creature library + campaigns + party roster on sign-in; clear
-  // them on sign-out. Wait for the initial session lookup before deciding — otherwise
-  // the first render (user still null) would run the sign-out branch and wipe the
-  // active campaign restored from the session.
+  // Wait for the initial session lookup before loading/clearing user data — otherwise
+  // the first render (user still null) runs the sign-out branch and wipes the active
+  // campaign restored from the session.
   useEffect(() => {
     if (authLoading) return
     if (!userId) {
@@ -271,8 +237,7 @@ function App() {
     }
   }, [userId, authLoading])
 
-  // On sign-in, hydrate the live encounter from the cloud (the authoritative copy);
-  // on sign-out, forget the row id so we stop writing to it.
+  // On sign-in, hydrate the live encounter from the cloud (the authoritative copy).
   useEffect(() => {
     if (authLoading) return
     cloudHydrated.current = false
@@ -289,7 +254,6 @@ function App() {
         dispatch({ type: 'load', encounter: res.encounter })
         setSelectedId(null)
       }
-      // Cloud writes are now safe: we know the row id (or that there's none yet).
       cloudHydrated.current = true
     })
     return () => {
@@ -297,15 +261,13 @@ function App() {
     }
   }, [userId, authLoading])
 
-  // Local-first autosave (debounced): always mirror the session to sessionStorage
-  // for per-device restore; when signed in, also persist the encounter to the cloud
-  // (one JSONB blob, RLS-isolated). The UI never waits on this — it's background.
+  // Local-first autosave (debounced): mirror the session to sessionStorage, and when
+  // signed in also persist the encounter to the cloud. Background — the UI never waits.
   useEffect(() => {
     const handle = setTimeout(() => {
       saveSession({ encounter, rollLog, theme, view, selectedId, activeCampaignId })
-      // Only write to the cloud once hydrated (so we update the user's row, never
-      // insert a duplicate), and never start a second insert while the first is in
-      // flight (which would also duplicate when the user has no row yet).
+      // Guard against duplicate rows: only write once hydrated, and never start a
+      // second insert while the first is in flight.
       if (userId && cloudHydrated.current && !cloudInserting.current) {
         const inserting = cloudId.current == null
         if (inserting) cloudInserting.current = true
@@ -330,8 +292,6 @@ function App() {
     setRollLog((prev) => [{ id: crypto.randomUUID(), label }, ...prev].slice(0, 25))
   }
 
-  // Renaming a combatant rewrites its name in the existing roll-log lines, so the
-  // log stays consistent with the tracker (entries bake the name in at roll time).
   const renameInLog = (oldName: string, newName: string) => {
     if (!oldName || oldName === newName) return
     setRollLog((prev) =>
@@ -342,8 +302,6 @@ function App() {
   }
 
   const handlePick = (creature: Creature) => {
-    // Auto-label duplicates ("Goblin", "Goblin 2", …). Initiative is rolled on add
-    // mid-combat, else stays 0 until Begin rolls for everyone at once (see addCombatant).
     const sameKind = encounter.combatants.filter(
       (c) => !c.isPC && c.creatureId === creature.id,
     ).length
@@ -782,9 +740,7 @@ function App() {
         />
       )}
 
-      {/* Footer mirrors the console columns. Middle (under the stat block): the dice
-          roller on the left, the active-campaign picker on the right of that column.
-          Right (under the tools column): the AGPL §13 source/license link, far right. */}
+      {}
       <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
         <div className="hidden lg:block" aria-hidden="true" />
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">

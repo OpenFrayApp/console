@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-/**
- * Shared primitive vocabulary for the core schema. These are the small building
- * blocks that Creature, Action, and Effect all draw on.
- */
-
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 
 export type AbilityScores = Record<Ability, number>

@@ -14,12 +14,9 @@ const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level $
 
 /**
  * Resolve a spell's mechanics against the board: roll its damage (scaled by the
- * chosen level) and, for a save spell, run the group save pre-seeded from the
- * spell. The spell owns the dice, damage type, and save ability; the caster owns
- * the DC (passed as `saveDc` when the caster is known — a monster's
- * Spellcasting.saveDc — or left for the DM to enter). PCs' own rolls are never
- * made for them (the group save records them). Spells with no mechanics render
- * nothing here — the caller handles "cast with no automatic effect".
+ * chosen level) and, for a save spell, run the group save pre-seeded from the spell.
+ * The spell owns the dice and save ability; the caster owns the DC (`saveDc`, or
+ * left for the DM). Spells with no mechanics render nothing — the caller handles it.
  */
 export function SpellResolution({
   spell,
@@ -34,7 +31,6 @@ export function SpellResolution({
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
   onClose: () => void
-  /** The caster's save DC, used to pre-seed the save. */
   saveDc?: number
 }) {
   const [variantKey, setVariantKey] = useState('base')

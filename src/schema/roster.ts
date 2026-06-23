@@ -21,8 +21,8 @@ export function abilityMod(score: number): number {
  * the roster entry never touches a fight in progress.
  *
  * Still lightweight, still not a character sheet: the DM transcribes these facts;
- * the app never derives class, level, or what an ability does. The ability scores
- * are stored so a PC can carry a real Dexterity for initiative tiebreaks later.
+ * the app never derives class, level, or what an ability does. Ability scores feed
+ * the Dexterity initiative tiebreak and the derived initiative modifier.
  */
 export interface RosterPc extends CharacterDetails {
   /** Stable id, generated client-side; matches the row's `data->>id`. */
@@ -40,7 +40,7 @@ export interface RosterPc extends CharacterDetails {
   resistances?: string[]
   immunities?: string[]
   vulnerabilities?: string[]
-  /** The six ability scores (signed-in form only). Stored, not yet derived from. */
+  /** The six ability scores (signed-in form only). */
   abilities?: AbilityScores
   /** The campaign this PC belongs to, or null/absent when unassigned. A stored tag. */
   campaignId?: string | null

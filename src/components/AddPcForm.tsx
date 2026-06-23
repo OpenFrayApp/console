@@ -18,9 +18,7 @@ const FIELD =
   'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
 const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
-// None of these are credential fields — keep password managers (1Password's
-// `data-1p-ignore`) and browser autofill off them so their popups don't cover the
-// inputs. Spread onto the form and every field.
+// Not credential fields — keep password-manager and browser-autofill popups off them so they don't cover the inputs.
 const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
 /**

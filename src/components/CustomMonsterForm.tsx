@@ -68,11 +68,7 @@ function ActionList({
   )
 }
 
-/**
- * The custom-creature editor — a controlled modal over the full Creature schema,
- * opened for "create" (an empty draft) or "edit" (a creature's draft + its id, so
- * the rebuilt creature keeps that id). On save it hands the Creature to `onSubmit`.
- */
+/** Controlled modal editor over the full Creature schema, for create or edit. */
 export function CustomMonsterForm({
   open,
   initialDraft,
@@ -88,10 +84,8 @@ export function CustomMonsterForm({
   onSubmit: (creature: Creature) => void
 }) {
   const [d, setD] = useState<MonsterDraft>(initialDraft)
-  // The SRD spell list, loaded once the modal opens, for the spellcasting picker.
   const [spells, setSpells] = useState<Spell[]>([])
 
-  // Seed the form each time it opens (create → empty, edit → the creature's draft).
   useEffect(() => {
     if (open) setD(initialDraft)
   }, [open, initialDraft])
@@ -111,8 +105,6 @@ export function CustomMonsterForm({
 
   const patch = (p: Partial<MonsterDraft>) => setD((prev) => ({ ...prev, ...p }))
 
-  // Derived numbers the DM shouldn't compute by hand: proficiency from CR, then
-  // attack to-hit and the spell save DC / attack bonus from ability + proficiency.
   const pb = proficiencyBonus(parseCr(d.cr))
   const scores = ABILITIES.reduce((acc, a) => {
     acc[a] = d.abilities[a].trim() ? Math.floor(Number(d.abilities[a]) || 0) : 10

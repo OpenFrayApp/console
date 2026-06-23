@@ -7,10 +7,9 @@ import type { RandomSource } from './../dice/rng.ts'
 import { roll, type RollResult } from '../dice/roll.ts'
 
 /**
- * Recharge abilities — the headline monster-resource feature. An ability with a
- * dice recharge ("Recharge 5–6") is spent on use and comes back when a d6 meets
- * its threshold, rolled at the start of the creature's turn (or on demand). Every
- * such action is tracked by its id in the combatant's `limitedUseState`.
+ * An ability with a dice recharge ("Recharge 5–6") is spent on use and comes back
+ * when a d6 meets its threshold, rolled at the start of the creature's turn (or on
+ * demand). Every such action is tracked by its id in the combatant's `limitedUseState`.
  */
 
 /** Is this action gated behind a recharge die? */

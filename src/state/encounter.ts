@@ -134,8 +134,6 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
         combatants: state.combatants.map((c) => (isFoe(c) ? c : setCurrentHp(c, c.hp.max))),
       }
 
-    // A short rest applies the DM-entered current HP per combatant and counts one
-    // rest. Only the listed combatants change.
     case 'shortRest':
       return {
         ...state,
@@ -150,8 +148,6 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     case 'clearFoes':
       return { ...state, activeIndex: 0, combatants: state.combatants.filter((c) => !isFoe(c)) }
 
-    // Sweep everything off the board: remove all combatants and reset the encounter to
-    // its pre-combat state. Only offered outside combat.
     case 'clearAll':
       return { ...state, round: 0, activeIndex: 0, paused: false, combatants: [] }
 

@@ -6,11 +6,11 @@ import type { RollEntry } from '../components/RollLog.tsx'
 
 /**
  * Anonymous-tier persistence: the live session is mirrored to `sessionStorage`
- * so an accidental reload or crash doesn't wipe the board mid-fight. This is the
- * ephemeral tier from the storage spec — tab-scoped, cleared on tab close, and it
- * **never** touches the database. `localStorage` is deliberately not used: it would
- * reintroduce the durable anonymous state the two-tier model exists to avoid.
- * Durable, cross-device persistence arrives with sign-up (Supabase + RLS) later.
+ * so an accidental reload or crash doesn't wipe the board mid-fight. Tab-scoped,
+ * cleared on tab close, and it **never** touches the database. `localStorage` is
+ * deliberately not used: it would reintroduce the durable anonymous state the
+ * two-tier model exists to avoid. Durable cross-device persistence is the signed-in
+ * tier (Supabase + RLS).
  */
 
 export type Theme = 'dark' | 'light'
@@ -87,7 +87,7 @@ export function saveSession(snapshot: SessionSnapshot): void {
   }
 }
 
-/** Drop the persisted session (e.g. a future "clear / new encounter" action). */
+/** Drop the persisted session. */
 export function clearSession(): void {
   storage()?.removeItem(KEY)
 }

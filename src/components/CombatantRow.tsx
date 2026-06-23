@@ -112,7 +112,6 @@ export function CombatantRow({
       }
       className={cx(
         'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2 transition-opacity',
-        // Disposition-coded left edge: friends sky, foes rose.
         isFoe(combatant) ? 'border-l-rose-400 dark:border-l-rose-500' : 'border-l-sky-400 dark:border-l-sky-500',
         onSelect && 'cursor-pointer',
         active

@@ -5,15 +5,13 @@ import type { Action, DamageRoll } from '../schema/action.ts'
 import type { Spell } from '../schema/spell.ts'
 
 /**
- * Turning a compendium spell into something rollable. A spell supplies the dice,
- * the damage type, and the save ability; the *caster* supplies the DC (a monster's
- * Spellcasting.saveDc, or DM-entered for a PC) and the cast level. So these helpers
- * resolve only the spell-owned half — the damage for a chosen level — and leave the
- * DC to the cast-time UI. See docs/compendium-ingest.md #14.
+ * A spell supplies dice, damage type, and save ability; the *caster* supplies the
+ * DC (a monster's Spellcasting.saveDc, or DM-entered for a PC) and cast level. These
+ * helpers resolve only the spell-owned half and leave the DC to the cast-time UI.
+ * See docs/compendium-ingest.md #14.
  */
 
 export interface DamageVariant {
-  /** Stable key for selection. */
   key: string
   /** Human label, e.g. "Level 3", "Slot 4", "Caster level 5". */
   label: string
@@ -22,11 +20,7 @@ export interface DamageVariant {
 
 const levelLabel = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
 
-/**
- * The damage options for a spell: its base damage, then each higher-level variant
- * (upcasting a slot, or a cantrip scaling with caster level). Empty when the spell
- * deals no typed damage.
- */
+/** Base damage plus each upcast/caster-level variant. Empty when the spell deals no typed damage. */
 export function damageVariants(spell: Spell): DamageVariant[] {
   const damage = spell.mechanics?.damage
   if (!damage) return []
@@ -53,9 +47,8 @@ export function damageTypes(damage: DamageRoll[]): string[] {
 const ROUNDS_PER = { round: 1, minute: 10 } as const
 
 /**
- * A spell's duration in combat rounds — for the concentration timer. Only
- * round/minute durations convert (1 minute = 10 rounds); hours and longer outlast
- * any fight, so they return undefined (tracked as indefinite).
+ * A spell's duration in combat rounds, for the concentration timer. Only round/minute
+ * durations convert (1 minute = 10 rounds); hours and longer return undefined (indefinite).
  */
 export function durationRounds(duration: string): number | undefined {
   const m = /(\d+)\s*(round|minute)s?/i.exec(duration)
@@ -65,12 +58,10 @@ export function durationRounds(duration: string): number | undefined {
 
 /**
  * Turn a spell into a resolvable Action so casting reuses the same attack / group
- * save modals as a monster's other actions. The caster supplies the DC and spell
- * attack bonus (a monster's `Spellcasting`); damage is the spell's **base** level —
- * 2024 monster spells are fixed to their listed level, so we never upcast here.
- * Returns null when there's nothing to resolve (a utility spell): the caller just
- * spends the use. Only attack-with-damage and save spells are auto-resolved; the
- * "damage only" Open5e shape is too noisy to trust, so it falls through to null.
+ * save modals as a monster's other actions. Damage is the spell's base level — 2024
+ * monster spells are fixed to their listed level, so we never upcast here. Returns
+ * null for utility spells and the untrustworthy Open5e "damage only" shape; the
+ * caller just spends the use.
  */
 export function spellAction(
   spell: Spell,
@@ -79,7 +70,7 @@ export function spellAction(
   const m = spell.mechanics
   if (!m) return null
   const id = `spell:${spell.id}`
-  const damage = m.damage // base level only
+  const damage = m.damage
   if (m.attackRoll && damage) {
     return {
       id,

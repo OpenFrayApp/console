@@ -6,7 +6,6 @@ import type { Combatant } from './combatant.ts'
 export interface EncounterLogEntry {
   id: string
   round: number
-  /** Human-readable summary. Richer roll data arrives with the dice engine. */
   message: string
 }
 

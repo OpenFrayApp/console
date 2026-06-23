@@ -14,11 +14,7 @@ import { Markdown } from './Markdown.tsx'
 
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
-/**
- * DM Notes: read-only markdown, or click-to-edit (a textarea that commits on blur)
- * when `onCommit` is supplied — mirroring the inline HP edit, but persisted. Shows a
- * muted prompt when empty so the DM can start typing.
- */
+/** Read-only markdown, or click-to-edit (commits on blur) when `onCommit` is supplied. */
 function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string) => void }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value ?? '')
@@ -91,12 +87,9 @@ function LineGroup({ label, items }: { label: string; items?: string[] }) {
 }
 
 /**
- * A player character rendered as a stat block — the same shape and styling as a
- * creature's (shared `StatHeader`, ability table, defenses, sections), so the
- * compendium and the encounter look identical. PCs are lightweight: abilities show
- * Mod only (no save proficiencies to read), and the values aren't rollable (the
- * player rolls their own dice). Editing handlers / `footer` are supplied by the
- * caller — live HP editing in combat, action buttons in the compendium.
+ * A player character rendered as a stat block — same shape and styling as a
+ * creature's, so the compendium and the encounter look identical. Abilities show
+ * Mod only and aren't rollable (the player rolls their own dice).
  */
 export function PcStatBlock({
   name,
@@ -148,17 +141,14 @@ export function PcStatBlock({
   bonds?: string[]
   flaws?: string[]
   backstory?: string
-  /** Private DM notes — shown only to the DM (this is a single-DM tool). */
   dmNotes?: string
   concentration?: Concentration | null
   onRename?: (name: string) => void
   onHpInput?: (raw: string) => void
   onTempInput?: (raw: string) => void
-  /** Roll an ability check (d20 + modifier) when a modifier is clicked. Combat only. */
+  /** Roll an ability check when a modifier is clicked. Combat only. */
   onCheck?: OnCheck
-  /** Make DM Notes click-to-edit, committing the new text (persisted by the caller). */
   onEditDmNotes?: (text: string) => void
-  /** Bottom source-style row (e.g. Add to encounter / Edit / Delete). */
   footer?: ReactNode
 }) {
   const hpTone = hpToneFor(hpTierOf(hp.current, hp.max))
@@ -226,7 +216,6 @@ export function PcStatBlock({
         languages={languages?.join(', ')}
       />
 
-      {/* When editable, click to edit (saved by the caller); otherwise read-only. */}
       {(onEditDmNotes || dmNotes?.trim()) && (
         <div>
           <h4 className={SECTION_HEADING}>DM Notes</h4>

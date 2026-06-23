@@ -5,9 +5,8 @@ import type { ReactNode } from 'react'
 import { sourceInfo } from '../compendium/format.ts'
 
 /**
- * Attribution line for a compendium entry — the ruleset it's from and its license
- * (linked), with optional trailing `actions` (e.g. Edit / Delete for a custom
- * creature). `mt-auto` pins it to the very bottom of the stat block / spell card.
+ * Attribution line for a compendium entry — ruleset and license, with optional
+ * trailing `actions`. `mt-auto` pins it to the bottom of the stat block / spell card.
  */
 export function SourceLink({ source, actions }: { source: string; actions?: ReactNode }) {
   const info = sourceInfo(source)

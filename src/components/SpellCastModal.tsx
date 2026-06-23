@@ -51,14 +51,11 @@ function Modal({
 }
 
 /**
- * Cast a spell from a monster's stat block. Shows the spell card for reference,
- * then "Cast" spends a use (a per-day spell decrements; at-will doesn't) and logs
- * the cast. If the spell resolves to an attack or a save, the matching resolver
- * modal (the same ones a monster's other actions use) opens — seeded with the
- * caster's DC / spell attack bonus, at the spell's fixed level (no upcasting). A
- * spell with no resolvable mechanics (Mage Hand, Invisibility) is still castable;
- * it just spends the use. The caster is always a monster, so no roll is ever made
- * on a player's behalf.
+ * Cast a spell from a monster's stat block. "Cast" spends a use (per-day decrements;
+ * at-will doesn't) and logs it. An attack/save spell then hands off to the shared
+ * resolver, seeded with the caster's DC / attack bonus at the spell's fixed level
+ * (no upcasting). A utility spell with no mechanics is still castable. The caster is
+ * always a monster, so no roll is ever made on a player's behalf.
  */
 export function SpellCastModal({
   caster,
@@ -115,7 +112,6 @@ export function SpellCastModal({
     else proceed()
   }
 
-  // Once cast, an attack/save spell hands off to the shared resolver modal.
   if (cast && action) {
     return (
       <ActionResolver

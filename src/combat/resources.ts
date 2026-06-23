@@ -13,22 +13,17 @@ import { isStable, markDeathSaveFailure, resetDeathSaves } from './deathsaves.ts
  * Resource mutations on a Combatant — HP/damage/heal, spell slots, legendary
  * actions, and limited-use abilities. All pure: they return a new value and
  * never mutate the input.
- *
- * Deferred to the dice engine (steps 5–6): rolling `Recharge 5–6` dice and the
- * concentration check triggered by damage. The state setters here are what those
- * later flows will call once a die has been rolled.
  */
 
 const clampNonNegativeInt = (n: number): number => Math.max(0, Math.floor(n))
 
 /**
- * Wound tier from current/max HP, independent of the alive/dead status:
+ * Wound tier from current/max HP, independent of alive/dead status. Feeds the player
+ * view, which shows a tier instead of exact HP:
  * - `healthy`  — at full HP
  * - `hurt`     — below max but above half
  * - `bloodied` — at or below half, above a quarter
- * - `critical` — at or below a quarter (close to death)
- *
- * This feeds the phase-2 player view, which shows a wound tier instead of exact HP.
+ * - `critical` — at or below a quarter
  */
 export type HpTier = 'healthy' | 'hurt' | 'bloodied' | 'critical'
 

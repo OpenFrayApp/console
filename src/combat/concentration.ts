@@ -8,13 +8,11 @@ import { rollSave } from './masssave.ts'
 import type { AppliedEffect } from './effectroll.ts'
 
 /**
- * Concentration. Taking damage forces a Constitution save (DC 10 or half the
- * damage, whichever is higher) to maintain it. Following the app's rule, we never
- * roll for the player: the DM records Maintained/Broken (applyConcentrationResult),
- * and rollConcentrationCheck() is the optional in-app roll for monsters.
- *
- * Being knocked out or killed ends concentration immediately — that is handled in
- * applyDamage, not here.
+ * Taking damage forces a CON save (DC 10 or half the damage, whichever is higher) to
+ * maintain concentration. Per the never-roll-for-the-player rule, the DM records the
+ * result (applyConcentrationResult); rollConcentrationCheck is the optional in-app
+ * roll for monsters. Being knocked out or killed ends concentration immediately, but
+ * that is handled in applyDamage, not here.
  */
 
 export function concentrationDC(damage: number): number {
@@ -23,8 +21,8 @@ export function concentrationDC(damage: number): number {
 
 /**
  * The DC to prompt after a combatant takes damage, or null for no prompt. A
- * concentrator that stays conscious must save; one knocked out or killed has
- * already lost concentration (applyDamage clears it), so it isn't asked again.
+ * concentrator knocked out or killed has already lost concentration (applyDamage
+ * clears it), so it isn't asked again.
  */
 export function concentrationPromptDC(
   before: Combatant,

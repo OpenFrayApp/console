@@ -139,8 +139,7 @@ export const CREATURE_TYPES: string[] = [
   'aberration', 'beast', 'celestial', 'construct', 'dragon', 'elemental', 'fey',
   'fiend', 'giant', 'humanoid', 'monstrosity', 'ooze', 'plant', 'undead', 'any',
 ]
-// The full D&D Beyond alignment vocabulary, lowercased to match SRD stat-block
-// rendering. Display only — nothing branches on it.
+// Lowercased to match SRD stat-block rendering. Display only — nothing branches on it.
 export const ALIGNMENTS: string[] = [
   'lawful good', 'neutral good', 'chaotic good',
   'lawful neutral', 'neutral', 'chaotic neutral',
@@ -197,14 +196,11 @@ export function emptyActionDraft(kind: ActionKind = 'melee'): ActionDraft {
     id: uid(),
     name: '',
     kind,
-    // Ranged attacks default to Dex, everything else to Str — the DM can change it.
     attackAbility: kind === 'ranged' ? 'dex' : 'str',
     reach: '',
     rangeNormal: '',
     rangeLong: '',
     damage: [emptyDamageDraft()],
-    // A real default (matching the mass-save modal) so the save ability needs no
-    // "choose…" placeholder; only the save kind uses it.
     saveAbility: 'dex',
     saveDc: '',
     saveOutcome: 'half',
@@ -362,7 +358,6 @@ export function buildAction(d: ActionDraft, ctx: DeriveContext): Action {
     id: d.id,
     name: d.name.trim(),
     kind: d.kind,
-    // Attacks derive to-hit from the chosen ability + proficiency; others don't roll.
     toHit: isAttack ? attackBonus(d.attackAbility, ctx) : null,
   }
   if (has(d.reach)) action.reach = num(d.reach)

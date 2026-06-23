@@ -12,18 +12,16 @@ import {
 } from './formula.ts'
 
 /**
- * The one dice chokepoint. Presets, the manual box, monster attacks, and (later)
- * mass saves all route through this — it's also where the roll log and, from
- * step 6, effect-awareness live. Effect resolution is not wired yet; the
- * `rollerId`/`targetId` context is accepted now so the signature is stable.
+ * The one dice chokepoint. Presets, the manual box, monster attacks, and mass saves
+ * all route through this. Effect-awareness layers on top via effectroll.ts, which
+ * resolves the net advantage/bonuses and passes them in here.
  */
 
 export type RollKind = 'attack' | 'save' | 'check' | 'damage' | 'raw'
 
 /**
- * How a critical hit inflates damage dice. Intended to become a campaign-level
- * setting; the engine already honours it per-roll. Only plain damage dice are
- * affected (never attack rolls, never flat modifiers):
+ * How a critical hit inflates damage dice. Only plain damage dice are affected
+ * (never attack rolls, never flat modifiers):
  * - `none`          — not a crit
  * - `double-dice`   — RAW: roll twice as many dice
  * - `double-total`  — roll once, then double the dice total

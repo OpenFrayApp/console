@@ -23,7 +23,6 @@ const FIELD =
 const LABEL =
   'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
-/** A labelled <select> over a set of options. */
 function SelectField<T extends string>({
   label,
   value,

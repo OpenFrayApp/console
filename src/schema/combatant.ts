@@ -60,8 +60,7 @@ export interface DeathSaves {
   failures: number
 }
 
-// Per-field visibility for the phase-2 player view. The flags exist now so the
-// data model never needs migration; they are not rendered in phase 1.
+// Per-field visibility for the player view.
 export type NameVisibility = 'shown' | 'hidden' | 'unknown'
 export type HpVisibility = 'exact' | 'bloodied' | 'hidden'
 export type FieldVisibility = 'shown' | 'hidden'
@@ -116,10 +115,6 @@ export interface MonsterCombatant extends CombatantBase {
 }
 
 /**
- * A player character — deliberately lightweight. These few fields cover ~95% of
- * what a DM needs at the table; the player's sheet owns everything else.
- */
-/**
  * A lightweight, non-snapshot combatant. Two flavours:
  * - `pc` — a player character: the combat-relevant fields the DM wants on the
  *   board (defenses, speed, etc.). Players roll their own dice.
@@ -160,8 +155,8 @@ export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   speed?: Speeds
   /**
    * The six ability scores, carried from a durable roster PC (signed-in only).
-   * Optional — anonymous PCs added at the table don't have them. Stored for a
-   * future Dexterity-based initiative tiebreak; nothing derives from it yet.
+   * Optional — anonymous PCs added at the table don't have them. Feeds the
+   * Dexterity initiative tiebreak.
    */
   abilities?: AbilityScores
   /** Present once the PC is downed; absent/zeroed when conscious. */

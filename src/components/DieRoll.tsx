@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-/** How long the spin runs before settling. Capped well under one second. */
 export const SPIN_MS = 800
 
 function prefersReducedMotion(): boolean {
@@ -14,9 +13,8 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * A d20 that spins to a value: it flips through faces quickly, slows down, and
- * settles on `value` — the whole animation capped under a second. Bump `spinKey`
- * to (re)start a spin. Respects prefers-reduced-motion (shows the value at once).
+ * A d20 that spins and settles on `value`. Bump `spinKey` to (re)start a spin.
+ * Respects prefers-reduced-motion (shows the value at once).
  *
  * The flickering faces are cosmetic only and use `Math.random` — the *actual*
  * roll is produced by the CSPRNG dice engine and passed in as `value`.
@@ -31,7 +29,7 @@ export function DieRoll({
   tone?: 'normal' | 'crit' | 'fumble'
 }) {
   const [face, setFace] = useState(value)
-  // The crit/fumble colour only shows once the die has settled — not mid-spin.
+  // Crit/fumble colour only shows once the die has settled, not mid-spin.
   const [settled, setSettled] = useState(true)
   const frame = useRef(0)
 

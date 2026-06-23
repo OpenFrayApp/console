@@ -25,8 +25,7 @@ const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
 type DurChoice = 'manual' | 'consume' | 'save' | '1r' | '1m' | '10m' | '1h' | '8h' | '24h'
 
-// Timed durations, in combat rounds (6s each), phrased the way spells are — no
-// spell reads "10 rounds". Mirrors the custom-spell form's duration vocabulary.
+// Timed durations in combat rounds (6s each), phrased the way spells are.
 const TIMED_ROUNDS: Partial<Record<DurChoice, number>> = {
   '1r': 1,
   '1m': 10,
@@ -66,10 +65,9 @@ const CHIP =
   'rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
 
 /**
- * The "Apply effect" modal: toggle conditions on/off, build a mechanical modifier
- * (advantage / disadvantage / a flat bonus, scoped and directional, in plain
- * language), or jot a free-text reminder — all with a chosen duration. Stays open so
- * the DM can stack several; Done (or ✕ / Escape) closes. Replaces the cramped popover.
+ * The "Apply effect" modal: toggle conditions, build a modifier (advantage /
+ * disadvantage / flat bonus), or jot a reminder — all with a chosen duration.
+ * Stays open so the DM can stack several; Done (or ✕ / Escape) closes.
  */
 export function EffectModal({
   name,
@@ -78,28 +76,22 @@ export function EffectModal({
   onRemove,
   onUpdateDuration,
 }: {
-  /** The combatant the effect is applied to, for the title. */
   name: string
-  /** The combatant's current effects, so condition chips reflect/toggle live state. */
   effects: Effect[]
   onApply: (effect: Effect) => void
-  /** Remove an effect by id (used to toggle a condition back off). */
   onRemove: (id: string) => void
   /** Re-set the duration on effects added this session (when the DM changes it). */
   onUpdateDuration: (ids: string[], duration: EffectDuration) => void
 }) {
   const [open, setOpen] = useState(false)
-  // Ids of effects added during this open session — the shared Duration control
-  // live-updates them, so the DM can add conditions, then choose "Save ends", etc.
+  // Effects added this open session — the shared Duration control live-updates them.
   const [sessionIds, setSessionIds] = useState<string[]>([])
 
-  // Shared duration for whatever gets applied.
   const [dur, setDur] = useState<DurChoice>('manual')
   const [saveAbility, setSaveAbility] = useState<Ability>('dex')
   const [saveDc, setSaveDc] = useState('')
   const [saveWhen, setSaveWhen] = useState<'endOfTurn' | 'startOfTurn'>('endOfTurn')
 
-  // Modifier builder.
   const [mode, setMode] = useState<EffectMode>('advantage')
   const [applies, setApplies] = useState<EffectApplies>('attackRolls')
   const [direction, setDirection] = useState<EffectDirection>('incoming')
@@ -107,12 +99,8 @@ export function EffectModal({
   const [label, setLabel] = useState('')
 
   const [note, setNote] = useState('')
-
-  // Short labels of what's been applied this session, so the DM gets feedback now
-  // that applying no longer closes the modal (apply several, then Done).
   const [added, setAdded] = useState<string[]>([])
 
-  // Reset to defaults each time the modal opens.
   useEffect(() => {
     if (!open) return
     setDur('manual')
@@ -134,8 +122,8 @@ export function EffectModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  // Switching the modifier type picks sensible defaults (matching the old chips):
-  // advantage → against it; disadvantage → on its rolls; bonus → on its rolls / all.
+  // Switching the modifier type picks sensible defaults: advantage → against it;
+  // disadvantage → on its rolls; bonus → all rolls it makes.
   const chooseMode = (m: EffectMode) => {
     setMode(m)
     if (m === 'flatBonus') {
@@ -150,8 +138,8 @@ export function EffectModal({
     }
   }
 
-  // Build the duration from the controls. Takes explicit parts so a control's
-  // onChange can compute the new duration before its state has flushed.
+  // Takes explicit parts so a control's onChange can compute the new duration
+  // before its own state has flushed.
   const makeDuration = (
     d: DurChoice = dur,
     ab: Ability = saveAbility,
@@ -165,25 +153,21 @@ export function EffectModal({
     return { type: 'manual' }
   }
 
-  // Push the new duration onto everything added this session (no-op when empty).
   const updateSession = (duration: EffectDuration) => {
     if (sessionIds.length) onUpdateDuration(sessionIds, duration)
   }
 
-  // Apply an effect and remember its id so the Duration control can re-bind it.
+  // Remember each applied effect's id so the Duration control can re-bind it.
   const track = (effect: Effect) => {
     onApply(effect)
     setSessionIds((s) => [...s, effect.id])
   }
 
-  // Apply now, but keep the modal open so the DM can add several effects; the
-  // running "Added" list is the feedback. Done (or ✕ / Escape) closes.
   const applyEffect = (effect: Effect, label: string) => {
     track(effect)
     setAdded((a) => [...a, label])
   }
 
-  // The condition currently on the combatant, if any (chips act as live toggles).
   const activeCondition = (c: ConditionName): Effect | undefined =>
     effects.find((e) => e.icon === 'condition' && e.name === c)
 
@@ -265,7 +249,6 @@ export function EffectModal({
             </div>
 
             <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
-              {/* Duration — applied to whatever you add below. */}
               <div className="space-y-1">
                 <p className={LABEL}>Duration</p>
                 <div className="flex flex-wrap items-center gap-2">
@@ -332,7 +315,6 @@ export function EffectModal({
                 )}
               </div>
 
-              {/* Conditions — tap to toggle on/off; active ones are highlighted. */}
               <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
                 <p className={LABEL}>Condition</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -406,7 +388,6 @@ export function EffectModal({
                 </button>
               </div>
 
-              {/* Reminder — the long-tail escape hatch. */}
               <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
                 <p className={LABEL}>Reminder</p>
                 <form

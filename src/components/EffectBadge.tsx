@@ -5,7 +5,6 @@ import type { Effect } from '../schema/effect.ts'
 import { badgeLabel } from '../combat/effects.ts'
 import type { SaveEndsGroup } from '../combat/saveEnds.ts'
 
-/** Tone by the effect's badge category — both light and dark. */
 function toneFor(icon: string | undefined): string {
   switch (icon) {
     case 'debuff':
@@ -29,8 +28,7 @@ export function EffectBadge({
   onRemove?: () => void
 }) {
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(effect.icon)}`
-  // A save-ends effect carries its escape save; surface the DC so the DM sees it
-  // (and is reminded a save is owed) instead of a bare condition name.
+  // Surface a save-ends effect's escape DC so the DM is reminded a save is owed.
   const save = effect.duration.type === 'saveEnds' ? effect.duration.save : null
   const saveTag = save ? (
     <span className="opacity-70" title={`${save.ability.toUpperCase()} save DC ${save.dc} ends it`}>

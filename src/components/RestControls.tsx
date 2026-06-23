@@ -149,11 +149,9 @@ function ShortRestModal({
 }
 
 /**
- * Short-rest / long-rest controls — an icon set in the header (campfire = short,
- * tent = long). A long rest restores all player characters and friendly NPCs to
- * full HP after a confirm; a short rest opens a per-character HP modal. Both are
- * disabled while combat is running (rests happen between fights). The short-rest
- * tally since the last long rest is shown to signed-in users.
+ * Short-rest / long-rest controls. A long rest restores all friendlies to full HP
+ * after a confirm; a short rest opens a per-character HP modal. Both are disabled
+ * while combat is running (rests happen between fights).
  */
 export function RestControls({
   combatants,
@@ -167,7 +165,6 @@ export function RestControls({
   /** True while combat is running — rests are disabled (not hidden). */
   disabled: boolean
   shortRests: number
-  /** Show the short-rest tally (signed-in users only). */
   showCounter: boolean
 }) {
   const [open, setOpen] = useState(false)

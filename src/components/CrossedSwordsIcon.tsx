@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-/** The OpenFray brand mark — crossed swords, matching the favicon and site logo. */
 export function CrossedSwordsIcon({ className = 'h-7 w-7' }: { className?: string }) {
   return (
     <svg

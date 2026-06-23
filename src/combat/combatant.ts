@@ -11,10 +11,9 @@ import type {
 import { rechargeActions } from './recharge.ts'
 
 /**
- * Whether a combatant sits on the enemy side for colouring and grouping. Monsters
- * are always foes; a lightweight combatant (PC / quick add) is a foe only when it
- * was explicitly marked one. This is a board/display notion, separate from `isPC`
- * (which drives mechanics).
+ * Whether a combatant sits on the enemy side for colouring and grouping. A
+ * board/display notion, separate from `isPC` (which drives mechanics): monsters are
+ * always foes; a PC / quick add is a foe only when explicitly marked one.
  */
 export function isFoe(c: Combatant): boolean {
   return c.isPC ? c.side === 'foe' : true
@@ -38,9 +37,8 @@ const DEFAULT_VISIBILITY: CombatantVisibility = {
 }
 
 /**
- * Snapshot a library Creature into a combat-ready Combatant. The template data is
- * deep-copied, so later edits to the library never reach into this fight
- * (snapshot, don't reference).
+ * Snapshot a library Creature into a combat-ready Combatant. The template is
+ * deep-copied, so later library edits never reach into this fight.
  */
 export function instantiate(
   creature: Creature,
@@ -53,7 +51,7 @@ export function instantiate(
   for (const lu of snapshot.limitedUse ?? []) {
     limitedUseState[lu.id] = { available: true }
   }
-  // Rechargeable actions (e.g. "Recharge 5–6") start charged and are tracked by id.
+  // Rechargeable actions (e.g. "Recharge 5–6") start charged.
   for (const action of rechargeActions(snapshot)) {
     limitedUseState[action.id] = { available: true }
   }

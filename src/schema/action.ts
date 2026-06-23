@@ -32,13 +32,6 @@ export interface Range {
 }
 
 /**
- * Everything rollable is an Action; dice presets read straight off it.
- *
- * The rule that saves months: mechanics live in structured fields
- * (`toHit`, `damage[].formula`, `save.dc`); prose lives in `text` for display
- * only. Never parse `text` back into numbers.
- */
-/**
  * How a limited-use ability comes back:
  * - `dice`     — recharge on a die roll, e.g. "Recharge 5–6" → `value: 5`
  * - `perDay`   — N uses per day
@@ -49,6 +42,11 @@ export type Recharge =
   | { type: 'perDay'; value: number }
   | { type: 'perRound'; value: number }
 
+/**
+ * Everything rollable. Mechanics live in structured fields (`toHit`,
+ * `damage[].formula`, `save.dc`); prose lives in `text` for display only — never
+ * parse `text` back into numbers.
+ */
 export interface Action {
   id: string
   name: string

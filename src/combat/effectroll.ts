@@ -14,11 +14,11 @@ import { roll, type CritRule, type RollKind, type RollResult } from '../dice/rol
 import { conditionAttackAdvantage, type AttackRange } from './conditionrules.ts'
 
 /**
- * Effect-aware rolling — the differentiator. A roll consults the roller's
- * `outgoing` effects and the target's `incoming` effects, nets advantage and
- * disadvantage (one of each cancels to a straight roll), folds in flat bonuses
- * (Bless), and consumes `consumeOnRoll` effects. The dice module stays generic;
- * this layer translates effects into its `advantage` / `bonuses` context.
+ * Effect-aware rolling. A roll consults the roller's `outgoing` effects and the
+ * target's `incoming` effects, nets advantage and disadvantage (one of each cancels
+ * to a straight roll), folds in flat bonuses (Bless), and consumes `consumeOnRoll`
+ * effects. The dice module stays generic; this layer translates effects into its
+ * `advantage` / `bonuses` context.
  */
 
 export interface AppliedEffect {
@@ -131,7 +131,6 @@ export function rollWithEffects(
   // Trait-driven advantage passed in by the caller (e.g. Magic Resistance).
   for (const source of opts.advantageSources ?? []) addAdvantage('advantage', source)
 
-  // Manual mechanical effects (advantageAgainst, disadvantageOn, flatBonus).
   for (const { effect, modifier } of applicable) {
     if (modifier.mode === 'advantage' || modifier.mode === 'disadvantage') {
       addAdvantage(modifier.mode, effect.name)

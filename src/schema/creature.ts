@@ -20,7 +20,7 @@ export type SpellLevel = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 /** Max spell slots per level. */
 export type SpellSlots = Partial<Record<SpellLevel, number>>
 
-/** Recharge / x-per-day abilities (the headline monster-resource feature). */
+/** Recharge / x-per-day abilities. */
 export interface LimitedUse {
   id: string
   name: string
@@ -75,8 +75,8 @@ export interface Spellcasting {
 /**
  * The master schema, shared by monsters, NPCs, and the compendium. A library
  * Creature is a read-only *template*; adding it to combat instantiates a mutable
- * Combatant (build step 2) by snapshotting this data — editing a template must
- * never mutate an in-progress fight.
+ * Combatant by snapshotting this data — editing a template must never mutate an
+ * in-progress fight.
  *
  * Mechanics live in structured fields; prose lives in `Action.text`.
  */

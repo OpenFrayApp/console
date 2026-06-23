@@ -85,8 +85,7 @@ export function CombatantControls({
     })
   }
 
-  // Re-set the duration on the given effects — the effect modal calls this when the
-  // DM changes the shared duration after already applying some effects this session.
+  // Called when the DM changes the shared duration after already applying some effects this session.
   const setEffectsDuration = (ids: string[], duration: EffectDuration) => {
     const set = new Set(ids)
     dispatch({
@@ -99,12 +98,10 @@ export function CombatantControls({
     })
   }
 
-  // Save-ends effects, grouped by their shared save so the DM is reminded one is
-  // owed and a single roll ends every effect that passes (not one die per effect).
+  // Grouped by their shared save so a single roll ends every effect that passes (not one die per effect).
   const saveEndsGroups = groupSaveEnds(combatant.effects)
 
-  // Roll the escape save for a monster (PCs roll their own — never rolled for them).
-  // One die per group; every effect whose DC it beats ends together.
+  // Monster escape save (PCs roll their own). One die per group; every effect whose DC it beats ends together.
   const rollSaveEnds = (group: SaveEndsGroup) => {
     if (combatant.isPC) return
     const bonus = saveBonus(combatant, group.ability) ?? 0

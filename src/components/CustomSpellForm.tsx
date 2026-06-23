@@ -20,8 +20,7 @@ import {
   type SpellDraft,
 } from './customSpell.ts'
 
-/** A stacked formula + damage-type editor, reused for base damage, the per-level
- *  increment, and each manual scaling row. Allows zero rows (a non-damaging spell). */
+/** Formula + damage-type rows, reused for base damage, increment, and scaling rows. */
 function DamageRows({
   rows,
   onChange,
@@ -71,8 +70,8 @@ function DamageRows({
   )
 }
 
-/** A select of common values with an "Other…" entry that reveals a free-text input
- *  (e.g. casting time, duration). A value not in the presets opens in Other mode. */
+/** A preset select with an "Other…" entry that reveals a free-text input. A value
+ *  not in the presets opens in Other mode. */
 function PresetField({
   value,
   options,
@@ -121,11 +120,9 @@ function PresetField({
 }
 
 /**
- * The custom-spell editor — a controlled modal over the Spell schema, opened for
- * "create" (an empty draft) or "edit" (a spell's draft + its id, so the rebuilt
- * spell keeps that id). The save DC is never collected (the caster owns it). Higher
- * levels are entered as a per-level increment that expands into damage variants, or
- * level-by-level for irregular spells.
+ * Controlled modal editor over the Spell schema, for create or edit. The save DC is
+ * never collected (the caster owns it). Higher levels are entered as a per-level
+ * increment that expands into damage variants, or level-by-level for irregular spells.
  */
 export function CustomSpellForm({
   open,

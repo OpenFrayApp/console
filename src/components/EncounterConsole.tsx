@@ -104,7 +104,7 @@ export function EncounterConsole({
   const { combatants, activeIndex } = encounter
   const running = started && !paused
   const activeId = running ? combatants[activeIndex]?.combatantId : undefined
-  // Show the explicitly-selected combatant, else whoever's turn it is, else the first.
+  // Explicitly-selected combatant, else whoever's turn it is, else the first.
   const selected =
     combatants.find((c) => c.combatantId === selectedId) ??
     combatants.find((c) => c.combatantId === activeId) ??
@@ -115,12 +115,10 @@ export function EncounterConsole({
     null,
   )
 
-  // The action whose resolver modal is open (the selected creature is the attacker).
   const [actionFor, setActionFor] = useState<Action | null>(null)
-  // Manual reorder drag (combat only): the dragged combatant and the row it's hovering,
-  // so the list can show a live preview before the drop commits.
+  // Manual reorder drag (combat only): the dragged combatant and the row it's over,
+  // so the list shows a live preview before the drop commits.
   const [drag, setDrag] = useState<{ id: string; overId: string | null } | null>(null)
-  // The spell being cast from the selected creature's stat block.
   const [castingSpell, setCastingSpell] = useState<SpellRef | null>(null)
   // Switching the selected combatant closes a stale resolver / cast modal.
   useEffect(() => {
@@ -128,7 +126,6 @@ export function EncounterConsole({
     setCastingSpell(null)
   }, [selected?.combatantId])
 
-  // The SRD spells, loaded once, indexed by id for the hover card + cast resolution.
   const [spellsById, setSpellsById] = useState<Map<string, Spell>>(new Map())
   useEffect(() => {
     loadSrdSpells().then(
@@ -139,7 +136,7 @@ export function EncounterConsole({
   const resolveSpell = (ref?: string): Spell | undefined =>
     ref ? spellsById.get(ref) : undefined
 
-  // Apply an HP/temp edit ("12", "+5", "-3"); HP damage to a concentrator prompts a save.
+  // HP damage to a concentrator prompts a save.
   const applyHpInput = (c: Combatant, raw: string, isTemp: boolean) => {
     const parsed = parseHpInput(raw)
     if (!parsed) return
@@ -187,7 +184,6 @@ export function EncounterConsole({
     setConcPrompt(null)
   }
 
-  // Roll a recharge die for a spent ability; on success it becomes usable again.
   const rollRechargeFor = (c: Combatant, action: Action) => {
     if (c.isPC) return
     const { recharged, roll } = rollRecharge(action)
@@ -201,8 +197,7 @@ export function EncounterConsole({
     }
   }
 
-  // Roll an ability check / save / skill off the stat block (d20 + modifier),
-  // effect-aware so Bless etc. fold in, and log it.
+  // Effect-aware so Bless etc. fold into the d20.
   const rollCheckFor = (
     c: Combatant,
     label: string,
@@ -214,7 +209,6 @@ export function EncounterConsole({
     onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, applied)
   }
 
-  // Spend a rechargeable action when it's used from the resolver.
   const consumeIfRechargeable = (c: Combatant, action: Action) => {
     if (c.isPC || !isRechargeable(action)) return
     dispatch({
@@ -224,16 +218,15 @@ export function EncounterConsole({
     })
   }
 
-  // Casting a spell from the stat block: spend a use (per-day decrements; at-will
-  // doesn't) and log the cast. The damage/save resolution is in the cast modal.
+  // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution
+  // happens in the cast modal.
   const castSpellFrom = (c: MonsterCombatant, spell: SpellRef) => {
     dispatch({
       type: 'update',
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : castSpell(cc, spell)),
     })
-    // A concentration spell makes the caster start concentrating on it (replacing
-    // any current concentration). The cast modal warns first if already busy.
+    // A concentration spell starts concentration, replacing any current one.
     const full = resolveSpell(spell.ref)
     if (full?.concentration) {
       dispatch({
@@ -261,8 +254,8 @@ export function EncounterConsole({
     })
   }
 
-  // Using a legendary action spends one from this round's budget, then resolves
-  // it like any other action when it has an attack or save.
+  // Spends from this round's legendary budget, then resolves it like any other
+  // action when it has an attack or save.
   const applyLegendaryAction = (c: MonsterCombatant, action: Action) => {
     dispatch({
       type: 'update',
@@ -303,8 +296,8 @@ export function EncounterConsole({
       }
     />
   )
-  // While dragging, render a preview order (the dragged row moved to where it hovers)
-  // so the list visibly makes space; the drop then commits the same move.
+  // While dragging, render a preview order so the list visibly makes space; the
+  // drop then commits the same move.
   const view =
     drag?.overId && drag.id !== drag.overId ? moveById(combatants, drag.id, drag.overId) : combatants
   const commitReorder = () => {
@@ -321,7 +314,6 @@ export function EncounterConsole({
 
   return (
     <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
-      {/* Left — initiative tracker */}
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800">
         <div className="flex items-center justify-between gap-2">
           {started ? (
@@ -361,14 +353,14 @@ export function EncounterConsole({
               Add creatures to build the encounter.
             </p>
           ) : started ? (
-            // During combat: living combatants in initiative order, the dead grouped below.
+            // In combat: living in initiative order, the dead grouped below.
             <>
               {living.map(renderRow)}
               {dead.length > 0 && <GroupHeading>Dead</GroupHeading>}
               {dead.map(renderRow)}
             </>
           ) : (
-            // Before combat there's no order yet, so group by kind for clarity.
+            // Before combat there's no order yet, so group by kind.
             <>
               {players.length > 0 && <GroupHeading>Players &amp; NPCs</GroupHeading>}
               {players.map(renderRow)}
@@ -379,7 +371,6 @@ export function EncounterConsole({
         </div>
       </section>
 
-      {/* Center — the selected combatant's stat block. */}
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800">
         {selected ? (
           <div className="min-h-0 flex-1 overflow-auto pr-4">
@@ -477,7 +468,6 @@ export function EncounterConsole({
         )}
       </section>
 
-      {/* Right — tools: the selected combatant's controls, then the roll log. */}
       <aside className="flex min-h-0 flex-col gap-4 overflow-auto lg:pl-4">
         {selected && (
           <div className="shrink-0">

@@ -11,8 +11,6 @@ const LABEL =
 
 type Note = { kind: 'ok' | 'err'; text: string } | null
 
-/** Human label for the Supabase `app_metadata.provider` value (the provider the
- *  user signed in with). Falls back to a generic phrase when it's absent. */
 const PROVIDER_LABELS: Record<string, string> = { google: 'Google', discord: 'Discord' }
 function providerName(provider?: string): string | null {
   if (!provider || provider === 'email') return null
@@ -52,7 +50,6 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
     setDelBusy(true)
     setDelNote(null)
     const { error } = await deleteAccount()
-    // On success the auth state flips to signed-out and the parent unmounts this.
     if (error) {
       setDelBusy(false)
       setDelNote({ kind: 'err', text: error })

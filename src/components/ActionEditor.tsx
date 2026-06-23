@@ -11,7 +11,6 @@ import {
 } from './customMonster.ts'
 
 // Width-less base, so explicit sizes (`${FIELD_W} w-16`) win cleanly in flex rows.
-// FIELD keeps `w-full` for the common full-width input.
 export const FIELD_W =
   'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
 export const FIELD = `w-full ${FIELD_W}`
@@ -52,8 +51,7 @@ export function ActionEditor({
 
   return (
     <div className="space-y-2 rounded-md border border-slate-200 p-2 dark:border-slate-700">
-      {/* Row 1 — what it is: name, kind, remove. To-hit isn't shown; it's derived
-          from the ability + proficiency and rendered on the stat block. */}
+      {/* To-hit isn't shown; it's derived from the ability + proficiency and rendered on the stat block. */}
       <div className="flex items-center gap-2">
         <input
           value={action.name}
@@ -84,7 +82,6 @@ export function ActionEditor({
         </button>
       </div>
 
-      {/* Attack — which ability it uses, and reach (melee) or range (ranged). */}
       {isAttack && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`${LABEL} w-16`}>Attack</span>
@@ -109,7 +106,6 @@ export function ActionEditor({
         </div>
       )}
 
-      {/* Save — ability, DC, and what a success does. */}
       {action.kind === 'save' && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`${LABEL} w-16`}>Save</span>
@@ -129,7 +125,6 @@ export function ActionEditor({
         </div>
       )}
 
-      {/* Damage — one component per row, stacked. */}
       <div className="space-y-1">
         <span className={LABEL}>Damage</span>
         {action.damage.map((d, i) => (
@@ -169,7 +164,6 @@ export function ActionEditor({
         </button>
       </div>
 
-      {/* Recharge / limited uses. */}
       <div className="flex flex-wrap items-center gap-2">
         <span className={`${LABEL} w-16`}>Recharge</span>
         <select value={action.rechargeKind} onChange={(e) => set('rechargeKind', e.target.value as RechargeKind)} aria-label="Recharge kind" className={`${FIELD_W} w-40`}>

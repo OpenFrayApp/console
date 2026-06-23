@@ -67,11 +67,10 @@ function Row({
 }
 
 /**
- * The "Roll Initiative" step shown when combat begins. Monsters and quick adds
- * arrive pre-rolled (editable); players start blank — the DM enters each player's
- * own roll, or leaves it blank to roll d20 + their modifier (the app never rolls a
- * player's dice unless asked). Any combatant can be toggled Surprised; on start the
- * campaign's surprise rule is applied. Mark nobody and it's an ordinary fight.
+ * The "Roll Initiative" step. Monsters and quick adds arrive pre-rolled (editable);
+ * players start blank — the DM enters each roll, or leaves it blank to roll d20 +
+ * modifier (the app never rolls a player's dice unless asked). Combatants can be
+ * toggled Surprised, applying the campaign's surprise rule on start.
  */
 export function InitiativePrompt({
   combatants,

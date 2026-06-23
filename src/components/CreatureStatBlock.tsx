@@ -32,8 +32,7 @@ const ABILITY_LABEL: Record<Ability, string> = {
 const abilityMod = (score: number): number => Math.floor((score - 10) / 2)
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
-// The ability/skill table headings and row labels use swapped styles: the heading
-// is the heavier one, the row label the lighter.
+// Heading is the heavier style, row label the lighter — swapped from the usual weight.
 const TABLE_HEADING = 'font-semibold uppercase text-slate-500 dark:text-slate-400'
 const TABLE_ROW_LABEL =
   'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
@@ -610,7 +609,6 @@ export function CreatureStatBlock({
               value={tmpValue}
               edit={onTempInput ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' } : undefined}
             />
-            {/* Initiative bonus: the creature's own if set, else derived from DEX. */}
             <HeaderStat
               label="Init"
               value={signed(creature.initiative ?? abilityMod(creature.abilities.dex))}

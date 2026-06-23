@@ -29,8 +29,7 @@ const SENSE_KEYS = [
   { key: 'truesight', label: 'Truesight', placeholder: 'Truesight' },
 ] as const
 
-// Just the nine alignments plus "No alignment" — PCs don't use the "typically…" /
-// "any…" hedges that monster blocks do.
+// PCs don't use the "typically…" / "any…" hedges that monster blocks do.
 const PC_ALIGNMENTS = [
   'lawful good',
   'neutral good',
@@ -212,7 +211,7 @@ function buildPc(d: PcDraft, id: string): RosterPc {
   }
 }
 
-/** A repeatable list of one-line text fields, with a "+ Add" button (like damage rows). */
+/** A repeatable list of one-line text fields with a "+ Add" button. */
 function LineList({
   label,
   addLabel,
@@ -258,10 +257,8 @@ function LineList({
 }
 
 /**
- * Create / edit a durable roster PC. Same accordion format as the custom-creature
- * form: collapsible sections, the structured speed and senses editors, edition and
- * alignment dropdowns. Still not a character sheet — no class, level, or spells; the
- * DM transcribes the board facts plus the roleplay notes they want to keep.
+ * Create / edit a durable roster PC. Not a character sheet — no class, level, or
+ * spells; the DM transcribes the board facts plus the roleplay notes to keep.
  */
 export function PcFormModal({
   open,

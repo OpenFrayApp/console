@@ -52,8 +52,6 @@ function TabButton({
   )
 }
 
-/** Left column for the Campaigns tab: the user's list (filtered by the shared
- *  search box). Creating a campaign is the right pane's empty-state action. */
 function CampaignList({
   campaigns,
   gated,
@@ -107,8 +105,6 @@ function CampaignList({
   )
 }
 
-/** Left column for the Players tab: the user's roster (filtered by the shared
- *  search box). Creating a PC is the right pane's empty-state action. */
 function PcList({
   pcs,
   campaigns,
@@ -236,15 +232,10 @@ export function Compendium({
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  // The editor modal: null = closed; otherwise the draft to edit and an id when
-  // updating an existing creature (vs creating a new one).
+  // null = closed; otherwise the draft, with editId set when updating an existing creature.
   const [editor, setEditor] = useState<{ draft: MonsterDraft; editId: string | null } | null>(null)
-  // The spell create/edit modal, same shape as the creature editor.
   const [spellEditor, setSpellEditor] = useState<{ draft: SpellDraft; editId: string | null } | null>(null)
-  // The campaign create/edit modal: null = closed; otherwise the campaign to edit
-  // (or null inside to create a new one).
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
-  // The PC create/edit modal: null = closed; otherwise the PC to edit (or null to create).
   const [pcForm, setPcForm] = useState<{ pc: RosterPc | null } | null>(null)
 
   useEffect(() => {
@@ -255,26 +246,22 @@ export function Compendium({
   const loading =
     tab === 'creatures' ? creatures === null : tab === 'spells' ? spells === null : false
 
-  // The user's custom creatures sit alongside the SRD in one searchable list.
   const allCreatures = useMemo(
     () => [...customCreatures, ...(creatures ?? [])],
     [customCreatures, creatures],
   )
 
-  // Custom spells likewise sit alongside the SRD spells.
   const allSpells = useMemo(
     () => [...customSpells, ...(spells ?? [])],
     [customSpells, spells],
   )
 
-  // Campaigns share the same search box as the other tabs, filtered by name.
   const filteredCampaigns = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = q ? campaigns.filter((c) => c.name.toLowerCase().includes(q)) : campaigns
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
   }, [campaigns, query])
 
-  // The roster shares the same search box, filtered by name.
   const filteredPcs = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = q ? rosterPcs.filter((p) => p.name.toLowerCase().includes(q)) : rosterPcs
@@ -319,8 +306,7 @@ export function Compendium({
     setQuery('')
   }
 
-  // Campaigns are signed-up-only; for anonymous users the create action prompts
-  // sign-up instead of opening the modal. Create/edit both go through the modal.
+  // Campaigns are signed-up-only; for anonymous users the create action prompts sign-up.
   const startNewCampaign = () => (createGated ? onGated?.() : setCampaignForm({ campaign: null }))
   const submitCampaign = (campaign: Campaign) => {
     if (campaignForm?.campaign) onUpdateCampaign?.(campaign)
@@ -334,8 +320,7 @@ export function Compendium({
     }
   }
 
-  // Roster PCs are signed-up-only; anonymous create prompts sign-up. Create/edit
-  // both go through the modal, mirroring campaigns.
+  // Roster PCs are signed-up-only; anonymous create prompts sign-up.
   const startNewPc = () => (createGated ? onGated?.() : setPcForm({ pc: null }))
   const submitPc = (pc: RosterPc) => {
     if (pcForm?.pc) onUpdatePc?.(pc)
@@ -361,7 +346,6 @@ export function Compendium({
       onDeleteCreature?.(c.id)
     }
   }
-  // Edit/Delete only on the user's own custom creatures.
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
 
   const startCreateSpell = () =>
@@ -484,8 +468,7 @@ export function Compendium({
             </button>
           </div>
         ) : selectedCreature ? (
-          // The stat block carries its own sticky header (with top padding inside
-          // its solid background). Custom creatures get Edit / Delete in the source row.
+          // No pt-4 here: the stat block carries its own sticky header with top padding inside its solid background.
           <CreatureStatBlock
             creature={selectedCreature}
             onEdit={isCustom(selectedCreature) ? () => startEdit(selectedCreature) : undefined}
@@ -561,8 +544,6 @@ export function Compendium({
             }
           />
         ) : (
-          // Nothing selected: a centered prompt that doubles as the create entry
-          // point on the Creatures and Campaigns tabs.
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <div className="rounded-full bg-slate-100 p-5 dark:bg-slate-800/70">
               <svg
