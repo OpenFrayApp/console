@@ -1,6 +1,6 @@
 # OpenFray
 
-**A free, open-source DnD 5e combat tracker for Dungeon Masters.**
+**A free, open-source DnD 5e combat tracker for Game Masters.**
 
 5.5e/2024-first, with 5.0 support. Built for the table — fast, glanceable, and
 focused on the one job other trackers do badly: keeping hold of what's actually

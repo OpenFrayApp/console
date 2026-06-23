@@ -7,7 +7,7 @@ reasoning lives in `docs/PROJECT-PLAN.md` (with deeper subsystem specs in
 
 ## What OpenFray is
 
-A fast, browser-based **combat console** for Dungeon Masters running DnD 5e
+A fast, browser-based **combat console** for Game Masters running DnD 5e
 (5.5e/2024-first, with 5.0 support). It tracks what's happening in a fight:
 initiative order, monster resources, conditions, and the relational state between
 combatants — plus dice and an SRD reference.
