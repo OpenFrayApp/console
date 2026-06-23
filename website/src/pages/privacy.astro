@@ -48,19 +48,29 @@ import Layout from '../layouts/Layout.astro';
     <p>We do not run our own advertising or analytics, and we never sell your data.</p>
 
     <h2>4. Cookies and local storage</h2>
+    <p>
+      OpenFray sets <strong>no cookies of its own</strong> — no advertising, analytics, or
+      cross-site tracking cookies. The only data kept on your device is strictly necessary for the
+      features you use, stored in your browser:
+    </p>
     <ul>
-      <li><strong>Theme preference</strong> — stored in your browser’s <code>localStorage</code>.</li>
+      <li><strong>Theme preference</strong> — light or dark, in <code>localStorage</code>.</li>
       <li><strong>Anonymous session state</strong> — your in-progress encounter, in <code>sessionStorage</code>.</li>
-      <li><strong>Authentication token</strong> — when signed in, your session is kept in <code>localStorage</code> by our authentication provider so you stay logged in. It is cleared when you sign out.</li>
+      <li><strong>Authentication token</strong> — when signed in, your session is kept in <code>localStorage</code> by our authentication provider so you stay logged in; cleared when you sign out.</li>
     </ul>
-    <p>We use no third-party advertising or cross-site tracking cookies.</p>
+    <p>
+      Our hosting provider (Cloudflare) may set a strictly-necessary security cookie to protect the
+      Service from abuse, and produces <strong>aggregate, cookieless</strong> traffic statistics from
+      its server logs. None of this stores a tracking identifier or follows you across sites — so no
+      cookie-consent banner is needed.
+    </p>
 
     <h2>5. Who processes your data</h2>
     <p>We rely on a small set of service providers (“processors”) to run OpenFray:</p>
     <table>
       <tr><th>Provider</th><th>Role</th></tr>
       <tr><td>Supabase</td><td>Authentication and database hosting (your account and saved content).</td></tr>
-      <tr><td>Cloudflare</td><td>Website hosting, content delivery, DNS, and email routing.</td></tr>
+      <tr><td>Cloudflare</td><td>Website hosting, content delivery, DNS, email routing, and aggregate (cookieless) traffic analytics.</td></tr>
       <tr><td>Google / Discord</td><td>Identity providers — only involved when you choose to sign in with them.</td></tr>
     </table>
     <p>These providers may process data on servers outside your country (including the United States) under appropriate safeguards. Each has its own privacy policy.</p>
