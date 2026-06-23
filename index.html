@@ -1,7 +1,18 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Apply the theme shared with the marketing site (openfray-theme) before
+      // paint to avoid a flash. Dark is the default unless 'light' was chosen.
+      try {
+        if (localStorage.getItem('openfray-theme') !== 'light') {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenFray — DnD 5e Combat Console</title>
     <meta

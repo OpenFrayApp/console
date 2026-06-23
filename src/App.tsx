@@ -152,7 +152,18 @@ function App() {
   // Restore the previous session (reload/crash insurance) once, on mount. Null
   // when there's nothing valid to restore, so every field falls back to its default.
   const [restored] = useState(loadSession)
-  const [theme, setTheme] = useState<Theme>(() => restored?.theme ?? 'dark')
+  // Theme is shared with the marketing site via the `openfray-theme` localStorage
+  // key, so a light/dark choice on either side carries into the other. Fall back to
+  // the restored session, then dark (the default both surfaces use).
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const stored = localStorage.getItem('openfray-theme')
+      if (stored === 'light' || stored === 'dark') return stored
+    } catch {
+      /* localStorage may be unavailable; fall through to the defaults */
+    }
+    return restored?.theme ?? 'dark'
+  })
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
   // Which tab the compendium opens on. The view toggle resets it to creatures; the
   // header "Add PC → create" entry sets it to characters before switching views.
@@ -216,6 +227,12 @@ function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
+    // Persist to the shared key so the marketing site reflects the same choice.
+    try {
+      localStorage.setItem('openfray-theme', theme)
+    } catch {
+      /* ignore when localStorage is unavailable */
+    }
   }, [theme])
 
   useEffect(() => {
@@ -621,20 +638,20 @@ function App() {
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div className="flex items-center gap-4 lg:gap-0">
-          {/* Title spans the initiative column so Group/Cast line up with the stat block. */}
-          <div className="flex items-center gap-2.5 lg:w-[28rem] lg:shrink-0 lg:pr-4">
+          {/* Logo links back to the marketing site; spans the initiative column so
+              Group/Cast line up with the stat block. */}
+          <a
+            href="/"
+            title="OpenFray home"
+            className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
+          >
             <span className="text-indigo-500 dark:text-indigo-400">
               <CrossedSwordsIcon />
             </span>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">
-                <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                DnD 5e combat console
-              </p>
-            </div>
-          </div>
+            <h1 className="text-xl font-semibold tracking-tight">
+              <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+            </h1>
+          </a>
           {view === 'encounter' && encounter.combatants.length > 0 && (
             <div className="flex items-center gap-2 lg:pl-4">
               <RestControls

@@ -6,8 +6,9 @@
 /*
  * Class-based dark mode. The `dark:` variant applies when `.dark` is on an
  * ancestor (set on <html>), so the theme is FORCED rather than driven by the
- * OS `prefers-color-scheme`. Dark is the default (see <html class="dark"> in
- * index.html); removing/replacing that class switches to light.
+ * OS `prefers-color-scheme`. Dark is the default — set on <html> before paint by
+ * the inline theme script in index.html (shared with the marketing site via the
+ * `openfray-theme` localStorage key); switching to light removes the class.
  *
  * Convention: author every component for BOTH themes — a light base plus a
  * `dark:` override (e.g. `bg-white dark:bg-slate-950`). Dark is default, but
