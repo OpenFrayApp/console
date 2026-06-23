@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState, type CSSProperties } from 'react'
 import type { Ability, AbilityScores as AbilityScoreMap, SaveBonuses, SkillBonuses } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
@@ -14,7 +13,7 @@ import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
 import { SpellCard } from './SpellCard.tsx'
-import { FLOATING_CARD, floatingCardStyle } from './spellPreview.ts'
+import { FLOATING_CARD, useHoverCard } from './spellPreview.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 
 /** Resolve a spell's compendium entry (for the hover preview + cast card). */
@@ -436,12 +435,11 @@ function SpellcastingSection({
   // The hover preview is anchored with a fixed, viewport-clamped position so it
   // isn't clipped by the scrolling stat-block column. Touch devices don't fire
   // hover, so they simply tap to open the cast modal (which shows the same card).
-  const [preview, setPreview] = useState<{ spell: Spell; style: CSSProperties } | null>(null)
+  const { card: preview, open: openPreview, close: closePreview, cancelClose } = useHoverCard<Spell>()
 
   const showPreview = (spell: SpellRef, el: HTMLElement) => {
     const found = resolveSpell?.(spell.ref)
-    if (!found) return
-    setPreview({ spell: found, style: floatingCardStyle(el.getBoundingClientRect()) })
+    if (found) openPreview(found, el)
   }
 
   return (
@@ -473,7 +471,7 @@ function SpellcastingSection({
                   type="button"
                   onClick={() => onCast(spell)}
                   onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
-                  onMouseLeave={() => setPreview(null)}
+                  onMouseLeave={closePreview}
                   title={`Cast ${spell.name}`}
                   className={
                     drained
@@ -489,8 +487,8 @@ function SpellcastingSection({
         ))}
       </div>
       {preview && (
-        <div className={FLOATING_CARD} style={preview.style}>
-          <SpellCard spell={preview.spell} />
+        <div className={FLOATING_CARD} style={preview.style} onMouseEnter={cancelClose} onMouseLeave={closePreview}>
+          <SpellCard spell={preview.value} />
         </div>
       )}
     </div>

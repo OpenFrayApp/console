@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
 const CARD_WIDTH = 384 // matches w-96
 
@@ -25,4 +25,26 @@ export function floatingCardStyle(rect: DOMRect): CSSProperties {
 }
 
 export const FLOATING_CARD =
-  'pointer-events-none fixed z-40 w-96 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900'
+  'fixed z-40 w-96 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900'
+
+/**
+ * Hover-card open/close state with a short close delay, so the mouse can travel
+ * from the anchor into the card (to scroll a long one) without it vanishing. The
+ * card is interactive; entering it cancels the pending close, leaving it closes.
+ * Generic over a payload so callers can stash which spell is shown.
+ */
+export function useHoverCard<T>() {
+  const [card, setCard] = useState<{ value: T; style: CSSProperties } | null>(null)
+  const timer = useRef<number | undefined>(undefined)
+  const cancelClose = () => window.clearTimeout(timer.current)
+  const open = (value: T, anchor: HTMLElement) => {
+    cancelClose()
+    setCard({ value, style: floatingCardStyle(anchor.getBoundingClientRect()) })
+  }
+  const close = () => {
+    cancelClose()
+    timer.current = window.setTimeout(() => setCard(null), 150)
+  }
+  useEffect(() => cancelClose, [])
+  return { card, open, close, cancelClose }
+}
