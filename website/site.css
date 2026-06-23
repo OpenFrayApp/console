@@ -13,19 +13,23 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  /* A glow at the top (behind the header) and a mirrored, softer one at the bottom
-     (behind the footer); the middle stays the plain dark background. Both layers
-     fill the page and never tile (no-repeat), so nothing repeats as pages grow. */
   background-color: var(--bg);
-  background-image:
-    radial-gradient(1000px 480px at 50% 0%, rgba(99, 102, 241, 0.18), transparent 70%),
-    radial-gradient(900px 460px at 50% 100%, rgba(99, 102, 241, 0.13), transparent 70%);
-  background-repeat: no-repeat;
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  position: relative;
   display: flex; flex-direction: column; min-height: 100%; line-height: 1.6;
 }
+/* A glow behind the header (top) and a softer mirror behind the footer (bottom),
+   with the middle left plain dark. Absolutely positioned so they anchor to the
+   document's top and bottom — not the viewport — and don't become flex items.
+   z-index: -1 keeps them behind the page content. */
+body::before, body::after {
+  content: ""; position: absolute; left: 0; right: 0;
+  pointer-events: none; z-index: -1;
+}
+body::before { top: 0; height: 480px; background: radial-gradient(1000px 480px at 50% 0%, rgba(99, 102, 241, 0.18), transparent 70%); }
+body::after { bottom: 0; height: 460px; background: radial-gradient(900px 460px at 50% 100%, rgba(99, 102, 241, 0.13), transparent 70%); }
 a { color: var(--accent); }
 
 /* Shared top bar: brand left, theme toggle right. */
@@ -59,6 +63,7 @@ ul.points { list-style: none; padding: 0; margin: 0 0 2rem; display: flex; flex-
 ul.points li { font-size: 0.85rem; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 0.4rem 0.9rem; }
 .cta { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.98rem; font-weight: 600; color: #fff; background: var(--accent-strong); border-radius: 0.6rem; padding: 0.8rem 1.4rem; text-decoration: none; transition: background 0.15s ease; }
 .cta:hover { background: var(--accent); }
+.disclaimer { margin: 2.75rem auto 0; max-width: 40rem; font-size: 0.78rem; color: var(--faint); line-height: 1.6; }
 
 .features { margin-top: 3.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; max-width: 56rem; width: 100%; text-align: left; }
 .feature { background: var(--panel); border: 1px solid var(--border); border-radius: 0.8rem; padding: 1.1rem 1.2rem; }
