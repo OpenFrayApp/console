@@ -182,6 +182,12 @@ function App() {
   // The DB row id of the signed-in user's encounter; a ref so the autosave effect
   // doesn't re-subscribe when it changes after the first cloud write.
   const cloudId = useRef<string | null>(null)
+  // True once the cloud encounter has been loaded for the current user. The autosave
+  // must not write before this, or it would insert a fresh row instead of updating
+  // the existing one (a new orphan row per sign-in). An insert-in-flight latch then
+  // stops a second insert racing the first when there's no row yet.
+  const cloudHydrated = useRef(false)
+  const cloudInserting = useRef(false)
   // The full-screen auth page: null (closed), 'in' (sign-in tab first, the default
   // for gated features), or 'up' (sign-up tab first, from the log-in popover's link).
   // It closes itself once the user is signed in.
@@ -252,16 +258,22 @@ function App() {
   // on sign-out, forget the row id so we stop writing to it.
   useEffect(() => {
     if (authLoading) return
+    cloudHydrated.current = false
+    cloudInserting.current = false
     if (!userId) {
       cloudId.current = null
       return
     }
     let active = true
     loadCloudEncounter().then((res) => {
-      if (!active || !res) return
-      cloudId.current = res.id
-      dispatch({ type: 'load', encounter: res.encounter })
-      setSelectedId(null)
+      if (!active) return
+      if (res) {
+        cloudId.current = res.id
+        dispatch({ type: 'load', encounter: res.encounter })
+        setSelectedId(null)
+      }
+      // Cloud writes are now safe: we know the row id (or that there's none yet).
+      cloudHydrated.current = true
     })
     return () => {
       active = false
@@ -274,9 +286,15 @@ function App() {
   useEffect(() => {
     const handle = setTimeout(() => {
       saveSession({ encounter, rollLog, theme, view, selectedId, activeCampaignId })
-      if (userId) {
+      // Only write to the cloud once hydrated (so we update the user's row, never
+      // insert a duplicate), and never start a second insert while the first is in
+      // flight (which would also duplicate when the user has no row yet).
+      if (userId && cloudHydrated.current && !cloudInserting.current) {
+        const inserting = cloudId.current == null
+        if (inserting) cloudInserting.current = true
         saveCloudEncounter(cloudId.current, encounter).then((id) => {
           if (id) cloudId.current = id
+          if (inserting) cloudInserting.current = false
         })
       }
     }, 600)
