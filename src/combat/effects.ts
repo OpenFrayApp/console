@@ -6,7 +6,9 @@ import type {
   ConditionName,
   Effect,
   EffectApplies,
+  EffectDirection,
   EffectDuration,
+  EffectMode,
 } from '../schema/effect.ts'
 
 /**
@@ -92,6 +94,55 @@ export function flatBonus(
     },
     duration: opts.duration ?? { type: 'rounds', rounds: 10 },
     note: opts.note ?? `${value} to rolls`,
+  }
+}
+
+/** The shape of a built-by-the-DM mechanical effect (the effect modal's output). */
+export interface ModifierSpec {
+  name: string
+  mode: EffectMode
+  direction: EffectDirection
+  applies: EffectApplies
+  /** For `flatBonus`: a number (−2) or formula (`"1d4"`); ignored for adv/disadv. */
+  value?: number | string | null
+}
+
+/** Whether a modifier helps the creature (buff) or hurts it (debuff) — badge tone. */
+function modifierIcon(spec: ModifierSpec): string {
+  if (spec.mode === 'flatBonus') {
+    const negative =
+      typeof spec.value === 'number'
+        ? spec.value < 0
+        : String(spec.value ?? '').trim().startsWith('-')
+    return negative ? 'debuff' : 'buff'
+  }
+  // Advantage on its own rolls, or disadvantage on rolls against it, helps it.
+  const helps =
+    (spec.mode === 'advantage') === (spec.direction === 'outgoing')
+  return helps ? 'buff' : 'debuff'
+}
+
+/**
+ * A general mechanical modifier built from explicit parts — the effect modal's
+ * output. Covers advantage/disadvantage (on its own rolls or rolls against it,
+ * scoped to attacks/saves/checks/all) and flat bonuses/penalties (Bless, Bane,
+ * Bardic Inspiration, …) without enumerating spells. The DM names it and picks the
+ * duration; nothing here knows what feature produced it.
+ */
+export function modifierEffect(spec: ModifierSpec, opts: EffectOpts = {}): Effect {
+  return {
+    id: newId(),
+    name: spec.name,
+    icon: modifierIcon(spec),
+    source: opts.source,
+    modifier: {
+      applies: spec.applies,
+      mode: spec.mode,
+      value: spec.mode === 'flatBonus' ? (spec.value ?? null) : null,
+      direction: spec.direction,
+    },
+    duration: opts.duration ?? { type: 'manual' },
+    note: opts.note,
   }
 }
 

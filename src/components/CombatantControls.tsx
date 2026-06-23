@@ -18,7 +18,7 @@ import {
 } from '../combat/resources.ts'
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
-import { EffectPicker } from './EffectPicker.tsx'
+import { EffectModal } from './EffectModal.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
@@ -68,7 +68,7 @@ export function CombatantControls({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <EffectPicker onApply={addEffect} />
+        <EffectModal name={name} onApply={addEffect} />
 
         {combatant.concentration ? (
           <button

@@ -9,6 +9,7 @@ import {
   disadvantageOn,
   flatBonus,
   isReminderOnly,
+  modifierEffect,
   reminder,
   saveEnds,
 } from '../../src/combat/effects.ts'
@@ -61,6 +62,32 @@ describe('flatBonus', () => {
   it('accepts an explicit applies target', () => {
     const e = flatBonus('Guidance', '1d4', { applies: 'abilityChecks' })
     expect(e.modifier?.applies).toBe('abilityChecks')
+  })
+})
+
+describe('modifierEffect', () => {
+  it('builds a directional advantage modifier (null value) and a manual default duration', () => {
+    const e = modifierEffect({ name: 'Faerie Fire', mode: 'advantage', direction: 'incoming', applies: 'attackRolls' })
+    expect(e.modifier).toEqual({ applies: 'attackRolls', mode: 'advantage', value: null, direction: 'incoming' })
+    expect(e.duration).toEqual({ type: 'manual' })
+  })
+
+  it('keeps the flat-bonus value and honours an explicit duration', () => {
+    const e = modifierEffect(
+      { name: 'Bless', mode: 'flatBonus', direction: 'outgoing', applies: 'all', value: '1d4' },
+      { duration: { type: 'rounds', rounds: 10 } },
+    )
+    expect(e.modifier?.value).toBe('1d4')
+    expect(e.duration).toEqual({ type: 'rounds', rounds: 10 })
+  })
+
+  it('tones a helpful modifier as a buff and a harmful one as a debuff', () => {
+    // Advantage on its own rolls helps it; advantage against it hurts it.
+    expect(modifierEffect({ name: 'x', mode: 'advantage', direction: 'outgoing', applies: 'all' }).icon).toBe('buff')
+    expect(modifierEffect({ name: 'x', mode: 'advantage', direction: 'incoming', applies: 'all' }).icon).toBe('debuff')
+    // A negative flat bonus is a debuff (Bane −2); a positive one a buff.
+    expect(modifierEffect({ name: 'Bane', mode: 'flatBonus', direction: 'outgoing', applies: 'all', value: -2 }).icon).toBe('debuff')
+    expect(modifierEffect({ name: 'Bless', mode: 'flatBonus', direction: 'outgoing', applies: 'all', value: '1d4' }).icon).toBe('buff')
   })
 })
 

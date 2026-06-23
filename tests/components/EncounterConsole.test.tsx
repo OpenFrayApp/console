@@ -150,11 +150,11 @@ describe('Encounter flow', () => {
     expect(screen.queryByText('No rolls yet.')).toBeNull()
   })
 
-  it('applies an effect from the picker to a combatant', async () => {
+  it('applies an effect from the modal to a combatant', async () => {
     render(<App />)
     await addGoblin()
-    fireEvent.click(screen.getByText('Apply condition'))
-    fireEvent.click(screen.getByText('Prone'))
-    expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row
+    fireEvent.click(screen.getByText('Apply effect'))
+    fireEvent.click(screen.getByRole('button', { name: 'Prone' })) // condition chip in the modal
+    expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row (modal closed)
   })
 })
