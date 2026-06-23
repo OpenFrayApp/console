@@ -154,9 +154,12 @@ to.
 ## Working agreements for agents
 
 - **Keep PRs/changes focused** — one concern at a time.
-- **Explain what and why in plain terms** alongside non-trivial code, so the
-  maintainer (who reviews and tests but may not read every line fluently) can
-  evaluate purpose and correctness at the system level.
+- **Minimal comments.** Let the code speak; comment only when it can't — a
+  non-obvious *why*, a gotcha, a workaround, or a 5e-rules citation. No narration
+  that restates a well-named symbol or obvious code, and no banner/section
+  dividers. A concise one-line header on a function/type is fine when its purpose
+  isn't clear from the name. Keep comments factual (no marketing/self-praise) and
+  current — delete stale ones rather than let them mislead.
 - **Be especially careful and explicit around:** auth, the `owner_id`/RLS boundary,
   anything touching user data, and the dice randomness. A change here that "works"
   in testing can still be wrong (e.g. a data-isolation leak passes functional
