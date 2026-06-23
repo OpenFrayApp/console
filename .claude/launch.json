@@ -10,8 +10,8 @@
     },
     {
       "name": "site",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4321", "--directory", "website"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "website", "run", "dev", "--", "--port", "4321", "--strictPort"],
       "port": 4321,
       "autoPort": false
     }

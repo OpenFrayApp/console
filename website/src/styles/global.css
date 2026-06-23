@@ -1,4 +1,4 @@
-/* OpenFray marketing-site template — shared by every page (home, privacy, terms).
+/* OpenFray marketing-site styles. Shared by every page via Layout.astro.
    Dark is the default; the toggle adds .light to <html>. */
 :root {
   --bg: #020617; --panel: #0b1222; --text: #e2e8f0; --muted: #94a3b8;
@@ -22,8 +22,7 @@ body {
 }
 /* A glow behind the header (top) and a softer mirror behind the footer (bottom),
    with the middle left plain dark. Absolutely positioned so they anchor to the
-   document's top and bottom — not the viewport — and don't become flex items.
-   z-index: -1 keeps them behind the page content. */
+   document's top and bottom — not the viewport — and don't become flex items. */
 body::before, body::after {
   content: ""; position: absolute; left: 0; right: 0;
   pointer-events: none; z-index: -1;
@@ -54,13 +53,11 @@ footer .sep { margin: 0 0.55rem; opacity: 0.5; }
 
 main { flex: 1; width: 100%; }
 
-/* Hero (homepage). */
+/* Hero (homepage, 404). */
 .hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 2.5rem 1.5rem 4rem; }
 .badge { display: inline-block; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; color: var(--accent); border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 0.35rem 0.85rem; margin-bottom: 1.5rem; }
 h1 { font-size: clamp(2.6rem, 8vw, 4.5rem); line-height: 1.02; letter-spacing: -0.03em; margin: 0 0 1rem; font-weight: 800; }
 .tagline { max-width: 38rem; font-size: clamp(1.05rem, 2.4vw, 1.25rem); color: var(--muted); line-height: 1.55; margin: 0 0 1.75rem; }
-ul.points { list-style: none; padding: 0; margin: 0 0 2rem; display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: center; max-width: 42rem; }
-ul.points li { font-size: 0.85rem; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 0.4rem 0.9rem; }
 .cta { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.98rem; font-weight: 600; color: #fff; background: var(--accent-strong); border-radius: 0.6rem; padding: 0.8rem 1.4rem; text-decoration: none; transition: background 0.15s ease; }
 .cta:hover { background: var(--accent); }
 .disclaimer { margin: 2.75rem auto 0; max-width: 40rem; font-size: 0.78rem; color: var(--faint); line-height: 1.6; }
