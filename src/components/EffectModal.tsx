@@ -23,7 +23,30 @@ const CONDITIONS: ConditionName[] = [
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
-type DurChoice = 'manual' | 'r1' | 'r10' | 'consume' | 'save'
+type DurChoice = 'manual' | 'consume' | 'save' | '1r' | '1m' | '10m' | '1h' | '8h' | '24h'
+
+// Timed durations, in combat rounds (6s each), phrased the way spells are — no
+// spell reads "10 rounds". Mirrors the custom-spell form's duration vocabulary.
+const TIMED_ROUNDS: Partial<Record<DurChoice, number>> = {
+  '1r': 1,
+  '1m': 10,
+  '10m': 100,
+  '1h': 600,
+  '8h': 4800,
+  '24h': 14400,
+}
+
+const DURATION_OPTIONS: { value: DurChoice; label: string }[] = [
+  { value: 'manual', label: 'Until removed' },
+  { value: 'consume', label: 'This turn / next attack' },
+  { value: '1r', label: '1 round' },
+  { value: '1m', label: '1 minute' },
+  { value: '10m', label: '10 minutes' },
+  { value: '1h', label: '1 hour' },
+  { value: '8h', label: '8 hours' },
+  { value: '24h', label: '24 hours' },
+  { value: 'save', label: 'Save ends' },
+]
 
 const APPLIES_TEXT: Record<EffectApplies, string> = {
   attackRolls: 'attack rolls',
@@ -135,18 +158,11 @@ export function EffectModal({
     dc: string = saveDc,
     w: 'endOfTurn' | 'startOfTurn' = saveWhen,
   ): EffectDuration => {
-    switch (d) {
-      case 'r1':
-        return { type: 'rounds', rounds: 1 }
-      case 'r10':
-        return { type: 'rounds', rounds: 10 }
-      case 'consume':
-        return { type: 'consumeOnRoll' }
-      case 'save':
-        return { type: 'saveEnds', save: { ability: ab, dc: Number(dc) || 10 }, when: w }
-      default:
-        return { type: 'manual' }
-    }
+    if (d === 'consume') return { type: 'consumeOnRoll' }
+    if (d === 'save') return { type: 'saveEnds', save: { ability: ab, dc: Number(dc) || 10 }, when: w }
+    const rounds = TIMED_ROUNDS[d]
+    if (rounds != null) return { type: 'rounds', rounds }
+    return { type: 'manual' }
   }
 
   // Push the new duration onto everything added this session (no-op when empty).
@@ -263,11 +279,9 @@ export function EffectModal({
                     aria-label="Duration"
                     className={`${FIELD_W} w-48`}
                   >
-                    <option value="manual">Until removed</option>
-                    <option value="r1">1 round</option>
-                    <option value="r10">10 rounds</option>
-                    <option value="consume">This turn / next attack</option>
-                    <option value="save">Save ends</option>
+                    {DURATION_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                   {dur === 'save' && (
                     <span className="flex flex-wrap items-center gap-1 text-sm">

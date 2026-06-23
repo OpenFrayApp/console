@@ -41,7 +41,7 @@ describe('EffectModal', () => {
     const onApply = vi.fn()
     render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
     const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'r10' } })
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1m' } }) // 1 minute = 10 rounds
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
     expect(onApply).toHaveBeenCalledOnce()
     expect(onApply.mock.calls[0][0]).toMatchObject({
@@ -155,7 +155,7 @@ describe('EffectModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '14' } })
     expect(latest[0].duration).toMatchObject({ type: 'saveEnds', save: { ability: 'dex', dc: 14 }, when: 'endOfTurn' })
     // Switching back to a plain duration drops the save again.
-    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'r10' } })
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1m' } })
     expect(latest[0].duration).toEqual({ type: 'rounds', rounds: 10 })
   })
 })

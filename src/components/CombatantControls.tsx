@@ -210,16 +210,16 @@ export function CombatantControls({
       </div>
 
       {saveEndsGroups.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <div className="space-y-1.5 rounded-md border border-amber-300/70 bg-amber-50/70 p-2 dark:border-amber-800/60 dark:bg-amber-950/30">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
             Save ends
           </p>
           {saveEndsGroups.map((group) => (
             <div key={`${group.ability}|${group.dc}|${group.when}`} className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-slate-600 dark:text-slate-300">
+              <span className="font-medium text-slate-700 dark:text-slate-200">
                 {group.effects.map((e) => e.name).join(', ')}
                 {` — ${group.ability.toUpperCase()} save DC ${group.dc}`}
-                <span className="text-slate-400 dark:text-slate-500">
+                <span className="font-normal text-slate-500 dark:text-slate-400">
                   {' '}
                   ({group.when === 'startOfTurn' ? 'start of turn' : 'end of turn'})
                 </span>
