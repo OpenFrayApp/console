@@ -82,7 +82,6 @@ describe('Encounter flow', () => {
     render(<App />)
     await addGoblin()
 
-    // The goblin appears in the tracker row and the center stat block.
     expect(screen.getAllByText('Goblin').length).toBeGreaterThan(0)
     expect(begin()).toBeEnabled()
 
@@ -173,7 +172,6 @@ describe('Encounter flow', () => {
     expect(screen.getByText('Save ends')).toBeInTheDocument()
     expect(screen.getByText(/Frightened.*DEX save DC 15/)).toBeInTheDocument()
 
-    // Marking it saved clears the effect.
     fireEvent.click(screen.getByRole('button', { name: 'Saved — clear' }))
     expect(screen.queryByText('Save ends')).toBeNull()
   })

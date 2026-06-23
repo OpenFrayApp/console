@@ -64,9 +64,9 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText(/Small humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
     expect(screen.getByText('AC')).toBeInTheDocument()
-    expect(screen.getByText('HP (3d6)')).toBeInTheDocument() // HP formula shown at the top
+    expect(screen.getByText('HP (3d6)')).toBeInTheDocument()
     expect(screen.getByText('Init')).toBeInTheDocument()
-    expect(container.textContent).toContain('10/10') // HP current/max
+    expect(container.textContent).toContain('10/10')
   })
 
   it('tints current HP by wound tier when live combat HP is given', () => {
@@ -82,8 +82,8 @@ describe('CreatureStatBlock', () => {
     const row = (re: RegExp) =>
       [...container.querySelectorAll('tr')].find((r) => re.test(r.textContent ?? ''))
     const dex = row(/dex/i)
-    expect(dex?.textContent).toContain('15') // score
-    expect(dex?.textContent).toContain('+2') // modifier
+    expect(dex?.textContent).toContain('15')
+    expect(dex?.textContent).toContain('+2')
     expect(dex?.textContent).toContain('+4') // proficient save (saves.dex = 4)
     const str = row(/str/i)
     expect(str?.textContent).toContain('8')
@@ -98,7 +98,7 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('Bonus Actions')).toBeInTheDocument()
     expect(screen.getByText('Legendary Actions (3/round)')).toBeInTheDocument()
     expect(screen.getByTitle('Legendary')).toBeInTheDocument() // "L" header badge
-    expect(container.textContent).toContain('Pounce (Recharge 5–6)') // recharge surfaced
+    expect(container.textContent).toContain('Pounce (Recharge 5–6)')
   })
 
   it('renders speeds as text, skills, defenses, and senses tables', () => {
@@ -106,10 +106,10 @@ describe('CreatureStatBlock', () => {
     const text = container.textContent ?? ''
     expect(text).toContain('Walk 30 ft.')
     expect(text).toContain('Climb 30 ft.')
-    expect(screen.getByText('Stealth')).toBeInTheDocument() // skills table
-    expect(screen.getByText('Poison')).toBeInTheDocument() // immunities value
+    expect(screen.getByText('Stealth')).toBeInTheDocument()
+    expect(screen.getByText('Poison')).toBeInTheDocument()
     expect(screen.getByText(/Darkvision 60 ft., Passive Perception 9/)).toBeInTheDocument()
-    expect(screen.getByText('Common, Goblin')).toBeInTheDocument() // languages value
+    expect(screen.getByText('Common, Goblin')).toBeInTheDocument()
   })
 
   it('renders markdown (bold) rather than raw asterisks', () => {

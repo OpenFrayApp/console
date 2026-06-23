@@ -47,7 +47,6 @@ a { color: var(--accent); }
 :root.light .theme-toggle .sun { display: none; }
 :root.light .theme-toggle .moon { display: inline; }
 
-/* Shared footer. */
 footer { width: 100%; max-width: 64rem; margin: 0 auto; padding: 1.75rem 1.5rem; text-align: center; font-size: 0.82rem; color: var(--faint); display: flex; align-items: center; justify-content: center; flex-wrap: wrap; border-top: 1px solid var(--border); }
 footer a { color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; }
 footer a:hover { color: var(--text); }

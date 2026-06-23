@@ -116,9 +116,6 @@ export function ActionResolver(props: ResolverProps) {
   )
 }
 
-/** An action with no to-hit and no save deals automatic area damage (e.g. the
- *  Lich's Deathly Teleport): targets just take the damage, no save roll. */
-
 /**
  * The standalone "Group save" — the same save modal with no preset action: the DM
  * picks the ability, DC, on-save rule, targets, and a damage number.
@@ -138,8 +135,6 @@ export function GroupSaveModal({
     <SaveResolver combatants={combatants} dispatch={dispatch} onRoll={onRoll} onClose={onClose} />
   )
 }
-
-// --- shared chrome ----------------------------------------------------------
 
 function Modal({
   title,
@@ -340,8 +335,6 @@ function ConditionChips({
 function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combatant[] {
   return combatants.filter((c) => c.combatantId !== attacker.combatantId && c.status !== 'dead')
 }
-
-// --- attacks: single target, animated to-hit -------------------------------
 
 function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse, onClose }: ResolverProps) {
   // On a crit, the campaign's crit rule governs how the damage dice are rolled.
@@ -609,8 +602,6 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     </Modal>
   )
 }
-
-// --- save / area actions: any number of targets ----------------------------
 
 interface SaveRow {
   result?: SaveResult

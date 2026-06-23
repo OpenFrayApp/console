@@ -30,7 +30,7 @@ describe('buildCreature', () => {
   it('marks user content with a fresh, unique custom: id', () => {
     const a = buildCreature(draft())
     const b = buildCreature(draft())
-    expect(a.id.startsWith('custom:')).toBe(true) // the user-content marker
+    expect(a.id.startsWith('custom:')).toBe(true)
     expect(a.id).not.toBe(b.id) // user content is never matched/deduped
   })
 

@@ -119,8 +119,6 @@ export function DefensesAndSenses({
   )
 }
 
-// --- ability / skill tables -------------------------------------------------
-
 const ABILITY_GROUPS: Ability[][] = [
   ['str', 'dex', 'con'],
   ['int', 'wis', 'cha'],
@@ -257,8 +255,6 @@ function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCh
     </table>
   )
 }
-
-// --- sections ---------------------------------------------------------------
 
 interface Entry {
   name: string

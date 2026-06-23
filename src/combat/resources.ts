@@ -146,8 +146,6 @@ export function grantTempHp(c: Combatant, amount: number): Combatant {
   return { ...c, hp: { ...c.hp, temp } }
 }
 
-// --- spell slots (monsters/NPCs; PCs track their own on their sheet) --------
-
 export function slotMax(c: MonsterCombatant, level: SpellLevel): number {
   return c.creature.spellcasting?.slots?.[level] ?? 0
 }
@@ -173,8 +171,6 @@ export function restoreSlot(
   return { ...c, slotsUsed: { ...c.slotsUsed, [level]: used - 1 } }
 }
 
-// --- legendary actions ------------------------------------------------------
-
 /** Spend legendary actions this round; clamps at 0. (Reset happens in nextTurn.) */
 export function spendLegendary(
   c: MonsterCombatant,
@@ -183,8 +179,6 @@ export function spendLegendary(
   const remaining = Math.max(0, c.legendaryRemaining - clampNonNegativeInt(cost))
   return { ...c, legendaryRemaining: remaining }
 }
-
-// --- limited-use / recharge abilities ---------------------------------------
 
 export function isLimitedAvailable(c: MonsterCombatant, id: string): boolean {
   return c.limitedUseState[id]?.available ?? false
@@ -203,8 +197,6 @@ export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombata
     limitedUseState: { ...c.limitedUseState, [id]: { available: true } },
   }
 }
-
-// --- legendary resistance (turn a failed save into a success, N/day) --------
 
 /** Per-day uses available — the higher in-lair count when the fight is in its lair. */
 export function legendaryResistanceMax(c: MonsterCombatant): number {
@@ -227,8 +219,6 @@ export function spendLegendaryResistance(c: MonsterCombatant): MonsterCombatant 
 export function setInLair(c: MonsterCombatant, inLair: boolean): MonsterCombatant {
   return { ...c, inLair }
 }
-
-// --- spellcasting uses (At Will / N per day, each spell counted on its own) --
 
 /** The state key for a spell: its compendium ref, falling back to its name. */
 export function spellKey(spell: SpellRef): string {

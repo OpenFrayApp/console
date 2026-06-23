@@ -63,7 +63,6 @@ export function CastSpellPanel({
     setQuery('')
   }
 
-  // --- Picker (no spell selected) -----------------------------------------
   if (!spell) {
     const q = query.trim().toLowerCase()
     const matches = [...customSpells, ...(spells ?? [])]
@@ -123,7 +122,6 @@ export function CastSpellPanel({
     )
   }
 
-  // --- Cast (spell selected) ----------------------------------------------
   // An attack or save spell opens the same modal as a monster's action: a save
   // spell → the mass-save modal, an attack spell → the attack modal. There's no
   // caster here, so the DM supplies the spell attack bonus / save DC; magical

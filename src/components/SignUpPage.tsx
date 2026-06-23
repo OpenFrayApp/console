@@ -116,7 +116,6 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mt-10 grid flex-1 items-start gap-10 lg:grid-cols-[1fr_24rem]">
-          {/* Value proposition */}
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               Save your table to the cloud.

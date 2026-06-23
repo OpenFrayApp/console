@@ -265,8 +265,6 @@ export function emptyDraft(): MonsterDraft {
   }
 }
 
-// --- parsing helpers ----------------------------------------------------------
-
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
 const signed = (v: string): number => Math.floor(Number(v) || 0)
 const has = (v: string): boolean => v.trim() !== ''
@@ -516,8 +514,6 @@ export function buildCreature(draft: MonsterDraft): Creature {
 
   return creature
 }
-
-// --- reverse: Creature → draft (for the Edit flow) ----------------------------
 
 const str = (n: number | undefined): string => (n == null ? '' : String(n))
 

@@ -70,8 +70,8 @@ describe('CombatantRow', () => {
   it('shows the name, HP, and AC', () => {
     render(<CombatantRow combatant={monster()} />)
     expect(screen.getByText('Goblin (A)')).toBeInTheDocument()
-    expect(screen.getByText('7')).toBeInTheDocument() // current HP
-    expect(screen.getByText('/7')).toBeInTheDocument() // max
+    expect(screen.getByText('7')).toBeInTheDocument()
+    expect(screen.getByText('/7')).toBeInTheDocument()
     expect(screen.getByText('AC 15')).toBeInTheDocument()
   })
 

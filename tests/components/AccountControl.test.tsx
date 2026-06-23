@@ -54,7 +54,6 @@ describe('AccountControl (anonymous)', () => {
     renderControl({ user: { email: 'dm@openfray.app' } as unknown as User })
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
-    // The AccountPanel renders its sections.
     expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument()
     expect(screen.getByText('Delete account')).toBeInTheDocument()
   })

@@ -30,8 +30,6 @@ import {
 } from '../../src/combat/resources.ts'
 import type { Spellcasting } from '../../src/schema/creature.ts'
 
-// --- fixtures ---------------------------------------------------------------
-
 function creature(): Creature {
   return {
     id: 'srd:mage',
@@ -98,8 +96,6 @@ function pc(overrides: Partial<PlayerCharacter> = {}): PlayerCharacter {
     ...overrides,
   }
 }
-
-// --- HP ---------------------------------------------------------------------
 
 describe('applyDamage', () => {
   it('reduces current HP', () => {
@@ -281,8 +277,6 @@ describe('isBloodied', () => {
   })
 })
 
-// --- spell slots ------------------------------------------------------------
-
 describe('spell slots', () => {
   it('spends a slot and reports remaining, not exceeding max', () => {
     const after = useSlot(monster(), '1')
@@ -299,8 +293,6 @@ describe('spell slots', () => {
     expect(restoreSlot(monster(), '1').slotsUsed['1'] ?? 0).toBe(0)
   })
 })
-
-// --- spellcasting uses ------------------------------------------------------
 
 describe('spell uses (At Will / N per day, each spell on its own)', () => {
   const SPELLCASTING: Spellcasting = {
@@ -355,8 +347,6 @@ describe('spell uses (At Will / N per day, each spell on its own)', () => {
   })
 })
 
-// --- legendary resistance ---------------------------------------------------
-
 describe('legendary resistance', () => {
   const lichLike = (overrides: Partial<MonsterCombatant> = {}) =>
     monster({
@@ -389,8 +379,6 @@ describe('legendary resistance', () => {
   })
 })
 
-// --- legendary actions ------------------------------------------------------
-
 describe('spendLegendary', () => {
   it('decrements remaining legendary actions', () => {
     expect(spendLegendary(monster({ legendaryRemaining: 3 })).legendaryRemaining).toBe(2)
@@ -400,8 +388,6 @@ describe('spendLegendary', () => {
     expect(spendLegendary(monster({ legendaryRemaining: 1 }), 3).legendaryRemaining).toBe(0)
   })
 })
-
-// --- limited-use / recharge -------------------------------------------------
 
 describe('limited-use abilities', () => {
   it('marks an ability used, then recharged', () => {

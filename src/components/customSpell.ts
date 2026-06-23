@@ -124,8 +124,6 @@ export function emptySpellDraft(): SpellDraft {
   }
 }
 
-// --- parsing helpers ----------------------------------------------------------
-
 const has = (v: string): boolean => v.trim() !== ''
 const list = (v: string): string[] => v.split(',').map((s) => s.trim()).filter(Boolean)
 const clampLevel = (v: string): number => Math.max(0, Math.min(9, Math.floor(Number(v) || 0)))
@@ -293,8 +291,6 @@ export function spellVariantPreview(draft: SpellDraft): { label: string; formula
   }
   return out
 }
-
-// --- reverse: Spell → draft (for the Edit flow) -------------------------------
 
 const damageToDrafts = (rows: DamageRoll[] | undefined): SpellDamageDraft[] =>
   (rows ?? []).map((r) => ({ id: uid(), formula: r.formula, type: r.type }))

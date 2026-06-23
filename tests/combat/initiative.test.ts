@@ -19,8 +19,6 @@ import {
   sortByInitiative,
 } from '../../src/combat/initiative.ts'
 
-// --- fixtures ---------------------------------------------------------------
-
 function creature(dex: number, perRound = 0): Creature {
   return {
     id: 'srd:goblin',
@@ -121,8 +119,6 @@ const ids = (e: Encounter) => e.combatants.map((c) => c.combatantId)
 const byId = (e: Encounter, id: string) =>
   e.combatants.find((c) => c.combatantId === id)!
 
-// --- ordering ---------------------------------------------------------------
-
 describe('compareInitiative / sortByInitiative', () => {
   it('orders by initiative descending', () => {
     const sorted = sortByInitiative([monster('a', 10), monster('b', 20)])
@@ -203,8 +199,6 @@ describe('surprise (skipsTurn)', () => {
     expect(byId(e, 'a').effects).toEqual([])
   })
 })
-
-// --- the loop ---------------------------------------------------------------
 
 describe('nextTurn', () => {
   it('advances to the next active combatant', () => {

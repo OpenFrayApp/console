@@ -198,7 +198,7 @@ export function PcStatBlock({
               value={tmpValue}
               edit={onTempInput ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' } : undefined}
             />
-            {/* The modifier, like a creature's Init bonus — the rolled value lives in the tracker. */}
+            {/* The modifier only — the rolled initiative lives in the tracker. */}
             <HeaderStat label="Init" value={signed(initiativeMod)} />
           </>
         }
@@ -226,8 +226,7 @@ export function PcStatBlock({
         languages={languages?.join(', ')}
       />
 
-      {/* DM Notes sit high — the DM's working scratch for this character. When
-          editable, click to edit (saved by the caller); otherwise read-only. */}
+      {/* When editable, click to edit (saved by the caller); otherwise read-only. */}
       {(onEditDmNotes || dmNotes?.trim()) && (
         <div>
           <h4 className={SECTION_HEADING}>DM Notes</h4>

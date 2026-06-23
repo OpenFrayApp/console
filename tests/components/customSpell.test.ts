@@ -42,7 +42,6 @@ describe('buildSpell', () => {
     const spell = buildSpell(
       draft({ name: 'Fireball', level: '3', resolution: 'save', saveAbility: 'dex', saveOutcome: 'half', damage: [dmg('8d6')] }),
     )
-    // The SpellSave shape carries ability + onSave and no DC (the caster owns it).
     expect(spell.mechanics?.save).toEqual({ ability: 'dex', onSave: 'half' })
     expect(Object.keys(spell.mechanics!.save!)).toEqual(['ability', 'onSave'])
   })

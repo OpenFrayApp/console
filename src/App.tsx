@@ -376,8 +376,6 @@ function App() {
     deleteCustomCreature(id)
   }
 
-  // Custom spells mirror custom creatures: saved to the library, shown in the
-  // compendium, and castable from the "Cast spell" picker.
   const handleCreateSpell = (spell: Spell) => {
     setCustomSpells((prev) => [spell, ...prev])
     saveCustomSpell(spell)
@@ -410,8 +408,7 @@ function App() {
     deleteCampaign(id)
   }
 
-  // Roster PCs persist to the user's account (signed-up only). Optimistic in-memory
-  // update first; the cloud write is background and best-effort.
+  // Roster PCs persist to the user's account (signed-up only), same optimistic pattern.
   const handleCreatePc = (pc: RosterPc) => {
     setRosterPcs((prev) => [pc, ...prev])
     saveRosterPc(pc)

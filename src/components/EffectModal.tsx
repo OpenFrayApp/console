@@ -357,7 +357,6 @@ export function EffectModal({
                 </div>
               </div>
 
-              {/* Modifier builder. */}
               <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
                 <p className={LABEL}>Modifier</p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

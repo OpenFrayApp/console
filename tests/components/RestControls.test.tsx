@@ -102,7 +102,6 @@ describe('RestControls', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Short rest' }))
     const dialog = screen.getByRole('dialog', { name: 'Short rest' })
-    // The foe (Goblin) isn't a rest target.
     expect(within(dialog).queryByText('Goblin')).toBeNull()
     // +N heals from current (4 + 5 = 9).
     fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), { target: { value: '+5' } })

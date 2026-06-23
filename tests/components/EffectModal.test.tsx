@@ -137,9 +137,9 @@ describe('EffectModal', () => {
     open()
     const chip = () => screen.getByRole('button', { name: 'Prone' })
     expect(chip()).toHaveAttribute('aria-pressed', 'false')
-    fireEvent.click(chip()) // apply
+    fireEvent.click(chip())
     expect(chip()).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(chip()) // re-click removes it
+    fireEvent.click(chip())
     expect(chip()).toHaveAttribute('aria-pressed', 'false')
   })
 

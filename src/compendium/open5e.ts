@@ -173,8 +173,6 @@ export function mapOpen5eSpell(raw: Open5eSpell): Spell {
   }
 }
 
-// --- Creatures --------------------------------------------------------------
-
 const ABILITY_BY_NAME: Record<string, Ability> = {
   strength: 'str',
   dexterity: 'dex',
