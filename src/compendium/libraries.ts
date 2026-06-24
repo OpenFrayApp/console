@@ -22,7 +22,7 @@ export interface Library {
 export const LIBRARIES: Library[] = [
   {
     id: 'srd-5.2',
-    label: 'Core Rules 2024 (SRD 5.2)',
+    label: 'Core Rules 2024 (SRD 5.2.1)',
     edition: '5.5',
     creaturesFile: 'srd-creatures.json',
     spellsFile: 'srd-spells.json',

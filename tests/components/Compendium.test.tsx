@@ -77,7 +77,7 @@ describe('Compendium', () => {
     render(<Compendium onCreateCreature={() => {}} />)
     await waitFor(() => screen.getByText('Aboleth'))
     fireEvent.click(screen.getByText('Aboleth'))
-    expect(screen.getByText(/Large aberration · CR 10/)).toBeInTheDocument()
+    expect(screen.getByText(/Large Aberration · CR 10/)).toBeInTheDocument()
   })
 
   it('switches to the spells tab and opens a spell', async () => {

@@ -14,6 +14,10 @@ export function formatSenses(senses: Senses): string {
   return parts.join(', ')
 }
 
+/** Title-case a field stored lowercase (creature type / alignment) for display,
+ *  e.g. "lawful evil" → "Lawful Evil", "dragon" → "Dragon". */
+export const titleCase = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase())
+
 /** Display a challenge rating, rendering fractional CRs as fractions. */
 export function formatCr(cr: number | undefined): string {
   if (cr == null) return '—'
@@ -37,7 +41,7 @@ export function sourceInfo(source: string): SourceInfo {
   switch (source) {
     case 'srd-5.2':
       return {
-        ruleset: 'Core Rules 2024 (SRD 5.2)',
+        ruleset: 'Core Rules 2024 (SRD 5.2.1)',
         license: 'CC-BY-4.0',
         url: 'https://www.dndbeyond.com/srd',
       }

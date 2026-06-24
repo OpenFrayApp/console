@@ -8,7 +8,7 @@ import type { Creature, SpellGroup, SpellLevel, Spellcasting, SpellRef } from '.
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
-import { formatCr, formatSenses } from '../compendium/format.ts'
+import { formatCr, formatSenses, titleCase as titleCaseWords } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -83,12 +83,14 @@ export function DefensesAndSenses({
   vulnerabilities,
   senses,
   languages,
+  gear,
 }: {
   resistances?: string
   immunities?: string
   vulnerabilities?: string
   senses?: string
   languages?: string
+  gear?: string
 }) {
   const present = (label: string, value?: string): [string, string][] =>
     value && value.length ? [[label, value]] : []
@@ -100,6 +102,7 @@ export function DefensesAndSenses({
   const senseRows: [string, string][] = [
     ...present('Senses', senses),
     ...present('Languages', languages),
+    ...present('Gear', gear),
   ]
   if (defenseRows.length === 0 && senseRows.length === 0) return null
   return (
@@ -614,8 +617,8 @@ export function CreatureStatBlock({
         originalName={label && label !== creature.name ? creature.name : undefined}
         subtitle={
           <>
-            {[creature.size, creature.type].filter(Boolean).join(' ')}
-            {creature.alignment ? `, ${creature.alignment}` : ''} · CR {formatCr(creature.cr)}
+            {[creature.size, titleCaseWords(creature.type)].filter(Boolean).join(' ')}
+            {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR {formatCr(creature.cr)}
             {creature.xp != null ? ` (${creature.xp.toLocaleString('en-US')} XP)` : ''}
           </>
         }
@@ -663,6 +666,7 @@ export function CreatureStatBlock({
         vulnerabilities={creature.vulnerabilities?.join(', ')}
         senses={formatSenses(creature.senses)}
         languages={creature.languages?.join(', ')}
+        gear={creature.gear?.join(', ')}
       />
 
       {showLrSection && lrTrait && (
@@ -709,6 +713,7 @@ export function CreatureStatBlock({
 
       <SourceLink
         source={creature.source}
+        page={creature.sourcePage}
         actions={
           onEdit || onDelete ? (
             <span className="flex shrink-0 gap-2">
