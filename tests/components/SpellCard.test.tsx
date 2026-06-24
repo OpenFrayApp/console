@@ -41,7 +41,7 @@ describe('SpellCard', () => {
     expect(screen.getByText('150 feet')).toBeInTheDocument()
     expect(screen.getByText('V, S, M (a tiny ball of bat guano)')).toBeInTheDocument()
     expect(screen.getByText(/Classes: Wizard, Sorcerer/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Core Rules 2024/ })).toBeInTheDocument()
+    expect(screen.getByText(/Core Rules 2024/)).toBeInTheDocument()
   })
 
   it('labels a cantrip', () => {

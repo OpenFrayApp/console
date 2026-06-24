@@ -34,24 +34,45 @@ export function proficiencyBonus(cr: number): number {
 }
 
 /**
- * The SRD parenthetical after the CR, e.g. "(XP 15,000, or 18,000 in lair; PB +5)".
- * In a creature's lair (`inLair`), the lair XP becomes the headline value.
+ * The parenthetical after the CR. The **reference** view (compendium) gives the
+ * full SRD detail — "(XP 15,000, or 18,000 in lair; PB +5)". The **combat** view is
+ * stripped to just the XP that applies right now (the lair value when `inLair`); PB
+ * isn't needed at the table.
  */
 export function crDetail(
   c: { cr?: number; xp?: number; xpLair?: number },
-  inLair = false,
+  opts: { inLair?: boolean; combat?: boolean } = {},
 ): string {
+  const { inLair = false, combat = false } = opts
+  if (combat) {
+    const xp = inLair && c.xpLair != null ? c.xpLair : c.xp
+    return xp != null ? ` (XP ${xp.toLocaleString('en-US')})` : ''
+  }
   const parts: string[] = []
   if (c.xp != null) {
-    const headline = inLair && c.xpLair != null ? c.xpLair : c.xp
-    const alt = inLair && c.xpLair != null ? c.xp : c.xpLair
     parts.push(
-      `XP ${headline.toLocaleString('en-US')}` +
-        (alt != null ? `, or ${alt.toLocaleString('en-US')} ${inLair ? 'out of lair' : 'in lair'}` : ''),
+      `XP ${c.xp.toLocaleString('en-US')}` +
+        (c.xpLair != null ? `, or ${c.xpLair.toLocaleString('en-US')} in lair` : ''),
     )
   }
   if (c.cr != null) parts.push(`PB +${proficiencyBonus(c.cr)}`)
   return parts.length ? ` (${parts.join('; ')})` : ''
+}
+
+/**
+ * The standard legendary-actions explanation, name-free and count-dynamic, shown
+ * under the section header for GMs who want the reminder. 2014 wording notes that
+ * some options cost more than one use; 2024 relies on per-action "(Costs N)" labels.
+ */
+export function legendaryPreamble(
+  la: { perRound: number; perRoundLair?: number },
+  edition?: '5.0' | '5.5',
+): string {
+  const uses = `Legendary Action Uses: ${la.perRound}${la.perRoundLair != null ? ` (${la.perRoundLair} in Lair)` : ''}.`
+  if (edition === '5.0') {
+    return `${uses} This creature can take ${la.perRound} legendary actions, choosing from the options below. Only one option can be used at a time and only at the end of another creature’s turn, and some options cost more than one use. It regains spent uses at the start of its turn.`
+  }
+  return `${uses} Immediately after another creature’s turn, this creature can expend a use to take one of the following actions. It regains all expended uses at the start of each of its turns.`
 }
 
 export interface SourceInfo {

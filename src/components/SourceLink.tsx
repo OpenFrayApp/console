@@ -16,21 +16,7 @@ export function SourceLink({ source, page, actions }: { source: string; page?: n
   const ruleset = page != null ? info.ruleset.replace(/\)\s*$/, `, p. ${page})`) : info.ruleset
   return (
     <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-200 pt-2 dark:border-slate-800">
-      <p className="text-xs text-slate-400 dark:text-slate-500">
-        Source:{' '}
-        {info.url ? (
-          <a
-            href={info.url}
-            target="_blank"
-            rel="noreferrer"
-            className="underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300"
-          >
-            {ruleset}
-          </a>
-        ) : (
-          ruleset
-        )}
-      </p>
+      <p className="text-xs text-slate-400 dark:text-slate-500">Source: {ruleset}</p>
       {actions}
     </div>
   )

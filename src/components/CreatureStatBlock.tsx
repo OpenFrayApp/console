@@ -8,7 +8,7 @@ import type { Creature, SpellGroup, SpellLevel, Spellcasting, SpellRef } from '.
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
-import { crDetail, formatCr, formatSenses, titleCase as titleCaseWords } from '../compendium/format.ts'
+import { crDetail, formatCr, formatSenses, legendaryPreamble, titleCase as titleCaseWords } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -307,6 +307,7 @@ export const SECTION_HEADING =
  */
 function ActionSection({
   title,
+  note,
   actions,
   onAction,
   rechargeState,
@@ -316,6 +317,8 @@ function ActionSection({
   legendaryRemaining,
 }: {
   title: string
+  /** Optional explanatory text shown under the header (e.g. the legendary preamble). */
+  note?: string
   actions?: Action[]
   onAction?: (a: Action) => void
   /** id → charged? A rechargeable action that is `false` can't be used until it recharges. */
@@ -332,6 +335,7 @@ function ActionSection({
   return (
     <div>
       <h4 className={SECTION_HEADING}>{title}</h4>
+      {note && <p className="mb-2 text-sm italic leading-relaxed text-slate-500 dark:text-slate-400">{note}</p>}
       <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {actions.map((a) => {
           const note = rechargeLabel(a.recharge)
@@ -624,7 +628,7 @@ export function CreatureStatBlock({
           <>
             {[creature.size, titleCaseWords(creature.type)].filter(Boolean).join(' ')}
             {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR {formatCr(creature.cr)}
-            {crDetail(creature, inLair)}
+            {crDetail(creature, { inLair, combat: hp != null })}
           </>
         }
         legendary={creature.legendaryActions != null}
@@ -695,6 +699,7 @@ export function CreatureStatBlock({
       <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
       <ActionSection
         title={legendaryTitle}
+        note={la ? legendaryPreamble(la, creature.edition) : undefined}
         actions={creature.legendaryActions?.actions}
         onAction={onLegendaryAction ?? onAction}
         clickAll={onLegendaryAction != null}

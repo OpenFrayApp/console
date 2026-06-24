@@ -9,10 +9,10 @@ import { SourceLink } from '../../src/components/SourceLink.tsx'
 afterEach(cleanup)
 
 describe('SourceLink', () => {
-  it('links the ruleset to the source (no license shown)', () => {
+  it('shows the ruleset as plain text — no link, no license', () => {
     render(<SourceLink source="srd-5.2" />)
-    const link = screen.getByRole('link', { name: /Core Rules 2024/ })
-    expect(link).toHaveAttribute('href', 'https://www.dndbeyond.com/srd')
+    expect(screen.getByText(/Core Rules 2024/)).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
     expect(screen.queryByText(/License/)).toBeNull()
   })
 
