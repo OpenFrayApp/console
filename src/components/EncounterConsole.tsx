@@ -9,6 +9,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import { moveById, type EncounterAction } from '../state/encounter.ts'
 import {
+  actionUsesRemaining,
   applyDamage,
   applyHealing,
   castSpell,
@@ -19,6 +20,7 @@ import {
   setCurrentHp,
   slotsRemaining,
   spellUsesRemaining,
+  spendActionUse,
   spendLegendary,
   spendLimited,
 } from '../combat/resources.ts'
@@ -217,6 +219,20 @@ export function EncounterConsole({
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : spendLimited(cc, action.id)),
     })
+  }
+
+  // Spend one per-day use of an action; if it's rollable, also open the resolver
+  // to roll it. Non-rollable per-day actions (e.g. an Archmage's Misty Step) just
+  // decrement, tracked like a spell's "N/Day Each" uses.
+  const consumeLimitedAction = (c: Combatant, action: Action) => {
+    if (c.isPC) return
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : spendActionUse(cc, action.id)),
+    })
+    const rollable = action.toHit != null || action.save != null || (action.damage?.length ?? 0) > 0
+    if (rollable) setActionFor(action)
   }
 
   // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution
@@ -445,6 +461,10 @@ export function EncounterConsole({
                   spellUsesOf={(spell) =>
                     selected.isPC ? null : spellUsesRemaining(selected, spell)
                   }
+                  actionUsesOf={(action) =>
+                    selected.isPC ? null : actionUsesRemaining(selected, action)
+                  }
+                  onUseAction={(action) => consumeLimitedAction(selected, action)}
                   slotsLeftOf={
                     selected.isPC
                       ? undefined

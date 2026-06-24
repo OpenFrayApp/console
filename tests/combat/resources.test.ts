@@ -8,6 +8,7 @@ import type {
   PlayerCharacter,
 } from '../../src/schema/combatant.ts'
 import {
+  actionUsesRemaining,
   applyDamage,
   applyHealing,
   castSpell,
@@ -27,6 +28,7 @@ import {
   spendLimited,
   spellUsesRemaining,
   spendSlot,
+  spendActionUse,
 } from '../../src/combat/resources.ts'
 import type { Spellcasting } from '../../src/schema/creature.ts'
 
@@ -447,5 +449,27 @@ describe('limited-use abilities', () => {
     expect(isLimitedAvailable(used, 'fire-breath')).toBe(false)
     const back = rechargeLimited(used, 'fire-breath')
     expect(isLimitedAvailable(back, 'fire-breath')).toBe(true)
+  })
+})
+
+describe('per-day action uses', () => {
+  const mistyStep = { id: 'misty-step', name: 'Misty Step', kind: 'utility', toHit: null, recharge: { type: 'perDay', value: 3 } } as const
+  const arcaneBurst = { id: 'arcane-burst', name: 'Arcane Burst', kind: 'melee', toHit: 9 } as const
+
+  it('tracks an "N/Day" action as a count, decrementing on each use', () => {
+    const m = monster()
+    expect(actionUsesRemaining(m, mistyStep)).toBe(3)
+    const after = spendActionUse(spendActionUse(m, 'misty-step'), 'misty-step')
+    expect(actionUsesRemaining(after, mistyStep)).toBe(1)
+  })
+
+  it('does not go below zero', () => {
+    let m = monster()
+    for (let i = 0; i < 5; i++) m = spendActionUse(m, 'misty-step')
+    expect(actionUsesRemaining(m, mistyStep)).toBe(0)
+  })
+
+  it('returns null for an action without a per-day recharge', () => {
+    expect(actionUsesRemaining(monster(), arcaneBurst)).toBeNull()
   })
 })

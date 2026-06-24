@@ -6,6 +6,7 @@ import type {
   CombatantStatus,
   MonsterCombatant,
 } from '../schema/combatant.ts'
+import type { Action } from '../schema/action.ts'
 import type { SpellLevel, SpellRef, SpellUsage } from '../schema/creature.ts'
 import { isStable, markDeathSaveFailure, resetDeathSaves } from './deathsaves.ts'
 
@@ -184,6 +185,18 @@ export function spendLimited(c: MonsterCombatant, id: string): MonsterCombatant 
     ...c,
     limitedUseState: { ...c.limitedUseState, [id]: { available: false } },
   }
+}
+
+/** Per-day uses left for an action with an "N/Day" recharge; null for any other action. */
+export function actionUsesRemaining(c: MonsterCombatant, action: Action): number | null {
+  if (action.recharge?.type !== 'perDay') return null
+  return Math.max(0, action.recharge.value - (c.actionUsesSpent?.[action.id] ?? 0))
+}
+
+/** Spend one per-day use of an action (tracked like a spell's "N/Day Each" uses). */
+export function spendActionUse(c: MonsterCombatant, id: string): MonsterCombatant {
+  const spent = c.actionUsesSpent ?? {}
+  return { ...c, actionUsesSpent: { ...spent, [id]: (spent[id] ?? 0) + 1 } }
 }
 
 export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombatant {

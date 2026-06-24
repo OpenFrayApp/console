@@ -104,6 +104,8 @@ export interface MonsterCombatant extends CombatantBase {
   slotsUsed: SlotsUsed
   /** Per-spell uses spent, keyed by spell ref (or name). At-will spells aren't tracked. */
   spellUsesSpent: Record<string, number>
+  /** Per-day uses spent for actions with an "N/Day" recharge (keyed by action id). */
+  actionUsesSpent?: Record<string, number>
   limitedUseState: Record<string, LimitedUseState>
   /** Resets to `creature.legendaryActions.perRound` at the end of its turn. */
   legendaryRemaining: number

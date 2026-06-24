@@ -313,6 +313,8 @@ function ActionSection({
   rechargeState,
   onRecharge,
   resolveSpell,
+  actionUsesOf,
+  onUseAction,
   clickAll,
   legendaryRemaining,
 }: {
@@ -325,6 +327,10 @@ function ActionSection({
   rechargeState?: Record<string, boolean>
   onRecharge?: (a: Action) => void
   resolveSpell?: ResolveSpell
+  /** Per-day uses left for an "N/Day" action, or null if untracked. */
+  actionUsesOf?: (a: Action) => number | null
+  /** Spend one per-day use of an action. */
+  onUseAction?: (a: Action) => void
   /** Make every action clickable (not just rollable ones) — used for legendary
    *  actions, where clicking spends one regardless of attack/save. */
   clickAll?: boolean
@@ -338,9 +344,32 @@ function ActionSection({
       {note && <p className="mb-2 text-sm italic leading-relaxed text-slate-500 dark:text-slate-400">{note}</p>}
       <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {actions.map((a) => {
-          const note = rechargeLabel(a.recharge)
-          const heading = `${a.name}${note ? ` (${note})` : ''}`
-          const charged = rechargeState?.[a.id] !== false
+          const usesLeft = actionUsesOf?.(a) ?? null
+          const recharge = rechargeLabel(a.recharge)
+          const label = usesLeft != null ? [recharge, `${usesLeft} left`].filter(Boolean).join(', ') : recharge
+          const heading = `${a.name}${label ? ` (${label})` : ''}`
+          const available = usesLeft != null ? usesLeft > 0 : rechargeState?.[a.id] !== false
+          // A per-day-limited action is clickable to spend a use (and roll it if it
+          // rolls); greyed once exhausted — tracked like a spell's "N/Day Each" uses.
+          if (onUseAction && usesLeft != null) {
+            return (
+              <p key={a.id} className={available ? undefined : 'opacity-60'}>
+                {available ? (
+                  <button
+                    type="button"
+                    onClick={() => onUseAction(a)}
+                    title={isRollable(a) ? 'Use this action (spends one, then rolls)' : 'Use this action (spends one)'}
+                    className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                  >
+                    {heading}.
+                  </button>
+                ) : (
+                  <span className="font-semibold">{heading}.</span>
+                )}{' '}
+                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+              </p>
+            )
+          }
           // Legendary actions: every entry is clickable (clicking spends its cost).
           if (onAction && clickAll) {
             const cost = a.legendaryCost ?? 1
@@ -361,7 +390,7 @@ function ActionSection({
               </p>
             )
           }
-          if (onAction && isRollable(a) && charged) {
+          if (onAction && isRollable(a) && available) {
             return (
               <p key={a.id}>
                 <button
@@ -377,7 +406,7 @@ function ActionSection({
             )
           }
           // Spent recharge ability — not usable until it recharges. Offer a roll.
-          if (onAction && isRollable(a) && !charged) {
+          if (onAction && isRollable(a) && !available) {
             return (
               <p key={a.id} className="opacity-60">
                 <span className="font-semibold">{heading}.</span>{' '}
@@ -534,6 +563,8 @@ export function CreatureStatBlock({
   onCheck,
   onCastSpell,
   spellUsesOf,
+  actionUsesOf,
+  onUseAction,
   slotsLeftOf,
   resolveSpell,
   onLegendaryAction,
@@ -566,6 +597,10 @@ export function CreatureStatBlock({
   onCheck?: OnCheck
   /** Cast a spell from the spellcasting block. Combat only. */
   onCastSpell?: (spell: SpellRef) => void
+  /** Per-day uses left for an action ("N/Day"), or null if untracked. Combat only. */
+  actionUsesOf?: (action: Action) => number | null
+  /** Spend one per-day use of an action (and roll it if rollable). Combat only. */
+  onUseAction?: (action: Action) => void
   /** Uses left for a spell on the live combatant (null = unlimited). Combat only. */
   spellUsesOf?: SpellUsesOf
   /** Spell slots left at a given level on the live combatant. Combat only. */
@@ -694,9 +729,9 @@ export function CreatureStatBlock({
           resolveSpell={resolveSpell}
         />
       )}
-      <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
-      <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
-      <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
+      <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
+      <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
       <ActionSection
         title={legendaryTitle}
         note={la ? legendaryPreamble(la, creature.edition) : undefined}
