@@ -734,7 +734,7 @@ export function CreatureStatBlock({
       <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
       <ActionSection
         title={legendaryTitle}
-        note={la ? legendaryPreamble(la, creature.edition) : undefined}
+        note={la ? legendaryPreamble(creature.edition) : undefined}
         actions={creature.legendaryActions?.actions}
         onAction={onLegendaryAction ?? onAction}
         clickAll={onLegendaryAction != null}

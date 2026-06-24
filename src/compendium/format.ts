@@ -64,15 +64,11 @@ export function crDetail(
  * under the section header for GMs who want the reminder. 2014 wording notes that
  * some options cost more than one use; 2024 relies on per-action "(Costs N)" labels.
  */
-export function legendaryPreamble(
-  la: { perRound: number; perRoundLair?: number },
-  edition?: '5.0' | '5.5',
-): string {
-  const uses = `Legendary Action Uses: ${la.perRound}${la.perRoundLair != null ? ` (${la.perRoundLair} in Lair)` : ''}.`
+export function legendaryPreamble(edition?: '5.0' | '5.5'): string {
   if (edition === '5.0') {
-    return `${uses} This creature can take ${la.perRound} legendary actions, choosing from the options below. Only one option can be used at a time and only at the end of another creature’s turn, and some options cost more than one use. It regains spent uses at the start of its turn.`
+    return 'This creature can take the legendary actions below, choosing from the options shown. Only one can be used at a time and only at the end of another creature’s turn, and some cost more than one use. It regains spent uses at the start of its turn.'
   }
-  return `${uses} Immediately after another creature’s turn, this creature can expend a use to take one of the following actions. It regains all expended uses at the start of each of its turns.`
+  return 'Immediately after another creature’s turn, this creature can expend a use to take one of the following actions. It regains all expended uses at the start of each of its turns.'
 }
 
 export interface SourceInfo {

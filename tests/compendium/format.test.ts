@@ -34,15 +34,14 @@ describe('crDetail', () => {
 })
 
 describe('legendaryPreamble', () => {
-  it('is name-free, count-dynamic, and shows the lair budget', () => {
-    const p = legendaryPreamble({ perRound: 3, perRoundLair: 4 })
-    expect(p).toContain('Legendary Action Uses: 3 (4 in Lair).')
+  it('is name-free and omits the count (shown in the heading)', () => {
+    const p = legendaryPreamble()
     expect(p).toContain('this creature can expend a use')
-    expect(p).not.toMatch(/dragon/i)
+    expect(p).not.toMatch(/Legendary Action Uses|dragon/i)
   })
 
-  it('2014 wording notes that some options cost more than one use', () => {
-    expect(legendaryPreamble({ perRound: 3 }, '5.0')).toContain('cost more than one use')
+  it('2014 wording notes that some cost more than one use', () => {
+    expect(legendaryPreamble('5.0')).toContain('cost more than one use')
   })
 })
 

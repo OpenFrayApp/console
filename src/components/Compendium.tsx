@@ -261,6 +261,11 @@ export function Compendium({
     () => [...customSpells, ...(spells ?? [])],
     [customSpells, spells],
   )
+  // Resolve `spell:<id>` prose links to their card for the hover preview.
+  const resolveSpell = useMemo(() => {
+    const byId = new Map(allSpells.map((s) => [s.id, s]))
+    return (ref?: string) => (ref ? byId.get(ref) : undefined)
+  }, [allSpells])
 
   const filteredCampaigns = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -492,6 +497,7 @@ export function Compendium({
           // No pt-4 here: the stat block carries its own sticky header with top padding inside its solid background.
           <CreatureStatBlock
             creature={selectedCreature}
+            resolveSpell={resolveSpell}
             onEdit={isCustom(selectedCreature) ? () => startEdit(selectedCreature) : undefined}
             onDelete={isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined}
           />
