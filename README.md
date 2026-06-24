@@ -75,21 +75,23 @@ fine; computing what a character can do is not.
 
 The single-GM combat console is up and running: initiative, monster resources,
 conditions/effects, concentration, group saves, and honest dice with a clear roll log,
-plus the built-in SRD compendium, custom creatures and spells, a durable **Characters**
-roster, and **campaigns** with house rules. It runs fully anonymous in the browser, or
-sign in (free, with **Discord or Google**) to save your fights and custom content to the
-cloud across devices. Still to come: a shared read-only player view, and best-effort
-content imports. Expect rough edges — it's alpha.
+plus the built-in SRD compendium (**Core Rules 2024 and an opt-in 2014 library**),
+custom creatures and spells, JSON creature import, a durable **Characters** roster, and
+**campaigns** with house rules. It runs fully anonymous in the browser, or sign in (free,
+with **Discord or Google**) to save your fights and custom content to the cloud across
+devices. Still to come: a shared read-only player view. Expect rough edges — it's alpha.
 
 ## Content & licensing
 
 - **Code:** [AGPL-3.0](./LICENSE). A hosted/modified version must share its source.
-- **Game content:** SRD 5.2 / 5.1 via [Open5e](https://open5e.com), under
+- **Game content:** SRD 5.2 (Core Rules 2024) via [Open5e](https://open5e.com) and SRD
+  5.1 (Core Rules 2014) via [dnd5eapi.co](https://www.dnd5eapi.co), both under
   **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app and in
   [`CREDITS.md`](./CREDITS.md). All game content uses CC-BY-4.0; the OGL is not used.
-  Some iconic monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC
-  and cannot be included; the custom-creature form and third-party content fill that
-  gap, each honored under its own license.
+  Signed-in users pick which libraries appear (Account → Content libraries; 5.2 by
+  default). Some iconic monsters (Beholder, Mind Flayer, etc.) are excluded from the
+  SRD by WotC and cannot be included; the custom-creature form, JSON import, and
+  third-party content fill that gap, each honored under its own license.
 - *Compatible with fifth edition. Not affiliated with or endorsed by Wizards of
   the Coast.*
 
