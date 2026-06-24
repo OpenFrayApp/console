@@ -137,12 +137,14 @@ dedup.
 5. Dice engine (presets + manual; CSPRNG + bias rejection; roll log).
 6. Effect-aware rolling (auto adv/disadv) — upgrade of #5.
 7. Mass save flow.
-8. SRD compendium + custom-creature/spell form (seed from Open5e **v2**; ingest
-   once, spot-check against schema, clean, then store — do not call live).
-   **Before touching the compendium/ingest, read [`docs/compendium-ingest.md`](docs/compendium-ingest.md)**
-   — it lists the Open5e data gotchas (broken `armor_detail`, prose save actions,
-   `order_in_statblock`, recharge in `usage_limits`, proficient-saves filter, …) and
-   toolchain traps, so they aren't rediscovered the hard way.
+8. SRD compendium + custom-creature/spell form. The compendium ships as static
+   JSON in `public/compendium/`; **the ingest tooling lives in the separate
+   [openfray-compendium](https://github.com/SirDarcanos/openfray-compendium) repo**,
+   not here (SRD 5.2 creatures are parsed from WotC's official 5.2.1 PDF; spells
+   and SRD 5.1 come from Open5e/dnd5eapi). The app only consumes the JSON.
+   **Before touching the compendium data or the stat-block UI, read
+   [`docs/compendium-ingest.md`](docs/compendium-ingest.md)** for the data gotchas
+   and where the tooling now lives.
 9. Concentration auto-checks.
 10. Identity: anonymous (ephemeral, `sessionStorage`) + sign-up (persist, RLS on).
 
