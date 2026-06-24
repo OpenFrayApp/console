@@ -8,11 +8,13 @@ import type { Campaign } from '../schema/campaign.ts'
 import type { RosterPc } from '../schema/roster.ts'
 import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
+import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary, libraryTag } from '../compendium/libraries.ts'
 import { CampaignCard } from './CampaignCard.tsx'
 import { CampaignFormModal } from './CampaignFormModal.tsx'
 import { campaignAcronym } from './campaignLabels.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
+import { ImportCreatureModal } from './ImportCreatureModal.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { PcFormModal } from './PcFormModal.tsx'
@@ -184,6 +186,7 @@ export function Compendium({
   onDeletePc,
   onAddPcToEncounter,
   initialTab = 'creatures',
+  enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   createGated = false,
   onGated,
 }: {
@@ -223,6 +226,8 @@ export function Compendium({
   onAddPcToEncounter?: (pc: RosterPc) => void
   /** Which tab to open on (the component remounts when the view re-enters). */
   initialTab?: Tab
+  /** Content library ids to show (custom content always shows). */
+  enabledLibraries?: string[]
   /** When anonymous, create actions prompt sign-up instead. */
   createGated?: boolean
   onGated?: () => void
@@ -234,6 +239,7 @@ export function Compendium({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // null = closed; otherwise the draft, with editId set when updating an existing creature.
   const [editor, setEditor] = useState<{ draft: MonsterDraft; editId: string | null } | null>(null)
+  const [importing, setImporting] = useState(false)
   const [spellEditor, setSpellEditor] = useState<{ draft: SpellDraft; editId: string | null } | null>(null)
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
   const [pcForm, setPcForm] = useState<{ pc: RosterPc | null } | null>(null)
@@ -269,28 +275,37 @@ export function Compendium({
   }, [rosterPcs, query])
 
   const entries = useMemo(() => {
+    // Edition tag: a custom entry uses its own edition; an SRD entry, its library's.
+    const tag = (item: { id: string; source: string; edition?: string }) =>
+      item.id.startsWith('custom:') ? item.edition : libraryTag(item.source)
     const list =
       tab === 'creatures'
-        ? allCreatures.map((c) => ({
-            id: c.id,
-            name: c.name,
-            meta: `CR ${formatCr(c.cr)}`,
-            custom: c.id.startsWith('custom:'),
-            concentration: false,
-            ritual: false,
-          }))
-        : allSpells.map((s) => ({
-            id: s.id,
-            name: s.name,
-            meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
-            custom: s.id.startsWith('custom:'),
-            concentration: s.concentration,
-            ritual: s.ritual,
-          }))
+        ? allCreatures
+            .filter((c) => inEnabledLibrary(c, enabledLibraries))
+            .map((c) => ({
+              id: c.id,
+              name: c.name,
+              meta: `CR ${formatCr(c.cr)}`,
+              custom: c.id.startsWith('custom:'),
+              lib: tag(c),
+              concentration: false,
+              ritual: false,
+            }))
+        : allSpells
+            .filter((s) => inEnabledLibrary(s, enabledLibraries))
+            .map((s) => ({
+              id: s.id,
+              name: s.name,
+              meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
+              custom: s.id.startsWith('custom:'),
+              lib: tag(s),
+              concentration: s.concentration,
+              ritual: s.ritual,
+            }))
     const q = query.trim().toLowerCase()
     const filtered = q ? list.filter((e) => e.name.toLowerCase().includes(q)) : list
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
-  }, [tab, allCreatures, allSpells, query])
+  }, [tab, allCreatures, allSpells, query, enabledLibraries])
 
   const selectedCreature =
     tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined
@@ -335,6 +350,7 @@ export function Compendium({
   }
 
   const startCreate = () => (createGated ? onGated?.() : setEditor({ draft: emptyDraft(), editId: null }))
+  const startImport = () => (createGated ? onGated?.() : setImporting(true))
   const startEdit = (c: Creature) => setEditor({ draft: creatureToDraft(c), editId: c.id })
   const submitEditor = (creature: Creature) => {
     if (editor?.editId) onUpdateCreature?.(creature)
@@ -434,6 +450,11 @@ export function Compendium({
                       {e.custom && (
                         <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
                           Custom
+                        </span>
+                      )}
+                      {e.lib && (e.custom || enabledLibraries.length > 1) && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          {e.lib}
                         </span>
                       )}
                       {e.meta}
@@ -574,13 +595,24 @@ export function Compendium({
                       : 'Select a spell to view it, or create a custom one.'}
             </p>
             {tab === 'creatures' && (
-              <button
-                type="button"
-                onClick={startCreate}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
-                {createGated ? 'Sign in' : 'Create custom creature'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={startCreate}
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                >
+                  {createGated ? 'Sign in' : 'Create custom creature'}
+                </button>
+                {!createGated && (
+                  <button
+                    type="button"
+                    onClick={startImport}
+                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Import JSON
+                  </button>
+                )}
+              </div>
             )}
             {tab === 'campaigns' && (
               <button
@@ -619,6 +651,12 @@ export function Compendium({
         editId={editor?.editId ?? null}
         onClose={() => setEditor(null)}
         onSubmit={submitEditor}
+      />
+
+      <ImportCreatureModal
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImport={onCreateCreature}
       />
 
       <CustomSpellForm

@@ -3,6 +3,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { LIBRARIES } from '../compendium/libraries.ts'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -35,9 +36,25 @@ function NoteLine({ note }: { note: Note }) {
  * erasure). Shown full-screen over the app; closes on a successful delete (the
  * user is signed out) or via Done.
  */
-export function AccountPanel({ onClose }: { onClose: () => void }) {
+export function AccountPanel({
+  onClose,
+  enabledLibraries,
+  onSetEnabledLibraries,
+}: {
+  onClose: () => void
+  enabledLibraries: string[]
+  onSetEnabledLibraries: (ids: string[]) => void
+}) {
   const { user, signOut, deleteAccount } = useAuth()
   const provider = providerName(user?.app_metadata?.provider)
+
+  // Toggle a library; never drop the last one (an empty compendium is never useful).
+  const toggleLibrary = (id: string) => {
+    const next = enabledLibraries.includes(id)
+      ? enabledLibraries.filter((x) => x !== id)
+      : [...enabledLibraries, id]
+    if (next.length > 0) onSetEnabledLibraries(next)
+  }
 
   const [confirm, setConfirm] = useState('')
   const [delNote, setDelNote] = useState<Note>(null)
@@ -99,6 +116,31 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
             >
               Sign out
             </button>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Content libraries
+            </h3>
+            <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              Choose which rules libraries appear in your compendium and pickers.
+            </p>
+            <div className="space-y-2">
+              {LIBRARIES.map((lib) => (
+                <label
+                  key={lib.id}
+                  className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-indigo-600"
+                    checked={enabledLibraries.includes(lib.id)}
+                    onChange={() => toggleLibrary(lib.id)}
+                  />
+                  {lib.label}
+                </label>
+              ))}
+            </div>
           </section>
 
           <section className="rounded-lg border border-rose-300 p-4 dark:border-rose-900/70">

@@ -4,16 +4,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import { loadSrdCreatures } from '../compendium/srd.ts'
+import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary, libraryTag } from '../compendium/libraries.ts'
 import { formatCr } from '../compendium/format.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
-/** A search popover to pick a creature (SRD + the user's custom library) to add. */
+/** A search popover to pick a creature (enabled SRD libraries + custom) to add. */
 export function AddCreaturePicker({
   onPick,
   customCreatures = [],
+  enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
 }: {
   onPick: (c: Creature) => void
   customCreatures?: Creature[]
+  enabledLibraries?: string[]
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -29,9 +32,17 @@ export function AddCreaturePicker({
   }, [open, creatures])
 
   const q = query.trim().toLowerCase()
+  // Sort before slicing so the top results interleave libraries — otherwise the
+  // first-loaded library (5.2) fills the whole unsearched list.
   const matches = [...customCreatures, ...(creatures ?? [])]
+    .filter((c) => inEnabledLibrary(c, enabledLibraries))
     .filter((c) => !q || c.name.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, 50)
+  // Edition tag: custom uses its own edition (always shown); SRD uses its library's
+  // (shown only when more than one library is on, to avoid noise).
+  const editionTag = (c: Creature): string | undefined =>
+    c.id.startsWith('custom:') ? c.edition : enabledLibraries.length > 1 ? libraryTag(c.source) : undefined
 
   return (
     <div className="relative" ref={ref}>
@@ -65,7 +76,12 @@ export function AddCreaturePicker({
                     className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     <span className="truncate">{c.name}</span>
-                    <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                      {editionTag(c) && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          {editionTag(c)}
+                        </span>
+                      )}
                       CR {formatCr(c.cr)}
                     </span>
                   </button>

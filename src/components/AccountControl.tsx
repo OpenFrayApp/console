@@ -21,7 +21,15 @@ function UserIcon() {
  * opens the full sign-in page (OAuth providers). Renders nothing until Supabase
  * is configured, so an unconfigured build stays anon-only.
  */
-export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
+export function AccountControl({
+  onSignIn,
+  enabledLibraries,
+  onSetEnabledLibraries,
+}: {
+  onSignIn: () => void
+  enabledLibraries: string[]
+  onSetEnabledLibraries: (ids: string[]) => void
+}) {
   const { user, loading, configured, signOut } = useAuth()
   const [accountOpen, setAccountOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -76,7 +84,13 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
             </button>
           </div>
         )}
-        {accountOpen && <AccountPanel onClose={() => setAccountOpen(false)} />}
+        {accountOpen && (
+          <AccountPanel
+            onClose={() => setAccountOpen(false)}
+            enabledLibraries={enabledLibraries}
+            onSetEnabledLibraries={onSetEnabledLibraries}
+          />
+        )}
       </div>
     )
   }

@@ -49,6 +49,8 @@ import { useAuth } from './auth/useAuth.ts'
 import { Compendium, type Tab as CompendiumTab } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
+import { DEFAULT_ENABLED_LIBRARIES, sanitizeEnabledLibraries } from './compendium/libraries.ts'
+import { loadUserSettings, saveUserSettings } from './state/cloudSettings.ts'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
@@ -163,6 +165,13 @@ function App() {
   })
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
+  // Which content libraries the compendium/picker show. Per-account (loaded on
+  // sign-in below); anonymous users keep the 5.2-only default.
+  const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(DEFAULT_ENABLED_LIBRARIES)
+  const setEnabledLibraries = (ids: string[]) => {
+    setEnabledLibrariesState(ids)
+    saveUserSettings({ enabledLibraries: ids })
+  }
   const [encounterPcEdit, setEncounterPcEdit] = useState<{ pc: RosterPc; combatantId: string } | null>(null)
   const [encounterCreatureEdit, setEncounterCreatureEdit] = useState<{ draft: MonsterDraft; editId: string } | null>(null)
   const [encounter, dispatch] = useReducer(
@@ -217,9 +226,13 @@ function App() {
       setCampaigns([])
       setRosterPcs([])
       setActiveCampaignId(null)
+      setEnabledLibrariesState(DEFAULT_ENABLED_LIBRARIES)
       return
     }
     let active = true
+    loadUserSettings().then((s) => {
+      if (active) setEnabledLibrariesState(sanitizeEnabledLibraries(s.enabledLibraries))
+    })
     loadCustomCreatures().then((list) => {
       if (active) setCustomCreatures(list)
     })
@@ -635,11 +648,19 @@ function App() {
               ) : (
                 <AddPcForm onAdd={addCombatant} />
               )}
-              <AddCreaturePicker onPick={handlePick} customCreatures={customCreatures} />
+              <AddCreaturePicker
+                onPick={handlePick}
+                customCreatures={customCreatures}
+                enabledLibraries={enabledLibraries}
+              />
             </div>
           )}
           <ViewToggle view={view} onChange={handleViewChange} />
-          <AccountControl onSignIn={() => setAuthOpen(true)} />
+          <AccountControl
+            onSignIn={() => setAuthOpen(true)}
+            enabledLibraries={enabledLibraries}
+            onSetEnabledLibraries={setEnabledLibraries}
+          />
           <button
             type="button"
             onClick={toggleTheme}
@@ -674,6 +695,7 @@ function App() {
               onDeletePc={handleDeletePc}
               onAddPcToEncounter={handleAddPcToEncounter}
               initialTab={compendiumTab}
+              enabledLibraries={enabledLibraries}
               createGated={!user}
               onGated={() => setAuthOpen(true)}
             />

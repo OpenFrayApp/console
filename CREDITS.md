@@ -28,16 +28,21 @@ Changes were made: content was reformatted and restructured into OpenFray's sche
 
 ## System Reference Document 5.1 (D&D 2014)
 
-*(Include this section only if 5.1 content is ingested.)*
+OpenFray's SRD 5.1 compendium (334 creatures, 319 spells) is used under CC-BY-4.0.
+SRD 5.1 is dual-licensed (OGL 1.0a or CC-BY-4.0); we elect CC-BY-4.0 and never invoke
+the OGL. Required attribution:
 
-This work includes material from the System Reference Document 5.1 ("SRD 5.1")
-by Wizards of the Coast LLC, available under the Creative Commons Attribution 4.0
-International License (<https://creativecommons.org/licenses/by/4.0/legalcode>).
+> This work includes material from the System Reference Document 5.1 ("SRD 5.1")
+> by Wizards of the Coast LLC and available at
+> <https://dnd.wizards.com/resources/systems-reference-document>. The SRD 5.1 is
+> licensed under the Creative Commons Attribution 4.0 International License available
+> at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
-> [Use WotC's exact specified attribution text for SRD 5.1 here.]
+Changes were made: content was reformatted and restructured into OpenFray's schema
+(structured action/damage/spellcasting fields, etc.).
 
-We use this content under CC-BY-4.0 (it is dual-licensed; we do not use the OGL).
-Changes were made: content was reformatted and restructured for use in OpenFray.
+> ⚠️ Verify the wording above against the SRD 5.1 CC-BY preamble before public release —
+> it must match WotC's specified text verbatim.
 
 ## Third-party content
 
@@ -50,7 +55,9 @@ None bundled yet.
 
 ## Data source
 
-Compendium data is sourced via the Open5e API (<https://open5e.com>).
+SRD 5.2 compendium data is sourced via the Open5e API (<https://open5e.com>). SRD 5.1
+data is sourced via the 5e-bits API (<https://www.dnd5eapi.co>). Both deliver WotC's
+SRD content, used here under CC-BY-4.0 (never the OGL).
 
 ---
 

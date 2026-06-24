@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ingest:srd": "node scripts/ingest-srd.ts"
+    "ingest:srd": "node scripts/ingest-srd.ts",
+    "ingest:srd-2014": "node scripts/ingest-srd-2014.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
