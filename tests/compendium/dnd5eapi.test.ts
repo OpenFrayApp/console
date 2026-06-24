@@ -46,7 +46,9 @@ describe('mapDndApiMonster', () => {
         ],
         speed: { walk: '30 ft.' },
         senses: { passive_perception: 12 },
-        languages: 'Any six languages',
+        languages: 'any six languages',
+        damage_resistances: ['damage from spells', 'bludgeoning from nonmagical attacks'],
+        condition_immunities: [{ index: 'charmed', name: 'charmed' }],
       }),
     )
     expect(c.id).toBe('srd-5.1:archmage')
@@ -61,7 +63,10 @@ describe('mapDndApiMonster', () => {
     expect(c.saves).toEqual({ int: 9, wis: 6 })
     expect(c.skills).toEqual({ arcana: 13 })
     expect(c.speed).toEqual({ walk: 30 })
+    // Defenses + languages are capitalized to match the 5.2 set.
     expect(c.languages).toEqual(['Any six languages'])
+    expect(c.resistances).toEqual(['Damage from spells', 'Bludgeoning from nonmagical attacks'])
+    expect(c.conditionImmunities).toEqual(['Charmed'])
   })
 
   it('lifts structured spellcasting into slots + groups (at-will, per level)', () => {
@@ -70,7 +75,7 @@ describe('mapDndApiMonster', () => {
         special_abilities: [
           {
             name: 'Spellcasting',
-            desc: '...',
+            desc: '…prepared:\n- 1st level (4 slots): magic missile\n* The archmage casts these spells on itself before combat.',
             spellcasting: {
               level: 18,
               ability: { index: 'int', name: 'INT' },
@@ -102,6 +107,8 @@ describe('mapDndApiMonster', () => {
     expect(sc.groups[1].spells[0]).toEqual({ name: 'Magic Missile', ref: 'srd-5.1:magic-missile' })
     expect(sc.groups[2].usage).toEqual({ type: 'slots', level: 3 })
     expect(sc.groups[3].usage).toEqual({ type: 'slots', level: 9 })
+    // the footnote from the ability prose is captured as a note
+    expect(sc.note).toBe('* The archmage casts these spells on itself before combat.')
     // the spellcasting ability is not also kept as a trait
     expect(c.traits).toBeUndefined()
   })

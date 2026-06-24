@@ -123,7 +123,7 @@ export function AccountPanel({
               Content libraries
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              Choose which rules libraries appear in your compendium and pickers.
+              Choose which rules libraries appear in your combat console and compendium.
             </p>
             <div className="space-y-2">
               {LIBRARIES.map((lib) => (

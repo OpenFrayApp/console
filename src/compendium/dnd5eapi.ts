@@ -51,6 +51,9 @@ const DAMAGE_TYPES = new Set<DamageType>([
 const refFromUrl = (url: string): string => url.replace(/\/$/, '').split('/').pop() ?? ''
 const feet = (s: string | undefined): number => Number(/(\d+)/.exec(s ?? '')?.[1]) || 0
 const normFormula = (s: string): string => s.replace(/\s+/g, '')
+// dnd5eapi lists defenses/languages lowercase; capitalize the first letter to match
+// the 5.2 set ("fire" → "Fire", "any six languages" → "Any six languages").
+const cap = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
 
 interface IndexName {
   index: string
@@ -201,7 +204,7 @@ function mapAction(a: ApiAction): Action {
   return { ...base, ...(damage && { damage }) }
 }
 
-function mapSpellcasting(sc: ApiSpellcasting): Spellcasting {
+function mapSpellcasting(sc: ApiSpellcasting, desc?: string): Spellcasting {
   const atWill: SpellRef[] = []
   const perDay = new Map<number, SpellRef[]>()
   const byLevel = new Map<number, SpellRef[]>()
@@ -235,11 +238,21 @@ function mapSpellcasting(sc: ApiSpellcasting): Spellcasting {
     if (n > 0) slots[lvl as SpellLevel] = n
   }
 
+  // Footnote lines (e.g. "* The archmage casts these spells on itself before combat.")
+  // live in the ability's prose, not the structured object.
+  const note = (desc ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('*'))
+    .join(' ')
+    .trim()
+
   const out: Spellcasting = { groups }
   if (sc.ability) out.ability = ABILITY_BY_INDEX[sc.ability.index]
   if (sc.dc != null) out.saveDc = sc.dc
   if (sc.modifier != null) out.toHit = sc.modifier
   if (Object.keys(slots).length) out.slots = slots
+  if (note) out.note = note
   return out
 }
 
@@ -293,7 +306,9 @@ export function mapDndApiMonster(raw: DndApiMonster): Creature {
   // Spellcasting is a special ability carrying a structured `spellcasting` object;
   // lift it out and keep the rest as traits.
   const scAbility = raw.special_abilities?.find((s) => s.spellcasting)
-  const spellcasting = scAbility?.spellcasting ? mapSpellcasting(scAbility.spellcasting) : undefined
+  const spellcasting = scAbility?.spellcasting
+    ? mapSpellcasting(scAbility.spellcasting, scAbility.desc)
+    : undefined
   const traits: Trait[] = (raw.special_abilities ?? [])
     .filter((s) => !s.spellcasting)
     .map((s) => ({ name: s.name, text: s.desc ?? '' }))
@@ -321,12 +336,12 @@ export function mapDndApiMonster(raw: DndApiMonster): Creature {
     skills: Object.keys(skills).length ? skills : undefined,
     senses: mapSenses(raw.senses),
     languages: raw.languages
-      ? raw.languages.split(',').map((l) => l.trim()).filter(Boolean)
+      ? raw.languages.split(',').map((l) => cap(l.trim())).filter(Boolean)
       : undefined,
-    resistances: undefIfEmpty(raw.damage_resistances ?? []),
-    immunities: undefIfEmpty(raw.damage_immunities ?? []),
-    vulnerabilities: undefIfEmpty(raw.damage_vulnerabilities ?? []),
-    conditionImmunities: undefIfEmpty((raw.condition_immunities ?? []).map((c) => c.name)),
+    resistances: undefIfEmpty((raw.damage_resistances ?? []).map(cap)),
+    immunities: undefIfEmpty((raw.damage_immunities ?? []).map(cap)),
+    vulnerabilities: undefIfEmpty((raw.damage_vulnerabilities ?? []).map(cap)),
+    conditionImmunities: undefIfEmpty((raw.condition_immunities ?? []).map((c) => cap(c.name))),
     cr: raw.challenge_rating,
     xp: raw.xp,
     traits: undefIfEmpty(traits),
