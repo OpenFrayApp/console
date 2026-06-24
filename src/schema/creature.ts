@@ -94,6 +94,9 @@ export interface Creature {
   source: ContentSource
   /** Campaign-level edition this block belongs to. */
   edition?: Edition
+  /** Page in the source document where this entry appears, e.g. SRD 5.2 p. 255.
+   *  Provenance/reference only — lets the app link back to the source. */
+  sourcePage?: number
   name: string
   size: Size
   /** Creature type, e.g. `"dragon"`, `"humanoid"`. */
@@ -123,6 +126,9 @@ export interface Creature {
   immunities?: string[]
   vulnerabilities?: string[]
   conditionImmunities?: string[]
+  /** Carried equipment, e.g. `["Shortsword", "Studded Leather Armor"]`. The 2024
+   *  stat blocks list this; reference/display only — the app doesn't model it. */
+  gear?: string[]
   /** Challenge rating. */
   cr?: number
   /** XP award for the encounter, e.g. 15000 at CR 16. */

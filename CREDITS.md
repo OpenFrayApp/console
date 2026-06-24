@@ -15,8 +15,9 @@ About/Credits screen), alongside the AGPL §13 "Source" link.
 
 ## System Reference Document 5.2 (D&D 2024)
 
-OpenFray's compendium (331 creatures, 339 spells) is seeded from the SRD 5.2 via
-the Open5e API and used under CC-BY-4.0. Required attribution:
+OpenFray's compendium uses material from the SRD 5.2 under CC-BY-4.0: **330
+creatures parsed from WotC's official SRD 5.2.1 PDF**, plus 339 spells via the
+[Open5e](https://open5e.com) API. Required attribution:
 
 > This work includes material from the System Reference Document 5.2 ("SRD 5.2")
 > by Wizards of the Coast LLC and available at <https://www.dndbeyond.com/srd>.
@@ -24,7 +25,9 @@ the Open5e API and used under CC-BY-4.0. Required attribution:
 > License available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
 Changes were made: content was reformatted and restructured into OpenFray's schema
-(structured action/damage fields, etc.).
+(structured action/damage fields, etc.), and known typos in the source PDF (e.g.
+the Archmage's XP) were corrected. The ingest tooling lives in the
+[openfray-compendium](https://github.com/SirDarcanos/openfray-compendium) repo.
 
 ## System Reference Document 5.1 (D&D 2014)
 
@@ -55,9 +58,12 @@ None bundled yet.
 
 ## Data source
 
-SRD 5.2 compendium data is sourced via the Open5e API (<https://open5e.com>). SRD 5.1
-data is sourced via the 5e-bits API (<https://www.dnd5eapi.co>). Both deliver WotC's
-SRD content, used here under CC-BY-4.0 (never the OGL).
+SRD 5.2 **creatures** are parsed from WotC's official SRD 5.2.1 PDF
+(<https://www.dndbeyond.com/srd>); SRD 5.2 **spells** come via the Open5e API
+(<https://open5e.com>). SRD 5.1 data is sourced via the 5e-bits API
+(<https://www.dnd5eapi.co>). All deliver WotC's SRD content, used here under
+CC-BY-4.0 (never the OGL). The ingest tooling lives in the
+[openfray-compendium](https://github.com/SirDarcanos/openfray-compendium) repo.
 
 ---
 
