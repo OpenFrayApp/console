@@ -240,6 +240,14 @@ describe('creatureToDraft (edit round-trip)', () => {
     }))
     expect(creatureToDraft(original).skills[0]).toMatchObject({ skill: 'stealth', expertise: true })
   })
+
+  it('round-trips an optional description (so editing an import keeps the lore)', () => {
+    const original = buildCreature(draft({ description: 'Born of cinder and spite.' }))
+    expect(original.description).toBe('Born of cinder and spite.')
+    expect(creatureToDraft(original).description).toBe('Born of cinder and spite.')
+    // An empty description stays absent, not an empty string.
+    expect(buildCreature(draft({})).description).toBeUndefined()
+  })
 })
 
 describe('structured HP', () => {

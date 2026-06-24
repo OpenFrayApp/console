@@ -47,12 +47,18 @@ export interface SpellRef {
 }
 
 /**
- * How often a spell can be cast. The 2024 monster model is "At Will" or
- * "N/Day Each" — for the latter, *each* spell in the group has its own N uses,
- * so casting one never spends another's. (`slot` is reserved for the 5.1 slot
- * model, which the 2024 SRD monsters don't use.)
+ * How often a spell can be cast.
+ * - `atWill` — unlimited (also covers cantrips).
+ * - `perDay` — the 2024 "N/Day Each" model; *each* spell in the group has its own
+ *   N uses, so casting one never spends another's (tracked in `spellUsesSpent`).
+ * - `slots` — the 2014/5.1 prepared-caster model; spells of a given level all draw
+ *   from a shared pool of that level's slots (counts in `Spellcasting.slots`,
+ *   consumed via `Combatant.slotsUsed`).
  */
-export type SpellUsage = { type: 'atWill' } | { type: 'perDay'; per: number }
+export type SpellUsage =
+  | { type: 'atWill' }
+  | { type: 'perDay'; per: number }
+  | { type: 'slots'; level: number }
 
 /** A usage tier of a spellcaster's list, e.g. "2/Day Each: Fireball, Invisibility". */
 export interface SpellGroup {
@@ -68,8 +74,10 @@ export interface Spellcasting {
   toHit?: number
   /** Spells grouped by usage, in stat-block order. */
   groups: SpellGroup[]
-  /** Legacy slot model (5.1); unused by 2024 monsters. */
+  /** Per-level spell-slot maxes for the 2014/5.1 slot model (absent for 2024 monsters). */
   slots?: SpellSlots
+  /** A trailing note from the stat block (e.g. "*casts these on itself before combat"). */
+  note?: string
 }
 
 /**
@@ -92,6 +100,11 @@ export interface Creature {
   type: string
   /** Alignment, e.g. `"chaotic evil"`, `"unaligned"`, `"any alignment"`. Display only. */
   alignment?: string
+  /**
+   * Optional flavor/lore text (markdown), display only. Absent for SRD creatures —
+   * that lore isn't part of the SRD — and populated only by imports / custom content.
+   */
+  description?: string
   ac: number
   maxHp: number
   /** Optional dice formula to roll HP per instance, e.g. `"19d12+133"`. */

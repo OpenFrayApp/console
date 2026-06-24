@@ -186,6 +186,14 @@ export function CustomMonsterForm({
                   <input value={d.cr} onChange={(e) => patch({ cr: e.target.value })} placeholder="CR (e.g. 1/2, 6)" aria-label="Challenge rating" inputMode="text" className={FIELD} />
                   <input value={d.sourceName} onChange={(e) => patch({ sourceName: e.target.value })} placeholder="Source (Homebrew, book…)" aria-label="Source" className={FIELD} />
                 </div>
+                <textarea
+                  value={d.description}
+                  onChange={(e) => patch({ description: e.target.value })}
+                  placeholder="Description / lore (optional)"
+                  aria-label="Description"
+                  rows={3}
+                  className={`${FIELD} mt-2`}
+                />
               </Section>
 
               <Section title="Defense & HP" open>

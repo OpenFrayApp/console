@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import type { Action } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
-import type { SpellRef } from '../schema/creature.ts'
+import type { SpellLevel, SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import { moveById, type EncounterAction } from '../state/encounter.ts'
@@ -17,6 +17,7 @@ import {
   rechargeLimited,
   restoreSpellUse,
   setCurrentHp,
+  slotsRemaining,
   spellUsesRemaining,
   spendLegendary,
   spendLimited,
@@ -443,6 +444,11 @@ export function EncounterConsole({
                   onCastSpell={setCastingSpell}
                   spellUsesOf={(spell) =>
                     selected.isPC ? null : spellUsesRemaining(selected, spell)
+                  }
+                  slotsLeftOf={
+                    selected.isPC
+                      ? undefined
+                      : (level) => slotsRemaining(selected, String(level) as SpellLevel)
                   }
                   resolveSpell={resolveSpell}
                   onLegendaryAction={

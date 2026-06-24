@@ -150,7 +150,7 @@ export function slotsRemaining(c: MonsterCombatant, level: SpellLevel): number {
 }
 
 /** Spend one slot of the given level; a no-op if none remain. */
-export function useSlot(c: MonsterCombatant, level: SpellLevel): MonsterCombatant {
+export function spendSlot(c: MonsterCombatant, level: SpellLevel): MonsterCombatant {
   if (slotsRemaining(c, level) <= 0) return c
   const used = (c.slotsUsed[level] ?? 0) + 1
   return { ...c, slotsUsed: { ...c.slotsUsed, [level]: used } }
@@ -242,13 +242,18 @@ export function spellUsesRemaining(
 ): number | null {
   const usage = spellUsage(c, spell)
   if (!usage || usage.type === 'atWill') return null
+  // Slot spells share a per-level pool; surface that level's remaining slots.
+  if (usage.type === 'slots') return slotsRemaining(c, String(usage.level) as SpellLevel)
   return Math.max(0, usage.per - (c.spellUsesSpent[spellKey(spell)] ?? 0))
 }
 
-/** Spend one use of a per-day spell; a no-op for at-will spells or when drained. */
+/** Spend a cast: a per-day spell's own use, or one slot of its level. No-op for
+ *  at-will spells or when the resource is drained. */
 export function castSpell(c: MonsterCombatant, spell: SpellRef): MonsterCombatant {
-  const remaining = spellUsesRemaining(c, spell)
-  if (remaining == null || remaining <= 0) return c
+  const usage = spellUsage(c, spell)
+  if (!usage || usage.type === 'atWill') return c
+  if (usage.type === 'slots') return spendSlot(c, String(usage.level) as SpellLevel)
+  if ((spellUsesRemaining(c, spell) ?? 0) <= 0) return c
   const key = spellKey(spell)
   return {
     ...c,
@@ -256,11 +261,13 @@ export function castSpell(c: MonsterCombatant, spell: SpellRef): MonsterCombatan
   }
 }
 
-/** Give back one spent use of a per-day spell; a no-op if none are spent. */
+/** Give back one spent cast — a per-day use or a level's slot; a no-op if none spent. */
 export function restoreSpellUse(
   c: MonsterCombatant,
   spell: SpellRef,
 ): MonsterCombatant {
+  const usage = spellUsage(c, spell)
+  if (usage?.type === 'slots') return restoreSlot(c, String(usage.level) as SpellLevel)
   const key = spellKey(spell)
   const spent = c.spellUsesSpent[key] ?? 0
   if (spent <= 0) return c

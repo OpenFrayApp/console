@@ -126,7 +126,9 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
 
     // A long rest restores all player characters and friendly NPCs to full HP
     // (setCurrentHp also clears death saves and wakes the unconscious); foes are
-    // untouched. The short-rest tally resets.
+    // untouched. The short-rest tally resets. (Monster spell slots aren't reset here:
+    // monsters are always foes, so a party rest leaves them be — re-add the creature
+    // for a fresh pool, or undo a cast to give a slot back.)
     case 'longRest':
       return {
         ...state,

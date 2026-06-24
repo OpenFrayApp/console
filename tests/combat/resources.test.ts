@@ -26,7 +26,7 @@ import {
   spendLegendaryResistance,
   spendLimited,
   spellUsesRemaining,
-  useSlot,
+  spendSlot,
 } from '../../src/combat/resources.ts'
 import type { Spellcasting } from '../../src/schema/creature.ts'
 
@@ -279,13 +279,13 @@ describe('isBloodied', () => {
 
 describe('spell slots', () => {
   it('spends a slot and reports remaining, not exceeding max', () => {
-    const after = useSlot(monster(), '1')
+    const after = spendSlot(monster(), '1')
     expect(slotsRemaining(after, '1')).toBe(3)
   })
 
   it('does not spend below zero remaining', () => {
     const drained = monster({ slotsUsed: { '1': 4 } })
-    expect(useSlot(drained, '1').slotsUsed['1']).toBe(4)
+    expect(spendSlot(drained, '1').slotsUsed['1']).toBe(4)
   })
 
   it('restores a spent slot, flooring at zero used', () => {
@@ -344,6 +344,58 @@ describe('spell uses (At Will / N per day, each spell on its own)', () => {
     const spent = castSpell(caster(), fireball)
     expect(spellUsesRemaining(restoreSpellUse(spent, fireball), fireball)).toBe(2)
     expect(spellUsesRemaining(restoreSpellUse(caster(), fireball), fireball)).toBe(2)
+  })
+})
+
+describe('castSpell — slot casters (2014, spells of a level share a slot pool)', () => {
+  const SLOT_SPELLCASTING: Spellcasting = {
+    ability: 'int',
+    saveDc: 17,
+    slots: { '1': 4, '3': 3 },
+    groups: [
+      { usage: { type: 'atWill' }, spells: [{ name: 'Fire Bolt', ref: 'srd-5.2:fire-bolt' }] },
+      {
+        usage: { type: 'slots', level: 1 },
+        spells: [
+          { name: 'Magic Missile', ref: 'srd-5.2:magic-missile' },
+          { name: 'Mage Armor', ref: 'srd-5.2:mage-armor' },
+        ],
+      },
+      { usage: { type: 'slots', level: 3 }, spells: [{ name: 'Fireball', ref: 'srd-5.2:fireball' }] },
+    ],
+  }
+  const slotCaster = () => monster({ creature: { ...creature(), spellcasting: SLOT_SPELLCASTING } })
+  const magicMissile = SLOT_SPELLCASTING.groups[1].spells[0]
+  const mageArmor = SLOT_SPELLCASTING.groups[1].spells[1]
+  const fireball = SLOT_SPELLCASTING.groups[2].spells[0]
+  const fireBolt = SLOT_SPELLCASTING.groups[0].spells[0]
+
+  it('shows the level’s remaining slots as the spell’s count', () => {
+    expect(spellUsesRemaining(slotCaster(), magicMissile)).toBe(4)
+    expect(spellUsesRemaining(slotCaster(), fireball)).toBe(3)
+  })
+
+  it('casting spends one slot of that level, shared across the level’s spells', () => {
+    const after = castSpell(slotCaster(), magicMissile)
+    expect(after.slotsUsed['1']).toBe(1)
+    expect(spellUsesRemaining(after, magicMissile)).toBe(3)
+    expect(spellUsesRemaining(after, mageArmor)).toBe(3) // shares the 1st-level pool
+    expect(spellUsesRemaining(after, fireball)).toBe(3) // 3rd-level untouched
+  })
+
+  it('treats cantrips in a slot caster as unlimited', () => {
+    expect(spellUsesRemaining(slotCaster(), fireBolt)).toBeNull()
+    expect(castSpell(slotCaster(), fireBolt).slotsUsed).toEqual({})
+  })
+
+  it('clamps a drained level at zero and restores a slot', () => {
+    let c = slotCaster()
+    for (let i = 0; i < 3; i++) c = castSpell(c, fireball)
+    expect(spellUsesRemaining(c, fireball)).toBe(0)
+    c = castSpell(c, fireball) // no slots left → no-op
+    expect(c.slotsUsed['3']).toBe(3)
+    c = restoreSpellUse(c, fireball)
+    expect(spellUsesRemaining(c, fireball)).toBe(1)
   })
 })
 

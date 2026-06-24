@@ -4,7 +4,7 @@
 import type { Ability, AbilityScores as AbilityScoreMap, SaveBonuses, SkillBonuses } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
-import type { Creature, SpellGroup, Spellcasting, SpellRef } from '../schema/creature.ts'
+import type { Creature, SpellGroup, SpellLevel, Spellcasting, SpellRef } from '../schema/creature.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
@@ -397,8 +397,13 @@ function ActionSection({
   )
 }
 
+const LEVEL_ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
+
 function usageLabel(group: SpellGroup): string {
   if (group.usage.type === 'atWill') return 'At Will'
+  if (group.usage.type === 'slots') {
+    return `${LEVEL_ORDINAL[group.usage.level] ?? `${group.usage.level}th`} Level`
+  }
   return `${group.usage.per}/Day Each`
 }
 
@@ -420,11 +425,13 @@ function SpellcastingSection({
   spellcasting,
   onCast,
   usesOf,
+  slotsLeftOf,
   resolveSpell,
 }: {
   spellcasting: Spellcasting
   onCast?: (spell: SpellRef) => void
   usesOf?: SpellUsesOf
+  slotsLeftOf?: (level: number) => number
   resolveSpell?: ResolveSpell
 }) {
   // The hover preview is anchored with a fixed, viewport-clamped position so it
@@ -444,43 +451,59 @@ function SpellcastingSection({
         {spellcastingHeader(spellcasting)}
       </p>
       <div className="space-y-2">
-        {spellcasting.groups.map((group, i) => (
-          <div key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-              {usageLabel(group)}
-            </span>
-            {group.spells.map((spell) => {
-              const remaining = usesOf?.(spell) ?? null
-              const drained = remaining === 0
-              const label = remaining == null ? spell.name : `${spell.name} (${remaining})`
-              if (!onCast) {
-                return (
-                  <span key={spell.ref ?? spell.name} className="text-slate-600 dark:text-slate-300">
-                    {label}
+        {spellcasting.groups.map((group, i) => {
+          // Slot groups carry the count on the level label; all the level's spells
+          // share that pool, so they don't show per-spell counts.
+          const level = group.usage.type === 'slots' ? group.usage.level : null
+          const slotMax = level != null ? (spellcasting.slots?.[String(level) as SpellLevel] ?? 0) : 0
+          const slotLeft = level != null ? (slotsLeftOf ? slotsLeftOf(level) : slotMax) : 0
+          const slotsDrained = level != null && slotLeft <= 0
+          return (
+            <div key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                {usageLabel(group)}
+                {level != null && slotMax > 0 && (
+                  <span className="ml-1 font-normal normal-case text-slate-400 dark:text-slate-500">
+                    ({slotsLeftOf ? `${slotLeft}/${slotMax} slots` : `${slotMax} ${slotMax === 1 ? 'slot' : 'slots'}`})
                   </span>
+                )}
+              </span>
+              {group.spells.map((spell) => {
+                const remaining = level != null ? null : (usesOf?.(spell) ?? null)
+                const drained = level != null ? slotsDrained : remaining === 0
+                const label = remaining == null ? spell.name : `${spell.name} (${remaining})`
+                if (!onCast) {
+                  return (
+                    <span key={spell.ref ?? spell.name} className="text-slate-600 dark:text-slate-300">
+                      {label}
+                    </span>
+                  )
+                }
+                return (
+                  <button
+                    key={spell.ref ?? spell.name}
+                    type="button"
+                    onClick={() => onCast(spell)}
+                    onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
+                    onMouseLeave={closePreview}
+                    title={`Cast ${spell.name}`}
+                    className={
+                      drained
+                        ? 'text-slate-400 line-through hover:no-underline dark:text-slate-600'
+                        : 'font-medium text-indigo-600 hover:underline dark:text-indigo-400'
+                    }
+                  >
+                    {label}
+                  </button>
                 )
-              }
-              return (
-                <button
-                  key={spell.ref ?? spell.name}
-                  type="button"
-                  onClick={() => onCast(spell)}
-                  onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
-                  onMouseLeave={closePreview}
-                  title={`Cast ${spell.name}`}
-                  className={
-                    drained
-                      ? 'text-slate-400 line-through hover:no-underline dark:text-slate-600'
-                      : 'font-medium text-indigo-600 hover:underline dark:text-indigo-400'
-                  }
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        ))}
+              })}
+            </div>
+          )
+        })}
       </div>
+      {spellcasting.note && (
+        <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">{spellcasting.note}</p>
+      )}
       {preview && (
         <div className={FLOATING_CARD} style={preview.style} onMouseEnter={cancelClose} onMouseLeave={closePreview}>
           <SpellCard spell={preview.value} />
@@ -504,6 +527,7 @@ export function CreatureStatBlock({
   onCheck,
   onCastSpell,
   spellUsesOf,
+  slotsLeftOf,
   resolveSpell,
   onLegendaryAction,
   legendaryRemaining,
@@ -536,6 +560,8 @@ export function CreatureStatBlock({
   onCastSpell?: (spell: SpellRef) => void
   /** Uses left for a spell on the live combatant (null = unlimited). Combat only. */
   spellUsesOf?: SpellUsesOf
+  /** Spell slots left at a given level on the live combatant. Combat only. */
+  slotsLeftOf?: (level: number) => number
   /** Resolve a spell's compendium entry for the hover preview / cast card. */
   resolveSpell?: ResolveSpell
   /** Use a legendary action (spends one, then resolves it if it's rollable). Combat only. */
@@ -651,6 +677,7 @@ export function CreatureStatBlock({
           spellcasting={creature.spellcasting}
           onCast={onCastSpell}
           usesOf={spellUsesOf}
+          slotsLeftOf={slotsLeftOf}
           resolveSpell={resolveSpell}
         />
       )}
@@ -668,6 +695,17 @@ export function CreatureStatBlock({
         resolveSpell={resolveSpell}
       />
       <ActionSection title="Lair Actions" actions={creature.lairActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+
+      {creature.description && (
+        <details>
+          <summary className="mb-2 cursor-pointer select-none border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
+            Description
+          </summary>
+          <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <Markdown resolveSpell={resolveSpell}>{creature.description}</Markdown>
+          </div>
+        </details>
+      )}
 
       <SourceLink
         source={creature.source}

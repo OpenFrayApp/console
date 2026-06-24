@@ -90,6 +90,8 @@ export interface MonsterDraft {
   /** Creature type (humanoid, dragon, …); empty = unspecified. */
   type: string
   alignment: string
+  /** Optional flavor/lore (markdown), display only. */
+  description: string
   /** Free-text origin label (book, "Homebrew"); stored as `source`, still user content. */
   sourceName: string
   edition: Edition
@@ -229,6 +231,7 @@ export function emptyDraft(): MonsterDraft {
     size: 'Medium',
     type: '',
     alignment: '',
+    description: '',
     sourceName: '',
     edition: '5.5',
     cr: '',
@@ -473,6 +476,7 @@ export function buildCreature(draft: MonsterDraft): Creature {
   }
 
   if (has(draft.alignment)) creature.alignment = draft.alignment
+  if (has(draft.description)) creature.description = draft.description.trim()
   if (hpFormula) creature.hpFormula = hpFormula
   if (Object.keys(saves).length) creature.saves = saves
   if (Object.keys(skills).length) creature.skills = skills
@@ -586,6 +590,7 @@ export function creatureToDraft(c: Creature): MonsterDraft {
     size: c.size,
     type: c.type,
     alignment: c.alignment ?? '',
+    description: c.description ?? '',
     sourceName: c.source === 'custom' ? '' : c.source,
     edition: c.edition ?? '5.5',
     cr: c.cr == null ? '' : crToString(c.cr),
