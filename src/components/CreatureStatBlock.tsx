@@ -8,7 +8,7 @@ import type { Creature, SpellGroup, SpellLevel, Spellcasting, SpellRef } from '.
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
-import { formatCr, formatSenses, titleCase as titleCaseWords } from '../compendium/format.ts'
+import { crDetail, formatCr, formatSenses, titleCase as titleCaseWords } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -535,6 +535,7 @@ export function CreatureStatBlock({
   onLegendaryAction,
   legendaryRemaining,
   legendaryResistanceLeft,
+  inLair = false,
   onEdit,
   onDelete,
 }: {
@@ -574,6 +575,8 @@ export function CreatureStatBlock({
   /** Legendary Resistance uses left, shown as its own section header in combat
    *  (the Use button + In-lair toggle live in the controls). */
   legendaryResistanceLeft?: number
+  /** Whether the creature is currently in its lair — swaps the lair XP/legendary budget. */
+  inLair?: boolean
   /** Edit this creature (custom library only) — shown in the source row. */
   onEdit?: () => void
   /** Delete this creature from the library (custom only) — shown in the source row. */
@@ -585,12 +588,14 @@ export function CreatureStatBlock({
   const lrTrait = creature.traits?.find((t) => /^Legendary Resistance/i.test(t.name))
   const showLrSection = legendaryResistanceLeft != null && lrTrait != null
   const traits = showLrSection ? creature.traits?.filter((t) => t !== lrTrait) : creature.traits
-  const perRound = creature.legendaryActions?.perRound
-  const legendaryTitle = !creature.legendaryActions
+  const la = creature.legendaryActions
+  const perRound = la && inLair && la.perRoundLair != null ? la.perRoundLair : la?.perRound
+  const lairNote = la?.perRoundLair != null && !inLair ? `, or ${la.perRoundLair} in lair` : ''
+  const legendaryTitle = !la
     ? 'Legendary Actions'
     : legendaryRemaining != null
       ? `Legendary Actions (${legendaryRemaining} of ${perRound} left)`
-      : `Legendary Actions (${perRound}/round)`
+      : `Legendary Actions (${perRound}/round${lairNote})`
 
   const current = hp ? hp.current : creature.maxHp
   const max = hp ? hp.max : creature.maxHp
@@ -619,7 +624,7 @@ export function CreatureStatBlock({
           <>
             {[creature.size, titleCaseWords(creature.type)].filter(Boolean).join(' ')}
             {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR {formatCr(creature.cr)}
-            {creature.xp != null ? ` (${creature.xp.toLocaleString('en-US')} XP)` : ''}
+            {crDetail(creature, inLair)}
           </>
         }
         legendary={creature.legendaryActions != null}

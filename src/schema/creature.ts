@@ -30,6 +30,8 @@ export interface LimitedUse {
 
 export interface LegendaryActions {
   perRound: number
+  /** Higher per-round budget while the creature is in its lair, when it has one. */
+  perRoundLair?: number
   actions: Action[]
 }
 
@@ -133,6 +135,8 @@ export interface Creature {
   cr?: number
   /** XP award for the encounter, e.g. 15000 at CR 16. */
   xp?: number
+  /** XP award while the creature is in its lair, when the SRD lists a lair value. */
+  xpLair?: number
 
   /** Passive features shown above the actions. */
   traits?: Trait[]

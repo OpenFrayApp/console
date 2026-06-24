@@ -9,11 +9,16 @@ import { SourceLink } from '../../src/components/SourceLink.tsx'
 afterEach(cleanup)
 
 describe('SourceLink', () => {
-  it('shows the ruleset and a linked license', () => {
+  it('links the ruleset to the source (no license shown)', () => {
     render(<SourceLink source="srd-5.2" />)
-    expect(screen.getByText(/Core Rules 2024/)).toBeInTheDocument()
-    const link = screen.getByRole('link', { name: 'CC-BY-4.0' })
+    const link = screen.getByRole('link', { name: /Core Rules 2024/ })
     expect(link).toHaveAttribute('href', 'https://www.dndbeyond.com/srd')
+    expect(screen.queryByText(/License/)).toBeNull()
+  })
+
+  it('folds the page into the ruleset parens', () => {
+    render(<SourceLink source="srd-5.2" page={266} />)
+    expect(screen.getByText(/\(SRD 5\.2\.1, p\. 266\)/)).toBeInTheDocument()
   })
 
   it('shows the 2014 ruleset', () => {

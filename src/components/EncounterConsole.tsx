@@ -464,6 +464,7 @@ export function EncounterConsole({
                       ? legendaryResistanceLeft(selected)
                       : undefined
                   }
+                  inLair={selected.inLair}
                 />
               )}
             </div>

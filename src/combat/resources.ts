@@ -210,9 +210,20 @@ export function spendLegendaryResistance(c: MonsterCombatant): MonsterCombatant 
   return { ...c, legendaryResistanceSpent: (c.legendaryResistanceSpent ?? 0) + 1 }
 }
 
-/** Toggle whether the fight is in this creature's lair (raises its max LR). */
+/** Legendary actions per round — the higher in-lair budget while in the lair. */
+export function legendaryPerRound(c: MonsterCombatant): number {
+  const la = c.creature.legendaryActions
+  if (!la) return 0
+  return c.inLair && la.perRoundLair != null ? la.perRoundLair : la.perRound
+}
+
+/** Toggle whether the fight is in this creature's lair (raises its max LR and, for
+ *  a creature with a lair legendary budget, refreshes legendary actions to it). */
 export function setInLair(c: MonsterCombatant, inLair: boolean): MonsterCombatant {
-  return { ...c, inLair }
+  const next = { ...c, inLair }
+  return c.creature.legendaryActions?.perRoundLair != null
+    ? { ...next, legendaryRemaining: legendaryPerRound(next) }
+    : next
 }
 
 /** The state key for a spell: its compendium ref, falling back to its name. */

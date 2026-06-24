@@ -27,6 +27,33 @@ export function formatCr(cr: number | undefined): string {
   return String(cr)
 }
 
+/** Proficiency bonus for a challenge rating (2024 table). */
+export function proficiencyBonus(cr: number): number {
+  if (cr <= 4) return 2
+  return 3 + Math.floor((Math.min(cr, 28) - 5) / 4) + (cr >= 29 ? 1 : 0)
+}
+
+/**
+ * The SRD parenthetical after the CR, e.g. "(XP 15,000, or 18,000 in lair; PB +5)".
+ * In a creature's lair (`inLair`), the lair XP becomes the headline value.
+ */
+export function crDetail(
+  c: { cr?: number; xp?: number; xpLair?: number },
+  inLair = false,
+): string {
+  const parts: string[] = []
+  if (c.xp != null) {
+    const headline = inLair && c.xpLair != null ? c.xpLair : c.xp
+    const alt = inLair && c.xpLair != null ? c.xp : c.xpLair
+    parts.push(
+      `XP ${headline.toLocaleString('en-US')}` +
+        (alt != null ? `, or ${alt.toLocaleString('en-US')} ${inLair ? 'out of lair' : 'in lair'}` : ''),
+    )
+  }
+  if (c.cr != null) parts.push(`PB +${proficiencyBonus(c.cr)}`)
+  return parts.length ? ` (${parts.join('; ')})` : ''
+}
+
 export interface SourceInfo {
   /** Which ruleset the content is from, e.g. "Core Rules 2024 (SRD 5.2)". */
   ruleset: string

@@ -62,7 +62,7 @@ describe('CreatureStatBlock', () => {
   it('renders the header with CR, AC, HP, and Init', () => {
     const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     expect(screen.getByText('Goblin')).toBeInTheDocument()
-    expect(screen.getByText(/Small Humanoid · CR 1\/4 \(50 XP\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Small Humanoid · CR 1\/4 \(XP 50; PB \+2\)/)).toBeInTheDocument()
     expect(screen.getByText('AC')).toBeInTheDocument()
     expect(screen.getByText('HP (3d6)')).toBeInTheDocument()
     expect(screen.getByText('Init')).toBeInTheDocument()
