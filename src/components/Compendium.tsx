@@ -8,7 +8,12 @@ import type { Campaign } from '../schema/campaign.ts'
 import type { RosterPc } from '../schema/roster.ts'
 import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
-import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary, libraryTag } from '../compendium/libraries.ts'
+import {
+  DEFAULT_ENABLED_LIBRARIES,
+  inEnabledLibrary,
+  librarySource,
+  libraryTag,
+} from '../compendium/libraries.ts'
 import { CampaignCard } from './CampaignCard.tsx'
 import { CampaignFormModal } from './CampaignFormModal.tsx'
 import { campaignAcronym } from './campaignLabels.ts'
@@ -292,6 +297,7 @@ export function Compendium({
               name: c.name,
               meta: `CR ${formatCr(c.cr)}`,
               custom: c.id.startsWith('custom:'),
+              src: c.id.startsWith('custom:') ? undefined : librarySource(c.source),
               lib: tag(c),
               concentration: false,
               ritual: false,
@@ -303,6 +309,7 @@ export function Compendium({
               name: s.name,
               meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
               custom: s.id.startsWith('custom:'),
+              src: s.id.startsWith('custom:') ? undefined : librarySource(s.source),
               lib: tag(s),
               concentration: s.concentration,
               ritual: s.ritual,
@@ -455,6 +462,11 @@ export function Compendium({
                       {e.custom && (
                         <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
                           Custom
+                        </span>
+                      )}
+                      {e.src && enabledLibraries.length > 1 && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          {e.src}
                         </span>
                       )}
                       {e.lib && (e.custom || enabledLibraries.length > 1) && (

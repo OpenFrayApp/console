@@ -4,7 +4,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import { loadSrdCreatures } from '../compendium/srd.ts'
-import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary, libraryTag } from '../compendium/libraries.ts'
+import {
+  DEFAULT_ENABLED_LIBRARIES,
+  inEnabledLibrary,
+  librarySource,
+  libraryTag,
+} from '../compendium/libraries.ts'
 import { formatCr } from '../compendium/format.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
@@ -39,10 +44,15 @@ export function AddCreaturePicker({
     .filter((c) => !q || c.name.toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, 50)
+  const isCustom = (c: Creature) => c.id.startsWith('custom:')
+  // Source tag (Core / ToB3): only for library creatures, and only when more than one
+  // library is on — with a single library every entry shares its source.
+  const sourceTag = (c: Creature): string | undefined =>
+    isCustom(c) || enabledLibraries.length <= 1 ? undefined : librarySource(c.source)
   // Edition tag: custom uses its own edition (always shown); SRD uses its library's
   // (shown only when more than one library is on, to avoid noise).
   const editionTag = (c: Creature): string | undefined =>
-    c.id.startsWith('custom:') ? c.edition : enabledLibraries.length > 1 ? libraryTag(c.source) : undefined
+    isCustom(c) ? c.edition : enabledLibraries.length > 1 ? libraryTag(c.source) : undefined
 
   return (
     <div className="relative" ref={ref}>
@@ -77,6 +87,16 @@ export function AddCreaturePicker({
                   >
                     <span className="truncate">{c.name}</span>
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                      {isCustom(c) && (
+                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                          Custom
+                        </span>
+                      )}
+                      {sourceTag(c) && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          {sourceTag(c)}
+                        </span>
+                      )}
                       {editionTag(c) && (
                         <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                           {editionTag(c)}

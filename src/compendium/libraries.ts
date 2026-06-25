@@ -14,6 +14,8 @@ export interface Library {
   /** Matches the entries' `source`. */
   id: string
   label: string
+  /** Compact source label for the dropdown/list badge, e.g. "Core" / "ToB3". */
+  shortLabel: string
   edition: Edition
   creaturesFile: string
   /** Absent for creatures-only libraries (e.g. a bestiary like Tome of Beasts). */
@@ -24,6 +26,7 @@ export const LIBRARIES: Library[] = [
   {
     id: 'srd-5.2',
     label: 'Core Rules 2024 (SRD 5.2.1)',
+    shortLabel: 'Core',
     edition: '5.5',
     creaturesFile: 'srd-creatures.json',
     spellsFile: 'srd-spells.json',
@@ -31,6 +34,7 @@ export const LIBRARIES: Library[] = [
   {
     id: 'srd-5.1',
     label: 'Core Rules 2014 (SRD 5.1)',
+    shortLabel: 'Core',
     edition: '5.0',
     creaturesFile: 'srd-2014-creatures.json',
     spellsFile: 'srd-2014-spells.json',
@@ -38,6 +42,7 @@ export const LIBRARIES: Library[] = [
   {
     id: 'kobold-press-tob3',
     label: 'Tome of Beasts 3 (Kobold Press)',
+    shortLabel: 'ToB3',
     edition: '5.0',
     creaturesFile: 'tob3-creatures.json',
   },
@@ -68,4 +73,9 @@ export function inEnabledLibrary(
 /** The edition tag for a source (e.g. "5.5" / "5.0"), for the compendium badge. */
 export function libraryTag(source: string): string | undefined {
   return LIBRARIES.find((l) => l.id === source)?.edition
+}
+
+/** The compact source label for a source (e.g. "Core" / "ToB3"), for the source badge. */
+export function librarySource(source: string): string | undefined {
+  return LIBRARIES.find((l) => l.id === source)?.shortLabel
 }

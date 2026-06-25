@@ -21,6 +21,19 @@ vi.mock('../../src/compendium/srd.ts', () => ({
         senses: { passivePerception: 9 },
         cr: 0.25,
       },
+      {
+        id: 'kobold-press-tob3:clockwork-myrmidon',
+        name: 'Clockwork Myrmidon',
+        source: 'kobold-press-tob3',
+        size: 'Medium',
+        type: 'construct',
+        ac: 18,
+        maxHp: 95,
+        speed: { walk: 30 },
+        abilities: { str: 18, dex: 14, con: 16, int: 10, wis: 11, cha: 5 },
+        senses: { passivePerception: 12 },
+        cr: 5,
+      },
     ]),
   loadSrdSpells: () => Promise.resolve([]),
 }))
@@ -43,5 +56,29 @@ describe('AddCreaturePicker', () => {
 
     expect(onPick).toHaveBeenCalledOnce()
     expect(onPick.mock.calls[0][0].name).toBe('Goblin')
+  })
+
+  it('badges each creature with its source when more than one library is enabled', async () => {
+    render(
+      <AddCreaturePicker
+        onPick={vi.fn()}
+        enabledLibraries={['srd-5.2', 'kobold-press-tob3']}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Add creature'))
+    await waitFor(() => screen.getByText('Clockwork Myrmidon'))
+
+    expect(screen.getByText('Core')).toBeTruthy()
+    expect(screen.getByText('ToB3')).toBeTruthy()
+  })
+
+  it('omits the source badge when only one library is enabled', async () => {
+    render(<AddCreaturePicker onPick={vi.fn()} enabledLibraries={['srd-5.2']} />)
+
+    fireEvent.click(screen.getByText('Add creature'))
+    await waitFor(() => screen.getByText('Goblin'))
+
+    expect(screen.queryByText('Core')).toBeNull()
   })
 })

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_ENABLED_LIBRARIES,
   inEnabledLibrary,
+  librarySource,
   libraryTag,
   sanitizeEnabledLibraries,
 } from '../../src/compendium/libraries.ts'
@@ -27,6 +28,13 @@ describe('libraries', () => {
     expect(libraryTag('srd-5.1')).toBe('5.0')
     expect(libraryTag('srd-5.2')).toBe('5.5')
     expect(libraryTag('custom')).toBeUndefined()
+  })
+
+  it('labels a source compactly (Core vs ToB3 disambiguates same-edition sources)', () => {
+    expect(librarySource('srd-5.2')).toBe('Core')
+    expect(librarySource('srd-5.1')).toBe('Core')
+    expect(librarySource('kobold-press-tob3')).toBe('ToB3')
+    expect(librarySource('custom')).toBeUndefined()
   })
 
   it('sanitizes a stored list: drops unknown ids, falls back when empty/invalid', () => {
