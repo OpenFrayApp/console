@@ -88,11 +88,11 @@ devices. Still to come: a shared read-only player view. Expect rough edges — i
   5.1 (Core Rules 2014) via [dnd5eapi.co](https://www.dnd5eapi.co), both under
   **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app and in
   [`CREDITS.md`](./CREDITS.md). Each source is honored under its own license, preferring
-  CC-BY > ORC > OGL; third-party content (e.g. Kobold Press) is used under its actual
-  license, never assumed CC-BY. Signed-in users pick which libraries appear (Account →
-  Content libraries; 5.2 by default). Some iconic monsters (Beholder, Mind Flayer, etc.)
-  are excluded from the SRD by WotC and cannot be included; the custom-creature form,
-  JSON import, and third-party content fill that gap.
+  CC-BY > ORC > OGL; third-party content — **Tome of Beasts 2 & 3 (Kobold Press)**, opt-in
+  libraries — is used under its actual license (OGL 1.0a), never assumed CC-BY. Anyone
+  picks which libraries appear (the **Settings** panel; 5.2 by default). Some iconic
+  monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC and cannot be
+  included; the custom-creature form, JSON import, and third-party content fill that gap.
 - *Compatible with fifth edition. Not affiliated with or endorsed by Wizards of
   the Coast.*
 
