@@ -510,7 +510,10 @@ function SpellcastingSection({
               {group.spells.map((spell) => {
                 const remaining = level != null ? null : (usesOf?.(spell) ?? null)
                 const drained = level != null ? slotsDrained : remaining === 0
-                const label = remaining == null ? spell.name : `${spell.name} (${remaining})`
+                // Source prose can list spells lowercased (e.g. ToB3 "charm person").
+                // Prefer the resolved spell's canonical name; else title-case it.
+                const name = resolveSpell?.(spell.ref)?.name ?? titleCaseWords(spell.name)
+                const label = remaining == null ? name : `${name} (${remaining})`
                 if (!onCast) {
                   return (
                     <span key={spell.ref ?? spell.name} className="text-slate-600 dark:text-slate-300">
@@ -525,7 +528,7 @@ function SpellcastingSection({
                     onClick={() => onCast(spell)}
                     onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
                     onMouseLeave={closePreview}
-                    title={`Cast ${spell.name}`}
+                    title={`Cast ${name}`}
                     className={
                       drained
                         ? 'text-slate-400 line-through hover:no-underline dark:text-slate-600'
