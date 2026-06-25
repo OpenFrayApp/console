@@ -73,12 +73,14 @@ describe('AddCreaturePicker', () => {
     expect(screen.getByText('ToB3')).toBeTruthy()
   })
 
-  it('omits the source badge when only one library is enabled', async () => {
+  it('shows the source badge even with a single library enabled', async () => {
     render(<AddCreaturePicker onPick={vi.fn()} enabledLibraries={['srd-5.2']} />)
 
     fireEvent.click(screen.getByText('Add creature'))
     await waitFor(() => screen.getByText('Goblin'))
 
-    expect(screen.queryByText('Core')).toBeNull()
+    // Badges are always visible now (no multi-library gating).
+    expect(screen.getByText('Core')).toBeTruthy()
+    expect(screen.getByText('5.5')).toBeTruthy()
   })
 })

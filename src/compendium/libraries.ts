@@ -62,6 +62,12 @@ const SOURCE_BADGE_CLASS: Record<string, string> = {
 }
 const SOURCE_BADGE_FALLBACK = 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
 
+/** Edition-badge colors, so 5.5 and 5.0 read distinctly (full class strings for Tailwind). */
+const EDITION_BADGE_CLASS: Record<string, string> = {
+  '5.5': 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+  '5.0': 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+}
+
 /** 5.2 only by default — 5.1 is opt-in, so existing/anonymous users see no change.
  *  The enabled set is a per-account setting (cloudSettings / the `user_settings`
  *  table); anonymous users always get this default and the toggle is signed-in-only. */
@@ -98,4 +104,9 @@ export function librarySource(source: string): string | undefined {
 export function librarySourceBadgeClass(source: string): string {
   const family = LIBRARIES.find((l) => l.id === source)?.family
   return (family && SOURCE_BADGE_CLASS[family]) || SOURCE_BADGE_FALLBACK
+}
+
+/** Color classes for an edition badge (e.g. "5.5" / "5.0"). */
+export function editionBadgeClass(edition: string | undefined): string {
+  return (edition && EDITION_BADGE_CLASS[edition]) || SOURCE_BADGE_FALLBACK
 }

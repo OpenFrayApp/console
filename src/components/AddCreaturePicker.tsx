@@ -6,6 +6,7 @@ import type { Creature } from '../schema/creature.ts'
 import { loadSrdCreatures } from '../compendium/srd.ts'
 import {
   DEFAULT_ENABLED_LIBRARIES,
+  editionBadgeClass,
   inEnabledLibrary,
   librarySource,
   librarySourceBadgeClass,
@@ -46,14 +47,12 @@ export function AddCreaturePicker({
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, 50)
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
-  // Source tag (Core / ToB3): only for library creatures, and only when more than one
-  // library is on — with a single library every entry shares its source.
+  // Source tag (Core / ToB3): library creatures only — custom carries its own badge.
   const sourceTag = (c: Creature): string | undefined =>
-    isCustom(c) || enabledLibraries.length <= 1 ? undefined : librarySource(c.source)
-  // Edition tag: custom uses its own edition (always shown); SRD uses its library's
-  // (shown only when more than one library is on, to avoid noise).
+    isCustom(c) ? undefined : librarySource(c.source)
+  // Edition tag: custom uses its own edition; a library creature uses its library's.
   const editionTag = (c: Creature): string | undefined =>
-    isCustom(c) ? c.edition : enabledLibraries.length > 1 ? libraryTag(c.source) : undefined
+    isCustom(c) ? c.edition : libraryTag(c.source)
 
   return (
     <div className="relative" ref={ref}>
@@ -99,7 +98,7 @@ export function AddCreaturePicker({
                         </span>
                       )}
                       {editionTag(c) && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(c))}`}>
                           {editionTag(c)}
                         </span>
                       )}

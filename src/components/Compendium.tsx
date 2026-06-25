@@ -10,6 +10,7 @@ import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import {
   DEFAULT_ENABLED_LIBRARIES,
+  editionBadgeClass,
   inEnabledLibrary,
   librarySource,
   librarySourceBadgeClass,
@@ -301,6 +302,7 @@ export function Compendium({
               src: c.id.startsWith('custom:') ? undefined : librarySource(c.source),
               srcClass: c.id.startsWith('custom:') ? undefined : librarySourceBadgeClass(c.source),
               lib: tag(c),
+              libClass: editionBadgeClass(tag(c)),
               concentration: false,
               ritual: false,
             }))
@@ -314,6 +316,7 @@ export function Compendium({
               src: s.id.startsWith('custom:') ? undefined : librarySource(s.source),
               srcClass: s.id.startsWith('custom:') ? undefined : librarySourceBadgeClass(s.source),
               lib: tag(s),
+              libClass: editionBadgeClass(tag(s)),
               concentration: s.concentration,
               ritual: s.ritual,
             }))
@@ -467,13 +470,13 @@ export function Compendium({
                           Custom
                         </span>
                       )}
-                      {e.src && enabledLibraries.length > 1 && (
+                      {e.src && (
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.srcClass}`}>
                           {e.src}
                         </span>
                       )}
-                      {e.lib && (e.custom || enabledLibraries.length > 1) && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      {e.lib && (
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.libClass}`}>
                           {e.lib}
                         </span>
                       )}

@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_ENABLED_LIBRARIES,
+  editionBadgeClass,
   inEnabledLibrary,
   librarySource,
   librarySourceBadgeClass,
@@ -46,6 +47,11 @@ describe('libraries', () => {
     )
     // Unknown sources still get a (fallback) class, never empty.
     expect(librarySourceBadgeClass('whatever')).toBeTruthy()
+  })
+
+  it('colors edition badges so 5.5 and 5.0 differ', () => {
+    expect(editionBadgeClass('5.5')).not.toBe(editionBadgeClass('5.0'))
+    expect(editionBadgeClass(undefined)).toBeTruthy()
   })
 
   it('sanitizes a stored list: drops unknown ids, falls back when empty/invalid', () => {
