@@ -85,15 +85,15 @@ function monster(): MonsterCombatant {
 afterEach(cleanup)
 
 describe('CastSpellPanel', () => {
-  it('lists only castable spells and opens a save spell in the mass-save modal', async () => {
+  it('lists all spells (incl. buffs) and opens a save spell in the mass-save modal', async () => {
     const onRoll = vi.fn()
     const dispatch = vi.fn()
     render(<CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={onRoll} />)
 
     fireEvent.click(screen.getByText('Cast spell'))
     await waitFor(() => expect(screen.getByText('Fireball')).toBeTruthy())
-    // The utility spell with no mechanics is filtered out of the picker.
-    expect(screen.queryByText('Light')).toBeNull()
+    // A no-mechanics utility/buff spell is listed too (so Bless et al. are castable).
+    expect(screen.getByText('Light')).toBeTruthy()
 
     fireEvent.click(screen.getByText('Fireball'))
     // A save spell opens the same group-save modal a monster's save action uses,
@@ -103,6 +103,32 @@ describe('CastSpellPanel', () => {
     expect(screen.getByLabelText('Save DC')).toBeTruthy()
     expect(screen.queryByLabelText('Cast level')).toBeNull()
     expect(screen.getByText('Roll saves')).toBeTruthy()
+  })
+
+  it('shows the reference card for a buff spell with no rollable mechanics', async () => {
+    render(<CastSpellPanel combatants={[monster()]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+    fireEvent.click(screen.getByText('Cast spell'))
+    await waitFor(() => expect(screen.getByText('Light')).toBeTruthy())
+    fireEvent.click(screen.getByText('Light'))
+    expect(screen.getByText(/Cast Light/)).toBeTruthy()
+    // The card lists reference fields rather than a roll button.
+    expect(screen.getByText('Casting Time')).toBeTruthy()
+    expect(screen.queryByText('Roll damage')).toBeNull()
+  })
+
+  it('lists only spells from enabled libraries', async () => {
+    render(
+      <CastSpellPanel
+        combatants={[monster()]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        enabledLibraries={['srd-5.1']}
+      />,
+    )
+    fireEvent.click(screen.getByText('Cast spell'))
+    // Both mocked spells are srd-5.2, so none show when only 5.1 is enabled.
+    await waitFor(() => expect(screen.getByText('No matches')).toBeTruthy())
+    expect(screen.queryByText('Fireball')).toBeNull()
   })
 
   it('disables casting with no combatants', () => {

@@ -7,15 +7,23 @@ import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { spellAction } from '../combat/casting.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
+import {
+  DEFAULT_ENABLED_LIBRARIES,
+  editionBadgeClass,
+  editionLabel,
+  inEnabledLibrary,
+  librarySource,
+  librarySourceBadgeClass,
+  libraryTag,
+} from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ActionResolver } from './ActionResolver.tsx'
+import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
-/** Spells the GM can roll/resolve here — those carrying structured mechanics. */
-const isCastable = (s: Spell): boolean => s.mechanics != null
-
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
+const isCustom = (s: Spell): boolean => s.id.startsWith('custom:')
 
 /**
  * Cast a spell from the compendium: roll its damage (scaled by the chosen level)
@@ -28,12 +36,15 @@ export function CastSpellPanel({
   dispatch,
   onRoll,
   customSpells = [],
+  enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
   /** The signed-in user's custom spells, castable alongside the SRD. */
   customSpells?: Spell[]
+  /** Only spells from these libraries (plus custom) are listed — matches the picker. */
+  enabledLibraries?: string[]
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -63,12 +74,20 @@ export function CastSpellPanel({
     setQuery('')
   }
 
+  // Source tag (Core / ToB…): library spells only — custom carries its own badge.
+  const sourceTag = (s: Spell): string | undefined =>
+    isCustom(s) ? undefined : librarySource(s.source)
+  const editionTag = (s: Spell): string | undefined =>
+    isCustom(s) ? s.edition : libraryTag(s.source)
+
   if (!spell) {
     const q = query.trim().toLowerCase()
+    // Every spell from the enabled libraries (so buffs like Bless show too), filtered
+    // by the active content set — not just rollable ones, and not the whole bundle.
     const matches = [...customSpells, ...(spells ?? [])]
-      .filter(isCastable)
+      .filter((s) => inEnabledLibrary(s, enabledLibraries))
       .filter((s) => !q || s.name.toLowerCase().includes(q))
-      .slice(0, 50)
+      .sort((a, b) => a.name.localeCompare(b.name))
 
     return (
       <div className="relative" ref={ref}>
@@ -87,8 +106,8 @@ export function CastSpellPanel({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search castable spells…"
-              aria-label="Search castable spells"
+              placeholder="Search spells…"
+              aria-label="Search spells"
               className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
             />
             {spells === null ? (
@@ -103,7 +122,22 @@ export function CastSpellPanel({
                       className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                       <span className="truncate">{s.name}</span>
-                      <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                        {isCustom(s) && (
+                          <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                            Custom
+                          </span>
+                        )}
+                        {sourceTag(s) && (
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(s.source)}`}>
+                            {sourceTag(s)}
+                          </span>
+                        )}
+                        {editionTag(s) && (
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(s))}`}>
+                            {editionLabel(editionTag(s))}
+                          </span>
+                        )}
                         {levelText(s.level)}
                       </span>
                     </button>
@@ -140,29 +174,34 @@ export function CastSpellPanel({
     )
   }
 
-  // Damage-only / utility spells have nothing to roll to-hit or save, so keep the
-  // inline reference card (damage roll + any note).
+  // A buff/utility spell with no rollable mechanics (Bless, Shield of Faith, …) shows
+  // its full reference card so the GM can read and adjudicate it (apply the effect via
+  // the Effect button). A damage-only spell keeps the compact roll-damage view.
   return (
     <div className="w-full space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">
           Cast {spell.name}{' '}
           <span className="font-normal text-slate-500 dark:text-slate-400">
             · {levelText(spell.level)} {spell.school}
           </span>
         </h3>
-        <button type="button" onClick={reset} className="text-xs text-slate-500 hover:underline">
+        <button type="button" onClick={reset} className="shrink-0 text-xs text-slate-500 hover:underline">
           Cancel
         </button>
       </div>
 
-      <SpellResolution
-        spell={spell}
-        combatants={combatants}
-        dispatch={dispatch}
-        onRoll={onRoll}
-        onClose={reset}
-      />
+      {spell.mechanics ? (
+        <SpellResolution
+          spell={spell}
+          combatants={combatants}
+          dispatch={dispatch}
+          onRoll={onRoll}
+          onClose={reset}
+        />
+      ) : (
+        <SpellCard spell={spell} />
+      )}
     </div>
   )
 }

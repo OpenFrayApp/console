@@ -638,7 +638,7 @@ function App() {
                 showCounter={!!user}
               />
               <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
-              <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} customSpells={customSpells} />
+              <CastSpellPanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} customSpells={customSpells} enabledLibraries={enabledLibraries} />
             </div>
           )}
         </div>
