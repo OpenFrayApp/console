@@ -110,6 +110,12 @@ export function sourceInfo(source: string): SourceInfo {
         license: 'CC-BY-4.0',
         url: 'https://www.dndbeyond.com/srd',
       }
+    case 'kobold-press-tob2':
+      return {
+        ruleset: 'Tome of Beasts 2',
+        license: 'OGL-1.0a',
+        url: 'https://koboldpress.com',
+      }
     case 'kobold-press-tob3':
       return {
         ruleset: 'Tome of Beasts 3',
