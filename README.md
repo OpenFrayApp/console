@@ -84,7 +84,7 @@ devices. Still to come: a shared read-only player view. Expect rough edges — i
 ## Content & licensing
 
 - **Code:** [AGPL-3.0](./LICENSE). A hosted/modified version must share its source.
-- **Game content:** SRD 5.2 (Core Rules 2024) via [Open5e](https://open5e.com) and SRD
+- **Game content:** SRD 5.2.1 (Core Rules 2024) from WotC's official CC-BY PDF and SRD
   5.1 (Core Rules 2014) via [dnd5eapi.co](https://www.dnd5eapi.co), both under
   **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app and in
   [`CREDITS.md`](./CREDITS.md). All game content uses CC-BY-4.0; the OGL is not used.

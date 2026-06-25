@@ -12,8 +12,8 @@ About/Credits screen), alongside the AGPL §13 "Source" link.
 ## System Reference Document 5.2.1 (D&D 2024)
 
 OpenFray's compendium uses material from the SRD 5.2.1 under CC-BY-4.0 — creature
-stat blocks and condition rules from WotC's official SRD 5.2.1 PDF, and spells via
-the [Open5e](https://open5e.com) API. Required attribution:
+stat blocks, spells, and condition rules, all parsed from WotC's official SRD 5.2.1
+PDF. Required attribution:
 
 > This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1")
 > by Wizards of the Coast LLC, available at <https://www.dndbeyond.com/srd>. The SRD

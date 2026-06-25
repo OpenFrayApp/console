@@ -140,8 +140,8 @@ dedup.
 8. SRD compendium + custom-creature/spell form. The compendium ships as static
    JSON in `public/compendium/`; **the ingest tooling lives in the separate
    [openfray-compendium](https://github.com/SirDarcanos/openfray-compendium) repo**,
-   not here (SRD 5.2 creatures are parsed from WotC's official 5.2.1 PDF; spells
-   and SRD 5.1 come from Open5e/dnd5eapi). The app only consumes the JSON.
+   not here (SRD 5.2.1 creatures, spells, and conditions are parsed from WotC's
+   official 5.2.1 PDF; SRD 5.1 comes from dnd5eapi). The app only consumes the JSON.
    **Before touching the compendium data or the stat-block UI, read
    [`docs/compendium-ingest.md`](docs/compendium-ingest.md)** for the data gotchas
    and where the tooling now lives.
