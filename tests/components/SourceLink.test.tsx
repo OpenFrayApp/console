@@ -18,7 +18,7 @@ describe('SourceLink', () => {
 
   it('folds the page into the ruleset parens', () => {
     render(<SourceLink source="srd-5.2" page={266} />)
-    expect(screen.getByText(/\(SRD 5\.2\.1, p\. 266\)/)).toBeInTheDocument()
+    expect(screen.getByText(/\(SRD 5\.2\.1, pg\. 266\)/)).toBeInTheDocument()
   })
 
   it('shows the 2014 ruleset', () => {
