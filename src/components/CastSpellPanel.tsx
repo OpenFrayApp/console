@@ -22,7 +22,7 @@ import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
-const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
+const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
 const isCustom = (s: Spell): boolean => s.id.startsWith('custom:')
 
 /**

@@ -22,6 +22,8 @@ export interface CombatStats {
   damageDealt: Record<string, number>
   /** combatantId → damage taken (every HP loss, captured by the reducer). */
   damageTaken: Record<string, number>
+  /** The single largest damage instance dealt, and by whom. */
+  biggestHit: { sourceId: string; amount: number } | null
 }
 
 /**

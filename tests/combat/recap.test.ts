@@ -71,14 +71,16 @@ describe('combat stats timer', () => {
     expect(activeMillis(s, 2300)).toBe(800) // 500 banked + 300 running
   })
 
-  it('addDealt / addTaken accumulate per combatant and ignore non-positive', () => {
+  it('addDealt / addTaken accumulate, track the biggest hit, and ignore non-positive', () => {
     let s = startStats(0)
     s = addDealt(s, 'a', 10)
     s = addDealt(s, 'a', 5)
+    s = addDealt(s, 'b', 22)
     s = addTaken(s, 'b', 7)
     s = addDealt(s, 'a', 0) // ignored
-    expect(s.damageDealt).toEqual({ a: 15 })
+    expect(s.damageDealt).toEqual({ a: 15, b: 22 })
     expect(s.damageTaken).toEqual({ b: 7 })
+    expect(s.biggestHit).toEqual({ sourceId: 'b', amount: 22 })
   })
 })
 
@@ -90,10 +92,14 @@ describe('outcome detection', () => {
     expect(allFoesDefeated([monster({ status: 'dead' })])).toBe(true)
   })
 
-  it('allPlayersDown only when every PC is down/dead and PCs exist', () => {
+  it('allPlayersDown only when every PC is dead or stabilized (not still saving)', () => {
     expect(allPlayersDown([])).toBe(false)
     expect(allPlayersDown([pc({ status: 'active' })])).toBe(false)
-    expect(allPlayersDown([pc({ status: 'unconscious' })])).toBe(true)
+    // Unconscious but still rolling death saves → not down (could recover).
+    expect(allPlayersDown([pc({ status: 'unconscious', deathSaves: { successes: 1, failures: 0 } })])).toBe(false)
+    // Stabilized (3 successes) counts as down.
+    expect(allPlayersDown([pc({ status: 'unconscious', deathSaves: { successes: 3, failures: 0 } })])).toBe(true)
+    expect(allPlayersDown([pc({ status: 'dead' })])).toBe(true)
     expect(allPlayersDown([pc({ status: 'dead' }), pc({ combatantId: 'pc2', status: 'active' })])).toBe(false)
   })
 })
@@ -110,7 +116,7 @@ describe('buildRecap', () => {
       ],
       { round: 4, combatStats: { ...stats, activeMs: 90_000, runningSince: null } },
     )
-    const recap = buildRecap(enc, [], 0)
+    const recap = buildRecap(enc, 0)
     expect(recap.outcome).toBe('victory')
     expect(recap.totalXp).toBe(500)
     expect(recap.partySize).toBe(2)
@@ -125,32 +131,34 @@ describe('buildRecap', () => {
       pc({ status: 'dead' }),
       monster({ status: 'dead' }),
     ])
-    expect(buildRecap(enc, [], 0).outcome).toBe('defeat')
+    expect(buildRecap(enc, 0).outcome).toBe('defeat')
   })
 
   it('inconclusive when both sides still stand', () => {
     const enc = encounter([pc({ status: 'active' }), monster({ status: 'active' })])
-    const recap = buildRecap(enc, [], 0)
+    const recap = buildRecap(enc, 0)
     expect(recap.outcome).toBe('inconclusive')
     expect(recap.totalXp).toBe(0)
   })
 
-  it('counts crits/fumbles from the roll log and names the MVP', () => {
-    const stats = { ...startStats(0), damageDealt: { pc1: 40, pc2: 12 }, damageTaken: { m1: 30 } }
+  it('awards: heavy hitter, most damage taken, and biggest single hit', () => {
+    const stats = {
+      ...startStats(0),
+      damageDealt: { pc1: 40, m1: 12 },
+      damageTaken: { m1: 30, pc1: 8 },
+      biggestHit: { sourceId: 'pc1', amount: 28 },
+    }
     const enc = encounter(
-      [pc({ combatantId: 'pc1', name: 'Hero', status: 'active' }), monster({ status: 'dead' })],
+      [pc({ combatantId: 'pc1', name: 'Hero', status: 'active' }), monster({ combatantId: 'm1', label: 'Goblin', status: 'dead' })],
       { combatStats: stats },
     )
-    const rolls = [
-      { result: { crit: true } },
-      { result: { crit: true } },
-      { result: { fumble: true } },
-      { result: {} },
-    ]
-    const recap = buildRecap(enc, rolls, 0)
-    expect(recap.crits).toBe(2)
-    expect(recap.fumbles).toBe(1)
-    expect(recap.damageTakenTotal).toBe(30)
-    expect(recap.mvp).toEqual({ label: 'Hero', amount: 40 })
+    const recap = buildRecap(enc, 0)
+    expect(recap.damageDealtTotal).toBe(52)
+    expect(recap.damageTakenTotal).toBe(38)
+    expect(recap.awards).toEqual([
+      { title: 'Most damage dealt', label: 'Hero', amount: 40 },
+      { title: 'Most damage taken', label: 'Goblin', amount: 30 },
+      { title: 'Biggest hit', label: 'Hero', amount: 28 },
+    ])
   })
 })

@@ -73,22 +73,28 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
           <Stat label="Rounds" value={recap.rounds} />
           <Stat label="Time (in-game)" value={duration(recap.inGameSeconds)} />
           <Stat label="Time (real)" value={duration(recap.activeMs / 1000)} hint="excludes pauses" />
-          <Stat label="Crits / Fumbles" value={`${recap.crits} / ${recap.fumbles}`} />
-          <Stat label="Damage taken" value={recap.damageTakenTotal.toLocaleString()} hint="all combatants" />
-          {recap.mvp && (
-            <div className="col-span-2 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20 sm:col-span-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                MVP — most damage dealt
-              </div>
-              <div className="mt-0.5 text-lg font-semibold">
-                {recap.mvp.label}{' '}
-                <span className="text-slate-500 dark:text-slate-400 tabular-nums">
-                  · {recap.mvp.amount.toLocaleString()} dmg
-                </span>
-              </div>
-            </div>
-          )}
+          <Stat label="Damage dealt" value={recap.damageDealtTotal.toLocaleString()} />
+          <Stat label="Damage taken" value={recap.damageTakenTotal.toLocaleString()} />
         </div>
+
+        {recap.awards.length > 0 && (
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {recap.awards.map((a) => (
+              <div
+                key={a.title}
+                className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20"
+              >
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  {a.title}
+                </div>
+                <div className="mt-0.5 font-semibold">{a.label}</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
+                  {a.amount.toLocaleString()} dmg
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

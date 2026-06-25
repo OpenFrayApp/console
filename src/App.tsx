@@ -615,7 +615,7 @@ function App() {
   // End combat: snapshot the recap from the live state (before stop zeroes the round),
   // then reset to setup. Used by the Stop button, the all-enemies prompt, and a TPK.
   const endCombat = () => {
-    setRecap(buildRecap(encounter, rollLog, Date.now()))
+    setRecap(buildRecap(encounter, Date.now()))
     setEndPrompt(false)
     dispatch({ type: 'stop' })
   }
