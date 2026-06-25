@@ -3,8 +3,9 @@
 
 import { type ReactNode } from 'react'
 import type { Spell } from '../schema/spell.ts'
+import { FloatingCard } from './FloatingCard.tsx'
 import { SpellCard } from './SpellCard.tsx'
-import { FLOATING_CARD, useHoverCard } from './spellPreview.ts'
+import { useHoverCard } from './spellPreview.ts'
 
 /**
  * Wraps a label and shows the spell's card on hover, anchored with a fixed
@@ -31,9 +32,9 @@ export function HoverSpell({
         {children}
       </span>
       {card && (
-        <div className={FLOATING_CARD} style={card.style} onMouseEnter={cancelClose} onMouseLeave={close}>
+        <FloatingCard style={card.style} onMouseEnter={cancelClose} onMouseLeave={close}>
           <SpellCard spell={spell} />
-        </div>
+        </FloatingCard>
       )}
     </>
   )

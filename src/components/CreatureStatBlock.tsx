@@ -13,7 +13,8 @@ import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
 import { SpellCard } from './SpellCard.tsx'
-import { FLOATING_CARD, useHoverCard } from './spellPreview.ts'
+import { FloatingCard } from './FloatingCard.tsx'
+import { useHoverCard } from './spellPreview.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 
 /** Resolve a spell's compendium entry (for the hover preview + cast card). */
@@ -541,9 +542,9 @@ function SpellcastingSection({
         <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">{spellcasting.note}</p>
       )}
       {preview && (
-        <div className={FLOATING_CARD} style={preview.style} onMouseEnter={cancelClose} onMouseLeave={closePreview}>
+        <FloatingCard style={preview.style} onMouseEnter={cancelClose} onMouseLeave={closePreview}>
           <SpellCard spell={preview.value} />
-        </div>
+        </FloatingCard>
       )}
     </div>
   )
