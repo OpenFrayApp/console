@@ -23,7 +23,7 @@ function renderControl(overrides: Partial<AuthState> = {}) {
   const onSignIn = vi.fn()
   render(
     <AuthContext.Provider value={value}>
-      <AccountControl onSignIn={onSignIn} enabledLibraries={['srd-5.2']} onSetEnabledLibraries={() => {}} />
+      <AccountControl onSignIn={onSignIn} />
     </AuthContext.Provider>,
   )
   return { value, onSignIn }

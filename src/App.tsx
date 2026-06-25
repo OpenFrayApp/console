@@ -49,8 +49,7 @@ import { useAuth } from './auth/useAuth.ts'
 import { Compendium, type Tab as CompendiumTab } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
-import { DEFAULT_ENABLED_LIBRARIES, sanitizeEnabledLibraries } from './compendium/libraries.ts'
-import { loadUserSettings, saveUserSettings } from './state/cloudSettings.ts'
+import { loadSettings, saveSettings } from './state/settings.ts'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
@@ -64,6 +63,7 @@ import { RestControls } from './components/RestControls.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
+import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
@@ -107,6 +107,15 @@ function MoonIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
+  )
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
     </svg>
   )
 }
@@ -165,13 +174,16 @@ function App() {
   })
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
-  // Which content libraries the compendium/picker show. Per-account (loaded on
-  // sign-in below); anonymous users keep the 5.2-only default.
-  const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(DEFAULT_ENABLED_LIBRARIES)
+  // Which content libraries the compendium/picker show. A device-local preference
+  // for every user (anon included), persisted in localStorage like the theme.
+  const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(
+    () => loadSettings().enabledLibraries,
+  )
   const setEnabledLibraries = (ids: string[]) => {
     setEnabledLibrariesState(ids)
-    saveUserSettings({ enabledLibraries: ids })
+    saveSettings({ enabledLibraries: ids })
   }
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [encounterPcEdit, setEncounterPcEdit] = useState<{ pc: RosterPc; combatantId: string } | null>(null)
   const [encounterCreatureEdit, setEncounterCreatureEdit] = useState<{ draft: MonsterDraft; editId: string } | null>(null)
   const [encounter, dispatch] = useReducer(
@@ -226,13 +238,9 @@ function App() {
       setCampaigns([])
       setRosterPcs([])
       setActiveCampaignId(null)
-      setEnabledLibrariesState(DEFAULT_ENABLED_LIBRARIES)
       return
     }
     let active = true
-    loadUserSettings().then((s) => {
-      if (active) setEnabledLibrariesState(sanitizeEnabledLibraries(s.enabledLibraries))
-    })
     loadCustomCreatures().then((list) => {
       if (active) setCustomCreatures(list)
     })
@@ -656,11 +664,16 @@ function App() {
             </div>
           )}
           <ViewToggle view={view} onChange={handleViewChange} />
-          <AccountControl
-            onSignIn={() => setAuthOpen(true)}
-            enabledLibraries={enabledLibraries}
-            onSetEnabledLibraries={setEnabledLibraries}
-          />
+          <AccountControl onSignIn={() => setAuthOpen(true)} />
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            title="Settings"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <GearIcon />
+          </button>
           <button
             type="button"
             onClick={toggleTheme}
@@ -672,6 +685,14 @@ function App() {
           </button>
         </div>
       </header>
+
+      {settingsOpen && (
+        <SettingsPanel
+          onClose={() => setSettingsOpen(false)}
+          enabledLibraries={enabledLibraries}
+          onSetEnabledLibraries={setEnabledLibraries}
+        />
+      )}
 
       <main className="min-h-0 flex-1 overflow-hidden">
         {view === 'compendium' ? (

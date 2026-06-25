@@ -23,7 +23,7 @@ function renderPanel(overrides: Partial<AuthState> = {}) {
   const onClose = vi.fn()
   render(
     <AuthContext.Provider value={value}>
-      <AccountPanel onClose={onClose} enabledLibraries={['srd-5.2']} onSetEnabledLibraries={() => {}} />
+      <AccountPanel onClose={onClose} />
     </AuthContext.Provider>,
   )
   return { value, onClose }
