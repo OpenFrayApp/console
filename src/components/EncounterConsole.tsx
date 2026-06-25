@@ -45,6 +45,7 @@ import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback, EncounterCleanup } from './EncounterPlayback.tsx'
 import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
+import { titleCase } from '../compendium/format.ts'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
@@ -260,7 +261,8 @@ export function EncounterConsole({
               }),
       })
     }
-    onNote(`${c.label} casts ${spell.name}`)
+    // Prefer the resolved compendium name (ToB stat blocks print spell names lowercase).
+    onNote(`${c.label} casts ${full?.name ?? titleCase(spell.name)}`)
   }
 
   const restoreSpellUseFor = (c: MonsterCombatant, spell: SpellRef) => {

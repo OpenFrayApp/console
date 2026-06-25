@@ -7,6 +7,7 @@ import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { spellAction } from '../combat/casting.ts'
+import { titleCase } from '../compendium/format.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { SpellCard } from './SpellCard.tsx'
@@ -130,7 +131,7 @@ export function SpellCastModal({
     <Modal
       title={
         <>
-          {caster.label} casts {spellRef.name}
+          {caster.label} casts {spell?.name ?? titleCase(spellRef.name)}
         </>
       }
       subtitle={usageLabel}
@@ -150,8 +151,8 @@ export function SpellCastModal({
         <div className="space-y-2">
           <p className="text-sm text-amber-700 dark:text-amber-300">
             {caster.concentration?.spell
-              ? `You are already concentrating on ${caster.concentration.spell}. Are you sure you want to cast ${spellRef.name}?`
-              : `You're already concentrating. Are you sure you want to cast ${spellRef.name}?`}
+              ? `You are already concentrating on ${caster.concentration.spell}. Are you sure you want to cast ${spell?.name ?? titleCase(spellRef.name)}?`
+              : `You're already concentrating. Are you sure you want to cast ${spell?.name ?? titleCase(spellRef.name)}?`}
           </p>
           <div className="flex items-center gap-3">
             <button
