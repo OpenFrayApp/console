@@ -32,7 +32,8 @@ export function loadSrdCreatures(): Promise<Creature[]> {
 }
 
 export function loadSrdSpells(): Promise<Spell[]> {
-  spells ??= Promise.all(LIBRARIES.map((l) => fetchList<Spell>(l.spellsFile))).then((lists) =>
+  const withSpells = LIBRARIES.filter((l) => l.spellsFile)
+  spells ??= Promise.all(withSpells.map((l) => fetchList<Spell>(l.spellsFile!))).then((lists) =>
     lists.flat(),
   )
   return spells

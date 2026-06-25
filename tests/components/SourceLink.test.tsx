@@ -31,4 +31,9 @@ describe('SourceLink', () => {
     expect(screen.getByText(/Custom/)).toBeInTheDocument()
     expect(screen.queryByRole('link')).toBeNull()
   })
+
+  it('shows a third-party (OGL) source and appends the page when there are no parens', () => {
+    render(<SourceLink source="kobold-press-tob3" page={16} />)
+    expect(screen.getByText(/Tome of Beasts 3 \(pg\. 16\)/)).toBeInTheDocument()
+  })
 })

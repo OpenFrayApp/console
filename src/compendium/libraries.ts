@@ -16,7 +16,8 @@ export interface Library {
   label: string
   edition: Edition
   creaturesFile: string
-  spellsFile: string
+  /** Absent for creatures-only libraries (e.g. a bestiary like Tome of Beasts). */
+  spellsFile?: string
 }
 
 export const LIBRARIES: Library[] = [
@@ -33,6 +34,12 @@ export const LIBRARIES: Library[] = [
     edition: '5.0',
     creaturesFile: 'srd-2014-creatures.json',
     spellsFile: 'srd-2014-spells.json',
+  },
+  {
+    id: 'kobold-press-tob3',
+    label: 'Tome of Beasts 3 (Kobold Press)',
+    edition: '5.0',
+    creaturesFile: 'tob3-creatures.json',
   },
 ]
 
