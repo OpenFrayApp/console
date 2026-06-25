@@ -5,11 +5,8 @@ OpenFray includes game content from the following sources. This governs the
 (AGPL-3.0, see [`LICENSE`](./LICENSE)). Both apply.
 
 **Policy:** each source is honored under its own license, preferring **CC-BY > ORC >
-OGL**; never assumed CC-BY. WotC SRD is CC-BY-4.0; third-party content (e.g. Kobold
-Press) is used under its actual license — ORC or OGL 1.0a — with that license's full
-obligations met below. See [`docs/content-licensing.md`](./docs/content-licensing.md)
-for the build-agent instructions. The running app must also surface this attribution
-in-app (an About/Credits screen), alongside the AGPL §13 "Source" link.
+OGL**; WotC SRD is CC-BY-4.0; third-party content (e.g. Kobold Press) is used under 
+its actual license — ORC or OGL 1.0a — with that license's full obligations met below.
 
 ## System Reference Document 5.2.1 (D&D 2024)
 
@@ -22,7 +19,7 @@ PDF. Required attribution:
 > 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License,
 > available at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
-Changes were made: the content was reformatted and restructured into OpenFray's
+**Changes were made**: the content was reformatted and restructured into OpenFray's
 schema, and some source typos were corrected.
 
 ## System Reference Document 5.1 (D&D 2014)
@@ -37,16 +34,9 @@ and never invoke the OGL. Required attribution:
 > licensed under the Creative Commons Attribution 4.0 International License available
 > at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
-Changes were made: the content was reformatted and restructured into OpenFray's schema.
+**Changes were made**: the content was reformatted and restructured into OpenFray's schema.
 
 ## Third-party content
-
-*(For each third-party source actually ingested — e.g. Kobold Press — name it and
-reproduce ITS required attribution under ITS own license. Do not assume CC-BY; check
-each publisher's terms before ingesting. For an **OGL 1.0a** source: include only its
-declared Open Game Content, reproduce the **full OGL 1.0a text** below, and carry its
-**verbatim Section 15 copyright chain** here. For an **ORC** source: include the ORC
-attribution notice and license. Record each source here before its data ships.)*
 
 ### Tome of Beasts (Kobold Press)
 
