@@ -6,6 +6,7 @@ import {
   DEFAULT_ENABLED_LIBRARIES,
   inEnabledLibrary,
   librarySource,
+  librarySourceBadgeClass,
   libraryTag,
   sanitizeEnabledLibraries,
 } from '../../src/compendium/libraries.ts'
@@ -35,6 +36,16 @@ describe('libraries', () => {
     expect(librarySource('srd-5.1')).toBe('Core')
     expect(librarySource('kobold-press-tob3')).toBe('ToB3')
     expect(librarySource('custom')).toBeUndefined()
+  })
+
+  it('colors source badges by family: siblings match, different families differ', () => {
+    // Both SRD "Core" sets share one color; ToB is its own.
+    expect(librarySourceBadgeClass('srd-5.2')).toBe(librarySourceBadgeClass('srd-5.1'))
+    expect(librarySourceBadgeClass('kobold-press-tob3')).not.toBe(
+      librarySourceBadgeClass('srd-5.2'),
+    )
+    // Unknown sources still get a (fallback) class, never empty.
+    expect(librarySourceBadgeClass('whatever')).toBeTruthy()
   })
 
   it('sanitizes a stored list: drops unknown ids, falls back when empty/invalid', () => {

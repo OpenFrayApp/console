@@ -8,6 +8,7 @@ import {
   DEFAULT_ENABLED_LIBRARIES,
   inEnabledLibrary,
   librarySource,
+  librarySourceBadgeClass,
   libraryTag,
 } from '../compendium/libraries.ts'
 import { formatCr } from '../compendium/format.ts'
@@ -88,12 +89,12 @@ export function AddCreaturePicker({
                     <span className="truncate">{c.name}</span>
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                       {isCustom(c) && (
-                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
                           Custom
                         </span>
                       )}
                       {sourceTag(c) && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(c.source)}`}>
                           {sourceTag(c)}
                         </span>
                       )}
