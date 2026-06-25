@@ -18,6 +18,7 @@ import {
 } from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ActionResolver } from './ActionResolver.tsx'
+import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './RollLog.tsx'
@@ -174,23 +175,11 @@ export function CastSpellPanel({
     )
   }
 
-  // A buff/utility spell with no rollable mechanics (Bless, Shield of Faith, …) shows
-  // its full reference card so the GM can read and adjudicate it (apply the effect via
-  // the Effect button). A damage-only spell keeps the compact roll-damage view.
+  // A damage-only / buff / utility spell with no attack or save opens the same popup a
+  // stat-block cast does: its reference card (Bless, Shield of Faith, …), or the compact
+  // roll-damage view for a damage-only spell.
   return (
-    <div className="w-full space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">
-          Cast {spell.name}{' '}
-          <span className="font-normal text-slate-500 dark:text-slate-400">
-            · {levelText(spell.level)} {spell.school}
-          </span>
-        </h3>
-        <button type="button" onClick={reset} className="shrink-0 text-xs text-slate-500 hover:underline">
-          Cancel
-        </button>
-      </div>
-
+    <Modal title={`Cast ${spell.name}`} subtitle={`${levelText(spell.level)} · ${spell.school}`} onClose={reset}>
       {spell.mechanics ? (
         <SpellResolution
           spell={spell}
@@ -202,6 +191,6 @@ export function CastSpellPanel({
       ) : (
         <SpellCard spell={spell} />
       )}
-    </div>
+    </Modal>
   )
 }

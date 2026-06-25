@@ -156,7 +156,7 @@ export function CombatantControls({
               aria-label={`Concentration duration for ${name}`}
               className="rounded border border-slate-300 bg-white px-1 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
             >
-              <option value="">Indefinite</option>
+              <option value="">Until removed</option>
               <option value="10">1 minute</option>
               <option value="100">10 minutes</option>
               <option value="600">1 hour</option>

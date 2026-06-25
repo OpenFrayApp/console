@@ -264,6 +264,7 @@ const QUICK_CONDITIONS: ConditionName[] = [
   'Restrained',
   'Poisoned',
   'Frightened',
+  'Incapacitated',
   'Stunned',
   'Blinded',
   'Paralyzed',
