@@ -4,10 +4,12 @@ OpenFray includes game content from the following sources. This governs the
 **game content** (the data); it is **separate from** the project's own code license
 (AGPL-3.0, see [`LICENSE`](./LICENSE)). Both apply.
 
-**Policy:** all game content is used under **CC-BY-4.0; the OGL is never used.** See
-[`docs/content-licensing.md`](./docs/content-licensing.md) for the full build-agent
-instructions. The running app must also surface this attribution in-app (an
-About/Credits screen), alongside the AGPL §13 "Source" link.
+**Policy:** each source is honored under its own license, preferring **CC-BY > ORC >
+OGL**; never assumed CC-BY. WotC SRD is CC-BY-4.0; third-party content (e.g. Kobold
+Press) is used under its actual license — ORC or OGL 1.0a — with that license's full
+obligations met below. See [`docs/content-licensing.md`](./docs/content-licensing.md)
+for the build-agent instructions. The running app must also surface this attribution
+in-app (an About/Credits screen), alongside the AGPL §13 "Source" link.
 
 ## System Reference Document 5.2.1 (D&D 2024)
 
@@ -43,9 +45,11 @@ Changes were made: the content was reformatted and restructured into OpenFray's 
 ## Third-party content
 
 *(For each third-party source actually ingested — e.g. Kobold Press — name it and
-reproduce ITS required attribution under ITS own license. Do not assume CC-BY. Check
-each publisher's terms before ingesting and record them here. If a source is OGL-only,
-flag it to the maintainer rather than reintroducing the OGL.)*
+reproduce ITS required attribution under ITS own license. Do not assume CC-BY; check
+each publisher's terms before ingesting. For an **OGL 1.0a** source: include only its
+declared Open Game Content, reproduce the **full OGL 1.0a text** below, and carry its
+**verbatim Section 15 copyright chain** here. For an **ORC** source: include the ORC
+attribution notice and license. Record each source here before its data ships.)*
 
 None bundled yet.
 
