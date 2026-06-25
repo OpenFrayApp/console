@@ -16,8 +16,8 @@ About/Credits screen), alongside the AGPL §13 "Source" link.
 ## System Reference Document 5.2 (D&D 2024)
 
 OpenFray's compendium uses material from the SRD 5.2 under CC-BY-4.0: **330
-creatures parsed from WotC's official SRD 5.2.1 PDF**, plus 339 spells via the
-[Open5e](https://open5e.com) API. Required attribution:
+creatures and the 15 conditions' rules text parsed from WotC's official SRD 5.2.1
+PDF**, plus 339 spells via the [Open5e](https://open5e.com) API. Required attribution:
 
 > This work includes material from the System Reference Document 5.2 ("SRD 5.2")
 > by Wizards of the Coast LLC and available at <https://www.dndbeyond.com/srd>.
