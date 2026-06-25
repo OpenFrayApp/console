@@ -48,6 +48,22 @@ declared Open Game Content, reproduce the **full OGL 1.0a text** below, and carr
 **verbatim Section 15 copyright chain** here. For an **ORC** source: include the ORC
 attribution notice and license. Record each source here before its data ships.)*
 
+### Tome of Beasts (Kobold Press)
+
+OpenFray includes **Open Game Content** from *Tome of Beasts* © 2016 Open Design LLC,
+used under the **Open Game License v1.0a**. ToB 1 designates its monster names,
+descriptions, statistics, and abilities as Open Game Content; we include **only** that.
+We do **not** include any Product Identity — artwork, sidebars, "fiction"/story text, or
+the book's unique **named individuals** (characters/deities), which are excluded
+wholesale: the Demon Lords Akyishigal, Alquam, Camazotz, Mechuiti, and Qorgeth; the
+arch-devil Mammon; Totivillus, Scribe of Hell; the Shadow Fey court rulers (Lord of the
+Hunt, the Moonlit King, the Queen of Night and Magic, the Queen of Witches, the River
+King, and the Snow Queen); the Bear King; the Avatar of Boreas; and the Emperor of the
+Ghouls (their generic "spawn" minions remain OGC). **Changes were made**: the stat blocks
+were reformatted and restructured into OpenFray's schema. *Kobold Press* and *Midgard*
+are trademarks of Open Design; OpenFray is not affiliated with or endorsed by Kobold
+Press.
+
 ### Tome of Beasts 2 (Kobold Press)
 
 OpenFray includes **Open Game Content** from *Tome of Beasts 2* © 2020 Open Design LLC,
