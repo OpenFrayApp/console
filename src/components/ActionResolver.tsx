@@ -289,7 +289,7 @@ function toDuration(choice: DurationChoice): EffectDuration {
  * duration. "Until {source}'s turn" (e.g. the Assassin's Poisoned-until-its-next-
  * turn) is offered when there's a source to key it to.
  */
-function ConditionChips({
+export function ConditionChips({
   onApply,
   sourceName,
 }: {
@@ -360,6 +360,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     autoCrit: boolean
   } | null>(null)
   const [damage, setDamage] = useState('')
+  const [adv, setAdv] = useState<'normal' | 'advantage' | 'disadvantage'>('normal')
   const [conc, setConc] = useState<{ dc: number; damage: number } | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
@@ -378,6 +379,8 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
       target,
       kind: 'attack',
       range,
+      advantageSources: adv === 'advantage' ? ['Advantage'] : undefined,
+      disadvantageSources: adv === 'disadvantage' ? ['Disadvantage'] : undefined,
     })
     const { result, applied } = rolled
     // Persist any consumeOnRoll effects that fired (e.g. "disadvantage on its
@@ -507,6 +510,31 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
           />
         </label>
       )}
+
+      <fieldset className="mb-3">
+        <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          Roll
+        </legend>
+        <div className="inline-flex overflow-hidden rounded-md border border-slate-300 text-sm dark:border-slate-700">
+          {(['normal', 'advantage', 'disadvantage'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setAdv(mode)}
+              className={`px-3 py-1 capitalize ${
+                adv === mode
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+              }`}
+            >
+              {mode === 'normal' ? 'Normal' : mode === 'advantage' ? 'Advantage' : 'Disadvantage'}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          Combines with any advantage/disadvantage from effects (one of each cancels).
+        </p>
+      </fieldset>
 
       <div className="flex items-center gap-3">
         <button

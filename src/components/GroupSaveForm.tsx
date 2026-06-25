@@ -5,7 +5,9 @@ import { useState } from 'react'
 import type { Ability } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
+import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { EncounterAction } from '../state/encounter.ts'
+import { condition } from '../combat/effects.ts'
 import {
   applySaveDamage,
   damageForResult,
@@ -20,6 +22,7 @@ import {
   rollConcentrationCheck,
 } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
+import { ConditionChips } from './ActionResolver.tsx'
 import type { OnRoll } from './RollLog.tsx'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
@@ -146,6 +149,20 @@ export function GroupSaveForm({
 
   const resolved = Object.keys(rows).length > 0
   const selectedCombatants = combatants.filter((c) => selected.has(c.combatantId))
+
+  // Conditions land on those who failed (or all selected pre-roll), like a save action.
+  const applyCondition = (name: ConditionName, duration: EffectDuration) => {
+    const affected = resolved
+      ? selectedCombatants.filter((c) => rows[c.combatantId]?.result === 'fail')
+      : selectedCombatants
+    for (const c of affected) {
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) => ({ ...cc, effects: [...cc.effects, condition(name, { duration })] }),
+      })
+    }
+  }
 
   if (pending.length > 0) {
     return (
@@ -294,6 +311,8 @@ export function GroupSaveForm({
           </button>
         </div>
       )}
+
+      {resolved && <ConditionChips onApply={applyCondition} />}
     </div>
   )
 }

@@ -46,6 +46,8 @@ export interface EffectRollOptions {
   range?: AttackRange
   /** Extra advantage sources beyond effects, e.g. a trait like "Magic Resistance". */
   advantageSources?: string[]
+  /** Extra disadvantage sources beyond effects (e.g. a GM-set disadvantage). */
+  disadvantageSources?: string[]
   crit?: boolean | CritRule
   rand?: RandomSource
 }
@@ -128,8 +130,9 @@ export function rollWithEffects(
     }
   }
 
-  // Trait-driven advantage passed in by the caller (e.g. Magic Resistance).
+  // Advantage / disadvantage passed in by the caller (a trait, or a GM toggle).
   for (const source of opts.advantageSources ?? []) addAdvantage('advantage', source)
+  for (const source of opts.disadvantageSources ?? []) addAdvantage('disadvantage', source)
 
   for (const { effect, modifier } of applicable) {
     if (modifier.mode === 'advantage' || modifier.mode === 'disadvantage') {

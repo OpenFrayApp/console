@@ -48,6 +48,7 @@ export function CombatantControls({
   onRoll: OnRoll
 }) {
   const [concInput, setConcInput] = useState<string | null>(null)
+  const [concDur, setConcDur] = useState<number | null>(null)
   const id = combatant.combatantId
   const name = nameOf(combatant)
 
@@ -55,8 +56,9 @@ export function CombatantControls({
 
   const startConc = () => {
     const spell = (concInput ?? '').trim()
-    apply((c) => startConcentration(c, { spell, saveDc: 0, round }))
+    apply((c) => startConcentration(c, { spell, saveDc: 0, round, rounds: concDur ?? undefined }))
     setConcInput(null)
+    setConcDur(null)
   }
 
   const showDeathSaves =
@@ -146,8 +148,20 @@ export function CombatantControls({
               }}
               placeholder="Spell / effect (optional)"
               aria-label={`Concentration spell for ${name}`}
-              className="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+              className="w-36 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
             />
+            <select
+              value={concDur === null ? '' : String(concDur)}
+              onChange={(e) => setConcDur(e.target.value === '' ? null : Number(e.target.value))}
+              aria-label={`Concentration duration for ${name}`}
+              className="rounded border border-slate-300 bg-white px-1 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">Indefinite</option>
+              <option value="10">1 minute</option>
+              <option value="100">10 minutes</option>
+              <option value="600">1 hour</option>
+              <option value="4800">8 hours</option>
+            </select>
             <button type="button" className={BTN} onClick={startConc}>
               Set
             </button>
