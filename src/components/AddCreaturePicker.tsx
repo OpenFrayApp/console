@@ -40,13 +40,12 @@ export function AddCreaturePicker({
   }, [open, creatures])
 
   const q = query.trim().toLowerCase()
-  // Sort before slicing so the top results interleave libraries — otherwise the
-  // first-loaded library (5.2) fills the whole unsearched list.
+  // Sorted alphabetically across every enabled library; the full list lives in the
+  // scroll container so you can browse all creatures, not just the first matches.
   const matches = [...customCreatures, ...(creatures ?? [])]
     .filter((c) => inEnabledLibrary(c, enabledLibraries))
     .filter((c) => !q || c.name.toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, 50)
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
   // Source tag (Core / ToB3): library creatures only — custom carries its own badge.
   const sourceTag = (c: Creature): string | undefined =>
@@ -71,8 +70,8 @@ export function AddCreaturePicker({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search SRD creatures…"
-            aria-label="Search SRD creatures"
+            placeholder="Search creatures…"
+            aria-label="Search creatures"
             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
           />
           {creatures === null ? (

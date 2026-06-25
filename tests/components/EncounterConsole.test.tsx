@@ -64,7 +64,7 @@ async function addGoblin() {
 
 async function addCreature(name: string) {
   // The picker stays open across picks, so only open it if it isn't already.
-  if (!screen.queryByLabelText('Search SRD creatures')) {
+  if (!screen.queryByLabelText('Search creatures')) {
     fireEvent.click(screen.getByText('Add creature'))
   }
   await waitFor(() => screen.getByText(name))
@@ -131,7 +131,7 @@ describe('Encounter flow', () => {
     beginCombat()
     // A reinforcement joins mid-fight — it should roll initiative, not sit at 0. The
     // picker stays open; click its Goblin (scoped, since the tracker also shows one).
-    const picker = screen.getByLabelText('Search SRD creatures').parentElement as HTMLElement
+    const picker = screen.getByLabelText('Search creatures').parentElement as HTMLElement
     fireEvent.click(within(picker).getByText('Goblin')) // auto-labelled "Goblin 2"
     // Read the new combatant's initiative from its tracker row (the stat block also
     // shows the name, so scope to the left section).

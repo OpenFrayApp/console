@@ -49,7 +49,7 @@ describe('AddCreaturePicker', () => {
 
     fireEvent.click(screen.getByText('Add creature'))
     await waitFor(() => screen.getByText('Goblin'))
-    fireEvent.change(screen.getByLabelText('Search SRD creatures'), {
+    fireEvent.change(screen.getByLabelText('Search creatures'), {
       target: { value: 'gob' },
     })
     fireEvent.click(screen.getByText('Goblin'))
