@@ -57,6 +57,9 @@ export interface Spell {
   id: string
   source: ContentSource
   edition?: Edition
+  /** Page in the source document where this entry appears, e.g. SRD 5.2.1 p. 131.
+   *  Provenance/reference only — lets the app link back to the source. */
+  sourcePage?: number
   name: string
   /** 0 for cantrips. */
   level: number

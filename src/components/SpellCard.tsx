@@ -93,6 +93,7 @@ export function SpellCard({
 
       <SourceLink
         source={spell.source}
+        page={spell.sourcePage}
         actions={
           onEdit || onDelete ? (
             <span className="flex shrink-0 gap-2">
