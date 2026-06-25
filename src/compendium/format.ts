@@ -18,6 +18,21 @@ export function formatSenses(senses: Senses): string {
  *  e.g. "lawful evil" → "Lawful Evil", "dragon" → "Dragon". */
 export const titleCase = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase())
 
+/**
+ * Capitalize the first letter of each comma-separated segment, leaving the rest of
+ * each segment untouched. Display-only normalization for source data that arrives
+ * lowercased (e.g. ToB3 defenses "radiant, blinded" → "Radiant, Blinded", a language
+ * line "understands Abyssal but can't speak" → "Understands Abyssal but can't speak").
+ * Proper nouns and mid-phrase words keep their own casing — unlike `titleCase`.
+ */
+export function capitalizeSegments(value: string | undefined): string | undefined {
+  if (!value) return value
+  return value
+    .split(', ')
+    .map((s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s))
+    .join(', ')
+}
+
 /** Display a challenge rating, rendering fractional CRs as fractions. */
 export function formatCr(cr: number | undefined): string {
   if (cr == null) return '—'

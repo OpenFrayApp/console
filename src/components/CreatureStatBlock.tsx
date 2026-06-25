@@ -8,7 +8,7 @@ import type { Creature, SpellGroup, SpellLevel, Spellcasting, SpellRef } from '.
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
-import { crDetail, formatCr, formatSenses, legendaryPreamble, titleCase as titleCaseWords } from '../compendium/format.ts'
+import { capitalizeSegments, crDetail, formatCr, formatSenses, legendaryPreamble, titleCase as titleCaseWords } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -95,14 +95,16 @@ export function DefensesAndSenses({
 }) {
   const present = (label: string, value?: string): [string, string][] =>
     value && value.length ? [[label, value]] : []
+  // Capitalize defenses/languages at render so lowercased source data (e.g. ToB3)
+  // shows correctly everywhere — never fixed in the JSON. Senses/gear are already formatted.
   const defenseRows: [string, string][] = [
-    ...present('Resistances', resistances),
-    ...present('Immunities', immunities),
-    ...present('Vulnerabilities', vulnerabilities),
+    ...present('Resistances', capitalizeSegments(resistances)),
+    ...present('Immunities', capitalizeSegments(immunities)),
+    ...present('Vulnerabilities', capitalizeSegments(vulnerabilities)),
   ]
   const senseRows: [string, string][] = [
     ...present('Senses', senses),
-    ...present('Languages', languages),
+    ...present('Languages', capitalizeSegments(languages)),
     ...present('Gear', gear),
   ]
   if (defenseRows.length === 0 && senseRows.length === 0) return null

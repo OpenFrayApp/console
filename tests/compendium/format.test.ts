@@ -2,7 +2,13 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { crDetail, legendaryPreamble, proficiencyBonus, titleCase } from '../../src/compendium/format.ts'
+import {
+  capitalizeSegments,
+  crDetail,
+  legendaryPreamble,
+  proficiencyBonus,
+  titleCase,
+} from '../../src/compendium/format.ts'
 
 describe('proficiencyBonus', () => {
   it('follows the CR table', () => {
@@ -49,5 +55,22 @@ describe('titleCase', () => {
   it('capitalises every word', () => {
     expect(titleCase('lawful evil')).toBe('Lawful Evil')
     expect(titleCase('dragon (chromatic)')).toBe('Dragon (Chromatic)')
+  })
+})
+
+describe('capitalizeSegments', () => {
+  it('capitalizes the first letter of each comma-separated item', () => {
+    expect(capitalizeSegments('radiant, blinded')).toBe('Radiant, Blinded')
+  })
+
+  it('only touches the first letter — proper nouns and mid-phrase words keep their case', () => {
+    expect(capitalizeSegments("understands Abyssal but can't speak")).toBe(
+      "Understands Abyssal but can't speak",
+    )
+  })
+
+  it('passes through empty/undefined unchanged', () => {
+    expect(capitalizeSegments(undefined)).toBeUndefined()
+    expect(capitalizeSegments('')).toBe('')
   })
 })
