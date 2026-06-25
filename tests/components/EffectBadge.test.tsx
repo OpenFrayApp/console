@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { EffectBadge } from '../../src/components/EffectBadge.tsx'
 import { condition, reminder } from '../../src/combat/effects.ts'
 
@@ -15,10 +15,15 @@ describe('EffectBadge', () => {
     expect(screen.getByText('Hex: +1d6 necrotic')).toBeInTheDocument()
   })
 
-  it('falls back to the name and titles the badge with it', () => {
+  it('falls back to the name and keeps a title fallback for touch', () => {
     render(<EffectBadge effect={condition('Stunned')} />)
-    const badge = screen.getByText('Stunned')
-    expect(badge).toBeInTheDocument()
-    expect(badge).toHaveAttribute('title', 'Stunned')
+    expect(screen.getByText('Stunned')).toBeInTheDocument()
+    expect(screen.getByTitle('Stunned')).toBeInTheDocument()
+  })
+
+  it('previews the condition rules on hover', () => {
+    render(<EffectBadge effect={condition('Stunned')} />)
+    fireEvent.mouseEnter(screen.getByText('Stunned'))
+    expect(screen.getByText(/automatically fail Strength and Dexterity saving throws/i)).toBeInTheDocument()
   })
 })

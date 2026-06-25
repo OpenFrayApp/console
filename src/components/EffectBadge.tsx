@@ -4,6 +4,20 @@
 import type { Effect } from '../schema/effect.ts'
 import { badgeLabel } from '../combat/effects.ts'
 import type { SaveEndsGroup } from '../combat/saveEnds.ts'
+import { resolveCondition } from '../compendium/conditions.ts'
+import { HoverCondition } from './HoverCondition.tsx'
+
+/** The badge text, wrapped in a condition hover preview when the effect is a condition. */
+function EffectLabel({ effect }: { effect: Effect }) {
+  const condition = effect.icon === 'condition' ? resolveCondition(effect.name) : undefined
+  const label = badgeLabel(effect)
+  if (!condition) return <>{label}</>
+  return (
+    <HoverCondition name={condition.name} text={condition.text} className="cursor-help">
+      {label}
+    </HoverCondition>
+  )
+}
 
 function toneFor(icon: string | undefined): string {
   switch (icon) {
@@ -43,7 +57,7 @@ export function EffectBadge({
         title={`Remove ${effect.name}`}
         className={`${className} hover:opacity-80`}
       >
-        {badgeLabel(effect)}
+        <EffectLabel effect={effect} />
         {saveTag}
         <span aria-hidden>×</span>
       </button>
@@ -51,7 +65,7 @@ export function EffectBadge({
   }
   return (
     <span title={effect.name} className={className}>
-      {badgeLabel(effect)}
+      <EffectLabel effect={effect} />
       {saveTag}
     </span>
   )

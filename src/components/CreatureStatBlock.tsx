@@ -283,7 +283,7 @@ function Section({
       </h4>
       <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {items.map((entry) => (
-          <Markdown key={entry.name} resolveSpell={resolveSpell}>
+          <Markdown key={entry.name} linkConditions resolveSpell={resolveSpell}>
             {`**${entry.name}${entry.note ? ` (${entry.note})` : ''}.** ${entry.text ?? ''}`}
           </Markdown>
         ))}
@@ -367,7 +367,7 @@ function ActionSection({
                 ) : (
                   <span className="font-semibold">{heading}.</span>
                 )}{' '}
-                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
             )
           }
@@ -387,7 +387,7 @@ function ActionSection({
                 >
                   {legendaryHeading}.
                 </button>{' '}
-                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
             )
           }
@@ -402,7 +402,7 @@ function ActionSection({
                 >
                   {heading}.
                 </button>{' '}
-                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
             )
           }
@@ -421,12 +421,12 @@ function ActionSection({
                     Roll recharge
                   </button>
                 )}{' '}
-                {a.text ? <Markdown inline resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
               </p>
             )
           }
           return (
-            <Markdown key={a.id} resolveSpell={resolveSpell}>{`**${heading}.** ${a.text ?? ''}`}</Markdown>
+            <Markdown key={a.id} linkConditions resolveSpell={resolveSpell}>{`**${heading}.** ${a.text ?? ''}`}</Markdown>
           )
         })}
       </div>
