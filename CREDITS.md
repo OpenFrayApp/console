@@ -48,6 +48,21 @@ declared Open Game Content, reproduce the **full OGL 1.0a text** below, and carr
 **verbatim Section 15 copyright chain** here. For an **ORC** source: include the ORC
 attribution notice and license. Record each source here before its data ships.)*
 
+### Tome of Beasts 2 (Kobold Press)
+
+OpenFray includes **Open Game Content** from *Tome of Beasts 2* © 2020 Open Design LLC,
+used under the **Open Game License v1.0a**. ToB 2 designates its monster names,
+descriptions, statistics, and abilities as Open Game Content; we include **only** that.
+We do **not** include any Product Identity — artwork, sidebars, "fiction"/story text, or
+the book's unique **named individuals** (characters/deities), which are excluded
+wholesale: Alsikaya the Screeching Mother of Volcanoes, Bathael the Exiled Lord, the
+Commander of Horn and Gold, Degmadu, Hriggala, the Mistress of Midnight Teeth, Poena,
+the Pumpkin King, the Queen of Scorpions, Rhopalocerex, Tarkun the Desiccated, the
+Curator, the Toad King, and Yskarakta (their generic "spawn" minions remain OGC).
+**Changes were made**: the stat blocks were reformatted and restructured into OpenFray's
+schema. *Kobold Press* and *Midgard* are trademarks of Open Design; OpenFray is not
+affiliated with or endorsed by Kobold Press.
+
 ### Tome of Beasts 3 (Kobold Press)
 
 OpenFray includes **Open Game Content** from *Tome of Beasts 3* © 2022 Open Design LLC,
@@ -193,6 +208,67 @@ Tome of Beasts 3 ©2022 Open Design LLC; Authors: Eytan Bernstein, Celeste Conow
 Benjamin L. Eastman, Robert Fairbanks, Scott Gable, Basheer Ghouse, Richard Green, Jeremy
 Hochhalter, Jeff Lee, Christopher Lockey, Sarah Madsen, Ben McFarland, Jonathan Miley,
 Kelly Pawlik, Sebastian Rombach, Chelsea Steverson, Brian Suskind, Mike Welham
+
+System Reference Document 5.0 Copyright 2016, Wizards of the Coast, Inc.; Authors Mike
+Mearls, Jeremy Crawford, Chris Perkins, Rodney Thompson, Peter Lee, James Wyatt, Robert J.
+Schwalb, Bruce R. Cordell, Chris Sims, and Steve Townshend, based on original material by
+E. Gary Gygax and Dave Arneson.
+
+Deep Magic: Void Magic. © 2016 Open Design; Author: Dan Dillon.
+
+Demon Cults & Secret Societies for 5th Edition. © 2017 Open Design. Authors: Jeff Lee,
+Mike Welham, Jon Sawatsky.
+
+Empire of the Ghouls © 2020 Open Design LLC; Wolfgang Baur, Richard Green, Jeff Lee,
+Christopher Lockey, Kelly Pawlik, Mike Welham.
+
+Midgard Heroes Handbook. © 2018 Open Design LLC; Authors: Chris Harris, Dan Dillon, Greg
+Marks, James Haeck, Jon Sawatsky, Michael Ohl, Richard Green, Rich Howard, Scott Carter,
+Shawn Merwin, and Wolfgang Baur.
+
+Midgard Worldbook. © 2018 Open Design LLC. Authors: Wolfgang Baur, Dan Dillon, Richard
+Green, Jeff Grubb, Chris Harris, Brian Suskind, and Jon Sawatsky.
+
+The Raven's Call 5th Edition © 2015 Open Design; Authors: Wolfgang Baur and Dan Dillon.
+
+Tales of the Old Margreve © 2019 Open Design LLC; Matthew Corley, Wolfgang Baur, Richard
+Green, James Introcaso, Ben McFarland, and Jon Sawatsky.
+
+Underworld Lairs © 2020 Open Design LLC; Authors: Jeff Lee, Ben McFarland, Shawn Merwin,
+Kelly Pawlik, Brian Suskind, and Mike Welham.
+
+Underworld Player's Guide © 2020 Open Design LLC; Authors: Wolfgang Baur, Dan Dillon, Jeff
+Lee, Christopher Lockey, Shawn Merwin, and Kelly Pawlik
+
+Warlock 10: The Magocracies. Authors: Dan Dillon, Ben McFarland, Kelly Pawlik, Troy E.
+Taylor. © 2019 Open Design LLC.
+
+Warlock 15: Boss Monsters. Authors: Celeste Conowitch, Scott Gable, Richard Green, TK
+Johnson, Kelly Pawlik, Robert Schwalb, Mike Welham. © 2019 Open Design LLC.
+
+Warlock Bestiary. Authors: Jeff Lee with Chris Harris, James Introcaso, and Wolfgang Baur.
+© 2018 Open Design LLC.
+
+Warlock Guide to the Shadow Realms. Author: Kelly Pawlik. © 2019 Open Design LLC.
+
+Warlock Lair: The Sunken Library of Qezzit Qire. © 2019 Open Design LLC. Author Mike
+Welham.
+
+Warlock Lair: Rumble in the Henhouse. © 2019 Open Design LLC. Author Kelly Pawlik.
+
+Warlock Lair: Birds of a Feather. © 2019 Open Design LLC. Author Kelly Pawlik.
+
+Warlock Lair: Reclamation of Hallowhall. Author: Jeff Lee. © 2019 Open Design LLC.
+
+Warlock Lair: The Dark Aerie. ©2019 Open Design LLC. Author Mike Welham.
+
+Warlock Lair: Song Undying. Author: Jeff Lee. © 2019 Open Design LLC.
+
+Warlock Lair: Lost and Found. ©2020 Open Design LLC. Authors Jonathan and Beth Ball.
+
+Warlock Lair: A Drinking Problem ©2020 Open Design LLC. Author Jonathan Miley.
+
+Warlock Lair: Gold and Glory ©2020 Open Design LLC. Author Bryan Armor.
 
 END OF LICENSE
 

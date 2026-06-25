@@ -45,6 +45,14 @@ export const LIBRARIES: Library[] = [
     spellsFile: 'srd-2014-spells.json',
   },
   {
+    id: 'kobold-press-tob2',
+    label: 'Tome of Beasts 2 (Kobold Press)',
+    shortLabel: 'ToB2',
+    family: 'tob',
+    edition: '5.0',
+    creaturesFile: 'tob2-creatures.json',
+  },
+  {
     id: 'kobold-press-tob3',
     label: 'Tome of Beasts 3 (Kobold Press)',
     shortLabel: 'ToB3',
