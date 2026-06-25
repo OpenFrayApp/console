@@ -192,7 +192,7 @@ Warlock 27: Southlands ©2021 Open Design LLC; Authors: Basheer Ghouse, Richard 
 Tome of Beasts 3 ©2022 Open Design LLC; Authors: Eytan Bernstein, Celeste Conowitch,
 Benjamin L. Eastman, Robert Fairbanks, Scott Gable, Basheer Ghouse, Richard Green, Jeremy
 Hochhalter, Jeff Lee, Christopher Lockey, Sarah Madsen, Ben McFarland, Jonathan Miley,
-Kelly Pawlik, Sebastian Rombach, Chelsea Steverson, Brian Suskind, Mike Welham.
+Kelly Pawlik, Sebastian Rombach, Chelsea Steverson, Brian Suskind, Mike Welham
 
 END OF LICENSE
 
