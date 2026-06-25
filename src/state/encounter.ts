@@ -7,6 +7,7 @@ import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import { beginEncounter, nextTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { setCurrentHp } from '../combat/resources.ts'
+import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
 
 /**
  * The encounter store as a pure reducer over the tested combat functions. The UI
@@ -26,6 +27,9 @@ export type EncounterAction =
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
   | { type: 'log'; message: string }
+  /** Attribute damage dealt to its source (for the recap MVP). Damage *taken* is
+   *  captured automatically from any HP drop, so this records the dealer only. */
+  | { type: 'recordDamage'; sourceId: string; amount: number }
   /** Long rest: restore every friendly combatant to full HP; reset the short-rest count. */
   | { type: 'longRest' }
   /** Short rest: set new current HP for the given combatants; bump the short-rest count. */
@@ -73,17 +77,32 @@ const indexOfId = (combatants: Combatant[], id: string | undefined): number => {
 export function encounterReducer(state: Encounter, action: EncounterAction): Encounter {
   switch (action.type) {
     case 'begin':
-      return { ...beginEncounter(state, action.tiebreak), paused: false }
+      return { ...beginEncounter(state, action.tiebreak), paused: false, combatStats: startStats(Date.now()) }
 
     case 'pause':
-      return { ...state, paused: true }
+      return {
+        ...state,
+        paused: true,
+        combatStats: state.combatStats && pauseStats(state.combatStats, Date.now()),
+      }
 
     case 'resume':
-      return { ...state, paused: false }
+      return {
+        ...state,
+        paused: false,
+        combatStats: state.combatStats && resumeStats(state.combatStats, Date.now()),
+      }
 
-    // End combat back to setup: keep the combatants on the board, reset the clock.
+    // End combat back to setup: keep the combatants on the board, reset the clock. The
+    // stats are finalized (clock stopped) and kept — App reads them for the recap.
     case 'stop':
-      return { ...state, round: 0, activeIndex: 0, paused: false }
+      return {
+        ...state,
+        round: 0,
+        activeIndex: 0,
+        paused: false,
+        combatStats: state.combatStats && pauseStats(state.combatStats, Date.now()),
+      }
 
     case 'nextTurn':
       return nextTurn(state)
@@ -103,12 +122,28 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       return { ...state, combatants, activeIndex }
     }
 
-    case 'update':
+    case 'update': {
+      const before = state.combatants.find((c) => c.combatantId === action.id)
+      const combatants = state.combatants.map((c) =>
+        c.combatantId === action.id ? action.update(c) : c,
+      )
+      const after = combatants.find((c) => c.combatantId === action.id)
+      // Any HP drop — action damage, a save, a manual edit — is damage taken.
+      const lost = before && after ? before.hp.current - after.hp.current : 0
       return {
         ...state,
-        combatants: state.combatants.map((c) =>
-          c.combatantId === action.id ? action.update(c) : c,
-        ),
+        combatants,
+        combatStats:
+          state.combatStats && lost > 0
+            ? addTaken(state.combatStats, action.id, lost)
+            : state.combatStats,
+      }
+    }
+
+    case 'recordDamage':
+      return {
+        ...state,
+        combatStats: state.combatStats && addDealt(state.combatStats, action.sourceId, action.amount),
       }
 
     case 'log':
@@ -178,8 +213,13 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       return { ...state, combatants, activeIndex: indexOfId(combatants, activeId(state)) }
     }
 
-    case 'load':
-      return action.encounter
+    case 'load': {
+      const e = action.encounter
+      // Don't credit time the tab was closed: restart the active clock from now.
+      return e.combatStats?.runningSince != null
+        ? { ...e, combatStats: { ...e.combatStats, runningSince: Date.now() } }
+        : e
+    }
 
     default:
       return state

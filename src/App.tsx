@@ -48,6 +48,8 @@ import {
 import { useAuth } from './auth/useAuth.ts'
 import { Compendium, type Tab as CompendiumTab } from './components/Compendium.tsx'
 import { EncounterConsole } from './components/EncounterConsole.tsx'
+import { RecapScreen, EndCombatPrompt } from './components/Recap.tsx'
+import { allFoesDefeated, allPlayersDown, buildRecap, type Recap } from './combat/recap.ts'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
 import { loadSettings, saveSettings } from './state/settings.ts'
 import { AddPcForm } from './components/AddPcForm.tsx'
@@ -184,6 +186,10 @@ function App() {
     saveSettings({ enabledLibraries: ids })
   }
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
+  const [recap, setRecap] = useState<Recap | null>(null)
+  const [endPrompt, setEndPrompt] = useState(false)
+  const foesPromptedRef = useRef(false)
   const [encounterPcEdit, setEncounterPcEdit] = useState<{ pc: RosterPc; combatantId: string } | null>(null)
   const [encounterCreatureEdit, setEncounterCreatureEdit] = useState<{ draft: MonsterDraft; editId: string } | null>(null)
   const [encounter, dispatch] = useReducer(
@@ -606,6 +612,38 @@ function App() {
     autoRollSaveEnds(next.combatants[next.activeIndex], 'startOfTurn')
   }
 
+  // End combat: snapshot the recap from the live state (before stop zeroes the round),
+  // then reset to setup. Used by the Stop button, the all-enemies prompt, and a TPK.
+  const endCombat = () => {
+    setRecap(buildRecap(encounter, rollLog, Date.now()))
+    setEndPrompt(false)
+    dispatch({ type: 'stop' })
+  }
+
+  // Detect combat's end. All PCs down → end automatically (defeat). All foes down →
+  // prompt once to end (the GM may keep the fight running). Re-arm when foes recover.
+  useEffect(() => {
+    if (encounter.round === 0) {
+      foesPromptedRef.current = false
+      setEndPrompt(false)
+      return
+    }
+    if (allPlayersDown(encounter.combatants)) {
+      endCombat()
+      return
+    }
+    if (allFoesDefeated(encounter.combatants)) {
+      if (!foesPromptedRef.current) {
+        foesPromptedRef.current = true
+        setEndPrompt(true)
+      }
+    } else if (foesPromptedRef.current) {
+      foesPromptedRef.current = false
+      setEndPrompt(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [encounter])
+
   const started = encounter.round > 0
   const paused = encounter.paused === true
 
@@ -738,12 +776,16 @@ function App() {
             paused={paused}
             onBegin={handleBegin}
             onNextTurn={handleNextTurn}
+            onStop={endCombat}
             onClearLog={() => setRollLog([])}
           />
         )}
       </main>
 
       {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
+
+      {endPrompt && <EndCombatPrompt onConfirm={endCombat} onCancel={() => setEndPrompt(false)} />}
+      {recap && <RecapScreen recap={recap} onClose={() => setRecap(null)} />}
 
       {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
           on-board copy's character fields (HP and combat state stay put). */}

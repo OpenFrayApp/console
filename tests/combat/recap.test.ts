@@ -1,0 +1,156 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 OpenFray contributors
+
+import { describe, expect, it } from 'vitest'
+import type { Combatant } from '../../src/schema/combatant.ts'
+import type { Encounter } from '../../src/schema/encounter.ts'
+import {
+  activeMillis,
+  addDealt,
+  addTaken,
+  allFoesDefeated,
+  allPlayersDown,
+  buildRecap,
+  pauseStats,
+  resumeStats,
+  startStats,
+} from '../../src/combat/recap.ts'
+
+const pc = (over: Partial<Extract<Combatant, { isPC: true }>> = {}): Combatant =>
+  ({
+    isPC: true,
+    kind: 'pc',
+    combatantId: 'pc1',
+    name: 'Hero',
+    ac: 16,
+    initiative: 0,
+    status: 'active',
+    hp: { current: 20, max: 20, temp: 0 },
+    concentration: null,
+    effects: [],
+    ...over,
+  }) as Combatant
+
+const monster = (over: Record<string, unknown> = {}): Combatant =>
+  ({
+    isPC: false,
+    combatantId: 'm1',
+    creatureId: 'srd:goblin',
+    creature: { id: 'srd:goblin', xp: 50 },
+    label: 'Goblin',
+    initiative: 0,
+    status: 'active',
+    hp: { current: 7, max: 7, temp: 0 },
+    slotsUsed: {},
+    spellUsesSpent: {},
+    limitedUseState: {},
+    legendaryRemaining: 0,
+    concentration: null,
+    effects: [],
+    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
+    ...over,
+  }) as unknown as Combatant
+
+const encounter = (combatants: Combatant[], over: Partial<Encounter> = {}): Encounter => ({
+  encounterId: 'e',
+  ownerId: null,
+  round: 3,
+  activeIndex: 0,
+  combatants,
+  log: [],
+  ...over,
+})
+
+describe('combat stats timer', () => {
+  it('accumulates active time and excludes paused spans', () => {
+    let s = startStats(1000)
+    expect(activeMillis(s, 1500)).toBe(500) // running 500ms
+    s = pauseStats(s, 1500) // banked 500ms, clock stopped
+    expect(activeMillis(s, 9999)).toBe(500) // time while paused doesn't count
+    s = resumeStats(s, 2000)
+    expect(activeMillis(s, 2300)).toBe(800) // 500 banked + 300 running
+  })
+
+  it('addDealt / addTaken accumulate per combatant and ignore non-positive', () => {
+    let s = startStats(0)
+    s = addDealt(s, 'a', 10)
+    s = addDealt(s, 'a', 5)
+    s = addTaken(s, 'b', 7)
+    s = addDealt(s, 'a', 0) // ignored
+    expect(s.damageDealt).toEqual({ a: 15 })
+    expect(s.damageTaken).toEqual({ b: 7 })
+  })
+})
+
+describe('outcome detection', () => {
+  it('allFoesDefeated only when every foe is down and foes exist', () => {
+    expect(allFoesDefeated([])).toBe(false)
+    expect(allFoesDefeated([monster({ status: 'active' })])).toBe(false)
+    expect(allFoesDefeated([monster({ status: 'dead' }), monster({ combatantId: 'm2', status: 'active' })])).toBe(false)
+    expect(allFoesDefeated([monster({ status: 'dead' })])).toBe(true)
+  })
+
+  it('allPlayersDown only when every PC is down/dead and PCs exist', () => {
+    expect(allPlayersDown([])).toBe(false)
+    expect(allPlayersDown([pc({ status: 'active' })])).toBe(false)
+    expect(allPlayersDown([pc({ status: 'unconscious' })])).toBe(true)
+    expect(allPlayersDown([pc({ status: 'dead' }), pc({ combatantId: 'pc2', status: 'active' })])).toBe(false)
+  })
+})
+
+describe('buildRecap', () => {
+  it('victory: sums defeated foes XP, splits per player, totals rounds/time', () => {
+    const stats = startStats(0)
+    const enc = encounter(
+      [
+        pc({ status: 'active' }),
+        pc({ combatantId: 'pc2', name: 'Mage', status: 'active' }),
+        monster({ combatantId: 'm1', status: 'dead', creature: { id: 'g', xp: 50 } as never }),
+        monster({ combatantId: 'm2', status: 'dead', creature: { id: 'o', xp: 450 } as never }),
+      ],
+      { round: 4, combatStats: { ...stats, activeMs: 90_000, runningSince: null } },
+    )
+    const recap = buildRecap(enc, [], 0)
+    expect(recap.outcome).toBe('victory')
+    expect(recap.totalXp).toBe(500)
+    expect(recap.partySize).toBe(2)
+    expect(recap.xpPerPlayer).toBe(250)
+    expect(recap.rounds).toBe(4)
+    expect(recap.inGameSeconds).toBe(24)
+    expect(recap.activeMs).toBe(90_000)
+  })
+
+  it('defeat when all PCs are down; XP still counts slain foes', () => {
+    const enc = encounter([
+      pc({ status: 'dead' }),
+      monster({ status: 'dead' }),
+    ])
+    expect(buildRecap(enc, [], 0).outcome).toBe('defeat')
+  })
+
+  it('inconclusive when both sides still stand', () => {
+    const enc = encounter([pc({ status: 'active' }), monster({ status: 'active' })])
+    const recap = buildRecap(enc, [], 0)
+    expect(recap.outcome).toBe('inconclusive')
+    expect(recap.totalXp).toBe(0)
+  })
+
+  it('counts crits/fumbles from the roll log and names the MVP', () => {
+    const stats = { ...startStats(0), damageDealt: { pc1: 40, pc2: 12 }, damageTaken: { m1: 30 } }
+    const enc = encounter(
+      [pc({ combatantId: 'pc1', name: 'Hero', status: 'active' }), monster({ status: 'dead' })],
+      { combatStats: stats },
+    )
+    const rolls = [
+      { result: { crit: true } },
+      { result: { crit: true } },
+      { result: { fumble: true } },
+      { result: {} },
+    ]
+    const recap = buildRecap(enc, rolls, 0)
+    expect(recap.crits).toBe(2)
+    expect(recap.fumbles).toBe(1)
+    expect(recap.damageTakenTotal).toBe(30)
+    expect(recap.mvp).toEqual({ label: 'Hero', amount: 40 })
+  })
+})

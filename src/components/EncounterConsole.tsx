@@ -77,6 +77,7 @@ export function EncounterConsole({
   paused,
   onBegin,
   onNextTurn,
+  onStop,
   onClearLog,
   onNote,
   onRename,
@@ -103,6 +104,7 @@ export function EncounterConsole({
   paused: boolean
   onBegin: () => void
   onNextTurn: () => void
+  onStop?: () => void
   onClearLog: () => void
 }) {
   const { combatants, activeIndex } = encounter
@@ -353,6 +355,7 @@ export function EncounterConsole({
             dispatch={dispatch}
             onBegin={onBegin}
             onNextTurn={onNextTurn}
+            onStop={onStop}
           />
         </div>
         <div

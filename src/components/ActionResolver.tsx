@@ -429,6 +429,7 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     const opts = { crit: attack.crit }
     const dc = concentrationPromptDC(tgt, applyDamage(tgt, amount, opts), amount)
     dispatch({ type: 'update', id: tgt.combatantId, update: (c) => applyDamage(c, amount, opts) })
+    if (attacker) dispatch({ type: 'recordDamage', sourceId: attacker.combatantId, amount })
     if (dc != null) setConc({ dc, damage: amount })
     else onClose()
   }
@@ -738,6 +739,7 @@ export function SaveResolver({
       const promptDc = concentrationPromptDC(c, applyDamage(c, amount), amount)
       if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: amount })
       dispatch({ type: 'update', id: c.combatantId, update: (cc) => applyDamage(cc, amount) })
+      if (attacker) dispatch({ type: 'recordDamage', sourceId: attacker.combatantId, amount })
     }
     if (prompts.length > 0) setPending(prompts)
     else onClose()

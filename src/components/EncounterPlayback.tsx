@@ -105,6 +105,7 @@ export function EncounterPlayback({
   dispatch,
   onBegin,
   onNextTurn,
+  onStop,
 }: {
   started: boolean
   paused: boolean
@@ -113,9 +114,12 @@ export function EncounterPlayback({
   /** Overrides for begin / next turn so the caller can also move the selection. */
   onBegin?: () => void
   onNextTurn?: () => void
+  /** Override for stop so the caller can show the end-of-combat recap. */
+  onStop?: () => void
 }) {
   const begin = onBegin ?? (() => dispatch({ type: 'begin' }))
   const advance = onNextTurn ?? (() => dispatch({ type: 'nextTurn' }))
+  const stop = onStop ?? (() => dispatch({ type: 'stop' }))
   const green = 'border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950'
   const grey = 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
   const red = 'border-rose-500 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950'
@@ -171,7 +175,7 @@ export function EncounterPlayback({
         type="button"
         aria-label="Stop"
         title="Stop"
-        onClick={() => dispatch({ type: 'stop' })}
+        onClick={stop}
         className={`${ICON_BTN} ${red}`}
       >
         <StopIcon />

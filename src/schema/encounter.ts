@@ -10,6 +10,21 @@ export interface EncounterLogEntry {
 }
 
 /**
+ * Combat clock + tallies kept while a fight runs, read by the end-of-combat recap.
+ * The IRL clock excludes paused time (`activeMs` accumulates; `runningSince` is when
+ * it last started, null while paused/ended). See `combat/recap.ts`.
+ */
+export interface CombatStats {
+  startedAt: number
+  activeMs: number
+  runningSince: number | null
+  /** combatantId → damage dealt (only where a source is known; drives the MVP). */
+  damageDealt: Record<string, number>
+  /** combatantId → damage taken (every HP loss, captured by the reducer). */
+  damageTaken: Record<string, number>
+}
+
+/**
  * The whole session state — persisted as one autosaved JSONB blob. Combatants
  * live inside it, not as separately-queried rows.
  */
@@ -28,4 +43,6 @@ export interface Encounter {
   /** Sorted by initiative descending. */
   combatants: Combatant[]
   log: EncounterLogEntry[]
+  /** Set on Begin; carries the recap clock + damage tallies. Absent before combat. */
+  combatStats?: CombatStats
 }
