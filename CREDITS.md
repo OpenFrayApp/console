@@ -31,16 +31,13 @@ OpenFray's SRD 5.1 compendium (via [dnd5eapi.co](https://www.dnd5eapi.co)) is us
 under CC-BY-4.0. SRD 5.1 is dual-licensed (OGL 1.0a or CC-BY-4.0); we elect CC-BY-4.0
 and never invoke the OGL. Required attribution:
 
-> This work includes material from the System Reference Document 5.1 ("SRD 5.1")
+> This work includes material taken from the System Reference Document 5.1 ("SRD 5.1")
 > by Wizards of the Coast LLC and available at
 > <https://dnd.wizards.com/resources/systems-reference-document>. The SRD 5.1 is
 > licensed under the Creative Commons Attribution 4.0 International License available
 > at <https://creativecommons.org/licenses/by/4.0/legalcode>.
 
 Changes were made: the content was reformatted and restructured into OpenFray's schema.
-
-> ⚠️ Verify the wording above against the SRD 5.1 CC-BY preamble before public release —
-> it must match WotC's specified text verbatim.
 
 ## Third-party content
 
