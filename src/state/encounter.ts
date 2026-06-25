@@ -6,6 +6,7 @@ import type { Encounter } from '../schema/encounter.ts'
 import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import { beginEncounter, nextTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe } from '../combat/combatant.ts'
+import { survivesLongRest } from '../combat/effects.ts'
 import { setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
 
@@ -165,10 +166,20 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     // monsters are always foes, so a party rest leaves them be — re-add the creature
     // for a fresh pool, or undo a cast to give a slot back.)
     case 'longRest':
+      // Restore friendly HP, and also end concentration and any sub-8h effect on them
+      // (a long rest is 8 hours); GM-managed `manual` and ≥8h effects survive.
       return {
         ...state,
         shortRests: 0,
-        combatants: state.combatants.map((c) => (isFoe(c) ? c : setCurrentHp(c, c.hp.max))),
+        combatants: state.combatants.map((c) =>
+          isFoe(c)
+            ? c
+            : {
+                ...setCurrentHp(c, c.hp.max),
+                concentration: null,
+                effects: c.effects.filter(survivesLongRest),
+              },
+        ),
       }
 
     case 'shortRest':

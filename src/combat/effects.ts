@@ -185,3 +185,18 @@ export function badgeLabel(effect: Effect): string {
 export function isReminderOnly(effect: Effect): boolean {
   return effect.modifier === null
 }
+
+/** Rounds in a long rest's 8 hours: 8 × 3600 ÷ 6s = 4800. */
+const LONG_REST_ROUNDS = 4800
+
+/**
+ * Does an effect outlast a long rest? Combat-scoped durations (consume-on-roll,
+ * until-source-turn, save-ends) and short timed `rounds` effects clear; a GM-managed
+ * `manual` effect or an explicitly ≥8h `rounds` duration survives.
+ */
+export function survivesLongRest(effect: Effect): boolean {
+  const d = effect.duration
+  if (d.type === 'manual') return true
+  if (d.type === 'rounds') return (d.rounds ?? 0) >= LONG_REST_ROUNDS
+  return false
+}

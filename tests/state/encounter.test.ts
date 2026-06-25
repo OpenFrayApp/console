@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { applyDamage } from '../../src/combat/resources.ts'
+import { condition } from '../../src/combat/effects.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 
 function creature(): Creature {
@@ -64,6 +65,22 @@ describe('encounterReducer', () => {
   it('adds combatants sorted by initiative', () => {
     const e = withCombatants(monster('a', 5), monster('b', 20))
     expect(e.combatants.map((c) => c.combatantId)).toEqual(['b', 'a'])
+  })
+
+  it('long rest restores friendly HP and clears concentration + sub-8h effects', () => {
+    const hero: PlayerCharacter = {
+      ...pc('hero', 5, 30),
+      concentration: { spell: 'Bless', saveDc: 13, round: 1 },
+      effects: [
+        condition('Frightened', { duration: { type: 'rounds', rounds: 10 } }),
+        condition('Restrained', { duration: { type: 'rounds', rounds: 4800 } }),
+      ],
+    }
+    const after = encounterReducer({ ...emptyEncounter(), combatants: [hero] }, { type: 'longRest' })
+    const c = after.combatants[0]
+    expect(c.hp.current).toBe(30)
+    expect(c.concentration).toBeNull()
+    expect(c.effects.map((e) => e.name)).toEqual(['Restrained'])
   })
 
   it('begins at round 1 with the top of the order active', () => {

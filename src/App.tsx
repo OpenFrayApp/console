@@ -552,6 +552,11 @@ function App() {
     const initiatives: Record<string, number> = {}
     for (const c of encounter.combatants) {
       const id = c.combatantId
+      // Dead creatures never roll — they stay dead at the bottom of the order.
+      if (c.status === 'dead') {
+        initiatives[id] = 0
+        continue
+      }
       const raw = (result.values[id] ?? '').trim()
       const isSurprised = surprised.has(id)
       const disadvantage = isSurprised && rule === 'disadvantage'
@@ -596,7 +601,9 @@ function App() {
     if (encounter.combatants.length === 0) return
     const initial: Record<string, string> = {}
     for (const c of encounter.combatants) {
-      initial[c.combatantId] = isPlayer(c) ? '' : String(rollInit(initLabel(c), initMod(c)))
+      // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
+      initial[c.combatantId] =
+        c.status === 'dead' ? '0' : isPlayer(c) ? '' : String(rollInit(initLabel(c), initMod(c)))
     }
     setInitPrompt(initial)
   }

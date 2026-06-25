@@ -12,6 +12,7 @@ import {
   modifierEffect,
   reminder,
   saveEnds,
+  survivesLongRest,
 } from '../../src/combat/effects.ts'
 
 describe('condition', () => {
@@ -105,6 +106,15 @@ describe('saveEnds', () => {
     const e = saveEnds('Ensnaring Strike', { ability: 'str', dc: 13 })
     expect(e.duration).toEqual({ type: 'saveEnds', save: { ability: 'str', dc: 13 } })
     expect(e.modifier).toBeNull()
+  })
+})
+
+describe('survivesLongRest', () => {
+  it('keeps manual and ≥8h effects, clears short and combat-scoped ones', () => {
+    expect(survivesLongRest(condition('Prone', { duration: { type: 'manual' } }))).toBe(true)
+    expect(survivesLongRest(condition('Restrained', { duration: { type: 'rounds', rounds: 4800 } }))).toBe(true)
+    expect(survivesLongRest(condition('Frightened', { duration: { type: 'rounds', rounds: 10 } }))).toBe(false)
+    expect(survivesLongRest(saveEnds('Web', { ability: 'str', dc: 12 }))).toBe(false)
   })
 })
 
