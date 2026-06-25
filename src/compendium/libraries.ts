@@ -118,3 +118,10 @@ export function librarySourceBadgeClass(source: string): string {
 export function editionBadgeClass(edition: string | undefined): string {
   return (edition && EDITION_BADGE_CLASS[edition]) || SOURCE_BADGE_FALLBACK
 }
+
+/** Display label for an edition: "5.5" → "5.5e", "5.0" → "5e" (the value stays "5.5"/"5.0"). */
+export function editionLabel(edition: string | undefined): string | undefined {
+  if (edition === '5.5') return '5.5e'
+  if (edition === '5.0') return '5e'
+  return edition
+}

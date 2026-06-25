@@ -16,6 +16,12 @@ const urlTransform = (url: string): string =>
 /** Resolve a `spell:<id>` link to its compendium entry for the hover preview. */
 export type ResolveSpell = (ref: string) => Spell | undefined
 
+// SRD 5.1 (dnd5eapi) emits tables with a blank line between every row, which breaks GFM
+// table parsing (rows must be contiguous). Collapse blank lines that sit between two
+// table rows so e.g. Control Weather's stage tables render as a table, not loose text.
+const joinTableRows = (md: string): string =>
+  md.replace(/(\|[^\n]*)\n(?:[ \t]*\n)+(?=[ \t]*\|)/g, '$1\n')
+
 /**
  * Renders compendium prose (bold, lists, paragraphs, and GFM tables — some spells
  * like Scrying carry tables), styled via arbitrary-variant classes for both themes.
@@ -72,7 +78,7 @@ export function Markdown({
   linkConditions?: boolean
 }) {
   const a = hoverAnchor(resolveSpell)
-  const source = linkConditions ? linkifyConditions(children) : children
+  const source = joinTableRows(linkConditions ? linkifyConditions(children) : children)
   if (inline) {
     return (
       <span className="[&_a]:underline [&_em]:italic [&_strong]:font-semibold">

@@ -4,6 +4,7 @@
 import {
   LIBRARIES,
   editionBadgeClass,
+  editionLabel,
   librarySourceBadgeClass,
 } from '../compendium/libraries.ts'
 
@@ -74,7 +75,7 @@ export function SettingsPanel({
                       {lib.shortLabel}
                     </span>
                     <span className={`${BADGE} ${editionBadgeClass(lib.edition)}`}>
-                      {lib.edition}
+                      {editionLabel(lib.edition)}
                     </span>
                   </span>
                 </label>

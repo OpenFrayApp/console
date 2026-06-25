@@ -7,6 +7,7 @@ import { loadSrdCreatures } from '../compendium/srd.ts'
 import {
   DEFAULT_ENABLED_LIBRARIES,
   editionBadgeClass,
+  editionLabel,
   inEnabledLibrary,
   librarySource,
   librarySourceBadgeClass,
@@ -99,7 +100,7 @@ export function AddCreaturePicker({
                       )}
                       {editionTag(c) && (
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(c))}`}>
-                          {editionTag(c)}
+                          {editionLabel(editionTag(c))}
                         </span>
                       )}
                       CR {formatCr(c.cr)}

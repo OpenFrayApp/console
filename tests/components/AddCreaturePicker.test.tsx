@@ -81,6 +81,6 @@ describe('AddCreaturePicker', () => {
 
     // Badges are always visible now (no multi-library gating).
     expect(screen.getByText('Core')).toBeTruthy()
-    expect(screen.getByText('5.5')).toBeTruthy()
+    expect(screen.getByText('5.5e')).toBeTruthy()
   })
 })

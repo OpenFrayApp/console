@@ -11,6 +11,7 @@ import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import {
   DEFAULT_ENABLED_LIBRARIES,
   editionBadgeClass,
+  editionLabel,
   inEnabledLibrary,
   librarySource,
   librarySourceBadgeClass,
@@ -477,7 +478,7 @@ export function Compendium({
                       )}
                       {e.lib && (
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.libClass}`}>
-                          {e.lib}
+                          {editionLabel(e.lib)}
                         </span>
                       )}
                       {e.meta}
