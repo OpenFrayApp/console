@@ -6,6 +6,7 @@ import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { Ability, DamageType } from '../schema/primitives.ts'
+import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import type { CritRule, RollResult } from '../dice/roll.ts'
 import { roll } from '../dice/roll.ts'
@@ -22,6 +23,7 @@ import {
   type SaveResult,
 } from '../combat/masssave.ts'
 import { condition } from '../combat/effects.ts'
+import { spellEffectFor } from '../combat/spellEffects.ts'
 import {
   applyConcentrationResult,
   breakConcentration,
@@ -96,6 +98,9 @@ interface ResolverProps {
   onUse?: () => void
   /** Pre-check the "Magical Effect" toggle (a spell is always a magical effect). */
   defaultMagical?: boolean
+  /** The spell being cast, when this resolver is driving a spell — lets a save spell
+   *  with a modelled board effect (Bane, Faerie Fire) offer to apply it on a failure. */
+  spell?: Spell
   onClose: () => void
 }
 
@@ -657,6 +662,7 @@ export function SaveResolver({
   onRoll,
   onUse,
   defaultMagical,
+  spell,
   onClose,
 }: {
   attacker?: MonsterCombatant
@@ -666,6 +672,7 @@ export function SaveResolver({
   onRoll: OnRoll
   onUse?: () => void
   defaultMagical?: boolean
+  spell?: Spell
   onClose: () => void
 }) {
   const save = action?.save ?? null
@@ -783,11 +790,12 @@ export function SaveResolver({
     else onClose()
   }
 
+  // Targets the effect lands on: those that failed (post-roll) or all selected (pre-roll).
+  const affectedTargets = (): Combatant[] =>
+    resolved ? selectedTargets.filter((c) => rows[c.combatantId]?.result === 'fail') : selectedTargets
+
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
-    // Conditions land on the targets that failed (or all selected pre-roll).
-    const affected = resolved
-      ? selectedTargets.filter((c) => rows[c.combatantId]?.result === 'fail')
-      : selectedTargets
+    const affected = affectedTargets()
     if (affected.length === 0) return
     for (const c of affected) {
       dispatch({
@@ -800,6 +808,21 @@ export function SaveResolver({
       })
     }
     setNote(`${name} → ${affected.map(nameOf).join(', ')}`)
+  }
+
+  // A save spell with a modelled non-condition effect (Bane's −1d4, Faerie Fire's
+  // advantage-against) offers to apply it to the failed targets — the resolver's
+  // condition chips can't express these.
+  const spellEffect = spell ? spellEffectFor(spell) : null
+  const applySpellEffect = () => {
+    if (!spellEffect || !spell) return
+    const affected = affectedTargets()
+    if (affected.length === 0) return
+    for (const c of affected) {
+      const effects = spellEffect.build({ source: attacker?.combatantId, spell })
+      dispatch({ type: 'update', id: c.combatantId, update: (cc) => ({ ...cc, effects: [...cc.effects, ...effects] }) })
+    }
+    setNote(`${spell.name} → ${affected.map(nameOf).join(', ')}`)
   }
 
   const resolveConc = (combatantId: string, update?: (c: Combatant) => Combatant) => {
@@ -1021,6 +1044,20 @@ export function SaveResolver({
           <button type="button" onClick={apply} className={`mt-3 ${APPLY_BTN}`}>
             Apply damage
           </button>
+
+          {spellEffect && (
+            <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50/50 p-2 dark:border-indigo-900/60 dark:bg-indigo-900/10">
+              <button
+                type="button"
+                onClick={applySpellEffect}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+              >
+                Apply {spell!.name}
+                {resolved ? ' to failed' : ''}
+              </button>
+              <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{spellEffect.summary}</span>
+            </div>
+          )}
 
           <ConditionChips onApply={applyCondition} sourceName={attacker ? nameOf(attacker) : undefined} />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}

@@ -171,6 +171,7 @@ export function CastSpellPanel({
         dispatch={dispatch}
         onRoll={onRoll}
         defaultMagical
+        spell={spell}
         onClose={reset}
       />
     )
@@ -182,13 +183,16 @@ export function CastSpellPanel({
   return (
     <Modal title={`Cast ${spell.name}`} subtitle={`${levelText(spell.level)} · ${spell.school}`} onClose={reset}>
       {spell.mechanics ? (
-        <SpellResolution
-          spell={spell}
-          combatants={combatants}
-          dispatch={dispatch}
-          onRoll={onRoll}
-          onClose={reset}
-        />
+        <div className="space-y-3">
+          <SpellResolution
+            spell={spell}
+            combatants={combatants}
+            dispatch={dispatch}
+            onRoll={onRoll}
+            onClose={reset}
+          />
+          <ApplySpellEffect spell={spell} combatants={combatants} dispatch={dispatch} />
+        </div>
       ) : (
         <div className="space-y-3">
           <SpellCard spell={spell} />

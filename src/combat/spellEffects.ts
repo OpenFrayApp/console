@@ -3,7 +3,7 @@
 
 import type { Effect, EffectDuration } from '../schema/effect.ts'
 import type { Spell } from '../schema/spell.ts'
-import { condition, flatBonus, reminder } from './effects.ts'
+import { advantageAgainst, condition, flatBonus, reminder } from './effects.ts'
 import { durationRounds } from './casting.ts'
 
 /**
@@ -86,6 +86,54 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     targeting: 'ally',
     build: ({ source }) => [
       reminder('Mage Armor', 'AC 13 + Dex modifier while not wearing armor', { source, duration: { type: 'manual' } }),
+    ],
+  },
+
+  // Save-or-suck debuffs — these reach the save resolver, which offers to apply this
+  // to the targets that fail. (Conditions like Hold Person's Paralyzed already have
+  // the resolver's condition chips; these are the non-condition effects it can't.)
+  bane: {
+    summary: '−1d4 to attack rolls and saving throws',
+    targeting: 'enemy',
+    multi: true,
+    build: ({ source, spell }) => [
+      flatBonus('Bane', '-1d4', { source, duration: timedDuration(spell), note: '−1d4 to attacks & saves' }),
+    ],
+  },
+  'faerie fire': {
+    summary: 'Attacks against it have advantage',
+    targeting: 'enemy',
+    multi: true,
+    build: ({ source, spell }) => [advantageAgainst('Faerie Fire', { source, duration: timedDuration(spell) })],
+  },
+
+  // Damage-rider / marker spells — a reminder badge the GM adds the dice from when
+  // the caster hits. We never auto-roll the rider; the reminder is the consequence.
+  hex: {
+    summary: '+1d6 necrotic on the caster’s hits; disadvantage on one ability',
+    targeting: 'enemy',
+    build: ({ source, spell }) => [
+      reminder('Hex', '+1d6 necrotic on hits vs this target; disadvantage on chosen-ability checks', {
+        source,
+        duration: timedDuration(spell),
+      }),
+    ],
+  },
+  "hunter's mark": {
+    summary: '+1d6 to the caster’s weapon damage vs this target',
+    targeting: 'enemy',
+    build: ({ source, spell }) => [
+      reminder("Hunter's Mark", '+1d6 weapon damage to this target on the caster’s hits', {
+        source,
+        duration: timedDuration(spell),
+      }),
+    ],
+  },
+  'divine favor': {
+    summary: '+1d4 radiant on the caster’s weapon hits',
+    targeting: 'self',
+    build: ({ source, spell }) => [
+      reminder('Divine Favor', '+1d4 radiant damage on your weapon hits', { source, duration: timedDuration(spell) }),
     ],
   },
 }

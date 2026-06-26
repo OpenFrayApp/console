@@ -27,6 +27,8 @@ function defaultTargets(
     if (def.targeting !== 'enemy') ids.add(caster.combatantId)
     return ids
   }
+  // Casterless GM cast: a self-buff has no known recipient, so let the GM pick.
+  if (def.targeting === 'self') return ids
   for (const c of combatants) {
     if (def.targeting === 'enemy' ? isFoe(c) : !isFoe(c)) ids.add(c.combatantId)
   }

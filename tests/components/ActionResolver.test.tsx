@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Action } from '../../src/schema/action.ts'
+import type { Spell } from '../../src/schema/spell.ts'
 import { ActionResolver } from '../../src/components/ActionResolver.tsx'
 
 function creature(over: Partial<Creature> = {}): Creature {
@@ -116,5 +117,55 @@ describe('ActionResolver — save actions', () => {
     )
     expect((screen.getByLabelText('Save DC') as HTMLInputElement).value).toBe('21')
     expect((screen.getByLabelText('On save') as HTMLSelectElement).value).toBe('half')
+  })
+
+  it("applies a save spell's board effect to the targets that fail", () => {
+    const dispatch = vi.fn()
+    const bane: Spell = {
+      id: 'srd-5.2:bane',
+      source: 'srd-5.2',
+      name: 'Bane',
+      level: 1,
+      school: 'Enchantment',
+      castingTime: 'action',
+      range: '30 feet',
+      components: { verbal: true, somatic: true, material: true },
+      duration: 'up to 1 minute',
+      concentration: true,
+      ritual: false,
+      text: '',
+    }
+    // A Charisma save the target can't make (DC 99 → guaranteed failure).
+    const baneAction: Action = {
+      id: 'spell:bane',
+      name: 'Bane',
+      kind: 'save',
+      toHit: null,
+      save: { ability: 'cha', dc: 99, onSave: 'negates' },
+      text: '',
+    }
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={baneAction}
+        combatants={[monster(), monster({ combatantId: 't', label: 'Ogre' })]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        spell={bane}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Ogre/ })) // select the target
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: /Apply Bane/ }))
+
+    const update = dispatch.mock.calls
+      .map((c) => c[0])
+      .find((a) => a.type === 'update' && a.id === 't')
+    expect(update).toBeTruthy()
+    const after = update.update(monster({ combatantId: 't', label: 'Ogre' }))
+    const bless = after.effects.find((e: { name: string }) => e.name === 'Bane')
+    expect(bless).toBeTruthy()
+    expect(bless.modifier).toMatchObject({ mode: 'flatBonus', value: '-1d4' })
   })
 })

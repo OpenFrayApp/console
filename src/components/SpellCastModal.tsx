@@ -85,6 +85,7 @@ export function SpellCastModal({
         dispatch={dispatch}
         onRoll={onRoll}
         defaultMagical
+        spell={spell}
         onClose={onClose}
       />
     )

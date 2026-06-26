@@ -61,6 +61,24 @@ describe('spellEffectFor', () => {
     expect(spellEffectFor(spell('Fireball'))).toBeNull()
   })
 
+  it('maps Bane to a −1d4 penalty and Faerie Fire to advantage-against', () => {
+    const [bane] = spellEffectFor(spell('Bane'))!.build({ spell: spell('Bane') })
+    expect(bane.modifier).toMatchObject({ mode: 'flatBonus', value: '-1d4' })
+
+    const ff = spellEffectFor(spell('Faerie Fire'))!
+    expect(ff.targeting).toBe('enemy')
+    const [effect] = ff.build({ spell: spell('Faerie Fire') })
+    expect(effect.modifier).toMatchObject({ mode: 'advantage', direction: 'incoming' })
+  })
+
+  it('maps damage-rider spells to reminders', () => {
+    for (const name of ['Hex', 'Hunter’s Mark', 'Divine Favor']) {
+      const [effect] = spellEffectFor(spell(name))!.build({ spell: spell(name) })
+      expect(effect.modifier).toBeNull() // reminder-only
+      expect(effect.note).toBeTruthy()
+    }
+  })
+
   it('timedDuration converts minutes but falls back to manual for hours', () => {
     expect(timedDuration(spell('x', { duration: 'up to 10 minutes' }))).toEqual({ type: 'rounds', rounds: 100 })
     expect(timedDuration(spell('x', { duration: '8 hours' }))).toEqual({ type: 'manual' })
