@@ -161,4 +161,24 @@ describe('buildRecap', () => {
       { title: 'Biggest hit', label: 'Hero', amount: 28 },
     ])
   })
+
+  it('derives highlight tallies from the game log (applies only, not removals)', () => {
+    const enc = encounter([pc({ status: 'active' }), monster({ status: 'dead' })], {
+      log: [
+        { id: '1-0', round: 1, category: 'cast', message: 'Mage casts Fireball' },
+        { id: '1-1', round: 1, category: 'cast', message: 'Mage casts Bless' },
+        { id: '1-2', round: 1, category: 'condition', message: 'Goblin is Prone' },
+        { id: '1-3', round: 1, category: 'condition', message: 'Hero gains Bless' },
+        { id: '2-4', round: 2, category: 'condition', message: 'Goblin is no longer Prone' },
+        { id: '2-5', round: 2, category: 'condition', message: 'Hero: Bless ends' },
+        { id: '2-6', round: 2, category: 'death', message: 'Goblin is down' },
+        { id: '3-7', round: 3, category: 'death', message: 'Goblin dies' },
+        { id: '3-8', round: 3, category: 'death', message: 'Goblin is back up' },
+      ],
+    })
+    const recap = buildRecap(enc, 0)
+    expect(recap.spellsCast).toBe(2)
+    expect(recap.effectsApplied).toBe(2) // the two applies; removals excluded
+    expect(recap.knockouts).toBe(2) // down + dies; "back up" excluded
+  })
 })

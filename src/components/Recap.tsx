@@ -75,6 +75,9 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
           <Stat label="Time (real)" value={duration(recap.activeMs / 1000)} hint="excludes pauses" />
           <Stat label="Damage dealt" value={recap.damageDealtTotal.toLocaleString()} />
           <Stat label="Damage taken" value={recap.damageTakenTotal.toLocaleString()} />
+          {recap.spellsCast > 0 && <Stat label="Spells cast" value={recap.spellsCast} />}
+          {recap.effectsApplied > 0 && <Stat label="Effects applied" value={recap.effectsApplied} />}
+          {recap.knockouts > 0 && <Stat label="Knockouts" value={recap.knockouts} hint="downed or slain" />}
         </div>
 
         {recap.awards.length > 0 && (

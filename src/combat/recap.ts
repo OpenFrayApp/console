@@ -80,6 +80,12 @@ export interface Recap {
   xpPerPlayer: number | null
   damageDealtTotal: number
   damageTakenTotal: number
+  /** Spells cast during the fight (from the game log). */
+  spellsCast: number
+  /** Effects/conditions applied during the fight (from the game log). */
+  effectsApplied: number
+  /** Times a combatant dropped (down or dead) during the fight (from the game log). */
+  knockouts: number
   /** Standout combatants — most damage dealt / taken, biggest single hit. */
   awards: Award[]
 }
@@ -120,6 +126,17 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
   const dealt = stats?.damageDealt ?? {}
   const taken = stats?.damageTaken ?? {}
 
+  // Highlight tallies derived from the game log. Effect *removals* ("no longer",
+  // "ends") and revivals are excluded so only things that happened are counted.
+  const log = encounter.log
+  const spellsCast = log.filter((e) => e.category === 'cast').length
+  const effectsApplied = log.filter(
+    (e) => e.category === 'condition' && !e.message.includes('no longer') && !e.message.endsWith(' ends'),
+  ).length
+  const knockouts = log.filter(
+    (e) => e.category === 'death' && (e.message.endsWith(' is down') || e.message.endsWith(' dies')),
+  ).length
+
   const awards: Award[] = []
   const heavy = top(combatants, dealt)
   if (heavy) awards.push({ ...heavy, title: 'Most damage dealt' })
@@ -140,6 +157,9 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
     xpPerPlayer,
     damageDealtTotal: sum(dealt),
     damageTakenTotal: sum(taken),
+    spellsCast,
+    effectsApplied,
+    knockouts,
     awards,
   }
 }
