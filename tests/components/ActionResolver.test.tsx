@@ -76,24 +76,29 @@ afterEach(() => {
 
 describe('ActionResolver — attacks', () => {
   it('logs the attack at the selected target, with advantage from an unconscious target', () => {
-    const onRoll = vi.fn()
+    const dispatch = vi.fn()
     const ogre = monster({ combatantId: 't', label: 'Ogre', status: 'unconscious' })
     render(
       <ActionResolver
         attacker={monster()}
         action={scimitar}
         combatants={[monster(), ogre]}
-        dispatch={vi.fn()}
-        onRoll={onRoll}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
         onClose={() => {}}
       />,
     )
     // Single target is auto-selected; roll the attack.
     fireEvent.click(screen.getByText('Roll attack'))
-    const [label, result, applied] = onRoll.mock.calls[0]
-    expect(label).toBe('Goblin: Scimitar → Ogre')
-    expect(result.kind).toBe('attack')
-    expect(applied).toEqual([{ source: 'Unconscious', effect: 'advantage' }])
+    // The attack is now one merged log entry dispatched to the encounter (to-hit +
+    // outcome + damage), not a separate onRoll call.
+    const logAction = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'log')
+    expect(logAction).toBeTruthy()
+    const { entry } = logAction
+    expect(entry.message).toBe('Goblin: Scimitar → Ogre')
+    expect(entry.result.kind).toBe('attack')
+    expect(entry.applied).toEqual([{ source: 'Unconscious', effect: 'advantage' }])
+    expect(['hit', 'crit', 'miss']).toContain(entry.outcome)
   })
 })
 

@@ -43,6 +43,41 @@ describe('GameLog feed', () => {
     expect(screen.getByText('9')).toBeInTheDocument()
   })
 
+  it('collapses an attack into one line with outcome and damage by type', () => {
+    const result = roll('1d20+7', { kind: 'attack', rand: faceSeq(14) })
+    render(
+      <GameLog
+        entries={[
+          {
+            id: 'a1',
+            round: 1,
+            category: 'roll',
+            message: 'Dragon: Bite → Ogre',
+            result,
+            outcome: 'hit',
+            damage: [
+              { type: 'piercing', amount: 18 },
+              { type: 'fire', amount: 7 },
+            ],
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText('Dragon: Bite → Ogre')).toBeInTheDocument()
+    expect(screen.getByText('Hit')).toBeInTheDocument()
+    expect(screen.getByText(/18 piercing \+ 7 fire = 25/)).toBeInTheDocument()
+  })
+
+  it('shows a miss without a damage breakdown', () => {
+    const result = roll('1d20+7', { kind: 'attack', rand: faceSeq(2) })
+    render(
+      <GameLog
+        entries={[{ id: 'm1', round: 1, category: 'roll', message: 'Dragon: Bite → Ogre', result, outcome: 'miss' }]}
+      />,
+    )
+    expect(screen.getByText('Miss')).toBeInTheDocument()
+  })
+
   it('renders a board event (non-roll) message', () => {
     render(
       <GameLog

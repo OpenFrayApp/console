@@ -36,6 +36,13 @@ export interface GameLogEntry {
   applied?: AppliedEffect[]
   /** The combatant the entry is about, when known (for future filtering). */
   sourceId?: string
+  /**
+   * For a resolved attack, collapsed onto one entry with its to-hit `result`: the
+   * outcome and the damage rolled per type (omitted on a miss). Lets the log show
+   * "Bite → Ogre · 27 hit · 18 piercing + 7 fire" as a single line.
+   */
+  outcome?: 'hit' | 'crit' | 'miss'
+  damage?: { type: string; amount: number }[]
 }
 
 /**

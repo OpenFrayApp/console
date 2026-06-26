@@ -93,6 +93,17 @@ function describeRoll(result: RollResult): string {
   return line
 }
 
+/** "18 piercing + 7 fire = 25" (the "= total" is dropped for a single type). */
+function describeDamage(damage: { type: string; amount: number }[]): string {
+  const parts = damage.filter((d) => d.amount > 0)
+  if (parts.length === 0) return '0 damage'
+  const text = parts.map((d) => `${d.amount} ${d.type}`).join(' + ')
+  if (parts.length === 1) return text
+  return `${text} = ${parts.reduce((s, d) => s + d.amount, 0)}`
+}
+
+const OUTCOME_LABEL = { hit: 'Hit', crit: 'Crit', miss: 'Miss' } as const
+
 function Dot({ category }: { category: GameLogCategory }) {
   return (
     <span
@@ -114,7 +125,7 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
             </span>
             <span
               className={`text-lg font-bold tabular-nums ${
-                entry.result.crit
+                entry.result.crit || entry.outcome === 'crit'
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : entry.result.fumble
                     ? 'text-red-600 dark:text-red-400'
@@ -131,6 +142,22 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
               return reasons.length > 0 ? <> · {reasons.join(', ')}</> : null
             })()}
           </div>
+          {entry.outcome && (
+            <div className="pl-3 text-xs text-slate-500 dark:text-slate-400">
+              <span
+                className={
+                  entry.outcome === 'miss'
+                    ? 'text-slate-400 dark:text-slate-500'
+                    : 'font-medium text-slate-600 dark:text-slate-300'
+                }
+              >
+                {OUTCOME_LABEL[entry.outcome]}
+              </span>
+              {entry.outcome !== 'miss' && entry.damage && entry.damage.length > 0 && (
+                <> · {describeDamage(entry.damage)}</>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <span className="flex items-baseline gap-1.5 text-sm text-slate-600 dark:text-slate-300">

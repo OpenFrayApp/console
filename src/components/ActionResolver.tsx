@@ -407,12 +407,21 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
     setRevealed(false)
     setConc(null)
     setNote(null)
-    onRoll(
-      `${attacker ? `${nameOf(attacker)}: ` : ''}${action.name} → ${nameOf(target)}`,
-      result,
-      applied,
-    )
-    logDamage(components, attacker, action, onRoll)
+    // One merged entry per attack: the to-hit roll, the outcome, and the rolled
+    // damage per type (omitted on a miss). The applied HP change is logged
+    // separately by the reducer when the GM presses Apply.
+    dispatch({
+      type: 'log',
+      entry: {
+        category: 'roll',
+        message: `${attacker ? `${nameOf(attacker)}: ` : ''}${action.name} → ${nameOf(target)}`,
+        result,
+        applied,
+        sourceId: attacker?.combatantId,
+        outcome: crit ? 'crit' : hits ? 'hit' : 'miss',
+        damage: hits ? dmg.map((d) => ({ type: d.type, amount: d.amount })) : undefined,
+      },
+    })
     onUse?.()
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(
