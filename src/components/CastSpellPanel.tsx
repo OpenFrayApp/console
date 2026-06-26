@@ -18,6 +18,7 @@ import {
 } from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ActionResolver } from './ActionResolver.tsx'
+import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
@@ -189,7 +190,10 @@ export function CastSpellPanel({
           onClose={reset}
         />
       ) : (
-        <SpellCard spell={spell} />
+        <div className="space-y-3">
+          <SpellCard spell={spell} />
+          <ApplySpellEffect spell={spell} combatants={combatants} dispatch={dispatch} />
+        </div>
       )}
     </Modal>
   )

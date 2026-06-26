@@ -9,6 +9,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { spellAction } from '../combat/casting.ts'
 import { titleCase } from '../compendium/format.ts'
 import { ActionResolver } from './ActionResolver.tsx'
+import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import type { OnRoll } from './GameLog.tsx'
@@ -153,8 +154,19 @@ export function SpellCastModal({
           )}
         </div>
       ) : (
-        // Cast, but nothing to resolve on the board (a utility spell).
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Cast — spent a use.</p>
+        // Cast, but nothing to resolve on the board (a utility spell). Offer to apply
+        // its effect on the board when we model one (Bless, Shield of Faith, …).
+        <div className="space-y-3">
+          <p className="text-sm text-emerald-600 dark:text-emerald-400">Cast — spent a use.</p>
+          {spell && (
+            <ApplySpellEffect
+              spell={spell}
+              caster={caster}
+              combatants={combatants}
+              dispatch={dispatch}
+            />
+          )}
+        </div>
       )}
     </Modal>
   )
