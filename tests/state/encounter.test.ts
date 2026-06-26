@@ -210,9 +210,94 @@ describe('encounterReducer', () => {
   })
 
   it('appends log entries', () => {
-    let e = encounterReducer(emptyEncounter(), { type: 'log', message: 'Goblin hits' })
-    e = encounterReducer(e, { type: 'log', message: 'Goblin misses' })
+    let e = encounterReducer(emptyEncounter(), {
+      type: 'log',
+      entry: { category: 'note', message: 'Goblin hits' },
+    })
+    e = encounterReducer(e, { type: 'log', entry: { category: 'note', message: 'Goblin misses' } })
     expect(e.log.map((l) => l.message)).toEqual(['Goblin hits', 'Goblin misses'])
     expect(new Set(e.log.map((l) => l.id)).size).toBe(2)
+  })
+
+  it('clears the log', () => {
+    let e = encounterReducer(emptyEncounter(), {
+      type: 'log',
+      entry: { category: 'note', message: 'x' },
+    })
+    e = encounterReducer(e, { type: 'clearLog' })
+    expect(e.log).toEqual([])
+  })
+
+  it('rewrites a renamed combatant across existing log entries', () => {
+    let e = encounterReducer(emptyEncounter(), {
+      type: 'log',
+      entry: { category: 'roll', message: 'Goblin: Bite' },
+    })
+    e = encounterReducer(e, { type: 'renameLog', from: 'Goblin', to: 'Snik' })
+    expect(e.log[0].message).toBe('Snik: Bite')
+  })
+})
+
+describe('encounter game-log events', () => {
+  const withCombatants = (...cs: ReturnType<typeof monster>[]) => ({
+    ...emptyEncounter(),
+    combatants: cs,
+  })
+
+  it('logs combat start and the first turn', () => {
+    const e = encounterReducer(withCombatants(monster('a', 0)), { type: 'begin' })
+    const messages = e.log.map((l) => l.message)
+    expect(messages).toContain('Combat begins — Round 1')
+    expect(messages).toContain("a's turn")
+  })
+
+  it('logs damage taken from an HP drop', () => {
+    const e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => applyDamage(c, 4),
+    })
+    expect(e.log.some((l) => l.category === 'hp' && l.message === 'a takes 4 damage')).toBe(true)
+  })
+
+  it('logs a condition applied and removed', () => {
+    const cond = condition('Prone')
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [cond] }),
+    })
+    expect(e.log.some((l) => l.category === 'condition' && l.message === 'a is Prone')).toBe(true)
+    e = encounterReducer(e, { type: 'update', id: 'a', update: (c) => ({ ...c, effects: [] }) })
+    expect(e.log.some((l) => l.message === 'a is no longer Prone')).toBe(true)
+  })
+
+  it('logs concentration starting', () => {
+    const e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, concentration: { spell: 'Hold Person', saveDc: 13, round: 1 } }),
+    })
+    expect(
+      e.log.some((l) => l.category === 'concentration' && l.message === 'a concentrates on Hold Person'),
+    ).toBe(true)
+  })
+
+  it('wipes the log on a full board sweep (clearAll) but not on stop', () => {
+    let e = encounterReducer(withCombatants(monster('a', 5)), { type: 'begin' })
+    expect(e.log.length).toBeGreaterThan(0)
+    const stopped = encounterReducer(e, { type: 'stop' })
+    expect(stopped.log.length).toBeGreaterThan(0) // recap reads it
+    e = encounterReducer(e, { type: 'clearAll' })
+    expect(e.log).toEqual([])
+  })
+
+  it('does not log a no-op update', () => {
+    const e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, reactionUsed: true }),
+    })
+    expect(e.log).toEqual([])
   })
 })

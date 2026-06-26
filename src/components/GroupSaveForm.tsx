@@ -23,7 +23,7 @@ import {
 } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { ConditionChips } from './ActionResolver.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))

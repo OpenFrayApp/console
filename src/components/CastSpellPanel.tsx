@@ -21,7 +21,7 @@ import { ActionResolver } from './ActionResolver.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
 const isCustom = (s: Spell): boolean => s.id.startsWith('custom:')

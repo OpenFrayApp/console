@@ -2,7 +2,6 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Encounter } from '../schema/encounter.ts'
-import type { RollEntry } from '../components/RollLog.tsx'
 
 /**
  * Anonymous-tier persistence: the live session is mirrored to `sessionStorage`
@@ -19,7 +18,6 @@ export type View = 'encounter' | 'compendium'
 /** Everything worth restoring to land the GM back where they left off. */
 export interface SessionSnapshot {
   encounter: Encounter
-  rollLog: RollEntry[]
   theme: Theme
   view: View
   /** Which combatant's stat block was open; dropped if it no longer exists. */
@@ -30,8 +28,9 @@ export interface SessionSnapshot {
 
 const KEY = 'openfray:session'
 // Bump when the snapshot shape changes incompatibly — a mismatch is discarded
-// rather than half-read into a stale shape.
-const VERSION = 1
+// rather than half-read into a stale shape. v2: the roll log moved into the
+// encounter (`encounter.log`) and is no longer a separate snapshot field.
+const VERSION = 2
 
 interface Envelope {
   version: number

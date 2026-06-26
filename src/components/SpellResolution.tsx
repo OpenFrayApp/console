@@ -8,7 +8,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { damageFormula, damageTypes, damageVariants } from '../combat/casting.ts'
 import { roll } from '../dice/roll.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
 

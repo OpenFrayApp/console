@@ -2,11 +2,40 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from './combatant.ts'
+import type { RollResult } from '../dice/roll.ts'
+import type { AppliedEffect } from '../combat/effectroll.ts'
 
-export interface EncounterLogEntry {
+/**
+ * What kind of thing a game-log entry records. Drives the sidebar icon and the
+ * review-modal filter. `roll` carries dice detail; the rest are board events.
+ */
+export type GameLogCategory =
+  | 'roll'
+  | 'cast'
+  | 'action'
+  | 'condition'
+  | 'concentration'
+  | 'hp'
+  | 'turn'
+  | 'rest'
+  | 'death'
+  | 'note'
+
+/**
+ * One line in the game log — the full combat record. Replaces the old roll-only
+ * log: dice rolls keep their `result`/`applied` detail, board events (a condition
+ * applied, a turn passing, damage taken) carry just a `message` + `category`.
+ */
+export interface GameLogEntry {
   id: string
   round: number
+  category: GameLogCategory
   message: string
+  /** Dice detail; present only for `roll` entries. */
+  result?: RollResult
+  applied?: AppliedEffect[]
+  /** The combatant the entry is about, when known (for future filtering). */
+  sourceId?: string
 }
 
 /**
@@ -44,7 +73,8 @@ export interface Encounter {
   shortRests?: number
   /** Sorted by initiative descending. */
   combatants: Combatant[]
-  log: EncounterLogEntry[]
+  /** The full combat record — every roll and board event, in chronological order. */
+  log: GameLogEntry[]
   /** Set on Begin; carries the recap clock + damage tallies. Absent before combat. */
   combatStats?: CombatStats
 }

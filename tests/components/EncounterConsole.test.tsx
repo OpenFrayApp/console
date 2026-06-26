@@ -143,10 +143,10 @@ describe('Encounter flow', () => {
 
   it('logs a quick roll', () => {
     render(<App />)
-    expect(screen.getByText('No rolls yet.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing logged yet.')).toBeInTheDocument()
     fireEvent.click(screen.getByText('d20'))
     expect(screen.getByText('1d20')).toBeInTheDocument()
-    expect(screen.queryByText('No rolls yet.')).toBeNull()
+    expect(screen.queryByText('Nothing logged yet.')).toBeNull()
   })
 
   it('applies an effect from the modal to a combatant', async () => {

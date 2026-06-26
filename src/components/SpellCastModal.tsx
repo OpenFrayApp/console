@@ -11,7 +11,7 @@ import { titleCase } from '../compendium/format.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 /**
  * Cast a spell from a monster's stat block. "Cast" spends a use (per-day decrements;

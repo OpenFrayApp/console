@@ -31,7 +31,7 @@ import {
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { DieRoll, SPIN_MS } from './DieRoll.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)

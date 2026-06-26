@@ -5,7 +5,7 @@ import { useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { GroupSaveModal } from './ActionResolver.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 /**
  * The standalone Fireball flow: a button that opens the shared group-save form.

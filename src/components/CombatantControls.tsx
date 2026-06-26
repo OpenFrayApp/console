@@ -22,7 +22,7 @@ import { roll } from '../dice/roll.ts'
 import type { Effect, EffectDuration } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)

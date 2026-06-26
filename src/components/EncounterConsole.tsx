@@ -44,7 +44,7 @@ import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback, EncounterCleanup } from './EncounterPlayback.tsx'
-import { RollLog, type OnNote, type OnRoll, type RollEntry } from './RollLog.tsx'
+import { GameLog, type OnNote, type OnRoll } from './GameLog.tsx'
 import { titleCase } from '../compendium/format.ts'
 
 const COLUMN_HEADING =
@@ -69,7 +69,6 @@ function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
 export function EncounterConsole({
   encounter,
   dispatch,
-  rollLog,
   onRoll,
   selectedId,
   onSelect,
@@ -78,7 +77,7 @@ export function EncounterConsole({
   onBegin,
   onNextTurn,
   onStop,
-  onClearLog,
+  onOpenLog,
   onNote,
   onRename,
   onEditPc,
@@ -87,7 +86,6 @@ export function EncounterConsole({
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
-  rollLog: RollEntry[]
   onRoll: OnRoll
   onNote: OnNote
   /** Open the full character editor for a roster-backed PC (saves to the DB). */
@@ -105,7 +103,8 @@ export function EncounterConsole({
   onBegin: () => void
   onNextTurn: () => void
   onStop?: () => void
-  onClearLog: () => void
+  /** Open the full game-log review modal. */
+  onOpenLog: () => void
 }) {
   const { combatants, activeIndex } = encounter
   const running = started && !paused
@@ -264,7 +263,7 @@ export function EncounterConsole({
       })
     }
     // Prefer the resolved compendium name (ToB stat blocks print spell names lowercase).
-    onNote(`${c.label} casts ${full?.name ?? titleCase(spell.name)}`)
+    onNote(`${c.label} casts ${full?.name ?? titleCase(spell.name)}`, 'cast')
   }
 
   const restoreSpellUseFor = (c: MonsterCombatant, spell: SpellRef) => {
@@ -283,7 +282,7 @@ export function EncounterConsole({
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : spendLegendary(cc, action.legendaryCost ?? 1)),
     })
-    onNote(`${c.label} uses ${action.name}`)
+    onNote(`${c.label} uses ${action.name}`, 'action')
     const rollable = action.toHit != null || action.save != null || (action.damage?.length ?? 0) > 0
     if (rollable) setActionFor(action)
   }
@@ -552,19 +551,20 @@ export function EncounterConsole({
 
         <div className="flex min-h-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800">
           <div className="mb-1 flex items-center justify-between">
-            <h3 className={COLUMN_HEADING}>Roll log</h3>
-            {rollLog.length > 0 && (
+            <h3 className={COLUMN_HEADING}>Game log</h3>
+            {encounter.log.length > 0 && (
               <button
                 type="button"
-                onClick={onClearLog}
+                onClick={onOpenLog}
                 className="text-xs text-slate-500 hover:underline dark:text-slate-400"
               >
-                Clear
+                View all
               </button>
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
-            <RollLog entries={rollLog} />
+            {/* Slim recent feed (newest first); the full record lives in the modal. */}
+            <GameLog entries={[...encounter.log].slice(-12).reverse()} />
           </div>
         </div>
       </aside>

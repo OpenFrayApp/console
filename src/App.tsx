@@ -68,7 +68,7 @@ import { AccountControl } from './components/AccountControl.tsx'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
-import { type OnNote, type OnRoll, type RollEntry } from './components/RollLog.tsx'
+import { GameLogModal, type OnNote, type OnRoll } from './components/GameLog.tsx'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
@@ -197,7 +197,7 @@ function App() {
     undefined,
     () => restored?.encounter ?? emptyEncounter(),
   )
-  const [rollLog, setRollLog] = useState<RollEntry[]>(() => restored?.rollLog ?? [])
+  const [logOpen, setLogOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
   const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
 
@@ -292,7 +292,7 @@ function App() {
   // signed in also persist the encounter to the cloud. Background — the UI never waits.
   useEffect(() => {
     const handle = setTimeout(() => {
-      saveSession({ encounter, rollLog, theme, view, selectedId, activeCampaignId })
+      saveSession({ encounter, theme, view, selectedId, activeCampaignId })
       // Guard against duplicate rows: only write once hydrated, and never start a
       // second insert while the first is in flight.
       if (userId && cloudHydrated.current && !cloudInserting.current) {
@@ -305,27 +305,20 @@ function App() {
       }
     }, 600)
     return () => clearTimeout(handle)
-  }, [encounter, rollLog, theme, view, selectedId, activeCampaignId, userId])
+  }, [encounter, theme, view, selectedId, activeCampaignId, userId])
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
 
   const pushRoll: OnRoll = (label, result, applied) => {
-    setRollLog((prev) =>
-      [{ id: crypto.randomUUID(), label, result, applied }, ...prev].slice(0, 25),
-    )
+    dispatch({ type: 'log', entry: { category: 'roll', message: label, result, applied } })
   }
 
-  const pushNote: OnNote = (label) => {
-    setRollLog((prev) => [{ id: crypto.randomUUID(), label }, ...prev].slice(0, 25))
+  const pushNote: OnNote = (label, category = 'note') => {
+    dispatch({ type: 'log', entry: { category, message: label } })
   }
 
   const renameInLog = (oldName: string, newName: string) => {
-    if (!oldName || oldName === newName) return
-    setRollLog((prev) =>
-      prev.map((e) =>
-        e.label.includes(oldName) ? { ...e, label: e.label.split(oldName).join(newName) } : e,
-      ),
-    )
+    dispatch({ type: 'renameLog', from: oldName, to: newName })
   }
 
   const handlePick = (creature: Creature) => {
@@ -770,7 +763,6 @@ function App() {
           <EncounterConsole
             encounter={encounter}
             dispatch={dispatch}
-            rollLog={rollLog}
             onRoll={pushRoll}
             onNote={pushNote}
             onRename={renameInLog}
@@ -784,10 +776,18 @@ function App() {
             onBegin={handleBegin}
             onNextTurn={handleNextTurn}
             onStop={endCombat}
-            onClearLog={() => setRollLog([])}
+            onOpenLog={() => setLogOpen(true)}
           />
         )}
       </main>
+
+      {logOpen && (
+        <GameLogModal
+          entries={encounter.log}
+          onClose={() => setLogOpen(false)}
+          onClear={() => dispatch({ type: 'clearLog' })}
+        />
+      )}
 
       {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
 

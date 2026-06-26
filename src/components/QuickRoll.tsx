@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { roll } from '../dice/roll.ts'
-import type { OnRoll } from './RollLog.tsx'
+import type { OnRoll } from './GameLog.tsx'
 
 const DICE = ['d20', 'd12', 'd10', 'd8', 'd6', 'd4']
 

@@ -35,7 +35,6 @@ function encounter(combatantIds: string[] = []): Encounter {
 function snapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
   return {
     encounter: encounter(),
-    rollLog: [],
     theme: 'dark',
     view: 'encounter',
     selectedId: null,
@@ -53,11 +52,9 @@ describe('session persistence', () => {
   })
 
   it('round-trips a saved snapshot', () => {
-    const snap = snapshot({
-      theme: 'light',
-      view: 'compendium',
-      rollLog: [{ id: 'r1', label: 'Goblin: initiative' }],
-    })
+    const enc = encounter()
+    enc.log = [{ id: '0-0', round: 0, category: 'note', message: 'Goblin: initiative' }]
+    const snap = snapshot({ theme: 'light', view: 'compendium', encounter: enc })
     saveSession(snap)
     expect(loadSession()).toEqual(snap)
   })
