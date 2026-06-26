@@ -40,8 +40,19 @@ const LIGHT: Spell = {
   // no mechanics — a utility spell, not castable here
 }
 
+const BLESS: Spell = {
+  ...spellBase,
+  id: 'srd-5.2:bless',
+  name: 'Bless',
+  level: 1,
+  school: 'Enchantment',
+  duration: 'up to 1 minute',
+  concentration: true,
+  // no mechanics — a buff
+}
+
 vi.mock('../../src/compendium/srd.ts', () => ({
-  loadSrdSpells: () => Promise.resolve([FIREBALL, LIGHT]),
+  loadSrdSpells: () => Promise.resolve([FIREBALL, LIGHT, BLESS]),
   loadSrdCreatures: () => Promise.resolve([]),
 }))
 
@@ -134,5 +145,31 @@ describe('CastSpellPanel', () => {
   it('disables casting with no combatants', () => {
     render(<CastSpellPanel combatants={[]} dispatch={vi.fn()} onRoll={vi.fn()} />)
     expect((screen.getByText('Cast spell') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('starts the chosen caster concentrating when a concentration spell is cast', async () => {
+    const dispatch = vi.fn()
+    render(<CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={vi.fn()} round={2} />)
+    fireEvent.click(screen.getByText('Cast spell'))
+    await waitFor(() => expect(screen.getByText('Bless')).toBeTruthy())
+    fireEvent.change(screen.getByLabelText('Caster'), { target: { value: 'g1' } })
+    fireEvent.click(screen.getByText('Bless'))
+
+    const conc = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update' && a.id === 'g1')
+    expect(conc).toBeTruthy()
+    expect(conc.update(monster()).concentration).toMatchObject({ spell: 'Bless', round: 2, rounds: 10 })
+  })
+
+  it("seeds the save DC from a monster caster's spellcasting", async () => {
+    const caster: MonsterCombatant = {
+      ...monster(),
+      creature: { ...creature(), spellcasting: { ability: 'int', saveDc: 16, groups: [] } },
+    }
+    render(<CastSpellPanel combatants={[caster]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+    fireEvent.click(screen.getByText('Cast spell'))
+    await waitFor(() => expect(screen.getByText('Fireball')).toBeTruthy())
+    fireEvent.change(screen.getByLabelText('Caster'), { target: { value: 'g1' } })
+    fireEvent.click(screen.getByText('Fireball'))
+    expect((screen.getByLabelText('Save DC') as HTMLInputElement).value).toBe('16')
   })
 })

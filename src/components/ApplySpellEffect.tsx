@@ -7,6 +7,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { spellEffectFor, type SpellEffectDef } from '../combat/spellEffects.ts'
+import { TargetChips } from './TargetChips.tsx'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
@@ -92,29 +93,12 @@ export function ApplySpellEffect({
       <p className="text-sm">
         <span className="font-medium">Apply on the board:</span> {def.summary}
       </p>
-      <div className="flex flex-wrap gap-1.5">
-        {targets.map((c) => {
-          const on = selected.has(c.combatantId)
-          return (
-            <button
-              key={c.combatantId}
-              type="button"
-              aria-pressed={on}
-              onClick={() => toggle(c.combatantId)}
-              className={
-                on
-                  ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
-                  : 'rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
-              }
-            >
-              {nameOf(c)}
-            </button>
-          )
-        })}
-        {targets.length === 0 && (
-          <span className="text-sm text-slate-500 dark:text-slate-400">No combatants to target.</span>
-        )}
-      </div>
+      <TargetChips
+        targets={targets}
+        selected={selected}
+        onToggle={toggle}
+        emptyText="No combatants to target."
+      />
       <div className="flex items-center gap-3">
         <button
           type="button"

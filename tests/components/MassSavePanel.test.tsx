@@ -58,7 +58,7 @@ describe('MassSavePanel', () => {
     )
 
     fireEvent.click(screen.getByText('Group save'))
-    fireEvent.click(screen.getByRole('button', { name: /a AC 15/ })) // target chip
+    fireEvent.click(screen.getByRole('button', { name: 'a' })) // target chip
     fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
     fireEvent.click(screen.getByText('Roll saves'))
 
@@ -87,7 +87,7 @@ describe('MassSavePanel', () => {
     render(<MassSavePanel combatants={[conc()]} dispatch={dispatch} onRoll={vi.fn()} />)
 
     fireEvent.click(screen.getByText('Group save'))
-    fireEvent.click(screen.getByRole('button', { name: /a AC 15/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
     fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
     fireEvent.click(screen.getByText('Roll saves'))
     fireEvent.click(screen.getByText('Fail'))

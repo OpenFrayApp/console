@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { spellAction } from '../combat/casting.ts'
+import { durationRounds, spellAction } from '../combat/casting.ts'
+import { startConcentration } from '../combat/concentration.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import {
   DEFAULT_ENABLED_LIBRARIES,
@@ -37,12 +38,15 @@ export function CastSpellPanel({
   combatants,
   dispatch,
   onRoll,
+  round = 0,
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  /** Current combat round — stamped on the caster's concentration when it starts. */
+  round?: number
   /** The signed-in user's custom spells, castable alongside the SRD. */
   customSpells?: Spell[]
   /** Only spells from these libraries (plus custom) are listed — matches the picker. */
@@ -52,6 +56,8 @@ export function CastSpellPanel({
   const [query, setQuery] = useState('')
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
+  const [casterId, setCasterId] = useState<string>('')
+  const caster = casterId ? combatants.find((c) => c.combatantId === casterId) : undefined
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => {
     setOpen(false)
@@ -74,6 +80,18 @@ export function CastSpellPanel({
     setSpell(s)
     setOpen(false)
     setQuery('')
+    // A concentration spell starts the chosen caster concentrating, with the spell's
+    // round timer — mirroring a stat-block cast. The caster is optional, so this only
+    // fires when one is picked.
+    if (s.concentration && caster) {
+      const saveDc = caster.isPC ? 0 : (caster.creature.spellcasting?.saveDc ?? 0)
+      dispatch({
+        type: 'update',
+        id: caster.combatantId,
+        update: (cc) =>
+          startConcentration(cc, { spell: s.name, saveDc, round, rounds: durationRounds(s.duration) }),
+      })
+    }
   }
 
   // Source tag (Core / ToB…): library spells only — custom carries its own badge.
@@ -103,6 +121,19 @@ export function CastSpellPanel({
         </button>
         {open && (
           <div className="absolute left-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+            <select
+              value={casterId}
+              onChange={(e) => setCasterId(e.target.value)}
+              aria-label="Caster"
+              className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+            >
+              <option value="">No caster (GM rolls)</option>
+              {combatants.map((c) => (
+                <option key={c.combatantId} value={c.combatantId}>
+                  {c.isPC ? c.name : c.label}
+                </option>
+              ))}
+            </select>
             <input
               autoFocus
               type="search"
@@ -159,13 +190,15 @@ export function CastSpellPanel({
   }
 
   // An attack or save spell opens the same modal as a monster's action: a save
-  // spell → the mass-save modal, an attack spell → the attack modal. There's no
-  // caster here, so the GM supplies the spell attack bonus / save DC; magical
-  // effect is pre-checked for saves.
-  const action = spellAction(spell, {})
+  // spell → the mass-save modal, an attack spell → the attack modal. A chosen monster
+  // caster seeds the save DC / spell attack bonus from its spellcasting; otherwise the
+  // GM supplies them. Magical effect is pre-checked for saves.
+  const spellcasting = caster && !caster.isPC ? caster.creature.spellcasting : undefined
+  const action = spellAction(spell, { saveDc: spellcasting?.saveDc, toHit: spellcasting?.toHit })
   if (action) {
     return (
       <ActionResolver
+        attacker={caster && !caster.isPC ? caster : undefined}
         action={action}
         combatants={combatants}
         dispatch={dispatch}
@@ -181,7 +214,11 @@ export function CastSpellPanel({
   // stat-block cast does: its reference card (Bless, Shield of Faith, …), or the compact
   // roll-damage view for a damage-only spell.
   return (
-    <Modal title={`Cast ${spell.name}`} subtitle={`${levelText(spell.level)} · ${spell.school}`} onClose={reset}>
+    <Modal
+      title={`Cast ${spell.name}`}
+      subtitle={`${levelText(spell.level)} · ${spell.school}${caster ? ` · ${caster.isPC ? caster.name : caster.label}` : ''}`}
+      onClose={reset}
+    >
       {spell.mechanics ? (
         <div className="space-y-3">
           <SpellResolution
@@ -191,12 +228,12 @@ export function CastSpellPanel({
             onRoll={onRoll}
             onClose={reset}
           />
-          <ApplySpellEffect spell={spell} combatants={combatants} dispatch={dispatch} />
+          <ApplySpellEffect spell={spell} caster={caster} combatants={combatants} dispatch={dispatch} />
         </div>
       ) : (
         <div className="space-y-3">
           <SpellCard spell={spell} />
-          <ApplySpellEffect spell={spell} combatants={combatants} dispatch={dispatch} />
+          <ApplySpellEffect spell={spell} caster={caster} combatants={combatants} dispatch={dispatch} />
         </div>
       )}
     </Modal>

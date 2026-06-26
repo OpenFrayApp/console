@@ -32,6 +32,7 @@ import {
 } from '../combat/concentration.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
+import { TargetChips } from './TargetChips.tsx'
 import { DieRoll, SPIN_MS } from './DieRoll.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
@@ -229,39 +230,6 @@ function DamagePill({
 // rather than a bright call-to-action.
 const APPLY_BTN =
   'rounded-md border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50'
-
-const chip =
-  'rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-const chipActive =
-  'rounded border border-indigo-500 bg-indigo-50 px-2 py-1 text-sm font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
-
-function TargetChips({
-  targets,
-  selected,
-  onToggle,
-}: {
-  targets: Combatant[]
-  selected: Set<string>
-  onToggle: (id: string) => void
-}) {
-  if (targets.length === 0) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">No other combatants to target.</p>
-  }
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {targets.map((t) => (
-        <button
-          key={t.combatantId}
-          type="button"
-          onClick={() => onToggle(t.combatantId)}
-          className={selected.has(t.combatantId) ? chipActive : chip}
-        >
-          {nameOf(t)} <span className="opacity-60">AC {acOf(t)}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
 
 const QUICK_CONDITIONS: ConditionName[] = [
   'Prone',
