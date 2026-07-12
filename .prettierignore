@@ -1,0 +1,15 @@
+# Dependencies & build output
+node_modules
+dist
+website/dist
+website/node_modules
+website/.astro
+
+# Generated / vendored data — never reformat
+public/compendium
+package-lock.json
+website/package-lock.json
+
+# Lockstep license text
+CREDITS.md
+LICENSE
