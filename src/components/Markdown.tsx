@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import { useContext } from 'react'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Spell } from '../schema/spell.ts'
 import { linkifyConditions, resolveCondition } from '../compendium/conditions.ts'
 import { HoverCondition } from './HoverCondition.tsx'
 import { HoverSpell } from './HoverSpell.tsx'
+import { SpellLinkContext } from './spellLinkContext.ts'
 
 // react-markdown sanitizes link URLs and drops unknown schemes; let our own
 // `spell:` / `condition:` links (trusted compendium content) pass through.
@@ -78,7 +80,10 @@ export function Markdown({
   linkConditions?: boolean
 }) {
   const a = hoverAnchor(resolveSpell)
-  const source = joinTableRows(linkConditions ? linkifyConditions(children) : children)
+  const linkSpells = useContext(SpellLinkContext)
+  // Link bare spell names first (adds `spell:` links), then bare condition names.
+  const linked = linkSpells ? linkSpells(children) : children
+  const source = joinTableRows(linkConditions ? linkifyConditions(linked) : linked)
   if (inline) {
     return (
       <span className="[&_a]:underline [&_em]:italic [&_strong]:font-semibold">

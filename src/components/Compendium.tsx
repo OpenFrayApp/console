@@ -8,6 +8,8 @@ import type { Campaign } from '../schema/campaign.ts'
 import type { RosterPc } from '../schema/roster.ts'
 import { formatCr } from '../compendium/format.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
+import { makeSpellLinker } from '../compendium/spelllinker.ts'
+import { SpellLinkContext } from './spellLinkContext.ts'
 import {
   DEFAULT_ENABLED_LIBRARIES,
   editionBadgeClass,
@@ -274,6 +276,14 @@ export function Compendium({
     const byId = new Map(allSpells.map((s) => [s.id, s]))
     return (ref?: string) => (ref ? byId.get(ref) : undefined)
   }, [allSpells])
+  // Link bare cast-spell names in creature prose (custom creatures aren't pre-baked).
+  const linkSpells = useMemo(() => {
+    const byName = new Map<string, string>()
+    for (const s of allSpells) {
+      if (!byName.has(s.name) || s.id.startsWith('srd-5.2')) byName.set(s.name, s.id)
+    }
+    return makeSpellLinker([...byName].map(([name, ref]) => ({ name, ref })))
+  }, [allSpells])
 
   const filteredCampaigns = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -514,12 +524,14 @@ export function Compendium({
           </div>
         ) : selectedCreature ? (
           // No pt-4 here: the stat block carries its own sticky header with top padding inside its solid background.
-          <CreatureStatBlock
-            creature={selectedCreature}
-            resolveSpell={resolveSpell}
-            onEdit={isCustom(selectedCreature) ? () => startEdit(selectedCreature) : undefined}
-            onDelete={isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined}
-          />
+          <SpellLinkContext.Provider value={linkSpells}>
+            <CreatureStatBlock
+              creature={selectedCreature}
+              resolveSpell={resolveSpell}
+              onEdit={isCustom(selectedCreature) ? () => startEdit(selectedCreature) : undefined}
+              onDelete={isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined}
+            />
+          </SpellLinkContext.Provider>
         ) : selectedSpell ? (
           <div className="flex min-h-0 flex-1 flex-col pt-4">
             <SpellCard

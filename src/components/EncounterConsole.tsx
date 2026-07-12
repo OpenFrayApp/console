@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Action } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { SpellLevel, SpellRef } from '../schema/creature.ts'
@@ -25,6 +25,8 @@ import {
   spendLimited,
 } from '../combat/resources.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
+import { makeSpellLinker } from '../compendium/spelllinker.ts'
+import { SpellLinkContext } from './spellLinkContext.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
@@ -140,6 +142,15 @@ export function EncounterConsole({
   }, [])
   const resolveSpell = (ref?: string): Spell | undefined =>
     ref ? spellsById.get(ref) : undefined
+  // Link bare cast-spell names in creature prose (custom creatures aren't pre-baked).
+  // Dedupe by name, preferring the 2024 (srd-5.2) entry when a spell exists in both.
+  const linkSpells = useMemo(() => {
+    const byName = new Map<string, string>()
+    for (const s of spellsById.values()) {
+      if (!byName.has(s.name) || s.id.startsWith('srd-5.2')) byName.set(s.name, s.id)
+    }
+    return makeSpellLinker([...byName].map(([name, ref]) => ({ name, ref })))
+  }, [spellsById])
 
   // HP damage to a concentrator prompts a save.
   const applyHpInput = (c: Combatant, raw: string, isTemp: boolean) => {
@@ -442,6 +453,7 @@ export function EncounterConsole({
                   onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
                 />
               ) : (
+                <SpellLinkContext.Provider value={linkSpells}>
                 <CreatureStatBlock
                   creature={selected.creature}
                   hp={selected.hp}
@@ -490,6 +502,7 @@ export function EncounterConsole({
                   }
                   inLair={selected.inLair}
                 />
+                </SpellLinkContext.Provider>
               )}
             </div>
         ) : (
