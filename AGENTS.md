@@ -170,6 +170,9 @@ to.
 - **Sign off commits** with `git commit -s` (DCO; no CLA).
 - **License:** AGPL-3.0. The running app must expose a "Source" link to the repo
   (AGPL §13). New source files get the short AGPL header.
+- **Legal pages:** any change to `website/src/pages/privacy.astro` or `terms.astro`
+  must **also bump the `Last updated:` date** (`<p class="updated">`) to the current
+  date, in the same edit. Never alter the legal copy without updating that date.
 - **When unsure whether something is in scope, ask / flag — don't quietly build it.**
 
 ## Licensing of content
