@@ -1,0 +1,6 @@
+# Revisions to skip in `git blame` (bulk, semantics-only changes).
+# GitHub uses this automatically. Locally, run once:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Style: format the entire repo with Prettier
+e6fffa946d130d4e43b7e9466b64fa6b1a6e492a
