@@ -33,12 +33,7 @@ export type ConditionName =
   | 'Unconscious'
 
 /** Which category of roll a modifier touches. */
-export type EffectApplies =
-  | 'attackRolls'
-  | 'savingThrows'
-  | 'abilityChecks'
-  | 'ac'
-  | 'all'
+export type EffectApplies = 'attackRolls' | 'savingThrows' | 'abilityChecks' | 'ac' | 'all'
 
 export type EffectMode = 'advantage' | 'disadvantage' | 'flatBonus'
 
@@ -62,11 +57,7 @@ export interface EffectModifier {
 }
 
 export type EffectDurationType =
-  | 'consumeOnRoll'
-  | 'rounds'
-  | 'untilSourceTurn'
-  | 'saveEnds'
-  | 'manual'
+  'consumeOnRoll' | 'rounds' | 'untilSourceTurn' | 'saveEnds' | 'manual'
 
 export interface EffectDuration {
   type: EffectDurationType

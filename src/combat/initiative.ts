@@ -74,10 +74,7 @@ function takesTurn(c: Combatant): boolean {
  * Start combat: sort into initiative order, round 1, and make the first creature
  * that actually takes a turn active (skipping any surprised/dead leaders).
  */
-export function beginEncounter(
-  e: Encounter,
-  tiebreak: InitiativeTiebreak = 'dex',
-): Encounter {
+export function beginEncounter(e: Encounter, tiebreak: InitiativeTiebreak = 'dex'): Encounter {
   const combatants = sortByInitiative(e.combatants, tiebreak)
   const first = combatants.findIndex(takesTurn)
   return {
@@ -93,9 +90,7 @@ function tickRoundsEffects(effects: Effect[]): Effect[] {
   return effects.flatMap((e) => {
     if (e.duration.type !== 'rounds') return [e]
     const remaining = (e.duration.rounds ?? 0) - 1
-    return remaining <= 0
-      ? []
-      : [{ ...e, duration: { ...e.duration, rounds: remaining } }]
+    return remaining <= 0 ? [] : [{ ...e, duration: { ...e.duration, rounds: remaining } }]
   })
 }
 
@@ -134,9 +129,7 @@ export function nextTurn(e: Encounter): Encounter {
   if (!e.combatants.some(takesTurn)) return e
 
   const endingId = e.combatants[e.activeIndex]?.combatantId
-  let combatants = e.combatants.map((c) =>
-    c.combatantId === endingId ? endTurn(c) : c,
-  )
+  let combatants = e.combatants.map((c) => (c.combatantId === endingId ? endTurn(c) : c))
 
   // The next taker in the remainder of this round.
   let index = -1

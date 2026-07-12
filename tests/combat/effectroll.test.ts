@@ -3,18 +3,10 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
-import type {
-  CombatantStatus,
-  MonsterCombatant,
-} from '../../src/schema/combatant.ts'
+import type { CombatantStatus, MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { RandomSource } from '../../src/dice/rng.ts'
-import {
-  advantageAgainst,
-  condition,
-  disadvantageOn,
-  flatBonus,
-} from '../../src/combat/effects.ts'
+import { advantageAgainst, condition, disadvantageOn, flatBonus } from '../../src/combat/effects.ts'
 import { rollWithEffects } from '../../src/combat/effectroll.ts'
 
 function faceSeq(...faces: number[]): RandomSource {

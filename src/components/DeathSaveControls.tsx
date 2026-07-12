@@ -49,34 +49,30 @@ const BTN = 'rounded border px-2 py-1 text-xs font-medium'
  * The app never rolls for the player: Save/Fail record the player's own result;
  * "Roll death save" is the fallback when they can't roll their own die.
  */
-export function DeathSaveControls({
-  onSave,
-  onFail,
-  onRoll,
-}: DeathSaveControlsProps) {
+export function DeathSaveControls({ onSave, onFail, onRoll }: DeathSaveControlsProps) {
   return (
     <div className="flex gap-1">
-        <button
-          type="button"
-          onClick={onSave}
-          className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          onClick={onFail}
-          className={`${BTN} border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950`}
-        >
-          Fail
-        </button>
-        <button
-          type="button"
-          onClick={onRoll}
-          className={`${BTN} border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
-        >
-          Roll death save
-        </button>
+      <button
+        type="button"
+        onClick={onSave}
+        className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        onClick={onFail}
+        className={`${BTN} border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950`}
+      >
+        Fail
+      </button>
+      <button
+        type="button"
+        onClick={onRoll}
+        className={`${BTN} border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
+      >
+        Roll death save
+      </button>
     </div>
   )
 }

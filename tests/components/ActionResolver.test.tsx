@@ -68,7 +68,11 @@ const fireBreath: Action = {
 
 beforeEach(() => {
   // Force reduced motion so the die settles instantly (no rAF in jsdom tests).
-  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }))
+  vi.stubGlobal('matchMedia', () => ({
+    matches: true,
+    addEventListener() {},
+    removeEventListener() {},
+  }))
 })
 afterEach(() => {
   cleanup()

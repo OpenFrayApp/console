@@ -3,10 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
-import type {
-  MonsterCombatant,
-  PlayerCharacter,
-} from '../../src/schema/combatant.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import {
   actionUsesRemaining,
   applyDamage,
@@ -120,7 +117,9 @@ describe('applyDamage', () => {
     // 20/20 PC takes 40: reduced to 0 with 20 leftover, which equals max -> dead.
     expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 40).status).toBe('dead')
     // 39 leaves 19 overkill, just under max -> still only downed.
-    expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 39).status).toBe('unconscious')
+    expect(applyDamage(pc({ hp: { current: 20, max: 20, temp: 0 } }), 39).status).toBe(
+      'unconscious',
+    )
   })
 
   it('adds a death-save failure when an already-downed PC takes damage', () => {
@@ -170,10 +169,7 @@ describe('applyHealing', () => {
   })
 
   it('revives a dead monster healed above 0', () => {
-    const c = applyHealing(
-      monster({ status: 'dead', hp: { current: 0, max: 40, temp: 0 } }),
-      5,
-    )
+    const c = applyHealing(monster({ status: 'dead', hp: { current: 0, max: 40, temp: 0 } }), 5)
     expect(c.hp.current).toBe(5)
     expect(c.status).toBe('active')
   })
@@ -208,7 +204,9 @@ describe('setCurrentHp', () => {
   })
 
   it('kills a monster set to 0 and revives one set above 0', () => {
-    expect(setCurrentHp(monster({ hp: { current: 0, max: 40, temp: 0 }, status: 'dead' }), 12).status).toBe('active')
+    expect(
+      setCurrentHp(monster({ hp: { current: 0, max: 40, temp: 0 }, status: 'dead' }), 12).status,
+    ).toBe('active')
     expect(setCurrentHp(monster(), 0).status).toBe('dead')
   })
 
@@ -216,7 +214,11 @@ describe('setCurrentHp', () => {
     const downed = setCurrentHp(pc({ hp: { current: 20, max: 30, temp: 0 } }), 0)
     expect(downed.status).toBe('unconscious')
     const revived = setCurrentHp(
-      pc({ status: 'unconscious', hp: { current: 0, max: 30, temp: 0 }, deathSaves: { successes: 1, failures: 2 } }),
+      pc({
+        status: 'unconscious',
+        hp: { current: 0, max: 30, temp: 0 },
+        deathSaves: { successes: 1, failures: 2 },
+      }),
       5,
     )
     expect(revived.status).toBe('active')
@@ -311,8 +313,7 @@ describe('spell uses (At Will / N per day, each spell on its own)', () => {
       },
     ],
   }
-  const caster = () =>
-    monster({ creature: { ...creature(), spellcasting: SPELLCASTING } })
+  const caster = () => monster({ creature: { ...creature(), spellcasting: SPELLCASTING } })
   const fireball = SPELLCASTING.groups[1].spells[0]
   const invisibility = SPELLCASTING.groups[1].spells[1]
   const mageHand = SPELLCASTING.groups[0].spells[0]
@@ -363,7 +364,10 @@ describe('castSpell — slot casters (2014, spells of a level share a slot pool)
           { name: 'Mage Armor', ref: 'srd-5.2:mage-armor' },
         ],
       },
-      { usage: { type: 'slots', level: 3 }, spells: [{ name: 'Fireball', ref: 'srd-5.2:fireball' }] },
+      {
+        usage: { type: 'slots', level: 3 },
+        spells: [{ name: 'Fireball', ref: 'srd-5.2:fireball' }],
+      },
     ],
   }
   const slotCaster = () => monster({ creature: { ...creature(), spellcasting: SLOT_SPELLCASTING } })
@@ -453,7 +457,13 @@ describe('limited-use abilities', () => {
 })
 
 describe('per-day action uses', () => {
-  const mistyStep = { id: 'misty-step', name: 'Misty Step', kind: 'utility', toHit: null, recharge: { type: 'perDay', value: 3 } } as const
+  const mistyStep = {
+    id: 'misty-step',
+    name: 'Misty Step',
+    kind: 'utility',
+    toHit: null,
+    recharge: { type: 'perDay', value: 3 },
+  } as const
   const arcaneBurst = { id: 'arcane-burst', name: 'Arcane Burst', kind: 'melee', toHit: 9 } as const
 
   it('tracks an "N/Day" action as a count, decrementing on each use', () => {

@@ -112,7 +112,9 @@ export function CombatantRow({
       }
       className={cx(
         'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2 transition-opacity',
-        isFoe(combatant) ? 'border-l-rose-400 dark:border-l-rose-500' : 'border-l-sky-400 dark:border-l-sky-500',
+        isFoe(combatant)
+          ? 'border-l-rose-400 dark:border-l-rose-500'
+          : 'border-l-sky-400 dark:border-l-sky-500',
         onSelect && 'cursor-pointer',
         active
           ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
@@ -167,7 +169,14 @@ export function CombatantRow({
               title="Remove from the encounter"
               className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-rose-600 focus:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-rose-400"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" className="h-3 w-3">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                className="h-3 w-3"
+              >
                 <path d="M6 6l12 12M18 6 6 18" />
               </svg>
             </button>
@@ -221,7 +230,9 @@ export function CombatantRow({
                     key={`${g.ability}|${g.dc}|${g.when}`}
                     group={g}
                     onRemove={
-                      onRemoveEffect ? () => g.effects.forEach((e) => onRemoveEffect(e.id)) : undefined
+                      onRemoveEffect
+                        ? () => g.effects.forEach((e) => onRemoveEffect(e.id))
+                        : undefined
                     }
                   />
                 ))}
@@ -231,9 +242,7 @@ export function CombatantRow({
 
         {combatant.isPC && combatant.status === 'unconscious' && (
           <div className="mt-1">
-            <DeathSavePips
-              saves={combatant.deathSaves ?? { successes: 0, failures: 0 }}
-            />
+            <DeathSavePips saves={combatant.deathSaves ?? { successes: 0, failures: 0 }} />
           </div>
         )}
       </div>
@@ -260,14 +269,10 @@ export function CombatantRow({
             )}
             <span className="text-slate-400 dark:text-slate-500">/{hp.max}</span>
           </span>
-          {hp.temp > 0 && (
-            <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>
-          )}
+          {hp.temp > 0 && <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>}
           {showTier && <span className="sr-only"> {TIER_LABEL[tier]}</span>}
         </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400">
-          AC {armorClass(combatant)}
-        </div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">AC {armorClass(combatant)}</div>
       </div>
     </div>
   )

@@ -80,7 +80,10 @@ describe('spellEffectFor', () => {
   })
 
   it('timedDuration converts minutes but falls back to manual for hours', () => {
-    expect(timedDuration(spell('x', { duration: 'up to 10 minutes' }))).toEqual({ type: 'rounds', rounds: 100 })
+    expect(timedDuration(spell('x', { duration: 'up to 10 minutes' }))).toEqual({
+      type: 'rounds',
+      rounds: 100,
+    })
     expect(timedDuration(spell('x', { duration: '8 hours' }))).toEqual({ type: 'manual' })
   })
 })

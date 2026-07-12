@@ -112,20 +112,87 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
             className={FIELD}
           />
           <div className="grid grid-cols-3 gap-2">
-            <input value={f.ac} onChange={set('ac')} placeholder="AC" aria-label="AC" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.hp} onChange={set('hp')} placeholder="HP" aria-label="Max HP" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.init} onChange={set('init')} placeholder="Init +" aria-label="Initiative modifier" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
+            <input
+              value={f.ac}
+              onChange={set('ac')}
+              placeholder="AC"
+              aria-label="AC"
+              inputMode="numeric"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
+            <input
+              value={f.hp}
+              onChange={set('hp')}
+              placeholder="HP"
+              aria-label="Max HP"
+              inputMode="numeric"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
+            <input
+              value={f.init}
+              onChange={set('init')}
+              placeholder="Init +"
+              aria-label="Initiative modifier"
+              inputMode="numeric"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input value={f.pp} onChange={set('pp')} placeholder="Pass. Perc." aria-label="Passive Perception" inputMode="numeric" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.speed} onChange={set('speed')} placeholder="Speed (30, Climb 12)" aria-label="Speed" {...NO_AUTOFILL} className={FIELD} />
+            <input
+              value={f.pp}
+              onChange={set('pp')}
+              placeholder="Pass. Perc."
+              aria-label="Passive Perception"
+              inputMode="numeric"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
+            <input
+              value={f.speed}
+              onChange={set('speed')}
+              placeholder="Speed (30, Climb 12)"
+              aria-label="Speed"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
           </div>
-          <input value={f.languages} onChange={set('languages')} placeholder="Languages (comma-separated)" aria-label="Languages" {...NO_AUTOFILL} className={FIELD} />
+          <input
+            value={f.languages}
+            onChange={set('languages')}
+            placeholder="Languages (comma-separated)"
+            aria-label="Languages"
+            {...NO_AUTOFILL}
+            className={FIELD}
+          />
           <div className="space-y-1">
             <p className={LABEL}>Defenses (comma-separated)</p>
-            <input value={f.resistances} onChange={set('resistances')} placeholder="Resistances" aria-label="Resistances" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.immunities} onChange={set('immunities')} placeholder="Immunities" aria-label="Immunities" {...NO_AUTOFILL} className={FIELD} />
-            <input value={f.vulnerabilities} onChange={set('vulnerabilities')} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...NO_AUTOFILL} className={FIELD} />
+            <input
+              value={f.resistances}
+              onChange={set('resistances')}
+              placeholder="Resistances"
+              aria-label="Resistances"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
+            <input
+              value={f.immunities}
+              onChange={set('immunities')}
+              placeholder="Immunities"
+              aria-label="Immunities"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
+            <input
+              value={f.vulnerabilities}
+              onChange={set('vulnerabilities')}
+              placeholder="Vulnerabilities"
+              aria-label="Vulnerabilities"
+              {...NO_AUTOFILL}
+              className={FIELD}
+            />
           </div>
           <button
             type="submit"

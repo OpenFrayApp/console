@@ -87,8 +87,22 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input value={ac} onChange={(e) => setAc(e.target.value)} placeholder="AC" aria-label="AC" inputMode="numeric" className={FIELD} />
-            <input value={hp} onChange={(e) => setHp(e.target.value)} placeholder="HP" aria-label="Max HP" inputMode="numeric" className={FIELD} />
+            <input
+              value={ac}
+              onChange={(e) => setAc(e.target.value)}
+              placeholder="AC"
+              aria-label="AC"
+              inputMode="numeric"
+              className={FIELD}
+            />
+            <input
+              value={hp}
+              onChange={(e) => setHp(e.target.value)}
+              placeholder="HP"
+              aria-label="Max HP"
+              inputMode="numeric"
+              className={FIELD}
+            />
           </div>
           <button
             type="submit"

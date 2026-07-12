@@ -60,10 +60,7 @@ describe('AddCreaturePicker', () => {
 
   it('badges each creature with its source when more than one library is enabled', async () => {
     render(
-      <AddCreaturePicker
-        onPick={vi.fn()}
-        enabledLibraries={['srd-5.2', 'kobold-press-tob3']}
-      />,
+      <AddCreaturePicker onPick={vi.fn()} enabledLibraries={['srd-5.2', 'kobold-press-tob3']} />,
     )
 
     fireEvent.click(screen.getByText('Add creature'))

@@ -8,7 +8,12 @@ import { speedLines } from '../combat/speed.ts'
 import { hpTierOf } from '../combat/resources.ts'
 import { hpToneFor } from './hpTone.ts'
 import { formatSenses } from '../compendium/format.ts'
-import { AbilityTable, DefensesAndSenses, SECTION_HEADING, type OnCheck } from './CreatureStatBlock.tsx'
+import {
+  AbilityTable,
+  DefensesAndSenses,
+  SECTION_HEADING,
+  type OnCheck,
+} from './CreatureStatBlock.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { Markdown } from './Markdown.tsx'
 
@@ -164,8 +169,13 @@ export function PcStatBlock({
     ) : (
       <span className="text-slate-400 dark:text-slate-500">—</span>
     )
-  const hasPersonality =
-    !!(faith?.trim() || personalityTraits?.length || ideals?.length || bonds?.length || flaws?.length)
+  const hasPersonality = !!(
+    faith?.trim() ||
+    personalityTraits?.length ||
+    ideals?.length ||
+    bonds?.length ||
+    flaws?.length
+  )
 
   return (
     <div className="@container flex flex-1 flex-col space-y-4">
@@ -181,12 +191,20 @@ export function PcStatBlock({
             <HeaderStat
               label="HP"
               value={hpValue}
-              edit={onHpInput ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' } : undefined}
+              edit={
+                onHpInput
+                  ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' }
+                  : undefined
+              }
             />
             <HeaderStat
               label="TMP"
               value={tmpValue}
-              edit={onTempInput ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' } : undefined}
+              edit={
+                onTempInput
+                  ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }
+                  : undefined
+              }
             />
             {/* The modifier only — the rolled initiative lives in the tracker. */}
             <HeaderStat label="Init" value={signed(initiativeMod)} />
@@ -232,7 +250,9 @@ export function PcStatBlock({
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   Faith
                 </p>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{faith}</p>
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                  {faith}
+                </p>
               </div>
             )}
             <LineGroup label="Personality Traits" items={personalityTraits} />

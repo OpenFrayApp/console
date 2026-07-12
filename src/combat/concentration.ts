@@ -39,10 +39,7 @@ export function isConcentrating(c: Combatant): boolean {
 }
 
 /** Start concentrating, replacing any existing concentration (one at a time). */
-export function startConcentration(
-  c: Combatant,
-  concentration: Concentration,
-): Combatant {
+export function startConcentration(c: Combatant, concentration: Concentration): Combatant {
   return { ...c, concentration }
 }
 
@@ -51,10 +48,7 @@ export function breakConcentration(c: Combatant): Combatant {
 }
 
 /** Record the player's own result (or a monster's) without rolling in-app. */
-export function applyConcentrationResult(
-  c: Combatant,
-  maintained: boolean,
-): Combatant {
+export function applyConcentrationResult(c: Combatant, maintained: boolean): Combatant {
   return maintained ? c : breakConcentration(c)
 }
 

@@ -20,7 +20,8 @@ export const CONDITION_TEXT: Record<ConditionName, string> = {
     '**Can’t Harm the Charmer.** You can’t attack the charmer or target the charmer with damaging abilities or magical effects.',
     '**Social Advantage.** The charmer has Advantage on any ability check to interact with you socially.',
   ].join('\n\n'),
-  Deafened: '**Can’t Hear.** You can’t hear and automatically fail any ability check that requires hearing.',
+  Deafened:
+    '**Can’t Hear.** You can’t hear and automatically fail any ability check that requires hearing.',
   Exhaustion: [
     '**Exhaustion Levels.** This condition is cumulative. Each time you receive it, you gain 1 Exhaustion level. You die if your Exhaustion level is 6.',
     '**D20 Tests Affected.** When you make a D20 Test, the roll is reduced by 2 times your Exhaustion level.',
@@ -63,7 +64,8 @@ export const CONDITION_TEXT: Record<ConditionName, string> = {
     '**Resist Damage.** You have Resistance to all damage.',
     '**Poison Immunity.** You have Immunity to the Poisoned condition.',
   ].join('\n\n'),
-  Poisoned: '**Ability Checks and Attacks Affected.** You have Disadvantage on attack rolls and ability checks.',
+  Poisoned:
+    '**Ability Checks and Attacks Affected.** You have Disadvantage on attack rolls and ability checks.',
   Prone: [
     '**Restricted Movement.** Your only movement options are to crawl or to spend an amount of movement equal to half your Speed (round down) to right yourself and thereby end the condition. If your Speed is 0, you can’t right yourself.',
     '**Attacks Affected.** You have Disadvantage on attack rolls. An attack roll against you has Advantage if the attacker is within 5 feet of you. Otherwise, that attack roll has Disadvantage.',

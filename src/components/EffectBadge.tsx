@@ -34,13 +34,7 @@ function toneFor(icon: string | undefined): string {
 }
 
 /** A single Effect rendered as a badge; clickable to remove when `onRemove` is set. */
-export function EffectBadge({
-  effect,
-  onRemove,
-}: {
-  effect: Effect
-  onRemove?: () => void
-}) {
+export function EffectBadge({ effect, onRemove }: { effect: Effect; onRemove?: () => void }) {
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(effect.icon)}`
   // Surface a save-ends effect's escape DC so the GM is reminded a save is owed.
   const save = effect.duration.type === 'saveEnds' ? effect.duration.save : null
@@ -83,13 +77,21 @@ export function SaveEndsBadge({
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor('condition')}`
   const names = group.effects.map((e) => e.name).join(', ')
   const tag = (
-    <span className="opacity-70" title={`${group.ability.toUpperCase()} save DC ${group.dc} ends them`}>
+    <span
+      className="opacity-70"
+      title={`${group.ability.toUpperCase()} save DC ${group.dc} ends them`}
+    >
       · save DC {group.dc}
     </span>
   )
   if (onRemove) {
     return (
-      <button type="button" onClick={onRemove} title={`Remove ${names}`} className={`${className} hover:opacity-80`}>
+      <button
+        type="button"
+        onClick={onRemove}
+        title={`Remove ${names}`}
+        className={`${className} hover:opacity-80`}
+      >
         {names}
         {tag}
         <span aria-hidden>×</span>

@@ -83,7 +83,9 @@ function describeRoll(result: RollResult): string {
     // beyond the kept dice — surface it so the breakdown reconciles with the total.
     const keptSum = g.sign * g.kept.reduce((a, b) => a + b, 0)
     const critBonus = g.total - keptSum
-    return critBonus === 0 ? base : `${base} ${critBonus >= 0 ? '+' : '−'}${Math.abs(critBonus)} crit`
+    return critBonus === 0
+      ? base
+      : `${base} ${critBonus >= 0 ? '+' : '−'}${Math.abs(critBonus)} crit`
   })
   let line = dice.join(' + ')
   if (result.modifier) line += ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`

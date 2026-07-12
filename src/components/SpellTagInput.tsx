@@ -97,7 +97,9 @@ export function SpellTagInput({
               >
                 {v.name}
                 {tag && (
-                  <span className="text-[0.65rem] text-indigo-500 dark:text-indigo-300/80">{tag}</span>
+                  <span className="text-[0.65rem] text-indigo-500 dark:text-indigo-300/80">
+                    {tag}
+                  </span>
                 )}
                 <button
                   type="button"

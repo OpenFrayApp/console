@@ -13,9 +13,7 @@ describe('parseFormula', () => {
   })
 
   it('defaults the count to 1', () => {
-    expect(parseFormula('d20').terms).toEqual([
-      { kind: 'dice', sign: 1, count: 1, sides: 20 },
-    ])
+    expect(parseFormula('d20').terms).toEqual([{ kind: 'dice', sign: 1, count: 1, sides: 20 }])
   })
 
   it('expands advantage into two dice keeping the highest', () => {

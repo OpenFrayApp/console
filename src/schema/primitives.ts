@@ -8,14 +8,7 @@ export type AbilityScores = Record<Ability, number>
 /** Saving-throw proficiency bonuses, keyed by ability. Partial — most absent. */
 export type SaveBonuses = Partial<Record<Ability, number>>
 
-export type Size =
-  | 'Tiny'
-  | 'Small'
-  | 'Medium or Small'
-  | 'Medium'
-  | 'Large'
-  | 'Huge'
-  | 'Gargantuan'
+export type Size = 'Tiny' | 'Small' | 'Medium or Small' | 'Medium' | 'Large' | 'Huge' | 'Gargantuan'
 
 /** The 18 standard 5e skills. */
 export type Skill =

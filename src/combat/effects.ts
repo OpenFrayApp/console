@@ -113,12 +113,13 @@ function modifierIcon(spec: ModifierSpec): string {
     const negative =
       typeof spec.value === 'number'
         ? spec.value < 0
-        : String(spec.value ?? '').trim().startsWith('-')
+        : String(spec.value ?? '')
+            .trim()
+            .startsWith('-')
     return negative ? 'debuff' : 'buff'
   }
   // Advantage on its own rolls, or disadvantage on rolls against it, helps it.
-  const helps =
-    (spec.mode === 'advantage') === (spec.direction === 'outgoing')
+  const helps = (spec.mode === 'advantage') === (spec.direction === 'outgoing')
   return helps ? 'buff' : 'debuff'
 }
 

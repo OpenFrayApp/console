@@ -50,8 +50,7 @@ export type EncounterAction =
   /** Replace the whole encounter — used when hydrating from the cloud on sign-in. */
   | { type: 'load'; encounter: Encounter }
 
-const activeId = (e: Encounter): string | undefined =>
-  e.combatants[e.activeIndex]?.combatantId
+const activeId = (e: Encounter): string | undefined => e.combatants[e.activeIndex]?.combatantId
 
 /** A log entry before the reducer stamps its id + round. */
 export type NewLogEntry = Omit<GameLogEntry, 'id' | 'round'>
@@ -102,7 +101,8 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
     if (afterEffectIds.has(e.id) || e.duration.type === 'consumeOnRoll') continue
     out.push({
       category: 'condition',
-      message: e.icon === 'condition' ? `${name} is no longer ${e.name}` : `${name}: ${e.name} ends`,
+      message:
+        e.icon === 'condition' ? `${name} is no longer ${e.name}` : `${name}: ${e.name} ends`,
       sourceId,
     })
   }
@@ -212,7 +212,8 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     case 'nextTurn': {
       const next = nextTurn(state)
       const entries: NewLogEntry[] = []
-      if (next.round > state.round) entries.push({ category: 'turn', message: `Round ${next.round}` })
+      if (next.round > state.round)
+        entries.push({ category: 'turn', message: `Round ${next.round}` })
       const active = next.combatants[next.activeIndex]
       const prevActiveId = state.combatants[state.activeIndex]?.combatantId
       if (active && active.combatantId !== prevActiveId) {
@@ -262,7 +263,8 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     case 'recordDamage':
       return {
         ...state,
-        combatStats: state.combatStats && addDealt(state.combatStats, action.sourceId, action.amount),
+        combatStats:
+          state.combatStats && addDealt(state.combatStats, action.sourceId, action.amount),
       }
 
     case 'log':
@@ -348,9 +350,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
             : below
               ? below.initiative + 1
               : order[at].initiative
-      const combatants = order.map((c) =>
-        c.combatantId === action.id ? { ...c, initiative } : c,
-      )
+      const combatants = order.map((c) => (c.combatantId === action.id ? { ...c, initiative } : c))
       return { ...state, combatants, activeIndex: indexOfId(combatants, activeId(state)) }
     }
 

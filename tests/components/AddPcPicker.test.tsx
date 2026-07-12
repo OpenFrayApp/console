@@ -18,7 +18,14 @@ const campaigns = [{ id: 'c1', name: 'Sands of Eternity', edition: '5.5' as cons
 describe('AddPcPicker', () => {
   it('opens a popover listing saved characters with their campaign acronym', () => {
     const onPick = vi.fn()
-    render(<AddPcPicker rosterPcs={rosterPcs} campaigns={campaigns} onPick={onPick} onCreate={() => {}} />)
+    render(
+      <AddPcPicker
+        rosterPcs={rosterPcs}
+        campaigns={campaigns}
+        onPick={onPick}
+        onCreate={() => {}}
+      />,
+    )
 
     // The list is behind the toggle.
     expect(screen.queryByText('Thalia')).toBeNull()

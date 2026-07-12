@@ -9,7 +9,7 @@ Before anything else, please read the one rule that matters most.
 
 **OpenFray is a fast scratchpad for combat, not a system of record.**
 It tracks what happens at the table — plus the reference a DM jots (a PC's stats,
-defenses, and character notes) — never the *rules engine* behind a character.
+defenses, and character notes) — never the _rules engine_ behind a character.
 
 Every contribution is measured against one question:
 
@@ -21,12 +21,12 @@ because they cross this line:
 
 - Knowing a PC's class, level, subclass, or feature list
 - Tracking PC spell slots, resources, or abilities (that's their sheet / D&D Beyond)
-- Auto-applying what a class feature *does* (we model the *result* it leaves on the
+- Auto-applying what a class feature _does_ (we model the _result_ it leaves on the
   board, not the feature)
 - Anything that turns OpenFray into a character manager or a VTT
 
 If a feature you want seems to need any of the above, open an issue to discuss
-*before* building — there's almost always a scratchpad-shaped version of the idea
+_before_ building — there's almost always a scratchpad-shaped version of the idea
 that fits (model the consequence, not the cause). We'd rather talk it through than
 have you build something we can't merge.
 
@@ -64,7 +64,7 @@ device/browser. A screenshot of the combat state helps a lot for tracker bugs.
 
 ## Suggesting features
 
-Open an issue describing the *table problem* you're trying to solve, not just the
+Open an issue describing the _table problem_ you're trying to solve, not just the
 solution. "I keep forgetting X mid-combat" tells us more than "add a button for X,"
 and it helps us find the scratchpad-shaped version that fits.
 

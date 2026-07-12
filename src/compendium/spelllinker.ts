@@ -12,9 +12,7 @@ const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\
  * Speed") are left alone, and existing links are never rewritten — so it's safe to
  * run over already-baked SRD text too.
  */
-export function makeSpellLinker(
-  spells: { name: string; ref: string }[],
-): (text: string) => string {
+export function makeSpellLinker(spells: { name: string; ref: string }[]): (text: string) => string {
   const refByLower = new Map(spells.map((s) => [s.name.toLowerCase(), s.ref]))
   // Longest names first so the alternation prefers "Mirror Image" over "Image".
   const names = [...new Set(spells.map((s) => s.name))]

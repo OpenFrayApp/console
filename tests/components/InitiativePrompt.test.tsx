@@ -60,7 +60,14 @@ const initial = { p1: '', m1: '14' }
 
 describe('InitiativePrompt', () => {
   it('lists every combatant with its pre-filled initiative', () => {
-    render(<InitiativePrompt combatants={combatants} initial={initial} onStart={() => {}} onCancel={() => {}} />)
+    render(
+      <InitiativePrompt
+        combatants={combatants}
+        initial={initial}
+        onStart={() => {}}
+        onCancel={() => {}}
+      />,
+    )
     expect(screen.getByText('Thalia')).toBeInTheDocument()
     expect(screen.getByText('Goblin A')).toBeInTheDocument()
     expect((screen.getByLabelText('Initiative for Thalia') as HTMLInputElement).value).toBe('')
@@ -69,7 +76,14 @@ describe('InitiativePrompt', () => {
 
   it('returns entered values and the surprised set on start', () => {
     const onStart = vi.fn()
-    render(<InitiativePrompt combatants={combatants} initial={initial} onStart={onStart} onCancel={() => {}} />)
+    render(
+      <InitiativePrompt
+        combatants={combatants}
+        initial={initial}
+        onStart={onStart}
+        onCancel={() => {}}
+      />,
+    )
 
     fireEvent.change(screen.getByLabelText('Initiative for Thalia'), { target: { value: '17' } })
     fireEvent.click(screen.getByRole('button', { name: 'Mark Goblin A surprised' }))
@@ -84,7 +98,14 @@ describe('InitiativePrompt', () => {
 
   it('toggles a surprise mark off again', () => {
     const onStart = vi.fn()
-    render(<InitiativePrompt combatants={combatants} initial={initial} onStart={onStart} onCancel={() => {}} />)
+    render(
+      <InitiativePrompt
+        combatants={combatants}
+        initial={initial}
+        onStart={onStart}
+        onCancel={() => {}}
+      />,
+    )
     const toggle = screen.getByRole('button', { name: 'Mark Goblin A surprised' })
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-pressed', 'true')

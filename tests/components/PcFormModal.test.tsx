@@ -66,7 +66,9 @@ describe('PcFormModal', () => {
       campaignId: 'camp-1',
     }
     const onSubmit = vi.fn()
-    render(<PcFormModal open pc={pc} campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />)
+    render(
+      <PcFormModal open pc={pc} campaigns={campaigns} onClose={() => {}} onSubmit={onSubmit} />,
+    )
 
     expect(screen.getByRole('dialog', { name: 'Edit player character' })).toBeInTheDocument()
     expect((screen.getByLabelText('PC name') as HTMLInputElement).value).toBe('Thalia')
@@ -132,7 +134,9 @@ describe('PcFormModal', () => {
     fireEvent.change(screen.getByLabelText('Race'), { target: { value: 'Half-Elf' } })
     fireEvent.change(screen.getByLabelText('Alignment'), { target: { value: 'lawful good' } })
     fireEvent.change(screen.getByLabelText('Faith'), { target: { value: 'Lathander' } })
-    fireEvent.change(screen.getByLabelText('GM notes'), { target: { value: 'Owes the party 50gp' } })
+    fireEvent.change(screen.getByLabelText('GM notes'), {
+      target: { value: 'Owes the party 50gp' },
+    })
 
     // Each roleplay category is a repeatable list: Add a line, then fill it.
     fireEvent.click(screen.getByRole('button', { name: '+ Add trait' }))

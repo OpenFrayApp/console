@@ -24,9 +24,7 @@ const levelLabel = (level: number): string => (level === 0 ? 'Cantrip' : `Level 
 export function damageVariants(spell: Spell): DamageVariant[] {
   const damage = spell.mechanics?.damage
   if (!damage) return []
-  const variants: DamageVariant[] = [
-    { key: 'base', label: levelLabel(spell.level), damage },
-  ]
+  const variants: DamageVariant[] = [{ key: 'base', label: levelLabel(spell.level), damage }]
   for (const s of spell.mechanics?.scaling ?? []) {
     const label = s.by === 'slot' ? `Slot ${s.level}` : `Caster level ${s.level}`
     variants.push({ key: `${s.by}-${s.level}`, label, damage: s.damage })

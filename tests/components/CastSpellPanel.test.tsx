@@ -149,15 +149,23 @@ describe('CastSpellPanel', () => {
 
   it('starts the chosen caster concentrating when a concentration spell is cast', async () => {
     const dispatch = vi.fn()
-    render(<CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={vi.fn()} round={2} />)
+    render(
+      <CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={vi.fn()} round={2} />,
+    )
     fireEvent.click(screen.getByText('Cast spell'))
     await waitFor(() => expect(screen.getByText('Bless')).toBeTruthy())
     fireEvent.change(screen.getByLabelText('Caster'), { target: { value: 'g1' } })
     fireEvent.click(screen.getByText('Bless'))
 
-    const conc = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update' && a.id === 'g1')
+    const conc = dispatch.mock.calls
+      .map((c) => c[0])
+      .find((a) => a.type === 'update' && a.id === 'g1')
     expect(conc).toBeTruthy()
-    expect(conc.update(monster()).concentration).toMatchObject({ spell: 'Bless', round: 2, rounds: 10 })
+    expect(conc.update(monster()).concentration).toMatchObject({
+      spell: 'Bless',
+      round: 2,
+      rounds: 10,
+    })
   })
 
   it("seeds the save DC from a monster caster's spellcasting", async () => {

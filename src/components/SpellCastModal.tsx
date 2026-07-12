@@ -148,7 +148,11 @@ export function SpellCastModal({
           {drained && (
             <span className="text-sm text-slate-500 dark:text-slate-400">
               No uses remaining ·{' '}
-              <button type="button" onClick={onRestore} className="text-indigo-600 hover:underline dark:text-indigo-400">
+              <button
+                type="button"
+                onClick={onRestore}
+                className="text-indigo-600 hover:underline dark:text-indigo-400"
+              >
                 restore one
               </button>
             </span>

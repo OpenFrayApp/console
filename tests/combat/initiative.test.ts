@@ -45,11 +45,7 @@ interface MonsterOpts {
   concentration?: MonsterCombatant['concentration']
 }
 
-function monster(
-  id: string,
-  initiative: number,
-  opts: MonsterOpts = {},
-): MonsterCombatant {
+function monster(id: string, initiative: number, opts: MonsterOpts = {}): MonsterCombatant {
   const perRound = opts.perRound ?? 0
   return {
     isPC: false,
@@ -84,7 +80,9 @@ function pc(id: string, initiative: number, dex?: number): PlayerCharacter {
     concentration: null,
     effects: [],
     // Roster PCs carry ability scores; anon/quick PCs leave this undefined.
-    ...(dex !== undefined ? { abilities: { str: 10, dex, con: 10, int: 10, wis: 10, cha: 10 } } : {}),
+    ...(dex !== undefined
+      ? { abilities: { str: 10, dex, con: 10, int: 10, wis: 10, cha: 10 } }
+      : {}),
   }
 }
 
@@ -116,8 +114,7 @@ const skipEffect = (id: string): Effect => ({
 })
 
 const ids = (e: Encounter) => e.combatants.map((c) => c.combatantId)
-const byId = (e: Encounter, id: string) =>
-  e.combatants.find((c) => c.combatantId === id)!
+const byId = (e: Encounter, id: string) => e.combatants.find((c) => c.combatantId === id)!
 
 describe('compareInitiative / sortByInitiative', () => {
   it('orders by initiative descending', () => {
@@ -128,10 +125,7 @@ describe('compareInitiative / sortByInitiative', () => {
   it('breaks ties by Dex score (higher first) by default', () => {
     const lowDex = monster('low', 15, { dex: 8 })
     const highDex = monster('high', 15, { dex: 18 })
-    expect(sortByInitiative([lowDex, highDex]).map((c) => c.combatantId)).toEqual([
-      'high',
-      'low',
-    ])
+    expect(sortByInitiative([lowDex, highDex]).map((c) => c.combatantId)).toEqual(['high', 'low'])
   })
 
   it('compares a roster PC and a monster by Dex in dex mode', () => {
@@ -215,11 +209,7 @@ describe('nextTurn', () => {
   })
 
   it('skips dead/down combatants', () => {
-    const combatants = [
-      monster('a', 30),
-      monster('b', 20, { status: 'dead' }),
-      monster('c', 10),
-    ]
+    const combatants = [monster('a', 30), monster('b', 20, { status: 'dead' }), monster('c', 10)]
     const e = nextTurn(encounter(combatants, 1, 0))
     expect(activeCombatant(e)?.combatantId).toBe('c')
   })
@@ -284,10 +274,14 @@ describe('nextTurn', () => {
   it("ticks the active creature's concentration timer, lapsing it at zero", () => {
     const conc = (rounds: number) => ({ spell: 'Detect Thoughts', saveDc: 13, round: 1, rounds })
     // b becomes active: its 2-round timer drops to 1.
-    const e1 = nextTurn(encounter([monster('a', 20), monster('b', 10, { concentration: conc(2) })], 1, 0))
+    const e1 = nextTurn(
+      encounter([monster('a', 20), monster('b', 10, { concentration: conc(2) })], 1, 0),
+    )
     expect((byId(e1, 'b') as MonsterCombatant).concentration?.rounds).toBe(1)
     // a 1-round timer lapses to no concentration as b's turn begins.
-    const e2 = nextTurn(encounter([monster('a', 20), monster('b', 10, { concentration: conc(1) })], 1, 0))
+    const e2 = nextTurn(
+      encounter([monster('a', 20), monster('b', 10, { concentration: conc(1) })], 1, 0),
+    )
     expect((byId(e2, 'b') as MonsterCombatant).concentration).toBeNull()
   })
 

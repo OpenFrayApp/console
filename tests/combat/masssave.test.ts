@@ -3,10 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
-import type {
-  MonsterCombatant,
-  PlayerCharacter,
-} from '../../src/schema/combatant.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { RandomSource } from '../../src/dice/rng.ts'
 import { flatBonus } from '../../src/combat/effects.ts'
@@ -140,7 +137,11 @@ describe('rollSave', () => {
 
 describe('hasMagicResistance', () => {
   it('detects the trait on a monster and never on a PC', () => {
-    expect(hasMagicResistance(monster({}, creature({ traits: [{ name: 'Magic Resistance', text: '' }] })))).toBe(true)
+    expect(
+      hasMagicResistance(
+        monster({}, creature({ traits: [{ name: 'Magic Resistance', text: '' }] })),
+      ),
+    ).toBe(true)
     expect(hasMagicResistance(monster())).toBe(false)
     expect(hasMagicResistance(pc())).toBe(false)
   })

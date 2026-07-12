@@ -5,7 +5,8 @@ import type { ReactNode } from 'react'
 import type { Concentration } from '../schema/combatant.ts'
 import { EditableField } from './EditableField.tsx'
 
-const STAT_LABEL = 'text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500'
+const STAT_LABEL =
+  'text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
 function concentrationTitle(c: Concentration): string {
   const base = c.spell ? `Concentrating: ${c.spell}` : 'Concentrating'
@@ -19,7 +20,15 @@ interface StatEdit {
 }
 
 /** A compact header stat: big value over a small uppercase label, optionally editable. */
-export function HeaderStat({ label, value, edit }: { label: string; value: ReactNode; edit?: StatEdit }) {
+export function HeaderStat({
+  label,
+  value,
+  edit,
+}: {
+  label: string
+  value: ReactNode
+  edit?: StatEdit
+}) {
   return (
     <div className="min-w-[2.5rem] text-center leading-tight">
       <div className="text-lg font-bold tabular-nums">

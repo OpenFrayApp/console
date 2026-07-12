@@ -15,7 +15,9 @@ function ResultBadge({ result }: { result: SaveResult | 'pending' }) {
   const base = 'rounded px-1.5 text-xs font-semibold uppercase tracking-wide'
   if (result === 'save') {
     return (
-      <span className={`${base} bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200`}>
+      <span
+        className={`${base} bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200`}
+      >
         Save
       </span>
     )
@@ -42,16 +44,11 @@ export function SaveResolutionList({ lines }: { lines: SaveLine[] }) {
   return (
     <ul className="divide-y divide-slate-200 dark:divide-slate-800">
       {lines.map((line) => (
-        <li
-          key={line.combatantId}
-          className="flex items-center justify-between gap-3 py-1.5"
-        >
+        <li key={line.combatantId} className="flex items-center justify-between gap-3 py-1.5">
           <span className="min-w-0 truncate font-medium">{line.label}</span>
           <span className="flex items-center gap-3">
             {line.total != null && (
-              <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                {line.total}
-              </span>
+              <span className="tabular-nums text-slate-500 dark:text-slate-400">{line.total}</span>
             )}
             <ResultBadge result={line.result} />
           </span>

@@ -39,7 +39,13 @@ const GOBLIN: Creature = {
     },
   ],
   bonusActions: [
-    { id: 'escape', name: 'Nimble Escape', kind: 'utility', toHit: null, text: 'Disengage or Hide.' },
+    {
+      id: 'escape',
+      name: 'Nimble Escape',
+      kind: 'utility',
+      toHit: null,
+      text: 'Disengage or Hide.',
+    },
   ],
   legendaryActions: {
     perRound: 3,

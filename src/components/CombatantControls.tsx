@@ -208,8 +208,20 @@ export function CombatantControls({
 
         {showDeathSaves && (
           <DeathSaveControls
-            onSave={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c) })}
-            onFail={() => dispatch({ type: 'update', id, update: (c) => (c.isPC ? markDeathSaveFailure(c) : c) })}
+            onSave={() =>
+              dispatch({
+                type: 'update',
+                id,
+                update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c),
+              })
+            }
+            onFail={() =>
+              dispatch({
+                type: 'update',
+                id,
+                update: (c) => (c.isPC ? markDeathSaveFailure(c) : c),
+              })
+            }
             onRoll={() => {
               if (!combatant.isPC) return
               const ds = rollDeathSave(combatant)
@@ -226,7 +238,10 @@ export function CombatantControls({
             Save ends
           </p>
           {saveEndsGroups.map((group) => (
-            <div key={`${group.ability}|${group.dc}|${group.when}`} className="flex flex-wrap items-center gap-2 text-xs">
+            <div
+              key={`${group.ability}|${group.dc}|${group.when}`}
+              className="flex flex-wrap items-center gap-2 text-xs"
+            >
               <span className="font-medium text-slate-700 dark:text-slate-200">
                 {group.effects.map((e) => e.name).join(', ')}
                 {` — ${group.ability.toUpperCase()} save DC ${group.dc}`}

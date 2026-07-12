@@ -70,8 +70,8 @@ export function ImportCreatureModal({
 
         <div className="space-y-3 p-4">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Paste an OpenFray Creature JSON. It’s saved to your library as an editable
-            custom creature.
+            Paste an OpenFray Creature JSON. It’s saved to your library as an editable custom
+            creature.
           </p>
           <textarea
             value={text}

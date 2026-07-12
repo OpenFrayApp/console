@@ -93,12 +93,16 @@ export function AddCreaturePicker({
                         </span>
                       )}
                       {sourceTag(c) && (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(c.source)}`}>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(c.source)}`}
+                        >
                           {sourceTag(c)}
                         </span>
                       )}
                       {editionTag(c) && (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(c))}`}>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(c))}`}
+                        >
                           {editionLabel(editionTag(c))}
                         </span>
                       )}
@@ -108,9 +112,7 @@ export function AddCreaturePicker({
                 </li>
               ))}
               {matches.length === 0 && (
-                <li className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                  No matches
-                </li>
+                <li className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">No matches</li>
               )}
             </ul>
           )}

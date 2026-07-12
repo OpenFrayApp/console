@@ -11,7 +11,16 @@ import { hpToneFor } from './hpTone.ts'
 /** A campfire — short rest. */
 function BonfireIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
       <path d="M12 3c2.5 2.5 3.5 4.7 3.5 6.5a3.5 3.5 0 0 1-7 0c0-1 .4-1.9 1-2.5.2 1 .8 1.5 1.3 1.5.7 0 1.2-.8.7-2C11 5.8 11.3 4.4 12 3Z" />
       <path d="M4 20l16-4" />
       <path d="M4 16l16 4" />
@@ -22,7 +31,16 @@ function BonfireIcon() {
 /** A tent — long rest. */
 function TentIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
       <path d="M2 20h20" />
       <path d="M12 4 4 20" />
       <path d="m12 4 8 16" />
@@ -96,8 +114,8 @@ function ShortRestModal({
 
         <div className="max-h-[60vh] space-y-2 overflow-auto p-4">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Enter each character's new HP — a number sets it, <code>+N</code> heals by that
-            much. Blank leaves them unchanged.
+            Enter each character's new HP — a number sets it, <code>+N</code> heals by that much.
+            Blank leaves them unchanged.
           </p>
           {combatants.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -108,7 +126,9 @@ function ShortRestModal({
               <div key={c.combatantId} className="flex items-center gap-3">
                 <span className="min-w-0 flex-1 truncate text-sm">{label(c)}</span>
                 <span className="shrink-0 text-xs tabular-nums">
-                  <span className={hpToneFor(hpTierOf(c.hp.current, c.hp.max))}>{c.hp.current}</span>
+                  <span className={hpToneFor(hpTierOf(c.hp.current, c.hp.max))}>
+                    {c.hp.current}
+                  </span>
                   <span className="text-slate-400 dark:text-slate-500">/{c.hp.max}</span>
                 </span>
                 <input
@@ -171,9 +191,7 @@ export function RestControls({
   const friendly = combatants.filter((c) => !isFoe(c))
   const longRest = () => {
     if (
-      window.confirm(
-        'Take a long rest? All player characters and friendly NPCs return to full HP.',
-      )
+      window.confirm('Take a long rest? All player characters and friendly NPCs return to full HP.')
     ) {
       dispatch({ type: 'longRest' })
     }

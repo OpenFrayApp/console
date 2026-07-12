@@ -52,8 +52,12 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${o.badge}`}>{o.label}</span>
-            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">Combat recap</h2>
+            <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${o.badge}`}>
+              {o.label}
+            </span>
+            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+              Combat recap
+            </h2>
           </div>
           <button
             type="button"
@@ -68,16 +72,28 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
           <Stat
             label="XP earned"
             value={recap.totalXp.toLocaleString()}
-            hint={recap.xpPerPlayer != null ? `${recap.xpPerPlayer.toLocaleString()} / player` : undefined}
+            hint={
+              recap.xpPerPlayer != null
+                ? `${recap.xpPerPlayer.toLocaleString()} / player`
+                : undefined
+            }
           />
           <Stat label="Rounds" value={recap.rounds} />
           <Stat label="Time (in-game)" value={duration(recap.inGameSeconds)} />
-          <Stat label="Time (real)" value={duration(recap.activeMs / 1000)} hint="excludes pauses" />
+          <Stat
+            label="Time (real)"
+            value={duration(recap.activeMs / 1000)}
+            hint="excludes pauses"
+          />
           <Stat label="Damage dealt" value={recap.damageDealtTotal.toLocaleString()} />
           <Stat label="Damage taken" value={recap.damageTakenTotal.toLocaleString()} />
           {recap.spellsCast > 0 && <Stat label="Spells cast" value={recap.spellsCast} />}
-          {recap.effectsApplied > 0 && <Stat label="Effects applied" value={recap.effectsApplied} />}
-          {recap.knockouts > 0 && <Stat label="Knockouts" value={recap.knockouts} hint="downed or slain" />}
+          {recap.effectsApplied > 0 && (
+            <Stat label="Effects applied" value={recap.effectsApplied} />
+          )}
+          {recap.knockouts > 0 && (
+            <Stat label="Knockouts" value={recap.knockouts} hint="downed or slain" />
+          )}
         </div>
 
         {recap.awards.length > 0 && (
@@ -120,7 +136,9 @@ export function EndCombatPrompt({
         className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-800 dark:bg-slate-900"
       >
         <h2 className="text-base font-semibold">All enemies defeated</h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">End combat and see the recap?</p>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          End combat and see the recap?
+        </p>
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"

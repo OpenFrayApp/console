@@ -41,7 +41,11 @@ const pc = (id: string, name: string): PlayerCharacter => ({
 describe('ApplySpellEffect', () => {
   it('renders nothing for an unmapped spell', () => {
     const { container } = render(
-      <ApplySpellEffect spell={spell('Fireball')} combatants={[pc('p1', 'Thalia')]} dispatch={vi.fn()} />,
+      <ApplySpellEffect
+        spell={spell('Fireball')}
+        combatants={[pc('p1', 'Thalia')]}
+        dispatch={vi.fn()}
+      />,
     )
     expect(container.firstChild).toBeNull()
   })

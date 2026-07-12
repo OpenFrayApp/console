@@ -58,9 +58,7 @@ export interface SpellRef {
  *   consumed via `Combatant.slotsUsed`).
  */
 export type SpellUsage =
-  | { type: 'atWill' }
-  | { type: 'perDay'; per: number }
-  | { type: 'slots'; level: number }
+  { type: 'atWill' } | { type: 'perDay'; per: number } | { type: 'slots'; level: number }
 
 /** A usage tier of a spellcaster's list, e.g. "2/Day Each: Fireball, Invisibility". */
 export interface SpellGroup {

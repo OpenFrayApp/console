@@ -42,34 +42,55 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     targeting: 'ally',
     multi: true,
     build: ({ source, spell }) => [
-      flatBonus('Bless', '1d4', { source, duration: timedDuration(spell), note: '+1d4 to attacks & saves' }),
+      flatBonus('Bless', '1d4', {
+        source,
+        duration: timedDuration(spell),
+        note: '+1d4 to attacks & saves',
+      }),
     ],
   },
   guidance: {
     summary: '+1d4 to one ability check',
     targeting: 'ally',
     build: ({ source }) => [
-      flatBonus('Guidance', '1d4', { source, applies: 'abilityChecks', duration: CONSUME, note: '+1d4 to an ability check' }),
+      flatBonus('Guidance', '1d4', {
+        source,
+        applies: 'abilityChecks',
+        duration: CONSUME,
+        note: '+1d4 to an ability check',
+      }),
     ],
   },
   resistance: {
     summary: '+1d4 to one saving throw',
     targeting: 'ally',
     build: ({ source }) => [
-      flatBonus('Resistance', '1d4', { source, applies: 'savingThrows', duration: CONSUME, note: '+1d4 to a saving throw' }),
+      flatBonus('Resistance', '1d4', {
+        source,
+        applies: 'savingThrows',
+        duration: CONSUME,
+        note: '+1d4 to a saving throw',
+      }),
     ],
   },
   'shield of faith': {
     summary: '+2 AC',
     targeting: 'ally',
     build: ({ source, spell }) => [
-      flatBonus('Shield of Faith', 2, { source, applies: 'ac', duration: timedDuration(spell), note: '+2 AC' }),
+      flatBonus('Shield of Faith', 2, {
+        source,
+        applies: 'ac',
+        duration: timedDuration(spell),
+        note: '+2 AC',
+      }),
     ],
   },
   invisibility: {
     summary: 'Invisible',
     targeting: 'ally',
-    build: ({ source, spell }) => [condition('Invisible', { source, duration: timedDuration(spell) })],
+    build: ({ source, spell }) => [
+      condition('Invisible', { source, duration: timedDuration(spell) }),
+    ],
   },
   heroism: {
     summary: 'Immune to Frightened; temp HP each turn',
@@ -85,7 +106,10 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     summary: 'AC 13 + Dex while unarmored',
     targeting: 'ally',
     build: ({ source }) => [
-      reminder('Mage Armor', 'AC 13 + Dex modifier while not wearing armor', { source, duration: { type: 'manual' } }),
+      reminder('Mage Armor', 'AC 13 + Dex modifier while not wearing armor', {
+        source,
+        duration: { type: 'manual' },
+      }),
     ],
   },
 
@@ -97,14 +121,20 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     targeting: 'enemy',
     multi: true,
     build: ({ source, spell }) => [
-      flatBonus('Bane', '-1d4', { source, duration: timedDuration(spell), note: '−1d4 to attacks & saves' }),
+      flatBonus('Bane', '-1d4', {
+        source,
+        duration: timedDuration(spell),
+        note: '−1d4 to attacks & saves',
+      }),
     ],
   },
   'faerie fire': {
     summary: 'Attacks against it have advantage',
     targeting: 'enemy',
     multi: true,
-    build: ({ source, spell }) => [advantageAgainst('Faerie Fire', { source, duration: timedDuration(spell) })],
+    build: ({ source, spell }) => [
+      advantageAgainst('Faerie Fire', { source, duration: timedDuration(spell) }),
+    ],
   },
 
   // Damage-rider / marker spells — a reminder badge the GM adds the dice from when
@@ -113,10 +143,14 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     summary: '+1d6 necrotic on the caster’s hits; disadvantage on one ability',
     targeting: 'enemy',
     build: ({ source, spell }) => [
-      reminder('Hex', '+1d6 necrotic on hits vs this target; disadvantage on chosen-ability checks', {
-        source,
-        duration: timedDuration(spell),
-      }),
+      reminder(
+        'Hex',
+        '+1d6 necrotic on hits vs this target; disadvantage on chosen-ability checks',
+        {
+          source,
+          duration: timedDuration(spell),
+        },
+      ),
     ],
   },
   "hunter's mark": {
@@ -133,7 +167,10 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     summary: '+1d4 radiant on the caster’s weapon hits',
     targeting: 'self',
     build: ({ source, spell }) => [
-      reminder('Divine Favor', '+1d4 radiant damage on your weapon hits', { source, duration: timedDuration(spell) }),
+      reminder('Divine Favor', '+1d4 radiant damage on your weapon hits', {
+        source,
+        duration: timedDuration(spell),
+      }),
     ],
   },
 }

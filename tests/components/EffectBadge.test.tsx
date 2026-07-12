@@ -24,6 +24,8 @@ describe('EffectBadge', () => {
   it('previews the condition rules on hover', () => {
     render(<EffectBadge effect={condition('Stunned')} />)
     fireEvent.mouseEnter(screen.getByText('Stunned'))
-    expect(screen.getByText(/automatically fail Strength and Dexterity saving throws/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/automatically fail Strength and Dexterity saving throws/i),
+    ).toBeInTheDocument()
   })
 })

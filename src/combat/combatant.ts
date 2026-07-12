@@ -40,10 +40,7 @@ const DEFAULT_VISIBILITY: CombatantVisibility = {
  * Snapshot a library Creature into a combat-ready Combatant. The template is
  * deep-copied, so later library edits never reach into this fight.
  */
-export function instantiate(
-  creature: Creature,
-  opts: InstantiateOptions,
-): MonsterCombatant {
+export function instantiate(creature: Creature, opts: InstantiateOptions): MonsterCombatant {
   const snapshot = structuredClone(creature)
   const max = opts.maxHp ?? snapshot.maxHp
 

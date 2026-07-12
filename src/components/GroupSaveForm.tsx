@@ -117,7 +117,11 @@ export function GroupSaveForm({
       if (!result) continue
       const evasion = evasionApplies(c, ability, onSave)
       const dealt = damageForResult(full, result, onSave, evasion)
-      const promptDc = concentrationPromptDC(c, applySaveDamage(c, full, result, onSave, evasion), dealt)
+      const promptDc = concentrationPromptDC(
+        c,
+        applySaveDamage(c, full, result, onSave, evasion),
+        dealt,
+      )
       if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: dealt })
       dispatch({
         type: 'update',
@@ -179,9 +183,7 @@ export function GroupSaveForm({
                 dc={p.dc}
                 canRoll={!p.combatant.isPC}
                 onMaintain={() => resolveConcentration(p.combatant.combatantId)}
-                onBreak={() =>
-                  resolveConcentration(p.combatant.combatantId, breakConcentration)
-                }
+                onBreak={() => resolveConcentration(p.combatant.combatantId, breakConcentration)}
                 onRoll={p.combatant.isPC ? undefined : () => rollConcentration(p)}
               />
             </li>

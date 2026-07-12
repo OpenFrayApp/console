@@ -22,7 +22,16 @@ const StopIcon = () => (
   </svg>
 )
 const BroomIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className="h-4 w-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     {/* handle */}
     <path d="M20 4 12 12" />
     {/* bristle head (bound at the top, flaring to the sweeping edge) */}
@@ -33,7 +42,16 @@ const BroomIcon = () => (
   </svg>
 )
 const SkullIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    className="h-4 w-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     {/* cranium + jaw */}
     <path d="M12 2.5c-4.4 0-7.5 3-7.5 7 0 2.4 1.1 4.2 2.8 5.3v2.4c0 .7.6 1.3 1.3 1.3h6.8c.7 0 1.3-.6 1.3-1.3v-2.4c1.7-1.1 2.8-2.9 2.8-5.3 0-4-3.1-7-7.5-7Z" />
     {/* eye sockets */}
@@ -120,9 +138,12 @@ export function EncounterPlayback({
   const begin = onBegin ?? (() => dispatch({ type: 'begin' }))
   const advance = onNextTurn ?? (() => dispatch({ type: 'nextTurn' }))
   const stop = onStop ?? (() => dispatch({ type: 'stop' }))
-  const green = 'border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950'
-  const grey = 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-  const red = 'border-rose-500 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950'
+  const green =
+    'border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950'
+  const grey =
+    'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+  const red =
+    'border-rose-500 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950'
 
   if (!started) {
     return (

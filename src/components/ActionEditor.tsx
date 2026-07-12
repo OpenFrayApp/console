@@ -14,7 +14,8 @@ import {
 export const FIELD_W =
   'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
 export const FIELD = `w-full ${FIELD_W}`
-export const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+export const LABEL =
+  'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
 const RECHARGE_KINDS: { value: RechargeKind; label: string }[] = [
   { value: 'none', label: 'No limit' },
@@ -85,21 +86,51 @@ export function ActionEditor({
       {isAttack && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`${LABEL} w-16`}>Attack</span>
-          <select value={action.attackAbility} onChange={(e) => set('attackAbility', e.target.value as ActionDraft['attackAbility'])} aria-label="Attack ability" className={`${FIELD_W} w-20`}>
-            {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
+          <select
+            value={action.attackAbility}
+            onChange={(e) => set('attackAbility', e.target.value as ActionDraft['attackAbility'])}
+            aria-label="Attack ability"
+            className={`${FIELD_W} w-20`}
+          >
+            {ABILITIES.map((a) => (
+              <option key={a} value={a}>
+                {a.toUpperCase()}
+              </option>
+            ))}
           </select>
           {action.kind === 'melee' && (
             <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
               reach
-              <input value={action.reach} onChange={(e) => set('reach', e.target.value)} placeholder="ft" aria-label="Reach" inputMode="numeric" className={`${FIELD_W} w-16`} />
+              <input
+                value={action.reach}
+                onChange={(e) => set('reach', e.target.value)}
+                placeholder="ft"
+                aria-label="Reach"
+                inputMode="numeric"
+                className={`${FIELD_W} w-16`}
+              />
             </span>
           )}
           {action.kind === 'ranged' && (
             <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
               range
-              <input value={action.rangeNormal} onChange={(e) => set('rangeNormal', e.target.value)} placeholder="near" aria-label="Short range" inputMode="numeric" className={`${FIELD_W} w-16`} />
+              <input
+                value={action.rangeNormal}
+                onChange={(e) => set('rangeNormal', e.target.value)}
+                placeholder="near"
+                aria-label="Short range"
+                inputMode="numeric"
+                className={`${FIELD_W} w-16`}
+              />
               /
-              <input value={action.rangeLong} onChange={(e) => set('rangeLong', e.target.value)} placeholder="far" aria-label="Long range" inputMode="numeric" className={`${FIELD_W} w-16`} />
+              <input
+                value={action.rangeLong}
+                onChange={(e) => set('rangeLong', e.target.value)}
+                placeholder="far"
+                aria-label="Long range"
+                inputMode="numeric"
+                className={`${FIELD_W} w-16`}
+              />
               ft
             </span>
           )}
@@ -109,15 +140,36 @@ export function ActionEditor({
       {action.kind === 'save' && (
         <div className="flex flex-wrap items-center gap-2">
           <span className={`${LABEL} w-16`}>Save</span>
-          <select value={action.saveAbility} onChange={(e) => set('saveAbility', e.target.value as ActionDraft['saveAbility'])} aria-label="Save ability" className={`${FIELD_W} w-20`}>
-            {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
+          <select
+            value={action.saveAbility}
+            onChange={(e) => set('saveAbility', e.target.value as ActionDraft['saveAbility'])}
+            aria-label="Save ability"
+            className={`${FIELD_W} w-20`}
+          >
+            {ABILITIES.map((a) => (
+              <option key={a} value={a}>
+                {a.toUpperCase()}
+              </option>
+            ))}
           </select>
           <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
             DC
-            <input value={action.saveDc} onChange={(e) => set('saveDc', e.target.value)} placeholder="#" aria-label="Save DC" inputMode="numeric" className={`${FIELD_W} w-14`} />
+            <input
+              value={action.saveDc}
+              onChange={(e) => set('saveDc', e.target.value)}
+              placeholder="#"
+              aria-label="Save DC"
+              inputMode="numeric"
+              className={`${FIELD_W} w-14`}
+            />
           </span>
           {/* Outcome labels mirror the mass-save modal (GroupSaveForm). */}
-          <select value={action.saveOutcome} onChange={(e) => set('saveOutcome', e.target.value as ActionDraft['saveOutcome'])} aria-label="On save" className={`${FIELD_W} min-w-0 flex-1`}>
+          <select
+            value={action.saveOutcome}
+            onChange={(e) => set('saveOutcome', e.target.value as ActionDraft['saveOutcome'])}
+            aria-label="On save"
+            className={`${FIELD_W} min-w-0 flex-1`}
+          >
             <option value="half">save → half damage</option>
             <option value="none">save → no damage</option>
             <option value="negates">save → negates effect</option>
@@ -131,22 +183,43 @@ export function ActionEditor({
           <div key={d.id} className="flex items-center gap-2">
             <input
               value={d.formula}
-              onChange={(e) => set('damage', action.damage.map((x) => (x.id === d.id ? { ...x, formula: e.target.value } : x)))}
+              onChange={(e) =>
+                set(
+                  'damage',
+                  action.damage.map((x) => (x.id === d.id ? { ...x, formula: e.target.value } : x)),
+                )
+              }
               placeholder="2d6"
               aria-label="Damage formula"
               className={`${FIELD_W} w-28 shrink-0`}
             />
             <select
               value={d.type}
-              onChange={(e) => set('damage', action.damage.map((x) => (x.id === d.id ? { ...x, type: e.target.value as typeof x.type } : x)))}
+              onChange={(e) =>
+                set(
+                  'damage',
+                  action.damage.map((x) =>
+                    x.id === d.id ? { ...x, type: e.target.value as typeof x.type } : x,
+                  ),
+                )
+              }
               aria-label="Damage type"
               className={`${FIELD_W} min-w-0 flex-1`}
             >
-              {DAMAGE_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+              {DAMAGE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
             <button
               type="button"
-              onClick={() => set('damage', action.damage.filter((x) => x.id !== d.id))}
+              onClick={() =>
+                set(
+                  'damage',
+                  action.damage.filter((x) => x.id !== d.id),
+                )
+              }
               aria-label="Remove damage"
               disabled={action.damage.length === 1 && i === 0}
               className="shrink-0 rounded border border-slate-300 px-1.5 py-1 text-xs text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -166,7 +239,12 @@ export function ActionEditor({
 
       <div className="flex flex-wrap items-center gap-2">
         <span className={`${LABEL} w-16`}>Recharge</span>
-        <select value={action.rechargeKind} onChange={(e) => set('rechargeKind', e.target.value as RechargeKind)} aria-label="Recharge kind" className={`${FIELD_W} w-40`}>
+        <select
+          value={action.rechargeKind}
+          onChange={(e) => set('rechargeKind', e.target.value as RechargeKind)}
+          aria-label="Recharge kind"
+          className={`${FIELD_W} w-40`}
+        >
           {RECHARGE_KINDS.map((r) => (
             <option key={r.value} value={r.value}>
               {r.label}

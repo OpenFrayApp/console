@@ -36,18 +36,30 @@ function DamageRows({
         <div key={d.id} className="flex items-center gap-2">
           <input
             value={d.formula}
-            onChange={(e) => onChange(rows.map((x) => (x.id === d.id ? { ...x, formula: e.target.value } : x)))}
+            onChange={(e) =>
+              onChange(rows.map((x) => (x.id === d.id ? { ...x, formula: e.target.value } : x)))
+            }
             placeholder="8d6"
             aria-label="Damage formula"
             className={`${FIELD_W} w-28 shrink-0`}
           />
           <select
             value={d.type}
-            onChange={(e) => onChange(rows.map((x) => (x.id === d.id ? { ...x, type: e.target.value as typeof x.type } : x)))}
+            onChange={(e) =>
+              onChange(
+                rows.map((x) =>
+                  x.id === d.id ? { ...x, type: e.target.value as typeof x.type } : x,
+                ),
+              )
+            }
             aria-label="Damage type"
             className={`${FIELD_W} min-w-0 flex-1`}
           >
-            {DAMAGE_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+            {DAMAGE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
           <button
             type="button"
@@ -103,7 +115,11 @@ function PresetField({
         }}
       >
         <option value="">{ariaLabel}…</option>
-        {options.map((o) => (<option key={o} value={o}>{o}</option>))}
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
         <option value="__other__">Other…</option>
       </select>
       {isOther && (
@@ -158,7 +174,9 @@ export function CustomSpellForm({
   const isCantrip = level === 0
   const hasBaseDamage = d.damage.some((r) => r.formula.trim() !== '')
   const preview = spellVariantPreview(d)
-  const manualLevels = isCantrip ? [...CANTRIP_TIERS] : Array.from({ length: 9 - level }, (_, i) => level + 1 + i)
+  const manualLevels = isCantrip
+    ? [...CANTRIP_TIERS]
+    : Array.from({ length: 9 - level }, (_, i) => level + 1 + i)
 
   const submit = () => {
     if (!d.name.trim()) return
@@ -206,22 +224,55 @@ export function CustomSpellForm({
               className={FIELD}
             />
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <select value={d.level} onChange={(e) => patch({ level: e.target.value })} aria-label="Level" className={FIELD}>
+              <select
+                value={d.level}
+                onChange={(e) => patch({ level: e.target.value })}
+                aria-label="Level"
+                className={FIELD}
+              >
                 {SPELL_LEVELS.map((l) => (
-                  <option key={l} value={l}>{l === '0' ? 'Cantrip' : `Level ${l}`}</option>
+                  <option key={l} value={l}>
+                    {l === '0' ? 'Cantrip' : `Level ${l}`}
+                  </option>
                 ))}
               </select>
-              <select value={d.school} onChange={(e) => patch({ school: e.target.value })} aria-label="School" className={FIELD}>
-                {SPELL_SCHOOLS.map((s) => (<option key={s} value={s}>{s}</option>))}
+              <select
+                value={d.school}
+                onChange={(e) => patch({ school: e.target.value })}
+                aria-label="School"
+                className={FIELD}
+              >
+                {SPELL_SCHOOLS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
-              <select value={d.edition} onChange={(e) => patch({ edition: e.target.value as SpellDraft['edition'] })} aria-label="Edition" className={FIELD}>
+              <select
+                value={d.edition}
+                onChange={(e) => patch({ edition: e.target.value as SpellDraft['edition'] })}
+                aria-label="Edition"
+                className={FIELD}
+              >
                 <option value="5.5">DnD 5.5 (2024)</option>
                 <option value="5.0">DnD 5.0 (2014)</option>
               </select>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <input value={d.sourceName} onChange={(e) => patch({ sourceName: e.target.value })} placeholder="Source (Homebrew, book…)" aria-label="Source" className={FIELD} />
-              <input value={d.classes} onChange={(e) => patch({ classes: e.target.value })} placeholder="Classes (comma-separated)" aria-label="Classes" className={FIELD} />
+              <input
+                value={d.sourceName}
+                onChange={(e) => patch({ sourceName: e.target.value })}
+                placeholder="Source (Homebrew, book…)"
+                aria-label="Source"
+                className={FIELD}
+              />
+              <input
+                value={d.classes}
+                onChange={(e) => patch({ classes: e.target.value })}
+                placeholder="Classes (comma-separated)"
+                aria-label="Classes"
+                className={FIELD}
+              />
             </div>
           </Section>
 
@@ -234,7 +285,13 @@ export function CustomSpellForm({
                 ariaLabel="Casting time"
                 otherPlaceholder="Casting time"
               />
-              <input value={d.range} onChange={(e) => patch({ range: e.target.value })} placeholder="Range" aria-label="Range" className={FIELD} />
+              <input
+                value={d.range}
+                onChange={(e) => patch({ range: e.target.value })}
+                placeholder="Range"
+                aria-label="Range"
+                className={FIELD}
+              />
               <PresetField
                 value={d.duration}
                 options={DURATIONS}
@@ -244,17 +301,58 @@ export function CustomSpellForm({
               />
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <label className="flex items-center gap-1"><input type="checkbox" checked={d.concentration} onChange={(e) => patch({ concentration: e.target.checked })} /> Concentration</label>
-              <label className="flex items-center gap-1"><input type="checkbox" checked={d.ritual} onChange={(e) => patch({ ritual: e.target.checked })} /> Ritual</label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={d.concentration}
+                  onChange={(e) => patch({ concentration: e.target.checked })}
+                />{' '}
+                Concentration
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={d.ritual}
+                  onChange={(e) => patch({ ritual: e.target.checked })}
+                />{' '}
+                Ritual
+              </label>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <span className={LABEL}>Components</span>
-              <label className="flex items-center gap-1"><input type="checkbox" checked={d.verbal} onChange={(e) => patch({ verbal: e.target.checked })} /> V</label>
-              <label className="flex items-center gap-1"><input type="checkbox" checked={d.somatic} onChange={(e) => patch({ somatic: e.target.checked })} /> S</label>
-              <label className="flex items-center gap-1"><input type="checkbox" checked={d.material} onChange={(e) => patch({ material: e.target.checked })} /> M</label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={d.verbal}
+                  onChange={(e) => patch({ verbal: e.target.checked })}
+                />{' '}
+                V
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={d.somatic}
+                  onChange={(e) => patch({ somatic: e.target.checked })}
+                />{' '}
+                S
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={d.material}
+                  onChange={(e) => patch({ material: e.target.checked })}
+                />{' '}
+                M
+              </label>
             </div>
             {d.material && (
-              <input value={d.materials} onChange={(e) => patch({ materials: e.target.value })} placeholder="Material components" aria-label="Material components" className={FIELD} />
+              <input
+                value={d.materials}
+                onChange={(e) => patch({ materials: e.target.value })}
+                placeholder="Material components"
+                aria-label="Material components"
+                className={FIELD}
+              />
             )}
           </Section>
 
@@ -277,7 +375,12 @@ export function CustomSpellForm({
               <span className={LABEL}>Resolution</span>
               {(['none', 'attack', 'save'] as const).map((r) => (
                 <label key={r} className="flex items-center gap-1">
-                  <input type="radio" name="spell-resolution" checked={d.resolution === r} onChange={() => patch({ resolution: r })} />
+                  <input
+                    type="radio"
+                    name="spell-resolution"
+                    checked={d.resolution === r}
+                    onChange={() => patch({ resolution: r })}
+                  />
                   {r === 'none' ? 'None' : r === 'attack' ? 'Spell attack' : 'Saving throw'}
                 </label>
               ))}
@@ -285,10 +388,28 @@ export function CustomSpellForm({
             {d.resolution === 'save' && (
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`${LABEL} w-16`}>Save</span>
-                <select value={d.saveAbility} onChange={(e) => patch({ saveAbility: e.target.value as SpellDraft['saveAbility'] })} aria-label="Save ability" className={`${FIELD_W} w-20`}>
-                  {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
+                <select
+                  value={d.saveAbility}
+                  onChange={(e) =>
+                    patch({ saveAbility: e.target.value as SpellDraft['saveAbility'] })
+                  }
+                  aria-label="Save ability"
+                  className={`${FIELD_W} w-20`}
+                >
+                  {ABILITIES.map((a) => (
+                    <option key={a} value={a}>
+                      {a.toUpperCase()}
+                    </option>
+                  ))}
                 </select>
-                <select value={d.saveOutcome} onChange={(e) => patch({ saveOutcome: e.target.value as SpellDraft['saveOutcome'] })} aria-label="On save" className={`${FIELD_W} min-w-0 flex-1`}>
+                <select
+                  value={d.saveOutcome}
+                  onChange={(e) =>
+                    patch({ saveOutcome: e.target.value as SpellDraft['saveOutcome'] })
+                  }
+                  aria-label="On save"
+                  className={`${FIELD_W} min-w-0 flex-1`}
+                >
                   <option value="half">save → half damage</option>
                   <option value="none">save → no damage</option>
                   <option value="negates">save → negates effect</option>
@@ -311,11 +432,21 @@ export function CustomSpellForm({
                 <>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                     <label className="flex items-center gap-1">
-                      <input type="radio" name="scaling-mode" checked={d.scalingMode === 'increment'} onChange={() => patch({ scalingMode: 'increment' })} />
+                      <input
+                        type="radio"
+                        name="scaling-mode"
+                        checked={d.scalingMode === 'increment'}
+                        onChange={() => patch({ scalingMode: 'increment' })}
+                      />
                       Scales regularly
                     </label>
                     <label className="flex items-center gap-1">
-                      <input type="radio" name="scaling-mode" checked={d.scalingMode === 'manual'} onChange={() => patch({ scalingMode: 'manual' })} />
+                      <input
+                        type="radio"
+                        name="scaling-mode"
+                        checked={d.scalingMode === 'manual'}
+                        onChange={() => patch({ scalingMode: 'manual' })}
+                      />
                       Edit each level
                     </label>
                   </div>
@@ -336,21 +467,38 @@ export function CustomSpellForm({
                   ) : (
                     <div className="space-y-2">
                       {d.scalingRows.map((row) => (
-                        <div key={row.id} className="space-y-1 rounded border border-slate-200 p-2 dark:border-slate-700">
+                        <div
+                          key={row.id}
+                          className="space-y-1 rounded border border-slate-200 p-2 dark:border-slate-700"
+                        >
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{isCantrip ? 'Character level' : 'Slot level'}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {isCantrip ? 'Character level' : 'Slot level'}
+                            </span>
                             <select
                               value={row.level}
-                              onChange={(e) => patch({ scalingRows: d.scalingRows.map((x) => (x.id === row.id ? { ...x, level: e.target.value } : x)) })}
+                              onChange={(e) =>
+                                patch({
+                                  scalingRows: d.scalingRows.map((x) =>
+                                    x.id === row.id ? { ...x, level: e.target.value } : x,
+                                  ),
+                                })
+                              }
                               aria-label="Scaling level"
                               className={`${FIELD_W} w-24`}
                             >
                               <option value="">Level…</option>
-                              {manualLevels.map((l) => (<option key={l} value={l}>{l}</option>))}
+                              {manualLevels.map((l) => (
+                                <option key={l} value={l}>
+                                  {l}
+                                </option>
+                              ))}
                             </select>
                             <button
                               type="button"
-                              onClick={() => patch({ scalingRows: d.scalingRows.filter((x) => x.id !== row.id) })}
+                              onClick={() =>
+                                patch({ scalingRows: d.scalingRows.filter((x) => x.id !== row.id) })
+                              }
                               aria-label="Remove level"
                               className="ml-auto shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                             >
@@ -359,11 +507,25 @@ export function CustomSpellForm({
                           </div>
                           <DamageRows
                             rows={row.damage}
-                            onChange={(damage) => patch({ scalingRows: d.scalingRows.map((x) => (x.id === row.id ? { ...x, damage } : x)) })}
+                            onChange={(damage) =>
+                              patch({
+                                scalingRows: d.scalingRows.map((x) =>
+                                  x.id === row.id ? { ...x, damage } : x,
+                                ),
+                              })
+                            }
                           />
                         </div>
                       ))}
-                      <button type="button" onClick={() => patch({ scalingRows: [...d.scalingRows, emptyScalingRowDraft()] })} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">+ Add level</button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          patch({ scalingRows: [...d.scalingRows, emptyScalingRowDraft()] })
+                        }
+                        className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
+                      >
+                        + Add level
+                      </button>
                     </div>
                   )}
 

@@ -95,10 +95,7 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
  * status). Max HP does carry to the board (it can change mid-fight); current HP is
  * only clamped down if it now exceeds the new max.
  */
-export function syncCombatantFromRoster(
-  combatant: PlayerCharacter,
-  pc: RosterPc,
-): PlayerCharacter {
+export function syncCombatantFromRoster(combatant: PlayerCharacter, pc: RosterPc): PlayerCharacter {
   const max = Math.max(1, Math.floor(pc.maxHp) || 1)
   return {
     ...combatant,

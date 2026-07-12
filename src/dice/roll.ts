@@ -70,10 +70,7 @@ export interface RollContext {
 }
 
 /** Apply adv/dis to the first plain d20 term (roll two, keep highest/lowest). */
-function applyAdvantage(
-  terms: Term[],
-  advantage: 'advantage' | 'disadvantage',
-): Term[] {
+function applyAdvantage(terms: Term[], advantage: 'advantage' | 'disadvantage'): Term[] {
   let applied = false
   return terms.map((t) => {
     if (applied || t.kind !== 'dice' || t.sides !== 20 || t.keep || t.advantage) {
@@ -92,9 +89,7 @@ function applyAdvantage(
 /** Turn extra bonuses (numbers or formula fragments) into additive terms. */
 function bonusTerms(bonuses: (number | string)[]): Term[] {
   return bonuses.flatMap((b) =>
-    typeof b === 'number'
-      ? [{ kind: 'flat', value: b } satisfies FlatTerm]
-      : parseFormula(b).terms,
+    typeof b === 'number' ? [{ kind: 'flat', value: b } satisfies FlatTerm] : parseFormula(b).terms,
   )
 }
 
@@ -111,11 +106,7 @@ function keptDice(results: number[], keep: DiceTerm['keep']): number[] {
   return keep.mode === 'kh' ? desc.slice(0, n) : desc.slice(results.length - n)
 }
 
-function rollGroup(
-  term: DiceTerm,
-  critRule: CritRule,
-  rand: RandomSource,
-): DieGroup {
+function rollGroup(term: DiceTerm, critRule: CritRule, rand: RandomSource): DieGroup {
   // Crit rules only apply to plain damage dice — never attack/keep/adv terms.
   const rule = term.keep || term.advantage ? 'none' : critRule
   const count = term.count * (rule === 'double-dice' ? 2 : 1)

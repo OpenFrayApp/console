@@ -24,17 +24,29 @@ function componentLine(spell: Spell): string {
 
 /** Small badges flagging a Concentration (C) and/or Ritual (R) spell. Shown next to
  *  the spell name in the list and beside the school on the spell card. */
-export function SpellTags({ concentration, ritual }: { concentration?: boolean; ritual?: boolean }) {
+export function SpellTags({
+  concentration,
+  ritual,
+}: {
+  concentration?: boolean
+  ritual?: boolean
+}) {
   if (!concentration && !ritual) return null
   return (
     <span className="flex shrink-0 items-center gap-1 not-italic">
       {concentration && (
-        <span title="Concentration" className="rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/60 dark:text-violet-300">
+        <span
+          title="Concentration"
+          className="rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/60 dark:text-violet-300"
+        >
           C
         </span>
       )}
       {ritual && (
-        <span title="Ritual" className="rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+        <span
+          title="Ritual"
+          className="rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/60 dark:text-amber-300"
+        >
           R
         </span>
       )}

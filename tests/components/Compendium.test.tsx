@@ -98,7 +98,9 @@ describe('Compendium', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create custom spell' }))
     const dialog = screen.getByRole('dialog', { name: 'Create custom spell' })
-    fireEvent.change(within(dialog).getByLabelText('Spell name'), { target: { value: 'Frost Lance' } })
+    fireEvent.change(within(dialog).getByLabelText('Spell name'), {
+      target: { value: 'Frost Lance' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
 
     expect(onCreateSpell).toHaveBeenCalledTimes(1)
@@ -140,7 +142,9 @@ describe('Compendium', () => {
     fireEvent.click(screen.getByText('Hex Bolt'))
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     const dialog = screen.getByRole('dialog', { name: 'Edit spell' })
-    fireEvent.change(within(dialog).getByLabelText('Spell name'), { target: { value: 'Hex Bolt II' } })
+    fireEvent.change(within(dialog).getByLabelText('Spell name'), {
+      target: { value: 'Hex Bolt II' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
 
     expect(onUpdateSpell).toHaveBeenCalledTimes(1)

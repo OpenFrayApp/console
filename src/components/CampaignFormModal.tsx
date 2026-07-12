@@ -3,11 +3,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import type { Edition } from '../schema/primitives.ts'
-import {
-  DEFAULT_CAMPAIGN_RULES,
-  type Campaign,
-  type CampaignRules,
-} from '../schema/campaign.ts'
+import { DEFAULT_CAMPAIGN_RULES, type Campaign, type CampaignRules } from '../schema/campaign.ts'
 import {
   CRIT_OPTIONS,
   EDITION_OPTIONS,
@@ -20,8 +16,7 @@ import {
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
 
-const LABEL =
-  'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
 function SelectField<T extends string>({
   label,
@@ -143,10 +138,17 @@ export function CampaignFormModal({
             />
           </label>
 
-          <SelectField label="Edition" value={edition} onChange={setEdition} options={EDITION_OPTIONS} />
+          <SelectField
+            label="Edition"
+            value={edition}
+            onChange={setEdition}
+            options={EDITION_OPTIONS}
+          />
 
           <div className="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">House rules</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              House rules
+            </h3>
             <SelectField
               label="Critical hit damage"
               value={rules.crit}

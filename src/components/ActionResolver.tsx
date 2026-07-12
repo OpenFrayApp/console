@@ -13,7 +13,11 @@ import { roll } from '../dice/roll.ts'
 import { useCampaignRules } from '../state/campaignRules.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { meleeHitAutoCrits } from '../combat/conditionrules.ts'
-import { applyDamage, legendaryResistanceLeft, spendLegendaryResistance } from '../combat/resources.ts'
+import {
+  applyDamage,
+  legendaryResistanceLeft,
+  spendLegendaryResistance,
+} from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
 import {
   damageForResult,
@@ -114,11 +118,7 @@ interface ResolverProps {
  * without a press, and conditions can be applied to the affected targets.
  */
 export function ActionResolver(props: ResolverProps) {
-  return props.action.toHit != null ? (
-    <AttackResolver {...props} />
-  ) : (
-    <SaveResolver {...props} />
-  )
+  return props.action.toHit != null ? <AttackResolver {...props} /> : <SaveResolver {...props} />
 }
 
 /**
@@ -187,7 +187,9 @@ function metaLine(action: Action): string {
   const bits: string[] = []
   if (action.toHit != null) bits.push(`${signed(action.toHit)} to hit`)
   if (action.save) {
-    bits.push(`${action.save.ability.toUpperCase()} save DC ${action.save.dc} (${action.save.onSave})`)
+    bits.push(
+      `${action.save.ability.toUpperCase()} save DC ${action.save.dc} (${action.save.onSave})`,
+    )
   }
   if (action.reach) bits.push(`reach ${action.reach} ft.`)
   if (action.range) {
@@ -217,7 +219,8 @@ function DamagePill({
   amount: number
   label?: string | null
 }) {
-  const tone = DAMAGE_TONE[type] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
+  const tone =
+    DAMAGE_TONE[type] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
   return (
     <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>
       {amount} {type}
@@ -309,7 +312,15 @@ function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combat
   return combatants.filter((c) => c.combatantId !== attacker.combatantId && c.status !== 'dead')
 }
 
-function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse, onClose }: ResolverProps) {
+function AttackResolver({
+  attacker,
+  action,
+  combatants,
+  dispatch,
+  onRoll,
+  onUse,
+  onClose,
+}: ResolverProps) {
   const { crit: critRule } = useCampaignRules()
   const targets = attacker
     ? targetsFor(attacker, combatants)
@@ -556,7 +567,8 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
             </span>
             {attack.autoCrit && (
               <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">
-                (auto-crit — {attack.target.status === 'unconscious' ? 'Unconscious' : 'Paralyzed'} target)
+                (auto-crit — {attack.target.status === 'unconscious' ? 'Unconscious' : 'Paralyzed'}{' '}
+                target)
               </span>
             )}
           </span>
@@ -605,7 +617,10 @@ function AttackResolver({ attacker, action, combatants, dispatch, onRoll, onUse,
 
       {revealed && attack && (
         <>
-          <ConditionChips onApply={applyCondition} sourceName={attacker ? nameOf(attacker) : undefined} />
+          <ConditionChips
+            onApply={applyCondition}
+            sourceName={attacker ? nameOf(attacker) : undefined}
+          />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}
@@ -667,7 +682,11 @@ export function SaveResolver({
   const [pending, setPending] = useState<{ combatant: Combatant; dc: number; damage: number }[]>([])
   const [note, setNote] = useState<string | null>(null)
 
-  const title = action ? (attacker ? `${nameOf(attacker)} · ${action.name}` : action.name) : 'Group save'
+  const title = action
+    ? attacker
+      ? `${nameOf(attacker)} · ${action.name}`
+      : action.name
+    : 'Group save'
   const selectedTargets = targets.filter((t) => selected.has(t.combatantId))
 
   const toggle = (id: string) =>
@@ -760,7 +779,9 @@ export function SaveResolver({
 
   // Targets the effect lands on: those that failed (post-roll) or all selected (pre-roll).
   const affectedTargets = (): Combatant[] =>
-    resolved ? selectedTargets.filter((c) => rows[c.combatantId]?.result === 'fail') : selectedTargets
+    resolved
+      ? selectedTargets.filter((c) => rows[c.combatantId]?.result === 'fail')
+      : selectedTargets
 
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     const affected = affectedTargets()
@@ -788,7 +809,11 @@ export function SaveResolver({
     if (affected.length === 0) return
     for (const c of affected) {
       const effects = spellEffect.build({ source: attacker?.combatantId, spell })
-      dispatch({ type: 'update', id: c.combatantId, update: (cc) => ({ ...cc, effects: [...cc.effects, ...effects] }) })
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) => ({ ...cc, effects: [...cc.effects, ...effects] }),
+      })
     }
     setNote(`${spell.name} → ${affected.map(nameOf).join(', ')}`)
   }
@@ -807,7 +832,10 @@ export function SaveResolver({
       <Modal title={title} subtitle="Concentration checks" onClose={onClose} wide>
         <ul className="space-y-2">
           {pending.map((p) => (
-            <li key={p.combatant.combatantId} className="flex flex-wrap items-center justify-between gap-2">
+            <li
+              key={p.combatant.combatantId}
+              className="flex flex-wrap items-center justify-between gap-2"
+            >
               <span className="text-sm font-medium">{nameOf(p.combatant)}</span>
               <ConcentrationPrompt
                 dc={p.dc}
@@ -897,7 +925,11 @@ export function SaveResolver({
                 className="flex items-center gap-1"
                 title="Magic Resistance grants advantage on saves against spells and other magical effects"
               >
-                <input type="checkbox" checked={magical} onChange={(e) => setMagical(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={magical}
+                  onChange={(e) => setMagical(e.target.checked)}
+                />
                 Magical Effect
               </label>
             )}
@@ -926,16 +958,19 @@ export function SaveResolver({
           <ul className="space-y-1.5">
             {selectedTargets.map((c) => {
               const row = rows[c.combatantId]
-              const defenses = area.length
-                ? damageAgainst(c, area).filter((d) => d.label)
-                : []
+              const defenses = area.length ? damageAgainst(c, area).filter((d) => d.label) : []
               return (
-                <li key={c.combatantId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <li
+                  key={c.combatantId}
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                >
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{nameOf(c)}</span>
                     {row?.d20 != null && <DieRoll value={row.d20} spinKey={spinKey} />}
                     {row?.total != null && (
-                      <span className="tabular-nums text-slate-500 dark:text-slate-400">{row.total}</span>
+                      <span className="tabular-nums text-slate-500 dark:text-slate-400">
+                        {row.total}
+                      </span>
                     )}
                     {!noSave && (
                       <>
@@ -1023,11 +1058,16 @@ export function SaveResolver({
                 Apply {spell!.name}
                 {resolved ? ' to failed' : ''}
               </button>
-              <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">{spellEffect.summary}</span>
+              <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                {spellEffect.summary}
+              </span>
             </div>
           )}
 
-          <ConditionChips onApply={applyCondition} sourceName={attacker ? nameOf(attacker) : undefined} />
+          <ConditionChips
+            onApply={applyCondition}
+            sourceName={attacker ? nameOf(attacker) : undefined}
+          />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}

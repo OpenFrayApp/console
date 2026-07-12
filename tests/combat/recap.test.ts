@@ -88,7 +88,12 @@ describe('outcome detection', () => {
   it('allFoesDefeated only when every foe is down and foes exist', () => {
     expect(allFoesDefeated([])).toBe(false)
     expect(allFoesDefeated([monster({ status: 'active' })])).toBe(false)
-    expect(allFoesDefeated([monster({ status: 'dead' }), monster({ combatantId: 'm2', status: 'active' })])).toBe(false)
+    expect(
+      allFoesDefeated([
+        monster({ status: 'dead' }),
+        monster({ combatantId: 'm2', status: 'active' }),
+      ]),
+    ).toBe(false)
     expect(allFoesDefeated([monster({ status: 'dead' })])).toBe(true)
   })
 
@@ -96,11 +101,17 @@ describe('outcome detection', () => {
     expect(allPlayersDown([])).toBe(false)
     expect(allPlayersDown([pc({ status: 'active' })])).toBe(false)
     // Unconscious but still rolling death saves → not down (could recover).
-    expect(allPlayersDown([pc({ status: 'unconscious', deathSaves: { successes: 1, failures: 0 } })])).toBe(false)
+    expect(
+      allPlayersDown([pc({ status: 'unconscious', deathSaves: { successes: 1, failures: 0 } })]),
+    ).toBe(false)
     // Stabilized (3 successes) counts as down.
-    expect(allPlayersDown([pc({ status: 'unconscious', deathSaves: { successes: 3, failures: 0 } })])).toBe(true)
+    expect(
+      allPlayersDown([pc({ status: 'unconscious', deathSaves: { successes: 3, failures: 0 } })]),
+    ).toBe(true)
     expect(allPlayersDown([pc({ status: 'dead' })])).toBe(true)
-    expect(allPlayersDown([pc({ status: 'dead' }), pc({ combatantId: 'pc2', status: 'active' })])).toBe(false)
+    expect(
+      allPlayersDown([pc({ status: 'dead' }), pc({ combatantId: 'pc2', status: 'active' })]),
+    ).toBe(false)
   })
 })
 
@@ -127,10 +138,7 @@ describe('buildRecap', () => {
   })
 
   it('defeat when all PCs are down; XP still counts slain foes', () => {
-    const enc = encounter([
-      pc({ status: 'dead' }),
-      monster({ status: 'dead' }),
-    ])
+    const enc = encounter([pc({ status: 'dead' }), monster({ status: 'dead' })])
     expect(buildRecap(enc, 0).outcome).toBe('defeat')
   })
 
@@ -149,7 +157,10 @@ describe('buildRecap', () => {
       biggestHit: { sourceId: 'pc1', amount: 28 },
     }
     const enc = encounter(
-      [pc({ combatantId: 'pc1', name: 'Hero', status: 'active' }), monster({ combatantId: 'm1', label: 'Goblin', status: 'dead' })],
+      [
+        pc({ combatantId: 'pc1', name: 'Hero', status: 'active' }),
+        monster({ combatantId: 'm1', label: 'Goblin', status: 'dead' }),
+      ],
       { combatStats: stats },
     )
     const recap = buildRecap(enc, 0)

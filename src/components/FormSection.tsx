@@ -21,7 +21,9 @@ export function FormSection({
       <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold">
         {title}
       </summary>
-      <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">{children}</div>
+      <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">
+        {children}
+      </div>
     </details>
   )
 }

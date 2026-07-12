@@ -35,10 +35,14 @@ describe('buildCreature', () => {
   })
 
   it('uses the free-text source label, falling back to custom when blank', () => {
-    expect(buildCreature(draft({ sourceName: 'Tome of Beasts (home)' })).source).toBe('Tome of Beasts (home)')
+    expect(buildCreature(draft({ sourceName: 'Tome of Beasts (home)' })).source).toBe(
+      'Tome of Beasts (home)',
+    )
     expect(buildCreature(draft({ sourceName: '' })).source).toBe('custom')
     // Either way it stays user content — never assumed CC-BY (no license shown).
-    expect(buildCreature(draft({ sourceName: 'Tome of Beasts (home)' })).id.startsWith('custom:')).toBe(true)
+    expect(
+      buildCreature(draft({ sourceName: 'Tome of Beasts (home)' })).id.startsWith('custom:'),
+    ).toBe(true)
   })
 
   it('includes alignment only when set', () => {
@@ -47,7 +51,17 @@ describe('buildCreature', () => {
   })
 
   it('parses core stats and trims the name', () => {
-    const c = buildCreature(draft({ name: '  Frost Worm  ', ac: '18', hpDieCount: '16', hpDie: '10', hpMod: '32', size: 'Huge', type: 'monstrosity' }))
+    const c = buildCreature(
+      draft({
+        name: '  Frost Worm  ',
+        ac: '18',
+        hpDieCount: '16',
+        hpDie: '10',
+        hpMod: '32',
+        size: 'Huge',
+        type: 'monstrosity',
+      }),
+    )
     expect(c.name).toBe('Frost Worm')
     expect(c.ac).toBe(18)
     expect(c.maxHp).toBe(120) // 16 × 5.5 + 32
@@ -60,11 +74,13 @@ describe('buildCreature', () => {
   })
 
   it('defaults abilities to 10 and derives save bonuses from CR proficiency', () => {
-    const c = buildCreature(draft({
-      cr: '10', // proficiency bonus +4
-      abilities: { str: '20', dex: '', con: '16', int: '', wis: '', cha: '' },
-      saves: { str: false, dex: true, con: true, int: false, wis: false, cha: false },
-    }))
+    const c = buildCreature(
+      draft({
+        cr: '10', // proficiency bonus +4
+        abilities: { str: '20', dex: '', con: '16', int: '', wis: '', cha: '' },
+        saves: { str: false, dex: true, con: true, int: false, wis: false, cha: false },
+      }),
+    )
     expect(c.abilities).toEqual({ str: 20, dex: 10, con: 16, int: 10, wis: 10, cha: 10 })
     // dex: mod 0 + pb 4 = 4; con: mod +3 + pb 4 = 7. Non-proficient saves are absent.
     expect(c.saves).toEqual({ dex: 4, con: 7 })
@@ -99,21 +115,37 @@ describe('buildCreature', () => {
   })
 
   it('builds speed from filled fields only, with hover', () => {
-    const c = buildCreature(draft({ speed: { walk: '40', fly: '80', swim: '', climb: '', burrow: '', hover: true } }))
+    const c = buildCreature(
+      draft({ speed: { walk: '40', fly: '80', swim: '', climb: '', burrow: '', hover: true } }),
+    )
     expect(c.speed).toEqual({ walk: 40, fly: 80, hover: true })
   })
 
   it('keeps only named actions and derives the attack to-hit + damage mod', () => {
     // str 18 (mod +4) at CR 5 (pb +3) → to hit +7; the +4 also rides on damage.
-    const named = { ...emptyActionDraft(), name: 'Bite', kind: 'melee' as const, reach: '5', damage: [{ id: 'd', formula: '2d6', type: 'piercing' as const }] }
+    const named = {
+      ...emptyActionDraft(),
+      name: 'Bite',
+      kind: 'melee' as const,
+      reach: '5',
+      damage: [{ id: 'd', formula: '2d6', type: 'piercing' as const }],
+    }
     const blank = emptyActionDraft() // no name → dropped
-    const c = buildCreature(draft({
-      cr: '5',
-      abilities: { str: '18', dex: '', con: '', int: '', wis: '', cha: '' },
-      actions: [named, blank],
-    }))
+    const c = buildCreature(
+      draft({
+        cr: '5',
+        abilities: { str: '18', dex: '', con: '', int: '', wis: '', cha: '' },
+        actions: [named, blank],
+      }),
+    )
     expect(c.actions).toHaveLength(1)
-    expect(c.actions?.[0]).toMatchObject({ name: 'Bite', kind: 'melee', toHit: 7, reach: 5, damage: [{ formula: '2d6+4', type: 'piercing' }] })
+    expect(c.actions?.[0]).toMatchObject({
+      name: 'Bite',
+      kind: 'melee',
+      toHit: 7,
+      reach: 5,
+      damage: [{ formula: '2d6+4', type: 'piercing' }],
+    })
   })
 
   it('adds the ability mod to primary damage only; not rider damage', () => {
@@ -137,7 +169,14 @@ describe('buildCreature', () => {
   })
 
   it('builds a save action with no to-hit and unmodified damage', () => {
-    const save = { ...emptyActionDraft('save'), name: 'Frost Breath', saveAbility: 'con' as const, saveDc: '16', saveOutcome: 'half' as const, damage: [{ id: 'd', formula: '10d6', type: 'cold' as const }] }
+    const save = {
+      ...emptyActionDraft('save'),
+      name: 'Frost Breath',
+      saveAbility: 'con' as const,
+      saveDc: '16',
+      saveOutcome: 'half' as const,
+      damage: [{ id: 'd', formula: '10d6', type: 'cold' as const }],
+    }
     const action = buildAction(save, CTX)
     expect(action.toHit).toBeNull()
     expect(action.save).toEqual({ ability: 'con', dc: 16, onSave: 'half' })
@@ -145,21 +184,29 @@ describe('buildCreature', () => {
   })
 
   it('maps a dice recharge with a default threshold of 6 when blank', () => {
-    const a = buildAction({ ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '' }, CTX)
+    const a = buildAction(
+      { ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '' },
+      CTX,
+    )
     expect(a.recharge).toEqual({ type: 'dice', value: 6 })
-    const b = buildAction({ ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '5' }, CTX)
+    const b = buildAction(
+      { ...emptyActionDraft(), name: 'Breath', rechargeKind: 'dice', rechargeValue: '5' },
+      CTX,
+    )
     expect(b.recharge).toEqual({ type: 'dice', value: 5 })
   })
 
   it('derives skill bonuses; expertise doubles the proficiency bonus', () => {
-    const c = buildCreature(draft({
-      cr: '5', // pb +3
-      abilities: { str: '', dex: '18', con: '', int: '', wis: '14', cha: '' },
-      skills: [
-        { id: 's1', skill: 'stealth', expertise: false }, // dex +4 + pb 3 = 7
-        { id: 's2', skill: 'perception', expertise: true }, // wis +2 + 2×pb 6 = 8
-      ],
-    }))
+    const c = buildCreature(
+      draft({
+        cr: '5', // pb +3
+        abilities: { str: '', dex: '18', con: '', int: '', wis: '14', cha: '' },
+        skills: [
+          { id: 's1', skill: 'stealth', expertise: false }, // dex +4 + pb 3 = 7
+          { id: 's2', skill: 'perception', expertise: true }, // wis +2 + 2×pb 6 = 8
+        ],
+      }),
+    )
     expect(c.skills).toEqual({ stealth: 7, perception: 8 })
   })
 
@@ -180,12 +227,14 @@ describe('buildCreature', () => {
       ],
     }
     const empty = emptySpellGroupDraft() // no spells → ignored
-    const c = buildCreature(draft({
-      cr: '9', // pb +4
-      abilities: { str: '', dex: '', con: '', int: '18', wis: '', cha: '' }, // int mod +4
-      spellAbility: 'int',
-      spellGroups: [filled, empty],
-    }))
+    const c = buildCreature(
+      draft({
+        cr: '9', // pb +4
+        abilities: { str: '', dex: '', con: '', int: '18', wis: '', cha: '' }, // int mod +4
+        spellAbility: 'int',
+        spellGroups: [filled, empty],
+      }),
+    )
     expect(c.spellcasting?.ability).toBe('int')
     expect(c.spellcasting?.saveDc).toBe(16) // 8 + 4 + 4
     expect(c.spellcasting?.toHit).toBe(8) // 4 + 4
@@ -200,7 +249,14 @@ describe('buildCreature', () => {
   })
 
   it('keeps named traits and drops nameless ones', () => {
-    const c = buildCreature(draft({ traits: [{ ...emptyTraitDraft(), name: 'Amphibious', text: 'Breathes air and water.' }, emptyTraitDraft()] }))
+    const c = buildCreature(
+      draft({
+        traits: [
+          { ...emptyTraitDraft(), name: 'Amphibious', text: 'Breathes air and water.' },
+          emptyTraitDraft(),
+        ],
+      }),
+    )
     expect(c.traits).toHaveLength(1)
     expect(c.traits?.[0]).toEqual({ name: 'Amphibious', text: 'Breathes air and water.' })
   })
@@ -208,15 +264,26 @@ describe('buildCreature', () => {
 
 describe('creatureToDraft (edit round-trip)', () => {
   it('round-trips core stats, derived saves/skills, and an attack', () => {
-    const original = buildCreature(draft({
-      cr: '5', // pb +3
-      ac: '15',
-      hpDieCount: '8', hpDie: '10', hpMod: '8',
-      abilities: { str: '18', dex: '14', con: '16', int: '8', wis: '12', cha: '10' },
-      saves: { str: true, dex: false, con: true, int: false, wis: false, cha: false },
-      skills: [{ id: 's', skill: 'athletics', expertise: false }],
-      actions: [{ ...emptyActionDraft(), name: 'Slam', kind: 'melee', damage: [{ id: 'd', formula: '2d8', type: 'bludgeoning' }] }],
-    }))
+    const original = buildCreature(
+      draft({
+        cr: '5', // pb +3
+        ac: '15',
+        hpDieCount: '8',
+        hpDie: '10',
+        hpMod: '8',
+        abilities: { str: '18', dex: '14', con: '16', int: '8', wis: '12', cha: '10' },
+        saves: { str: true, dex: false, con: true, int: false, wis: false, cha: false },
+        skills: [{ id: 's', skill: 'athletics', expertise: false }],
+        actions: [
+          {
+            ...emptyActionDraft(),
+            name: 'Slam',
+            kind: 'melee',
+            damage: [{ id: 'd', formula: '2d8', type: 'bludgeoning' }],
+          },
+        ],
+      }),
+    )
     // Reverse to a draft, then rebuild — the result should match the original.
     const back = buildCreature(creatureToDraft(original))
     expect(back.ac).toBe(15)
@@ -233,11 +300,13 @@ describe('creatureToDraft (edit round-trip)', () => {
   })
 
   it('reverses expertise skills back to expertise', () => {
-    const original = buildCreature(draft({
-      cr: '5',
-      abilities: { str: '', dex: '18', con: '', int: '', wis: '', cha: '' },
-      skills: [{ id: 's', skill: 'stealth', expertise: true }],
-    }))
+    const original = buildCreature(
+      draft({
+        cr: '5',
+        abilities: { str: '', dex: '18', con: '', int: '', wis: '', cha: '' },
+        skills: [{ id: 's', skill: 'stealth', expertise: true }],
+      }),
+    )
     expect(creatureToDraft(original).skills[0]).toMatchObject({ skill: 'stealth', expertise: true })
   })
 

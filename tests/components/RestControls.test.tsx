@@ -56,7 +56,13 @@ const combatants: Combatant[] = [hero, foe]
 describe('RestControls', () => {
   it('disables both rests while combat is running', () => {
     render(
-      <RestControls combatants={combatants} dispatch={() => {}} disabled shortRests={0} showCounter={false} />,
+      <RestControls
+        combatants={combatants}
+        dispatch={() => {}}
+        disabled
+        shortRests={0}
+        showCounter={false}
+      />,
     )
     expect(screen.getByRole('button', { name: 'Short rest' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Long rest' })).toBeDisabled()
@@ -64,11 +70,23 @@ describe('RestControls', () => {
 
   it('shows the short-rest tally only when the counter is enabled', () => {
     const { rerender } = render(
-      <RestControls combatants={combatants} dispatch={() => {}} disabled={false} shortRests={2} showCounter={false} />,
+      <RestControls
+        combatants={combatants}
+        dispatch={() => {}}
+        disabled={false}
+        shortRests={2}
+        showCounter={false}
+      />,
     )
     expect(screen.queryByText('2 SR')).toBeNull()
     rerender(
-      <RestControls combatants={combatants} dispatch={() => {}} disabled={false} shortRests={2} showCounter />,
+      <RestControls
+        combatants={combatants}
+        dispatch={() => {}}
+        disabled={false}
+        shortRests={2}
+        showCounter
+      />,
     )
     expect(screen.getByText('2 SR')).toBeInTheDocument()
   })
@@ -77,7 +95,13 @@ describe('RestControls', () => {
     const dispatch = vi.fn()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(
-      <RestControls combatants={combatants} dispatch={dispatch} disabled={false} shortRests={0} showCounter />,
+      <RestControls
+        combatants={combatants}
+        dispatch={dispatch}
+        disabled={false}
+        shortRests={0}
+        showCounter
+      />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Long rest' }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'longRest' })
@@ -88,7 +112,13 @@ describe('RestControls', () => {
     const dispatch = vi.fn()
     vi.spyOn(window, 'confirm').mockReturnValue(false)
     render(
-      <RestControls combatants={combatants} dispatch={dispatch} disabled={false} shortRests={0} showCounter />,
+      <RestControls
+        combatants={combatants}
+        dispatch={dispatch}
+        disabled={false}
+        shortRests={0}
+        showCounter
+      />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Long rest' }))
     expect(dispatch).not.toHaveBeenCalled()
@@ -98,13 +128,21 @@ describe('RestControls', () => {
   it('short rest modal lists only friendly combatants and applies +N / fixed HP', () => {
     const dispatch = vi.fn()
     render(
-      <RestControls combatants={combatants} dispatch={dispatch} disabled={false} shortRests={0} showCounter />,
+      <RestControls
+        combatants={combatants}
+        dispatch={dispatch}
+        disabled={false}
+        shortRests={0}
+        showCounter
+      />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Short rest' }))
     const dialog = screen.getByRole('dialog', { name: 'Short rest' })
     expect(within(dialog).queryByText('Goblin')).toBeNull()
     // +N heals from current (4 + 5 = 9).
-    fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), { target: { value: '+5' } })
+    fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), {
+      target: { value: '+5' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Take short rest' }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'shortRest', hp: { hero: 9 } })
   })
@@ -112,11 +150,19 @@ describe('RestControls', () => {
   it('short rest treats a bare number as the exact HP', () => {
     const dispatch = vi.fn()
     render(
-      <RestControls combatants={combatants} dispatch={dispatch} disabled={false} shortRests={0} showCounter />,
+      <RestControls
+        combatants={combatants}
+        dispatch={dispatch}
+        disabled={false}
+        shortRests={0}
+        showCounter
+      />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Short rest' }))
     const dialog = screen.getByRole('dialog', { name: 'Short rest' })
-    fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), { target: { value: '12' } })
+    fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), {
+      target: { value: '12' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Take short rest' }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'shortRest', hp: { hero: 12 } })
   })

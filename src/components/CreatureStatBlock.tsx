@@ -1,14 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { Ability, AbilityScores as AbilityScoreMap, SaveBonuses, SkillBonuses } from '../schema/primitives.ts'
+import type {
+  Ability,
+  AbilityScores as AbilityScoreMap,
+  SaveBonuses,
+  SkillBonuses,
+} from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
-import type { Creature, SpellGroup, SpellLevel, Spellcasting, SpellRef } from '../schema/creature.ts'
+import type {
+  Creature,
+  SpellGroup,
+  SpellLevel,
+  Spellcasting,
+  SpellRef,
+} from '../schema/creature.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
-import { capitalizeSegments, crDetail, formatCr, formatSenses, legendaryPreamble, titleCase as titleCaseWords } from '../compendium/format.ts'
+import {
+  capitalizeSegments,
+  crDetail,
+  formatCr,
+  formatSenses,
+  legendaryPreamble,
+  titleCase as titleCaseWords,
+} from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
@@ -41,7 +59,6 @@ const TABLE_ROW_LABEL =
 function titleCase(skill: string): string {
   return skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
 }
-
 
 function rechargeLabel(recharge: Recharge | undefined): string | undefined {
   if (!recharge) return undefined
@@ -193,7 +210,9 @@ export function AbilityTable({
               <tr key={a} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
                 <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{ABILITY_LABEL[a]}</td>
                 <td className="px-1 py-1 text-right tabular-nums">{abilities[a]}</td>
-                <td className={`px-1 py-1 text-right tabular-nums ${showSaves ? '' : 'rounded-r pr-2'}`}>
+                <td
+                  className={`px-1 py-1 text-right tabular-nums ${showSaves ? '' : 'rounded-r pr-2'}`}
+                >
                   <RollableValue
                     label={`${a.toUpperCase()} check`}
                     modifier={abilityMod(abilities[a])}
@@ -226,7 +245,9 @@ export function AbilityTable({
 
 /** The ability block for a creature (always shows the Save column). */
 function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: OnCheck }) {
-  return <AbilityTable abilities={creature.abilities} saves={creature.saves ?? {}} onCheck={onCheck} />
+  return (
+    <AbilityTable abilities={creature.abilities} saves={creature.saves ?? {}} onCheck={onCheck} />
+  )
 }
 
 function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCheck }) {
@@ -344,12 +365,17 @@ function ActionSection({
   return (
     <div>
       <h4 className={SECTION_HEADING}>{title}</h4>
-      {note && <p className="mb-2 text-sm italic leading-relaxed text-slate-500 dark:text-slate-400">{note}</p>}
+      {note && (
+        <p className="mb-2 text-sm italic leading-relaxed text-slate-500 dark:text-slate-400">
+          {note}
+        </p>
+      )}
       <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {actions.map((a) => {
           const usesLeft = actionUsesOf?.(a) ?? null
           const recharge = rechargeLabel(a.recharge)
-          const label = usesLeft != null ? [recharge, `${usesLeft} left`].filter(Boolean).join(', ') : recharge
+          const label =
+            usesLeft != null ? [recharge, `${usesLeft} left`].filter(Boolean).join(', ') : recharge
           const heading = `${a.name}${label ? ` (${label})` : ''}`
           const available = usesLeft != null ? usesLeft > 0 : rechargeState?.[a.id] !== false
           // A per-day-limited action is clickable to spend a use (and roll it if it
@@ -361,7 +387,11 @@ function ActionSection({
                   <button
                     type="button"
                     onClick={() => onUseAction(a)}
-                    title={isRollable(a) ? 'Use this action (spends one, then rolls)' : 'Use this action (spends one)'}
+                    title={
+                      isRollable(a)
+                        ? 'Use this action (spends one, then rolls)'
+                        : 'Use this action (spends one)'
+                    }
                     className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
                   >
                     {heading}.
@@ -369,7 +399,11 @@ function ActionSection({
                 ) : (
                   <span className="font-semibold">{heading}.</span>
                 )}{' '}
-                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
               </p>
             )
           }
@@ -384,12 +418,18 @@ function ActionSection({
                   type="button"
                   onClick={() => onAction(a)}
                   disabled={cantAfford}
-                  title={cost > 1 ? `Use this action (spends ${cost})` : 'Use this action (spends one)'}
+                  title={
+                    cost > 1 ? `Use this action (spends ${cost})` : 'Use this action (spends one)'
+                  }
                   className="font-semibold text-indigo-600 hover:underline disabled:no-underline disabled:hover:no-underline dark:text-indigo-400"
                 >
                   {legendaryHeading}.
                 </button>{' '}
-                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
               </p>
             )
           }
@@ -404,7 +444,11 @@ function ActionSection({
                 >
                   {heading}.
                 </button>{' '}
-                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
               </p>
             )
           }
@@ -423,12 +467,20 @@ function ActionSection({
                     Roll recharge
                   </button>
                 )}{' '}
-                {a.text ? <Markdown inline linkConditions resolveSpell={resolveSpell}>{a.text}</Markdown> : null}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
               </p>
             )
           }
           return (
-            <Markdown key={a.id} linkConditions resolveSpell={resolveSpell}>{`**${heading}.** ${a.text ?? ''}`}</Markdown>
+            <Markdown
+              key={a.id}
+              linkConditions
+              resolveSpell={resolveSpell}
+            >{`**${heading}.** ${a.text ?? ''}`}</Markdown>
           )
         })}
       </div>
@@ -476,7 +528,12 @@ function SpellcastingSection({
   // The hover preview is anchored with a fixed, viewport-clamped position so it
   // isn't clipped by the scrolling stat-block column. Touch devices don't fire
   // hover, so they simply tap to open the cast modal (which shows the same card).
-  const { card: preview, open: openPreview, close: closePreview, cancelClose } = useHoverCard<Spell>()
+  const {
+    card: preview,
+    open: openPreview,
+    close: closePreview,
+    cancelClose,
+  } = useHoverCard<Spell>()
 
   const showPreview = (spell: SpellRef, el: HTMLElement) => {
     const found = resolveSpell?.(spell.ref)
@@ -494,7 +551,8 @@ function SpellcastingSection({
           // Slot groups carry the count on the level label; all the level's spells
           // share that pool, so they don't show per-spell counts.
           const level = group.usage.type === 'slots' ? group.usage.level : null
-          const slotMax = level != null ? (spellcasting.slots?.[String(level) as SpellLevel] ?? 0) : 0
+          const slotMax =
+            level != null ? (spellcasting.slots?.[String(level) as SpellLevel] ?? 0) : 0
           const slotLeft = level != null ? (slotsLeftOf ? slotsLeftOf(level) : slotMax) : 0
           const slotsDrained = level != null && slotLeft <= 0
           return (
@@ -503,7 +561,11 @@ function SpellcastingSection({
                 {usageLabel(group)}
                 {level != null && slotMax > 0 && (
                   <span className="ml-1 font-normal normal-case text-slate-400 dark:text-slate-500">
-                    ({slotsLeftOf ? `${slotLeft}/${slotMax} slots` : `${slotMax} ${slotMax === 1 ? 'slot' : 'slots'}`})
+                    (
+                    {slotsLeftOf
+                      ? `${slotLeft}/${slotMax} slots`
+                      : `${slotMax} ${slotMax === 1 ? 'slot' : 'slots'}`}
+                    )
                   </span>
                 )}
               </span>
@@ -516,7 +578,10 @@ function SpellcastingSection({
                 const label = remaining == null ? name : `${name} (${remaining})`
                 if (!onCast) {
                   return (
-                    <span key={spell.ref ?? spell.name} className="text-slate-600 dark:text-slate-300">
+                    <span
+                      key={spell.ref ?? spell.name}
+                      className="text-slate-600 dark:text-slate-300"
+                    >
                       {label}
                     </span>
                   )
@@ -544,7 +609,9 @@ function SpellcastingSection({
         })}
       </div>
       {spellcasting.note && (
-        <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">{spellcasting.note}</p>
+        <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">
+          {spellcasting.note}
+        </p>
       )}
       {preview && (
         <FloatingCard style={preview.style} onMouseEnter={cancelClose} onMouseLeave={closePreview}>
@@ -668,7 +735,8 @@ export function CreatureStatBlock({
         subtitle={
           <>
             {[creature.size, titleCaseWords(creature.type)].filter(Boolean).join(' ')}
-            {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR {formatCr(creature.cr)}
+            {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR{' '}
+            {formatCr(creature.cr)}
             {crDetail(creature, { inLair, combat: hp != null })}
           </>
         }
@@ -681,12 +749,20 @@ export function CreatureStatBlock({
             <HeaderStat
               label={creature.hpFormula ? `HP (${creature.hpFormula})` : 'HP'}
               value={hpValue}
-              edit={onHpInput ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' } : undefined}
+              edit={
+                onHpInput
+                  ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' }
+                  : undefined
+              }
             />
             <HeaderStat
               label="TMP"
               value={tmpValue}
-              edit={onTempInput ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' } : undefined}
+              edit={
+                onTempInput
+                  ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }
+                  : undefined
+              }
             />
             <HeaderStat
               label="Init"
@@ -709,10 +785,9 @@ export function CreatureStatBlock({
 
       <DefensesAndSenses
         resistances={creature.resistances?.join(', ')}
-        immunities={[
-          ...(creature.immunities ?? []),
-          ...(creature.conditionImmunities ?? []),
-        ].join(', ')}
+        immunities={[...(creature.immunities ?? []), ...(creature.conditionImmunities ?? [])].join(
+          ', ',
+        )}
         vulnerabilities={creature.vulnerabilities?.join(', ')}
         senses={formatSenses(creature.senses)}
         languages={creature.languages?.join(', ')}
@@ -722,7 +797,9 @@ export function CreatureStatBlock({
       {showLrSection && lrTrait && (
         <div>
           <h4 className={SECTION_HEADING}>Legendary Resistance ({legendaryResistanceLeft} left)</h4>
-          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{lrTrait.text}</p>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {lrTrait.text}
+          </p>
         </div>
       )}
       <Section title="Traits" items={traits} resolveSpell={resolveSpell} />
@@ -735,9 +812,36 @@ export function CreatureStatBlock({
           resolveSpell={resolveSpell}
         />
       )}
-      <ActionSection title="Actions" actions={creature.actions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
-      <ActionSection title="Bonus Actions" actions={creature.bonusActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
-      <ActionSection title="Reactions" actions={creature.reactions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} actionUsesOf={actionUsesOf} onUseAction={onUseAction} />
+      <ActionSection
+        title="Actions"
+        actions={creature.actions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+        actionUsesOf={actionUsesOf}
+        onUseAction={onUseAction}
+      />
+      <ActionSection
+        title="Bonus Actions"
+        actions={creature.bonusActions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+        actionUsesOf={actionUsesOf}
+        onUseAction={onUseAction}
+      />
+      <ActionSection
+        title="Reactions"
+        actions={creature.reactions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+        actionUsesOf={actionUsesOf}
+        onUseAction={onUseAction}
+      />
       <ActionSection
         title={legendaryTitle}
         note={la ? legendaryPreamble(creature.edition) : undefined}
@@ -749,7 +853,14 @@ export function CreatureStatBlock({
         onRecharge={onRecharge}
         resolveSpell={resolveSpell}
       />
-      <ActionSection title="Lair Actions" actions={creature.lairActions} onAction={onAction} rechargeState={rechargeState} onRecharge={onRecharge} resolveSpell={resolveSpell} />
+      <ActionSection
+        title="Lair Actions"
+        actions={creature.lairActions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+      />
 
       {creature.description && (
         <details>

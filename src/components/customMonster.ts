@@ -134,26 +134,62 @@ export interface MonsterDraft {
 }
 
 export const SIZES: Size[] = [
-  'Tiny', 'Small', 'Medium or Small', 'Medium', 'Large', 'Huge', 'Gargantuan',
+  'Tiny',
+  'Small',
+  'Medium or Small',
+  'Medium',
+  'Large',
+  'Huge',
+  'Gargantuan',
 ]
 /** Standard 5e creature types, plus the "any" catch-all. Stored lowercase. */
 export const CREATURE_TYPES: string[] = [
-  'aberration', 'beast', 'celestial', 'construct', 'dragon', 'elemental', 'fey',
-  'fiend', 'giant', 'humanoid', 'monstrosity', 'ooze', 'plant', 'undead', 'any',
+  'aberration',
+  'beast',
+  'celestial',
+  'construct',
+  'dragon',
+  'elemental',
+  'fey',
+  'fiend',
+  'giant',
+  'humanoid',
+  'monstrosity',
+  'ooze',
+  'plant',
+  'undead',
+  'any',
 ]
 // Lowercased to match SRD stat-block rendering. Display only — nothing branches on it.
 export const ALIGNMENTS: string[] = [
-  'lawful good', 'neutral good', 'chaotic good',
-  'lawful neutral', 'neutral', 'chaotic neutral',
-  'lawful evil', 'neutral evil', 'chaotic evil',
+  'lawful good',
+  'neutral good',
+  'chaotic good',
+  'lawful neutral',
+  'neutral',
+  'chaotic neutral',
+  'lawful evil',
+  'neutral evil',
+  'chaotic evil',
   'unaligned',
-  'typically lawful good', 'typically neutral good', 'typically chaotic good',
-  'typically lawful neutral', 'typically neutral', 'typically chaotic neutral',
-  'typically lawful evil', 'typically neutral evil', 'typically chaotic evil',
+  'typically lawful good',
+  'typically neutral good',
+  'typically chaotic good',
+  'typically lawful neutral',
+  'typically neutral',
+  'typically chaotic neutral',
+  'typically lawful evil',
+  'typically neutral evil',
+  'typically chaotic evil',
   'any alignment',
-  'any lawful alignment', 'any chaotic alignment',
-  'any good alignment', 'any evil alignment', 'any neutral alignment',
-  'any non-lawful alignment', 'any non-chaotic alignment', 'any non-good alignment',
+  'any lawful alignment',
+  'any chaotic alignment',
+  'any good alignment',
+  'any evil alignment',
+  'any neutral alignment',
+  'any non-lawful alignment',
+  'any non-chaotic alignment',
+  'any non-good alignment',
 ]
 export const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 /** Hit-die sizes, as number strings. */
@@ -161,30 +197,81 @@ export const HP_DICE: string[] = ['4', '6', '8', '10', '12', '20']
 export const ACTION_KINDS: ActionKind[] = ['melee', 'ranged', 'save', 'utility']
 export const SAVE_OUTCOMES: SaveOutcome[] = ['half', 'none', 'negates']
 export const DAMAGE_TYPES: DamageType[] = [
-  'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning',
-  'necrotic', 'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder',
+  'acid',
+  'bludgeoning',
+  'cold',
+  'fire',
+  'force',
+  'lightning',
+  'necrotic',
+  'piercing',
+  'poison',
+  'psychic',
+  'radiant',
+  'slashing',
+  'thunder',
 ]
 export const SKILLS: Skill[] = [
-  'acrobatics', 'animalHandling', 'arcana', 'athletics', 'deception', 'history',
-  'insight', 'intimidation', 'investigation', 'medicine', 'nature', 'perception',
-  'performance', 'persuasion', 'religion', 'sleightOfHand', 'stealth', 'survival',
+  'acrobatics',
+  'animalHandling',
+  'arcana',
+  'athletics',
+  'deception',
+  'history',
+  'insight',
+  'intimidation',
+  'investigation',
+  'medicine',
+  'nature',
+  'perception',
+  'performance',
+  'persuasion',
+  'religion',
+  'sleightOfHand',
+  'stealth',
+  'survival',
 ]
 /** Display labels for the camelCase skill keys. */
 export const SKILL_LABELS: Record<Skill, string> = {
-  acrobatics: 'Acrobatics', animalHandling: 'Animal Handling', arcana: 'Arcana',
-  athletics: 'Athletics', deception: 'Deception', history: 'History', insight: 'Insight',
-  intimidation: 'Intimidation', investigation: 'Investigation', medicine: 'Medicine',
-  nature: 'Nature', perception: 'Perception', performance: 'Performance',
-  persuasion: 'Persuasion', religion: 'Religion', sleightOfHand: 'Sleight of Hand',
-  stealth: 'Stealth', survival: 'Survival',
+  acrobatics: 'Acrobatics',
+  animalHandling: 'Animal Handling',
+  arcana: 'Arcana',
+  athletics: 'Athletics',
+  deception: 'Deception',
+  history: 'History',
+  insight: 'Insight',
+  intimidation: 'Intimidation',
+  investigation: 'Investigation',
+  medicine: 'Medicine',
+  nature: 'Nature',
+  perception: 'Perception',
+  performance: 'Performance',
+  persuasion: 'Persuasion',
+  religion: 'Religion',
+  sleightOfHand: 'Sleight of Hand',
+  stealth: 'Stealth',
+  survival: 'Survival',
 }
 /** The ability each skill is based on — used to derive a proficient skill bonus. */
 export const SKILL_ABILITY: Record<Skill, Ability> = {
-  acrobatics: 'dex', animalHandling: 'wis', arcana: 'int', athletics: 'str',
-  deception: 'cha', history: 'int', insight: 'wis', intimidation: 'cha',
-  investigation: 'int', medicine: 'wis', nature: 'int', perception: 'wis',
-  performance: 'cha', persuasion: 'cha', religion: 'int', sleightOfHand: 'dex',
-  stealth: 'dex', survival: 'wis',
+  acrobatics: 'dex',
+  animalHandling: 'wis',
+  arcana: 'int',
+  athletics: 'str',
+  deception: 'cha',
+  history: 'int',
+  insight: 'wis',
+  intimidation: 'cha',
+  investigation: 'int',
+  medicine: 'wis',
+  nature: 'int',
+  perception: 'wis',
+  performance: 'cha',
+  persuasion: 'cha',
+  religion: 'int',
+  sleightOfHand: 'dex',
+  stealth: 'dex',
+  survival: 'wis',
 }
 
 const uid = (): string => crypto.randomUUID()
@@ -244,7 +331,13 @@ export function emptyDraft(): MonsterDraft {
     abilities: { str: '', dex: '', con: '', int: '', wis: '', cha: '' },
     saves: { str: false, dex: false, con: false, int: false, wis: false, cha: false },
     skills: [],
-    senses: { passivePerception: '', darkvision: '', blindsight: '', tremorsense: '', truesight: '' },
+    senses: {
+      passivePerception: '',
+      darkvision: '',
+      blindsight: '',
+      tremorsense: '',
+      truesight: '',
+    },
     languages: '',
     resistances: '',
     immunities: '',
@@ -314,7 +407,10 @@ export function parseCr(v: string): number | undefined {
 }
 
 const list = (v: string): string[] =>
-  v.split(',').map((s) => s.trim()).filter(Boolean)
+  v
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 const listOpt = (v: string): string[] | undefined => {
   const out = list(v)
   return out.length ? out : undefined
@@ -391,7 +487,7 @@ function buildSpellcasting(draft: MonsterDraft, ctx: DeriveContext): Spellcastin
       usage:
         g.usage === 'atWill'
           ? ({ type: 'atWill' } as const)
-          : ({ type: 'perDay' as const, per: has(g.per) ? num(g.per) : 1 }),
+          : { type: 'perDay' as const, per: has(g.per) ? num(g.per) : 1 },
       spells: g.spells.map((s) => ({ ...s })),
     }))
     .filter((g) => g.spells.length > 0)
@@ -441,7 +537,11 @@ export function buildCreature(draft: MonsterDraft): Creature {
     skills[s.skill] = abilityMod(abilities[SKILL_ABILITY[s.skill]]) + pb + (s.expertise ? pb : 0)
   }
 
-  const senses: Senses = { passivePerception: has(draft.senses.passivePerception) ? num(draft.senses.passivePerception) : 10 }
+  const senses: Senses = {
+    passivePerception: has(draft.senses.passivePerception)
+      ? num(draft.senses.passivePerception)
+      : 10,
+  }
   if (has(draft.senses.darkvision)) senses.darkvision = num(draft.senses.darkvision)
   if (has(draft.senses.blindsight)) senses.blindsight = num(draft.senses.blindsight)
   if (has(draft.senses.tremorsense)) senses.tremorsense = num(draft.senses.tremorsense)
@@ -520,7 +620,11 @@ const crToString = (cr: number): string =>
   cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr)
 
 /** Pull dice (`14d12+56`) back into the count/die/mod fields. */
-function hpFromFormula(formula: string | undefined): { hpDieCount: string; hpDie: string; hpMod: string } {
+function hpFromFormula(formula: string | undefined): {
+  hpDieCount: string
+  hpDie: string
+  hpMod: string
+} {
   const m = formula?.match(/^(\d+)d(\d+)([+-]\d+)?$/)
   if (!m) return { hpDieCount: '', hpDie: '8', hpMod: '' }
   return { hpDieCount: m[1], hpDie: m[2], hpMod: m[3] ? m[3].replace(/^\+/, '') : '' }
@@ -605,14 +709,20 @@ export function creatureToDraft(c: Creature): MonsterDraft {
       burrow: str(speed.burrow),
       hover: Boolean(speed.hover),
     },
-    abilities: ABILITIES.reduce((acc, a) => {
-      acc[a] = String(c.abilities[a])
-      return acc
-    }, {} as Record<Ability, string>),
-    saves: ABILITIES.reduce((acc, a) => {
-      acc[a] = c.saves?.[a] != null
-      return acc
-    }, {} as Record<Ability, boolean>),
+    abilities: ABILITIES.reduce(
+      (acc, a) => {
+        acc[a] = String(c.abilities[a])
+        return acc
+      },
+      {} as Record<Ability, string>,
+    ),
+    saves: ABILITIES.reduce(
+      (acc, a) => {
+        acc[a] = c.saves?.[a] != null
+        return acc
+      },
+      {} as Record<Ability, boolean>,
+    ),
     skills,
     senses: {
       passivePerception: str(c.senses?.passivePerception),
@@ -631,7 +741,9 @@ export function creatureToDraft(c: Creature): MonsterDraft {
     bonusActions: (c.bonusActions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
     reactions: (c.reactions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
     legendaryPerRound: str(c.legendaryActions?.perRound) || '3',
-    legendaryActions: (c.legendaryActions?.actions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
+    legendaryActions: (c.legendaryActions?.actions ?? []).map((a) =>
+      actionToDraft(a, c.abilities, pb),
+    ),
     lairActions: (c.lairActions ?? []).map((a) => actionToDraft(a, c.abilities, pb)),
     legendaryResistance: str(c.legendaryResistance),
     legendaryResistanceLair: str(c.legendaryResistanceLair),

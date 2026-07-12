@@ -89,7 +89,12 @@ export function CastSpellPanel({
         type: 'update',
         id: caster.combatantId,
         update: (cc) =>
-          startConcentration(cc, { spell: s.name, saveDc, round, rounds: durationRounds(s.duration) }),
+          startConcentration(cc, {
+            spell: s.name,
+            saveDc,
+            round,
+            rounds: durationRounds(s.duration),
+          }),
       })
     }
   }
@@ -162,12 +167,16 @@ export function CastSpellPanel({
                           </span>
                         )}
                         {sourceTag(s) && (
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(s.source)}`}>
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(s.source)}`}
+                          >
                             {sourceTag(s)}
                           </span>
                         )}
                         {editionTag(s) && (
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(s))}`}>
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(s))}`}
+                          >
                             {editionLabel(editionTag(s))}
                           </span>
                         )}
@@ -228,12 +237,22 @@ export function CastSpellPanel({
             onRoll={onRoll}
             onClose={reset}
           />
-          <ApplySpellEffect spell={spell} caster={caster} combatants={combatants} dispatch={dispatch} />
+          <ApplySpellEffect
+            spell={spell}
+            caster={caster}
+            combatants={combatants}
+            dispatch={dispatch}
+          />
         </div>
       ) : (
         <div className="space-y-3">
           <SpellCard spell={spell} />
-          <ApplySpellEffect spell={spell} caster={caster} combatants={combatants} dispatch={dispatch} />
+          <ApplySpellEffect
+            spell={spell}
+            caster={caster}
+            combatants={combatants}
+            dispatch={dispatch}
+          />
         </div>
       )}
     </Modal>

@@ -30,7 +30,12 @@ function creature(): Creature {
     abilities: { str: 20, dex: 10, con: 18, int: 14, wis: 12, cha: 16 },
     senses: { passivePerception: 16 },
     actions: [bite, breath],
-    legendaryActions: { perRound: 3, actions: [{ id: 'tail', name: 'Tail', kind: 'melee', toHit: 7, recharge: { type: 'dice', value: 6 } }] },
+    legendaryActions: {
+      perRound: 3,
+      actions: [
+        { id: 'tail', name: 'Tail', kind: 'melee', toHit: 7, recharge: { type: 'dice', value: 6 } },
+      ],
+    },
   }
 }
 

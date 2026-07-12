@@ -22,7 +22,9 @@ let spells: Promise<Spell[]> | undefined
 const COMPENDIUM = `${import.meta.env.BASE_URL}compendium`
 
 const fetchList = <T>(file: string): Promise<T[]> =>
-  fetch(`${COMPENDIUM}/${file}`).then((r) => r.json() as Promise<T[]>).catch(() => [])
+  fetch(`${COMPENDIUM}/${file}`)
+    .then((r) => r.json() as Promise<T[]>)
+    .catch(() => [])
 
 export function loadSrdCreatures(): Promise<Creature[]> {
   creatures ??= Promise.all(LIBRARIES.map((l) => fetchList<Creature>(l.creaturesFile))).then(

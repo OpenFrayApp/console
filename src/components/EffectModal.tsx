@@ -16,9 +16,21 @@ import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 
 // Ordered roughly by table frequency.
 const CONDITIONS: ConditionName[] = [
-  'Prone', 'Grappled', 'Frightened', 'Restrained', 'Poisoned', 'Stunned', 'Blinded',
-  'Charmed', 'Incapacitated', 'Invisible', 'Paralyzed', 'Petrified', 'Deafened',
-  'Unconscious', 'Exhaustion',
+  'Prone',
+  'Grappled',
+  'Frightened',
+  'Restrained',
+  'Poisoned',
+  'Stunned',
+  'Blinded',
+  'Charmed',
+  'Incapacitated',
+  'Invisible',
+  'Paralyzed',
+  'Petrified',
+  'Deafened',
+  'Unconscious',
+  'Exhaustion',
 ]
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
@@ -147,7 +159,8 @@ export function EffectModal({
     w: 'endOfTurn' | 'startOfTurn' = saveWhen,
   ): EffectDuration => {
     if (d === 'consume') return { type: 'consumeOnRoll' }
-    if (d === 'save') return { type: 'saveEnds', save: { ability: ab, dc: Number(dc) || 10 }, when: w }
+    if (d === 'save')
+      return { type: 'saveEnds', save: { ability: ab, dc: Number(dc) || 10 }, when: w }
     const rounds = TIMED_ROUNDS[d]
     if (rounds != null) return { type: 'rounds', rounds }
     return { type: 'manual' }
@@ -263,7 +276,9 @@ export function EffectModal({
                     className={`${FIELD_W} w-48`}
                   >
                     {DURATION_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                   {dur === 'save' && (
@@ -278,7 +293,11 @@ export function EffectModal({
                         aria-label="Save ability"
                         className={`${FIELD_W} w-20`}
                       >
-                        {ABILITIES.map((a) => (<option key={a} value={a}>{a.toUpperCase()}</option>))}
+                        {ABILITIES.map((a) => (
+                          <option key={a} value={a}>
+                            {a.toUpperCase()}
+                          </option>
+                        ))}
                       </select>
                       DC
                       <input
@@ -310,7 +329,8 @@ export function EffectModal({
                 </div>
                 {dur === 'save' && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    A monster rolls this automatically at the chosen moment; a player rolls their own.
+                    A monster rolls this automatically at the chosen moment; a player rolls their
+                    own.
                   </p>
                 )}
               </div>
@@ -344,7 +364,12 @@ export function EffectModal({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <label className="space-y-1">
                     <span className="text-xs text-slate-500 dark:text-slate-400">Effect</span>
-                    <select value={mode} onChange={(e) => chooseMode(e.target.value as EffectMode)} aria-label="Modifier effect" className={FIELD}>
+                    <select
+                      value={mode}
+                      onChange={(e) => chooseMode(e.target.value as EffectMode)}
+                      aria-label="Modifier effect"
+                      className={FIELD}
+                    >
                       <option value="advantage">Advantage</option>
                       <option value="disadvantage">Disadvantage</option>
                       <option value="flatBonus">Bonus / penalty</option>
@@ -352,7 +377,12 @@ export function EffectModal({
                   </label>
                   <label className="space-y-1">
                     <span className="text-xs text-slate-500 dark:text-slate-400">Applies to</span>
-                    <select value={applies} onChange={(e) => setApplies(e.target.value as EffectApplies)} aria-label="Applies to" className={FIELD}>
+                    <select
+                      value={applies}
+                      onChange={(e) => setApplies(e.target.value as EffectApplies)}
+                      aria-label="Applies to"
+                      className={FIELD}
+                    >
                       <option value="attackRolls">Attack rolls</option>
                       <option value="savingThrows">Saving throws</option>
                       <option value="abilityChecks">Ability checks</option>
@@ -363,19 +393,41 @@ export function EffectModal({
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                   <span className={LABEL}>On</span>
                   <label className="flex items-center gap-1">
-                    <input type="radio" name="effect-direction" checked={direction === 'outgoing'} onChange={() => setDirection('outgoing')} />
+                    <input
+                      type="radio"
+                      name="effect-direction"
+                      checked={direction === 'outgoing'}
+                      onChange={() => setDirection('outgoing')}
+                    />
                     Rolls it makes
                   </label>
                   <label className="flex items-center gap-1">
-                    <input type="radio" name="effect-direction" checked={direction === 'incoming'} onChange={() => setDirection('incoming')} />
+                    <input
+                      type="radio"
+                      name="effect-direction"
+                      checked={direction === 'incoming'}
+                      onChange={() => setDirection('incoming')}
+                    />
                     Rolls made against it
                   </label>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {mode === 'flatBonus' && (
-                    <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="+1d4 or -2" aria-label="Amount" className={`${FIELD_W} w-28`} />
+                    <input
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="+1d4 or -2"
+                      aria-label="Amount"
+                      className={`${FIELD_W} w-28`}
+                    />
                   )}
-                  <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (Bless, Bane…)" aria-label="Modifier label" className={`${FIELD_W} min-w-0 flex-1`} />
+                  <input
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    placeholder="Label (Bless, Bane…)"
+                    aria-label="Modifier label"
+                    className={`${FIELD_W} min-w-0 flex-1`}
+                  />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">{summary}</p>
                 <button
@@ -397,8 +449,18 @@ export function EffectModal({
                   }}
                   className="flex gap-2"
                 >
-                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Hex: +1d6 necrotic" aria-label="Custom reminder" className={`${FIELD_W} min-w-0 flex-1`} />
-                  <button type="submit" disabled={!note.trim()} className={`${CHIP} disabled:opacity-40`}>
+                  <input
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="e.g. Hex: +1d6 necrotic"
+                    aria-label="Custom reminder"
+                    className={`${FIELD_W} min-w-0 flex-1`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!note.trim()}
+                    className={`${CHIP} disabled:opacity-40`}
+                  >
                     Add
                   </button>
                 </form>

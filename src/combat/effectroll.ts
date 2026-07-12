@@ -2,12 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import type {
-  ConditionName,
-  Effect,
-  EffectApplies,
-  EffectModifier,
-} from '../schema/effect.ts'
+import type { ConditionName, Effect, EffectApplies, EffectModifier } from '../schema/effect.ts'
 import type { AdvantageState } from '../dice/formula.ts'
 import type { RandomSource } from '../dice/rng.ts'
 import { roll, type CritRule, type RollKind, type RollResult } from '../dice/roll.ts'
@@ -108,10 +103,7 @@ function describeBonus(value: number | string): string {
   return value
 }
 
-export function rollWithEffects(
-  formula: string,
-  opts: EffectRollOptions,
-): EffectRoll {
+export function rollWithEffects(formula: string, opts: EffectRollOptions): EffectRoll {
   const { roller, target, kind } = opts
   const applicable = collect(roller, target, kind)
 
@@ -185,9 +177,7 @@ export function rollWithEffects(
 
   // Consume consumeOnRoll effects that fired, from whichever combatant owns them.
   const consumed = new Set(
-    applicable
-      .filter((a) => a.effect.duration.type === 'consumeOnRoll')
-      .map((a) => a.effect.id),
+    applicable.filter((a) => a.effect.duration.type === 'consumeOnRoll').map((a) => a.effect.id),
   )
   const strip = (c: Combatant | undefined): Combatant | undefined => {
     if (!c || !c.effects.some((e) => consumed.has(e.id))) return c

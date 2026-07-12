@@ -84,9 +84,7 @@ export function rollSave(
 ): SaveRoll {
   const bonus = saveBonus(c, request.ability)
   if (bonus === null) {
-    throw new Error(
-      `Cannot auto-roll a save for PC "${c.combatantId}"; record the result manually`,
-    )
+    throw new Error(`Cannot auto-roll a save for PC "${c.combatantId}"; record the result manually`)
   }
   const { result, applied } = rollWithEffects(`1d20${formatBonus(bonus)}`, {
     roller: c,

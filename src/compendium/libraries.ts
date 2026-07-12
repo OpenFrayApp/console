@@ -99,10 +99,7 @@ export function sanitizeEnabledLibraries(ids: unknown): string[] {
 }
 
 /** Whether an item should show: custom content always; otherwise its source must be enabled. */
-export function inEnabledLibrary(
-  item: { id: string; source: string },
-  enabled: string[],
-): boolean {
+export function inEnabledLibrary(item: { id: string; source: string }, enabled: string[]): boolean {
   return item.id.startsWith('custom:') || enabled.includes(item.source)
 }
 

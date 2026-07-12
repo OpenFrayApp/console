@@ -108,9 +108,7 @@ function CampaignList({
           </li>
         ))}
         {campaigns.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
-            No matches
-          </li>
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No matches</li>
         )}
       </ul>
     </>
@@ -250,7 +248,10 @@ export function Compendium({
   // null = closed; otherwise the draft, with editId set when updating an existing creature.
   const [editor, setEditor] = useState<{ draft: MonsterDraft; editId: string | null } | null>(null)
   const [importing, setImporting] = useState(false)
-  const [spellEditor, setSpellEditor] = useState<{ draft: SpellDraft; editId: string | null } | null>(null)
+  const [spellEditor, setSpellEditor] = useState<{
+    draft: SpellDraft
+    editId: string | null
+  } | null>(null)
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
   const [pcForm, setPcForm] = useState<{ pc: RosterPc | null } | null>(null)
 
@@ -267,10 +268,7 @@ export function Compendium({
     [customCreatures, creatures],
   )
 
-  const allSpells = useMemo(
-    () => [...customSpells, ...(spells ?? [])],
-    [customSpells, spells],
-  )
+  const allSpells = useMemo(() => [...customSpells, ...(spells ?? [])], [customSpells, spells])
   // Resolve `spell:<id>` prose links to their card for the hover preview.
   const resolveSpell = useMemo(() => {
     const byId = new Map(allSpells.map((s) => [s.id, s]))
@@ -338,8 +336,7 @@ export function Compendium({
 
   const selectedCreature =
     tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined
-  const selectedSpell =
-    tab === 'spells' ? allSpells.find((s) => s.id === selectedId) : undefined
+  const selectedSpell = tab === 'spells' ? allSpells.find((s) => s.id === selectedId) : undefined
   const selectedCampaign =
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
   const selectedPc = tab === 'characters' ? rosterPcs.find((p) => p.id === selectedId) : undefined
@@ -378,7 +375,8 @@ export function Compendium({
     }
   }
 
-  const startCreate = () => (createGated ? onGated?.() : setEditor({ draft: emptyDraft(), editId: null }))
+  const startCreate = () =>
+    createGated ? onGated?.() : setEditor({ draft: emptyDraft(), editId: null })
   const startImport = () => (createGated ? onGated?.() : setImporting(true))
   const startEdit = (c: Creature) => setEditor({ draft: creatureToDraft(c), editId: c.id })
   const submitEditor = (creature: Creature) => {
@@ -482,12 +480,16 @@ export function Compendium({
                         </span>
                       )}
                       {e.src && (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.srcClass}`}>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.srcClass}`}
+                        >
                           {e.src}
                         </span>
                       )}
                       {e.lib && (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.libClass}`}>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.libClass}`}
+                        >
                           {editionLabel(e.lib)}
                         </span>
                       )}
@@ -497,9 +499,7 @@ export function Compendium({
                 </li>
               ))}
               {entries.length === 0 && (
-                <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
-                  No matches
-                </li>
+                <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No matches</li>
               )}
             </ul>
           </>
@@ -529,14 +529,18 @@ export function Compendium({
               creature={selectedCreature}
               resolveSpell={resolveSpell}
               onEdit={isCustom(selectedCreature) ? () => startEdit(selectedCreature) : undefined}
-              onDelete={isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined}
+              onDelete={
+                isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined
+              }
             />
           </SpellLinkContext.Provider>
         ) : selectedSpell ? (
           <div className="flex min-h-0 flex-1 flex-col pt-4">
             <SpellCard
               spell={selectedSpell}
-              onEdit={isCustomSpell(selectedSpell) ? () => startEditSpell(selectedSpell) : undefined}
+              onEdit={
+                isCustomSpell(selectedSpell) ? () => startEditSpell(selectedSpell) : undefined
+              }
               onDelete={isCustomSpell(selectedSpell) ? () => deleteSpell(selectedSpell) : undefined}
             />
           </div>

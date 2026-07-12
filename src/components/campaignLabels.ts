@@ -2,12 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Edition } from '../schema/primitives.ts'
-import type {
-  CritRule,
-  HpMethod,
-  InitiativeTiebreak,
-  SurpriseRule,
-} from '../schema/campaign.ts'
+import type { CritRule, HpMethod, InitiativeTiebreak, SurpriseRule } from '../schema/campaign.ts'
 
 /** A selectable option: the stored value and its human label. */
 export interface Option<T extends string> {

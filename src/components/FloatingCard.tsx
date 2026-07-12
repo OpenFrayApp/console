@@ -22,7 +22,12 @@ export function FloatingCard({
   children: ReactNode
 }) {
   return createPortal(
-    <div className={FLOATING_CARD} style={style} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div
+      className={FLOATING_CARD}
+      style={style}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {children}
     </div>,
     document.body,

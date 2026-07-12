@@ -44,7 +44,9 @@ export function parseImportedCreature(text: string): ImportResult {
   if (!senses || !isNum(senses.passivePerception)) missing.push('senses.passivePerception')
 
   if (missing.length) {
-    return { error: `Missing or invalid field${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}.` }
+    return {
+      error: `Missing or invalid field${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}.`,
+    }
   }
 
   const creature: Creature = {

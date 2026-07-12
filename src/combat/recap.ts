@@ -29,7 +29,8 @@ export const activeMillis = (s: CombatStats, now: number): number =>
 
 export function addDealt(s: CombatStats, sourceId: string, amount: number): CombatStats {
   if (amount <= 0) return s
-  const biggestHit = !s.biggestHit || amount > s.biggestHit.amount ? { sourceId, amount } : s.biggestHit
+  const biggestHit =
+    !s.biggestHit || amount > s.biggestHit.amount ? { sourceId, amount } : s.biggestHit
   return {
     ...s,
     damageDealt: { ...s.damageDealt, [sourceId]: (s.damageDealt[sourceId] ?? 0) + amount },
@@ -39,7 +40,10 @@ export function addDealt(s: CombatStats, sourceId: string, amount: number): Comb
 
 export function addTaken(s: CombatStats, targetId: string, amount: number): CombatStats {
   if (amount <= 0) return s
-  return { ...s, damageTaken: { ...s.damageTaken, [targetId]: (s.damageTaken[targetId] ?? 0) + amount } }
+  return {
+    ...s,
+    damageTaken: { ...s.damageTaken, [targetId]: (s.damageTaken[targetId] ?? 0) + amount },
+  }
 }
 
 const isDefeated = (c: Combatant): boolean => c.status !== 'active'
@@ -131,10 +135,14 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
   const log = encounter.log
   const spellsCast = log.filter((e) => e.category === 'cast').length
   const effectsApplied = log.filter(
-    (e) => e.category === 'condition' && !e.message.includes('no longer') && !e.message.endsWith(' ends'),
+    (e) =>
+      e.category === 'condition' &&
+      !e.message.includes('no longer') &&
+      !e.message.endsWith(' ends'),
   ).length
   const knockouts = log.filter(
-    (e) => e.category === 'death' && (e.message.endsWith(' is down') || e.message.endsWith(' dies')),
+    (e) =>
+      e.category === 'death' && (e.message.endsWith(' is down') || e.message.endsWith(' dies')),
   ).length
 
   const awards: Award[] = []
@@ -144,7 +152,11 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
   if (soaked) awards.push({ ...soaked, title: 'Most damage taken' })
   if (stats?.biggestHit) {
     const c = combatants.find((x) => x.combatantId === stats.biggestHit!.sourceId)
-    awards.push({ title: 'Biggest hit', label: c ? label(c) : stats.biggestHit.sourceId, amount: stats.biggestHit.amount })
+    awards.push({
+      title: 'Biggest hit',
+      label: c ? label(c) : stats.biggestHit.sourceId,
+      amount: stats.biggestHit.amount,
+    })
   }
 
   return {

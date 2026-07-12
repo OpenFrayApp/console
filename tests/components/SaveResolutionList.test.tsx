@@ -4,10 +4,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
-import {
-  SaveResolutionList,
-  type SaveLine,
-} from '../../src/components/SaveResolutionList.tsx'
+import { SaveResolutionList, type SaveLine } from '../../src/components/SaveResolutionList.tsx'
 
 afterEach(cleanup)
 

@@ -32,10 +32,7 @@ export async function saveCustomSpell(spell: Spell): Promise<void> {
 /** Replace an edited spell in place (matched by its stable id, RLS-scoped). */
 export async function updateCustomSpell(spell: Spell): Promise<void> {
   if (!supabase) return
-  await supabase
-    .from('spells')
-    .update({ name: spell.name, data: spell })
-    .eq('data->>id', spell.id)
+  await supabase.from('spells').update({ name: spell.name, data: spell }).eq('data->>id', spell.id)
 }
 
 /** Remove a spell from the library by its stable id (RLS-scoped to the owner). */

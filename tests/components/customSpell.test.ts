@@ -24,7 +24,9 @@ const dmg = (formula: string, type: SpellDraft['damage'][number]['type'] = 'fire
 
 describe('buildSpell', () => {
   it('builds a utility spell with no mechanics', () => {
-    const spell = buildSpell(draft({ name: 'Mage Hand', level: '0', resolution: 'none', damage: [] }))
+    const spell = buildSpell(
+      draft({ name: 'Mage Hand', level: '0', resolution: 'none', damage: [] }),
+    )
     expect(spell.id).toMatch(/^custom:/)
     expect(spell.level).toBe(0)
     expect(spell.mechanics).toBeUndefined()
@@ -32,7 +34,9 @@ describe('buildSpell', () => {
   })
 
   it('captures an attack-roll spell with damage', () => {
-    const spell = buildSpell(draft({ name: 'Fire Bolt', level: '0', resolution: 'attack', damage: [dmg('1d10')] }))
+    const spell = buildSpell(
+      draft({ name: 'Fire Bolt', level: '0', resolution: 'attack', damage: [dmg('1d10')] }),
+    )
     expect(spell.mechanics?.attackRoll).toBe(true)
     expect(spell.mechanics?.damage).toEqual([{ formula: '1d10', type: 'fire' }])
     expect(spell.mechanics?.save).toBeUndefined()
@@ -40,7 +44,14 @@ describe('buildSpell', () => {
 
   it('captures a save spell without a DC (the caster owns it)', () => {
     const spell = buildSpell(
-      draft({ name: 'Fireball', level: '3', resolution: 'save', saveAbility: 'dex', saveOutcome: 'half', damage: [dmg('8d6')] }),
+      draft({
+        name: 'Fireball',
+        level: '3',
+        resolution: 'save',
+        saveAbility: 'dex',
+        saveOutcome: 'half',
+        damage: [dmg('8d6')],
+      }),
     )
     expect(spell.mechanics?.save).toEqual({ ability: 'dex', onSave: 'half' })
     expect(Object.keys(spell.mechanics!.save!)).toEqual(['ability', 'onSave'])
@@ -51,7 +62,9 @@ describe('buildSpell', () => {
   })
 
   it('omits mechanics when scaling has no base damage', () => {
-    const spell = buildSpell(draft({ name: 'X', resolution: 'none', damage: [], scalingIncrement: [dmg('1d6')] }))
+    const spell = buildSpell(
+      draft({ name: 'X', resolution: 'none', damage: [], scalingIncrement: [dmg('1d6')] }),
+    )
     expect(spell.mechanics).toBeUndefined()
   })
 })
@@ -59,7 +72,13 @@ describe('buildSpell', () => {
 describe('scaling (increment mode)', () => {
   it('expands a leveled spell to merged per-slot variants', () => {
     const spell = buildSpell(
-      draft({ name: 'Fireball', level: '3', resolution: 'save', damage: [dmg('8d6')], scalingIncrement: [dmg('1d6')] }),
+      draft({
+        name: 'Fireball',
+        level: '3',
+        resolution: 'save',
+        damage: [dmg('8d6')],
+        scalingIncrement: [dmg('1d6')],
+      }),
     )
     const scaling = spell.mechanics!.scaling!
     expect(scaling.map((s) => s.level)).toEqual([4, 5, 6, 7, 8, 9])
@@ -70,7 +89,13 @@ describe('scaling (increment mode)', () => {
 
   it('expands a cantrip across the character tiers', () => {
     const spell = buildSpell(
-      draft({ name: 'Fire Bolt', level: '0', resolution: 'attack', damage: [dmg('1d10')], scalingIncrement: [dmg('1d10')] }),
+      draft({
+        name: 'Fire Bolt',
+        level: '0',
+        resolution: 'attack',
+        damage: [dmg('1d10')],
+        scalingIncrement: [dmg('1d10')],
+      }),
     )
     const scaling = spell.mechanics!.scaling!
     expect(scaling.map((s) => s.level)).toEqual([5, 11, 17])
@@ -79,7 +104,9 @@ describe('scaling (increment mode)', () => {
   })
 
   it('appends a different damage type as its own component', () => {
-    expect(scaleAndMerge([{ formula: '2d6', type: 'fire' }], [{ formula: '1d6', type: 'cold' }], 2)).toEqual([
+    expect(
+      scaleAndMerge([{ formula: '2d6', type: 'fire' }], [{ formula: '1d6', type: 'cold' }], 2),
+    ).toEqual([
       { formula: '2d6', type: 'fire' },
       { formula: '2d6', type: 'cold' },
     ])
@@ -125,7 +152,14 @@ describe('spellVariantPreview', () => {
 describe('spellToDraft round-trip', () => {
   it('round-trips a regular leveled spell into increment mode', () => {
     const built = buildSpell(
-      draft({ name: 'Fireball', level: '3', resolution: 'save', saveAbility: 'dex', damage: [dmg('8d6')], scalingIncrement: [dmg('1d6')] }),
+      draft({
+        name: 'Fireball',
+        level: '3',
+        resolution: 'save',
+        saveAbility: 'dex',
+        damage: [dmg('8d6')],
+        scalingIncrement: [dmg('1d6')],
+      }),
     )
     const back = spellToDraft(built)
     expect(back.scalingMode).toBe('increment')

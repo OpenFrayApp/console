@@ -5,10 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
-import type {
-  MonsterCombatant,
-  PlayerCharacter,
-} from '../../src/schema/combatant.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { CombatantRow } from '../../src/components/CombatantRow.tsx'
 import { condition } from '../../src/combat/effects.ts'
 
@@ -104,7 +101,9 @@ describe('CombatantRow', () => {
   })
 
   it('marks a dead monster', () => {
-    render(<CombatantRow combatant={monster({ status: 'dead', hp: { current: 0, max: 7, temp: 0 } })} />)
+    render(
+      <CombatantRow combatant={monster({ status: 'dead', hp: { current: 0, max: 7, temp: 0 } })} />,
+    )
     expect(screen.getByText('Dead')).toBeInTheDocument()
   })
 
@@ -195,7 +194,10 @@ describe('CombatantRow', () => {
   it('edits current HP inline when onHpInput is provided', () => {
     const onHpInput = vi.fn()
     const { container } = render(
-      <CombatantRow combatant={pc({ hp: { current: 20, max: 38, temp: 0 } })} onHpInput={onHpInput} />,
+      <CombatantRow
+        combatant={pc({ hp: { current: 20, max: 38, temp: 0 } })}
+        onHpInput={onHpInput}
+      />,
     )
     fireEvent.click(screen.getByTitle('Set HP, or +N / −N'))
     const input = container.querySelector('input') as HTMLInputElement

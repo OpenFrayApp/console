@@ -1,5 +1,5 @@
 Guidance for AI agents (and humans) working in the OpenFray codebase. Read this
-before writing code. It is the source of truth for *how* to build here; the full
+before writing code. It is the source of truth for _how_ to build here; the full
 reasoning lives in `docs/PROJECT-PLAN.md` (with deeper subsystem specs in
 `docs/specs/`).
 
@@ -16,17 +16,17 @@ combatants — plus dice and an SRD reference.
 
 > **OpenFray is a fast scratchpad, not a system of record.**
 > We track what happens at the table — plus the reference a GM jots — never the
-> *rules engine* behind a character.
+> _rules engine_ behind a character.
 
 **The test for any feature, before building it:**
 
 > **Does it require knowing a player character's build? If yes, it is out of scope.**
 
-"Knowing the build" means the app having to *model, derive from, or run* class,
+"Knowing the build" means the app having to _model, derive from, or run_ class,
 level, features, or spells — not the descriptive facts a GM chooses to type in.
 
 Out of scope (belongs on a character sheet / D&D Beyond, never here): modeling
-class features or what an ability *does*; tracking PC spell slots, resources, or
+class features or what an ability _does_; tracking PC spell slots, resources, or
 level; importing/syncing character sheets; auto-converting content between
 editions; auto-matching or deduplicating user-created creatures.
 
@@ -41,13 +41,13 @@ optionally ability scores, senses, speed, an initiative modifier, and damage
 resistances/immunities/vulnerabilities (these feed damage like a monster's); and
 character context like race, alignment, faith, personality traits/ideals/bonds/flaws,
 a backstory, and private GM notes. A **Quick add** is just name/HP/AC for a throwaway
-NPC. The test still holds: the GM *transcribes* these facts and the app displays them;
+NPC. The test still holds: the GM _transcribes_ these facts and the app displays them;
 it never models class/level/spells, derives a build, or runs what a character can do.
 GM-entered defenses are "what damage this takes" — a board consequence — not a sheet
 we read.
 
 If a feature is useful but fails the test, it is still a no. When a request tempts
-you toward "it should really *know* X about the player," stop — that temptation is
+you toward "it should really _know_ X about the player," stop — that temptation is
 the signal, not a reason to proceed. Flag it rather than building it.
 
 ---
@@ -157,7 +157,7 @@ to.
 
 - **Keep PRs/changes focused** — one concern at a time.
 - **Minimal comments.** Let the code speak; comment only when it can't — a
-  non-obvious *why*, a gotcha, a workaround, or a 5e-rules citation. No narration
+  non-obvious _why_, a gotcha, a workaround, or a 5e-rules citation. No narration
   that restates a well-named symbol or obvious code, and no banner/section
   dividers. A concise one-line header on a function/type is fine when its purpose
   isn't clear from the name. Keep comments factual (no marketing/self-praise) and

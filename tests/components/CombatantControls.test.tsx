@@ -65,7 +65,9 @@ afterEach(cleanup)
 describe('CombatantControls', () => {
   it('toggles the reaction', () => {
     const dispatch = vi.fn()
-    render(<CombatantControls combatant={monster()} round={1} dispatch={dispatch} onRoll={() => {}} />)
+    render(
+      <CombatantControls combatant={monster()} round={1} dispatch={dispatch} onRoll={() => {}} />,
+    )
     fireEvent.click(screen.getByText('Use reaction'))
     const call = dispatch.mock.calls[0][0]
     expect(call.type).toBe('update')
@@ -93,7 +95,9 @@ describe('CombatantControls', () => {
 
   it('marks a combatant as concentrating', () => {
     const dispatch = vi.fn()
-    render(<CombatantControls combatant={monster()} round={3} dispatch={dispatch} onRoll={() => {}} />)
+    render(
+      <CombatantControls combatant={monster()} round={3} dispatch={dispatch} onRoll={() => {}} />,
+    )
     fireEvent.click(screen.getByText('Concentrate'))
     fireEvent.change(screen.getByLabelText(/Concentration spell/), {
       target: { value: 'Hold Person' },

@@ -72,7 +72,16 @@ describe('GameLog feed', () => {
     const result = roll('1d20+7', { kind: 'attack', rand: faceSeq(2) })
     render(
       <GameLog
-        entries={[{ id: 'm1', round: 1, category: 'roll', message: 'Dragon: Bite → Ogre', result, outcome: 'miss' }]}
+        entries={[
+          {
+            id: 'm1',
+            round: 1,
+            category: 'roll',
+            message: 'Dragon: Bite → Ogre',
+            result,
+            outcome: 'miss',
+          },
+        ]}
       />,
     )
     expect(screen.getByText('Miss')).toBeInTheDocument()

@@ -101,7 +101,13 @@ function emptyDraft(): PcDraft {
     hp: '',
     speed: { walk: '', fly: '', swim: '', climb: '', burrow: '', hover: false },
     abilities: { str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10' },
-    senses: { passivePerception: '', darkvision: '', blindsight: '', tremorsense: '', truesight: '' },
+    senses: {
+      passivePerception: '',
+      darkvision: '',
+      blindsight: '',
+      tremorsense: '',
+      truesight: '',
+    },
     languages: '',
     resistances: '',
     immunities: '',
@@ -331,7 +337,12 @@ export function PcFormModal({
           <Section title="Identity" open>
             <label className="block space-y-1">
               <span className={LABEL}>Campaign</span>
-              <select value={d.campaignId} onChange={(e) => patch({ campaignId: e.target.value })} aria-label="Campaign" className={FIELD}>
+              <select
+                value={d.campaignId}
+                onChange={(e) => patch({ campaignId: e.target.value })}
+                aria-label="Campaign"
+                className={FIELD}
+              >
                 <option value="">No campaign</option>
                 {campaigns.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -358,7 +369,12 @@ export function PcFormModal({
               className={FIELD}
             />
             <div className="grid grid-cols-2 gap-2">
-              <select value={d.alignment} onChange={(e) => patch({ alignment: e.target.value })} aria-label="Alignment" className={FIELD}>
+              <select
+                value={d.alignment}
+                onChange={(e) => patch({ alignment: e.target.value })}
+                aria-label="Alignment"
+                className={FIELD}
+              >
                 <option value="">No alignment</option>
                 {PC_ALIGNMENTS.map((a) => (
                   <option key={a} value={a}>
@@ -366,7 +382,12 @@ export function PcFormModal({
                   </option>
                 ))}
               </select>
-              <select value={d.edition} onChange={(e) => patch({ edition: e.target.value as Edition })} aria-label="Edition" className={FIELD}>
+              <select
+                value={d.edition}
+                onChange={(e) => patch({ edition: e.target.value as Edition })}
+                aria-label="Edition"
+                className={FIELD}
+              >
                 <option value="5.5">DnD 5.5 (2024)</option>
                 <option value="5.0">DnD 5.0 (2014)</option>
               </select>
@@ -376,9 +397,23 @@ export function PcFormModal({
           <Section title="Defense & HP" open>
             <div className="flex flex-wrap items-center gap-2">
               <span className={LABEL}>AC</span>
-              <input value={d.ac} onChange={(e) => patch({ ac: e.target.value })} placeholder="AC" aria-label="AC" inputMode="numeric" className={`${FIELD_W} w-16`} />
+              <input
+                value={d.ac}
+                onChange={(e) => patch({ ac: e.target.value })}
+                placeholder="AC"
+                aria-label="AC"
+                inputMode="numeric"
+                className={`${FIELD_W} w-16`}
+              />
               <span className={LABEL}>Max HP</span>
-              <input value={d.hp} onChange={(e) => patch({ hp: e.target.value })} placeholder="HP" aria-label="Max HP" inputMode="numeric" className={`${FIELD_W} w-20`} />
+              <input
+                value={d.hp}
+                onChange={(e) => patch({ hp: e.target.value })}
+                placeholder="HP"
+                aria-label="Max HP"
+                inputMode="numeric"
+                className={`${FIELD_W} w-20`}
+              />
             </div>
           </Section>
 
@@ -397,7 +432,11 @@ export function PcFormModal({
               ))}
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={d.speed.hover} onChange={(e) => patch({ speed: { ...d.speed, hover: e.target.checked } })} />
+              <input
+                type="checkbox"
+                checked={d.speed.hover}
+                onChange={(e) => patch({ speed: { ...d.speed, hover: e.target.checked } })}
+              />
               Can hover
             </label>
           </Section>
@@ -433,17 +472,46 @@ export function PcFormModal({
                 />
               ))}
             </div>
-            <input value={d.languages} onChange={(e) => patch({ languages: e.target.value })} placeholder="Languages" aria-label="Languages" {...OFF} className={FIELD} />
+            <input
+              value={d.languages}
+              onChange={(e) => patch({ languages: e.target.value })}
+              placeholder="Languages"
+              aria-label="Languages"
+              {...OFF}
+              className={FIELD}
+            />
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Languages are comma-separated. Passive Perception defaults to 10 + your Wisdom modifier.
+              Languages are comma-separated. Passive Perception defaults to 10 + your Wisdom
+              modifier.
             </p>
           </Section>
 
           <Section title="Defenses">
             <p className={LABEL}>Comma-separated</p>
-            <input value={d.resistances} onChange={(e) => patch({ resistances: e.target.value })} placeholder="Resistances" aria-label="Resistances" {...OFF} className={FIELD} />
-            <input value={d.immunities} onChange={(e) => patch({ immunities: e.target.value })} placeholder="Immunities" aria-label="Immunities" {...OFF} className={FIELD} />
-            <input value={d.vulnerabilities} onChange={(e) => patch({ vulnerabilities: e.target.value })} placeholder="Vulnerabilities" aria-label="Vulnerabilities" {...OFF} className={FIELD} />
+            <input
+              value={d.resistances}
+              onChange={(e) => patch({ resistances: e.target.value })}
+              placeholder="Resistances"
+              aria-label="Resistances"
+              {...OFF}
+              className={FIELD}
+            />
+            <input
+              value={d.immunities}
+              onChange={(e) => patch({ immunities: e.target.value })}
+              placeholder="Immunities"
+              aria-label="Immunities"
+              {...OFF}
+              className={FIELD}
+            />
+            <input
+              value={d.vulnerabilities}
+              onChange={(e) => patch({ vulnerabilities: e.target.value })}
+              placeholder="Vulnerabilities"
+              aria-label="Vulnerabilities"
+              {...OFF}
+              className={FIELD}
+            />
           </Section>
 
           <Section title="Personality & backstory">
@@ -458,10 +526,30 @@ export function PcFormModal({
                 className={FIELD}
               />
             </label>
-            <LineList label="Personality Traits" addLabel="+ Add trait" items={d.personalityTraits} onChange={setList('personalityTraits')} />
-            <LineList label="Ideals" addLabel="+ Add ideal" items={d.ideals} onChange={setList('ideals')} />
-            <LineList label="Bonds" addLabel="+ Add bond" items={d.bonds} onChange={setList('bonds')} />
-            <LineList label="Flaws" addLabel="+ Add flaw" items={d.flaws} onChange={setList('flaws')} />
+            <LineList
+              label="Personality Traits"
+              addLabel="+ Add trait"
+              items={d.personalityTraits}
+              onChange={setList('personalityTraits')}
+            />
+            <LineList
+              label="Ideals"
+              addLabel="+ Add ideal"
+              items={d.ideals}
+              onChange={setList('ideals')}
+            />
+            <LineList
+              label="Bonds"
+              addLabel="+ Add bond"
+              items={d.bonds}
+              onChange={setList('bonds')}
+            />
+            <LineList
+              label="Flaws"
+              addLabel="+ Add flaw"
+              items={d.flaws}
+              onChange={setList('flaws')}
+            />
             <label className="block space-y-1">
               <span className={LABEL}>Backstory &amp; Goals</span>
               <textarea

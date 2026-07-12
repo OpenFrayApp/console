@@ -2,7 +2,11 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from '../../src/schema/roster.ts'
+import {
+  rosterPcToCombatant,
+  syncCombatantFromRoster,
+  type RosterPc,
+} from '../../src/schema/roster.ts'
 
 const base: RosterPc = {
   id: 'pc-1',
@@ -49,8 +53,12 @@ describe('rosterPcToCombatant', () => {
   })
 
   it('derives the initiative modifier from Dexterity', () => {
-    expect(rosterPcToCombatant({ ...base, abilities: { ...base.abilities!, dex: 20 } }).initiativeMod).toBe(5)
-    expect(rosterPcToCombatant({ ...base, abilities: { ...base.abilities!, dex: 7 } }).initiativeMod).toBe(-2)
+    expect(
+      rosterPcToCombatant({ ...base, abilities: { ...base.abilities!, dex: 20 } }).initiativeMod,
+    ).toBe(5)
+    expect(
+      rosterPcToCombatant({ ...base, abilities: { ...base.abilities!, dex: 7 } }).initiativeMod,
+    ).toBe(-2)
   })
 
   it('clamps HP and AC, and defaults initiative to 0 without abilities', () => {

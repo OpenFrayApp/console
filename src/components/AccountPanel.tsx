@@ -6,8 +6,7 @@ import { useAuth } from '../auth/useAuth.ts'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
-const LABEL =
-  'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
 type Note = { kind: 'ok' | 'err'; text: string } | null
 
@@ -63,7 +62,9 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
       <div className="mx-auto flex min-h-full max-w-lg flex-col px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Account</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              Account
+            </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400" title={user?.email}>
               {user?.email}
             </p>
@@ -79,17 +80,23 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
 
         <div className="space-y-4">
           <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Signed in</h3>
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Signed in
+            </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               You're signed in with{' '}
               <span className="font-medium text-slate-900 dark:text-slate-100">{user?.email}</span>{' '}
               {provider ? (
                 <>
-                  via <span className="font-medium text-slate-900 dark:text-slate-100">{provider}</span>. To
-                  change your email or password, manage them in your {provider} account.
+                  via{' '}
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{provider}</span>
+                  . To change your email or password, manage them in your {provider} account.
                 </>
               ) : (
-                <>via your identity provider. To change your email or password, manage them with that provider.</>
+                <>
+                  via your identity provider. To change your email or password, manage them with
+                  that provider.
+                </>
               )}
             </p>
             <button
@@ -102,7 +109,9 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
           </section>
 
           <section className="rounded-lg border border-rose-300 p-4 dark:border-rose-900/70">
-            <h3 className="mb-1 text-sm font-semibold text-rose-700 dark:text-rose-400">Delete account</h3>
+            <h3 className="mb-1 text-sm font-semibold text-rose-700 dark:text-rose-400">
+              Delete account
+            </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
               Permanently deletes your account and <strong>all your data</strong> — encounters,
               custom creatures, campaigns, and saved players. This is immediate and can't be undone.

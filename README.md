@@ -18,8 +18,8 @@ concentration, conditions, the relational state between combatants (who has
 advantage on whom, who's debuffed), mass saves, and dice — with a built-in SRD
 compendium and an easy custom-creature form.
 
-It exists because the tools that came before it track *each creature* well but
-forget the *relationships*: that the barbarian's Reckless Attack grants advantage
+It exists because the tools that came before it track _each creature_ well but
+forget the _relationships_: that the barbarian's Reckless Attack grants advantage
 against him, that the bard's Vicious Mockery debuffs the goblin's next swing, that
 six creatures all need to roll the same save against one Fireball. OpenFray treats
 those as first-class.
@@ -28,10 +28,10 @@ those as first-class.
 
 **OpenFray is a fast scratchpad, not a system of record.**
 
-It tracks what's *happening in the fight* and the reference a GM keeps on hand —
-never the *rules engine* behind a character. The player's sheet / D&D Beyond owns
-what a character *can do* and works out the numbers; OpenFray owns what
-*just happened*, what must be *remembered* this round, and the notes a GM jots to
+It tracks what's _happening in the fight_ and the reference a GM keeps on hand —
+never the _rules engine_ behind a character. The player's sheet / D&D Beyond owns
+what a character _can do_ and works out the numbers; OpenFray owns what
+_just happened_, what must be _remembered_ this round, and the notes a GM jots to
 run the table. This line is deliberate, and it's the reason the app stays fast and
 simple instead of becoming a worse copy of a VTT.
 
@@ -39,7 +39,7 @@ The test for any feature, contribution, or idea:
 
 > **Does it require knowing a player character's build? If yes, it's out of scope.**
 
-"Knowing the build" means the app having to *model, derive from, or run* class,
+"Knowing the build" means the app having to _model, derive from, or run_ class,
 level, features, or spells — not the descriptive facts a GM chooses to type in.
 This isn't a limitation to work around — it's the design. A few of its
 consequences, so the spirit is clear:
@@ -50,10 +50,10 @@ consequences, so the spirit is clear:
   context like race, alignment, faith, personality traits, ideals, bonds, flaws, a
   backstory, and private GM notes. It's all the GM's call what to jot. A **Quick add**
   is the bare minimum — name, HP, AC — for a throwaway NPC or a creature dropped in
-  mid-fight. What OpenFray won't do is *run* the character: no class, level, spell
+  mid-fight. What OpenFray won't do is _run_ the character: no class, level, spell
   slots, or feature logic, and it never derives or auto-applies what a PC can do.
   The GM transcribes; the sheet still owns the mechanics.
-- **Effects model the *result*, not the cause.** There are only ~6 shapes of
+- **Effects model the _result_, not the cause.** There are only ~6 shapes of
   consequence in all of 5e (a condition, advantage, disadvantage, a flat modifier,
   a reminder, a save-ends effect). We model those six. We never model the hundreds
   of class features that produce them — the GM transcribes the outcome, the app
@@ -64,8 +64,8 @@ consequences, so the spirit is clear:
 - **Creatures in combat are snapshots, not references.** Editing a monster in your
   library never mutates a fight in progress.
 
-If you're contributing and a change starts to feel like the app needs to *model or
-run* a character's build — class features, spell mechanics, leveling — that's the
+If you're contributing and a change starts to feel like the app needs to _model or
+run_ a character's build — class features, spell mechanics, leveling — that's the
 signal to stop and rethink, not to add the field. Storing a fact the GM types is
 fine; computing what a character can do is not.
 
@@ -94,8 +94,8 @@ devices. Still to come: a shared read-only player view. Expect rough edges — i
   picks which libraries appear (the **Settings** panel; 5.2 by default). Some iconic
   monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC and cannot be
   included; the custom-creature form, JSON import, and third-party content fill that gap.
-- *Compatible with fifth edition. Not affiliated with or endorsed by Wizards of
-  the Coast.*
+- _Compatible with fifth edition. Not affiliated with or endorsed by Wizards of
+  the Coast._
 
 ## Contributing
 

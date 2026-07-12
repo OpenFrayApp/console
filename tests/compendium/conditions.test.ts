@@ -2,7 +2,11 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { CONDITION_TEXT, linkifyConditions, resolveCondition } from '../../src/compendium/conditions.ts'
+import {
+  CONDITION_TEXT,
+  linkifyConditions,
+  resolveCondition,
+} from '../../src/compendium/conditions.ts'
 
 describe('resolveCondition', () => {
   it('resolves a known condition to its reference text', () => {

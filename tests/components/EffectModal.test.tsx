@@ -39,7 +39,15 @@ function open() {
 describe('EffectModal', () => {
   it('applies a condition with the chosen duration', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1m' } }) // 1 minute = 10 rounds
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
@@ -53,10 +61,20 @@ describe('EffectModal', () => {
 
   it('builds an advantage-against modifier with a clear direction', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
     // Defaults: Advantage / attack rolls / made against it.
-    fireEvent.change(within(dialog).getByLabelText('Modifier label'), { target: { value: 'Faerie Fire' } })
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'Faerie Fire' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Apply modifier' }))
     expect(onApply.mock.calls[0][0]).toMatchObject({
       name: 'Faerie Fire',
@@ -66,11 +84,23 @@ describe('EffectModal', () => {
 
   it('builds a flat bonus, dropping a leading + and keeping dice as a string', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Modifier effect'), { target: { value: 'flatBonus' } })
+    fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
+      target: { value: 'flatBonus' },
+    })
     fireEvent.change(within(dialog).getByLabelText('Amount'), { target: { value: '+1d4' } })
-    fireEvent.change(within(dialog).getByLabelText('Modifier label'), { target: { value: 'Bless' } })
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'Bless' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Apply modifier' }))
     expect(onApply.mock.calls[0][0].modifier).toMatchObject({
       mode: 'flatBonus',
@@ -82,9 +112,19 @@ describe('EffectModal', () => {
 
   it('stores a plain numeric amount as a number (Bane −2)', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Modifier effect'), { target: { value: 'flatBonus' } })
+    fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
+      target: { value: 'flatBonus' },
+    })
     fireEvent.change(within(dialog).getByLabelText('Amount'), { target: { value: '-2' } })
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), { target: { value: 'Bane' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Apply modifier' }))
@@ -93,23 +133,49 @@ describe('EffectModal', () => {
 
   it('requires a label before applying a modifier', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
     expect(within(dialog).getByRole('button', { name: 'Apply modifier' })).toBeDisabled()
   })
 
   it('applies a custom reminder', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), { target: { value: 'Hex: +1d6 necrotic' } })
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'Hex: +1d6 necrotic' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add' }))
     expect(onApply.mock.calls[0][0]).toMatchObject({ note: 'Hex: +1d6 necrotic', modifier: null })
   })
 
   it('builds a save-ends duration with a roll timing (default end of turn)', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save ability'), { target: { value: 'wis' } })
@@ -124,10 +190,20 @@ describe('EffectModal', () => {
 
   it('records a start-of-turn save timing', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} onUpdateDuration={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
-    fireEvent.change(within(dialog).getByLabelText('Save timing'), { target: { value: 'startOfTurn' } })
+    fireEvent.change(within(dialog).getByLabelText('Save timing'), {
+      target: { value: 'startOfTurn' },
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
     expect(onApply.mock.calls[0][0].duration.when).toBe('startOfTurn')
   })
@@ -145,7 +221,13 @@ describe('EffectModal', () => {
 
   it('binds a later duration change to effects already added this session', () => {
     let latest: Effect[] = []
-    render(<Harness onEffects={(e) => { latest = e }} />)
+    render(
+      <Harness
+        onEffects={(e) => {
+          latest = e
+        }}
+      />,
+    )
     const dialog = open()
     // Apply Prone first, with the default "Until removed" duration.
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
@@ -153,7 +235,11 @@ describe('EffectModal', () => {
     // Switching to Save ends + a DC retroactively binds the save to it.
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '14' } })
-    expect(latest[0].duration).toMatchObject({ type: 'saveEnds', save: { ability: 'dex', dc: 14 }, when: 'endOfTurn' })
+    expect(latest[0].duration).toMatchObject({
+      type: 'saveEnds',
+      save: { ability: 'dex', dc: 14 },
+      when: 'endOfTurn',
+    })
     // Switching back to a plain duration drops the save again.
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1m' } })
     expect(latest[0].duration).toEqual({ type: 'rounds', rounds: 10 })

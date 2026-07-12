@@ -140,8 +140,7 @@ export function EncounterConsole({
       () => {},
     )
   }, [])
-  const resolveSpell = (ref?: string): Spell | undefined =>
-    ref ? spellsById.get(ref) : undefined
+  const resolveSpell = (ref?: string): Spell | undefined => (ref ? spellsById.get(ref) : undefined)
   // Link bare cast-spell names in creature prose (custom creatures aren't pre-baked).
   // Dedupe by name, preferring the 2024 (srd-5.2) entry when a spell exists in both.
   const linkSpells = useMemo(() => {
@@ -214,12 +213,7 @@ export function EncounterConsole({
   }
 
   // Effect-aware so Bless etc. fold into the d20.
-  const rollCheckFor = (
-    c: Combatant,
-    label: string,
-    modifier: number,
-    kind: 'save' | 'check',
-  ) => {
+  const rollCheckFor = (c: Combatant, label: string, modifier: number, kind: 'save' | 'check') => {
     const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
     const { result, applied } = rollWithEffects(formula, { roller: c, kind })
     onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, applied)
@@ -330,7 +324,9 @@ export function EncounterConsole({
   // While dragging, render a preview order so the list visibly makes space; the
   // drop then commits the same move.
   const view =
-    drag?.overId && drag.id !== drag.overId ? moveById(combatants, drag.id, drag.overId) : combatants
+    drag?.overId && drag.id !== drag.overId
+      ? moveById(combatants, drag.id, drag.overId)
+      : combatants
   const commitReorder = () => {
     if (drag?.overId && drag.id !== drag.overId) {
       dispatch({ type: 'reorder', id: drag.id, toId: drag.overId })
@@ -406,54 +402,54 @@ export function EncounterConsole({
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800">
         {selected ? (
           <div className="min-h-0 flex-1 overflow-auto pr-4">
-              {selected.isPC ? (
-                <PcStatBlock
-                  name={selected.name}
-                  subtitle={
-                    selected.kind === 'quick'
-                      ? 'Quick add'
-                      : ['Player character', selected.race, selected.alignment]
-                          .filter(Boolean)
-                          .join(' · ')
-                  }
-                  ac={selected.ac}
-                  hp={selected.hp}
-                  initiativeMod={selected.initiativeMod ?? 0}
-                  speed={selected.speed}
-                  abilities={selected.abilities}
-                  resistances={selected.resistances}
-                  immunities={selected.immunities}
-                  vulnerabilities={selected.vulnerabilities}
-                  languages={selected.languages}
-                  senses={selected.senses}
-                  passivePerception={selected.passivePerception}
-                  faith={selected.faith}
-                  personalityTraits={selected.personalityTraits}
-                  ideals={selected.ideals}
-                  bonds={selected.bonds}
-                  flaws={selected.flaws}
-                  backstory={selected.backstory}
-                  dmNotes={selected.dmNotes}
-                  concentration={selected.concentration}
-                  onRename={(name) => {
-                    onRename(selected.name, name)
-                    dispatch({
-                      type: 'update',
-                      id: selected.combatantId,
-                      update: (c) => (c.isPC ? { ...c, name } : c),
-                    })
-                  }}
-                  onHpInput={(raw) => applyHpInput(selected, raw, false)}
-                  onTempInput={(raw) => applyHpInput(selected, raw, true)}
-                  onEditDmNotes={
-                    selected.rosterId && onEditPcDmNotes
-                      ? (text) => onEditPcDmNotes(selected, text)
-                      : undefined
-                  }
-                  onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
-                />
-              ) : (
-                <SpellLinkContext.Provider value={linkSpells}>
+            {selected.isPC ? (
+              <PcStatBlock
+                name={selected.name}
+                subtitle={
+                  selected.kind === 'quick'
+                    ? 'Quick add'
+                    : ['Player character', selected.race, selected.alignment]
+                        .filter(Boolean)
+                        .join(' · ')
+                }
+                ac={selected.ac}
+                hp={selected.hp}
+                initiativeMod={selected.initiativeMod ?? 0}
+                speed={selected.speed}
+                abilities={selected.abilities}
+                resistances={selected.resistances}
+                immunities={selected.immunities}
+                vulnerabilities={selected.vulnerabilities}
+                languages={selected.languages}
+                senses={selected.senses}
+                passivePerception={selected.passivePerception}
+                faith={selected.faith}
+                personalityTraits={selected.personalityTraits}
+                ideals={selected.ideals}
+                bonds={selected.bonds}
+                flaws={selected.flaws}
+                backstory={selected.backstory}
+                dmNotes={selected.dmNotes}
+                concentration={selected.concentration}
+                onRename={(name) => {
+                  onRename(selected.name, name)
+                  dispatch({
+                    type: 'update',
+                    id: selected.combatantId,
+                    update: (c) => (c.isPC ? { ...c, name } : c),
+                  })
+                }}
+                onHpInput={(raw) => applyHpInput(selected, raw, false)}
+                onTempInput={(raw) => applyHpInput(selected, raw, true)}
+                onEditDmNotes={
+                  selected.rosterId && onEditPcDmNotes
+                    ? (text) => onEditPcDmNotes(selected, text)
+                    : undefined
+                }
+                onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
+              />
+            ) : (
+              <SpellLinkContext.Provider value={linkSpells}>
                 <CreatureStatBlock
                   creature={selected.creature}
                   hp={selected.hp}
@@ -502,9 +498,9 @@ export function EncounterConsole({
                   }
                   inLair={selected.inLair}
                 />
-                </SpellLinkContext.Provider>
-              )}
-            </div>
+              </SpellLinkContext.Provider>
+            )}
+          </div>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Add a combatant, then select it to see its stat block and actions.

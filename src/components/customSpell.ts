@@ -2,12 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { DamageRoll, SaveOutcome } from '../schema/action.ts'
-import type {
-  Spell,
-  SpellComponents,
-  SpellMechanics,
-  SpellScaling,
-} from '../schema/spell.ts'
+import type { Spell, SpellComponents, SpellMechanics, SpellScaling } from '../schema/spell.ts'
 import type { Ability, DamageType, Edition } from '../schema/primitives.ts'
 
 /**
@@ -71,19 +66,39 @@ export interface SpellDraft {
 }
 
 export const SPELL_SCHOOLS: string[] = [
-  'Abjuration', 'Conjuration', 'Divination', 'Enchantment',
-  'Evocation', 'Illusion', 'Necromancy', 'Transmutation',
+  'Abjuration',
+  'Conjuration',
+  'Divination',
+  'Enchantment',
+  'Evocation',
+  'Illusion',
+  'Necromancy',
+  'Transmutation',
 ]
 export const SPELL_LEVELS: string[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 /** Character levels at which a cantrip's damage steps up (2014/2024 alike). */
 export const CANTRIP_TIERS = [5, 11, 17] as const
 /** Common casting times (the form offers an "Other…" free-text fallback too). */
 export const CASTING_TIMES: string[] = [
-  '1 action', '1 bonus action', '1 reaction', '1 minute', '10 minutes', '1 hour', '8 hours', '24 hours',
+  '1 action',
+  '1 bonus action',
+  '1 reaction',
+  '1 minute',
+  '10 minutes',
+  '1 hour',
+  '8 hours',
+  '24 hours',
 ]
 /** Common durations — concentration is a separate flag, so these are bare times. */
 export const DURATIONS: string[] = [
-  'Instantaneous', '1 round', '1 minute', '10 minutes', '1 hour', '8 hours', '24 hours', 'Until dispelled',
+  'Instantaneous',
+  '1 round',
+  '1 minute',
+  '10 minutes',
+  '1 hour',
+  '8 hours',
+  '24 hours',
+  'Until dispelled',
 ]
 
 const uid = (): string => crypto.randomUUID()
@@ -125,7 +140,11 @@ export function emptySpellDraft(): SpellDraft {
 }
 
 const has = (v: string): boolean => v.trim() !== ''
-const list = (v: string): string[] => v.split(',').map((s) => s.trim()).filter(Boolean)
+const list = (v: string): string[] =>
+  v
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 const clampLevel = (v: string): number => Math.max(0, Math.min(9, Math.floor(Number(v) || 0)))
 
 interface Dice {
@@ -297,7 +316,10 @@ const damageToDrafts = (rows: DamageRoll[] | undefined): SpellDamageDraft[] =>
 
 const sameDamage = (a: DamageRoll[], b: DamageRoll[]): boolean => {
   const key = (rows: DamageRoll[]) =>
-    rows.map((r) => `${r.formula}|${r.type}`).sort().join(';')
+    rows
+      .map((r) => `${r.formula}|${r.type}`)
+      .sort()
+      .join(';')
   return key(a) === key(b)
 }
 
@@ -317,7 +339,10 @@ function deriveIncrement(base: DamageRoll[], step1: DamageRoll[]): DamageRoll[] 
     const count = d.count - (b?.count ?? 0)
     const mod = d.mod - (b?.mod ?? 0)
     if (count > 0 || mod !== 0) {
-      inc.push({ formula: renderDice({ count: Math.max(count, 0), die: d.die, mod }), type: r.type })
+      inc.push({
+        formula: renderDice({ count: Math.max(count, 0), die: d.die, mod }),
+        type: r.type,
+      })
     }
   }
   return inc.length ? inc : null
@@ -382,7 +407,11 @@ export function spellToDraft(spell: Spell): SpellDraft {
     scalingMode: manual ? 'manual' : 'increment',
     scalingIncrement: increment ? damageToDrafts(increment) : empty.scalingIncrement,
     scalingRows: manual
-      ? scaling.map((s) => ({ id: uid(), level: String(s.level), damage: damageToDrafts(s.damage) }))
+      ? scaling.map((s) => ({
+          id: uid(),
+          level: String(s.level),
+          damage: damageToDrafts(s.damage),
+        }))
       : [],
   }
 }

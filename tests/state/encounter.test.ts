@@ -76,7 +76,10 @@ describe('encounterReducer', () => {
         condition('Restrained', { duration: { type: 'rounds', rounds: 4800 } }),
       ],
     }
-    const after = encounterReducer({ ...emptyEncounter(), combatants: [hero] }, { type: 'longRest' })
+    const after = encounterReducer(
+      { ...emptyEncounter(), combatants: [hero] },
+      { type: 'longRest' },
+    )
     const c = after.combatants[0]
     expect(c.hp.current).toBe(30)
     expect(c.concentration).toBeNull()
@@ -200,10 +203,9 @@ describe('encounterReducer', () => {
   })
 
   it('keeps turn ownership by id across a reorder', () => {
-    let e = encounterReducer(
-      withCombatants(monster('a', 20), monster('b', 15), monster('c', 10)),
-      { type: 'begin' },
-    )
+    let e = encounterReducer(withCombatants(monster('a', 20), monster('b', 15), monster('c', 10)), {
+      type: 'begin',
+    })
     expect(e.combatants[e.activeIndex].combatantId).toBe('a')
     e = encounterReducer(e, { type: 'reorder', id: 'a', toId: 'c' })
     expect(e.combatants[e.activeIndex].combatantId).toBe('a') // still a's turn
@@ -279,7 +281,9 @@ describe('encounter game-log events', () => {
       update: (c) => ({ ...c, concentration: { spell: 'Hold Person', saveDc: 13, round: 1 } }),
     })
     expect(
-      e.log.some((l) => l.category === 'concentration' && l.message === 'a concentrates on Hold Person'),
+      e.log.some(
+        (l) => l.category === 'concentration' && l.message === 'a concentrates on Hold Person',
+      ),
     ).toBe(true)
   })
 

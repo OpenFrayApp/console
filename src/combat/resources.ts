@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type {
-  Combatant,
-  CombatantStatus,
-  MonsterCombatant,
-} from '../schema/combatant.ts'
+import type { Combatant, CombatantStatus, MonsterCombatant } from '../schema/combatant.ts'
 import type { Action } from '../schema/action.ts'
 import type { SpellLevel, SpellRef, SpellUsage } from '../schema/creature.ts'
 import { isStable, markDeathSaveFailure, resetDeathSaves } from './deathsaves.ts'
@@ -50,11 +46,7 @@ export function isBloodied(c: Combatant): boolean {
  * make death saves) — unless the massive-damage rule kills it outright: the
  * leftover damage after reaching 0 equals or exceeds the PC's HP maximum.
  */
-function statusForHp(
-  c: Combatant,
-  current: number,
-  overkill: number,
-): CombatantStatus {
+function statusForHp(c: Combatant, current: number, overkill: number): CombatantStatus {
   if (current > 0) return 'active'
   if (!c.isPC) return 'dead'
   return overkill >= c.hp.max ? 'dead' : 'unconscious'
@@ -66,11 +58,7 @@ export interface DamageOptions {
 }
 
 /** Apply damage: temporary HP absorbs first, then current HP floors at 0. */
-export function applyDamage(
-  c: Combatant,
-  amount: number,
-  opts: DamageOptions = {},
-): Combatant {
+export function applyDamage(c: Combatant, amount: number, opts: DamageOptions = {}): Combatant {
   const dmg = clampNonNegativeInt(amount)
   // Damage to an already-unconscious PC causes death-save failures (two on a crit).
   // A *stable* PC taking damage is no longer stable: clear its three accumulated
@@ -158,20 +146,14 @@ export function spendSlot(c: MonsterCombatant, level: SpellLevel): MonsterCombat
 }
 
 /** Give back one spent slot; a no-op if none are spent. */
-export function restoreSlot(
-  c: MonsterCombatant,
-  level: SpellLevel,
-): MonsterCombatant {
+export function restoreSlot(c: MonsterCombatant, level: SpellLevel): MonsterCombatant {
   const used = c.slotsUsed[level] ?? 0
   if (used <= 0) return c
   return { ...c, slotsUsed: { ...c.slotsUsed, [level]: used - 1 } }
 }
 
 /** Spend legendary actions this round; clamps at 0. (Reset happens in nextTurn.) */
-export function spendLegendary(
-  c: MonsterCombatant,
-  cost = 1,
-): MonsterCombatant {
+export function spendLegendary(c: MonsterCombatant, cost = 1): MonsterCombatant {
   const remaining = Math.max(0, c.legendaryRemaining - clampNonNegativeInt(cost))
   return { ...c, legendaryRemaining: remaining }
 }
@@ -245,10 +227,7 @@ export function spellKey(spell: SpellRef): string {
 }
 
 /** The usage tier a spell belongs to, or undefined if it isn't in the block. */
-export function spellUsage(
-  c: MonsterCombatant,
-  spell: SpellRef,
-): SpellUsage | undefined {
+export function spellUsage(c: MonsterCombatant, spell: SpellRef): SpellUsage | undefined {
   const key = spellKey(spell)
   for (const group of c.creature.spellcasting?.groups ?? []) {
     if (group.spells.some((s) => spellKey(s) === key)) return group.usage
@@ -260,10 +239,7 @@ export function spellUsage(
  * Uses left for a spell: `null` when unlimited (at-will, or a spell not gated by
  * a per-day limit), otherwise the per-day count minus what's been spent.
  */
-export function spellUsesRemaining(
-  c: MonsterCombatant,
-  spell: SpellRef,
-): number | null {
+export function spellUsesRemaining(c: MonsterCombatant, spell: SpellRef): number | null {
   const usage = spellUsage(c, spell)
   if (!usage || usage.type === 'atWill') return null
   // Slot spells share a per-level pool; surface that level's remaining slots.
@@ -286,10 +262,7 @@ export function castSpell(c: MonsterCombatant, spell: SpellRef): MonsterCombatan
 }
 
 /** Give back one spent cast — a per-day use or a level's slot; a no-op if none spent. */
-export function restoreSpellUse(
-  c: MonsterCombatant,
-  spell: SpellRef,
-): MonsterCombatant {
+export function restoreSpellUse(c: MonsterCombatant, spell: SpellRef): MonsterCombatant {
   const usage = spellUsage(c, spell)
   if (usage?.type === 'slots') return restoreSlot(c, String(usage.level) as SpellLevel)
   const key = spellKey(spell)

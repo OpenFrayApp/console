@@ -26,7 +26,18 @@ const foe = (id: string, label: string): MonsterCombatant => ({
   isPC: false,
   combatantId: id,
   creatureId: 'srd:goblin',
-  creature: { id: 'srd:goblin', source: 'srd-5.2', name: 'Goblin', size: 'Small', type: 'humanoid', ac: 15, maxHp: 7, speed: {}, abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 }, senses: { passivePerception: 9 } },
+  creature: {
+    id: 'srd:goblin',
+    source: 'srd-5.2',
+    name: 'Goblin',
+    size: 'Small',
+    type: 'humanoid',
+    ac: 15,
+    maxHp: 7,
+    speed: {},
+    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
+    senses: { passivePerception: 9 },
+  },
   label,
   initiative: 0,
   status: 'active',
@@ -60,7 +71,13 @@ describe('TargetChips', () => {
   })
 
   it('drops the group labels when only one side is present', () => {
-    render(<TargetChips targets={[foe('f1', 'Goblin'), foe('f2', 'Ogre')]} selected={new Set()} onToggle={() => {}} />)
+    render(
+      <TargetChips
+        targets={[foe('f1', 'Goblin'), foe('f2', 'Ogre')]}
+        selected={new Set()}
+        onToggle={() => {}}
+      />,
+    )
     expect(screen.queryByText('Foes')).toBeNull()
     expect(screen.queryByText('Allies')).toBeNull()
     expect(screen.getByRole('button', { name: 'Goblin' })).toBeInTheDocument()
@@ -68,7 +85,13 @@ describe('TargetChips', () => {
 
   it('toggles selection and marks the chosen chip pressed', () => {
     const onToggle = vi.fn()
-    render(<TargetChips targets={[foe('f1', 'Goblin')]} selected={new Set(['f1'])} onToggle={onToggle} />)
+    render(
+      <TargetChips
+        targets={[foe('f1', 'Goblin')]}
+        selected={new Set(['f1'])}
+        onToggle={onToggle}
+      />,
+    )
     const chip = screen.getByRole('button', { name: 'Goblin' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(chip)
@@ -76,7 +99,9 @@ describe('TargetChips', () => {
   })
 
   it('shows the empty text when there are no targets', () => {
-    const { container } = render(<TargetChips targets={[]} selected={new Set()} onToggle={() => {}} emptyText="Nobody here" />)
+    const { container } = render(
+      <TargetChips targets={[]} selected={new Set()} onToggle={() => {}} emptyText="Nobody here" />,
+    )
     expect(within(container).getByText('Nobody here')).toBeInTheDocument()
   })
 })

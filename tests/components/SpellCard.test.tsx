@@ -15,7 +15,12 @@ const FIREBALL: Spell = {
   school: 'Evocation',
   castingTime: 'action',
   range: '150 feet',
-  components: { verbal: true, somatic: true, material: true, materials: 'a tiny ball of bat guano' },
+  components: {
+    verbal: true,
+    somatic: true,
+    material: true,
+    materials: 'a tiny ball of bat guano',
+  },
   duration: 'instantaneous',
   concentration: false,
   ritual: false,
