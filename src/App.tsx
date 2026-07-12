@@ -65,6 +65,7 @@ import { RestControls } from './components/RestControls.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
+import { CombatTimers } from './components/CombatTimers.tsx'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
@@ -907,7 +908,15 @@ function App() {
 
         {}
         <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
-          <div className="hidden lg:block" aria-hidden="true" />
+          {view === 'encounter' && started && encounter.combatStats ? (
+            <CombatTimers
+              stats={encounter.combatStats}
+              round={encounter.round}
+              running={started && !paused}
+            />
+          ) : (
+            <div className="hidden lg:block" aria-hidden="true" />
+          )}
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
             {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
             {view === 'encounter' && user && (
