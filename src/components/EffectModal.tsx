@@ -219,6 +219,11 @@ export function EffectModal({
     )
     setLabel('')
     setAmount('')
+    // Reset the direction/applies to this modifier type's sensible default so a
+    // second effect doesn't silently inherit the first's direction — e.g. adding
+    // Reckless's "advantage on its own attacks" (outgoing) then its "advantage
+    // against it" (incoming), which must read as a debuff, not a buff.
+    chooseMode(mode)
   }
 
   const applyReminder = () => {

@@ -82,6 +82,35 @@ describe('EffectModal', () => {
     })
   })
 
+  it('resets the direction after each apply so a second effect does not inherit it', () => {
+    const onApply = vi.fn()
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
+    const dialog = open()
+    // First effect: advantage on its OWN attacks (Reckless's buff half).
+    fireEvent.click(within(dialog).getByLabelText('Rolls it makes'))
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'Reckless' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply modifier' }))
+    expect(onApply.mock.calls[0][0].modifier.direction).toBe('outgoing')
+
+    // Second effect applied without touching direction: it must fall back to the
+    // "against it" default (Reckless's debuff half), not silently stay outgoing.
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'Reckless' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply modifier' }))
+    expect(onApply.mock.calls[1][0].modifier.direction).toBe('incoming')
+  })
+
   it('builds a flat bonus, dropping a leading + and keeping dice as a string', () => {
     const onApply = vi.fn()
     render(
