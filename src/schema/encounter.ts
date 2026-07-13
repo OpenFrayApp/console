@@ -16,6 +16,7 @@ export type GameLogCategory =
   | 'condition'
   | 'concentration'
   | 'hp'
+  | 'heal'
   | 'turn'
   | 'rest'
   | 'death'

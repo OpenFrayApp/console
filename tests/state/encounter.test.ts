@@ -262,6 +262,31 @@ describe('encounter game-log events', () => {
     expect(e.log.some((l) => l.category === 'hp' && l.message === 'a takes 4 damage')).toBe(true)
   })
 
+  it('logs healing under the heal category when HP rises', () => {
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => applyDamage(c, 4),
+    })
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, hp: { ...c.hp, current: c.hp.current + 3 } }),
+    })
+    expect(e.log.some((l) => l.category === 'heal' && l.message === 'a regains 3 HP')).toBe(true)
+  })
+
+  it('logs a revive as a heal, not a death event', () => {
+    let e = encounterReducer(emptyEncounter(), { type: 'add', combatant: pc('hero', 0, 20) })
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'hero',
+      update: (c) => ({ ...c, status: 'active', hp: { ...c.hp, current: 5 } }),
+    })
+    expect(e.log.some((l) => l.category === 'heal' && l.message === 'hero is back up')).toBe(true)
+    expect(e.log.some((l) => l.category === 'death')).toBe(false)
+  })
+
   it('logs a condition applied and removed', () => {
     const cond = condition('Prone')
     let e = encounterReducer(withCombatants(monster('a', 0)), {

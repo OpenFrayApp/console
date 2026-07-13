@@ -85,7 +85,7 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
 
   const dhp = after.hp.current - before.hp.current
   if (dhp < 0) out.push({ category: 'hp', message: `${name} takes ${-dhp} damage`, sourceId })
-  else if (dhp > 0) out.push({ category: 'hp', message: `${name} regains ${dhp} HP`, sourceId })
+  else if (dhp > 0) out.push({ category: 'heal', message: `${name} regains ${dhp} HP`, sourceId })
 
   const beforeEffectIds = new Set(before.effects.map((e) => e.id))
   const afterEffectIds = new Set(after.effects.map((e) => e.id))
@@ -122,7 +122,8 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
     else if (after.status === 'unconscious')
       out.push({ category: 'death', message: `${name} is down`, sourceId })
     else if (after.status === 'active')
-      out.push({ category: 'death', message: `${name} is back up`, sourceId })
+      // A revive is a recovery, not a death event — group it with healing (green).
+      out.push({ category: 'heal', message: `${name} is back up`, sourceId })
   }
 
   return out
