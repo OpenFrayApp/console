@@ -3,7 +3,7 @@
 
 import type { Effect, EffectDuration } from '../schema/effect.ts'
 import type { Spell } from '../schema/spell.ts'
-import { advantageAgainst, condition, flatBonus, reminder } from './effects.ts'
+import { advantageAgainst, condition, disadvantageOn, flatBonus, reminder } from './effects.ts'
 import { durationRounds } from './casting.ts'
 
 /**
@@ -135,6 +135,12 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
     build: ({ source, spell }) => [
       advantageAgainst('Faerie Fire', { source, duration: timedDuration(spell) }),
     ],
+  },
+  'vicious mockery': {
+    summary: 'Disadvantage on its next attack roll',
+    targeting: 'enemy',
+    // The disadvantage clears on the target's next attack (consumeOnRoll default).
+    build: ({ source }) => [disadvantageOn('Vicious Mockery', { source })],
   },
 
   // Damage-rider / marker spells — a reminder badge the GM adds the dice from when

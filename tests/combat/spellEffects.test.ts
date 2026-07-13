@@ -71,6 +71,19 @@ describe('spellEffectFor', () => {
     expect(effect.modifier).toMatchObject({ mode: 'advantage', direction: 'incoming' })
   })
 
+  it('maps Vicious Mockery to disadvantage on the target’s next attack', () => {
+    const vm = spellEffectFor(spell('Vicious Mockery', { level: 0 }))!
+    expect(vm.targeting).toBe('enemy')
+    const [effect] = vm.build({ source: 'bard', spell: spell('Vicious Mockery', { level: 0 }) })
+    expect(effect.modifier).toMatchObject({
+      applies: 'attackRolls',
+      mode: 'disadvantage',
+      direction: 'outgoing',
+    })
+    expect(effect.duration).toEqual({ type: 'consumeOnRoll' })
+    expect(effect.source).toBe('bard')
+  })
+
   it('maps damage-rider spells to reminders', () => {
     for (const name of ['Hex', 'Hunter’s Mark', 'Divine Favor']) {
       const [effect] = spellEffectFor(spell(name))!.build({ spell: spell(name) })
