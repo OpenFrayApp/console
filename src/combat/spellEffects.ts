@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import type { Combatant } from '../schema/combatant.ts'
 import type { Effect, EffectDuration } from '../schema/effect.ts'
 import type { Spell } from '../schema/spell.ts'
 import { advantageAgainst, condition, disadvantageOn, flatBonus, reminder } from './effects.ts'
 import { durationRounds } from './casting.ts'
+import { abilityModifier } from './masssave.ts'
 
 /**
  * A curated map of buff/utility spells to the board effect they leave behind, so
@@ -25,7 +27,13 @@ export interface SpellEffectDef {
   /** True when the spell normally affects more than one creature (e.g. Bless, up to 3). */
   multi?: boolean
   /** Build a fresh effect (with a unique id) for one target. Call once per target. */
-  build: (ctx: { source?: string; spell: Spell }) => Effect[]
+  build: (ctx: { source?: string; spell: Spell; target?: Combatant }) => Effect[]
+}
+
+/** Dex score when the board has one: monsters always, PCs only from the roster. */
+function dexScore(c: Combatant | undefined): number | undefined {
+  if (!c) return undefined
+  return c.isPC ? c.abilities?.dex : c.creature.abilities.dex
 }
 
 /** The spell's stated duration as an Effect duration; manual when it doesn't convert (hours+). */
@@ -105,10 +113,30 @@ const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
   'mage armor': {
     summary: 'AC 13 + Dex while unarmored',
     targeting: 'ally',
-    build: ({ source }) => [
-      reminder('Mage Armor', 'AC 13 + Dex modifier while not wearing armor', {
+    // Mage Armor *sets* the AC rather than adding to it, so it stays a reminder — but
+    // we work the number out when the target's Dex is on the board.
+    build: ({ source, target }) => {
+      const dex = dexScore(target)
+      const note = dex == null ? 'AC 13 + Dex' : `AC ${13 + abilityModifier(dex)} unarmored`
+      return [reminder('Mage Armor', note, { source, duration: { type: 'manual' } })]
+    },
+  },
+  fly: {
+    summary: 'Fly Speed 60 ft. and can hover',
+    targeting: 'ally',
+    // A higher-level slot targets one extra creature per level above 3rd.
+    multi: true,
+    build: ({ source, spell }) => [
+      reminder('Fly', 'Fly Speed 60, hovers', { source, duration: timedDuration(spell) }),
+    ],
+  },
+  'mind blank': {
+    summary: 'Immune to Psychic damage and Charmed',
+    targeting: 'ally',
+    build: ({ source, spell }) => [
+      reminder('Mind Blank', 'Immune to Psychic & Charmed', {
         source,
-        duration: { type: 'manual' },
+        duration: timedDuration(spell),
       }),
     ],
   },

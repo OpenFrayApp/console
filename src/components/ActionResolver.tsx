@@ -808,7 +808,7 @@ export function SaveResolver({
     const affected = affectedTargets()
     if (affected.length === 0) return
     for (const c of affected) {
-      const effects = spellEffect.build({ source: attacker?.combatantId, spell })
+      const effects = spellEffect.build({ source: attacker?.combatantId, spell, target: c })
       dispatch({
         type: 'update',
         id: c.combatantId,

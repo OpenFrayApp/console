@@ -2,8 +2,23 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
+import type { Combatant, MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import { spellEffectFor, timedDuration } from '../../src/combat/spellEffects.ts'
+
+const monster = (dex: number): MonsterCombatant =>
+  ({
+    isPC: false,
+    combatantId: 'm1',
+    creature: { abilities: { str: 10, dex, con: 10, int: 10, wis: 10, cha: 10 } },
+  }) as MonsterCombatant
+
+const pc = (dex?: number): PlayerCharacter =>
+  ({
+    isPC: true,
+    combatantId: 'p1',
+    abilities: dex == null ? undefined : { str: 10, dex, con: 10, int: 10, wis: 10, cha: 10 },
+  }) as PlayerCharacter
 
 const spell = (name: string, over: Partial<Spell> = {}): Spell => ({
   id: `srd-5.2:${name.toLowerCase()}`,
@@ -90,6 +105,33 @@ describe('spellEffectFor', () => {
       expect(effect.modifier).toBeNull() // reminder-only
       expect(effect.note).toBeTruthy()
     }
+  })
+
+  it('works out Mage Armor’s AC from the target’s Dex, falling back when unknown', () => {
+    const mageArmor = spell('Mage Armor', { duration: '8 hours', concentration: false })
+    const build = (target?: Combatant) =>
+      spellEffectFor(mageArmor)!.build({ spell: mageArmor, target })[0]
+
+    expect(build(monster(16)).note).toBe('AC 16 unarmored')
+    expect(build(pc(12)).note).toBe('AC 14 unarmored')
+    // Anonymous PCs and quick adds carry no ability scores.
+    expect(build(pc()).note).toBe('AC 13 + Dex')
+    expect(build().note).toBe('AC 13 + Dex')
+  })
+
+  it('offers Fly and Mind Blank as ally reminders', () => {
+    const fly = spell('Fly', { level: 3, duration: 'up to 10 minutes' })
+    const def = spellEffectFor(fly)!
+    expect(def.targeting).toBe('ally')
+    expect(def.multi).toBe(true) // a higher slot targets extra creatures
+    const [flying] = def.build({ spell: fly })
+    expect(flying.name).toBe('Fly')
+    expect(flying.duration).toEqual({ type: 'rounds', rounds: 100 })
+
+    const mb = spell('Mind Blank', { level: 8, duration: '24 hours', concentration: false })
+    const [blank] = spellEffectFor(mb)!.build({ spell: mb })
+    expect(blank.name).toBe('Mind Blank')
+    expect(blank.duration).toEqual({ type: 'manual' })
   })
 
   it('timedDuration converts minutes but falls back to manual for hours', () => {

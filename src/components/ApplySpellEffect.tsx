@@ -77,7 +77,7 @@ export function ApplySpellEffect({
     for (const c of targets) {
       if (!selected.has(c.combatantId)) continue
       // Build fresh per target so each effect carries its own unique id.
-      const effects = def.build({ source: caster?.combatantId, spell })
+      const effects = def.build({ source: caster?.combatantId, spell, target: c })
       dispatch({
         type: 'update',
         id: c.combatantId,
