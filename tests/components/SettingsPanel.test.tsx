@@ -38,4 +38,19 @@ describe('SettingsPanel', () => {
     fireEvent.click(screen.getByText('Core Rules 2024 (SRD 5.2.1)'))
     expect(onSet).not.toHaveBeenCalled()
   })
+
+  it('links to the importer extension on the Chrome Web Store', () => {
+    render(
+      <SettingsPanel
+        onClose={() => {}}
+        enabledLibraries={['srd-5.2']}
+        onSetEnabledLibraries={() => {}}
+      />,
+    )
+    const link = screen.getByRole('link', { name: /Download for Chrome/ })
+    expect(link.getAttribute('href')).toContain(
+      'chromewebstore.google.com/detail/openfray-importer/',
+    )
+    expect(link.getAttribute('target')).toBe('_blank')
+  })
 })

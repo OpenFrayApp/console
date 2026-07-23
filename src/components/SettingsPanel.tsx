@@ -10,6 +10,9 @@ import {
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
 
+const IMPORTER_URL =
+  'https://chromewebstore.google.com/detail/openfray-importer/cjooflanhdpfddpppllaelhlfpdinjfk'
+
 /**
  * App settings, available to every user (anonymous included). Settings persist in
  * `localStorage`, so the panel doesn't need an account. Today it holds the content
@@ -81,6 +84,38 @@ export function SettingsPanel({
                 </label>
               ))}
             </div>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Browser extension
+            </h3>
+            <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              OpenFray Importer turns a D&amp;D Beyond monster page into an OpenFray creature you
+              can import into your library — no retyping a stat block.
+            </p>
+            <a
+              href={IMPORTER_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="h-4 w-4"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download for Chrome
+            </a>
           </section>
         </div>
       </div>
