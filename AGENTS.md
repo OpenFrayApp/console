@@ -4,6 +4,10 @@ reasoning lives in the maintainer's working notes — `local/docs/PROJECT-PLAN.m
 and `local/docs/specs/` — which are **not committed**; everything a contributor
 needs to follow the rules is in this file.
 
+Its counterpart for words is [`STYLE.md`](./STYLE.md) — the writing style guide for
+every word we publish: the handbook, the marketing site, and the app's own labels
+and messages. **Read it before writing or changing any user-facing copy.**
+
 ---
 
 ## What OpenFray is
@@ -115,6 +119,8 @@ their builds into `dist/` for Cloudflare Pages.
 | `public/compendium/` | generated SRD / Tome of Beasts JSON the app fetches | —          |
 | `local/`             | maintainer working notes — **not committed**        | —          |
 
+`STYLE.md` at the root governs the copy in all three of them.
+
 `site/` and `docs/` are **npm workspaces**: one `npm install` at the root covers all
 three, and each still declares its own dependencies in its own `package.json`. There is
 one lockfile, at the root.
@@ -215,6 +221,10 @@ to.
   in testing can still be wrong (e.g. a data-isolation leak passes functional
   tests). Call out the risk and the reasoning.
 - **Match existing style**; run the linter/formatter before committing.
+- **All user-facing copy follows [`STYLE.md`](./STYLE.md)** — UI labels, buttons,
+  errors and empty states as much as the handbook and the marketing site. Renaming a
+  label in the app means updating the handbook page and its screenshots in the same
+  change.
 - **Sign off commits** with `git commit -s` (DCO; no CLA).
 - **License:** AGPL-3.0. The running app must expose a "Source" link to the repo
   (AGPL §13). New source files get the short AGPL header.

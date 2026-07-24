@@ -8,8 +8,9 @@ Before anything else, please read the one rule that matters most.
 ## The scope rule (read this first)
 
 **OpenFray is a fast scratchpad for combat, not a system of record.**
-It tracks what happens at the table — plus the reference a DM jots (a PC's stats,
-defenses, and character notes) — never the _rules engine_ behind a character.
+It tracks what happens at the table — plus the reference a GM jots (a player
+character's stats, defenses, and character notes) — never the _rules engine_ behind a
+character.
 
 Every contribution is measured against one question:
 
@@ -53,7 +54,10 @@ These come from the same spirit; please keep them intact:
 2. **Fork, branch, build.** Branch names like `feat/mass-save` or `fix/turn-order`.
 3. **Keep PRs focused.** One concern per PR; easier to review, faster to merge.
 4. **Match the stack.** TypeScript, the existing patterns, and the principles above.
-5. **Sign your commits (DCO).** Use `git commit -s`, which adds a `Signed-off-by:`
+   `AGENTS.md` is the source of truth for how we build here.
+5. **Follow the style guide for any words a user will read.** [`STYLE.md`](./STYLE.md)
+   covers the handbook, the marketing site, and the app's own labels and messages.
+6. **Sign your commits (DCO).** Use `git commit -s`, which adds a `Signed-off-by:`
    line certifying you have the right to submit the code under the project's
    license.
 
