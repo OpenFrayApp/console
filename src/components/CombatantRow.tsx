@@ -238,7 +238,7 @@ export function CombatantRow({
                 <EditableField
                   initial=""
                   onCommit={onHpInput}
-                  title="Set HP, or +N / −N"
+                  title="Set hit points, or type +5 or -8"
                   inputMode="numeric"
                   inputClassName="w-12 rounded border border-slate-300 bg-white px-1 text-right tabular-nums dark:border-slate-600 dark:bg-slate-800"
                 >

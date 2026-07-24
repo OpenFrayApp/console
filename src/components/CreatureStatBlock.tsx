@@ -758,7 +758,7 @@ export function CreatureStatBlock({
               value={hpValue}
               edit={
                 onHpInput
-                  ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' }
+                  ? { initial: '', onCommit: onHpInput, title: 'Set hit points, or type +5 or -8' }
                   : undefined
               }
             />
@@ -767,7 +767,11 @@ export function CreatureStatBlock({
               value={tmpValue}
               edit={
                 onTempInput
-                  ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }
+                  ? {
+                      initial: '',
+                      onCommit: onTempInput,
+                      title: 'Set temporary hit points, or type +5 or -8',
+                    }
                   : undefined
               }
             />

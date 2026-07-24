@@ -12,6 +12,24 @@ export interface ImportResult {
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !== ''
 
+/** Field names as the GM knows them — the raw keys mean nothing to a reader. */
+const FIELD_LABELS: Record<string, string> = {
+  name: 'a name',
+  size: 'a size',
+  type: 'a type',
+  ac: 'an armor class',
+  maxHp: 'hit points',
+  speed: 'a speed',
+  abilities: 'its six ability scores',
+  passivePerception: 'a passive Perception',
+}
+
+const listFields = (keys: string[]): string => {
+  const named = keys.map((k) => FIELD_LABELS[k] ?? k)
+  if (named.length === 1) return named[0]
+  return `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}`
+}
+
 /**
  * Parse pasted JSON (e.g. from the D&D Beyond importer) into a library Creature.
  * Validates only the fields the app can't render without; the rest of the shape is
@@ -24,10 +42,13 @@ export function parseImportedCreature(text: string): ImportResult {
   try {
     raw = JSON.parse(text)
   } catch {
-    return { error: 'That isn’t valid JSON.' }
+    return {
+      error:
+        'That text isn’t a creature. In the importer, click Copy JSON, then paste the whole thing here.',
+    }
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    return { error: 'Expected a single creature object.' }
+    return { error: 'Paste one creature at a time — this looks like something else.' }
   }
 
   const c = raw as Record<string, unknown>
@@ -41,11 +62,11 @@ export function parseImportedCreature(text: string): ImportResult {
   if (!isNum(c.maxHp)) missing.push('maxHp')
   if (typeof c.speed !== 'object' || c.speed === null) missing.push('speed')
   if (!abilities || ABILITIES.some((a) => !isNum(abilities[a]))) missing.push('abilities')
-  if (!senses || !isNum(senses.passivePerception)) missing.push('senses.passivePerception')
+  if (!senses || !isNum(senses.passivePerception)) missing.push('passivePerception')
 
   if (missing.length) {
     return {
-      error: `Missing or invalid field${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}.`,
+      error: `This creature is missing ${listFields(missing)}. Copy it again from the importer, or build it by hand instead.`,
     }
   }
 

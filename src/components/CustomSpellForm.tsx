@@ -269,7 +269,7 @@ export function CustomSpellForm({
               <input
                 value={d.classes}
                 onChange={(e) => patch({ classes: e.target.value })}
-                placeholder="Classes (comma-separated)"
+                placeholder="Classes, separated by commas"
                 aria-label="Classes"
                 className={FIELD}
               />

@@ -334,8 +334,8 @@ export function EffectModal({
                 </div>
                 {dur === 'save' && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    A monster rolls this automatically at the chosen moment; a player rolls their
-                    own.
+                    OpenFray rolls this for a creature at the chosen moment. A player rolls their
+                    own, and you record it.
                   </p>
                 )}
               </div>

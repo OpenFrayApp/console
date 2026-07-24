@@ -37,14 +37,14 @@ const renderWith = (leveling: 'xp' | 'milestone') =>
 describe('RecapScreen', () => {
   it('shows the XP earned tile for an XP campaign', () => {
     renderWith('xp')
-    expect(screen.getByText('XP earned')).toBeInTheDocument()
-    expect(screen.getByText('150 / player')).toBeInTheDocument()
+    expect(screen.getByText('Experience')).toBeInTheDocument()
+    expect(screen.getByText('150 per player')).toBeInTheDocument()
   })
 
   it('hides the XP tile for a milestone campaign, keeping the rest of the recap', () => {
     renderWith('milestone')
-    expect(screen.queryByText('XP earned')).toBeNull()
-    expect(screen.queryByText(/\/ player/)).toBeNull()
+    expect(screen.queryByText('Experience')).toBeNull()
+    expect(screen.queryByText(/per player/)).toBeNull()
     // The rest of the tallies still render.
     expect(screen.getByText('Rounds')).toBeInTheDocument()
   })

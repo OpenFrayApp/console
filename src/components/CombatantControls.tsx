@@ -158,7 +158,7 @@ export function CombatantControls({
                 if (e.key === 'Enter') startConc()
                 if (e.key === 'Escape') setConcInput(null)
               }}
-              placeholder="Spell / effect (optional)"
+              placeholder="Spell name (optional)"
               aria-label={`Concentration spell for ${name}`}
               className="w-36 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
             />

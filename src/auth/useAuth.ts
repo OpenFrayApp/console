@@ -33,9 +33,11 @@ const ANONYMOUS: AuthState = {
   user: null,
   loading: false,
   configured: false,
-  signInWithProvider: async () => ({ error: 'Sign-in is not configured yet.' }),
+  signInWithProvider: async () => ({
+    error: 'Signing in isn’t available on this copy of OpenFray.',
+  }),
   signOut: async () => {},
-  deleteAccount: async () => ({ error: 'Sign-in is not configured yet.' }),
+  deleteAccount: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),
 }
 
 export function useAuth(): AuthState {

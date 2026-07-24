@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithProvider = async (provider: OAuthProvider): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Sign-in is not configured yet.' }
+    if (!supabase) return { error: 'Signing in isn’t available on this copy of OpenFray.' }
     // Redirect-based flow: the browser navigates to the provider and returns to
     // the app, where supabase-js detects the session from the callback URL.
     // Return to the app's own path (origin + base, e.g. /console/), not the site
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const deleteAccount = async (): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Sign-in is not configured yet.' }
+    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
     // Self-delete can't use the admin API from the browser, so this calls a
     // security-definer SQL function (delete_account) that erases the caller's data
     // and auth row. On success we sign out — the session is already invalid.

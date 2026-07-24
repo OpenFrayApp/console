@@ -127,17 +127,23 @@ export function EncounterCleanup({
   const grey =
     'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
   const clearAll = () => {
-    if (window.confirm('Remove all combatants from the encounter?')) dispatch({ type: 'clearAll' })
+    if (
+      window.confirm('Remove everyone from the board and clear the game log? This can’t be undone.')
+    ) {
+      dispatch({ type: 'clearAll' })
+    }
   }
   const clearFoes = () => {
-    if (window.confirm('Remove all foes from the encounter?')) dispatch({ type: 'clearFoes' })
+    if (window.confirm('Remove every foe from the board? Your players stay where they are.')) {
+      dispatch({ type: 'clearFoes' })
+    }
   }
   return (
     <div className="flex items-center gap-1">
       <button
         type="button"
-        aria-label="Remove all combatants"
-        title="Remove all combatants"
+        aria-label="Remove everyone and clear the log"
+        title="Remove everyone and clear the log"
         disabled={!hasCombatants}
         onClick={clearAll}
         className={`${ICON_BTN} ${grey}`}
@@ -146,8 +152,8 @@ export function EncounterCleanup({
       </button>
       <button
         type="button"
-        aria-label="Remove all foes"
-        title="Remove all foes"
+        aria-label="Remove all foes, keep the players"
+        title="Remove all foes, keep the players"
         disabled={!hasFoes}
         onClick={clearFoes}
         className={`${ICON_BTN} ${grey}`}

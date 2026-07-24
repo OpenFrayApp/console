@@ -55,10 +55,11 @@ export function SettingsPanel({
         <div className="space-y-4">
           <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Content libraries
+              Rule sets
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              Choose which rules libraries appear in your combat console and compendium.
+              Tick the rule sets your table plays. They appear in the compendium and in the Add
+              creature list.
             </p>
             <div className="space-y-2">
               {LIBRARIES.map((lib) => (
@@ -91,8 +92,8 @@ export function SettingsPanel({
               Browser extension
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              OpenFray Importer turns a D&amp;D Beyond monster page into an OpenFray creature you
-              can import into your library — no retyping a stat block.
+              OpenFray Importer turns a D&amp;D Beyond creature page into an OpenFray creature you
+              can add to your library, so you never retype a stat block.
             </p>
             <a
               href={IMPORTER_URL}
@@ -114,7 +115,7 @@ export function SettingsPanel({
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download for Chrome
+              Get it for Chrome
             </a>
           </section>
         </div>

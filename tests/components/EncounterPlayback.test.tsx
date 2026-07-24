@@ -16,8 +16,8 @@ describe('EncounterPlayback', () => {
   it('shows Begin before combat (cleanup lives elsewhere)', () => {
     render(<EncounterPlayback started={false} paused={false} canBegin dispatch={() => {}} />)
     expect(screen.getByRole('button', { name: 'Begin' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Remove all foes' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Remove all combatants' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove all foes, keep the players' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove everyone and clear the log' })).toBeNull()
   })
 
   it('shows Pause and Stop once combat is running', () => {
@@ -52,21 +52,25 @@ describe('TurnControls', () => {
 describe('EncounterCleanup', () => {
   it('shows the skull and broom', () => {
     render(<EncounterCleanup hasCombatants hasFoes dispatch={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Remove all combatants' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove all foes' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Remove everyone and clear the log' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Remove all foes, keep the players' }),
+    ).toBeInTheDocument()
   })
 
   it('disables the skull with no combatants and the broom with no foes', () => {
     render(<EncounterCleanup hasCombatants={false} hasFoes={false} dispatch={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Remove all combatants' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Remove all foes' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Remove everyone and clear the log' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Remove all foes, keep the players' })).toBeDisabled()
   })
 
   it('clears all combatants after confirming', () => {
     const dispatch = vi.fn()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<EncounterCleanup hasCombatants hasFoes dispatch={dispatch} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Remove all combatants' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove everyone and clear the log' }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'clearAll' })
     vi.restoreAllMocks()
   })
@@ -75,7 +79,7 @@ describe('EncounterCleanup', () => {
     const dispatch = vi.fn()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<EncounterCleanup hasCombatants hasFoes dispatch={dispatch} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Remove all foes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove all foes, keep the players' }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'clearFoes' })
     vi.restoreAllMocks()
   })
@@ -84,8 +88,8 @@ describe('EncounterCleanup', () => {
     const dispatch = vi.fn()
     vi.spyOn(window, 'confirm').mockReturnValue(false)
     render(<EncounterCleanup hasCombatants hasFoes dispatch={dispatch} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Remove all combatants' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Remove all foes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove everyone and clear the log' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove all foes, keep the players' }))
     expect(dispatch).not.toHaveBeenCalled()
     vi.restoreAllMocks()
   })

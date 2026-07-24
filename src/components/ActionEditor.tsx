@@ -276,7 +276,7 @@ export function ActionEditor({
       <textarea
         value={action.text}
         onChange={(e) => set('text', e.target.value)}
-        placeholder="Prose (display only — never parsed for mechanics)"
+        placeholder="What it does, in your own words. Shown as written; the dice come from the fields above."
         aria-label={`${label} text`}
         rows={2}
         className={FIELD}

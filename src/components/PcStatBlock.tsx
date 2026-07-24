@@ -48,7 +48,7 @@ function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string
           if (e.key === 'Escape') setEditing(false)
         }}
         aria-label="GM notes"
-        placeholder="Markdown supported. Click away to save."
+        placeholder="Notes only you can see. Click away to save."
         className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800"
       />
     )
@@ -193,7 +193,7 @@ export function PcStatBlock({
               value={hpValue}
               edit={
                 onHpInput
-                  ? { initial: '', onCommit: onHpInput, title: 'Set HP, or +N / −N' }
+                  ? { initial: '', onCommit: onHpInput, title: 'Set hit points, or type +5 or -8' }
                   : undefined
               }
             />
@@ -202,7 +202,11 @@ export function PcStatBlock({
               value={tmpValue}
               edit={
                 onTempInput
-                  ? { initial: '', onCommit: onTempInput, title: 'Set temp HP, or +N / −N' }
+                  ? {
+                      initial: '',
+                      onCommit: onTempInput,
+                      title: 'Set temporary hit points, or type +5 or -8',
+                    }
                   : undefined
               }
             />
@@ -236,7 +240,7 @@ export function PcStatBlock({
 
       {(onEditDmNotes || dmNotes?.trim()) && (
         <div>
-          <h4 className={SECTION_HEADING}>GM Notes</h4>
+          <h4 className={SECTION_HEADING}>GM notes</h4>
           <DmNotes value={dmNotes} onCommit={onEditDmNotes} />
         </div>
       )}

@@ -11,9 +11,9 @@ afterEach(cleanup)
 describe('App', () => {
   it('shows the encounter console by default with view navigation', () => {
     render(<App />)
-    expect(screen.getByText('Add creature')).toBeInTheDocument()
-    expect(screen.getByText(/Add creatures to build the encounter/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Encounter' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Compendium' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add creature' })).toBeInTheDocument()
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show the fight' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show the compendium' })).toBeInTheDocument()
   })
 })

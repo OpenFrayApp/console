@@ -69,16 +69,18 @@ function CampaignList({
   gated,
   selectedId,
   onSelect,
+  emptyLabel,
 }: {
   campaigns: Campaign[]
   gated: boolean
   selectedId: string | null
   onSelect: (id: string) => void
+  emptyLabel: string
 }) {
   if (gated) {
     return (
       <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-        Sign in to create and manage campaigns.
+        Sign in to see your campaigns.
       </p>
     )
   }
@@ -108,7 +110,7 @@ function CampaignList({
           </li>
         ))}
         {campaigns.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No matches</li>
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
         )}
       </ul>
     </>
@@ -121,12 +123,14 @@ function PcList({
   gated,
   selectedId,
   onSelect,
+  emptyLabel,
 }: {
   pcs: RosterPc[]
   campaigns: Campaign[]
   gated: boolean
   selectedId: string | null
   onSelect: (id: string) => void
+  emptyLabel: string
 }) {
   const tag = (campaignId?: string | null): string => {
     const name = campaigns.find((c) => c.id === campaignId)?.name
@@ -135,7 +139,7 @@ function PcList({
   if (gated) {
     return (
       <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-        Sign in to build and reuse a party roster.
+        Sign in to see your characters.
       </p>
     )
   }
@@ -168,7 +172,7 @@ function PcList({
           </li>
         ))}
         {pcs.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No matches</li>
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
         )}
       </ul>
     </>
@@ -242,6 +246,7 @@ export function Compendium({
 }) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [query, setQuery] = useState('')
+  const searching = query.trim().length > 0
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -355,7 +360,11 @@ export function Compendium({
     setSelectedId(campaign.id)
   }
   const removeCampaign = (campaign: Campaign) => {
-    if (window.confirm(`Delete “${campaign.name}”?`)) {
+    if (
+      window.confirm(
+        `Delete the campaign “${campaign.name}”? Its house rules go with it, and this can’t be undone.`,
+      )
+    ) {
       if (selectedId === campaign.id) setSelectedId(null)
       onDeleteCampaign?.(campaign.id)
     }
@@ -369,7 +378,11 @@ export function Compendium({
     setSelectedId(pc.id)
   }
   const removePc = (pc: RosterPc) => {
-    if (window.confirm(`Delete “${pc.name}” from your roster?`)) {
+    if (
+      window.confirm(
+        `Delete “${pc.name}”? This can’t be undone. Anyone already on the board stays there.`,
+      )
+    ) {
       if (selectedId === pc.id) setSelectedId(null)
       onDeletePc?.(pc.id)
     }
@@ -384,7 +397,11 @@ export function Compendium({
     else onCreateCreature(creature)
   }
   const deleteCreature = (c: Creature) => {
-    if (window.confirm(`Delete “${c.name}” from your library?`)) {
+    if (
+      window.confirm(
+        `Delete “${c.name}” from your library? This can’t be undone. Copies already in a fight stay there.`,
+      )
+    ) {
       if (selectedId === c.id) setSelectedId(null)
       onDeleteCreature?.(c.id)
     }
@@ -400,7 +417,7 @@ export function Compendium({
     setSelectedId(spell.id)
   }
   const deleteSpell = (s: Spell) => {
-    if (window.confirm(`Delete “${s.name}” from your library?`)) {
+    if (window.confirm(`Delete “${s.name}” from your library? This can’t be undone.`)) {
       if (selectedId === s.id) setSelectedId(null)
       onDeleteSpell?.(s.id)
     }
@@ -440,6 +457,7 @@ export function Compendium({
             gated={createGated}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            emptyLabel={searching ? 'No campaigns match that search.' : 'No campaigns yet.'}
           />
         ) : tab === 'characters' ? (
           <PcList
@@ -448,6 +466,7 @@ export function Compendium({
             gated={createGated}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            emptyLabel={searching ? 'No characters match that search.' : 'No characters yet.'}
           />
         ) : loading ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
@@ -499,7 +518,11 @@ export function Compendium({
                 </li>
               ))}
               {entries.length === 0 && (
-                <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No matches</li>
+                <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
+                  {searching
+                    ? `No ${tab} match that search.`
+                    : `No ${tab} in the rule sets you have turned on.`}
+                </li>
               )}
             </ul>
           </>
@@ -511,8 +534,8 @@ export function Compendium({
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'characters'
-                ? 'Sign into your account to build a reusable party roster.'
-                : 'Sign into your account to create a campaign.'}
+                ? 'Sign in to save your players and drop them into any fight.'
+                : "Sign in to create campaigns and set your table's house rules."}
             </p>
             <button
               type="button"
@@ -625,15 +648,15 @@ export function Compendium({
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'creatures'
                 ? createGated
-                  ? 'Select a creature to view it, or sign into your account to create a custom one.'
-                  : 'Select a creature to view it, or create a custom one.'
+                  ? 'Pick a creature from the list to read its stat block, or sign in to build your own.'
+                  : 'Pick a creature from the list to read its stat block, or build your own.'
                 : tab === 'campaigns'
-                  ? 'Select a campaign to view it, or create a new one.'
+                  ? 'Pick a campaign from the list to see its house rules, or create one.'
                   : tab === 'characters'
-                    ? 'Select a player character to view it, or create one.'
+                    ? 'Pick a character from the list to see their details, or create one.'
                     : createGated
-                      ? 'Select a spell to view it, or sign into your account to create a custom one.'
-                      : 'Select a spell to view it, or create a custom one.'}
+                      ? 'Pick a spell from the list to read its card, or sign in to build your own.'
+                      : 'Pick a spell from the list to read its card, or build your own.'}
             </p>
             {tab === 'creatures' && (
               <div className="flex items-center gap-2">
@@ -650,7 +673,7 @@ export function Compendium({
                     onClick={startImport}
                     className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Import JSON
+                    Import a creature
                   </button>
                 )}
               </div>

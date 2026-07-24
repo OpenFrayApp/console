@@ -144,7 +144,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
             <input
               value={f.pp}
               onChange={set('pp')}
-              placeholder="Pass. Perc."
+              placeholder="Passive Perception"
               aria-label="Passive Perception"
               inputMode="numeric"
               {...NO_AUTOFILL}
@@ -153,7 +153,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
             <input
               value={f.speed}
               onChange={set('speed')}
-              placeholder="Speed (30, Climb 12)"
+              placeholder="Speed (30, climb 12)"
               aria-label="Speed"
               {...NO_AUTOFILL}
               className={FIELD}
@@ -162,13 +162,13 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
           <input
             value={f.languages}
             onChange={set('languages')}
-            placeholder="Languages (comma-separated)"
+            placeholder="Languages, separated by commas"
             aria-label="Languages"
             {...NO_AUTOFILL}
             className={FIELD}
           />
           <div className="space-y-1">
-            <p className={LABEL}>Defenses (comma-separated)</p>
+            <p className={LABEL}>Defenses, separated by commas</p>
             <input
               value={f.resistances}
               onChange={set('resistances')}

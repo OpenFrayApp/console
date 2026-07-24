@@ -57,7 +57,7 @@ const beginCombat = () => {
 }
 
 async function addGoblin() {
-  fireEvent.click(screen.getByText('Add creature'))
+  fireEvent.click(screen.getByRole('button', { name: 'Add creature' }))
   await waitFor(() => screen.getByText('Goblin'))
   fireEvent.click(screen.getByText('Goblin'))
 }
@@ -65,7 +65,7 @@ async function addGoblin() {
 async function addCreature(name: string) {
   // The picker stays open across picks, so only open it if it isn't already.
   if (!screen.queryByLabelText('Search creatures')) {
-    fireEvent.click(screen.getByText('Add creature'))
+    fireEvent.click(screen.getByRole('button', { name: 'Add creature' }))
   }
   await waitFor(() => screen.getByText(name))
   fireEvent.click(screen.getByText(name))
@@ -74,7 +74,7 @@ async function addCreature(name: string) {
 describe('Encounter flow', () => {
   it('starts empty with Begin disabled', () => {
     render(<App />)
-    expect(screen.getByText(/Add creatures to build the encounter/)).toBeInTheDocument()
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
     expect(begin()).toBeDisabled()
   })
 
@@ -118,7 +118,7 @@ describe('Encounter flow', () => {
     await addGoblin()
     // The tracker row and the stat block both have an HP editor; target the stat block.
     const center = container.querySelectorAll('section')[1]
-    fireEvent.click(center.querySelector('button[title^="Set HP"]') as HTMLElement)
+    fireEvent.click(center.querySelector('button[title^="Set hit points"]') as HTMLElement)
     const input = center.querySelector('input.w-14') as HTMLInputElement
     fireEvent.change(input, { target: { value: '-3' } })
     fireEvent.keyDown(input, { key: 'Enter' })

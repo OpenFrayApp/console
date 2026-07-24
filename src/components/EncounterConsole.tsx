@@ -159,7 +159,7 @@ export function EncounterConsole({
         'set' in parsed &&
         next < c.hp.temp &&
         !window.confirm(
-          `Temporary HP doesn't stack — you normally keep the higher value (now ${c.hp.temp}). Set it to ${next} anyway?`,
+          `Temporary hit points don't stack — you normally keep the higher number, which is ${c.hp.temp}. Set them to ${next} anyway?`,
         )
       ) {
         return
@@ -377,7 +377,8 @@ export function EncounterConsole({
         >
           {combatants.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Add creatures to build the encounter.
+              Nobody is on the board yet. Use <strong>Add creature</strong>, <strong>Add PC</strong>
+              , or <strong>Quick add</strong> at the top to fill it.
             </p>
           ) : started ? (
             // In combat: living in initiative order, the dead grouped below.
@@ -389,7 +390,7 @@ export function EncounterConsole({
           ) : (
             // Before combat there's no order yet, so group by kind.
             <>
-              {players.length > 0 && <GroupHeading>Players &amp; NPCs</GroupHeading>}
+              {players.length > 0 && <GroupHeading>Players and allies</GroupHeading>}
               {players.map(renderRow)}
               {creatures.length > 0 && <GroupHeading>Creatures</GroupHeading>}
               {creatures.map(renderRow)}
@@ -502,7 +503,7 @@ export function EncounterConsole({
           </div>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Add a combatant, then select it to see its stat block and actions.
+            Click anyone in the tracker to see their stat block and act on them.
           </p>
         )}
       </section>

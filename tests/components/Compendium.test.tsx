@@ -304,7 +304,7 @@ describe('Compendium', () => {
     render(<Compendium onCreateCreature={() => {}} createGated onGated={onGated} />)
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.click(screen.getByText('Characters'))
-    expect(screen.getByText(/Sign in to build and reuse a party roster/)).toBeInTheDocument()
+    expect(screen.getByText(/Sign in to save your players/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(onGated).toHaveBeenCalled()
   })
@@ -322,7 +322,7 @@ describe('Compendium', () => {
     )
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.click(screen.getByText('Campaigns'))
-    expect(screen.getByText(/Sign in to create and manage campaigns/)).toBeInTheDocument()
+    expect(screen.getByText(/Sign in to create campaigns/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(onGated).toHaveBeenCalled()

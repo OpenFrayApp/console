@@ -47,7 +47,7 @@ describe('PcStatBlock', () => {
     expect(screen.getByText('Personality')).toBeInTheDocument()
     expect(screen.getByText('Faith')).toBeInTheDocument()
     expect(screen.getByText('Lathander')).toBeInTheDocument()
-    expect(screen.getByText('GM Notes')).toBeInTheDocument()
+    expect(screen.getByText('GM notes')).toBeInTheDocument()
     expect(screen.getByText('Secretly the heir.')).toBeInTheDocument()
     expect(screen.getByText('Personality Traits')).toBeInTheDocument()
     expect(screen.getByText('Brave to a fault')).toBeInTheDocument()

@@ -74,11 +74,11 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {showXp && (
             <Stat
-              label="XP earned"
+              label="Experience"
               value={recap.totalXp.toLocaleString()}
               hint={
                 recap.xpPerPlayer != null
-                  ? `${recap.xpPerPlayer.toLocaleString()} / player`
+                  ? `${recap.xpPerPlayer.toLocaleString()} per player`
                   : undefined
               }
             />
@@ -97,7 +97,7 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
             <Stat label="Effects applied" value={recap.effectsApplied} />
           )}
           {recap.knockouts > 0 && (
-            <Stat label="Knockouts" value={recap.knockouts} hint="downed or slain" />
+            <Stat label="Knockouts" value={recap.knockouts} hint="downed or killed" />
           )}
         </div>
 
@@ -113,7 +113,7 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
                 </div>
                 <div className="mt-0.5 font-semibold">{a.label}</div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
-                  {a.amount.toLocaleString()} dmg
+                  {a.amount.toLocaleString()} damage
                 </div>
               </div>
             ))}
@@ -140,7 +140,7 @@ export function EndCombatPrompt({
         aria-label="End combat?"
         className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-800 dark:bg-slate-900"
       >
-        <h2 className="text-base font-semibold">All enemies defeated</h2>
+        <h2 className="text-base font-semibold">Every foe is down</h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
           End combat and see the recap?
         </p>

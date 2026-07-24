@@ -78,7 +78,7 @@ describe('RestControls', () => {
         showCounter={false}
       />,
     )
-    expect(screen.queryByText('2 SR')).toBeNull()
+    expect(screen.queryByText('2 short rests')).toBeNull()
     rerender(
       <RestControls
         combatants={combatants}
@@ -88,7 +88,7 @@ describe('RestControls', () => {
         showCounter
       />,
     )
-    expect(screen.getByText('2 SR')).toBeInTheDocument()
+    expect(screen.getByText('2 short rests')).toBeInTheDocument()
   })
 
   it('takes a long rest after confirming', () => {
@@ -140,7 +140,7 @@ describe('RestControls', () => {
     const dialog = screen.getByRole('dialog', { name: 'Short rest' })
     expect(within(dialog).queryByText('Goblin')).toBeNull()
     // +N heals from current (4 + 5 = 9).
-    fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), {
+    fireEvent.change(within(dialog).getByLabelText('New hit points for Thalia'), {
       target: { value: '+5' },
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Take short rest' }))
@@ -160,7 +160,7 @@ describe('RestControls', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Short rest' }))
     const dialog = screen.getByRole('dialog', { name: 'Short rest' })
-    fireEvent.change(within(dialog).getByLabelText('New HP for Thalia'), {
+    fireEvent.change(within(dialog).getByLabelText('New hit points for Thalia'), {
       target: { value: '12' },
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Take short rest' }))

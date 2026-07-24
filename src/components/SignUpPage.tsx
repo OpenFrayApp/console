@@ -56,27 +56,27 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className:
 
 const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
   {
-    title: 'Saved & synced',
-    body: 'Your in-progress fights persist to the cloud and follow you across devices — reopen mid-round next week.',
+    title: 'Saved and synced',
+    body: 'Your fight is saved as you play and follows you to your other devices. Close the laptop mid-round, pick it up next week.',
     icon: <path d="M21 12a9 9 0 1 1-6.219-8.56M21 3v6h-6" />,
   },
   {
     title: 'Custom creatures',
-    body: 'Build your own homebrew creatures with the full stat-block editor — anything the SRD leaves out.',
+    body: 'Build the creatures the books leave out, in a full stat-block editor, and keep them in your own library.',
     icon: (
       <path d="m14.5 17.5 4 4M11 3 8 6m0 0L3 11l3 3 5-5M8 6l3 3m6.5 1.5L21 7l-4-4-3.5 3.5m4 4-9 9-3-3 9-9" />
     ),
   },
   {
     title: 'Campaigns',
-    body: 'Run campaigns with their own edition and house rules — crit damage, surprise, creature HP — applied across your fights.',
+    body: "Set your table's house rules once — critical hit damage, surprise, creature hit points — and they apply to every fight.",
     icon: (
       <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     ),
   },
   {
-    title: 'Your party, kept',
-    body: 'The PCs you add stay with your encounters across sessions — no re-entering the table every week.',
+    title: 'Your characters, kept',
+    body: 'Build each player character once, then drop them into any fight. No retyping the party every week.',
     icon: (
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
     ),
@@ -130,22 +130,22 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
-            Keep browsing
+            Back to the console
           </button>
         </div>
 
         <div className="mt-10 grid flex-1 items-start gap-10 lg:grid-cols-[1fr_24rem]">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Save your table to the cloud.
+              Sign in to keep your game
             </h2>
             <p className="mt-2 max-w-xl text-slate-600 dark:text-slate-400">
-              OpenFray runs great without an account — SRD monsters, quick adds, your party, and the
-              dice are all free to use. Sign up to make it <em>yours</em>.
+              OpenFray works without an account: the built-in creatures, your players, the dice, and
+              the whole tracker. Signing in saves what you build so it's still there next session.
             </p>
             <p className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
               <span className="font-semibold">Free, and always will be.</span> No ads, no paywall,
-              no premium tier — OpenFray is a passion project for the table.
+              no paid tier.
             </p>
             <ul className="mt-8 grid gap-5 sm:grid-cols-2">
               {BENEFITS.map((b) => (
@@ -172,9 +172,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Sign in to save your table
-            </h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Sign in</h3>
             <div className="mt-4 space-y-3">
               {PROVIDERS.map((p) => (
                 <button
@@ -191,8 +189,8 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
               {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
             </div>
             <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-              Free forever — no ads, no paywall. New here? Signing in creates your account
-              automatically. Your data stays private to it.
+              New here? Signing in creates your account for you. Nothing you've already done in this
+              tab is lost, and only you can see what you save.
             </p>
           </div>
         </div>

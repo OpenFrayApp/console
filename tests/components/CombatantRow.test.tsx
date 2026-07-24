@@ -199,7 +199,7 @@ describe('CombatantRow', () => {
         onHpInput={onHpInput}
       />,
     )
-    fireEvent.click(screen.getByTitle('Set HP, or +N / −N'))
+    fireEvent.click(screen.getByTitle('Set hit points, or type +5 or -8'))
     const input = container.querySelector('input') as HTMLInputElement
     fireEvent.change(input, { target: { value: '-5' } })
     fireEvent.keyDown(input, { key: 'Enter' })

@@ -189,8 +189,8 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
         type="button"
         onClick={() => onChange('encounter')}
         aria-current={view === 'encounter' ? 'page' : undefined}
-        aria-label="Encounter"
-        title="Encounter"
+        aria-label="Show the fight"
+        title="Show the fight"
         className={cell(view === 'encounter')}
       >
         <SwordIcon />
@@ -199,8 +199,8 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
         type="button"
         onClick={() => onChange('compendium')}
         aria-current={view === 'compendium' ? 'page' : undefined}
-        aria-label="Compendium"
-        title="Compendium"
+        aria-label="Show the compendium"
+        title="Show the compendium"
         className={`border-l border-slate-300 dark:border-slate-700 ${cell(view === 'compendium')}`}
       >
         <BookIcon />

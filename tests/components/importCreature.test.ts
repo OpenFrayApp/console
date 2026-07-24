@@ -37,21 +37,21 @@ describe('parseImportedCreature', () => {
   })
 
   it('rejects invalid JSON', () => {
-    expect(parseImportedCreature('{ not json').error).toMatch(/valid JSON/i)
+    expect(parseImportedCreature('{ not json').error).toMatch(/isn’t a creature/i)
   })
 
   it('rejects a non-object (array)', () => {
-    expect(parseImportedCreature('[]').error).toMatch(/single creature/i)
+    expect(parseImportedCreature('[]').error).toMatch(/one creature at a time/i)
   })
 
-  it('reports the missing required fields', () => {
+  it('names the missing fields the way the GM knows them', () => {
     const partial = { ...valid } as Record<string, unknown>
     delete partial.ac
     delete partial.abilities
     const { creature, error } = parseImportedCreature(JSON.stringify(partial))
     expect(creature).toBeUndefined()
-    expect(error).toMatch(/ac/)
-    expect(error).toMatch(/abilities/)
+    expect(error).toMatch(/armor class/)
+    expect(error).toMatch(/ability scores/)
   })
 
   it('drops an unrecognized edition rather than passing it through', () => {

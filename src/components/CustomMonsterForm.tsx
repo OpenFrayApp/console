@@ -409,7 +409,7 @@ export function CustomMonsterForm({
                     onChange={(e) =>
                       patch({ senses: { ...d.senses, passivePerception: e.target.value } })
                     }
-                    placeholder="Passive Perc."
+                    placeholder="Passive Perception"
                     aria-label="Passive Perception"
                     inputMode="numeric"
                     className={FIELD}
@@ -457,12 +457,12 @@ export function CustomMonsterForm({
                   className={FIELD}
                 />
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Languages are comma-separated.
+                  Separate languages with commas.
                 </p>
               </Section>
 
               <Section title="Defenses">
-                <p className={LABEL}>Comma-separated</p>
+                <p className={LABEL}>Separate each with a comma</p>
                 <input
                   value={d.resistances}
                   onChange={(e) => patch({ resistances: e.target.value })}

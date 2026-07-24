@@ -38,7 +38,10 @@ export function ImportCreatureModal({
   const submit = () => {
     const result = parseImportedCreature(text)
     if (result.error || !result.creature) {
-      setError(result.error ?? 'Could not import that creature.')
+      setError(
+        result.error ??
+          "That doesn't look like an OpenFray creature. Copy it again from the importer and paste the whole thing.",
+      )
       return
     }
     onImport(result.creature)
@@ -57,7 +60,7 @@ export function ImportCreatureModal({
         className="my-auto w-full max-w-lg rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-          <h2 className="text-lg font-semibold">Import creature JSON</h2>
+          <h2 className="text-lg font-semibold">Import a creature</h2>
           <button
             type="button"
             onClick={onClose}
@@ -70,8 +73,8 @@ export function ImportCreatureModal({
 
         <div className="space-y-3 p-4">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Paste an OpenFray Creature JSON. It’s saved to your library as an editable custom
-            creature.
+            Paste what the OpenFray Importer copied for you. The creature is saved to your library,
+            where you can edit it like any you built yourself.
           </p>
           <textarea
             value={text}

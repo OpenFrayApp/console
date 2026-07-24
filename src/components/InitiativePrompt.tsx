@@ -145,7 +145,7 @@ export function InitiativePrompt({
         className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900"
       >
         <div className="mb-1 flex items-start justify-between gap-3">
-          <h3 className="text-base font-semibold">Roll Initiative</h3>
+          <h3 className="text-base font-semibold">Roll initiative</h3>
           <button
             type="button"
             onClick={onCancel}
@@ -155,12 +155,13 @@ export function InitiativePrompt({
           </button>
         </div>
         <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-          Players are blank — enter each roll, or leave blank to roll d20 + modifier. Toggle{' '}
-          <span className="text-amber-600 dark:text-amber-400">⚠</span> to mark a combatant
-          surprised; leave them off for an ordinary fight.
+          Creatures are rolled for you. Type what each player rolled, or leave a box empty and
+          OpenFray rolls for them. Click{' '}
+          <span className="text-amber-600 dark:text-amber-400">⚠</span> beside a name to mark that
+          character surprised.
         </p>
         <div className="flex flex-col gap-4 sm:flex-row">
-          {column(allies, 'Players & NPCs', 0)}
+          {column(allies, 'Players and allies', 0)}
           {column(foes, 'Creatures', allies.length)}
         </div>
         <button

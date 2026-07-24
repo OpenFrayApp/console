@@ -22,7 +22,7 @@ const ABILITY_LABEL: Record<Ability, string> = {
 }
 const SPEED_KEYS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const
 const SENSE_KEYS = [
-  { key: 'passivePerception', label: 'Passive Perception', placeholder: 'Passive Perc.' },
+  { key: 'passivePerception', label: 'Passive Perception', placeholder: 'Passive Perception' },
   { key: 'darkvision', label: 'Darkvision', placeholder: 'Darkvision' },
   { key: 'blindsight', label: 'Blindsight', placeholder: 'Blindsight' },
   { key: 'tremorsense', label: 'Tremorsense', placeholder: 'Tremorsense' },
@@ -481,13 +481,13 @@ export function PcFormModal({
               className={FIELD}
             />
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Languages are comma-separated. Passive Perception defaults to 10 + your Wisdom
+              Separate languages with commas. Passive Perception defaults to 10 + your Wisdom
               modifier.
             </p>
           </Section>
 
           <Section title="Defenses">
-            <p className={LABEL}>Comma-separated</p>
+            <p className={LABEL}>Separate each with a comma</p>
             <input
               value={d.resistances}
               onChange={(e) => patch({ resistances: e.target.value })}
@@ -563,7 +563,7 @@ export function PcFormModal({
               />
             </label>
             <label className="block space-y-1">
-              <span className={LABEL}>GM Notes</span>
+              <span className={LABEL}>GM notes</span>
               <textarea
                 value={d.dmNotes}
                 onChange={(e) => patch({ dmNotes: e.target.value })}

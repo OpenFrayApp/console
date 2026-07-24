@@ -19,7 +19,7 @@ describe('SettingsPanel', () => {
       />,
     )
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy()
-    expect(screen.getByText('Content libraries')).toBeTruthy()
+    expect(screen.getByText('Rule sets')).toBeTruthy()
 
     fireEvent.click(screen.getByText('Tome of Beasts 3 (Kobold Press)'))
     expect(onSet).toHaveBeenCalledWith(['srd-5.2', 'kobold-press-tob3'])
@@ -47,7 +47,7 @@ describe('SettingsPanel', () => {
         onSetEnabledLibraries={() => {}}
       />,
     )
-    const link = screen.getByRole('link', { name: /Download for Chrome/ })
+    const link = screen.getByRole('link', { name: /Get it for Chrome/ })
     expect(link.getAttribute('href')).toContain(
       'chromewebstore.google.com/detail/openfray-importer/',
     )

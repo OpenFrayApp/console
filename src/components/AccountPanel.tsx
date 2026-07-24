@@ -90,12 +90,13 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
                 <>
                   via{' '}
                   <span className="font-medium text-slate-900 dark:text-slate-100">{provider}</span>
-                  . To change your email or password, manage them in your {provider} account.
+                  . Change your email or password in your {provider} account — OpenFray never sees
+                  them.
                 </>
               ) : (
                 <>
-                  via your identity provider. To change your email or password, manage them with
-                  that provider.
+                  via the service you signed in with. Change your email or password there — OpenFray
+                  never sees them.
                 </>
               )}
             </p>
@@ -113,8 +114,9 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
               Delete account
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              Permanently deletes your account and <strong>all your data</strong> — encounters,
-              custom creatures, campaigns, and saved players. This is immediate and can't be undone.
+              Deletes your account and <strong>everything in it</strong>: your fights, your
+              creatures and spells, your campaigns, and your characters. It happens straight away
+              and can't be undone.
             </p>
             <form onSubmit={submitDelete} className="space-y-2">
               <label className="block space-y-1">

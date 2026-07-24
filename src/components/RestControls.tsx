@@ -114,12 +114,12 @@ function ShortRestModal({
 
         <div className="max-h-[60vh] space-y-2 overflow-auto p-4">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Enter each character's new HP — a number sets it, <code>+N</code> heals by that much.
-            Blank leaves them unchanged.
+            Type each character's new hit points. A number sets the total, <code>+5</code> heals by
+            that much. Leave a box empty and that character is left alone.
           </p>
           {combatants.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              No player characters or friendly NPCs to rest.
+              Nobody on your side is on the board yet. Add your players first.
             </p>
           ) : (
             combatants.map((c) => (
@@ -136,8 +136,8 @@ function ShortRestModal({
                   onChange={(e) =>
                     setValues((prev) => ({ ...prev, [c.combatantId]: e.target.value }))
                   }
-                  placeholder="+N or #"
-                  aria-label={`New HP for ${label(c)}`}
+                  placeholder="24 or +5"
+                  aria-label={`New hit points for ${label(c)}`}
                   inputMode="numeric"
                   autoComplete="off"
                   data-1p-ignore="true"
@@ -191,7 +191,10 @@ export function RestControls({
   const friendly = combatants.filter((c) => !isFoe(c))
   const longRest = () => {
     if (
-      window.confirm('Take a long rest? All player characters and friendly NPCs return to full HP.')
+      window.confirm(
+        'Take a long rest? Everyone on your side returns to full hit points, concentration ends, ' +
+          'and effects lasting less than eight hours are cleared.',
+      )
     ) {
       dispatch({ type: 'longRest' })
     }
@@ -234,7 +237,7 @@ export function RestControls({
           title="Short rests taken since the last long rest"
           className="text-xs tabular-nums text-slate-500 dark:text-slate-400"
         >
-          {shortRests} SR
+          {shortRests} short {shortRests === 1 ? 'rest' : 'rests'}
         </span>
       )}
       {open && (
