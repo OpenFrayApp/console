@@ -6,6 +6,7 @@ import {
   CRIT_OPTIONS,
   EDITION_OPTIONS,
   HP_OPTIONS,
+  LEVELING_OPTIONS,
   SURPRISE_OPTIONS,
   TIEBREAK_OPTIONS,
   labelOf,
@@ -49,6 +50,7 @@ export function CampaignCard({
         <Row label="Surprise round" value={labelOf(SURPRISE_OPTIONS, rules.surprise)} />
         <Row label="Creature HP" value={labelOf(HP_OPTIONS, rules.hp)} />
         <Row label="Initiative ties" value={labelOf(TIEBREAK_OPTIONS, rules.initiativeTiebreak)} />
+        <Row label="Level up" value={labelOf(LEVELING_OPTIONS, rules.leveling ?? 'xp')} />
       </dl>
 
       <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-200 pt-2 dark:border-slate-800">

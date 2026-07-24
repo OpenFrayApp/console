@@ -238,6 +238,58 @@ describe('encounterReducer', () => {
     e = encounterReducer(e, { type: 'renameLog', from: 'Goblin', to: 'Snik' })
     expect(e.log[0].message).toBe('Snik: Bite')
   })
+
+  describe('endConcentration', () => {
+    // A concentration spell's effects live on its targets, so ending it has to sweep
+    // the whole board — otherwise a broken Bless leaves badges on three PCs.
+    const sustained = (source: string) => ({
+      ...condition('Blinded', { source }),
+      concentration: true,
+    })
+
+    const board = () => {
+      const caster = {
+        ...monster('caster', 10),
+        concentration: { spell: 'Bless', saveDc: 13, round: 1 },
+      }
+      const t1 = { ...monster('t1', 5), effects: [sustained('caster')] }
+      const t2 = {
+        ...monster('t2', 4),
+        effects: [sustained('caster'), condition('Prone', { source: 'other' })],
+      }
+      return withCombatants(caster, t1, t2)
+    }
+
+    it('clears the caster’s sustained effects from every target', () => {
+      const e = encounterReducer(board(), { type: 'endConcentration', id: 'caster' })
+      const at = (id: string) => e.combatants.find((c) => c.combatantId === id)!
+      expect(at('caster').concentration).toBeNull()
+      expect(at('t1').effects).toEqual([])
+      // An unrelated condition on the same row survives.
+      expect(at('t2').effects.map((x) => x.name)).toEqual(['Prone'])
+    })
+
+    it('leaves effects from another caster, and non-concentration effects, alone', () => {
+      let e = board()
+      e = encounterReducer(e, {
+        type: 'update',
+        id: 't1',
+        update: (c) => ({
+          ...c,
+          effects: [...c.effects, condition('Poisoned', { source: 'other' })],
+        }),
+      })
+      e = encounterReducer(e, { type: 'endConcentration', id: 'other' })
+      const t1 = e.combatants.find((c) => c.combatantId === 't1')!
+      // 'other' concentrates on nothing here, so only its *flagged* effects would go.
+      expect(t1.effects.map((x) => x.name)).toEqual(['Blinded', 'Poisoned'])
+    })
+
+    it('logs the end of concentration', () => {
+      const e = encounterReducer(board(), { type: 'endConcentration', id: 'caster' })
+      expect(e.log.some((l) => l.message.includes('concentration ends'))).toBe(true)
+    })
+  })
 })
 
 describe('encounter game-log events', () => {

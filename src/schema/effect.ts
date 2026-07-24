@@ -90,6 +90,16 @@ export interface Effect {
    * active — e.g. a Surprised creature under the 2014 rule, skipped on round 1.
    */
   skipsTurn?: boolean
+  /**
+   * Set when the effect exists only while `source` concentrates on the spell that
+   * made it. Ending that concentration clears it from every target.
+   */
+  concentration?: boolean
   /** Always shown to the GM as a plain reminder. */
   note?: string
+  /**
+   * The source's own wording for how long this lasts ("8 hours", "Until dispelled"),
+   * kept for effects the clock can't tick. Display-only — nothing derives from it.
+   */
+  durationNote?: string
 }

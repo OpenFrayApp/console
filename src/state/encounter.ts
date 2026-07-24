@@ -4,7 +4,7 @@
 import type { Combatant } from '../schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { InitiativeTiebreak } from '../schema/campaign.ts'
-import { beginEncounter, nextTurn, sortByInitiative } from '../combat/initiative.ts'
+import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { survivesLongRest } from '../combat/effects.ts'
 import { setCurrentHp } from '../combat/resources.ts'
@@ -24,9 +24,13 @@ export type EncounterAction =
   | { type: 'resume' }
   | { type: 'stop' }
   | { type: 'nextTurn' }
+  /** Step back to the previous turn — a mis-click correction, not an undo of its ticks. */
+  | { type: 'prevTurn' }
   | { type: 'add'; combatant: Combatant; tiebreak?: InitiativeTiebreak }
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
+  /** End `id`'s concentration and clear the effects it was sustaining, board-wide. */
+  | { type: 'endConcentration'; id: string }
   /** Append a game-log entry; the reducer stamps its id + current round. */
   | { type: 'log'; entry: NewLogEntry }
   /** Rewrite a name across existing log entries (when a combatant is renamed). */
@@ -227,6 +231,23 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       return withLogs(next, entries, next.round)
     }
 
+    case 'prevTurn': {
+      const prev = previousTurn(state)
+      const active = prev.combatants[prev.activeIndex]
+      if (!active || active.combatantId === state.combatants[state.activeIndex]?.combatantId) {
+        return prev
+      }
+      const entries: NewLogEntry[] = []
+      if (prev.round < state.round)
+        entries.push({ category: 'turn', message: `Back to round ${prev.round}` })
+      entries.push({
+        category: 'turn',
+        message: `Back to ${combatantLabel(active)}'s turn`,
+        sourceId: active.combatantId,
+      })
+      return withLogs(prev, entries, prev.round)
+    }
+
     case 'add': {
       const keepActive = activeId(state)
       const combatants = sortByInitiative([...state.combatants, action.combatant], action.tiebreak)
@@ -259,6 +280,22 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
             : state.combatStats,
       }
       return before && after ? withLogs(next, diffCombatantLogs(before, after)) : next
+    }
+
+    // Concentration is what sustains a spell's effects, so ending it has to clear
+    // them from every target — not just the caster's own row.
+    case 'endConcentration': {
+      const combatants = state.combatants.map((c) => {
+        const effects = c.effects.filter((e) => !(e.concentration && e.source === action.id))
+        const dropped = effects.length !== c.effects.length
+        const ending = c.combatantId === action.id && c.concentration !== null
+        if (!dropped && !ending) return c
+        return { ...c, effects, concentration: ending ? null : c.concentration }
+      })
+      const logs = state.combatants.flatMap((before, i) =>
+        combatants[i] === before ? [] : diffCombatantLogs(before, combatants[i]),
+      )
+      return withLogs({ ...state, combatants }, logs)
     }
 
     case 'recordDamage':

@@ -2,7 +2,13 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Edition } from '../schema/primitives.ts'
-import type { CritRule, HpMethod, InitiativeTiebreak, SurpriseRule } from '../schema/campaign.ts'
+import type {
+  CritRule,
+  HpMethod,
+  InitiativeTiebreak,
+  LevelingMethod,
+  SurpriseRule,
+} from '../schema/campaign.ts'
 
 /** A selectable option: the stored value and its human label. */
 export interface Option<T extends string> {
@@ -37,6 +43,11 @@ export const TIEBREAK_OPTIONS: Option<InitiativeTiebreak>[] = [
   { value: 'dex', label: 'Higher Dexterity' },
   { value: 'pcs-first', label: 'Players first' },
   { value: 'manual', label: 'Manual order' },
+]
+
+export const LEVELING_OPTIONS: Option<LevelingMethod>[] = [
+  { value: 'xp', label: 'Experience points (XP)' },
+  { value: 'milestone', label: 'Milestone' },
 ]
 
 /** The human label for a stored value, falling back to the raw value if unknown. */

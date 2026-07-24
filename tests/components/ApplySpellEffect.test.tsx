@@ -76,4 +76,37 @@ describe('ApplySpellEffect', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
     expect(dispatch).not.toHaveBeenCalled()
   })
+
+  it('applies a self-only spell to its caster with no button to press', () => {
+    const dispatch = vi.fn()
+    const drake = pc('m1', 'Brass Drake')
+    const speak = { ...spell('Speak with Animals'), concentration: false, duration: '10 minutes' }
+    render(
+      <ApplySpellEffect
+        spell={speak}
+        caster={drake}
+        combatants={[drake, pc('p1', 'Thalia')]}
+        dispatch={dispatch}
+      />,
+    )
+
+    // No chooser and no confirm step — it landed on cast.
+    expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
+    expect(screen.getByText(/Applied to Brass Drake/)).toBeInTheDocument()
+
+    const action = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
+    expect(action.id).toBe('m1')
+    expect((action.update(drake) as Combatant).effects[0].name).toBe('Speak with Animals')
+    // Once only — a re-render must not stack a second copy.
+    expect(dispatch.mock.calls.filter((c) => c[0].type === 'update')).toHaveLength(1)
+  })
+
+  it('still lets the GM pick a recipient for a self spell cast with no caster', () => {
+    const dispatch = vi.fn()
+    const speak = { ...spell('Speak with Animals'), concentration: false, duration: '10 minutes' }
+    render(<ApplySpellEffect spell={speak} combatants={[pc('p1', 'Thalia')]} dispatch={dispatch} />)
+    // The app can't know who cast it, so nothing is applied until the GM says.
+    expect(dispatch).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Apply effect' })).toBeInTheDocument()
+  })
 })

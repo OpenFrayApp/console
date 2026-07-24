@@ -97,9 +97,11 @@ describe('MassSavePanel', () => {
     expect(screen.getByText('Concentration — DC 12')).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Broken'))
+    // Ending concentration is board-wide (it also clears the effects it sustained),
+    // so it dispatches its own action rather than an update to the caster's row.
     const breakCall = dispatch.mock.calls
       .map((c) => c[0])
-      .find((a) => a.type === 'update' && a.id === 'a' && a.update(conc()).concentration === null)
+      .find((a) => a.type === 'endConcentration' && a.id === 'a')
     expect(breakCall).toBeTruthy()
   })
 })

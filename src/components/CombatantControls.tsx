@@ -10,14 +10,15 @@ import {
   markDeathSaveSuccess,
   rollDeathSave,
 } from '../combat/deathsaves.ts'
-import { breakConcentration, startConcentration } from '../combat/concentration.ts'
+import { startConcentration } from '../combat/concentration.ts'
 import {
   legendaryResistanceLeft,
   setInLair,
   spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { saveBonus } from '../combat/masssave.ts'
-import { groupSaveEnds, type SaveEndsGroup } from '../combat/saveEnds.ts'
+import { describeDuration } from '../combat/effects.ts'
+import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect, EffectDuration } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
@@ -37,11 +38,14 @@ const BTN =
  */
 export function CombatantControls({
   combatant,
+  combatants,
   round,
   dispatch,
   onRoll,
 }: {
   combatant: Combatant
+  /** The rest of the board, to name whoever caused a source-relative effect. */
+  combatants?: Combatant[]
   /** Current round, recorded when concentration starts. */
   round: number
   dispatch: (action: EncounterAction) => void
@@ -78,15 +82,6 @@ export function CombatantControls({
       update: (c) => ({ ...c, effects: c.effects.filter((e) => e.id !== effectId) }),
     })
 
-  const removeEffects = (ids: string[]) => {
-    const set = new Set(ids)
-    dispatch({
-      type: 'update',
-      id,
-      update: (c) => ({ ...c, effects: c.effects.filter((e) => !set.has(e.id)) }),
-    })
-  }
-
   // Called when the GM changes the shared duration after already applying some effects this session.
   const setEffectsDuration = (ids: string[], duration: EffectDuration) => {
     const set = new Set(ids)
@@ -100,17 +95,23 @@ export function CombatantControls({
     })
   }
 
-  // Grouped by their shared save so a single roll ends every effect that passes (not one die per effect).
-  const saveEndsGroups = groupSaveEnds(combatant.effects)
+  // Alphabetical, so a row keeps its place as effects come and go.
+  const sortedEffects = [...combatant.effects].sort((a, b) => a.name.localeCompare(b.name))
 
-  // Monster escape save (PCs roll their own). One die per group; every effect whose DC it beats ends together.
-  const rollSaveEnds = (group: SaveEndsGroup) => {
+  /** Name of whoever caused an effect, for a source-relative duration. */
+  const sourceName = (e: Effect): string | undefined => {
+    const src = combatants?.find((c) => c.combatantId === e.source)
+    return src && (src.isPC ? src.name : src.label)
+  }
+
+  // Monster escape save (PCs roll their own). One die per effect — effects that share
+  // an ability and DC came from different sources, so one roll can't end both.
+  const rollSaveEnds = (save: SaveEnds) => {
     if (combatant.isPC) return
-    const bonus = saveBonus(combatant, group.ability) ?? 0
+    const bonus = saveBonus(combatant, save.ability) ?? 0
     const result = roll(`1d20${signed(bonus)}`, { kind: 'save' })
-    const names = group.effects.map((e) => e.name).join(', ')
-    onRoll(`${name}: ${names} (${group.ability.toUpperCase()} save)`, result)
-    if (result.total >= group.dc) removeEffects(group.effects.map((e) => e.id))
+    onRoll(`${name}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
+    if (result.total >= save.dc) removeEffect(save.effect.id)
   }
 
   return (
@@ -124,10 +125,21 @@ export function CombatantControls({
           onUpdateDuration={setEffectsDuration}
         />
 
+        {combatant.effects.length > 0 && (
+          <button
+            type="button"
+            onClick={() => apply((c) => ({ ...c, effects: [] }))}
+            title={`Clear every effect on ${name}`}
+            className={BTN}
+          >
+            Clear effects
+          </button>
+        )}
+
         {combatant.concentration ? (
           <button
             type="button"
-            onClick={() => apply(breakConcentration)}
+            onClick={() => dispatch({ type: 'endConcentration', id: combatant.combatantId })}
             className="rounded border border-violet-400 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
           >
             End concentration
@@ -232,39 +244,56 @@ export function CombatantControls({
         )}
       </div>
 
-      {saveEndsGroups.length > 0 && (
-        <div className="space-y-1.5 rounded-md border border-amber-300/70 bg-amber-50/70 p-2 dark:border-amber-800/60 dark:bg-amber-950/30">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-            Save ends
+      {combatant.effects.length > 0 && (
+        <div className="rounded-md border border-slate-300/70 bg-slate-50/70 px-2 py-1.5 dark:border-slate-700/60 dark:bg-slate-900/40">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Applied effects
           </p>
-          {saveEndsGroups.map((group) => (
-            <div
-              key={`${group.ability}|${group.dc}|${group.when}`}
-              className="flex flex-wrap items-center gap-2 text-xs"
-            >
-              <span className="font-medium text-slate-700 dark:text-slate-200">
-                {group.effects.map((e) => e.name).join(', ')}
-                {` — ${group.ability.toUpperCase()} save DC ${group.dc}`}
-                <span className="font-normal text-slate-500 dark:text-slate-400">
-                  {' '}
-                  ({group.when === 'startOfTurn' ? 'start of turn' : 'end of turn'})
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => removeEffects(group.effects.map((e) => e.id))}
-                title="Mark the save as passed and clear these effects"
-                className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
-              >
-                Saved — clear
-              </button>
-              {!combatant.isPC && (
-                <button type="button" onClick={() => rollSaveEnds(group)} className={BTN}>
-                  Roll save
-                </button>
-              )}
-            </div>
-          ))}
+          {/* Two columns — what it is, and what to do about it — so the buttons line up. */}
+          <ul className="divide-y divide-slate-200/80 dark:divide-slate-800/80">
+            {sortedEffects.map((e) => {
+              const save = saveEndsOf(e)
+              return (
+                <li key={e.id} className="flex items-center justify-between gap-2 py-1 text-xs">
+                  <span className="min-w-0 text-slate-700 dark:text-slate-200">
+                    <span className="font-medium">{e.name}</span>{' '}
+                    <span className="text-slate-500 dark:text-slate-400">
+                      ·{' '}
+                      {save ? (
+                        <>
+                          {save.ability.toUpperCase()} save DC {save.dc} (
+                          <abbr
+                            title={save.when === 'startOfTurn' ? 'Start of turn' : 'End of turn'}
+                            className="cursor-help underline decoration-dotted underline-offset-2"
+                          >
+                            {save.when === 'startOfTurn' ? 'SoT' : 'EoT'}
+                          </abbr>
+                          )
+                        </>
+                      ) : (
+                        describeDuration(e, sourceName(e))
+                      )}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    {save && !combatant.isPC && (
+                      <button type="button" onClick={() => rollSaveEnds(save)} className={BTN}>
+                        Roll save
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeEffect(e.id)}
+                      title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
+                      className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+                    >
+                      Clear
+                    </button>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       )}
     </div>

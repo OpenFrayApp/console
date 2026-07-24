@@ -37,6 +37,14 @@ describe('crDetail', () => {
   it('is empty without CR/XP', () => {
     expect(crDetail({})).toBe('')
   })
+
+  it('drops XP for a milestone campaign, keeping PB in the reference view', () => {
+    // Combat view has only XP, so hiding it leaves nothing.
+    expect(crDetail(dragon, { combat: true, showXp: false })).toBe('')
+    // Reference view keeps the proficiency bonus.
+    expect(crDetail(dragon, { showXp: false })).toBe(' (PB +5)')
+    expect(crDetail({ cr: 1, xp: 200 }, { showXp: false })).toBe(' (PB +2)')
+  })
 })
 
 describe('legendaryPreamble', () => {

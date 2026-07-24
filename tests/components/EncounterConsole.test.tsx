@@ -168,12 +168,12 @@ describe('Encounter flow', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
 
-    // The controls now remind the GM a save is owed, with its ability + DC.
-    expect(screen.getByText('Save ends')).toBeInTheDocument()
-    expect(screen.getByText(/Frightened.*DEX save DC 15/)).toBeInTheDocument()
+    // The badge on the row stays short; the Applied effects list carries the save.
+    expect(screen.getByText('Applied effects')).toBeInTheDocument()
+    expect(screen.getByText(/DEX save DC 15/)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Saved — clear' }))
-    expect(screen.queryByText('Save ends')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(screen.queryByText('Applied effects')).toBeNull()
   })
 
   it('auto-rolls a monster save-ends effect at the end of its turn', async () => {
@@ -192,7 +192,7 @@ describe('Encounter flow', () => {
     expect(screen.getByText(/Goblin: Frightened \(DEX save\)/)).toBeInTheDocument()
   })
 
-  it('rolls one save for conditions that share it', async () => {
+  it('rolls a separate save for each condition, even at the same DC', async () => {
     render(<App />)
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
@@ -203,12 +203,13 @@ describe('Encounter flow', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Restrained' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
 
-    // The controls list both conditions on one save-ends line, not two.
-    expect(screen.getByText(/Frightened, Restrained — DEX save DC 12/)).toBeInTheDocument()
+    // Each gets its own row in Applied effects — a shared DC isn't a shared roll.
+    expect(screen.getAllByText(/DEX save DC 12/)).toHaveLength(2)
 
     beginCombat()
     fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
-    // One combined roll for both, not a separate die each.
-    expect(screen.getByText(/Goblin: Frightened, Restrained \(DEX save\)/)).toBeInTheDocument()
+    // One die each, logged separately.
+    expect(screen.getByText(/Goblin: Frightened \(DEX save\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Goblin: Restrained \(DEX save\)/)).toBeInTheDocument()
   })
 })

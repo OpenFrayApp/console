@@ -2,8 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Effect } from '../schema/effect.ts'
-import { badgeLabel } from '../combat/effects.ts'
-import type { SaveEndsGroup } from '../combat/saveEnds.ts'
+import { badgeLabel, describeDuration } from '../combat/effects.ts'
 import { resolveCondition } from '../compendium/conditions.ts'
 import { HoverCondition } from './HoverCondition.tsx'
 
@@ -33,16 +32,14 @@ function toneFor(icon: string | undefined): string {
   }
 }
 
-/** A single Effect rendered as a badge; clickable to remove when `onRemove` is set. */
+/**
+ * A single Effect as a badge; clickable to remove when `onRemove` is set. The badge
+ * carries the label only — how long it lasts, and any escape save, live in the
+ * Applied effects list beside the stat block, so a crowded row stays readable.
+ */
 export function EffectBadge({ effect, onRemove }: { effect: Effect; onRemove?: () => void }) {
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(effect.icon)}`
-  // Surface a save-ends effect's escape DC so the GM is reminded a save is owed.
-  const save = effect.duration.type === 'saveEnds' ? effect.duration.save : null
-  const saveTag = save ? (
-    <span className="opacity-70" title={`${save.ability.toUpperCase()} save DC ${save.dc} ends it`}>
-      · save DC {save.dc}
-    </span>
-  ) : null
+  const title = `${effect.name} — ${describeDuration(effect)}`
   if (onRemove) {
     return (
       <button
@@ -52,56 +49,13 @@ export function EffectBadge({ effect, onRemove }: { effect: Effect; onRemove?: (
         className={`${className} hover:opacity-80`}
       >
         <EffectLabel effect={effect} />
-        {saveTag}
         <span aria-hidden>×</span>
       </button>
     )
   }
   return (
-    <span title={effect.name} className={className}>
+    <span title={title} className={className}>
       <EffectLabel effect={effect} />
-      {saveTag}
-    </span>
-  )
-}
-
-/** Several save-ends conditions that share one save, shown as a single badge (they
- *  roll and end together). Removing it clears the whole group. */
-export function SaveEndsBadge({
-  group,
-  onRemove,
-}: {
-  group: SaveEndsGroup
-  onRemove?: () => void
-}) {
-  const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor('condition')}`
-  const names = group.effects.map((e) => e.name).join(', ')
-  const tag = (
-    <span
-      className="opacity-70"
-      title={`${group.ability.toUpperCase()} save DC ${group.dc} ends them`}
-    >
-      · save DC {group.dc}
-    </span>
-  )
-  if (onRemove) {
-    return (
-      <button
-        type="button"
-        onClick={onRemove}
-        title={`Remove ${names}`}
-        className={`${className} hover:opacity-80`}
-      >
-        {names}
-        {tag}
-        <span aria-hidden>×</span>
-      </button>
-    )
-  }
-  return (
-    <span title={names} className={className}>
-      {names}
-      {tag}
     </span>
   )
 }

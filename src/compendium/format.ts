@@ -52,19 +52,21 @@ export function proficiencyBonus(cr: number): number {
  * The parenthetical after the CR. The **reference** view (compendium) gives the
  * full SRD detail — "(XP 15,000, or 18,000 in lair; PB +5)". The **combat** view is
  * stripped to just the XP that applies right now (the lair value when `inLair`); PB
- * isn't needed at the table.
+ * isn't needed at the table. A milestone campaign passes `showXp: false` to drop the
+ * XP figure entirely (the combat view then shows nothing; the reference view keeps PB).
  */
 export function crDetail(
   c: { cr?: number; xp?: number; xpLair?: number },
-  opts: { inLair?: boolean; combat?: boolean } = {},
+  opts: { inLair?: boolean; combat?: boolean; showXp?: boolean } = {},
 ): string {
-  const { inLair = false, combat = false } = opts
+  const { inLair = false, combat = false, showXp = true } = opts
   if (combat) {
+    if (!showXp) return ''
     const xp = inLair && c.xpLair != null ? c.xpLair : c.xp
     return xp != null ? ` (XP ${xp.toLocaleString('en-US')})` : ''
   }
   const parts: string[] = []
-  if (c.xp != null) {
+  if (showXp && c.xp != null) {
     parts.push(
       `XP ${c.xp.toLocaleString('en-US')}` +
         (c.xpLair != null ? `, or ${c.xpLair.toLocaleString('en-US')} in lair` : ''),

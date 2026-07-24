@@ -6,6 +6,7 @@ import {
   advantageAgainst,
   badgeLabel,
   condition,
+  describeDuration,
   disadvantageOn,
   flatBonus,
   isReminderOnly,
@@ -170,5 +171,50 @@ describe('helpers', () => {
     const b = condition('Prone')
     expect(a.id).toBeTruthy()
     expect(a.id).not.toBe(b.id)
+  })
+
+  it('describeDuration says how each effect ends', () => {
+    expect(
+      describeDuration(
+        condition('Paralyzed', {
+          duration: { type: 'saveEnds', save: { ability: 'wis', dc: 10 } },
+        }),
+      ),
+    ).toBe('WIS save DC 10 (EoT)')
+    expect(
+      describeDuration(
+        condition('Restrained', {
+          duration: { type: 'saveEnds', save: { ability: 'str', dc: 13 }, when: 'startOfTurn' },
+        }),
+      ),
+    ).toBe('STR save DC 13 (SoT)')
+    // A rounds effect reports what's left — it ticks down each round.
+    expect(
+      describeDuration(flatBonus('Bless', '1d4', { duration: { type: 'rounds', rounds: 10 } })),
+    ).toBe('10 rounds left')
+    expect(describeDuration(condition('Prone', { duration: { type: 'rounds', rounds: 1 } }))).toBe(
+      '1 round left',
+    )
+    // Past ten minutes of rounds the count stops meaning anything — say it in time.
+    expect(
+      describeDuration(condition('Prone', { duration: { type: 'rounds', rounds: 600 } })),
+    ).toBe('1 hour left')
+    expect(
+      describeDuration(condition('Prone', { duration: { type: 'rounds', rounds: 4800 } })),
+    ).toBe('8 hours left')
+    expect(
+      describeDuration(condition('Prone', { duration: { type: 'rounds', rounds: 300 } })),
+    ).toBe('30 minutes left')
+    expect(describeDuration(condition('Prone', { duration: { type: 'consumeOnRoll' } }))).toBe(
+      'until its next roll',
+    )
+    expect(
+      describeDuration(condition('Prone', { duration: { type: 'untilSourceTurn' } }), 'Archmage'),
+    ).toBe('until Archmage’s next turn')
+    // Hours don't convert to rounds, so the source's own wording is kept for them.
+    expect(
+      describeDuration({ ...reminder('Disguise Self', 'Disguised'), durationNote: '1 hour' }),
+    ).toBe('1 hour')
+    expect(describeDuration(condition('Prone'))).toBe('until removed')
   })
 })

@@ -32,8 +32,6 @@ import { isFoe } from '../combat/combatant.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { durationRounds } from '../combat/casting.ts'
 import {
-  applyConcentrationResult,
-  breakConcentration,
   concentrationPromptDC,
   rollConcentrationCheck,
   startConcentration,
@@ -45,7 +43,7 @@ import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
-import { EncounterPlayback, EncounterCleanup } from './EncounterPlayback.tsx'
+import { EncounterPlayback, EncounterCleanup, TurnControls } from './EncounterPlayback.tsx'
 import { GameLog, type OnNote, type OnRoll } from './GameLog.tsx'
 import { titleCase } from '../compendium/format.ts'
 
@@ -192,10 +190,8 @@ export function EncounterConsole({
     }
   }
 
-  const resolveConcentration = (update?: (c: Combatant) => Combatant) => {
-    if (update && concPrompt) {
-      dispatch({ type: 'update', id: concPrompt.id, update })
-    }
+  const resolveConcentration = (broke = false) => {
+    if (broke && concPrompt) dispatch({ type: 'endConcentration', id: concPrompt.id })
     setConcPrompt(null)
   }
 
@@ -344,9 +340,13 @@ export function EncounterConsole({
       <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800">
         <div className="flex items-center justify-between gap-2">
           {started ? (
-            <h2 className={COLUMN_HEADING}>
-              {`Round ${encounter.round}${paused ? ' · paused' : ''}`}
-            </h2>
+            // The turn stepper lives with the round it moves through.
+            <div className="flex items-center gap-2">
+              <h2 className={COLUMN_HEADING}>
+                {`Round ${encounter.round}${paused ? ' · paused' : ''}`}
+              </h2>
+              {!paused && <TurnControls dispatch={dispatch} onNextTurn={onNextTurn} />}
+            </div>
           ) : (
             <EncounterCleanup
               hasCombatants={combatants.length > 0}
@@ -360,7 +360,6 @@ export function EncounterConsole({
             canBegin={combatants.length > 0}
             dispatch={dispatch}
             onBegin={onBegin}
-            onNextTurn={onNextTurn}
             onStop={onStop}
           />
         </div>
@@ -518,20 +517,21 @@ export function EncounterConsole({
                   dc={concPrompt.dc}
                   canRoll={!selected.isPC}
                   onMaintain={() => resolveConcentration()}
-                  onBreak={() => resolveConcentration(breakConcentration)}
+                  onBreak={() => resolveConcentration(true)}
                   onRoll={
                     selected.isPC
                       ? undefined
                       : () => {
                           const check = rollConcentrationCheck(selected, concPrompt.damage)
                           onRoll(`${selected.label}: concentration`, check.roll, check.applied)
-                          resolveConcentration((c) => applyConcentrationResult(c, check.maintained))
+                          resolveConcentration(!check.maintained)
                         }
                   }
                 />
               )}
               <CombatantControls
                 combatant={selected}
+                combatants={encounter.combatants}
                 round={encounter.round}
                 dispatch={dispatch}
                 onRoll={onRoll}

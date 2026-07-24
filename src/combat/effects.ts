@@ -187,6 +187,41 @@ export function isReminderOnly(effect: Effect): boolean {
   return effect.modifier === null
 }
 
+/**
+ * How this effect ends, in words — the right-hand "Applied effects" list carries
+ * this so the badge on the row can stay short. A `rounds` effect reports what is
+ * left (it ticks down each round); anything the clock can't tick falls back to the
+ * source's own wording ("8 hours"), then to "until removed".
+ */
+export function describeDuration(effect: Effect, sourceName?: string): string {
+  const d = effect.duration
+  switch (d.type) {
+    case 'saveEnds': {
+      if (!d.save) return 'save ends'
+      const when = d.when === 'startOfTurn' ? 'SoT' : 'EoT'
+      return `${d.save.ability.toUpperCase()} save DC ${d.save.dc} (${when})`
+    }
+    case 'rounds': {
+      const rounds = d.rounds ?? 0
+      // Rounds are what a GM counts in a fight, but past ten minutes of them the
+      // number stops meaning anything — say it in time instead. (6 seconds a round.)
+      if (rounds > 100) {
+        const minutes = Math.round(rounds / 10)
+        if (minutes < 60) return `${minutes} minutes left`
+        const hours = Math.round(minutes / 60)
+        return `${hours} hour${hours === 1 ? '' : 's'} left`
+      }
+      return `${rounds} round${rounds === 1 ? '' : 's'} left`
+    }
+    case 'consumeOnRoll':
+      return 'until its next roll'
+    case 'untilSourceTurn':
+      return sourceName ? `until ${sourceName}’s next turn` : 'until its source’s next turn'
+    default:
+      return effect.durationNote ?? 'until removed'
+  }
+}
+
 /** Rounds in a long rest's 8 hours: 8 × 3600 ÷ 6s = 4800. */
 const LONG_REST_ROUNDS = 4800
 

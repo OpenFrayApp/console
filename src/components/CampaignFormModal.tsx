@@ -8,6 +8,7 @@ import {
   CRIT_OPTIONS,
   EDITION_OPTIONS,
   HP_OPTIONS,
+  LEVELING_OPTIONS,
   SURPRISE_OPTIONS,
   TIEBREAK_OPTIONS,
   type Option,
@@ -172,6 +173,12 @@ export function CampaignFormModal({
               value={rules.initiativeTiebreak}
               onChange={(v) => setRule('initiativeTiebreak', v)}
               options={TIEBREAK_OPTIONS}
+            />
+            <SelectField
+              label="Level up"
+              value={rules.leveling ?? 'xp'}
+              onChange={(v) => setRule('leveling', v)}
+              options={LEVELING_OPTIONS}
             />
           </div>
         </div>

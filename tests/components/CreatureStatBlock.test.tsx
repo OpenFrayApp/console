@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature, SpellRef } from '../../src/schema/creature.ts'
 import { CreatureStatBlock } from '../../src/components/CreatureStatBlock.tsx'
+import { CampaignRulesContext } from '../../src/state/campaignRules.ts'
+import { DEFAULT_CAMPAIGN_RULES } from '../../src/schema/campaign.ts'
 
 const GOBLIN: Creature = {
   id: 'srd-5.2:goblin',
@@ -73,6 +75,27 @@ describe('CreatureStatBlock', () => {
     expect(screen.getByText('HP (3d6)')).toBeInTheDocument()
     expect(screen.getByText('Init')).toBeInTheDocument()
     expect(container.textContent).toContain('10/10')
+  })
+
+  it('hides XP in the combat view under a milestone campaign', () => {
+    // Combat view = live HP passed; the header then shows only XP, so it disappears.
+    render(
+      <CampaignRulesContext.Provider value={{ ...DEFAULT_CAMPAIGN_RULES, leveling: 'milestone' }}>
+        <CreatureStatBlock creature={GOBLIN} hp={{ current: 10, max: 10, temp: 0 }} />
+      </CampaignRulesContext.Provider>,
+    )
+    expect(screen.getByText(/Small Humanoid · CR 1\/4/)).toBeInTheDocument()
+    expect(screen.queryByText(/XP/)).toBeNull()
+  })
+
+  it('always shows XP in the compendium view, whatever the campaign uses', () => {
+    // Reference view = no live HP. The setting must not reach it.
+    render(
+      <CampaignRulesContext.Provider value={{ ...DEFAULT_CAMPAIGN_RULES, leveling: 'milestone' }}>
+        <CreatureStatBlock creature={GOBLIN} />
+      </CampaignRulesContext.Provider>,
+    )
+    expect(screen.getByText(/Small Humanoid · CR 1\/4 \(XP 50; PB \+2\)/)).toBeInTheDocument()
   })
 
   it('tints current HP by wound tier when live combat HP is given', () => {

@@ -19,6 +19,8 @@ import type {
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import { hpTierOf } from '../combat/resources.ts'
+import { isAutoLabel } from '../combat/combatant.ts'
+import { useCampaignRules } from '../state/campaignRules.ts'
 import {
   capitalizeSegments,
   crDetail,
@@ -695,6 +697,11 @@ export function CreatureStatBlock({
   onDelete?: () => void
 }) {
   const displayName = label ?? creature.name
+  // A milestone campaign hides XP in the combat view (and the recap). The compendium
+  // is a reference — it always shows everything, whatever the campaign uses.
+  const inCombat = hp != null
+  const milestone = useCampaignRules().leveling === 'milestone'
+  const showXp = !inCombat || !milestone
   // Legendary Resistance gets its own section (counter header + trait text); pull its
   // trait out of the plain Traits list so it isn't shown twice.
   const lrTrait = creature.traits?.find((t) => /^Legendary Resistance/i.test(t.name))
@@ -731,13 +738,13 @@ export function CreatureStatBlock({
       <StatHeader
         name={displayName}
         onRename={onRename}
-        originalName={label && label !== creature.name ? creature.name : undefined}
+        originalName={label && !isAutoLabel(label, creature.name) ? creature.name : undefined}
         subtitle={
           <>
             {[creature.size, titleCaseWords(creature.type)].filter(Boolean).join(' ')}
             {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR{' '}
             {formatCr(creature.cr)}
-            {crDetail(creature, { inLair, combat: hp != null })}
+            {crDetail(creature, { inLair, combat: inCombat, showXp })}
           </>
         }
         legendary={creature.legendaryActions != null}

@@ -4,7 +4,11 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { EncounterPlayback, EncounterCleanup } from '../../src/components/EncounterPlayback.tsx'
+import {
+  EncounterPlayback,
+  EncounterCleanup,
+  TurnControls,
+} from '../../src/components/EncounterPlayback.tsx'
 
 afterEach(cleanup)
 
@@ -16,10 +20,32 @@ describe('EncounterPlayback', () => {
     expect(screen.queryByRole('button', { name: 'Remove all combatants' })).toBeNull()
   })
 
-  it('shows Next turn once combat is running', () => {
+  it('shows Pause and Stop once combat is running', () => {
     render(<EncounterPlayback started paused={false} canBegin dispatch={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Next turn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Begin' })).toBeNull()
+    // Stepping through turns lives with the round heading, not here.
+    expect(screen.queryByRole('button', { name: 'Next turn' })).toBeNull()
+  })
+})
+
+describe('TurnControls', () => {
+  it('steps forward and back', () => {
+    const dispatch = vi.fn()
+    render(<TurnControls dispatch={dispatch} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Previous turn' }))
+    expect(dispatch.mock.calls.map((c) => c[0].type)).toEqual(['nextTurn', 'prevTurn'])
+  })
+
+  it('lets the caller override Next turn (to move the selection too)', () => {
+    const dispatch = vi.fn()
+    const onNextTurn = vi.fn()
+    render(<TurnControls dispatch={dispatch} onNextTurn={onNextTurn} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
+    expect(onNextTurn).toHaveBeenCalled()
+    expect(dispatch).not.toHaveBeenCalled()
   })
 })
 

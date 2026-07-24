@@ -18,7 +18,18 @@ describe('EffectBadge', () => {
   it('falls back to the name and keeps a title fallback for touch', () => {
     render(<EffectBadge effect={condition('Stunned')} />)
     expect(screen.getByText('Stunned')).toBeInTheDocument()
-    expect(screen.getByTitle('Stunned')).toBeInTheDocument()
+    // The badge stays short; the tooltip carries how it ends.
+    expect(screen.getByTitle('Stunned — until removed')).toBeInTheDocument()
+  })
+
+  it('keeps the escape save off the badge — it belongs in Applied effects', () => {
+    const save = condition('Paralyzed', {
+      duration: { type: 'saveEnds', save: { ability: 'wis', dc: 15 } },
+    })
+    render(<EffectBadge effect={save} />)
+    expect(screen.getByText('Paralyzed')).toBeInTheDocument()
+    expect(screen.queryByText(/save DC/)).toBeNull()
+    expect(screen.getByTitle('Paralyzed — WIS save DC 15 (EoT)')).toBeInTheDocument()
   })
 
   it('previews the condition rules on hover', () => {

@@ -19,6 +19,7 @@ import {
 } from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ActionResolver } from './ActionResolver.tsx'
+import { isSupportSpell } from '../combat/spellEffects.ts'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
@@ -203,7 +204,9 @@ export function CastSpellPanel({
   // caster seeds the save DC / spell attack bonus from its spellcasting; otherwise the
   // GM supplies them. Magical effect is pre-checked for saves.
   const spellcasting = caster && !caster.isPC ? caster.creature.spellcasting : undefined
-  const action = spellAction(spell, { saveDc: spellcasting?.saveDc, toHit: spellcasting?.toHit })
+  const action = isSupportSpell(spell)
+    ? null
+    : spellAction(spell, { saveDc: spellcasting?.saveDc, toHit: spellcasting?.toHit })
   if (action) {
     return (
       <ActionResolver
@@ -228,7 +231,7 @@ export function CastSpellPanel({
       subtitle={`${levelText(spell.level)} · ${spell.school}${caster ? ` · ${caster.isPC ? caster.name : caster.label}` : ''}`}
       onClose={reset}
     >
-      {spell.mechanics ? (
+      {spell.mechanics && !isSupportSpell(spell) ? (
         <div className="space-y-3">
           <SpellResolution
             spell={spell}

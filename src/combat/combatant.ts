@@ -19,6 +19,25 @@ export function isFoe(c: Combatant): boolean {
   return c.isPC ? c.side === 'foe' : true
 }
 
+/**
+ * The label for the Nth copy of a creature on the board: "Ghoul", then "Ghoul 2".
+ * Auto-numbering is disambiguation, not a name the GM chose — see `isAutoLabel`.
+ */
+export function autoLabel(name: string, alreadyOnBoard: number): string {
+  return alreadyOnBoard > 0 ? `${name} ${alreadyOnBoard + 1}` : name
+}
+
+/**
+ * Whether a label is just the auto-numbering rather than a GM rename. A renamed
+ * combatant shows its original name alongside ("Snik (Goblin)"); "Goblin 2" is the
+ * same creature with a number, so showing "Goblin 2 (Goblin)" is noise.
+ */
+export function isAutoLabel(label: string, creatureName: string): boolean {
+  if (label === creatureName) return true
+  const escaped = creatureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^${escaped} \\d+$`).test(label)
+}
+
 export interface InstantiateOptions {
   combatantId: string
   initiative: number

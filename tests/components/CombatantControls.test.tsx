@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { CombatantControls } from '../../src/components/CombatantControls.tsx'
+import { condition } from '../../src/combat/effects.ts'
 
 function creature(): Creature {
   return {
@@ -107,5 +108,71 @@ describe('CombatantControls', () => {
     const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
     const updated = call?.update(monster())
     expect(updated?.concentration).toEqual({ spell: 'Hold Person', saveDc: 0, round: 3 })
+  })
+
+  describe('applied effects', () => {
+    const withEffects = (): MonsterCombatant => ({
+      ...monster(),
+      effects: [
+        condition('Prone'),
+        condition('Paralyzed', {
+          source: 'caster',
+          duration: { type: 'saveEnds', save: { ability: 'wis', dc: 15 } },
+        }),
+      ],
+    })
+
+    it('lists each effect with how it ends, alphabetically', () => {
+      render(
+        <CombatantControls
+          combatant={withEffects()}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+        />,
+      )
+      const rows = screen.getAllByRole('listitem').map((li) => li.textContent)
+      expect(rows[0]).toContain('Paralyzed')
+      expect(rows[0]).toContain('WIS save DC 15')
+      expect(rows[1]).toContain('Prone')
+      expect(rows[1]).toContain('until removed')
+    })
+
+    it('rolls one save per effect, not one for the whole list', () => {
+      render(
+        <CombatantControls
+          combatant={withEffects()}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+        />,
+      )
+      // Only the save-ends effect offers a roll; Prone has nothing to roll against.
+      expect(screen.getAllByRole('button', { name: 'Roll save' })).toHaveLength(1)
+      expect(screen.getAllByRole('button', { name: 'Clear' })).toHaveLength(2)
+    })
+
+    it('clears every effect at once from the controls', () => {
+      const dispatch = vi.fn()
+      render(
+        <CombatantControls
+          combatant={withEffects()}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Clear effects' }))
+      const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
+      expect(call.update(withEffects()).effects).toEqual([])
+    })
+
+    it('offers nothing to clear when there are no effects', () => {
+      render(
+        <CombatantControls combatant={monster()} round={1} dispatch={vi.fn()} onRoll={() => {}} />,
+      )
+      expect(screen.queryByRole('button', { name: 'Clear effects' })).toBeNull()
+      expect(screen.queryByText('Applied effects')).toBeNull()
+    })
   })
 })

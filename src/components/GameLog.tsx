@@ -241,21 +241,36 @@ export function GameLogModal({
       subtitle={`${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} this fight`}
       onClose={onClose}
     >
-      {present.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {chip('all', 'All')}
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {present.length > 0 && chip('all', 'All')}
           {present.map((c) => chip(c, CATEGORY_LABEL[c]))}
         </div>
-      )}
+        {entries.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              onClear()
+              onClose()
+            }}
+            className="shrink-0 text-xs text-slate-500 hover:underline dark:text-slate-400"
+          >
+            Clear log
+          </button>
+        )}
+      </div>
 
       {groups.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Nothing logged yet.</p>
       ) : (
         groups.map(([round, items]) => (
           <div key={round} className="mb-3">
-            <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-              {round === 0 ? 'Setup' : `Round ${round}`}
-            </h4>
+            {/* Round 0 is pre-combat setup — the entries speak for themselves. */}
+            {round > 0 && (
+              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                Round {round}
+              </h4>
+            )}
             <ul className="space-y-1.5">
               {items.map((entry) => (
                 <LogLine key={entry.id} entry={entry} />
@@ -263,21 +278,6 @@ export function GameLogModal({
             </ul>
           </div>
         ))
-      )}
-
-      {entries.length > 0 && (
-        <div className="mt-2 border-t border-slate-200 pt-2 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={() => {
-              onClear()
-              onClose()
-            }}
-            className="text-xs text-slate-500 hover:underline dark:text-slate-400"
-          >
-            Clear log
-          </button>
-        </div>
       )}
     </Modal>
   )

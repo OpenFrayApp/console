@@ -15,12 +15,7 @@ import {
   rollSave,
   type SaveResult,
 } from '../combat/masssave.ts'
-import {
-  applyConcentrationResult,
-  breakConcentration,
-  concentrationPromptDC,
-  rollConcentrationCheck,
-} from '../combat/concentration.ts'
+import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { ConditionChips } from './ActionResolver.tsx'
 import type { OnRoll } from './GameLog.tsx'
@@ -134,8 +129,8 @@ export function GroupSaveForm({
     else onClose()
   }
 
-  const resolveConcentration = (combatantId: string, update?: (c: Combatant) => Combatant) => {
-    if (update) dispatch({ type: 'update', id: combatantId, update })
+  const resolveConcentration = (combatantId: string, broke = false) => {
+    if (broke) dispatch({ type: 'endConcentration', id: combatantId })
     setPending((prev) => {
       const next = prev.filter((p) => p.combatant.combatantId !== combatantId)
       if (next.length === 0) onClose()
@@ -146,9 +141,7 @@ export function GroupSaveForm({
   const rollConcentration = (p: ConcPrompt) => {
     const check = rollConcentrationCheck(p.combatant, p.damage)
     onRoll?.(`${nameOf(p.combatant)}: concentration`, check.roll, check.applied)
-    resolveConcentration(p.combatant.combatantId, (c) =>
-      applyConcentrationResult(c, check.maintained),
-    )
+    resolveConcentration(p.combatant.combatantId, !check.maintained)
   }
 
   const resolved = Object.keys(rows).length > 0
@@ -183,7 +176,7 @@ export function GroupSaveForm({
                 dc={p.dc}
                 canRoll={!p.combatant.isPC}
                 onMaintain={() => resolveConcentration(p.combatant.combatantId)}
-                onBreak={() => resolveConcentration(p.combatant.combatantId, breakConcentration)}
+                onBreak={() => resolveConcentration(p.combatant.combatantId, true)}
                 onRoll={p.combatant.isPC ? undefined : () => rollConcentration(p)}
               />
             </li>

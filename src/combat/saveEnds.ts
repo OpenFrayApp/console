@@ -5,28 +5,25 @@ import type { Ability } from '../schema/primitives.ts'
 import type { Effect } from '../schema/effect.ts'
 
 /**
- * Save-ends effects that share one saving throw — same ability, DC, and timing —
- * are resolved with a single roll, not one per effect. Conditions applied together
- * (e.g. a spell that imposes two) carry the same save, so they group and end as one.
+ * Save-ends effects each get their own saving throw. Two effects that happen to
+ * share an ability and DC came from different sources — one die can't end both, so
+ * they are never rolled together.
  */
-export interface SaveEndsGroup {
+export interface SaveEnds {
+  effect: Effect
   ability: Ability
   dc: number
   when: 'startOfTurn' | 'endOfTurn'
-  effects: Effect[]
 }
 
-/** Group a combatant's save-ends effects by their shared save (ability + DC + timing). */
-export function groupSaveEnds(effects: Effect[]): SaveEndsGroup[] {
-  const groups = new Map<string, SaveEndsGroup>()
-  for (const e of effects) {
-    if (e.duration.type !== 'saveEnds' || !e.duration.save) continue
-    const { ability, dc } = e.duration.save
-    const when = e.duration.when ?? 'endOfTurn'
-    const key = `${ability}|${dc}|${when}`
-    const group = groups.get(key)
-    if (group) group.effects.push(e)
-    else groups.set(key, { ability, dc, when, effects: [e] })
-  }
-  return [...groups.values()]
+/** The escape save an effect carries, or null when nothing ends it that way. */
+export function saveEndsOf(effect: Effect): SaveEnds | null {
+  const d = effect.duration
+  if (d.type !== 'saveEnds' || !d.save) return null
+  return { effect, ability: d.save.ability, dc: d.save.dc, when: d.when ?? 'endOfTurn' }
+}
+
+/** Every save-ends effect on a combatant, each with its own save. */
+export function saveEndsEffects(effects: Effect[]): SaveEnds[] {
+  return effects.map(saveEndsOf).filter((s): s is SaveEnds => s !== null)
 }

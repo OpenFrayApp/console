@@ -85,6 +85,29 @@ export function beginEncounter(e: Encounter, tiebreak: InitiativeTiebreak = 'dex
   }
 }
 
+/**
+ * Step the turn pointer back to the previous taker, wrapping into the previous round
+ * at the top of the order.
+ *
+ * A correction for a mis-click, **not an undo**: the ticks `nextTurn` applied — effect
+ * timers, legendary actions, concentration, cleared surprise — are not restored,
+ * because nothing records what they were. Pure pointer movement only.
+ */
+export function previousTurn(e: Encounter): Encounter {
+  if (e.combatants.length === 0) return e
+
+  for (let i = e.activeIndex - 1; i >= 0; i--) {
+    if (takesTurn(e.combatants[i])) return { ...e, activeIndex: i }
+  }
+  // Nothing earlier in this round — wrap to the last taker of the previous one.
+  for (let i = e.combatants.length - 1; i > e.activeIndex; i--) {
+    if (takesTurn(e.combatants[i])) {
+      return { ...e, activeIndex: i, round: Math.max(1, e.round - 1) }
+    }
+  }
+  return e
+}
+
 /** Tick `rounds`-duration effects down by one; drop those that reach zero. */
 function tickRoundsEffects(effects: Effect[]): Effect[] {
   return effects.flatMap((e) => {

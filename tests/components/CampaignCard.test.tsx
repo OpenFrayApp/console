@@ -13,7 +13,13 @@ const campaign: Campaign = {
   id: 'camp-1',
   name: 'Curse of Strahd',
   edition: '5.5',
-  rules: { crit: 'max-plus-roll', surprise: 'skip', hp: 'roll', initiativeTiebreak: 'pcs-first' },
+  rules: {
+    crit: 'max-plus-roll',
+    surprise: 'skip',
+    hp: 'roll',
+    initiativeTiebreak: 'pcs-first',
+    leveling: 'milestone',
+  },
 }
 
 describe('CampaignCard', () => {
@@ -25,6 +31,7 @@ describe('CampaignCard', () => {
     expect(screen.getByText('Skip the first turn (5.0)')).toBeInTheDocument()
     expect(screen.getByText('Roll')).toBeInTheDocument()
     expect(screen.getByText('Players first')).toBeInTheDocument()
+    expect(screen.getByText('Milestone')).toBeInTheDocument()
   })
 
   it('falls back to default rules for a campaign saved before the rules block', () => {
@@ -32,6 +39,8 @@ describe('CampaignCard', () => {
     render(<CampaignCard campaign={legacy} onEdit={() => {}} onDelete={() => {}} />)
     expect(screen.getByText('Double the dice (standard)')).toBeInTheDocument()
     expect(screen.getByText('Average')).toBeInTheDocument()
+    // A campaign with no leveling field reads as XP.
+    expect(screen.getByText('Experience points (XP)')).toBeInTheDocument()
   })
 
   it('wires Edit and Delete', () => {

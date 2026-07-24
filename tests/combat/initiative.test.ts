@@ -16,6 +16,7 @@ import {
   beginEncounter,
   compareInitiative,
   nextTurn,
+  previousTurn,
   sortByInitiative,
 } from '../../src/combat/initiative.ts'
 
@@ -292,5 +293,42 @@ describe('nextTurn', () => {
     expect(input.activeIndex).toBe(0)
     expect(input.round).toBe(1)
     expect(ids(input)).toEqual(before)
+  })
+})
+
+describe('previousTurn', () => {
+  it('steps back to the previous taker in the round', () => {
+    const e = previousTurn(encounter([monster('a', 20), monster('b', 10)], 2, 1))
+    expect(e.activeIndex).toBe(0)
+    expect(e.round).toBe(2)
+  })
+
+  it('wraps to the last taker of the previous round from the top of the order', () => {
+    const e = previousTurn(encounter([monster('a', 20), monster('b', 10)], 3, 0))
+    expect(e.activeIndex).toBe(1)
+    expect(e.round).toBe(2)
+  })
+
+  it('never steps below round 1', () => {
+    const e = previousTurn(encounter([monster('a', 20), monster('b', 10)], 1, 0))
+    expect(e.round).toBe(1)
+  })
+
+  it('skips the dead and the downed, like nextTurn', () => {
+    const board = [monster('a', 20), monster('b', 15, { status: 'dead' }), monster('c', 10)]
+    expect(previousTurn(encounter(board, 1, 2)).activeIndex).toBe(0)
+  })
+
+  it('stays put when nobody else can take a turn', () => {
+    const board = [monster('a', 20), monster('b', 10, { status: 'dead' })]
+    const input = encounter(board, 2, 0)
+    expect(previousTurn(input)).toEqual(input)
+  })
+
+  it('moves the pointer only — it does not restore what the turn ticked', () => {
+    // Honest limitation: this is a mis-click correction, not an undo.
+    const board = [monster('a', 20, { effects: [roundsEffect('e1', 5)] }), monster('b', 10)]
+    const after = previousTurn(encounter(board, 2, 1))
+    expect(after.combatants[0].effects[0].duration.rounds).toBe(5)
   })
 })

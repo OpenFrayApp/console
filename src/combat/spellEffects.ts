@@ -1,218 +1,64 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { Combatant } from '../schema/combatant.ts'
-import type { Effect, EffectDuration } from '../schema/effect.ts'
 import type { Spell } from '../schema/spell.ts'
-import { advantageAgainst, condition, disadvantageOn, flatBonus, reminder } from './effects.ts'
-import { durationRounds } from './casting.ts'
-import { abilityModifier } from './masssave.ts'
+import { SPELL_EFFECTS } from './spells/index.ts'
+import type { SpellEffectDef } from './spells/shared.ts'
 
 /**
- * A curated map of buff/utility spells to the board effect they leave behind, so
- * casting one can *offer* to apply it instead of only showing the card. We model the
- * consequence (one of the ~6 Effect shapes), never the spell's rules — and only where
- * the effect is unambiguous. Save-or-suck spells (Hold Person, Bane) route through the
- * save resolver instead; this map is for the no-save buffs that otherwise just spend a
- * use. Keyed by normalized name so it spans editions/sources.
+ * The map of spells to the board effect they leave behind, so casting one can *offer*
+ * to apply it instead of only showing the card. We model the consequence (one of the
+ * ~6 Effect shapes), never the spell's rules. Keyed by normalized name so one entry
+ * spans both editions; entries that genuinely differ branch on `spell.edition`.
+ *
+ * Every compendium spell is either in this map or in the skip list the coverage test
+ * reads (`tests/combat/spellCoverage.data.ts`) — a new library fails that test until
+ * its spells are triaged.
  */
 
-/** Who a spell's effect usually lands on — drives default target selection. */
-export type EffectTargeting = 'self' | 'ally' | 'enemy'
-
-export interface SpellEffectDef {
-  /** Plain-English board effect, shown on the apply prompt. */
-  summary: string
-  targeting: EffectTargeting
-  /** True when the spell normally affects more than one creature (e.g. Bless, up to 3). */
-  multi?: boolean
-  /** Build a fresh effect (with a unique id) for one target. Call once per target. */
-  build: (ctx: { source?: string; spell: Spell; target?: Combatant }) => Effect[]
-}
-
-/** Dex score when the board has one: monsters always, PCs only from the roster. */
-function dexScore(c: Combatant | undefined): number | undefined {
-  if (!c) return undefined
-  return c.isPC ? c.abilities?.dex : c.creature.abilities.dex
-}
-
-/** The spell's stated duration as an Effect duration; manual when it doesn't convert (hours+). */
-export function timedDuration(spell: Spell): EffectDuration {
-  const rounds = durationRounds(spell.duration)
-  return rounds != null ? { type: 'rounds', rounds } : { type: 'manual' }
-}
-
-const CONSUME: EffectDuration = { type: 'consumeOnRoll' }
-
-const SPELL_EFFECTS: Record<string, SpellEffectDef> = {
-  bless: {
-    summary: '+1d4 to attack rolls and saving throws',
-    targeting: 'ally',
-    multi: true,
-    build: ({ source, spell }) => [
-      flatBonus('Bless', '1d4', {
-        source,
-        duration: timedDuration(spell),
-        note: '+1d4 to attacks & saves',
-      }),
-    ],
-  },
-  guidance: {
-    summary: '+1d4 to one ability check',
-    targeting: 'ally',
-    build: ({ source }) => [
-      flatBonus('Guidance', '1d4', {
-        source,
-        applies: 'abilityChecks',
-        duration: CONSUME,
-        note: '+1d4 to an ability check',
-      }),
-    ],
-  },
-  resistance: {
-    summary: '+1d4 to one saving throw',
-    targeting: 'ally',
-    build: ({ source }) => [
-      flatBonus('Resistance', '1d4', {
-        source,
-        applies: 'savingThrows',
-        duration: CONSUME,
-        note: '+1d4 to a saving throw',
-      }),
-    ],
-  },
-  'shield of faith': {
-    summary: '+2 AC',
-    targeting: 'ally',
-    build: ({ source, spell }) => [
-      flatBonus('Shield of Faith', 2, {
-        source,
-        applies: 'ac',
-        duration: timedDuration(spell),
-        note: '+2 AC',
-      }),
-    ],
-  },
-  invisibility: {
-    summary: 'Invisible',
-    targeting: 'ally',
-    build: ({ source, spell }) => [
-      condition('Invisible', { source, duration: timedDuration(spell) }),
-    ],
-  },
-  heroism: {
-    summary: 'Immune to Frightened; temp HP each turn',
-    targeting: 'ally',
-    build: ({ source, spell }) => [
-      reminder('Heroism', 'Immune to Frightened; gains temp HP at the start of each turn', {
-        source,
-        duration: timedDuration(spell),
-      }),
-    ],
-  },
-  'mage armor': {
-    summary: 'AC 13 + Dex while unarmored',
-    targeting: 'ally',
-    // Mage Armor *sets* the AC rather than adding to it, so it stays a reminder — but
-    // we work the number out when the target's Dex is on the board.
-    build: ({ source, target }) => {
-      const dex = dexScore(target)
-      const note = dex == null ? 'AC 13 + Dex' : `AC ${13 + abilityModifier(dex)} unarmored`
-      return [reminder('Mage Armor', note, { source, duration: { type: 'manual' } })]
-    },
-  },
-  fly: {
-    summary: 'Fly Speed 60 ft. and can hover',
-    targeting: 'ally',
-    // A higher-level slot targets one extra creature per level above 3rd.
-    multi: true,
-    build: ({ source, spell }) => [
-      reminder('Fly', 'Fly Speed 60, hovers', { source, duration: timedDuration(spell) }),
-    ],
-  },
-  'mind blank': {
-    summary: 'Immune to Psychic damage and Charmed',
-    targeting: 'ally',
-    build: ({ source, spell }) => [
-      reminder('Mind Blank', 'Immune to Psychic & Charmed', {
-        source,
-        duration: timedDuration(spell),
-      }),
-    ],
-  },
-
-  // Save-or-suck debuffs — these reach the save resolver, which offers to apply this
-  // to the targets that fail. (Conditions like Hold Person's Paralyzed already have
-  // the resolver's condition chips; these are the non-condition effects it can't.)
-  bane: {
-    summary: '−1d4 to attack rolls and saving throws',
-    targeting: 'enemy',
-    multi: true,
-    build: ({ source, spell }) => [
-      flatBonus('Bane', '-1d4', {
-        source,
-        duration: timedDuration(spell),
-        note: '−1d4 to attacks & saves',
-      }),
-    ],
-  },
-  'faerie fire': {
-    summary: 'Attacks against it have advantage',
-    targeting: 'enemy',
-    multi: true,
-    build: ({ source, spell }) => [
-      advantageAgainst('Faerie Fire', { source, duration: timedDuration(spell) }),
-    ],
-  },
-  'vicious mockery': {
-    summary: 'Disadvantage on its next attack roll',
-    targeting: 'enemy',
-    // The disadvantage clears on the target's next attack (consumeOnRoll default).
-    build: ({ source }) => [disadvantageOn('Vicious Mockery', { source })],
-  },
-
-  // Damage-rider / marker spells — a reminder badge the GM adds the dice from when
-  // the caster hits. We never auto-roll the rider; the reminder is the consequence.
-  hex: {
-    summary: '+1d6 necrotic on the caster’s hits; disadvantage on one ability',
-    targeting: 'enemy',
-    build: ({ source, spell }) => [
-      reminder(
-        'Hex',
-        '+1d6 necrotic on hits vs this target; disadvantage on chosen-ability checks',
-        {
-          source,
-          duration: timedDuration(spell),
-        },
-      ),
-    ],
-  },
-  "hunter's mark": {
-    summary: '+1d6 to the caster’s weapon damage vs this target',
-    targeting: 'enemy',
-    build: ({ source, spell }) => [
-      reminder("Hunter's Mark", '+1d6 weapon damage to this target on the caster’s hits', {
-        source,
-        duration: timedDuration(spell),
-      }),
-    ],
-  },
-  'divine favor': {
-    summary: '+1d4 radiant on the caster’s weapon hits',
-    targeting: 'self',
-    build: ({ source, spell }) => [
-      reminder('Divine Favor', '+1d4 radiant damage on your weapon hits', {
-        source,
-        duration: timedDuration(spell),
-      }),
-    ],
-  },
-}
+export type {
+  EffectTargeting,
+  SpellEffectContext,
+  SpellEffectDef,
+  SpellEffectTable,
+} from './spells/shared.ts'
+export { timedDuration } from './spells/shared.ts'
+export { SPELL_EFFECTS } from './spells/index.ts'
 
 /** Normalize a spell name for lookup: lowercased, straight apostrophes, trimmed. */
-const normalize = (name: string): string => name.toLowerCase().replace(/['’]/g, "'").trim()
+export const normalize = (name: string): string => name.toLowerCase().replace(/['’]/g, "'").trim()
 
-/** The board effect a buff/utility spell applies, or null if we don't model one. */
+/**
+ * A pure buff that should open its card, not the save resolver. The 5.2 ingest gave
+ * several of these a phantom `mechanics.save` by reading a saving throw mentioned in
+ * their own text (Haste's advantage on Dex saves, Beacon of Hope's, Gaseous Form's,
+ * Sanctuary's, Holy Aura's) — all of them carry no mechanics in the 5.1 data, so it is
+ * a parser bug, reported upstream to the openfray-compendium repo. Guarding on the
+ * modelled effect keeps correctly-tagged spells untouched.
+ */
+export function isSupportSpell(spell: Spell): boolean {
+  const def = SPELL_EFFECTS[normalize(spell.name)]
+  if (!def || def.targeting === 'enemy') return false
+  return !spell.mechanics?.damage?.length && !spell.mechanics?.attackRoll
+}
+
+/**
+ * The board effect a spell applies, or null if we don't model one. Two things are
+ * stamped on here rather than in every entry: the concentration flag (so ending the
+ * caster's concentration clears the effect from every target) and the spell's own
+ * duration wording (so an effect the round clock can't tick — "8 hours" — can still
+ * say how long it lasts).
+ */
 export function spellEffectFor(spell: Spell): SpellEffectDef | null {
-  return SPELL_EFFECTS[normalize(spell.name)] ?? null
+  const def = SPELL_EFFECTS[normalize(spell.name)]
+  if (!def) return null
+  return {
+    ...def,
+    build: (ctx) =>
+      def.build(ctx).map((effect) => ({
+        ...effect,
+        ...(spell.concentration && { concentration: true as const }),
+        ...(effect.duration.type === 'manual' && { durationNote: spell.duration }),
+      })),
+  }
 }

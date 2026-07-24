@@ -144,7 +144,11 @@ dedup.
    official 5.2.1 PDF; SRD 5.1 comes from dnd5eapi). The app only consumes the JSON.
    **Before touching the compendium data or the stat-block UI, read
    [`docs/compendium-ingest.md`](docs/compendium-ingest.md)** for the data gotchas
-   and where the tooling now lives.
+   and where the tooling now lives. **Adding a library with spells means triaging
+   each one**: give it an entry in `src/combat/spells/*` or list it, with a reason, in
+   `tests/combat/spellCoverage.data.ts`. `spellCoverage.test.ts` fails until every
+   spell has a verdict — a missing entry is otherwise invisible (the spell just
+   silently offers no targets and applies nothing when cast).
 9. Concentration auto-checks.
 10. Identity: anonymous (ephemeral, `sessionStorage`) + sign-up (persist, RLS on).
 

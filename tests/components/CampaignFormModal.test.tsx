@@ -36,6 +36,7 @@ describe('CampaignFormModal', () => {
       surprise: 'disadvantage',
       hp: 'average',
       initiativeTiebreak: 'dex',
+      leveling: 'xp',
     })
     expect(onClose).toHaveBeenCalled()
   })

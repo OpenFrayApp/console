@@ -3,6 +3,7 @@
 
 import type { ReactNode } from 'react'
 import type { Outcome, Recap } from '../combat/recap.ts'
+import { useCampaignRules } from '../state/campaignRules.ts'
 
 const OUTCOME: Record<Outcome, { label: string; badge: string }> = {
   victory: {
@@ -42,6 +43,8 @@ function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: 
 /** The end-of-combat recap. Outcome banner + XP, timing, and fight tallies. */
 export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => void }) {
   const o = OUTCOME[recap.outcome]
+  // A milestone campaign doesn't track XP, so the XP tile has nothing to say.
+  const showXp = useCampaignRules().leveling !== 'milestone'
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
@@ -69,15 +72,17 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Stat
-            label="XP earned"
-            value={recap.totalXp.toLocaleString()}
-            hint={
-              recap.xpPerPlayer != null
-                ? `${recap.xpPerPlayer.toLocaleString()} / player`
-                : undefined
-            }
-          />
+          {showXp && (
+            <Stat
+              label="XP earned"
+              value={recap.totalXp.toLocaleString()}
+              hint={
+                recap.xpPerPlayer != null
+                  ? `${recap.xpPerPlayer.toLocaleString()} / player`
+                  : undefined
+              }
+            />
+          )}
           <Stat label="Rounds" value={recap.rounds} />
           <Stat label="Time (in-game)" value={duration(recap.inGameSeconds)} />
           <Stat

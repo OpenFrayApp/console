@@ -28,12 +28,7 @@ import {
 } from '../combat/masssave.ts'
 import { condition } from '../combat/effects.ts'
 import { spellEffectFor } from '../combat/spellEffects.ts'
-import {
-  applyConcentrationResult,
-  breakConcentration,
-  concentrationPromptDC,
-  rollConcentrationCheck,
-} from '../combat/concentration.ts'
+import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { TargetChips } from './TargetChips.tsx'
@@ -457,7 +452,7 @@ function AttackResolver({
           canRoll={!tgt.isPC}
           onMaintain={onClose}
           onBreak={() => {
-            dispatch({ type: 'update', id: tgt.combatantId, update: breakConcentration })
+            dispatch({ type: 'endConcentration', id: tgt.combatantId })
             onClose()
           }}
           onRoll={
@@ -807,8 +802,16 @@ export function SaveResolver({
     if (!spellEffect || !spell) return
     const affected = affectedTargets()
     if (affected.length === 0) return
+    // Hand the resolver's save to the builder so a save-ends debuff carries the
+    // escape save the GM just rolled against.
+    const escape = { ability, dc: toNum(dc) || 10 }
     for (const c of affected) {
-      const effects = spellEffect.build({ source: attacker?.combatantId, spell, target: c })
+      const effects = spellEffect.build({
+        source: attacker?.combatantId,
+        spell,
+        target: c,
+        save: escape,
+      })
       dispatch({
         type: 'update',
         id: c.combatantId,
@@ -818,8 +821,8 @@ export function SaveResolver({
     setNote(`${spell.name} → ${affected.map(nameOf).join(', ')}`)
   }
 
-  const resolveConc = (combatantId: string, update?: (c: Combatant) => Combatant) => {
-    if (update) dispatch({ type: 'update', id: combatantId, update })
+  const resolveConc = (combatantId: string, broke = false) => {
+    if (broke) dispatch({ type: 'endConcentration', id: combatantId })
     setPending((prev) => {
       const next = prev.filter((p) => p.combatant.combatantId !== combatantId)
       if (next.length === 0) onClose()
@@ -841,16 +844,14 @@ export function SaveResolver({
                 dc={p.dc}
                 canRoll={!p.combatant.isPC}
                 onMaintain={() => resolveConc(p.combatant.combatantId)}
-                onBreak={() => resolveConc(p.combatant.combatantId, breakConcentration)}
+                onBreak={() => resolveConc(p.combatant.combatantId, true)}
                 onRoll={
                   p.combatant.isPC
                     ? undefined
                     : () => {
                         const check = rollConcentrationCheck(p.combatant, p.damage)
                         onRoll(`${nameOf(p.combatant)}: concentration`, check.roll, check.applied)
-                        resolveConc(p.combatant.combatantId, (c) =>
-                          applyConcentrationResult(c, check.maintained),
-                        )
+                        resolveConc(p.combatant.combatantId, !check.maintained)
                       }
                 }
               />

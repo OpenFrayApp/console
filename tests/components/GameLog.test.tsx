@@ -126,7 +126,8 @@ describe('GameLogModal', () => {
 
   it('groups entries by round and filters by category', () => {
     render(<GameLogModal entries={entries} onClose={() => {}} onClear={() => {}} />)
-    expect(screen.getByText('Setup')).toBeInTheDocument()
+    // Pre-combat entries carry no round heading — only actual rounds get one.
+    expect(screen.queryByText('Setup')).toBeNull()
     expect(screen.getByText('Round 1')).toBeInTheDocument()
     expect(screen.getByText('Round 2')).toBeInTheDocument()
 

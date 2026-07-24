@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Combatant } from '../../src/schema/combatant.ts'
-import { isFoe } from '../../src/combat/combatant.ts'
+import { autoLabel, isAutoLabel, isFoe } from '../../src/combat/combatant.ts'
 
 const pc = (over: Partial<Extract<Combatant, { isPC: true }>> = {}): Combatant =>
   ({
@@ -55,5 +55,30 @@ describe('isFoe', () => {
 
   it('defaults a side-less lightweight combatant to friend', () => {
     expect(isFoe(pc({ kind: 'quick' }))).toBe(false)
+  })
+})
+
+describe('labels', () => {
+  it('numbers copies after the first', () => {
+    expect(autoLabel('Ghoul', 0)).toBe('Ghoul')
+    expect(autoLabel('Ghoul', 1)).toBe('Ghoul 2')
+    expect(autoLabel('Ghoul', 4)).toBe('Ghoul 5')
+  })
+
+  it('recognises auto-numbering so a duplicate is not read as a rename', () => {
+    expect(isAutoLabel('Ghoul', 'Ghoul')).toBe(true)
+    expect(isAutoLabel('Ghoul 2', 'Ghoul')).toBe(true)
+    expect(isAutoLabel('Ghoul 12', 'Ghoul')).toBe(true)
+  })
+
+  it('treats a GM rename as a rename', () => {
+    expect(isAutoLabel('Snik', 'Goblin')).toBe(false)
+    expect(isAutoLabel('Ghoul the Second', 'Ghoul')).toBe(false)
+    expect(isAutoLabel('Ghoul 2 (boss)', 'Ghoul')).toBe(false)
+  })
+
+  it('is not fooled by regex characters in a creature name', () => {
+    expect(isAutoLabel('Bo.gle 2', 'Bo.gle')).toBe(true)
+    expect(isAutoLabel('BoXgle 2', 'Bo.gle')).toBe(false)
   })
 })

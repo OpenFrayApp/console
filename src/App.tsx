@@ -6,12 +6,12 @@ import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
-import { instantiate } from './combat/combatant.ts'
+import { autoLabel, instantiate } from './combat/combatant.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { saveBonus } from './combat/masssave.ts'
-import { groupSaveEnds } from './combat/saveEnds.ts'
+import { saveEndsEffects } from './combat/saveEnds.ts'
 import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
@@ -381,7 +381,7 @@ function App() {
     const sameKind = encounter.combatants.filter(
       (c) => !c.isPC && c.creatureId === creature.id,
     ).length
-    const label = sameKind > 0 ? `${creature.name} ${sameKind + 1}` : creature.name
+    const label = autoLabel(creature.name, sameKind)
     addCombatant(
       instantiate(creature, {
         combatantId: crypto.randomUUID(),
@@ -532,22 +532,20 @@ function App() {
     }
   }
   // Auto-roll a monster's save-ends effects at the chosen moment of its turn (PCs
-  // roll their own — never rolled for them). Effects sharing one save (ability + DC
-  // + timing) roll a single die together and end as a group.
+  // roll their own — never rolled for them). One die per effect: two effects that
+  // share an ability and DC came from different sources, so one roll can't end both.
   const autoRollSaveEnds = (c: Combatant | undefined, when: 'startOfTurn' | 'endOfTurn') => {
     if (!c || c.isPC) return
-    for (const group of groupSaveEnds(c.effects)) {
-      if (group.when !== when) continue
-      const bonus = saveBonus(c, group.ability) ?? 0
+    for (const save of saveEndsEffects(c.effects)) {
+      if (save.when !== when) continue
+      const bonus = saveBonus(c, save.ability) ?? 0
       const result = roll(`1d20${bonus >= 0 ? `+${bonus}` : `${bonus}`}`, { kind: 'save' })
-      const names = group.effects.map((e) => e.name).join(', ')
-      pushRoll(`${c.label}: ${names} (${group.ability.toUpperCase()} save)`, result)
-      if (result.total >= group.dc) {
-        const ids = new Set(group.effects.map((e) => e.id))
+      pushRoll(`${c.label}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
+      if (result.total >= save.dc) {
         dispatch({
           type: 'update',
           id: c.combatantId,
-          update: (cc) => ({ ...cc, effects: cc.effects.filter((x) => !ids.has(x.id)) }),
+          update: (cc) => ({ ...cc, effects: cc.effects.filter((x) => x.id !== save.effect.id) }),
         })
       }
     }

@@ -30,12 +30,22 @@ export type HpMethod = 'average' | 'roll' | 'min' | 'max'
  */
 export type InitiativeTiebreak = 'dex' | 'pcs-first' | 'manual'
 
+/**
+ * How the party levels up — display-only, it drives nothing mechanical.
+ * - `xp`: track and show experience points (the SRD default).
+ * - `milestone`: the GM levels the party by story beats, so XP is noise — hide it
+ *   in the stat block and the end-of-combat recap.
+ */
+export type LevelingMethod = 'xp' | 'milestone'
+
 /** A campaign's house rules — combat options that vary table to table. */
 export interface CampaignRules {
   crit: CritRule
   surprise: SurpriseRule
   hp: HpMethod
   initiativeTiebreak: InitiativeTiebreak
+  /** Optional for back-compat; absent means `xp` (the pre-setting behaviour). */
+  leveling?: LevelingMethod
 }
 
 /** The 5.5-first defaults, applied to campaigns that predate the rules block. */
@@ -44,6 +54,7 @@ export const DEFAULT_CAMPAIGN_RULES: CampaignRules = {
   surprise: 'disadvantage',
   hp: 'average',
   initiativeTiebreak: 'dex',
+  leveling: 'xp',
 }
 
 /**

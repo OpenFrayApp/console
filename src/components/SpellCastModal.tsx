@@ -7,6 +7,7 @@ import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { spellAction } from '../combat/casting.ts'
+import { isSupportSpell } from '../combat/spellEffects.ts'
 import { titleCase } from '../compendium/format.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
@@ -52,12 +53,13 @@ export function SpellCastModal({
   const [confirming, setConfirming] = useState(false)
   const drained = usesRemaining === 0
 
-  const action = spell
-    ? spellAction(spell, {
-        saveDc: caster.creature.spellcasting?.saveDc,
-        toHit: caster.creature.spellcasting?.toHit,
-      })
-    : null
+  const action =
+    spell && !isSupportSpell(spell)
+      ? spellAction(spell, {
+          saveDc: caster.creature.spellcasting?.saveDc,
+          toHit: caster.creature.spellcasting?.toHit,
+        })
+      : null
 
   const usageLabel =
     usesRemaining == null ? 'At will' : `${usesRemaining} use${usesRemaining === 1 ? '' : 's'} left`

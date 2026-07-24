@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
@@ -60,9 +60,26 @@ export function ApplySpellEffect({
   )
   const [appliedTo, setAppliedTo] = useState<string[] | null>(null)
 
+  // A self-only spell (Speak with Animals, Blur) lands on its caster and nobody else,
+  // so there is nothing to choose — and nothing to confirm. Without a known caster the
+  // GM still has to say who cast it, and picks from the board as usual.
+  const selfOnly = def?.targeting === 'self' && caster !== undefined
+  const done = useRef(false)
+  useEffect(() => {
+    if (!def || !selfOnly || !caster || done.current) return
+    done.current = true
+    const effects = def.build({ source: caster.combatantId, spell, target: caster })
+    dispatch({
+      type: 'update',
+      id: caster.combatantId,
+      update: (x) => ({ ...x, effects: [...x.effects, ...effects] }),
+    })
+    setAppliedTo([nameOf(caster)])
+  }, [def, selfOnly, caster, spell, dispatch])
+
   if (!def) return null
 
-  const targets = combatants.filter((c) => c.status !== 'dead')
+  const targets = selfOnly && caster ? [caster] : combatants.filter((c) => c.status !== 'dead')
 
   const toggle = (id: string) =>
     setSelected((s) => {
@@ -93,27 +110,37 @@ export function ApplySpellEffect({
       <p className="text-sm">
         <span className="font-medium">Apply on the board:</span> {def.summary}
       </p>
-      <TargetChips
-        targets={targets}
-        selected={selected}
-        onToggle={toggle}
-        emptyText="No combatants to target."
-      />
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={apply}
-          disabled={selected.size === 0}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-        >
-          Apply effect
-        </button>
-        {appliedTo != null && (
-          <span className="text-sm text-emerald-600 dark:text-emerald-400">
-            {appliedTo.length > 0 ? `Applied to ${appliedTo.join(', ')}` : 'No targets selected'}
-          </span>
-        )}
-      </div>
+      {selfOnly ? (
+        <p className="text-sm text-emerald-600 dark:text-emerald-400">
+          Applied to {caster ? nameOf(caster) : 'the caster'}.
+        </p>
+      ) : (
+        <>
+          <TargetChips
+            targets={targets}
+            selected={selected}
+            onToggle={toggle}
+            emptyText="No combatants to target."
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={apply}
+              disabled={selected.size === 0}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+            >
+              Apply effect
+            </button>
+            {appliedTo != null && (
+              <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                {appliedTo.length > 0
+                  ? `Applied to ${appliedTo.join(', ')}`
+                  : 'No targets selected'}
+              </span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

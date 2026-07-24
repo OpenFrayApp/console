@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { groupSaveEnds } from '../../src/combat/saveEnds.ts'
+import { saveEndsEffects, saveEndsOf } from '../../src/combat/saveEnds.ts'
 import type { Ability } from '../../src/schema/primitives.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 
@@ -19,28 +19,20 @@ const saveEnd = (
   duration: { type: 'saveEnds', save: { ability, dc }, when },
 })
 
-describe('groupSaveEnds', () => {
-  it('groups effects that share a save (ability + DC + timing)', () => {
-    const groups = groupSaveEnds([
-      saveEnd('Frightened', 'dex', 15),
-      saveEnd('Restrained', 'dex', 15),
-    ])
-    expect(groups).toHaveLength(1)
-    expect(groups[0]).toMatchObject({ ability: 'dex', dc: 15, when: 'endOfTurn' })
-    expect(groups[0].effects.map((e) => e.name)).toEqual(['Frightened', 'Restrained'])
+describe('saveEndsOf', () => {
+  it('reads the escape save off an effect', () => {
+    expect(saveEndsOf(saveEnd('Frightened', 'wis', 12))).toMatchObject({
+      ability: 'wis',
+      dc: 12,
+      when: 'endOfTurn',
+    })
   })
 
-  it('keeps different saves in separate groups', () => {
-    const groups = groupSaveEnds([
-      saveEnd('Frightened', 'dex', 15),
-      saveEnd('Poisoned', 'con', 15), // different ability
-      saveEnd('Stunned', 'dex', 13), // different DC
-      saveEnd('Prone', 'dex', 15, 'startOfTurn'), // different timing
-    ])
-    expect(groups).toHaveLength(4)
+  it('keeps an explicit start-of-turn timing', () => {
+    expect(saveEndsOf(saveEnd('Prone', 'dex', 15, 'startOfTurn'))?.when).toBe('startOfTurn')
   })
 
-  it('ignores effects that are not save-ends', () => {
+  it('returns null for an effect no save ends', () => {
     const condition: Effect = {
       id: 'c',
       name: 'Grappled',
@@ -48,10 +40,31 @@ describe('groupSaveEnds', () => {
       modifier: null,
       duration: { type: 'manual' },
     }
-    expect(groupSaveEnds([condition])).toEqual([])
+    expect(saveEndsOf(condition)).toBeNull()
+  })
+})
+
+describe('saveEndsEffects', () => {
+  it('gives each effect its own save, even when the ability and DC match', () => {
+    // Two effects at DEX 15 came from different sources — one die can't end both.
+    const saves = saveEndsEffects([
+      saveEnd('Frightened', 'dex', 15),
+      saveEnd('Restrained', 'dex', 15),
+    ])
+    expect(saves).toHaveLength(2)
+    expect(saves.map((s) => s.effect.name)).toEqual(['Frightened', 'Restrained'])
   })
 
-  it('defaults missing timing to end of turn', () => {
-    expect(groupSaveEnds([saveEnd('Frightened', 'wis', 12)])[0].when).toBe('endOfTurn')
+  it('skips effects that are not save-ends', () => {
+    const manual: Effect = {
+      id: 'c',
+      name: 'Grappled',
+      icon: 'condition',
+      modifier: null,
+      duration: { type: 'manual' },
+    }
+    expect(
+      saveEndsEffects([manual, saveEnd('Stunned', 'con', 13)]).map((s) => s.effect.name),
+    ).toEqual(['Stunned'])
   })
 })
