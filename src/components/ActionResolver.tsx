@@ -28,7 +28,11 @@ import {
 } from '../combat/masssave.ts'
 import { condition } from '../combat/effects.ts'
 import { spellEffectFor } from '../combat/spellEffects.ts'
-import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
+import {
+  applyConcentrationResult,
+  concentrationPromptDC,
+  rollConcentrationCheck,
+} from '../combat/concentration.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { TargetChips } from './TargetChips.tsx'
