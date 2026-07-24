@@ -150,7 +150,8 @@ Capitalization and naming are part of correctness. Get these right.
 | the compendium                    | the library, the database                                       |
 | the log                           | the roll log, the feed                                          |
 | effect, condition, reminder       | buff, debuff, status                                            |
-| encounter                         | fight, combat (in prose — "combat" is fine in **Start combat**) |
+| fight                             | combat (in prose — "combat" is fine in **Start combat**)        |
+| encounter                         | — the app's own noun; in prose, say "fight"                     |
 | sign in, signed in, sign out      | log in, login, log out, register                                |
 | DnD 5e                            | D&D 5e, 5E, dnd, fifth edition                                  |
 | Dungeons and Dragons              | Dungeons & Dragons                                              |
