@@ -20,6 +20,7 @@ import { createRequire } from 'node:module'
 import { readdirSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { drawAnnotations, measureAnnotations } from './lib/annotations.mjs'
 
 const BASE = process.env.OPENFRAY_URL ?? 'http://localhost:5199/console/'
 const OUT = process.env.OUT_DIR ?? 'docs/src/assets/screens'
@@ -44,183 +45,6 @@ function loadPlaywright() {
     }
   }
   throw new Error('Playwright not found. Run: npx --yes playwright --version')
-}
-
-// ---------------------------------------------------------------- annotations
-
-// Runs in the page so callouts line up with real elements. `items` carry rects
-// already measured by Playwright, plus the label to attach.
-function drawAnnotations(items) {
-  const RED = '#ff2f45'
-  document.getElementById('of-annotations')?.remove()
-
-  const layer = document.createElement('div')
-  layer.id = 'of-annotations'
-  layer.style.cssText =
-    'position:fixed;inset:0;z-index:2147483647;pointer-events:none;' +
-    'font:600 15px/1.2 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif'
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.setAttribute('style', 'position:absolute;inset:0;width:100%;height:100%;overflow:visible')
-  layer.append(svg)
-  document.body.append(layer)
-
-  const PAD = 6
-  const MARGIN = 10
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  const placed = []
-  const hits = (a, b) =>
-    a.x < b.x + b.w + 8 && a.x + a.w + 8 > b.x && a.y < b.y + b.h + 8 && a.y + a.h + 8 > b.y
-
-  for (const item of items) {
-    const r = {
-      left: item.rect.x - window.scrollX - PAD,
-      top: item.rect.y - window.scrollY - PAD,
-      width: item.rect.width + PAD * 2,
-      height: item.rect.height + PAD * 2,
-    }
-    r.right = r.left + r.width
-    r.bottom = r.top + r.height
-
-    if (item.box !== false) {
-      const box = document.createElement('div')
-      box.dataset.ofMark = '1'
-      box.style.cssText =
-        `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;` +
-        `border:3px solid ${RED};border-radius:${item.radius ?? 10}px;` +
-        `box-shadow:0 0 0 2px rgba(0,0,0,.35),0 0 22px rgba(255,47,69,.45)`
-      layer.append(box)
-      placed.push({ x: r.left, y: r.top, w: r.width, h: r.height })
-    }
-
-    if (item.n == null && !item.text) continue
-
-    // A bare number sits on the box corner, keyed to a legend in the prose.
-    if (item.place === 'corner') {
-      const badge = document.createElement('div')
-      badge.dataset.ofMark = '1'
-      badge.textContent = String(item.n)
-      badge.style.cssText =
-        `position:fixed;left:${r.left - 15}px;top:${r.top - 15}px;width:30px;height:30px;` +
-        `display:flex;align-items:center;justify-content:center;border-radius:999px;` +
-        `background:${RED};color:#fff;font-size:16px;font-weight:800;` +
-        `box-shadow:0 2px 10px rgba(0,0,0,.5)`
-      layer.append(badge)
-      continue
-    }
-
-    const pill = document.createElement('div')
-    pill.dataset.ofMark = '1'
-    pill.style.cssText =
-      'position:fixed;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;' +
-      `background:${RED};color:#fff;padding:7px 13px;border-radius:999px;` +
-      'box-shadow:0 2px 10px rgba(0,0,0,.45);letter-spacing:.01em'
-    if (item.n != null) {
-      const badge = document.createElement('span')
-      badge.textContent = String(item.n)
-      badge.style.cssText =
-        'display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;' +
-        `border-radius:999px;background:#fff;color:${RED};font-size:13px;font-weight:800`
-      pill.append(badge)
-    }
-    if (item.text) pill.append(document.createTextNode(item.text))
-    layer.append(pill)
-
-    const pw = pill.offsetWidth
-    const ph = pill.offsetHeight
-
-    // Place outside the box, flipping to the opposite side when it would fall
-    // off-screen, then step further out until it stops colliding with earlier marks.
-    let place = item.place ?? 'right'
-    const room = {
-      right: vw - r.right,
-      left: r.left,
-      top: r.top,
-      bottom: vh - r.bottom,
-    }
-    const need = place === 'left' || place === 'right' ? pw + MARGIN : ph + MARGIN
-    if (room[place] < need + 24) {
-      const flip = { right: 'left', left: 'right', top: 'bottom', bottom: 'top' }[place]
-      if (room[flip] >= need + 24) place = flip
-    }
-
-    const step = place === 'left' || place === 'right' ? pw + 16 : ph + 14
-    let gap = item.gap ?? 40
-    let x
-    let y
-    for (let i = 0; i < 8; i++) {
-      if (place === 'right' || place === 'left') {
-        x = place === 'right' ? r.right + gap : r.left - gap - pw
-        y = r.top + r.height / 2 - ph / 2
-      } else {
-        x = r.left + r.width / 2 - pw / 2
-        y = place === 'top' ? r.top - gap - ph : r.bottom + gap
-      }
-      x = Math.min(Math.max(x, MARGIN), vw - pw - MARGIN)
-      y = Math.min(Math.max(y, MARGIN), vh - ph - MARGIN)
-      if (!placed.some((p) => hits({ x, y, w: pw, h: ph }, p))) break
-      gap += step
-    }
-    pill.style.left = `${x}px`
-    pill.style.top = `${y}px`
-    placed.push({ x, y, w: pw, h: ph })
-
-    // Arrow from the pill's near edge to the nearest point on the box.
-    const from = {
-      right: { x, y: y + ph / 2 },
-      left: { x: x + pw, y: y + ph / 2 },
-      top: { x: x + pw / 2, y: y + ph },
-      bottom: { x: x + pw / 2, y },
-    }[place]
-    const to = {
-      right: { x: r.right, y: Math.min(Math.max(from.y, r.top + 8), r.bottom - 8) },
-      left: { x: r.left, y: Math.min(Math.max(from.y, r.top + 8), r.bottom - 8) },
-      top: { x: Math.min(Math.max(from.x, r.left + 8), r.right - 8), y: r.top },
-      bottom: { x: Math.min(Math.max(from.x, r.left + 8), r.right - 8), y: r.bottom },
-    }[place]
-
-    const dx = to.x - from.x
-    const dy = to.y - from.y
-    const len = Math.hypot(dx, dy) || 1
-    const ux = dx / len
-    const uy = dy / len
-    const tip = { x: to.x - ux * 3, y: to.y - uy * 3 }
-    const base = { x: tip.x - ux * 13, y: tip.y - uy * 13 }
-
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-    line.setAttribute('x1', from.x)
-    line.setAttribute('y1', from.y)
-    line.setAttribute('x2', base.x)
-    line.setAttribute('y2', base.y)
-    line.setAttribute('stroke', RED)
-    line.setAttribute('stroke-width', '3.5')
-    line.setAttribute('stroke-linecap', 'round')
-    svg.append(line)
-
-    const head = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
-    head.setAttribute(
-      'points',
-      [
-        `${tip.x},${tip.y}`,
-        `${base.x - uy * 6},${base.y + ux * 6}`,
-        `${base.x + uy * 6},${base.y - ux * 6}`,
-      ].join(' '),
-    )
-    head.setAttribute('fill', RED)
-    svg.append(head)
-  }
-}
-
-/** Union of everything drawn, so a close-up can crop to just the marked area. */
-function measureAnnotations(pad) {
-  const marks = [...document.querySelectorAll('#of-annotations [data-of-mark]')]
-  if (!marks.length) return null
-  const rects = marks.map((m) => m.getBoundingClientRect())
-  const x = Math.max(0, Math.min(...rects.map((r) => r.left)) - pad)
-  const y = Math.max(0, Math.min(...rects.map((r) => r.top)) - pad)
-  const right = Math.min(window.innerWidth, Math.max(...rects.map((r) => r.right)) + pad)
-  const bottom = Math.min(window.innerHeight, Math.max(...rects.map((r) => r.bottom)) + pad)
-  return { x, y, width: right - x, height: bottom - y }
 }
 
 // ---------------------------------------------------------------- helpers
@@ -371,35 +195,113 @@ async function main() {
 
   // --- before combat -------------------------------------------------------
 
+  // The three buttons sit shoulder to shoulder, so the boxes are tight and thin.
+  const addButton = { pad: 2, weight: 2, place: 'bottom' }
   await shot(page, 'add-buttons', {
     clip: 'auto',
     items: [
       {
+        ...addButton,
         locator: page.getByRole('button', { name: 'Quick add' }),
-        text: 'Invented on the spot',
-        place: 'bottom',
+        text: 'A throwaway combatant',
       },
-      { locator: page.getByRole('button', { name: 'Add PC' }), text: 'A player', place: 'bottom' },
-      { locator: addCreature, text: 'From the compendium', place: 'bottom' },
+      {
+        ...addButton,
+        locator: page.getByRole('button', { name: 'Add PC' }),
+        text: 'A player character',
+      },
+      { ...addButton, locator: addCreature, text: 'One from the compendium' },
     ],
   })
 
-  const mage = row('Mage')
-  await shot(page, 'tracker-row', {
+  await shot(page, 'rest-buttons', {
     clip: 'auto',
+    pad: 50,
     items: [
-      { locator: mage.locator('div.w-7'), text: 'Initiative', place: 'bottom' },
-      { locator: mage.locator('span.truncate').first(), text: 'Who it is', place: 'bottom' },
       {
-        locator: mage.locator('div.text-right span.tabular-nums').first(),
-        text: 'Hit points — click to change them',
+        locator: page.getByRole('button', { name: 'Short rest' }),
+        text: 'Short rest',
         place: 'bottom',
+        pad: 2,
+        weight: 2,
       },
-      { locator: mage.locator('div.text-right div.text-xs'), text: 'Armor class', place: 'bottom' },
+      {
+        locator: page.getByRole('button', { name: 'Long rest' }),
+        text: 'Long rest',
+        place: 'bottom',
+        pad: 2,
+        weight: 2,
+      },
+    ],
+  })
+
+  await page.getByRole('button', { name: 'Short rest' }).click()
+  await page.waitForTimeout(300)
+  await shot(page, 'short-rest', {
+    clip: 'auto',
+    clipTo: modal(),
+    items: [
+      {
+        locator: page.getByLabel(/^New HP for/).first(),
+        text: 'A number sets it; +7 heals',
+        place: 'left',
+        pad: 2,
+        weight: 2,
+      },
+    ],
+  })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(200)
+
+  // The last row, so the labels drop into the empty tracker below it instead of
+  // covering other rows. HP and AC share one box — separately they sit millimetres
+  // apart and the two boxes swallow each other.
+  const lastRow = tracker.locator('[role=button]').last()
+  const lastRowBox = await lastRow.boundingBox()
+  const trkBox = await tracker.boundingBox()
+  await shot(page, 'tracker-row', {
+    // Wide enough for the right-hand label to fit, tall enough for a row of context
+    // above and the labels below — no further.
+    clip: {
+      x: Math.max(0, trkBox.x - 8),
+      y: Math.max(0, lastRowBox.y - 105),
+      width: trkBox.width + 130,
+      height: 250,
+    },
+    items: [
+      {
+        locator: lastRow.locator('div.w-7'),
+        text: 'Initiative',
+        place: 'bottom',
+        pad: 2,
+        weight: 2,
+      },
+      {
+        locators: [
+          lastRow.locator('div.text-right span.tabular-nums').first(),
+          lastRow.locator('div.text-right div.text-xs'),
+        ],
+        text: 'Hit points and armor class',
+        place: 'bottom',
+        pad: 3,
+        weight: 2,
+      },
     ],
   })
 
   // --- start the fight -----------------------------------------------------
+
+  await shot(page, 'begin', {
+    clip: 'auto',
+    pad: 60,
+    items: [
+      {
+        locator: page.getByRole('button', { name: 'Begin' }),
+        text: 'Begin — starts the fight',
+        place: 'left',
+      },
+    ],
+  })
 
   await page.getByRole('button', { name: 'Begin' }).click()
   await page.waitForTimeout(250)
@@ -409,12 +311,17 @@ async function main() {
     items: [
       {
         locator: page.getByLabel('Initiative for Bram Ironfist'),
-        text: 'Type a player’s roll, or leave it blank to roll',
+        text: 'Players: type what they rolled',
         place: 'left',
       },
       {
         locator: page.getByLabel('Mark Bram Ironfist surprised'),
-        text: 'Mark anyone surprised',
+        text: 'Mark them surprised',
+        place: 'bottom',
+      },
+      {
+        locator: page.getByLabel('Initiative for Ogre'),
+        text: 'Creatures are rolled for you',
         place: 'right',
       },
     ],
@@ -428,38 +335,62 @@ async function main() {
   await ogre.click()
   await page.waitForTimeout(200)
 
+  // The five regions of the console. The three columns are flush against each other,
+  // so their boxes are inset (negative pad) and thin — otherwise the borders collide.
+  // Numbers only — no box. Any border drawn at a column's edge lands on the content
+  // that runs to that edge (the log's totals, the Stop button, the CONTROLS heading),
+  // and the three columns are already visually distinct without one.
+  const region = { place: 'corner', box: false }
   await shot(page, 'layout', {
     items: [
-      { locator: tracker, n: 1, place: 'corner' },
-      { locator: statBlock, n: 2, place: 'corner' },
-      { locator: tools, n: 3, place: 'corner' },
-      { locator: diceBar, n: 4, place: 'corner' },
-      { locator: addCreature, n: 5, place: 'corner' },
+      // Numbers go bottom-left, where each column runs out of content. The header
+      // and footer are one row tall, so theirs are nudged into the gap between
+      // their left-hand content and the controls in the middle.
+      { ...region, locator: tracker, n: 1, badge: 'bl' },
+      { ...region, locator: statBlock, n: 2, badge: 'bl' },
+      { ...region, locator: tools, n: 3, badge: 'bl' },
+      { ...region, locator: page.locator('header').first(), n: 4, badgeDx: 225 },
+      { ...region, locator: page.locator('footer').first(), n: 5, badgeDx: 390 },
     ],
   })
 
   await shot(page, 'turn-controls', {
     clip: 'auto',
     items: [
+      // Placed right so the labels sit in the gaps rather than over the rows. The
+      // round number needs no label, and each pair of buttons reads as one control.
       {
-        locator: page.getByRole('heading', { name: /Round/i }),
-        text: 'The round you are on',
-        place: 'bottom',
+        locators: [
+          page.getByRole('button', { name: 'Previous turn' }),
+          page.getByRole('button', { name: 'Next turn' }),
+        ],
+        text: 'Move through the turns',
+        place: 'top',
+        weight: 2,
       },
       {
-        locator: page.getByRole('button', { name: 'Previous turn' }),
-        text: 'Back a turn',
-        place: 'bottom',
+        locators: [
+          page.getByRole('button', { name: 'Pause' }),
+          page.getByRole('button', { name: 'Stop' }),
+        ],
+        text: 'Pause or end the fight',
+        place: 'top',
+        weight: 2,
       },
+    ],
+  })
+
+  // The drag handle is easy to miss, so it gets its own close-up.
+  await shot(page, 'drag-handle', {
+    clip: 'auto',
+    pad: 34,
+    items: [
       {
-        locator: page.getByRole('button', { name: 'Next turn' }),
-        text: 'On to the next turn',
-        place: 'bottom',
-      },
-      {
-        locator: page.getByRole('button', { name: 'Stop' }),
-        text: 'Pause, or end the fight',
-        place: 'bottom',
+        locator: ogre.locator('span[aria-label^="Drag to reorder"]'),
+        text: 'Drag this to move a creature',
+        place: 'right',
+        pad: 3,
+        weight: 2,
       },
     ],
   })
@@ -479,20 +410,83 @@ async function main() {
     ],
   })
 
-  await page.getByLabel('Duration').selectOption({ label: 'Save ends' })
+  // Worked examples. Both are deliberately NOT spells: a spell would be cast from the
+  // Cast spell flow, which applies its effect itself. This box is for the things
+  // nothing in the app knows about.
+  //
+  // 1 — Reckless Attack: the barbarian announces it, so attacks against him have
+  // advantage until his next turn. Captured configured but not yet applied.
+  await page.getByLabel('Duration').selectOption({ label: '1 round' })
+  await page.getByLabel('Modifier effect').selectOption({ label: 'Advantage' })
+  await page.getByLabel('Applies to').selectOption({ label: 'Attack rolls' })
+  await page.getByRole('radio', { name: 'Rolls made against it' }).check()
+  await page.getByLabel('Modifier label').fill('Reckless')
+  await page.waitForTimeout(150)
+  await shot(page, 'example-reckless', {
+    clip: 'auto',
+    clipTo: modal(),
+    items: [
+      {
+        locator: page.getByRole('button', { name: 'Apply modifier' }),
+        text: 'OpenFray writes it out — then apply',
+        place: 'right',
+        pad: 2,
+        weight: 2,
+      },
+    ],
+  })
+
+  // 2 — A reminder, the escape hatch for anything the boxes above can't express.
+  // Reopened from scratch so example 1's half-filled modifier isn't still on screen.
+  await page.getByRole('button', { name: 'Done' }).click()
+  await page.waitForTimeout(200)
+  await page.getByRole('button', { name: 'Apply effect' }).click()
+  await page.waitForTimeout(200)
+  await page.getByLabel('Duration').selectOption({ label: 'Until removed' })
+  await page
+    .getByPlaceholder('e.g. Hex: +1d6 necrotic')
+    .fill('Standing in the oil — first fire damage ignites it')
+  await page.waitForTimeout(150)
+  await shot(page, 'example-reminder', {
+    clip: 'auto',
+    clipTo: modal(),
+    items: [
+      {
+        locators: [
+          page.getByPlaceholder('e.g. Hex: +1d6 necrotic'),
+          page.getByRole('button', { name: 'Add', exact: true }),
+        ],
+        text: 'Anything the boxes above can’t say',
+        place: 'top',
+        pad: 3,
+        weight: 2,
+      },
+    ],
+  })
+
   await dump(page, 'save ends')
   await page.getByRole('button', { name: 'Frightened', exact: true }).click()
   await page.getByRole('button', { name: 'Done' }).click()
   await page.waitForTimeout(250)
 
+  // A few rows around the badge: enough to place it in the tracker, not the whole
+  // column.
+  const trackerBox = await tracker.boundingBox()
+  const ogreBox = await ogre.boundingBox()
   await shot(page, 'effect-badge', {
-    clip: 'auto',
-    pad: 40,
+    clip: {
+      x: Math.max(0, trackerBox.x - 8),
+      y: Math.max(0, ogreBox.y - 110),
+      width: trackerBox.width + 16,
+      height: 300,
+    },
     items: [
       {
         locator: ogre.locator('div.mt-1').getByText('Frightened'),
         text: 'The effect shows on the row',
-        place: 'right',
+        place: 'bottom',
+        pad: 3,
+        weight: 2,
       },
     ],
   })
@@ -512,18 +506,27 @@ async function main() {
 
   // --- spells --------------------------------------------------------------
 
-  await mage.click()
+  await row('Mage').click()
   await page.waitForTimeout(250)
   await shot(page, 'cast-spell', {
     clip: 'auto',
-    clipTo: page.getByRole('heading', { name: 'Spellcasting' }).locator('..'),
+    // The whole stat block, so it's obvious this list lives on the creature.
+    clipTo: statBlock,
     items: [
       {
         locator: page.getByRole('button', { name: 'Fireball (2)' }),
         text: 'Click a spell to cast it',
         place: 'bottom',
+        pad: 2,
+        weight: 2,
       },
-      { locator: page.getByText('2/DAY EACH'), text: 'What it has left today', place: 'left' },
+      {
+        locator: page.getByText('2/DAY EACH'),
+        text: 'What it has left today',
+        place: 'left',
+        pad: 2,
+        weight: 2,
+      },
     ],
   })
 
@@ -533,11 +536,22 @@ async function main() {
     clip: 'auto',
     clipTo: modal(),
     items: [
-      { locator: page.getByLabel('Save DC'), text: 'The number to beat', place: 'top' },
-      { locator: page.getByLabel('On save'), text: 'What a save earns', place: 'top' },
-      { locator: page.getByLabel('Damage'), text: 'A formula, or a number', place: 'top' },
-      { locator: page.getByText('TARGETS'), text: 'Who is rolling', place: 'left' },
-      { locator: page.getByRole('button', { name: 'Roll saves' }), text: '', place: 'right' },
+      // Only the two fields whose behaviour isn't obvious from the form itself —
+      // the DC is labelled "DC" and the target list has its own headings.
+      {
+        locator: page.getByLabel('On save'),
+        text: 'What a successful save earns',
+        place: 'top',
+        pad: 2,
+        weight: 2,
+      },
+      {
+        locator: page.getByLabel('Damage'),
+        text: 'A formula, or a number you were told',
+        place: 'top',
+        pad: 2,
+        weight: 2,
+      },
     ],
   })
   await page.getByRole('button', { name: 'Close' }).click()
@@ -560,6 +574,61 @@ async function main() {
     ],
   })
 
+  // --- death saves ---------------------------------------------------------
+
+  // Drop a player to 0 through the tracker's own HP editor, so the row and the
+  // controls show what a GM actually sees when someone goes down.
+  const bram = row('Bram Ironfist')
+  await bram.click()
+  await bram.getByRole('button', { name: /^\d+$/ }).first().click()
+  await page.locator('input:focus').fill('0')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+
+  const bramBox = await bram.boundingBox()
+  const trBox = await tracker.boundingBox()
+  await shot(page, 'death-save-row', {
+    clip: {
+      x: Math.max(0, trBox.x - 8),
+      y: Math.max(0, bramBox.y - 80),
+      width: trBox.width + 130,
+      height: 240,
+    },
+    items: [
+      {
+        locator: bram.locator('div.mt-1').first(),
+        text: 'Successes and failures so far',
+        place: 'bottom',
+        pad: 3,
+        weight: 2,
+      },
+    ],
+  })
+
+  await shot(page, 'death-saves', {
+    clip: 'auto',
+    pad: 34,
+    items: [
+      {
+        locators: [
+          page.getByRole('button', { name: 'Save', exact: true }),
+          page.getByRole('button', { name: 'Fail', exact: true }),
+        ],
+        text: 'Record what the player rolled',
+        place: 'bottom',
+        pad: 3,
+        weight: 2,
+      },
+      {
+        locator: page.getByRole('button', { name: /Roll death save/ }),
+        text: 'Or let OpenFray roll it',
+        place: 'bottom',
+        pad: 3,
+        weight: 2,
+      },
+    ],
+  })
+
   // --- the compendium ------------------------------------------------------
 
   await page.getByRole('button', { name: 'Compendium' }).click()
@@ -567,15 +636,50 @@ async function main() {
   const aboleth = page.getByRole('button', { name: /^Aboleth/ }).first()
   await aboleth.click()
   await page.waitForTimeout(400)
+  // Numbered regions, like the console layout — the whole window is unreadable at
+  // docs width, so detail lives in the cropped shot below instead.
+  const compGrid = page.locator('main div.grid').first()
   await shot(page, 'compendium', {
     items: [
       {
+        ...region,
         locators: ['Creatures', 'Spells', 'Characters', 'Campaigns'].map((t) =>
           page.getByRole('button', { name: t, exact: true }),
         ),
-        text: 'Four tabs',
+        n: 1,
+      },
+      // The search and the results, not the whole left column — that would swallow
+      // the tabs and nest one region inside another.
+      {
+        ...region,
+        locators: [
+          page.getByPlaceholder('Search creatures…'),
+          page.getByRole('button', { name: /^Ancient Gold Dragon/ }),
+        ],
+        n: 2,
+        badge: 'bl',
+      },
+      { ...region, locator: compGrid.locator('> div').nth(1), n: 3, badge: 'bl' },
+    ],
+  })
+
+  // The badges are the one thing on that screen you can't guess, so they get a
+  // close-up where the text is actually legible.
+  const abolethBox = await aboleth.boundingBox()
+  await shot(page, 'library-badges', {
+    clip: {
+      x: Math.max(0, abolethBox.x - 10),
+      y: Math.max(0, abolethBox.y - 16),
+      width: 980,
+      height: 210,
+    },
+    items: [
+      {
+        locator: aboleth.locator('span').filter({ hasText: 'Core' }).first(),
+        text: 'Which book, and which rules',
         place: 'right',
-        gap: 90,
+        pad: 3,
+        weight: 2,
       },
     ],
   })
