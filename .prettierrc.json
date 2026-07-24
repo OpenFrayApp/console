@@ -5,6 +5,7 @@
   "plugins": ["prettier-plugin-astro"],
   "overrides": [
     { "files": "*.astro", "options": { "parser": "astro" } },
-    { "files": "website/**", "options": { "semi": true } }
+    { "files": "site/**", "options": { "semi": true } },
+    { "files": "docs/**", "options": { "semi": true } }
   ]
 }

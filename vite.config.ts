@@ -12,6 +12,9 @@ export default defineConfig({
   // `import.meta.env.BASE_URL` (= '/console/') is the prefix for runtime fetches.
   base: '/console/',
   plugins: [react(), tailwindcss()],
+  // Fixed so the site's dev server can proxy /console here (see site/astro.config.mjs),
+  // and so the Supabase OAuth redirect allow-list has one dev URL to trust.
+  server: { port: 5199, strictPort: true },
   // Build into dist/console so the app lives at the /console path; the landing page
   // and Pages routing rules are added to dist/ root by scripts/assemble-site.mjs.
   build: { outDir: 'dist/console' },

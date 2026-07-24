@@ -1,14 +1,16 @@
 # Dependencies & build output
 node_modules
 dist
-website/dist
-website/node_modules
-website/.astro
+site/dist
+site/node_modules
+site/.astro
+docs/dist
+docs/node_modules
+docs/.astro
 
 # Generated / vendored data — never reformat
 public/compendium
 package-lock.json
-website/package-lock.json
 
 # Lockstep license text
 CREDITS.md

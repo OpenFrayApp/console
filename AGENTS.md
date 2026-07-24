@@ -1,7 +1,8 @@
 Guidance for AI agents (and humans) working in the OpenFray codebase. Read this
-before writing code. It is the source of truth for _how_ to build here; the full
-reasoning lives in `docs/PROJECT-PLAN.md` (with deeper subsystem specs in
-`docs/specs/`).
+before writing code. It is the source of truth for _how_ to build here. The full
+reasoning lives in the maintainer's working notes — `local/docs/PROJECT-PLAN.md`
+and `local/docs/specs/` — which are **not committed**; everything a contributor
+needs to follow the rules is in this file.
 
 ---
 
@@ -101,6 +102,49 @@ dedup.
 
 ---
 
+## Repo layout
+
+Three parts ship as **one site from this one repo**; `scripts/assemble-site.mjs` merges
+their builds into `dist/` for Cloudflare Pages.
+
+| Folder               | What it is                                          | Served at  |
+| -------------------- | --------------------------------------------------- | ---------- |
+| `src/` (repo root)   | the React + Vite combat console                     | `/console` |
+| `site/`              | Astro marketing site (home, privacy, terms)         | `/`        |
+| `docs/`              | Starlight handbook for players and GMs              | `/docs`    |
+| `public/compendium/` | generated SRD / Tome of Beasts JSON the app fetches | —          |
+| `local/`             | maintainer working notes — **not committed**        | —          |
+
+`site/` and `docs/` are **npm workspaces**: one `npm install` at the root covers all
+three, and each still declares its own dependencies in its own `package.json`. There is
+one lockfile, at the root.
+
+Each part runs its own dev server, on a port pinned in its own config — not passed on
+the command line, so `npm run dev` and the editor's launch configs agree:
+
+| Command               | What it starts             | URL                     |
+| --------------------- | -------------------------- | ----------------------- |
+| `npm run dev`         | the console (Vite)         | localhost:5199/console/ |
+| `npm run dev -w site` | the marketing site (Astro) | localhost:4321          |
+| `npm run dev -w docs` | the handbook (Starlight)   | localhost:4322/docs/    |
+| `npm run dev:all`     | all three at once          | the three URLs above    |
+
+Most work needs only one of them. `npm run build` builds all three and assembles
+`dist/` — the only check that proves the **links between** the parts resolve, since in
+dev they're on different origins.
+
+> **Don't try to serve all three from one dev origin.** Proxying `/console` and `/docs`
+> through the site's dev server was tried and abandoned: each Vite dev server emits
+> root-relative asset URLs (`/node_modules/…`, `/@vite/client`) with no path prefix, so
+> the proxied server's assets get requested from the proxying server, which fails with a
+> confusing overlay. Setting `vite.base` fixes the assets and breaks routing instead.
+
+Two companion projects live in **their own repos**, because they have their own release
+cadence and consumers: [openfray-compendium](https://github.com/SirDarcanos/openfray-compendium)
+(the ingest tooling that generates `public/compendium/*.json`) and
+[openfray-importer](https://github.com/SirDarcanos/openfray-importer) (the browser
+extension). Split a part out only when it earns that — these three do not.
+
 ## Tech stack
 
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
@@ -143,8 +187,8 @@ dedup.
    not here (SRD 5.2.1 creatures, spells, and conditions are parsed from WotC's
    official 5.2.1 PDF; SRD 5.1 comes from dnd5eapi). The app only consumes the JSON.
    **Before touching the compendium data or the stat-block UI, read
-   [`docs/compendium-ingest.md`](docs/compendium-ingest.md)** for the data gotchas
-   and where the tooling now lives. **Adding a library with spells means triaging
+   `local/docs/compendium-ingest.md`** (maintainer-local) for the data gotchas and
+   where the tooling now lives. **Adding a library with spells means triaging
    each one**: give it an entry in `src/combat/spells/*` or list it, with a reason, in
    `tests/combat/spellCoverage.data.ts`. `spellCoverage.test.ts` fails until every
    spell has a verdict — a missing entry is otherwise invisible (the spell just
@@ -174,7 +218,7 @@ to.
 - **Sign off commits** with `git commit -s` (DCO; no CLA).
 - **License:** AGPL-3.0. The running app must expose a "Source" link to the repo
   (AGPL §13). New source files get the short AGPL header.
-- **Legal pages:** any change to `website/src/pages/privacy.astro` or `terms.astro`
+- **Legal pages:** any change to `site/src/pages/privacy.astro` or `terms.astro`
   must **also bump the `Last updated:` date** (`<p class="updated">`) to the current
   date, in the same edit. Never alter the legal copy without updating that date.
 - **When unsure whether something is in scope, ask / flag — don't quietly build it.**
@@ -190,6 +234,7 @@ offered, else **OGL 1.0a** — **never assumed CC-BY**. Using a source under the
 shipping **only its declared Open Game Content** (no Product Identity — art, fiction, PI
 names, sidebars), reproducing the **full OGL text + verbatim Section 15 chain**, and
 designating our OGC. **Never ingest SRD-excluded WotC IP** (Beholder, Mind Flayer, …).
-All of this is satisfied via an in-app About/Credits screen + `CREDITS.md`. Full
-instructions: [`docs/content-licensing.md`](./docs/content-licensing.md). This content
-licensing is separate from the project's AGPL (which governs the code).
+All of this is satisfied via an in-app About/Credits screen + `CREDITS.md`, which is the
+public record of compliance. Full ingest instructions: `local/docs/content-licensing.md`
+(maintainer-local). This content licensing is separate from the project's AGPL (which
+governs the code).

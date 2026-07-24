@@ -8,8 +8,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  // `website` is a self-contained Astro project with its own tooling.
-  { ignores: ['dist', 'scripts', 'website'] },
+  // `site` and `docs` are self-contained Astro projects with their own tooling.
+  { ignores: ['dist', 'scripts', 'site', 'docs'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

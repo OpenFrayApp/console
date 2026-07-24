@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /console
-
-Sitemap: https://openfray.app/sitemap-index.xml
