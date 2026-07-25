@@ -7,6 +7,7 @@ import {
   editionLabel,
   librarySourceBadgeClass,
 } from '../compendium/libraries.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
 
@@ -33,7 +34,10 @@ export function SettingsPanel({
     const next = enabledLibraries.includes(id)
       ? enabledLibraries.filter((x) => x !== id)
       : [...enabledLibraries, id]
-    if (next.length > 0) onSetEnabledLibraries(next)
+    if (next.length > 0) {
+      track(EVENTS.ruleSetToggled)
+      onSetEnabledLibraries(next)
+    }
   }
 
   return (
@@ -99,6 +103,7 @@ export function SettingsPanel({
               href={IMPORTER_URL}
               target="_blank"
               rel="noreferrer"
+              onClick={() => track(EVENTS.importerClicked)}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
             >
               <svg

@@ -46,6 +46,7 @@ import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback, EncounterCleanup, TurnControls } from './EncounterPlayback.tsx'
 import { GameLog, type OnNote, type OnRoll } from './GameLog.tsx'
 import { titleCase } from '../compendium/format.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
@@ -241,6 +242,7 @@ export function EncounterConsole({
   // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution
   // happens in the cast modal.
   const castSpellFrom = (c: MonsterCombatant, spell: SpellRef) => {
+    track(EVENTS.spellCast)
     dispatch({
       type: 'update',
       id: c.combatantId,

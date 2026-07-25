@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { EncounterAction } from '../state/encounter.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const ICON_BTN =
   'inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm disabled:cursor-not-allowed disabled:opacity-40'
@@ -130,11 +131,13 @@ export function EncounterCleanup({
     if (
       window.confirm('Remove everyone from the board and clear the game log? This can’t be undone.')
     ) {
+      track(EVENTS.clearedBoard)
       dispatch({ type: 'clearAll' })
     }
   }
   const clearFoes = () => {
     if (window.confirm('Remove every foe from the board? Your players stay where they are.')) {
+      track(EVENTS.clearedFoes)
       dispatch({ type: 'clearFoes' })
     }
   }

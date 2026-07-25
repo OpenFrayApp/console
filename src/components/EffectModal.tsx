@@ -13,6 +13,7 @@ import type {
 } from '../schema/effect.ts'
 import { condition, modifierEffect, reminder } from '../combat/effects.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { track as recordEvent, EVENTS } from '../lib/analytics.ts'
 
 // Ordered roughly by table frequency.
 const CONDITIONS: ConditionName[] = [
@@ -172,6 +173,7 @@ export function EffectModal({
 
   // Remember each applied effect's id so the Duration control can re-bind it.
   const track = (effect: Effect) => {
+    recordEvent(EVENTS.effectApplied)
     onApply(effect)
     setSessionIds((s) => [...s, effect.id])
   }

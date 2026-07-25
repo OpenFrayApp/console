@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import { parseImportedCreature } from './importCreature.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 /**
  * Paste an OpenFray Creature JSON (e.g. from the D&D Beyond importer) and save it
@@ -44,6 +45,7 @@ export function ImportCreatureModal({
       )
       return
     }
+    track(EVENTS.creatureImported)
     onImport(result.creature)
     onClose()
   }

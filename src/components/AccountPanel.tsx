@@ -3,6 +3,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -53,6 +54,7 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
       setDelBusy(false)
       setDelNote({ kind: 'err', text: error })
     } else {
+      track(EVENTS.accountDeleted)
       onClose()
     }
   }
@@ -102,7 +104,10 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
             </p>
             <button
               type="button"
-              onClick={() => signOut()}
+              onClick={() => {
+                track(EVENTS.signedOut)
+                signOut()
+              }}
               className="mt-3 text-sm font-medium text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
             >
               Sign out

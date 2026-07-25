@@ -38,6 +38,7 @@ import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { TargetChips } from './TargetChips.tsx'
 import { DieRoll, SPIN_MS } from './DieRoll.tsx'
 import type { OnRoll } from './GameLog.tsx'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
@@ -356,6 +357,7 @@ function AttackResolver({
 
   const doRoll = () => {
     if (!target) return
+    track(EVENTS.attackRolled)
     const range = action.kind === 'ranged' ? 'ranged' : 'melee'
     const toHit = attacker ? (action.toHit ?? 0) : toNum(bonus)
     const rolled = rollWithEffects(`1d20${signed(toHit)}`, {
@@ -718,6 +720,7 @@ export function SaveResolver({
   }
 
   const rollSaves = () => {
+    track(action ? EVENTS.saveRolled : EVENTS.groupSaveRolled)
     const request = { ability, dc: toNum(dc) || 10, onSave }
     if (action) {
       const components = rollDamageComponents(action, false)

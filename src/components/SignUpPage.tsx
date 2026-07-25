@@ -4,6 +4,7 @@
 import { useState, type ReactNode } from 'react'
 import { useAuth, type OAuthProvider } from '../auth/useAuth.ts'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 /** Discord wordmark glyph. */
 function DiscordIcon() {
@@ -94,6 +95,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
 
   const start = async (provider: OAuthProvider) => {
     if (busy) return
+    track(EVENTS.signInStarted)
     setError(null)
     setBusy(provider)
     const { error } = await signInWithProvider(provider)

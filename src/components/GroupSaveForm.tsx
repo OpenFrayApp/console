@@ -19,6 +19,7 @@ import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concent
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { ConditionChips } from './ActionResolver.tsx'
 import type { OnRoll } from './GameLog.tsx'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
@@ -87,6 +88,7 @@ export function GroupSaveForm({
     })
 
   const rollSaves = () => {
+    track(EVENTS.groupSaveRolled)
     const request = { ability, dc: num(dc) || 10, onSave }
     const next: Record<string, Row> = {}
     for (const c of combatants) {

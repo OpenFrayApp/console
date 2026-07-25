@@ -7,6 +7,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { hpTierOf, parseHpInput } from '../combat/resources.ts'
 import { hpToneFor } from './hpTone.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 /** A campfire — short rest. */
 function BonfireIcon() {
@@ -81,6 +82,7 @@ function ShortRestModal({
       if (!parsed) continue
       hp[c.combatantId] = 'delta' in parsed ? c.hp.current + parsed.delta : parsed.set
     }
+    track(EVENTS.shortRest)
     dispatch({ type: 'shortRest', hp })
     onClose()
   }
@@ -196,6 +198,7 @@ export function RestControls({
           'and effects lasting less than eight hours are cleared.',
       )
     ) {
+      track(EVENTS.longRest)
       dispatch({ type: 'longRest' })
     }
   }

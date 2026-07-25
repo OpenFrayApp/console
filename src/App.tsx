@@ -70,6 +70,7 @@ import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { GameLogModal, type OnNote, type OnRoll } from './components/GameLog.tsx'
+import { track, EVENTS } from './lib/analytics.ts'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 
@@ -363,7 +364,10 @@ function App() {
     return () => clearTimeout(handle)
   }, [encounter, theme, view, selectedId, activeCampaignId, userId])
 
-  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  const toggleTheme = () => {
+    track(EVENTS.themeToggled)
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  }
 
   const pushRoll: OnRoll = (label, result, applied) => {
     dispatch({ type: 'log', entry: { category: 'roll', message: label, result, applied } })
@@ -378,6 +382,7 @@ function App() {
   }
 
   const handlePick = (creature: Creature) => {
+    track(EVENTS.creatureAdded)
     const sameKind = encounter.combatants.filter(
       (c) => !c.isPC && c.creatureId === creature.id,
     ).length
@@ -461,6 +466,7 @@ function App() {
   // Add a roster PC to the current fight: instantiate a fresh combatant (the roster
   // entry is a reusable template), then jump to the encounter and select it.
   const handleAddPcToEncounter = (pc: RosterPc) => {
+    track(EVENTS.pcAdded)
     addCombatant(rosterPcToCombatant(pc))
     setView('encounter')
   }
@@ -503,7 +509,10 @@ function App() {
   // The view toggle opens the compendium on its default (creatures) tab; only the
   // create-a-character flow targets the Players tab.
   const handleViewChange = (next: View) => {
-    if (next === 'compendium') setCompendiumTab('creatures')
+    if (next === 'compendium') {
+      track(EVENTS.compendiumOpened)
+      setCompendiumTab('creatures')
+    }
     setView(next)
   }
 
@@ -641,6 +650,7 @@ function App() {
       effects: withSurprise(c),
     }))
     const next = beginEncounter({ ...encounter, combatants }, activeRules.initiativeTiebreak)
+    track(EVENTS.combatStarted)
     dispatch({ type: 'begin', tiebreak: activeRules.initiativeTiebreak })
     selectActive(next)
     autoRecharge(next)
@@ -674,6 +684,7 @@ function App() {
   // End combat: snapshot the recap from the live state (before stop zeroes the round),
   // then reset to setup. Used by the Stop button, the all-enemies prompt, and a TPK.
   const endCombat = () => {
+    track(EVENTS.combatStopped)
     setRecap(buildRecap(encounter, Date.now()))
     setEndPrompt(false)
     dispatch({ type: 'stop' })
@@ -753,7 +764,12 @@ function App() {
           <div className="flex items-center gap-3">
             {view === 'encounter' && (
               <div className="flex items-center gap-2">
-                <AddQuickForm onAdd={addCombatant} />
+                <AddQuickForm
+                  onAdd={(c) => {
+                    track(EVENTS.quickAdded)
+                    addCombatant(c)
+                  }}
+                />
                 {user ? (
                   <AddPcPicker
                     rosterPcs={rosterPcs}
@@ -762,7 +778,12 @@ function App() {
                     onCreate={openRosterCreate}
                   />
                 ) : (
-                  <AddPcForm onAdd={addCombatant} />
+                  <AddPcForm
+                    onAdd={(c) => {
+                      track(EVENTS.pcAdded)
+                      addCombatant(c)
+                    }}
+                  />
                 )}
                 <AddCreaturePicker
                   onPick={handlePick}
@@ -775,7 +796,10 @@ function App() {
             <AccountControl onSignIn={() => setAuthOpen(true)} />
             <button
               type="button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => {
+                track(EVENTS.settingsOpened)
+                setSettingsOpen(true)
+              }}
               aria-label="Settings"
               title="Settings"
               className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"

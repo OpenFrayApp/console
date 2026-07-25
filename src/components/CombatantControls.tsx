@@ -24,6 +24,7 @@ import type { Effect, EffectDuration } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
 import type { OnRoll } from './GameLog.tsx'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
@@ -59,6 +60,7 @@ export function CombatantControls({
   const apply = (update: (c: Combatant) => Combatant) => dispatch({ type: 'update', id, update })
 
   const startConc = () => {
+    track(EVENTS.concentrationStarted)
     const spell = (concInput ?? '').trim()
     apply((c) => startConcentration(c, { spell, saveDc: 0, round, rounds: concDur ?? undefined }))
     setConcInput(null)
@@ -182,7 +184,10 @@ export function CombatantControls({
 
         <button
           type="button"
-          onClick={() => apply((c) => ({ ...c, reactionUsed: !c.reactionUsed }))}
+          onClick={() => {
+            if (!combatant.reactionUsed) track(EVENTS.reactionUsed)
+            apply((c) => ({ ...c, reactionUsed: !c.reactionUsed }))
+          }}
           aria-pressed={combatant.reactionUsed === true}
           title="One reaction per round (opportunity attack, readied action, Shield, …). Refreshes at the start of this combatant's turn."
           className={
@@ -198,7 +203,10 @@ export function CombatantControls({
           <>
             <button
               type="button"
-              onClick={() => apply((c) => (c.isPC ? c : spendLegendaryResistance(c)))}
+              onClick={() => {
+                track(EVENTS.legendaryResistanceUsed)
+                apply((c) => (c.isPC ? c : spendLegendaryResistance(c)))
+              }}
               disabled={legendaryResistanceLeft(combatant) <= 0}
               title="Turn a failed save into a success; spends one use"
               className="rounded border border-amber-400 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"

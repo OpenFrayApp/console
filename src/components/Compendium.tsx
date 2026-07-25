@@ -32,6 +32,7 @@ import { abilityMod } from '../schema/roster.ts'
 import { SpellCard, SpellTags } from './SpellCard.tsx'
 import { CustomSpellForm } from './CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters'
 
@@ -356,7 +357,10 @@ export function Compendium({
   const startNewCampaign = () => (createGated ? onGated?.() : setCampaignForm({ campaign: null }))
   const submitCampaign = (campaign: Campaign) => {
     if (campaignForm?.campaign) onUpdateCampaign?.(campaign)
-    else onCreateCampaign?.(campaign)
+    else {
+      track(EVENTS.campaignCreated)
+      onCreateCampaign?.(campaign)
+    }
     setSelectedId(campaign.id)
   }
   const removeCampaign = (campaign: Campaign) => {
@@ -374,7 +378,10 @@ export function Compendium({
   const startNewPc = () => (createGated ? onGated?.() : setPcForm({ pc: null }))
   const submitPc = (pc: RosterPc) => {
     if (pcForm?.pc) onUpdatePc?.(pc)
-    else onCreatePc?.(pc)
+    else {
+      track(EVENTS.characterCreated)
+      onCreatePc?.(pc)
+    }
     setSelectedId(pc.id)
   }
   const removePc = (pc: RosterPc) => {
@@ -394,7 +401,10 @@ export function Compendium({
   const startEdit = (c: Creature) => setEditor({ draft: creatureToDraft(c), editId: c.id })
   const submitEditor = (creature: Creature) => {
     if (editor?.editId) onUpdateCreature?.(creature)
-    else onCreateCreature(creature)
+    else {
+      track(EVENTS.customCreatureCreated)
+      onCreateCreature(creature)
+    }
   }
   const deleteCreature = (c: Creature) => {
     if (
@@ -413,7 +423,10 @@ export function Compendium({
   const startEditSpell = (s: Spell) => setSpellEditor({ draft: spellToDraft(s), editId: s.id })
   const submitSpellEditor = (spell: Spell) => {
     if (spellEditor?.editId) onUpdateSpell?.(spell)
-    else onCreateSpell?.(spell)
+    else {
+      track(EVENTS.customSpellCreated)
+      onCreateSpell?.(spell)
+    }
     setSelectedId(spell.id)
   }
   const deleteSpell = (s: Spell) => {
