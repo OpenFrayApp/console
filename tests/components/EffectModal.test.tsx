@@ -36,6 +36,13 @@ function open() {
   return screen.getByRole('dialog', { name: 'Apply effect to Goblin' })
 }
 
+/** Open the modal and expand the collapsed modifier builder. */
+function openModifier() {
+  const dialog = open()
+  fireEvent.click(within(dialog).getByRole('button', { name: '+ Add a bonus or penalty' }))
+  return dialog
+}
+
 describe('EffectModal', () => {
   it('applies a condition with the chosen duration', () => {
     const onApply = vi.fn()
@@ -70,7 +77,7 @@ describe('EffectModal', () => {
         onUpdateDuration={() => {}}
       />,
     )
-    const dialog = open()
+    const dialog = openModifier()
     // Defaults: Advantage / attack rolls / made against it.
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
       target: { value: 'Faerie Fire' },
@@ -93,7 +100,7 @@ describe('EffectModal', () => {
         onUpdateDuration={() => {}}
       />,
     )
-    const dialog = open()
+    const dialog = openModifier()
     // First effect: advantage on its OWN attacks (Reckless's buff half).
     fireEvent.click(within(dialog).getByLabelText('Rolls it makes'))
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
@@ -122,7 +129,7 @@ describe('EffectModal', () => {
         onUpdateDuration={() => {}}
       />,
     )
-    const dialog = open()
+    const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
       target: { value: 'flatBonus' },
     })
@@ -150,7 +157,7 @@ describe('EffectModal', () => {
         onUpdateDuration={() => {}}
       />,
     )
-    const dialog = open()
+    const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
       target: { value: 'flatBonus' },
     })
@@ -171,8 +178,24 @@ describe('EffectModal', () => {
         onUpdateDuration={() => {}}
       />,
     )
-    const dialog = open()
+    const dialog = openModifier()
     expect(within(dialog).getByRole('button', { name: 'Apply modifier' })).toBeDisabled()
+  })
+
+  it('keeps the modifier builder collapsed until asked for', () => {
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={() => {}}
+        onRemove={() => {}}
+        onUpdateDuration={() => {}}
+      />,
+    )
+    const dialog = open()
+    expect(within(dialog).queryByLabelText('Modifier label')).toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add a bonus or penalty' }))
+    expect(within(dialog).getByLabelText('Modifier label')).not.toBeNull()
   })
 
   it('applies a custom reminder', () => {

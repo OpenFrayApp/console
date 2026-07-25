@@ -113,6 +113,8 @@ export function EffectModal({
 
   const [note, setNote] = useState('')
   const [added, setAdded] = useState<string[]>([])
+  // The modifier builder is collapsed by default — a condition or a reminder is the common case.
+  const [showModifier, setShowModifier] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -128,6 +130,7 @@ export function EffectModal({
     setNote('')
     setAdded([])
     setSessionIds([])
+    setShowModifier(false)
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -269,77 +272,105 @@ export function EffectModal({
             </div>
 
             <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
-              <div className="space-y-1">
-                <p className={LABEL}>Duration</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={dur}
-                    onChange={(e) => {
-                      const v = e.target.value as DurChoice
-                      setDur(v)
-                      updateSession(makeDuration(v))
-                    }}
-                    aria-label="Duration"
-                    className={`${FIELD_W} w-48`}
-                  >
-                    {DURATION_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <p className={LABEL}>Duration</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={dur}
+                      onChange={(e) => {
+                        const v = e.target.value as DurChoice
+                        setDur(v)
+                        updateSession(makeDuration(v))
+                      }}
+                      aria-label="Duration"
+                      className={`${FIELD_W} w-full`}
+                    >
+                      {DURATION_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {dur === 'save' && (
+                      <span className="flex flex-wrap items-center gap-1 text-sm">
+                        <select
+                          value={saveAbility}
+                          onChange={(e) => {
+                            const v = e.target.value as Ability
+                            setSaveAbility(v)
+                            updateSession(makeDuration(dur, v))
+                          }}
+                          aria-label="Save ability"
+                          className={`${FIELD_W} w-20`}
+                        >
+                          {ABILITIES.map((a) => (
+                            <option key={a} value={a}>
+                              {a.toUpperCase()}
+                            </option>
+                          ))}
+                        </select>
+                        DC
+                        <input
+                          value={saveDc}
+                          onChange={(e) => {
+                            setSaveDc(e.target.value)
+                            updateSession(makeDuration(dur, saveAbility, e.target.value))
+                          }}
+                          placeholder="#"
+                          aria-label="Save DC"
+                          inputMode="numeric"
+                          className={`${FIELD_W} w-14`}
+                        />
+                        <select
+                          value={saveWhen}
+                          onChange={(e) => {
+                            const v = e.target.value as typeof saveWhen
+                            setSaveWhen(v)
+                            updateSession(makeDuration(dur, saveAbility, saveDc, v))
+                          }}
+                          aria-label="Save timing"
+                          className={`${FIELD_W} w-32`}
+                        >
+                          <option value="endOfTurn">end of turn</option>
+                          <option value="startOfTurn">start of turn</option>
+                        </select>
+                      </span>
+                    )}
+                  </div>
                   {dur === 'save' && (
-                    <span className="flex flex-wrap items-center gap-1 text-sm">
-                      <select
-                        value={saveAbility}
-                        onChange={(e) => {
-                          const v = e.target.value as Ability
-                          setSaveAbility(v)
-                          updateSession(makeDuration(dur, v))
-                        }}
-                        aria-label="Save ability"
-                        className={`${FIELD_W} w-20`}
-                      >
-                        {ABILITIES.map((a) => (
-                          <option key={a} value={a}>
-                            {a.toUpperCase()}
-                          </option>
-                        ))}
-                      </select>
-                      DC
-                      <input
-                        value={saveDc}
-                        onChange={(e) => {
-                          setSaveDc(e.target.value)
-                          updateSession(makeDuration(dur, saveAbility, e.target.value))
-                        }}
-                        placeholder="#"
-                        aria-label="Save DC"
-                        inputMode="numeric"
-                        className={`${FIELD_W} w-14`}
-                      />
-                      <select
-                        value={saveWhen}
-                        onChange={(e) => {
-                          const v = e.target.value as typeof saveWhen
-                          setSaveWhen(v)
-                          updateSession(makeDuration(dur, saveAbility, saveDc, v))
-                        }}
-                        aria-label="Save timing"
-                        className={`${FIELD_W} w-32`}
-                      >
-                        <option value="endOfTurn">end of turn</option>
-                        <option value="startOfTurn">start of turn</option>
-                      </select>
-                    </span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      OpenFray rolls this for a creature at the chosen moment. A player rolls their
+                      own, and you record it.
+                    </p>
                   )}
                 </div>
-                {dur === 'save' && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    OpenFray rolls this for a creature at the chosen moment. A player rolls their
-                    own, and you record it.
-                  </p>
-                )}
+
+                <div className="space-y-1">
+                  <p className={LABEL}>Reminder</p>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      applyReminder()
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="e.g. Hex: +1d6 necrotic"
+                      aria-label="Custom reminder"
+                      className={`${FIELD_W} min-w-0 flex-1`}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!note.trim()}
+                      className={`${CHIP} disabled:opacity-40`}
+                    >
+                      Add
+                    </button>
+                  </form>
+                </div>
               </div>
 
               <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
@@ -366,111 +397,108 @@ export function EffectModal({
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                <p className={LABEL}>Modifier</p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <label className="space-y-1">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Effect</span>
-                    <select
-                      value={mode}
-                      onChange={(e) => chooseMode(e.target.value as EffectMode)}
-                      aria-label="Modifier effect"
-                      className={FIELD}
-                    >
-                      <option value="advantage">Advantage</option>
-                      <option value="disadvantage">Disadvantage</option>
-                      <option value="flatBonus">Bonus / penalty</option>
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Applies to</span>
-                    <select
-                      value={applies}
-                      onChange={(e) => setApplies(e.target.value as EffectApplies)}
-                      aria-label="Applies to"
-                      className={FIELD}
-                    >
-                      <option value="attackRolls">Attack rolls</option>
-                      <option value="savingThrows">Saving throws</option>
-                      <option value="abilityChecks">Ability checks</option>
-                      <option value="all">Everything</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                  <span className={LABEL}>On</span>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="radio"
-                      name="effect-direction"
-                      checked={direction === 'outgoing'}
-                      onChange={() => setDirection('outgoing')}
-                    />
-                    Rolls it makes
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="radio"
-                      name="effect-direction"
-                      checked={direction === 'incoming'}
-                      onChange={() => setDirection('incoming')}
-                    />
-                    Rolls made against it
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {mode === 'flatBonus' && (
-                    <input
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="+1d4 or -2"
-                      aria-label="Amount"
-                      className={`${FIELD_W} w-28`}
-                    />
-                  )}
-                  <input
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    placeholder="Label (Bless, Bane…)"
-                    aria-label="Modifier label"
-                    className={`${FIELD_W} min-w-0 flex-1`}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{summary}</p>
-                <button
-                  type="button"
-                  onClick={applyModifier}
-                  disabled={!canApplyModifier}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-                >
-                  Apply modifier
-                </button>
-              </div>
-
-              <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                <p className={LABEL}>Reminder</p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    applyReminder()
-                  }}
-                  className="flex gap-2"
-                >
-                  <input
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="e.g. Hex: +1d6 necrotic"
-                    aria-label="Custom reminder"
-                    className={`${FIELD_W} min-w-0 flex-1`}
-                  />
+              <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+                {!showModifier ? (
                   <button
-                    type="submit"
-                    disabled={!note.trim()}
-                    className={`${CHIP} disabled:opacity-40`}
+                    type="button"
+                    onClick={() => setShowModifier(true)}
+                    className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
                   >
-                    Add
+                    + Add a bonus or penalty
                   </button>
-                </form>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className={LABEL}>Modifier</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowModifier(false)}
+                        className="text-xs text-slate-500 hover:underline dark:text-slate-400"
+                      >
+                        Hide
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <label className="space-y-1">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Effect</span>
+                        <select
+                          value={mode}
+                          onChange={(e) => chooseMode(e.target.value as EffectMode)}
+                          aria-label="Modifier effect"
+                          className={FIELD}
+                        >
+                          <option value="advantage">Advantage</option>
+                          <option value="disadvantage">Disadvantage</option>
+                          <option value="flatBonus">Bonus / penalty</option>
+                        </select>
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Applies to
+                        </span>
+                        <select
+                          value={applies}
+                          onChange={(e) => setApplies(e.target.value as EffectApplies)}
+                          aria-label="Applies to"
+                          className={FIELD}
+                        >
+                          <option value="attackRolls">Attack rolls</option>
+                          <option value="savingThrows">Saving throws</option>
+                          <option value="abilityChecks">Ability checks</option>
+                          <option value="all">Everything</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      <span className={LABEL}>On</span>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="effect-direction"
+                          checked={direction === 'outgoing'}
+                          onChange={() => setDirection('outgoing')}
+                        />
+                        Rolls it makes
+                      </label>
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name="effect-direction"
+                          checked={direction === 'incoming'}
+                          onChange={() => setDirection('incoming')}
+                        />
+                        Rolls made against it
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {mode === 'flatBonus' && (
+                        <input
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          placeholder="+1d4 or -2"
+                          aria-label="Amount"
+                          className={`${FIELD_W} w-28`}
+                        />
+                      )}
+                      <input
+                        value={label}
+                        onChange={(e) => setLabel(e.target.value)}
+                        placeholder="Label (Bless, Bane…)"
+                        aria-label="Modifier label"
+                        className={`${FIELD_W} min-w-0 flex-1`}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{summary}</p>
+                    <button
+                      type="button"
+                      onClick={applyModifier}
+                      disabled={!canApplyModifier}
+                      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+                    >
+                      Apply modifier
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
