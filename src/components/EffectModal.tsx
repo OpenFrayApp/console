@@ -78,27 +78,22 @@ const CHIP =
   'rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
 
 /**
- * The "Apply effect" modal: toggle conditions, build a modifier (advantage /
- * disadvantage / flat bonus), or jot a reminder — all with a chosen duration.
- * Stays open so the GM can stack several; Done (or ✕ / Escape) closes.
+ * The "Apply effect" modal: stage a duration, any conditions, an optional modifier
+ * (advantage / disadvantage / flat bonus), and a reminder, then commit them all at once
+ * with **Apply**. Nothing lands on the creature until Apply; ✕ / Escape / backdrop cancels.
  */
 export function EffectModal({
   name,
   effects,
   onApply,
   onRemove,
-  onUpdateDuration,
 }: {
   name: string
   effects: Effect[]
   onApply: (effect: Effect) => void
   onRemove: (id: string) => void
-  /** Re-set the duration on effects added this session (when the GM changes it). */
-  onUpdateDuration: (ids: string[], duration: EffectDuration) => void
 }) {
   const [open, setOpen] = useState(false)
-  // Effects added this open session — the shared Duration control live-updates them.
-  const [sessionIds, setSessionIds] = useState<string[]>([])
 
   const [dur, setDur] = useState<DurChoice>('manual')
   const [saveAbility, setSaveAbility] = useState<Ability>('dex')
@@ -112,12 +107,17 @@ export function EffectModal({
   const [label, setLabel] = useState('')
 
   const [note, setNote] = useState('')
-  const [added, setAdded] = useState<string[]>([])
   // The modifier builder is collapsed by default — a condition or a reminder is the common case.
   const [showModifier, setShowModifier] = useState(false)
+  // Conditions are staged here and committed on Apply, not toggled live.
+  const [staged, setStaged] = useState<Set<ConditionName>>(new Set())
 
-  useEffect(() => {
-    if (!open) return
+  const conditionNames = (): ConditionName[] =>
+    effects.filter((e) => e.icon === 'condition').map((e) => e.name as ConditionName)
+
+  // Open with the creature's current conditions pre-selected, and everything else reset.
+  const openModal = () => {
+    setStaged(new Set(conditionNames()))
     setDur('manual')
     setSaveAbility('dex')
     setSaveDc('')
@@ -128,9 +128,12 @@ export function EffectModal({
     setAmount('')
     setLabel('')
     setNote('')
-    setAdded([])
-    setSessionIds([])
     setShowModifier(false)
+    setOpen(true)
+  }
+
+  useEffect(() => {
+    if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -154,49 +157,26 @@ export function EffectModal({
     }
   }
 
-  // Takes explicit parts so a control's onChange can compute the new duration
-  // before its own state has flushed.
-  const makeDuration = (
-    d: DurChoice = dur,
-    ab: Ability = saveAbility,
-    dc: string = saveDc,
-    w: 'endOfTurn' | 'startOfTurn' = saveWhen,
-  ): EffectDuration => {
-    if (d === 'consume') return { type: 'consumeOnRoll' }
-    if (d === 'save')
-      return { type: 'saveEnds', save: { ability: ab, dc: Number(dc) || 10 }, when: w }
-    const rounds = TIMED_ROUNDS[d]
+  const makeDuration = (): EffectDuration => {
+    if (dur === 'consume') return { type: 'consumeOnRoll' }
+    if (dur === 'save')
+      return {
+        type: 'saveEnds',
+        save: { ability: saveAbility, dc: Number(saveDc) || 10 },
+        when: saveWhen,
+      }
+    const rounds = TIMED_ROUNDS[dur]
     if (rounds != null) return { type: 'rounds', rounds }
     return { type: 'manual' }
   }
 
-  const updateSession = (duration: EffectDuration) => {
-    if (sessionIds.length) onUpdateDuration(sessionIds, duration)
-  }
-
-  // Remember each applied effect's id so the Duration control can re-bind it.
-  const track = (effect: Effect) => {
-    recordEvent(EVENTS.effectApplied)
-    onApply(effect)
-    setSessionIds((s) => [...s, effect.id])
-  }
-
-  const applyEffect = (effect: Effect, label: string) => {
-    track(effect)
-    setAdded((a) => [...a, label])
-  }
-
-  const activeCondition = (c: ConditionName): Effect | undefined =>
-    effects.find((e) => e.icon === 'condition' && e.name === c)
-
   const toggleCondition = (c: ConditionName) => {
-    const existing = activeCondition(c)
-    if (existing) {
-      onRemove(existing.id)
-      setSessionIds((s) => s.filter((x) => x !== existing.id))
-    } else {
-      track(condition(c, { duration: makeDuration() }))
-    }
+    setStaged((s) => {
+      const next = new Set(s)
+      if (next.has(c)) next.delete(c)
+      else next.add(c)
+      return next
+    })
   }
 
   const dirText = direction === 'outgoing' ? 'it makes' : 'made against it'
@@ -205,44 +185,54 @@ export function EffectModal({
       ? `${label.trim() || 'Effect'}: ${amount.trim() || '±N'} to ${APPLIES_TEXT[applies]} ${dirText}`
       : `${label.trim() || 'Effect'}: ${mode === 'advantage' ? 'Advantage' : 'Disadvantage'} on ${APPLIES_TEXT[applies]} ${dirText}`
 
-  const canApplyModifier = label.trim() !== '' && (mode !== 'flatBonus' || amount.trim() !== '')
+  const modifierReady = label.trim() !== '' && (mode !== 'flatBonus' || amount.trim() !== '')
 
-  const applyModifier = () => {
-    if (!canApplyModifier) return
-    applyEffect(
-      modifierEffect(
-        {
-          name: label.trim(),
-          mode,
-          direction,
-          applies,
-          value: mode === 'flatBonus' ? parseAmount(amount) : null,
-        },
-        { duration: makeDuration() },
-      ),
-      label.trim(),
-    )
-    setLabel('')
-    setAmount('')
-    // Reset the direction/applies to this modifier type's sensible default so a
-    // second effect doesn't silently inherit the first's direction — e.g. adding
-    // Reckless's "advantage on its own attacks" (outgoing) then its "advantage
-    // against it" (incoming), which must read as a debuff, not a buff.
-    chooseMode(mode)
-  }
-
-  const applyReminder = () => {
+  // The only apply path. Commits everything staged at once, with the chosen duration:
+  // conditions (newly-checked added, unchecked removed), the modifier if one was built,
+  // and the reminder if one was typed.
+  const apply = () => {
+    const duration = makeDuration()
+    const current = new Set(conditionNames())
+    for (const c of staged) {
+      if (!current.has(c)) {
+        recordEvent(EVENTS.effectApplied)
+        onApply(condition(c, { duration }))
+      }
+    }
+    for (const c of current) {
+      if (!staged.has(c)) {
+        const existing = effects.find((e) => e.icon === 'condition' && e.name === c)
+        if (existing) onRemove(existing.id)
+      }
+    }
+    if (modifierReady) {
+      recordEvent(EVENTS.effectApplied)
+      onApply(
+        modifierEffect(
+          {
+            name: label.trim(),
+            mode,
+            direction,
+            applies,
+            value: mode === 'flatBonus' ? parseAmount(amount) : null,
+          },
+          { duration },
+        ),
+      )
+    }
     const text = note.trim()
-    if (!text) return
-    applyEffect(reminder(text, text, { duration: makeDuration() }), text)
-    setNote('')
+    if (text) {
+      recordEvent(EVENTS.effectApplied)
+      onApply(reminder(text, text, { duration }))
+    }
+    setOpen(false)
   }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openModal}
         className="rounded border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
       >
         Apply effect
@@ -278,11 +268,7 @@ export function EffectModal({
                   <div className="flex flex-wrap items-center gap-2">
                     <select
                       value={dur}
-                      onChange={(e) => {
-                        const v = e.target.value as DurChoice
-                        setDur(v)
-                        updateSession(makeDuration(v))
-                      }}
+                      onChange={(e) => setDur(e.target.value as DurChoice)}
                       aria-label="Duration"
                       className={`${FIELD_W} w-full`}
                     >
@@ -296,11 +282,7 @@ export function EffectModal({
                       <span className="flex flex-wrap items-center gap-1 text-sm">
                         <select
                           value={saveAbility}
-                          onChange={(e) => {
-                            const v = e.target.value as Ability
-                            setSaveAbility(v)
-                            updateSession(makeDuration(dur, v))
-                          }}
+                          onChange={(e) => setSaveAbility(e.target.value as Ability)}
                           aria-label="Save ability"
                           className={`${FIELD_W} w-20`}
                         >
@@ -313,10 +295,7 @@ export function EffectModal({
                         DC
                         <input
                           value={saveDc}
-                          onChange={(e) => {
-                            setSaveDc(e.target.value)
-                            updateSession(makeDuration(dur, saveAbility, e.target.value))
-                          }}
+                          onChange={(e) => setSaveDc(e.target.value)}
                           placeholder="#"
                           aria-label="Save DC"
                           inputMode="numeric"
@@ -324,11 +303,7 @@ export function EffectModal({
                         />
                         <select
                           value={saveWhen}
-                          onChange={(e) => {
-                            const v = e.target.value as typeof saveWhen
-                            setSaveWhen(v)
-                            updateSession(makeDuration(dur, saveAbility, saveDc, v))
-                          }}
+                          onChange={(e) => setSaveWhen(e.target.value as typeof saveWhen)}
                           aria-label="Save timing"
                           className={`${FIELD_W} w-32`}
                         >
@@ -348,28 +323,13 @@ export function EffectModal({
 
                 <div className="space-y-1">
                   <p className={LABEL}>Reminder</p>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      applyReminder()
-                    }}
-                    className="flex gap-2"
-                  >
-                    <input
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="e.g. Hex: +1d6 necrotic"
-                      aria-label="Custom reminder"
-                      className={`${FIELD_W} min-w-0 flex-1`}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!note.trim()}
-                      className={`${CHIP} disabled:opacity-40`}
-                    >
-                      Add
-                    </button>
-                  </form>
+                  <input
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="e.g. Hex: +1d6 necrotic"
+                    aria-label="Custom reminder"
+                    className={`${FIELD_W} w-full`}
+                  />
                 </div>
               </div>
 
@@ -377,7 +337,7 @@ export function EffectModal({
                 <p className={LABEL}>Condition</p>
                 <div className="flex flex-wrap gap-1.5">
                   {CONDITIONS.map((c) => {
-                    const active = activeCondition(c) != null
+                    const active = staged.has(c)
                     return (
                       <button
                         key={c}
@@ -489,29 +449,25 @@ export function EffectModal({
                       />
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{summary}</p>
-                    <button
-                      type="button"
-                      onClick={applyModifier}
-                      disabled={!canApplyModifier}
-                      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-                    >
-                      Apply modifier
-                    </button>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-              <p className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                {added.length > 0 && `Added: ${added.join(', ')}`}
-              </p>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={apply}
                 className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
               >
-                Done
+                Apply
               </button>
             </div>
           </div>

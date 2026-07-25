@@ -154,7 +154,7 @@ describe('Encounter flow', () => {
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
     fireEvent.click(screen.getByRole('button', { name: 'Prone' })) // condition chip in the modal
-    fireEvent.click(screen.getByRole('button', { name: 'Done' })) // close the modal (stays open for multiple)
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' })) // commit the staged effect and close
     expect(screen.getByRole('button', { name: 'Prone' })).toBeInTheDocument() // badge on the row
   })
 
@@ -166,7 +166,7 @@ describe('Encounter flow', () => {
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '15' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
     // The badge on the row stays short; the Applied effects list carries the save.
     expect(screen.getByText('Applied effects')).toBeInTheDocument()
@@ -184,7 +184,7 @@ describe('Encounter flow', () => {
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '12' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
     beginCombat()
     // Ending the goblin's turn rolls its end-of-turn save automatically (logged).
@@ -201,7 +201,7 @@ describe('Encounter flow', () => {
     fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '12' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Restrained' }))
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
     // Each gets its own row in Applied effects — a shared DC isn't a shared roll.
     expect(screen.getAllByText(/DEX save DC 12/)).toHaveLength(2)

@@ -20,7 +20,7 @@ import { saveBonus } from '../combat/masssave.ts'
 import { describeDuration } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
-import type { Effect, EffectDuration } from '../schema/effect.ts'
+import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
 import type { OnRoll } from './GameLog.tsx'
@@ -84,19 +84,6 @@ export function CombatantControls({
       update: (c) => ({ ...c, effects: c.effects.filter((e) => e.id !== effectId) }),
     })
 
-  // Called when the GM changes the shared duration after already applying some effects this session.
-  const setEffectsDuration = (ids: string[], duration: EffectDuration) => {
-    const set = new Set(ids)
-    dispatch({
-      type: 'update',
-      id,
-      update: (c) => ({
-        ...c,
-        effects: c.effects.map((e) => (set.has(e.id) ? { ...e, duration } : e)),
-      }),
-    })
-  }
-
   // Alphabetical, so a row keeps its place as effects come and go.
   const sortedEffects = [...combatant.effects].sort((a, b) => a.name.localeCompare(b.name))
 
@@ -124,7 +111,6 @@ export function CombatantControls({
           effects={combatant.effects}
           onApply={addEffect}
           onRemove={removeEffect}
-          onUpdateDuration={setEffectsDuration}
         />
 
         {combatant.effects.length > 0 && (
