@@ -15,6 +15,21 @@ cpSync('site/dist', 'dist', { recursive: true })
 // already point under /docs. Copy it in wholesale.
 cpSync('docs/dist', 'dist/docs', { recursive: true })
 
+// The handbook was reorganised into fight/, library/, and reference/ folders; keep the
+// old /docs/concepts/* (and the old top-level /docs/importer/) URLs working.
+const docsMoves = {
+  '/docs/concepts/encounters/': '/docs/fight/encounters/',
+  '/docs/concepts/combatants/': '/docs/fight/combatants/',
+  '/docs/concepts/effects/': '/docs/fight/effects/',
+  '/docs/concepts/spells/': '/docs/fight/spells/',
+  '/docs/concepts/rests/': '/docs/fight/rests/',
+  '/docs/concepts/compendium/': '/docs/library/compendium/',
+  '/docs/concepts/making-your-own/': '/docs/library/making-your-own/',
+  '/docs/concepts/campaigns/': '/docs/library/campaigns/',
+  '/docs/concepts/dice/': '/docs/reference/dice/',
+  '/docs/importer/': '/docs/library/importer/',
+}
+
 // Pages routing: normalise the bare /console and /docs to their trailing-slash index,
 // and give the app an SPA-style fallback so any /console/* path resolves to the app
 // shell (real static assets under /console/ are served first, so this only catches
@@ -24,6 +39,7 @@ const redirects = [
   '/console            /console/             301',
   '/console/*          /console/index.html   200',
   '/docs               /docs/                301',
+  ...Object.entries(docsMoves).map(([from, to]) => `${from.padEnd(38)}${to}  301`),
   '',
 ].join('\n')
 writeFileSync('dist/_redirects', redirects)
