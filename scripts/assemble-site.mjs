@@ -44,4 +44,21 @@ const redirects = [
 ].join('\n')
 writeFileSync('dist/_redirects', redirects)
 
-console.log('Assembled dist/: landing at /, app at /console/, docs at /docs/, _redirects written.')
+// One sitemap index at the domain root, covering both the marketing site and the
+// handbook. Each part builds its own sitemap-0.xml (@astrojs/sitemap); the docs are a
+// subfolder of the same site, so a single root index is the natural discovery point and
+// doesn't depend on robots.txt. This overwrites the marketing-only index copied in from
+// site/dist above. (A sitemap index must point at sitemap files, not other indexes.)
+const sitemapIndex = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+  '<sitemap><loc>https://openfray.app/sitemap-0.xml</loc></sitemap>',
+  '<sitemap><loc>https://openfray.app/docs/sitemap-0.xml</loc></sitemap>',
+  '</sitemapindex>',
+  '',
+].join('\n')
+writeFileSync('dist/sitemap-index.xml', sitemapIndex)
+
+console.log(
+  'Assembled dist/: landing at /, app at /console/, docs at /docs/, _redirects + sitemap-index written.'
+)
