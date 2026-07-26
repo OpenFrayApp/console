@@ -54,7 +54,7 @@ asides, and em-dash flourishes usually are not; prefer a second sentence.
 ## What we document, and what we don't
 
 - **Document the app.** What a button does, what a screen shows, what happens next.
-- **Don't teach Dungeons & Dragons.** State a rule only when the reader needs it to understand what
+- **Don't teach Dungeons and Dragons.** State a rule only when the reader needs it to understand what
   OpenFray is doing (for example, that a save-ends effect is rolled at the start or end of a
   turn). Never restate rules text, and never reproduce SRD content in the docs or on the site.
 - **Don't document what doesn't exist.** If a feature is planned, either leave it out or mark
@@ -153,14 +153,31 @@ Capitalization and naming are part of correctness. Get these right.
 | fight                             | combat (in prose — "combat" is fine in **Start combat**)        |
 | encounter                         | — the app's own noun; in prose, say "fight"                     |
 | sign in, signed in, sign out      | log in, login, log out, register                                |
-| DnD 5e                            | D&D 5e, 5E, dnd, fifth edition                                  |
-| Dungeons and Dragons              | Dungeons & Dragons                                              |
+| DnD 5e (house short form)         | dnd (lowercase), a bare "5E" as a label                        |
+| Dungeons and Dragons, DnD         | D&D, Dungeons & Dragons (only in "D&D Beyond" or legal text)     |
 | D&D Beyond                        | DDB, DnD Beyond                                                 |
 | Core Rules 2024 / Core Rules 2014 | 5.5e / 5e (badges use these; prose spells it out)               |
 | rule sets                         | rulesets, sources, libraries                                    |
 
 More:
 
+- **The ampersand marks are Wizards of the Coast's, not ours.** Never write "D&D" or
+  "Dungeons & Dragons" as our own term — spell it "DnD" or "Dungeons and Dragons". The
+  ampersand form appears in only two places: the **D&D Beyond** product name (we're naming
+  their product), and a copyright or legal statement that has to quote the trademark.
+  Nowhere else — not in titles, prose, metadata, or keywords.
+- **Edition names — write the ones readers search.** "DnD 5e" is the house short form,
+  but "Dungeons and Dragons 5e", "5th edition", and the year forms ("DnD 2024", "Core
+  Rules 2024", "2014 edition") are all correct and welcome — in page titles, descriptions,
+  and metadata especially, and in prose wherever they read naturally. These are the words
+  people type into a search box; match them. Don't lowercase to "dnd" or drop in a bare
+  "5E" as a label.
+- **The product is the combat console; "combat tracker" and "initiative tracker" are search
+  synonyms.** "Combat console" is what the app and the site call OpenFray, so lead with it in
+  titles and prominent copy. "Combat tracker" and "initiative tracker" are the phrases readers
+  type into a search box — use them as synonyms in descriptions, metadata, and page
+  introductions, not as the main label. Inside the console's own workings the precise nouns
+  still hold: **the tracker** is the initiative list, and **the console** is the whole thing.
 - **OpenFray** — one word, capital O and F. Never "Openfray", never "the OpenFray app".
 - **American spelling** ("color", "canceled"), per Merriam-Webster. This is a deliberate
   exception to how the existing pages read; new and edited copy uses American spelling.
