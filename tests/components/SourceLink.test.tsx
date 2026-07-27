@@ -32,6 +32,12 @@ describe('SourceLink', () => {
     expect(screen.queryByText(/openfray-brood/)).toBeNull()
   })
 
+  it('shows an OpenFray library (The Waking Garden) by name, not its id', () => {
+    render(<SourceLink source="openfray-waking-garden" />)
+    expect(screen.getByText(/The Waking Garden/)).toBeInTheDocument()
+    expect(screen.queryByText(/openfray-waking/)).toBeNull()
+  })
+
   it('shows custom content without a license link', () => {
     render(<SourceLink source="custom" />)
     expect(screen.getByText(/Custom/)).toBeInTheDocument()

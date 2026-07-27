@@ -86,6 +86,15 @@ export const LIBRARIES: Library[] = [
     edition: '5.5',
     creaturesFile: 'brood-creatures.json',
   },
+  {
+    id: 'openfray-waking-garden',
+    label: 'The Waking Garden',
+    shortLabel: 'TWG',
+    family: 'openfray',
+    group: 'openfray',
+    edition: '5.5',
+    creaturesFile: 'waking-garden-creatures.json',
+  },
 ]
 
 /** Source-badge colors, keyed by family so sibling books share one (full class

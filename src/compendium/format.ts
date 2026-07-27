@@ -144,6 +144,12 @@ export function sourceInfo(source: string): SourceInfo {
         license: 'CC-BY-4.0',
         url: 'https://openfray.app',
       }
+    case 'openfray-waking-garden':
+      return {
+        ruleset: 'The Waking Garden',
+        license: 'CC-BY-4.0',
+        url: 'https://openfray.app',
+      }
     case 'custom':
       return { ruleset: 'Custom (you)' }
     default:
