@@ -51,7 +51,7 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { RecapScreen, EndCombatPrompt } from './components/Recap.tsx'
 import { allFoesDefeated, allPlayersDown, buildRecap, type Recap } from './combat/recap.ts'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
-import { loadSettings, saveSettings } from './state/settings.ts'
+import { loadSettings, saveSettings, type LibrarySort } from './state/settings.ts'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
@@ -242,6 +242,12 @@ function App() {
   const setShowHomebrew = (value: boolean) => {
     setShowHomebrewState(value)
     saveSettings({ showHomebrew: value })
+  }
+  // How the compendium orders its list (by name, or by CR / spell level).
+  const [librarySort, setLibrarySortState] = useState<LibrarySort>(() => loadSettings().librarySort)
+  const setLibrarySort = (value: LibrarySort) => {
+    setLibrarySortState(value)
+    saveSettings({ librarySort: value })
   }
   const [settingsOpen, setSettingsOpen] = useState(false)
   // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
@@ -834,6 +840,8 @@ function App() {
             onSetEnabledLibraries={setEnabledLibraries}
             showHomebrew={showHomebrew}
             onSetShowHomebrew={setShowHomebrew}
+            librarySort={librarySort}
+            onSetLibrarySort={setLibrarySort}
           />
         )}
 
@@ -861,6 +869,7 @@ function App() {
                 initialTab={compendiumTab}
                 enabledLibraries={enabledLibraries}
                 showHomebrew={showHomebrew}
+                librarySort={librarySort}
                 createGated={!user}
                 onGated={() => setAuthOpen(true)}
               />

@@ -8,9 +8,12 @@ import { SettingsPanel } from '../../src/components/SettingsPanel.tsx'
 
 afterEach(cleanup)
 
-function renderPanel(over: { enabledLibraries?: string[]; showHomebrew?: boolean } = {}) {
+function renderPanel(
+  over: { enabledLibraries?: string[]; showHomebrew?: boolean; librarySort?: 'name' | 'cr' } = {},
+) {
   const onSetEnabledLibraries = vi.fn()
   const onSetShowHomebrew = vi.fn()
+  const onSetLibrarySort = vi.fn()
   render(
     <SettingsPanel
       onClose={() => {}}
@@ -18,9 +21,11 @@ function renderPanel(over: { enabledLibraries?: string[]; showHomebrew?: boolean
       onSetEnabledLibraries={onSetEnabledLibraries}
       showHomebrew={over.showHomebrew ?? true}
       onSetShowHomebrew={onSetShowHomebrew}
+      librarySort={over.librarySort ?? 'name'}
+      onSetLibrarySort={onSetLibrarySort}
     />,
   )
-  return { onSetEnabledLibraries, onSetShowHomebrew }
+  return { onSetEnabledLibraries, onSetShowHomebrew, onSetLibrarySort }
 }
 
 describe('SettingsPanel', () => {
@@ -50,6 +55,12 @@ describe('SettingsPanel', () => {
 
     fireEvent.click(screen.getByText('Homebrew creations'))
     expect(onSetShowHomebrew).toHaveBeenCalledWith(false)
+  })
+
+  it('changes the library sort to CR / level', () => {
+    const { onSetLibrarySort } = renderPanel()
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'cr' } })
+    expect(onSetLibrarySort).toHaveBeenCalledWith('cr')
   })
 
   it('links to the importer extension on the Chrome Web Store', () => {

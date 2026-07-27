@@ -9,11 +9,17 @@ import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
  * settings, not combat/session state, so unlike the encounter they intentionally
  * survive a tab close. Grows as more preferences arrive (e.g. keyboard shortcuts).
  */
+/** How the compendium orders its list: alphabetically, or by challenge rating
+ *  (creatures) / spell level (spells). */
+export type LibrarySort = 'name' | 'cr'
+
 export interface AppSettings {
   /** Content library ids the compendium/picker show (see compendium/libraries.ts). */
   enabledLibraries: string[]
   /** Whether homebrew (custom) creations show in the compendium and pickers. On by default. */
   showHomebrew: boolean
+  /** How the compendium sorts creatures and spells. Defaults to by name. */
+  librarySort: LibrarySort
 }
 
 const KEY = 'openfray-settings'
@@ -34,6 +40,8 @@ export function loadSettings(): AppSettings {
     enabledLibraries: sanitizeEnabledLibraries(data.enabledLibraries),
     // On by default; only an explicit stored `false` hides homebrew.
     showHomebrew: data.showHomebrew !== false,
+    // By name unless an explicit 'cr' is stored.
+    librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
   }
 }
 

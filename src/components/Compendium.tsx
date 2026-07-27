@@ -7,6 +7,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { Campaign } from '../schema/campaign.ts'
 import type { RosterPc } from '../schema/roster.ts'
 import { formatCr } from '../compendium/format.ts'
+import type { LibrarySort } from '../state/settings.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
@@ -201,6 +202,7 @@ export function Compendium({
   initialTab = 'creatures',
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  librarySort = 'name',
   createGated = false,
   onGated,
 }: {
@@ -244,6 +246,8 @@ export function Compendium({
   enabledLibraries?: string[]
   /** When false, homebrew (custom) creatures and spells are hidden. On by default. */
   showHomebrew?: boolean
+  /** List order: by name, or by CR (creatures) / spell level (spells). */
+  librarySort?: LibrarySort
   /** When anonymous, create actions prompt sign-up instead. */
   createGated?: boolean
   onGated?: () => void
@@ -315,6 +319,7 @@ export function Compendium({
             .map((c) => ({
               id: c.id,
               name: c.name,
+              sortKey: c.cr ?? 0,
               meta: `CR ${formatCr(c.cr)}`,
               custom: c.id.startsWith('custom:'),
               src: c.id.startsWith('custom:') ? undefined : librarySource(c.source),
@@ -329,6 +334,7 @@ export function Compendium({
             .map((s) => ({
               id: s.id,
               name: s.name,
+              sortKey: s.level,
               meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
               custom: s.id.startsWith('custom:'),
               src: s.id.startsWith('custom:') ? undefined : librarySource(s.source),
@@ -340,8 +346,13 @@ export function Compendium({
             }))
     const q = query.trim().toLowerCase()
     const filtered = q ? list.filter((e) => e.name.toLowerCase().includes(q)) : list
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
-  }, [tab, allCreatures, allSpells, query, enabledLibraries, showHomebrew])
+    // By CR/level (ascending), name as tiebreak; otherwise straight alphabetical.
+    return [...filtered].sort((a, b) =>
+      librarySort === 'cr'
+        ? a.sortKey - b.sortKey || a.name.localeCompare(b.name)
+        : a.name.localeCompare(b.name),
+    )
+  }, [tab, allCreatures, allSpells, query, enabledLibraries, showHomebrew, librarySort])
 
   const selectedCreature =
     tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined

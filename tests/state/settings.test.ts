@@ -31,4 +31,17 @@ describe('app settings (localStorage)', () => {
     localStorage.setItem('openfray-settings', 'not json')
     expect(loadSettings().enabledLibraries).toEqual(DEFAULT_ENABLED_LIBRARIES)
   })
+
+  it('defaults the library sort to name and round-trips a change', () => {
+    expect(loadSettings().librarySort).toBe('name')
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().librarySort).toBe('cr')
+  })
+
+  it('merges a saved preference without clobbering the others', () => {
+    saveSettings({ enabledLibraries: ['srd-5.1'] })
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().enabledLibraries).toEqual(['srd-5.1'])
+    expect(loadSettings().librarySort).toBe('cr')
+  })
 })

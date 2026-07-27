@@ -8,6 +8,7 @@ import {
   librarySourceBadgeClass,
 } from '../compendium/libraries.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
+import type { LibrarySort } from '../state/settings.ts'
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
 
@@ -36,12 +37,16 @@ export function SettingsPanel({
   onSetEnabledLibraries,
   showHomebrew,
   onSetShowHomebrew,
+  librarySort,
+  onSetLibrarySort,
 }: {
   onClose: () => void
   enabledLibraries: string[]
   onSetEnabledLibraries: (ids: string[]) => void
   showHomebrew: boolean
   onSetShowHomebrew: (value: boolean) => void
+  librarySort: LibrarySort
+  onSetLibrarySort: (value: LibrarySort) => void
 }) {
   // Toggle a library; never drop the last one (an empty compendium is never useful).
   const toggleLibrary = (id: string) => {
@@ -128,6 +133,23 @@ export function SettingsPanel({
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3 dark:border-slate-800">
+              <label htmlFor="library-sort" className="text-sm text-slate-700 dark:text-slate-200">
+                Sort by
+              </label>
+              <select
+                id="library-sort"
+                value={librarySort}
+                onChange={(e) => {
+                  track(EVENTS.librarySortChanged)
+                  onSetLibrarySort(e.target.value as LibrarySort)
+                }}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <option value="name">Name (A–Z)</option>
+                <option value="cr">Creature CR/Spell level</option>
+              </select>
             </div>
           </section>
 
