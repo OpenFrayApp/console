@@ -130,7 +130,7 @@ second paragraph.
   block". A reader who can't find the button can't follow the step.
 - Name icon-only controls by both icon and function: "the **campfire** (short rest)".
 - Describe navigation as a path when it's more than one hop: "Open **Settings** (the gear at
-  the top right), then tick the rule sets your table uses."
+  the top right), then tick the libraries your table uses."
 - Don't describe screen positions that change on small screens without saying so.
 
 ---
@@ -139,25 +139,25 @@ second paragraph.
 
 Capitalization and naming are part of correctness. Get these right.
 
-| Use                               | Not                                                             |
-| --------------------------------- | --------------------------------------------------------------- |
-| Game Master, GM                   | Dungeon Master, DM, DMG                                         |
-| creature                          | monster, mob, enemy (as a noun for a stat block)                |
-| player, player character          | NPC, PC (in prose — **Add PC** is a button label)               |
-| hit points, armor class           | HP, AC (in prose — fine in a screenshot or table header)        |
-| the console                       | the app, the tool, the tracker (for the whole thing)            |
-| the tracker                       | the initiative list, the left column                            |
-| the compendium                    | the library, the database                                       |
-| the log                           | the roll log, the feed                                          |
-| effect, condition, reminder       | buff, debuff, status                                            |
-| fight                             | combat (in prose — "combat" is fine in **Start combat**)        |
-| encounter                         | — the app's own noun; in prose, say "fight"                     |
-| sign in, signed in, sign out      | log in, login, log out, register                                |
-| DnD 5e (house short form)         | dnd (lowercase), a bare "5E" as a label                        |
-| Dungeons and Dragons, DnD         | D&D, Dungeons & Dragons (only in "D&D Beyond" or legal text)     |
-| D&D Beyond                        | DDB, DnD Beyond                                                 |
-| Core Rules 2024 / Core Rules 2014 | 5.5e / 5e (badges use these; prose spells it out)               |
-| rule sets                         | rulesets, sources, libraries                                    |
+| Use                                 | Not                                                          |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Game Master, GM                     | Dungeon Master, DM, DMG                                      |
+| creature                            | monster, mob, enemy (as a noun for a stat block)             |
+| player, player character            | NPC, PC (in prose — **Add PC** is a button label)            |
+| hit points, armor class             | HP, AC (in prose — fine in a screenshot or table header)     |
+| the console                         | the app, the tool, the tracker (for the whole thing)         |
+| the tracker                         | the initiative list, the left column                         |
+| the compendium                      | the library, the database                                    |
+| the log                             | the roll log, the feed                                       |
+| effect, condition, reminder         | buff, debuff, status                                         |
+| fight                               | combat (in prose — "combat" is fine in **Start combat**)     |
+| encounter                           | — the app's own noun; in prose, say "fight"                  |
+| sign in, signed in, sign out        | log in, login, log out, register                             |
+| DnD 5e (house short form)           | dnd (lowercase), a bare "5E" as a label                      |
+| Dungeons and Dragons, DnD           | D&D, Dungeons & Dragons (only in "D&D Beyond" or legal text) |
+| D&D Beyond                          | DDB, DnD Beyond                                              |
+| Basic Rules 2024 / Basic Rules 2014 | 5.5e / 5e (badges use these; prose spells it out)            |
+| libraries (the content collections) | rule sets, rulesets, sources                                 |
 
 More:
 

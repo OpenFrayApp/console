@@ -76,7 +76,7 @@ fine; computing what a character can do is not.
 The single-GM combat console is up and running: initiative, monster resources,
 conditions/effects, concentration, group saves, and honest dice with a clear roll log,
 plus an **end-of-combat recap** (XP, timing, and standout hits), the built-in SRD
-compendium (**Core Rules 2024 and opt-in 2014 + Tome of Beasts libraries**), custom
+compendium (**Basic Rules 2024 and opt-in 2014 + Tome of Beasts libraries**), custom
 creatures and spells, JSON creature import, a durable **Characters** roster, and
 **campaigns** with house rules. It runs fully anonymous in the browser, or sign in (free,
 with **Discord or Google**) to save your fights and custom content to the cloud across
@@ -85,8 +85,8 @@ devices. Still to come: a shared read-only player view. Expect rough edges — i
 ## Content & licensing
 
 - **Code:** [AGPL-3.0](./LICENSE). A hosted/modified version must share its source.
-- **Game content:** SRD 5.2.1 (Core Rules 2024) from WotC's official CC-BY PDF and SRD
-  5.1 (Core Rules 2014) via [dnd5eapi.co](https://www.dnd5eapi.co), both under
+- **Game content:** SRD 5.2.1 (Basic Rules 2024) from WotC's official CC-BY PDF and SRD
+  5.1 (Basic Rules 2014) via [dnd5eapi.co](https://www.dnd5eapi.co), both under
   **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app and in
   [`CREDITS.md`](./CREDITS.md). Each source is honored under its own license, preferring
   CC-BY > ORC > OGL; third-party content — **Tome of Beasts 1–3 (Kobold Press)**, opt-in
