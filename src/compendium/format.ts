@@ -89,7 +89,7 @@ export function legendaryPreamble(edition?: '5.0' | '5.5'): string {
 }
 
 export interface SourceInfo {
-  /** Which ruleset the content is from, e.g. "Core Rules 2024 (SRD 5.2)". */
+  /** Which ruleset the content is from, e.g. "Basic Rules 2024 (SRD 5.2.1)". */
   ruleset: string
   /** Content license, e.g. "CC-BY-4.0"; absent for user-authored content. */
   license?: string
@@ -102,13 +102,13 @@ export function sourceInfo(source: string): SourceInfo {
   switch (source) {
     case 'srd-5.2':
       return {
-        ruleset: 'Core Rules 2024 (SRD 5.2.1)',
+        ruleset: 'Basic Rules 2024 (SRD 5.2.1)',
         license: 'CC-BY-4.0',
         url: 'https://www.dndbeyond.com/srd',
       }
     case 'srd-5.1':
       return {
-        ruleset: 'Core Rules 2014 (SRD 5.1)',
+        ruleset: 'Basic Rules 2014 (SRD 5.1)',
         license: 'CC-BY-4.0',
         url: 'https://www.dndbeyond.com/srd',
       }
@@ -129,6 +129,12 @@ export function sourceInfo(source: string): SourceInfo {
         ruleset: 'Tome of Beasts 3',
         license: 'OGL-1.0a',
         url: 'https://koboldpress.com',
+      }
+    case 'openfray-brood-bloom':
+      return {
+        ruleset: 'Brood & Bloom',
+        license: 'CC-BY-4.0',
+        url: 'https://openfray.app',
       }
     case 'custom':
       return { ruleset: 'Custom (you)' }

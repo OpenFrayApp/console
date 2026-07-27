@@ -78,7 +78,7 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'tob3-creatures.json',
   },
   {
-    id: 'openfray-brood',
+    id: 'openfray-brood-bloom',
     label: 'Brood & Bloom',
     shortLabel: 'B&B',
     family: 'openfray',

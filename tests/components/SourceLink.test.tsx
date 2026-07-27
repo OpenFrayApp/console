@@ -11,7 +11,7 @@ afterEach(cleanup)
 describe('SourceLink', () => {
   it('shows the ruleset as plain text — no link, no license', () => {
     render(<SourceLink source="srd-5.2" />)
-    expect(screen.getByText(/Core Rules 2024/)).toBeInTheDocument()
+    expect(screen.getByText(/Basic Rules 2024/)).toBeInTheDocument()
     expect(screen.queryByRole('link')).toBeNull()
     expect(screen.queryByText(/License/)).toBeNull()
   })
@@ -23,7 +23,13 @@ describe('SourceLink', () => {
 
   it('shows the 2014 ruleset', () => {
     render(<SourceLink source="srd-5.1" />)
-    expect(screen.getByText(/Core Rules 2014/)).toBeInTheDocument()
+    expect(screen.getByText(/Basic Rules 2014/)).toBeInTheDocument()
+  })
+
+  it('shows an OpenFray library (Brood & Bloom) by name, not its id', () => {
+    render(<SourceLink source="openfray-brood-bloom" />)
+    expect(screen.getByText(/Brood & Bloom/)).toBeInTheDocument()
+    expect(screen.queryByText(/openfray-brood/)).toBeNull()
   })
 
   it('shows custom content without a license link', () => {
