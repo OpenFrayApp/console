@@ -8,45 +8,52 @@ import { SettingsPanel } from '../../src/components/SettingsPanel.tsx'
 
 afterEach(cleanup)
 
+function renderPanel(over: { enabledLibraries?: string[]; showHomebrew?: boolean } = {}) {
+  const onSetEnabledLibraries = vi.fn()
+  const onSetShowHomebrew = vi.fn()
+  render(
+    <SettingsPanel
+      onClose={() => {}}
+      enabledLibraries={over.enabledLibraries ?? ['srd-5.2']}
+      onSetEnabledLibraries={onSetEnabledLibraries}
+      showHomebrew={over.showHomebrew ?? true}
+      onSetShowHomebrew={onSetShowHomebrew}
+    />,
+  )
+  return { onSetEnabledLibraries, onSetShowHomebrew }
+}
+
 describe('SettingsPanel', () => {
-  it('lists the content libraries and toggles one on', () => {
-    const onSet = vi.fn()
-    render(
-      <SettingsPanel
-        onClose={() => {}}
-        enabledLibraries={['srd-5.2']}
-        onSetEnabledLibraries={onSet}
-      />,
-    )
+  it('groups the rule sets under Core / OpenFray / Other and toggles one on', () => {
+    const { onSetEnabledLibraries } = renderPanel()
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy()
-    expect(screen.getByText('Rule sets')).toBeTruthy()
+    expect(screen.getByText('Libraries')).toBeTruthy()
+    for (const group of ['Core', 'OpenFray', 'Other']) {
+      expect(screen.getByRole('heading', { name: group })).toBeTruthy()
+    }
 
     fireEvent.click(screen.getByText('Tome of Beasts 3 (Kobold Press)'))
-    expect(onSet).toHaveBeenCalledWith(['srd-5.2', 'kobold-press-tob3'])
+    expect(onSetEnabledLibraries).toHaveBeenCalledWith(['srd-5.2', 'kobold-press-tob3'])
   })
 
   it('never lets the user disable the last library', () => {
-    const onSet = vi.fn()
-    render(
-      <SettingsPanel
-        onClose={() => {}}
-        enabledLibraries={['srd-5.2']}
-        onSetEnabledLibraries={onSet}
-      />,
-    )
-    // Unchecking the only enabled library is a no-op.
-    fireEvent.click(screen.getByText('Core Rules 2024 (SRD 5.2.1)'))
-    expect(onSet).not.toHaveBeenCalled()
+    const { onSetEnabledLibraries } = renderPanel()
+    fireEvent.click(screen.getByText('Basic Rules 2024 (SRD 5.2.1)'))
+    expect(onSetEnabledLibraries).not.toHaveBeenCalled()
+  })
+
+  it('lists homebrew under Other, on by default, and toggles it off', () => {
+    const { onSetShowHomebrew } = renderPanel({ showHomebrew: true })
+    const label = screen.getByText('Homebrew creations').closest('label')!
+    const checkbox = label.querySelector('input[type=checkbox]') as HTMLInputElement
+    expect(checkbox.checked).toBe(true)
+
+    fireEvent.click(screen.getByText('Homebrew creations'))
+    expect(onSetShowHomebrew).toHaveBeenCalledWith(false)
   })
 
   it('links to the importer extension on the Chrome Web Store', () => {
-    render(
-      <SettingsPanel
-        onClose={() => {}}
-        enabledLibraries={['srd-5.2']}
-        onSetEnabledLibraries={() => {}}
-      />,
-    )
+    renderPanel()
     const link = screen.getByRole('link', { name: /Get it for Chrome/ })
     expect(link.getAttribute('href')).toContain(
       'chromewebstore.google.com/detail/openfray-importer/',

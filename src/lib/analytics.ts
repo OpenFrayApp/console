@@ -54,6 +54,7 @@ export const EVENTS = {
   compendiumOpened: 'Compendium opened',
   settingsOpened: 'Settings opened',
   ruleSetToggled: 'Rule set toggled',
+  homebrewToggled: 'Homebrew toggled',
   themeToggled: 'Theme toggled',
   importerClicked: 'Importer clicked',
 } as const

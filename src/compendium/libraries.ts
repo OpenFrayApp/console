@@ -19,6 +19,10 @@ export interface Library {
   /** Source family for badge coloring — sibling books share a color (every SRD
    *  "Core" set, every Tome of Beasts volume, …). */
   family: string
+  /** Settings-panel grouping header: 'core' (SRD), 'openfray' (first-party content),
+   *  'other' (third-party books). Homebrew is injected into 'other' by the panel — it's a
+   *  preference, not a library. */
+  group: 'core' | 'openfray' | 'other'
   edition: Edition
   creaturesFile: string
   /** Absent for creatures-only libraries (e.g. a bestiary like Tome of Beasts). */
@@ -28,27 +32,30 @@ export interface Library {
 export const LIBRARIES: Library[] = [
   {
     id: 'srd-5.2',
-    label: 'Core Rules 2024 (SRD 5.2.1)',
+    label: 'Basic Rules 2024 (SRD 5.2.1)',
     shortLabel: 'Core',
     family: 'srd',
+    group: 'core',
     edition: '5.5',
     creaturesFile: 'srd-creatures.json',
     spellsFile: 'srd-spells.json',
   },
   {
     id: 'srd-5.1',
-    label: 'Core Rules 2014 (SRD 5.1)',
+    label: 'Basic Rules 2014 (SRD 5.1)',
     shortLabel: 'Core',
     family: 'srd',
+    group: 'core',
     edition: '5.0',
     creaturesFile: 'srd-2014-creatures.json',
     spellsFile: 'srd-2014-spells.json',
   },
   {
     id: 'kobold-press-tob',
-    label: 'Tome of Beasts (Kobold Press)',
+    label: 'Tome of Beasts 1 (Kobold Press)',
     shortLabel: 'ToB1',
     family: 'tob',
+    group: 'other',
     edition: '5.0',
     creaturesFile: 'tob1-creatures.json',
   },
@@ -57,6 +64,7 @@ export const LIBRARIES: Library[] = [
     label: 'Tome of Beasts 2 (Kobold Press)',
     shortLabel: 'ToB2',
     family: 'tob',
+    group: 'other',
     edition: '5.0',
     creaturesFile: 'tob2-creatures.json',
   },
@@ -65,8 +73,18 @@ export const LIBRARIES: Library[] = [
     label: 'Tome of Beasts 3 (Kobold Press)',
     shortLabel: 'ToB3',
     family: 'tob',
+    group: 'other',
     edition: '5.0',
     creaturesFile: 'tob3-creatures.json',
+  },
+  {
+    id: 'openfray-brood',
+    label: 'Brood & Bloom',
+    shortLabel: 'B&B',
+    family: 'openfray',
+    group: 'openfray',
+    edition: '5.5',
+    creaturesFile: 'brood-creatures.json',
   },
 ]
 
@@ -75,6 +93,7 @@ export const LIBRARIES: Library[] = [
 const SOURCE_BADGE_CLASS: Record<string, string> = {
   srd: 'bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300',
   tob: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+  openfray: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
 }
 const SOURCE_BADGE_FALLBACK = 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
 
@@ -98,9 +117,16 @@ export function sanitizeEnabledLibraries(ids: unknown): string[] {
   return DEFAULT_ENABLED_LIBRARIES
 }
 
-/** Whether an item should show: custom content always; otherwise its source must be enabled. */
-export function inEnabledLibrary(item: { id: string; source: string }, enabled: string[]): boolean {
-  return item.id.startsWith('custom:') || enabled.includes(item.source)
+/** Whether an item should show: homebrew (custom) content follows the show-homebrew
+ *  preference; otherwise its source must be an enabled library. Defaults to showing
+ *  homebrew, so callers that don't pass the flag keep the old always-show behavior. */
+export function inEnabledLibrary(
+  item: { id: string; source: string },
+  enabled: string[],
+  showHomebrew = true,
+): boolean {
+  if (item.id.startsWith('custom:')) return showHomebrew
+  return enabled.includes(item.source)
 }
 
 /** The edition tag for a source (e.g. "5.5" / "5.0"), for the compendium badge. */

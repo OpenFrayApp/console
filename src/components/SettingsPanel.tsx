@@ -11,6 +11,16 @@ import { track, EVENTS } from '../lib/analytics.ts'
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
 
+// Rule-set groups, in display order; the homebrew toggle rides along in "Other".
+const GROUPS: { key: 'core' | 'openfray' | 'other'; label: string }[] = [
+  { key: 'core', label: 'Core' },
+  { key: 'openfray', label: 'OpenFray' },
+  { key: 'other', label: 'Other' },
+]
+// The compendium's "Custom" badge, reused on the homebrew row — no edition badge, since
+// homebrew can be either edition.
+const CUSTOM_BADGE = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'
+
 const IMPORTER_URL =
   'https://chromewebstore.google.com/detail/openfray-importer/cjooflanhdpfddpppllaelhlfpdinjfk'
 
@@ -24,10 +34,14 @@ export function SettingsPanel({
   onClose,
   enabledLibraries,
   onSetEnabledLibraries,
+  showHomebrew,
+  onSetShowHomebrew,
 }: {
   onClose: () => void
   enabledLibraries: string[]
   onSetEnabledLibraries: (ids: string[]) => void
+  showHomebrew: boolean
+  onSetShowHomebrew: (value: boolean) => void
 }) {
   // Toggle a library; never drop the last one (an empty compendium is never useful).
   const toggleLibrary = (id: string) => {
@@ -59,34 +73,60 @@ export function SettingsPanel({
         <div className="space-y-4">
           <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Rule sets
+              Libraries
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              Tick the rule sets your table plays. They appear in the compendium and in the Add
-              creature list.
+              Select the libraries your table uses. They add creatures and spells in the compendium,
+              in the Add creature list, and in the Cast spell list.
             </p>
-            <div className="space-y-2">
-              {LIBRARIES.map((lib) => (
-                <label
-                  key={lib.id}
-                  className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-indigo-600"
-                    checked={enabledLibraries.includes(lib.id)}
-                    onChange={() => toggleLibrary(lib.id)}
-                  />
-                  <span>{lib.label}</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className={`${BADGE} ${librarySourceBadgeClass(lib.id)}`}>
-                      {lib.shortLabel}
-                    </span>
-                    <span className={`${BADGE} ${editionBadgeClass(lib.edition)}`}>
-                      {editionLabel(lib.edition)}
-                    </span>
-                  </span>
-                </label>
+            <div className="space-y-4">
+              {GROUPS.map((group) => (
+                <div key={group.key}>
+                  <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {group.label}
+                  </h4>
+                  <div className="space-y-2">
+                    {group.key === 'other' && (
+                      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-indigo-600"
+                          checked={showHomebrew}
+                          onChange={() => {
+                            track(EVENTS.homebrewToggled)
+                            onSetShowHomebrew(!showHomebrew)
+                          }}
+                        />
+                        <span>Homebrew creations</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`${BADGE} ${CUSTOM_BADGE}`}>Custom</span>
+                        </span>
+                      </label>
+                    )}
+                    {LIBRARIES.filter((lib) => lib.group === group.key).map((lib) => (
+                      <label
+                        key={lib.id}
+                        className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-indigo-600"
+                          checked={enabledLibraries.includes(lib.id)}
+                          onChange={() => toggleLibrary(lib.id)}
+                        />
+                        <span>{lib.label}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`${BADGE} ${librarySourceBadgeClass(lib.id)}`}>
+                            {lib.shortLabel}
+                          </span>
+                          <span className={`${BADGE} ${editionBadgeClass(lib.edition)}`}>
+                            {editionLabel(lib.edition)}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </section>

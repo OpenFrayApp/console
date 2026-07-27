@@ -13,9 +13,12 @@ import {
 } from '../../src/compendium/libraries.ts'
 
 describe('libraries', () => {
-  it('always shows custom content, whatever is enabled', () => {
+  it('shows custom (homebrew) content per the show-homebrew flag; defaults to showing it', () => {
+    // Default (flag omitted / true): custom shows whatever's enabled.
     expect(inEnabledLibrary({ id: 'custom:x', source: 'Homebrew' }, [])).toBe(true)
-    expect(inEnabledLibrary({ id: 'custom:x', source: 'srd-5.1' }, ['srd-5.2'])).toBe(true)
+    expect(inEnabledLibrary({ id: 'custom:x', source: 'srd-5.1' }, ['srd-5.2'], true)).toBe(true)
+    // Flag off: custom is hidden, even though it's never a "library".
+    expect(inEnabledLibrary({ id: 'custom:x', source: 'Homebrew' }, [], false)).toBe(false)
   })
 
   it('shows an SRD entry only when its source is enabled', () => {

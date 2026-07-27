@@ -42,6 +42,7 @@ export function CastSpellPanel({
   round = 0,
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
+  showHomebrew = true,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
@@ -52,6 +53,8 @@ export function CastSpellPanel({
   customSpells?: Spell[]
   /** Only spells from these libraries (plus custom) are listed — matches the picker. */
   enabledLibraries?: string[]
+  /** When false, homebrew (custom) spells are hidden — matches the compendium/picker. */
+  showHomebrew?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -111,7 +114,7 @@ export function CastSpellPanel({
     // Every spell from the enabled libraries (so buffs like Bless show too), filtered
     // by the active content set — not just rollable ones, and not the whole bundle.
     const matches = [...customSpells, ...(spells ?? [])]
-      .filter((s) => inEnabledLibrary(s, enabledLibraries))
+      .filter((s) => inEnabledLibrary(s, enabledLibraries, showHomebrew))
       .filter((s) => !q || s.name.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name))
 

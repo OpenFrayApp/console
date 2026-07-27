@@ -21,10 +21,12 @@ export function AddCreaturePicker({
   onPick,
   customCreatures = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
+  showHomebrew = true,
 }: {
   onPick: (c: Creature) => void
   customCreatures?: Creature[]
   enabledLibraries?: string[]
+  showHomebrew?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -43,7 +45,7 @@ export function AddCreaturePicker({
   // Sorted alphabetically across every enabled library; the full list lives in the
   // scroll container so you can browse all creatures, not just the first matches.
   const matches = [...customCreatures, ...(creatures ?? [])]
-    .filter((c) => inEnabledLibrary(c, enabledLibraries))
+    .filter((c) => inEnabledLibrary(c, enabledLibraries, showHomebrew))
     .filter((c) => !q || c.name.toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name))
   const isCustom = (c: Creature) => c.id.startsWith('custom:')

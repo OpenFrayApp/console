@@ -236,6 +236,13 @@ function App() {
     setEnabledLibrariesState(ids)
     saveSettings({ enabledLibraries: ids })
   }
+  // Whether homebrew (custom) creations show in the compendium and pickers. On by default;
+  // device-local like the library toggles.
+  const [showHomebrew, setShowHomebrewState] = useState<boolean>(() => loadSettings().showHomebrew)
+  const setShowHomebrew = (value: boolean) => {
+    setShowHomebrewState(value)
+    saveSettings({ showHomebrew: value })
+  }
   const [settingsOpen, setSettingsOpen] = useState(false)
   // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
   const [recap, setRecap] = useState<Recap | null>(null)
@@ -757,6 +764,7 @@ function App() {
                   round={encounter.round}
                   customSpells={customSpells}
                   enabledLibraries={enabledLibraries}
+                  showHomebrew={showHomebrew}
                 />
               </div>
             )}
@@ -789,6 +797,7 @@ function App() {
                   onPick={handlePick}
                   customCreatures={customCreatures}
                   enabledLibraries={enabledLibraries}
+                  showHomebrew={showHomebrew}
                 />
               </div>
             )}
@@ -823,6 +832,8 @@ function App() {
             onClose={() => setSettingsOpen(false)}
             enabledLibraries={enabledLibraries}
             onSetEnabledLibraries={setEnabledLibraries}
+            showHomebrew={showHomebrew}
+            onSetShowHomebrew={setShowHomebrew}
           />
         )}
 
@@ -849,6 +860,7 @@ function App() {
                 onAddPcToEncounter={handleAddPcToEncounter}
                 initialTab={compendiumTab}
                 enabledLibraries={enabledLibraries}
+                showHomebrew={showHomebrew}
                 createGated={!user}
                 onGated={() => setAuthOpen(true)}
               />

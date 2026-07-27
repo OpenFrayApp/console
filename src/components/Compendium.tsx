@@ -200,6 +200,7 @@ export function Compendium({
   onAddPcToEncounter,
   initialTab = 'creatures',
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
+  showHomebrew = true,
   createGated = false,
   onGated,
 }: {
@@ -239,8 +240,10 @@ export function Compendium({
   onAddPcToEncounter?: (pc: RosterPc) => void
   /** Which tab to open on (the component remounts when the view re-enters). */
   initialTab?: Tab
-  /** Content library ids to show (custom content always shows). */
+  /** Content library ids to show. */
   enabledLibraries?: string[]
+  /** When false, homebrew (custom) creatures and spells are hidden. On by default. */
+  showHomebrew?: boolean
   /** When anonymous, create actions prompt sign-up instead. */
   createGated?: boolean
   onGated?: () => void
@@ -308,7 +311,7 @@ export function Compendium({
     const list =
       tab === 'creatures'
         ? allCreatures
-            .filter((c) => inEnabledLibrary(c, enabledLibraries))
+            .filter((c) => inEnabledLibrary(c, enabledLibraries, showHomebrew))
             .map((c) => ({
               id: c.id,
               name: c.name,
@@ -322,7 +325,7 @@ export function Compendium({
               ritual: false,
             }))
         : allSpells
-            .filter((s) => inEnabledLibrary(s, enabledLibraries))
+            .filter((s) => inEnabledLibrary(s, enabledLibraries, showHomebrew))
             .map((s) => ({
               id: s.id,
               name: s.name,
@@ -338,7 +341,7 @@ export function Compendium({
     const q = query.trim().toLowerCase()
     const filtered = q ? list.filter((e) => e.name.toLowerCase().includes(q)) : list
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name))
-  }, [tab, allCreatures, allSpells, query, enabledLibraries])
+  }, [tab, allCreatures, allSpells, query, enabledLibraries, showHomebrew])
 
   const selectedCreature =
     tab === 'creatures' ? allCreatures.find((c) => c.id === selectedId) : undefined
