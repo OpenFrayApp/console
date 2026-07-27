@@ -5,10 +5,34 @@ import { describe, expect, it } from 'vitest'
 import {
   capitalizeSegments,
   crDetail,
+  formatSenses,
   legendaryPreamble,
   proficiencyBonus,
   titleCase,
 } from '../../src/compendium/format.ts'
+
+describe('formatSenses', () => {
+  it('lists each sense in feet, passive perception last', () => {
+    expect(formatSenses({ passivePerception: 14, darkvision: 60, blindsight: 30 })).toBe(
+      'Darkvision 60 ft., Blindsight 30 ft., Passive Perception 14',
+    )
+  })
+
+  it('prints whole miles as miles — a mile-scale sense in feet is unreadable', () => {
+    expect(formatSenses({ passivePerception: 24, tremorsense: 5280 })).toBe(
+      'Tremorsense 1 mile, Passive Perception 24',
+    )
+    expect(formatSenses({ passivePerception: 10, truesight: 10560 })).toBe(
+      'Truesight 2 miles, Passive Perception 10',
+    )
+  })
+
+  it('keeps a range that is not a whole number of miles in feet', () => {
+    expect(formatSenses({ passivePerception: 10, blindsight: 6000 })).toBe(
+      'Blindsight 6000 ft., Passive Perception 10',
+    )
+  })
+})
 
 describe('proficiencyBonus', () => {
   it('follows the CR table', () => {

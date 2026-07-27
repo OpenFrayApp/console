@@ -3,13 +3,21 @@
 
 import type { Senses } from '../schema/primitives.ts'
 
+/** A sense range, stored in feet, printed the way a stat block does: whole miles as
+ *  miles ("Tremorsense 1 mile"), everything else as feet. */
+function range(feet: number): string {
+  if (feet < 5280 || feet % 5280) return `${feet} ft.`
+  const miles = feet / 5280
+  return `${miles} ${miles === 1 ? 'mile' : 'miles'}`
+}
+
 /** Senses as a single line, e.g. "Darkvision 60 ft., Passive Perception 14". */
 export function formatSenses(senses: Senses): string {
   const parts: string[] = []
-  if (senses.darkvision) parts.push(`Darkvision ${senses.darkvision} ft.`)
-  if (senses.blindsight) parts.push(`Blindsight ${senses.blindsight} ft.`)
-  if (senses.tremorsense) parts.push(`Tremorsense ${senses.tremorsense} ft.`)
-  if (senses.truesight) parts.push(`Truesight ${senses.truesight} ft.`)
+  if (senses.darkvision) parts.push(`Darkvision ${range(senses.darkvision)}`)
+  if (senses.blindsight) parts.push(`Blindsight ${range(senses.blindsight)}`)
+  if (senses.tremorsense) parts.push(`Tremorsense ${range(senses.tremorsense)}`)
+  if (senses.truesight) parts.push(`Truesight ${range(senses.truesight)}`)
   parts.push(`Passive Perception ${senses.passivePerception}`)
   return parts.join(', ')
 }
