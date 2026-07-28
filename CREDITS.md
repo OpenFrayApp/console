@@ -38,9 +38,10 @@ and never invoke the OGL. Required attribution:
 
 ## OpenFray original content
 
-*Brood & Bloom* and *The Waking Garden* are © 2026 OpenFray. They are licensed in layers,
-and the layer decides what you may do with the material. The same terms are published with
-each work — in the app, on <https://openfray.app>, and in the print edition.
+*Brood & Bloom* and *The Waking Garden* are © 2026 OpenFray. The stat blocks and game
+mechanics are free to reuse. The lore, art, and prose are not; all rights reserved. The
+terms are below, and are published with each work: in the app, on <https://openfray.app>,
+and in the print edition.
 
 - **Creatures and mechanics.** The stat blocks and game mechanics — every field of a
   creature entry other than its `description` — are licensed under the Creative Commons
