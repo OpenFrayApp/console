@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "npm run dev & npm run dev -w site & npm run dev -w docs & wait",
-    "build": "node scripts/clean-dist.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs",
+    "build": "node scripts/clean-dist.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs && node scripts/check-css-specificity.mjs",
     "build:site": "npm run build -w site",
     "build:docs": "npm run build -w docs",
     "preview": "vite preview",
