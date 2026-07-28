@@ -364,8 +364,23 @@ tables, and stat blocks — follows the rules below.
 
 ### Formatting game terms
 
-- **Capitalize** ability scores, Armor Class, Difficulty Class, skills, languages, planes,
-  and the named traits and actions of a creature.
+The published guide dates from the 2014 rules, and no updated one exists for 2024. The
+list below is what the 2024 rules actually do, measured across the SRD 5.2.1 text we ship
+(330 creatures, ~190,000 characters): damage types, conditions, Hit Points, Speed, and
+Advantage/Disadvantage are capitalized there without a single exception.
+
+- **Capitalize** ability scores, Armor Class, Difficulty Class, Challenge Rating, skills,
+  languages, planes, and the named traits and actions of a creature.
+- **Capitalize, per the 2024 rules**: damage types (Fire damage, Piercing damage),
+  conditions (Prone, Frightened, Restrained), Hit Points, Temporary Hit Points, Speed and
+  its variants (Fly Speed), Advantage and Disadvantage, Difficult Terrain, Half Cover, and
+  the area shapes (Cone, Emanation, Line, Sphere).
+- **Only when it is the game term.** "A creature's Speed can't be reduced" takes the
+  capital; "they cannot move at speed" is ordinary English and does not.
+- Lowercase stays for the ordinary words: ability, attack roll, damage roll, round,
+  saving throw in running prose, spell, cantrip, spell slot.
+- This applies to game content only. The handbook, the marketing site, and the app keep
+  the lowercase house forms in the [words table](#words-we-use) — "armor class" there.
 - **Italicize** spells and magic items, in lowercase: _animate objects_, _flame tongue_. The
   italics mark the title, so a _wall of fire_ spell produces a wall of fire.
 - **Inline subheads take a period, not a colon**, and are set in bold: **Terrain.** not
