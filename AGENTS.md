@@ -139,6 +139,47 @@ has exactly two sources. Edit them; don't generate them.
 
 The print edition is built from these same two sources, with only the differences that
 print needs (its own wording for "book", a two-column page). It is not a separate text.
+Its licensing page also keeps a fineprint line the web edition drops, because print has no
+footer to carry the compatibility and trademark notices.
+
+### How the site is styled
+
+`site/` is **Tailwind v4, utilities-first**: a component, layout or page carries its own
+utilities, and the two stylesheets hold only what a utility can't reach.
+
+- The theme lives in CSS custom properties mapped into `@theme`, so `bg-panel` resolves
+  through the variable and flips with the light/dark toggle. There is **no `dark:` variant
+  here** — the app (`src/`) uses the opposite convention (`.dark` + `dark:`). Don't unify
+  them without changing the pre-paint script in both places.
+- **All of the site's own CSS is wrapped in `@layer components`.** That is load-bearing:
+  layer order beats specificity, so utilities always win over the stylesheet and the
+  stylesheet always wins over preflight. Don't unwrap it.
+- **What stays CSS, deliberately:** the prose defaults for `.doc` and `.book-body` — they
+  style bare `h2`/`p`/`li`/`td` in long-form copy, which has nothing to hang a utility on
+  short of classing every paragraph — plus the rendered markdown inside components,
+  element-level rules, and the few things no utility can express (`.lightbox::backdrop`,
+  the theme toggle's icon swap, `color-mix()`).
+- `scripts/check-css-specificity.mjs` fails the build on a prose rule written as a plain
+  descendant selector. Wrap prose defaults in `:where()` so a component's own class wins.
+
+Three Tailwind behaviours have each caused a silent bug here. All three are invisible until
+measured:
+
+1. **Preflight removes browser defaults the stylesheet never declared** — bold headings,
+   list markers, paragraph margins. They are declared explicitly now.
+2. **Two utilities for the same property in one class list resolve by Tailwind's output
+   order, not the order written.** Keep a shared class constant free of any property a
+   caller might set; `display` and margins have both bitten.
+3. **A `text-*` utility also sets `line-height`.** Pair it with an explicit `leading-*`
+   when the element had been inheriting the body's `1.6`.
+
+**A class name may also be a script hook** (`.lightbox-next`, `.nav-toggle`, `.shot-thumb`).
+Keep the semantic name alongside the utilities — dropping one breaks behaviour while every
+computed style stays identical, so measurement cannot catch it.
+
+Before changing shared CSS or a layout, snapshot computed styles and diff after; every
+regression worth catching in `site/` has been invisible to the eye and obvious in the
+numbers.
 
 `site/` and `docs/` are **npm workspaces**: one `npm install` at the root covers all
 three, and each still declares its own dependencies in its own `package.json`. There is

@@ -54,7 +54,10 @@ These come from the same spirit; please keep them intact:
 2. **Fork, branch, build.** Branch names like `feat/mass-save` or `fix/turn-order`.
 3. **Keep PRs focused.** One concern per PR; easier to review, faster to merge.
 4. **Match the stack.** TypeScript, the existing patterns, and the principles above.
-   `AGENTS.md` is the source of truth for how we build here.
+   `AGENTS.md` is the source of truth for how we build here. Styling is Tailwind in both
+   the app and the marketing site, but the two use opposite light/dark conventions and the
+   site has a few rules worth reading first — see "How the site is styled" in `AGENTS.md`
+   before touching CSS there.
 5. **Follow the style guide for any words a user will read.** [`STYLE.md`](./STYLE.md)
    covers the handbook, the marketing site, and the app's own labels and messages.
 6. **Sign your commits (DCO).** Use `git commit -s`, which adds a `Signed-off-by:`
