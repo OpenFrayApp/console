@@ -94,8 +94,8 @@ devices. Still to come: a shared read-only player view. Expect rough edges — i
   picks which libraries appear (the **Settings** panel; 5.2 by default). Some iconic
   monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC and cannot be
   included; the custom-creature form, JSON import, and third-party content fill that gap.
-- _Compatible with fifth edition. Not affiliated with or endorsed by Wizards of
-  the Coast._
+- _Compatible with 5e (2014) and 5.5e (2024). Not affiliated with or endorsed by
+  Wizards of the Coast._
 
 ## Contributing
 

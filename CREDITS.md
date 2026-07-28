@@ -44,7 +44,7 @@ third-party material. They are licensed by layer:
 - **Stat blocks and mechanics** — every field of a creature entry except its
   `description` — are released under **CC-BY-4.0**. Reuse them with attribution to
   OpenFray (<https://openfray.app>).
-- **Lore and art** — each creature's `description` text, plus any artwork — are
+- **Lore, art, and prose** — each creature's `description` text, plus any artwork — are
   © OpenFray, all rights reserved. They are shown in the app but are not licensed for
   reuse in other products.
 
@@ -292,5 +292,5 @@ END OF LICENSE
 
 ---
 
-*OpenFray is compatible with fifth edition and is not affiliated with, endorsed,
-sponsored, or specifically approved by Wizards of the Coast LLC.*
+*OpenFray is compatible with 5e (2014) and 5.5e (2024), and is not affiliated with,
+endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.*
