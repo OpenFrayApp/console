@@ -60,5 +60,5 @@ const sitemapIndex = [
 writeFileSync('dist/sitemap-index.xml', sitemapIndex)
 
 console.log(
-  'Assembled dist/: landing at /, app at /console/, docs at /docs/, _redirects + sitemap-index written.'
+  'Assembled dist/: landing at /, app at /console/, docs at /docs/, _redirects + sitemap-index written.',
 )
