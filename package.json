@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "npm run dev & npm run dev -w site & npm run dev -w docs & wait",
-    "build": "node scripts/clean-dist.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs && node scripts/check-css-specificity.mjs",
+    "build": "node scripts/clean-dist.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs && node scripts/check-css-specificity.mjs && node scripts/generate-print.mjs --check",
     "build:site": "npm run build -w site",
     "build:docs": "npm run build -w docs",
     "preview": "vite preview",
@@ -17,7 +17,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "print": "node scripts/generate-print.mjs && typst compile --root . print/waking-garden.typ print/waking-garden.pdf",
+    "print:generate": "node scripts/generate-print.mjs",
+    "print:watch": "typst watch --root . print/waking-garden.typ print/waking-garden.pdf"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
