@@ -332,6 +332,69 @@ applies — same terminology, same sentence case, same plain language.
 
 ---
 
+## Game content (libraries and books)
+
+The creature libraries we write — _The Waking Garden_, _Brood & Bloom_ — and their print
+editions are game text, not documentation. They follow the game's own house style rather
+than the plain-instruction rules above.
+
+**Lore is exempt.** A creature's `description`, and the flavor passages that open a chapter,
+keep their authored voice. Everything else — chapter and section prose, encounter write-ups,
+tables, and stat blocks — follows the rules below.
+
+### Numbers and measurements
+
+- **Numerals for anything the game measures**: points, scores, damage, challenge ratings,
+  and any trait with a numeric value. "The spell deals 10 fire damage." "A creature with a
+  Speed of 25 feet can't keep up."
+- **Numerals for durations of a game effect**, and for distances that set the size or extent
+  of one: "lasts for 1 round", "for the next 10 minutes", "a range of 30 feet", "extends 5
+  feet beyond the doorway".
+- **Numerals for tactical-scale dimensions**: "the room is 20 feet square", "60 feet by 40
+  feet", "6 feet tall".
+- **Spell out everything else**, including large-scale distance and time that isn't a game
+  effect: "forty acres of stubble", "the two cities are fifty miles apart", "they wandered
+  for three days".
+- **Spell out the unit in prose.** "30 feet", not "30 ft." — `ft.` belongs to stat blocks
+  and data fields (`Speed 30 ft.`), never to a sentence.
+- **Use the real characters**: a true minus sign (−, U+2212) rather than a hyphen, × rather
+  than the letter x, and ½ ¼ ⅓ ⅔ ¾ for fractions set against a numeral.
+- **Say "half"**, not "one-half". Write "10 fire damage", not "10 points of fire damage".
+- **Avoid weeks and months** for durations — the length of a week varies by world. Use days.
+
+### Formatting game terms
+
+- **Capitalize** ability scores, Armor Class, Difficulty Class, skills, languages, planes,
+  and the named traits and actions of a creature.
+- **Italicize** spells and magic items, in lowercase: _animate objects_, _flame tongue_. The
+  italics mark the title, so a _wall of fire_ spell produces a wall of fire.
+- **Inline subheads take a period, not a colon**, and are set in bold: **Terrain.** not
+  **Terrain:**. A stat-block data field is different — that's a bold label and a value.
+- **Introduce every vertical list with a complete sentence ending in a colon.** Capitalize
+  each item; punctuate items only when they are complete sentences.
+
+### Wording
+
+- You _make_ a saving throw — never "roll" one, which is redundant. Prefer "the target must
+  make a saving throw" over "the target makes a saving throw".
+- Don't confuse making a roll with succeeding on one: "succeed on a DC 15 Strength check".
+- An attack _roll_ has advantage or disadvantage, not the attack.
+- "Magic" is the adjective for an object with magical qualities (a magic item, a magic
+  sword); "magical" for most other uses. Never "magical item".
+- A creature's **hit point maximum**, not its "maximum hit points".
+- Proficiency is _in_ a skill or language, and _with_ a tool, weapon, or armor.
+
+### Where we deliberately differ
+
+Two rules in the game's house style don't apply to us, and both are on purpose:
+
+- **Game Master, never Dungeon Master.** That term is Wizards of the Coast's, and we don't
+  use their marks as our own. This overrides the guide everywhere.
+- **Singular "they" is fine.** The guide forbids it; we don't. Use it for a person whose
+  gender is unknown or irrelevant, rather than "he or she".
+
+---
+
 ## In-app copy (`src/`)
 
 Every label, button, tooltip, empty state, confirmation, and error message in the console is
