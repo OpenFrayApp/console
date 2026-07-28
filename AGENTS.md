@@ -114,12 +114,31 @@ their builds into `dist/` for Cloudflare Pages.
 | Folder               | What it is                                          | Served at  |
 | -------------------- | --------------------------------------------------- | ---------- |
 | `src/` (repo root)   | the React + Vite combat console                     | `/console` |
-| `site/`              | Astro marketing site (home, privacy, terms)         | `/`        |
+| `site/`              | Astro marketing site, plus the published libraries  | `/`        |
 | `docs/`              | Starlight handbook for players and GMs              | `/docs`    |
 | `public/compendium/` | generated SRD / Tome of Beasts JSON the app fetches | —          |
 | `local/`             | maintainer working notes — **not committed**        | —          |
 
 `STYLE.md` at the root governs the copy in all three of them.
+
+### Where a published library's content lives
+
+A first-party library (_The Waking Garden_) is published as a section of `site/`, and it
+has exactly two sources. Edit them; don't generate them.
+
+- **Prose** — `site/src/content/waking-garden/*.mdx`, one file per chapter. These are
+  written by hand. They were imported once from the authored manuscript, but they have
+  since diverged on purpose (the web edition says "library" where print says "book", and
+  it reorders an encounter's parts), so the MDX is the source now and re-importing would
+  undo those edits. There is no generator to re-run, and adding one back would only turn
+  every copy edit into a string substitution keyed to a sentence that might change.
+- **Stat blocks** — `public/compendium/<library>-creatures.json`, rendered at build time
+  by `site/src/components/Creature.astro`. Never transcribe a stat block into the prose:
+  the page and the console read the same file, which is what stops them disagreeing. That
+  JSON is generated from the openfray-compendium repo; edit it there.
+
+The print edition is built from these same two sources, with only the differences that
+print needs (its own wording for "book", a two-column page). It is not a separate text.
 
 `site/` and `docs/` are **npm workspaces**: one `npm install` at the root covers all
 three, and each still declares its own dependencies in its own `package.json`. There is
