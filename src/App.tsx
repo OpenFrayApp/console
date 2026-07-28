@@ -66,6 +66,7 @@ import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
 import { CombatTimers } from './components/CombatTimers.tsx'
+import { CombatDifficulty } from './components/CombatDifficulty.tsx'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
@@ -957,6 +958,8 @@ function App() {
               round={encounter.round}
               running={started && !paused}
             />
+          ) : view === 'encounter' ? (
+            <CombatDifficulty combatants={encounter.combatants} />
           ) : (
             <div className="hidden lg:block" aria-hidden="true" />
           )}

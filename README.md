@@ -75,8 +75,8 @@ fine; computing what a character can do is not.
 
 The single-GM combat console is up and running: initiative, monster resources,
 conditions/effects, concentration, group saves, and honest dice with a clear roll log,
-plus an **end-of-combat recap** (XP, timing, and standout hits), the built-in SRD
-compendium (**Basic Rules 2024 and opt-in 2014 + Tome of Beasts libraries**), custom
+plus an **encounter difficulty estimate** before you begin and an **end-of-combat recap**
+(XP, timing, and standout hits), the built-in SRD compendium (**Basic Rules 2024 and opt-in 2014 + Tome of Beasts libraries**), custom
 creatures and spells, JSON creature import, a durable **Characters** roster, and
 **campaigns** with house rules. It runs fully anonymous in the browser, or sign in (free,
 with **Discord or Google**) to save your fights and custom content to the cloud across

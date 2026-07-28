@@ -3,6 +3,7 @@
 
 import type { ReactNode } from 'react'
 import type { Outcome, Recap } from '../combat/recap.ts'
+import { DIFFICULTY_LABEL } from '../combat/difficulty.ts'
 import { useCampaignRules } from '../state/campaignRules.ts'
 
 const OUTCOME: Record<Outcome, { label: string; badge: string }> = {
@@ -81,6 +82,13 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
                   ? `${recap.xpPerPlayer.toLocaleString()} per player`
                   : undefined
               }
+            />
+          )}
+          {recap.difficulty && (
+            <Stat
+              label="Difficulty"
+              value={DIFFICULTY_LABEL[recap.difficulty]}
+              hint="before the fight"
             />
           )}
           <Stat label="Rounds" value={recap.rounds} />

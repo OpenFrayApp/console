@@ -9,6 +9,7 @@ import { isFoe } from '../combat/combatant.ts'
 import { survivesLongRest } from '../combat/effects.ts'
 import { setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
+import { assessEncounter } from '../combat/difficulty.ts'
 
 /**
  * The encounter store as a pure reducer over the tested combat functions. The UI
@@ -166,7 +167,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       const started = {
         ...beginEncounter(state, action.tiebreak),
         paused: false,
-        combatStats: startStats(Date.now()),
+        combatStats: startStats(Date.now(), assessEncounter(state.combatants)?.tier ?? null),
       }
       const active = started.combatants[started.activeIndex]
       return withLogs(

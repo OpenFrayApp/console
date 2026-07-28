@@ -13,6 +13,7 @@ afterEach(cleanup)
 
 const RECAP: Recap = {
   outcome: 'victory',
+  difficulty: 'hard',
   rounds: 4,
   inGameSeconds: 24,
   activeMs: 90_000,
@@ -47,5 +48,20 @@ describe('RecapScreen', () => {
     expect(screen.queryByText(/per player/)).toBeNull()
     // The rest of the tallies still render.
     expect(screen.getByText('Rounds')).toBeInTheDocument()
+  })
+
+  it('reports the difficulty the fight was rated at before it started', () => {
+    renderWith('xp')
+    expect(screen.getByText('Difficulty')).toBeInTheDocument()
+    expect(screen.getByText('Hard')).toBeInTheDocument()
+  })
+
+  it('leaves the difficulty tile out when the fight was never rated', () => {
+    render(
+      <CampaignRulesContext.Provider value={DEFAULT_CAMPAIGN_RULES}>
+        <RecapScreen recap={{ ...RECAP, difficulty: null }} onClose={() => {}} />
+      </CampaignRulesContext.Provider>,
+    )
+    expect(screen.queryByText('Difficulty')).toBeNull()
   })
 })

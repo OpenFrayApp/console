@@ -4,6 +4,7 @@
 import type { Combatant } from './combatant.ts'
 import type { RollResult } from '../dice/roll.ts'
 import type { AppliedEffect } from '../combat/effectroll.ts'
+import type { DifficultyTier } from '../combat/difficulty.ts'
 
 /**
  * What kind of thing a game-log entry records. Drives the sidebar icon and the
@@ -61,6 +62,12 @@ export interface CombatStats {
   damageTaken: Record<string, number>
   /** The single largest damage instance dealt, and by whom. */
   biggestHit: { sourceId: string; amount: number } | null
+  /**
+   * How hard the fight looked when it began, kept so the recap reports what the GM
+   * signed up for rather than what is left standing. Absent on fights started before
+   * the readout existed.
+   */
+  difficulty?: DifficultyTier | null
 }
 
 /**

@@ -5,14 +5,16 @@ import type { Combatant } from '../schema/combatant.ts'
 import type { CombatStats, Encounter } from '../schema/encounter.ts'
 import { isFoe } from './combatant.ts'
 import { isStable } from './deathsaves.ts'
+import type { DifficultyTier } from './difficulty.ts'
 
-export const startStats = (now: number): CombatStats => ({
+export const startStats = (now: number, difficulty: DifficultyTier | null = null): CombatStats => ({
   startedAt: now,
   activeMs: 0,
   runningSince: now,
   damageDealt: {},
   damageTaken: {},
   biggestHit: null,
+  difficulty,
 })
 
 export function pauseStats(s: CombatStats, now: number): CombatStats {
@@ -74,6 +76,8 @@ export interface Award {
 
 export interface Recap {
   outcome: Outcome
+  /** How hard the fight looked when it began; null when there was nothing to judge. */
+  difficulty: DifficultyTier | null
   rounds: number
   /** In-game seconds = rounds × 6. */
   inGameSeconds: number
@@ -161,6 +165,8 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
 
   return {
     outcome,
+    // Recorded at Begin: by now the foes are defeated, so the board can't be re-read.
+    difficulty: stats?.difficulty ?? null,
     rounds: round,
     inGameSeconds: round * 6,
     activeMs: stats ? activeMillis(stats, now) : 0,
