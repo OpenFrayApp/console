@@ -7,7 +7,7 @@ import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import { speedLines } from '../combat/speed.ts'
 import { hpTierOf } from '../combat/resources.ts'
 import { hpToneFor } from './hpTone.ts'
-import { formatSenses } from '../compendium/format.ts'
+import { formatSenses, signed } from '../compendium/format.ts'
 import {
   AbilityTable,
   DefensesAndSenses,
@@ -16,8 +16,6 @@ import {
 } from './CreatureStatBlock.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { Markdown } from './Markdown.tsx'
-
-const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
 /** Read-only markdown, or click-to-edit (commits on blur) when `onCommit` is supplied. */
 function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string) => void }) {

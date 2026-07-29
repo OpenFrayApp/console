@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import { abilityMod } from '../schema/roster.ts'
+import { abilityMod } from '../schema/primitives.ts'
 import { isFoe } from './combatant.ts'
 
 export type DifficultyTier = 'trivial' | 'easy' | 'medium' | 'hard' | 'deadly'

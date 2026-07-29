@@ -8,7 +8,6 @@ import type { Effect } from '../../src/schema/effect.ts'
 import type { RandomSource } from '../../src/dice/rng.ts'
 import { flatBonus } from '../../src/combat/effects.ts'
 import {
-  abilityModifier,
   applySaveDamage,
   damageForResult,
   evasionApplies,
@@ -77,15 +76,6 @@ function pc(): PlayerCharacter {
     effects: [],
   }
 }
-
-describe('abilityModifier', () => {
-  it('floors (score - 10) / 2', () => {
-    expect(abilityModifier(16)).toBe(3)
-    expect(abilityModifier(14)).toBe(2)
-    expect(abilityModifier(10)).toBe(0)
-    expect(abilityModifier(7)).toBe(-2)
-  })
-})
 
 describe('saveBonus', () => {
   it('uses a monster’s proficient save when present', () => {

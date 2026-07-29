@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { AbilityScores, Edition, Senses, Speeds } from './primitives.ts'
+import {
+  abilityMod,
+  type AbilityScores,
+  type Edition,
+  type Senses,
+  type Speeds,
+} from './primitives.ts'
 import type { CharacterDetails, PlayerCharacter } from './combatant.ts'
-
-/** The 5e ability modifier for a score (10–11 → 0, 14 → +2, 8 → −1). */
-export function abilityMod(score: number): number {
-  return Math.floor((score - 10) / 2)
-}
 
 /**
  * A durable player character a signed-up user keeps in their party roster — the

@@ -4,6 +4,7 @@
 import type { DamageRoll, SaveOutcome } from '../schema/action.ts'
 import type { Spell, SpellComponents, SpellMechanics, SpellScaling } from '../schema/spell.ts'
 import type { Ability, DamageType, Edition } from '../schema/primitives.ts'
+import { hasValue as has, parseList as list } from '../lib/form.ts'
 
 /**
  * The custom-spell editor's working state. Like the monster draft, inputs are
@@ -139,12 +140,6 @@ export function emptySpellDraft(): SpellDraft {
   }
 }
 
-const has = (v: string): boolean => v.trim() !== ''
-const list = (v: string): string[] =>
-  v
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
 const clampLevel = (v: string): number => Math.max(0, Math.min(9, Math.floor(Number(v) || 0)))
 
 interface Dice {

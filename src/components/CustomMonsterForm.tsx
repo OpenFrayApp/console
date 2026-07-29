@@ -26,11 +26,11 @@ import {
   emptySpellGroupDraft,
   emptyTraitDraft,
   parseCr,
-  proficiencyBonus,
   type ActionDraft,
   type DeriveContext,
   type MonsterDraft,
 } from './customMonster.ts'
+import { proficiencyBonus } from '../compendium/format.ts'
 
 function ActionList({
   label,

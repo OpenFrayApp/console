@@ -2,15 +2,9 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useEffect, useRef, useState } from 'react'
+import { prefersReducedMotion } from '../lib/motion.ts'
 
 export const SPIN_MS = 800
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
-  )
-}
 
 /**
  * A d20 that spins and settles on `value`. Bump `spinKey` to (re)start a spin.

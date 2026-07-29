@@ -10,18 +10,26 @@ import type {
   Spellcasting,
   Trait,
 } from '../schema/creature.ts'
-import type {
-  Ability,
-  AbilityScores,
-  DamageType,
-  Edition,
-  SaveBonuses,
-  Senses,
-  Size,
-  Skill,
-  SkillBonuses,
-  Speeds,
+import {
+  abilityMod,
+  type Ability,
+  type AbilityScores,
+  type DamageType,
+  type Edition,
+  type SaveBonuses,
+  type Senses,
+  type Size,
+  type Skill,
+  type SkillBonuses,
+  type Speeds,
 } from '../schema/primitives.ts'
+import { proficiencyBonus } from '../compendium/format.ts'
+import {
+  hasValue as has,
+  parseList as list,
+  parseNonNegativeInt as num,
+  parseSignedInt,
+} from '../lib/form.ts'
 
 /**
  * The custom-monster editor's working state. Form inputs are strings; the schema
@@ -357,29 +365,7 @@ export function emptyDraft(): MonsterDraft {
   }
 }
 
-const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
-const signed = (v: string): number => Math.floor(Number(v) || 0)
-const has = (v: string): boolean => v.trim() !== ''
 const numOpt = (v: string): number | undefined => (has(v) ? num(v) : undefined)
-
-/** A 5e ability modifier, floored. A blank score is treated as 10 (mod 0). */
-export const abilityMod = (score: number): number => Math.floor((score - 10) / 2)
-
-/**
- * Proficiency bonus by challenge rating (2024 core-rules table). Fractional CRs (1/8–1/2)
- * and CR 0 all sit at +2; it then steps +1 every four CR. Drives derived save,
- * skill, attack, and spell DC numbers so the GM marks intent, not arithmetic.
- */
-export function proficiencyBonus(cr: number | undefined): number {
-  if (cr == null || cr <= 4) return 2
-  if (cr <= 8) return 3
-  if (cr <= 12) return 4
-  if (cr <= 16) return 5
-  if (cr <= 20) return 6
-  if (cr <= 24) return 7
-  if (cr <= 28) return 8
-  return 9
-}
 
 /** Average HP for a hit-dice pool: count × (die + 1) / 2 + modifier, floored. */
 export function averageHp(count: number, die: number, mod: number): number {
@@ -406,11 +392,6 @@ export function parseCr(v: string): number | undefined {
   return Number.isFinite(n) ? Math.max(0, n) : undefined
 }
 
-const list = (v: string): string[] =>
-  v
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
 const listOpt = (v: string): string[] | undefined => {
   const out = list(v)
   return out.length ? out : undefined
@@ -509,7 +490,7 @@ function buildSpellcasting(draft: MonsterDraft, ctx: DeriveContext): Spellcastin
  */
 export function buildCreature(draft: MonsterDraft): Creature {
   const abilities = ABILITIES.reduce((acc, a) => {
-    acc[a] = has(draft.abilities[a]) ? signed(draft.abilities[a]) : 10
+    acc[a] = has(draft.abilities[a]) ? parseSignedInt(draft.abilities[a]) : 10
     return acc
   }, {} as AbilityScores)
 
@@ -555,7 +536,7 @@ export function buildCreature(draft: MonsterDraft): Creature {
 
   const hpCount = num(draft.hpDieCount)
   const hpDie = num(draft.hpDie)
-  const hpMod = signed(draft.hpMod)
+  const hpMod = parseSignedInt(draft.hpMod)
   const hpFormula = buildHpFormula(hpCount, hpDie, hpMod)
   const maxHp = Math.max(1, averageHp(hpCount, hpDie, hpMod))
 

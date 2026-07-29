@@ -19,6 +19,16 @@ export function isFoe(c: Combatant): boolean {
   return c.isPC ? c.side === 'foe' : true
 }
 
+/** The display name for a combatant row: a PC's name, a monster's board label. */
+export function nameOf(c: Combatant): string {
+  return c.isPC ? c.name : c.label
+}
+
+/** A combatant's armor class: entered directly on a PC, from the stat block on a monster. */
+export function acOf(c: Combatant): number {
+  return c.isPC ? c.ac : c.creature.ac
+}
+
 /**
  * The label for the Nth copy of a creature on the board: "Ghoul", then "Ghoul 2".
  * Auto-numbering is disambiguation, not a name the GM chose — see `isAutoLabel`.

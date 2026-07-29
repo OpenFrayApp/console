@@ -4,8 +4,7 @@
 import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
-
-const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
+import { parseNonNegativeInt as num } from '../lib/form.ts'
 
 const FIELD_BASE =
   'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'

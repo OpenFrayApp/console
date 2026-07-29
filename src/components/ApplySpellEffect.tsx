@@ -5,11 +5,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { isFoe } from '../combat/combatant.ts'
+import { isFoe, nameOf } from '../combat/combatant.ts'
 import { spellEffectFor, type SpellEffectDef } from '../combat/spellEffects.ts'
 import { TargetChips } from './TargetChips.tsx'
-
-const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
 /**
  * Default target selection. With a caster (a monster casting), only its own row is

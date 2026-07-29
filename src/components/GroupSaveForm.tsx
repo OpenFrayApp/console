@@ -8,6 +8,8 @@ import type { Combatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { condition } from '../combat/effects.ts'
+import { nameOf } from '../combat/combatant.ts'
+import { parseNonNegativeInt as num } from '../lib/form.ts'
 import {
   applySaveDamage,
   damageForResult,
@@ -22,8 +24,6 @@ import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
-const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
 interface Row {
   result?: SaveResult

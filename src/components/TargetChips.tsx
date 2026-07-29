@@ -2,9 +2,8 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import { isFoe } from '../combat/combatant.ts'
+import { isFoe, nameOf } from '../combat/combatant.ts'
 
-const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const byName = (a: Combatant, b: Combatant): number => nameOf(a).localeCompare(nameOf(b))
 
 const chip =

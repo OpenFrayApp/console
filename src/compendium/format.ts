@@ -26,6 +26,9 @@ export function formatSenses(senses: Senses): string {
  *  e.g. "lawful evil" → "Lawful Evil", "dragon" → "Dragon". */
 export const titleCase = (s: string): string => s.replace(/\b\w/g, (c) => c.toUpperCase())
 
+/** Format a bonus with its sign, e.g. 5 → "+5", 0 → "+0", -1 → "-1". */
+export const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
+
 /**
  * Capitalize the first letter of each comma-separated segment, leaving the rest of
  * each segment untouched. Display-only normalization for source data that arrives
@@ -50,10 +53,19 @@ export function formatCr(cr: number | undefined): string {
   return String(cr)
 }
 
-/** Proficiency bonus for a challenge rating (2024 table). */
-export function proficiencyBonus(cr: number): number {
-  if (cr <= 4) return 2
-  return 3 + Math.floor((Math.min(cr, 28) - 5) / 4) + (cr >= 29 ? 1 : 0)
+/**
+ * Proficiency bonus by challenge rating (2024 core-rules table). Fractional CRs
+ * (1/8–1/2), CR 0, and an unset CR all sit at +2; it then steps +1 every four CR.
+ */
+export function proficiencyBonus(cr: number | undefined): number {
+  if (cr == null || cr <= 4) return 2
+  if (cr <= 8) return 3
+  if (cr <= 12) return 4
+  if (cr <= 16) return 5
+  if (cr <= 20) return 6
+  if (cr <= 24) return 7
+  if (cr <= 28) return 8
+  return 9
 }
 
 /**

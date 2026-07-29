@@ -17,6 +17,8 @@ import {
   spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { saveBonus } from '../combat/masssave.ts'
+import { nameOf } from '../combat/combatant.ts'
+import { signed } from '../compendium/format.ts'
 import { describeDuration } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
@@ -25,9 +27,6 @@ import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
-
-const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
-const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
 const BTN =
   'rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'

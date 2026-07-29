@@ -3,10 +3,9 @@
 
 import { useRef, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
-import { isFoe } from '../combat/combatant.ts'
+import { isFoe, nameOf } from '../combat/combatant.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
-const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
 
 function WarningIcon() {

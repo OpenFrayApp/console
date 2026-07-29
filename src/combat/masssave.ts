@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import type { Ability } from '../schema/primitives.ts'
+import { abilityMod, type Ability } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
 import type { RandomSource } from '../dice/rng.ts'
 import type { RollResult } from '../dice/roll.ts'
@@ -35,14 +35,10 @@ export interface SaveRoll {
   applied: AppliedEffect[]
 }
 
-export function abilityModifier(score: number): number {
-  return Math.floor((score - 10) / 2)
-}
-
 /** A creature's save bonus for an ability, or null for a PC (rolls their own). */
 export function saveBonus(c: Combatant, ability: Ability): number | null {
   if (c.isPC) return null
-  return c.creature.saves?.[ability] ?? abilityModifier(c.creature.abilities[ability])
+  return c.creature.saves?.[ability] ?? abilityMod(c.creature.abilities[ability])
 }
 
 const formatBonus = (n: number): string => (n === 0 ? '' : n > 0 ? `+${n}` : `${n}`)

@@ -19,6 +19,9 @@ import {
   spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
+import { acOf, nameOf } from '../combat/combatant.ts'
+import { signed } from '../compendium/format.ts'
+import { parseNonNegativeInt as toNum } from '../lib/form.ts'
 import {
   damageForResult,
   evasionApplies,
@@ -37,21 +40,11 @@ import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { TargetChips } from './TargetChips.tsx'
 import { DieRoll, SPIN_MS } from './DieRoll.tsx'
+import { prefersReducedMotion } from '../lib/motion.ts'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
-const nameOf = (c: Combatant): string => (c.isPC ? c.name : c.label)
-const acOf = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
-const toNum = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
-  )
-}
 
 /** A rolled damage component before defenses are applied. */
 interface RolledDamage {

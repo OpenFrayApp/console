@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type {
-  Ability,
-  AbilityScores as AbilityScoreMap,
-  SaveBonuses,
-  SkillBonuses,
+import {
+  abilityMod,
+  type Ability,
+  type AbilityScores as AbilityScoreMap,
+  type SaveBonuses,
+  type SkillBonuses,
 } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import type { Action, Recharge } from '../schema/action.ts'
@@ -27,7 +28,8 @@ import {
   formatCr,
   formatSenses,
   legendaryPreamble,
-  titleCase as titleCaseWords,
+  signed,
+  titleCase,
 } from '../compendium/format.ts'
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
@@ -50,15 +52,14 @@ const ABILITY_LABEL: Record<Ability, string> = {
   wis: 'Wis',
   cha: 'Cha',
 }
-const abilityMod = (score: number): number => Math.floor((score - 10) / 2)
-const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
 
 // Heading is the heavier style, row label the lighter — swapped from the usual weight.
 const TABLE_HEADING = 'font-semibold uppercase text-slate-500 dark:text-slate-400'
 const TABLE_ROW_LABEL =
   'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
-function titleCase(skill: string): string {
+/** A camelCase skill key as its label: "sleightOfHand" → "Sleight Of Hand". */
+function skillLabel(skill: string): string {
   return skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
 }
 
@@ -266,10 +267,10 @@ function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCh
       <tbody>
         {entries.map(([skill, bonus]) => (
           <tr key={skill} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
-            <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{titleCase(skill)}</td>
+            <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{skillLabel(skill)}</td>
             <td className="rounded-r px-2 py-1 text-right tabular-nums">
               <RollableValue
-                label={titleCase(skill)}
+                label={skillLabel(skill)}
                 modifier={bonus as number}
                 kind="check"
                 onCheck={onCheck}
@@ -576,7 +577,7 @@ function SpellcastingSection({
                 const drained = level != null ? slotsDrained : remaining === 0
                 // Source prose can list spells lowercased (e.g. ToB3 "charm person").
                 // Prefer the resolved spell's canonical name; else title-case it.
-                const name = resolveSpell?.(spell.ref)?.name ?? titleCaseWords(spell.name)
+                const name = resolveSpell?.(spell.ref)?.name ?? titleCase(spell.name)
                 const label = remaining == null ? name : `${name} (${remaining})`
                 if (!onCast) {
                   return (
@@ -741,8 +742,8 @@ export function CreatureStatBlock({
         originalName={label && !isAutoLabel(label, creature.name) ? creature.name : undefined}
         subtitle={
           <>
-            {[creature.size, titleCaseWords(creature.type)].filter(Boolean).join(' ')}
-            {creature.alignment ? `, ${titleCaseWords(creature.alignment)}` : ''} · CR{' '}
+            {[creature.size, titleCase(creature.type)].filter(Boolean).join(' ')}
+            {creature.alignment ? `, ${titleCase(creature.alignment)}` : ''} · CR{' '}
             {formatCr(creature.cr)}
             {crDetail(creature, { inLair, combat: inCombat, showXp })}
           </>

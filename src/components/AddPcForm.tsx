@@ -5,14 +5,7 @@ import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
 import { parseSpeedInput } from '../combat/speed.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
-
-const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
-const signed = (v: string): number => Math.floor(Number(v) || 0)
-const list = (v: string): string[] =>
-  v
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
+import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../lib/form.ts'
 
 const FIELD =
   'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -59,7 +52,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       combatantId: crypto.randomUUID(),
       name: f.name.trim(),
       initiative: 0, // rolled/entered when combat begins
-      initiativeMod: f.init ? signed(f.init) : undefined,
+      initiativeMod: f.init ? parseSignedInt(f.init) : undefined,
       ac: num(f.ac),
       passivePerception: f.pp ? num(f.pp) : undefined,
       languages: list(f.languages).length ? list(f.languages) : undefined,

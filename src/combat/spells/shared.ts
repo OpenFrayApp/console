@@ -3,10 +3,9 @@
 
 import type { Combatant } from '../../schema/combatant.ts'
 import type { Effect, EffectDuration } from '../../schema/effect.ts'
-import type { Ability } from '../../schema/primitives.ts'
+import { abilityMod, type Ability } from '../../schema/primitives.ts'
 import type { Spell } from '../../schema/spell.ts'
 import { durationRounds } from '../casting.ts'
-import { abilityModifier } from '../masssave.ts'
 
 /**
  * Types and helpers shared by the per-category spell tables. Lives apart from
@@ -69,5 +68,5 @@ export function dexScore(c: Combatant | undefined): number | undefined {
 /** A target's Dex modifier, or undefined when it carries no ability scores. */
 export function dexModifier(c: Combatant | undefined): number | undefined {
   const score = dexScore(c)
-  return score == null ? undefined : abilityModifier(score)
+  return score == null ? undefined : abilityMod(score)
 }

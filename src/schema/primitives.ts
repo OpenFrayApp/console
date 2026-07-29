@@ -5,6 +5,11 @@ export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 
 export type AbilityScores = Record<Ability, number>
 
+/** The 5e ability modifier for a score (10–11 → 0, 14 → +2, 8 → −1). */
+export function abilityMod(score: number): number {
+  return Math.floor((score - 10) / 2)
+}
+
 /** Saving-throw proficiency bonuses, keyed by ability. Partial — most absent. */
 export type SaveBonuses = Partial<Record<Ability, number>>
 

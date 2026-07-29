@@ -8,6 +8,7 @@ import {
   formatSenses,
   legendaryPreamble,
   proficiencyBonus,
+  signed,
   titleCase,
 } from '../../src/compendium/format.ts'
 
@@ -42,6 +43,19 @@ describe('proficiencyBonus', () => {
     expect(proficiencyBonus(16)).toBe(5)
     expect(proficiencyBonus(17)).toBe(6)
     expect(proficiencyBonus(30)).toBe(9)
+  })
+
+  it('treats fractional and unset CRs as +2', () => {
+    expect(proficiencyBonus(undefined)).toBe(2)
+    expect(proficiencyBonus(0.5)).toBe(2)
+  })
+})
+
+describe('signed', () => {
+  it('prefixes non-negatives with + and keeps the minus', () => {
+    expect(signed(5)).toBe('+5')
+    expect(signed(0)).toBe('+0')
+    expect(signed(-1)).toBe('-1')
   })
 })
 

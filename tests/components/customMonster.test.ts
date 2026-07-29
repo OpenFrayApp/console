@@ -13,7 +13,6 @@ import {
   emptySpellGroupDraft,
   emptyTraitDraft,
   parseCr,
-  proficiencyBonus,
   type MonsterDraft,
 } from '../../src/components/customMonster.ts'
 
@@ -84,17 +83,6 @@ describe('buildCreature', () => {
     expect(c.abilities).toEqual({ str: 20, dex: 10, con: 16, int: 10, wis: 10, cha: 10 })
     // dex: mod 0 + pb 4 = 4; con: mod +3 + pb 4 = 7. Non-proficient saves are absent.
     expect(c.saves).toEqual({ dex: 4, con: 7 })
-  })
-
-  it('proficiencyBonus follows the CR table', () => {
-    expect(proficiencyBonus(undefined)).toBe(2)
-    expect(proficiencyBonus(0)).toBe(2)
-    expect(proficiencyBonus(0.5)).toBe(2)
-    expect(proficiencyBonus(4)).toBe(2)
-    expect(proficiencyBonus(5)).toBe(3)
-    expect(proficiencyBonus(12)).toBe(4)
-    expect(proficiencyBonus(17)).toBe(6)
-    expect(proficiencyBonus(30)).toBe(9)
   })
 
   it('parses fractional and decimal CRs', () => {

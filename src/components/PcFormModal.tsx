@@ -4,7 +4,9 @@
 import { useEffect, useState } from 'react'
 import type { Ability, AbilityScores, Edition, Senses, Speeds } from '../schema/primitives.ts'
 import type { Campaign } from '../schema/campaign.ts'
-import { abilityMod, type RosterPc } from '../schema/roster.ts'
+import type { RosterPc } from '../schema/roster.ts'
+import { abilityMod } from '../schema/primitives.ts'
+import { hasValue as has, parseList as list, parseNonNegativeInt as num } from '../lib/form.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { FormSection as Section } from './FormSection.tsx'
 
@@ -42,14 +44,7 @@ const PC_ALIGNMENTS = [
   'chaotic evil',
 ]
 
-const num = (v: string): number => Math.max(0, Math.floor(Number(v) || 0))
 const score = (v: string): number => Math.max(1, Math.min(30, Math.floor(Number(v) || 10)))
-const has = (v: string): boolean => v.trim().length > 0
-const list = (v: string): string[] =>
-  v
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
 const orUndef = (xs: string[]): string[] | undefined => (xs.length ? xs : undefined)
 /** Trim a line-list to its non-empty entries, or undefined when there are none. */
 const clean = (xs: string[]): string[] | undefined => {
