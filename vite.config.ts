@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -23,5 +23,7 @@ export default defineConfig({
     // docblock: `// @vitest-environment jsdom`.
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
+    // The site workspace runs its own suite (astro-aware config): `npm run test -w site`.
+    exclude: [...configDefaults.exclude, 'site/**', 'docs/**'],
   },
 })

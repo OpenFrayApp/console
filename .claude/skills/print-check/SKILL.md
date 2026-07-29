@@ -14,23 +14,36 @@ verification loop.
 ## Workflow
 
 1. Start the site dev server: `npm run dev -w site`.
-2. Open `http://localhost:4321/the-waking-garden/print/` in the browser pane.
-   **The page is blank for ~40–60s while Paged.js paginates** — that is normal.
-   Pagination is done when `document.body.dataset.pages` is set.
-3. Read the browser console. A healthy run logs exactly:
-   - `Paged.js: <N> pages, <X>/<Y> refs resolved.` — X must equal Y, and N should
-     match the last known page count (git log the last `Print:` commit if unsure;
-     a moved page count on a pure-CSS change is a regression signal).
-   - No `Print: replaced …` warning — that fires when the library→book word map's
-     occurrence count drifts; if the copy edit was intentional, update
-     `EXPECTED_LIBRARY_TERMS` in `print.astro` in the same change.
-   - No `Print: … reference(s) found no target.` warning.
-4. `document.body.dataset.pages === 'failed'` means Paged.js threw — the console
-   has the error. The classic cause: a stylesheet other than `print-paged.css`
-   reached Paged.js (css-tree cannot parse Tailwind v4's `@media (width >= 40rem)`
-   and dies with a blank page).
-5. For a visual check, screenshot the paginated result; for the real artifact,
-   print to PDF from a normal browser with backgrounds on.
+2. Run the headless check — it opens the page in real Chrome, waits for
+   pagination, and exits non-zero on any failure, timeout, or warning:
+
+   ```bash
+   node scripts/print-check.mjs
+   ```
+
+   A healthy run prints `Paged.js: <N> pages, <X>/<X> refs resolved.` — N should
+   match the last known page count (git log the last `Print:` commit if unsure; a
+   moved count on a pure-CSS change is a regression signal).
+
+   **Use a real browser, not the in-app browser pane** — Paged.js chunking stalls
+   there (its idle callbacks never fire) and the page sits blank forever with no
+   error.
+
+## Inspecting by hand
+
+Open the URL in Chrome yourself for a visual pass; the real artifact is printed to
+PDF from there, with backgrounds on. **The page is blank for ~40–60s while Paged.js
+paginates**; it is done when `document.body.dataset.pages` is set. A healthy run's
+console shows exactly the `Paged.js:` line above and none of these:
+
+- A `Print: replaced …` warning — the library→book word map's occurrence count
+  drifted; if the copy edit was intentional, update `EXPECTED_LIBRARY_TERMS` in
+  `print.astro` in the same change.
+- A `Print: … reference(s) found no target.` warning.
+- `dataset.pages === 'failed'` — Paged.js threw, and the console has the error. The
+  classic cause: a stylesheet other than `print-paged.css` reached Paged.js
+  (css-tree cannot parse Tailwind v4's `@media (width >= 40rem)` and dies with a
+  blank page).
 
 ## Traps (each cost a debugging session)
 
