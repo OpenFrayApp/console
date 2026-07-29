@@ -13,7 +13,9 @@ const INLINE = 'a|strong|em|code|b|i'
 const openJam = new RegExp(`(\\w)<(${INLINE})\\b`, 'g')
 const closeJam = new RegExp(`</(${INLINE})>(\\w)`, 'g')
 
-const files = globSync('dist/**/*.html', { exclude: (p) => p.includes('/console/') })
+// globSync's exclude sees each candidate path relative to cwd ("dist/console"),
+// never a fully joined "…/console/…" — match the directory itself to prune it.
+const files = globSync('dist/**/*.html', { exclude: (p) => p === 'dist/console' })
 const problems = []
 
 for (const file of files) {
