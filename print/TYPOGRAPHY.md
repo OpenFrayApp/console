@@ -59,8 +59,9 @@ wrong was the role each one played, not the values.
 | `accent`    | `#4f46e5` | `--accent`    |
 | `rule-col`  | `#e2e8f0` | `--border`    |
 
-`accent-tint` and `rule-strong` are deleted: both are defined today, neither is used, and
-neither has a counterpart on the site.
+`accent-tint`, `rule-strong` and `accent-deep` are deleted. The first two were defined and
+never used. `accent-deep` (`--accent-strong`) coloured the creature names and section
+titles, which the site sets in `ink`; nothing else wanted it, and links take `accent`.
 
 Roles, as measured:
 
@@ -86,17 +87,34 @@ Six text sizes. Each is a measured site role; the collapsed pairs are noted.
 | Token       | rem   | Print  | Used for                                                    |
 | ----------- | ----- | ------ | ----------------------------------------------------------- |
 | `t-micro`   | 0.75  | 6.9pt  | Section labels, table headers, eyebrows, footer, art credit |
+| `t-index`   | 0.8   | 7.4pt  | The two generated indexes, and nothing else                 |
 | `t-small`   | 0.875 | 8.05pt | Table body, the type line, GM notes, spellcasting note      |
 | `t-body`    | 1     | 9.2pt  | Running text, stat lines, trait and action text             |
 | `t-large`   | 1.15  | 10.6pt | Sub-heads, the cover lede                                   |
 | `t-title`   | 1.5   | 13.8pt | Creature name, section title, group title                   |
-| `t-chapter` | 2     | 18.4pt | Chapter title                                               |
+| `t-chapter` | 2     | 18.4pt | Chapter title, end-page title                               |
 
 Collapsed: prose tables (0.92rem) join the stat tables at `t-small`; sub-heads (1.12rem)
 join the lede at `t-large`; section titles (1.45rem) join creature names at `t-title`.
 
+`t-index` survives as its own step rather than collapsing into `t-small`. The site holds
+it apart for a reason that applies here too: the index is 67 rows in two side-by-side
+tables, and at the larger size a challenge-rating cell wraps at half width.
+
 The cover is poster type and sits outside this scale on purpose — `d-cover` 46pt and
 `d-cover-sub` 15pt, used on one page and nowhere else.
+
+### A gap measured off the site is not a gap in Typst
+
+CSS wraps text in a line box: a 24px name at `line-height: 1.333` sits in 32px, with 4px
+of half-leading above and below it that a descender lives inside. Typst's text box is
+tight to the glyphs. So the site's 2px name-to-type-line margin, ported directly, put the
+descenders of "Blightspud" through its own type line.
+
+**Add the site's half-leading back when converting a tight pairing.** The name-to-type
+gap is `sp-3`, not the `sp-1` the margin alone suggests. This only bites where two
+elements of very different size sit close together; ordinary paragraph rhythm is
+unaffected, because there the leading is already in the token.
 
 ## Leading
 
@@ -145,15 +163,13 @@ Insets are a separate group, because padding inside a container is not vertical 
 The site draws borders at 1, 2 and 3 device pixels. At `1rem = 16px = 9.2pt`, one pixel is
 0.575pt.
 
-| Token      | Print  | Colour     | Used for                                              |
-| ---------- | ------ | ---------- | ----------------------------------------------------- |
-| `r-hair`   | 0.6pt  | `rule-col` | Table row rules, the stat block's section bands       |
-| `r-medium` | 1.15pt | `accent`   | Under a section title; under a table header           |
-| `r-heavy`  | 1.7pt  | `accent`   | The chapter rule; a stat block's top edge; a left bar |
+| Token     | Print  | Colour     | Used for                                              |
+| --------- | ------ | ---------- | ----------------------------------------------------- |
+| `r-hair`  | 0.6pt  | `rule-col` | Table row rules, the stat block's section bands       |
+| `r-mid`   | 1.15pt | `accent`   | Under a section title; under a table header           |
+| `r-heavy` | 1.7pt  | `accent`   | The chapter rule; a stat block's top edge; a left bar |
 
-Five unrelated weights (`0.4 / 0.5 / 1.4 / 2.5 / 3pt`) have been merged onto three —
-`r-hair` / `r-mid` / `r-heavy`. The values above are what they become when the scale is
-re-derived; today they still hold the old `0.5 / 1.4 / 2.5`.
+Five unrelated weights (`0.4 / 0.5 / 1.4 / 2.5 / 3pt`) merged onto these three.
 
 ## The spacing model
 
@@ -187,10 +203,9 @@ Rules for the template:
 `print/theme.typ` holds all of it, and is imported by:
 
 - `bestiary.typ` — the layout, which is the only file that composes roles into elements;
-- `waking-garden.typ` — the spine, which today carries twelve literal sizes of its own;
-- the markup emitted by `scripts/generate-print.mjs`, which today writes `12.5pt` and
-  `7.6pt` into generated chapters as JavaScript string literals. It emits `#wide-head(…)`
-  instead, and stops knowing about sizes.
+- `waking-garden.typ` — the spine;
+- the markup emitted by `scripts/generate-print.mjs`, which emits `#wide-head(…)` and
+  token names, never a size.
 
 That third one matters most. A size that lives in a Node script cannot be reached by a
 change to the Typst scale, which is the mechanism behind "I changed one thing and
@@ -198,19 +213,21 @@ something else moved."
 
 ## The stat block
 
-The site's structure is correct and print follows it. Two differences from the current
-template are structural, not cosmetic:
+The site's structure is correct and print follows it. Two of the differences were
+structural rather than cosmetic:
 
 - **The four top fields sit in one wrapping row**, not four stacked lines. AC, Initiative,
-  HP and Speed flow with a `sp-5` gap between pairs.
-- **The ability table has a Score column.** The template folds the score into the ability
-  cell, so its header row reads `— mod save — mod save` with two empty cells.
+  HP and Speed flow with a `sp-7` gap between pairs. This alone returns three lines of
+  column depth per creature.
+- **The ability table has a Score column.** Folding the score into the ability cell left
+  the header reading `— mod save — mod save` with two empty cells over nothing.
 
 Structure, top to bottom, with the band rules that separate the parts:
 
 | Part                                      | Type                                          | Colour                               | Gap below |
 | ----------------------------------------- | --------------------------------------------- | ------------------------------------ | --------- |
-| Name                                      | `t-title`, bold, tracking −0.025em            | `ink`                                | `sp-1`    |
+| — `r-heavy` accent top edge —             |                                               |                                      | `sp-5`    |
+| Name                                      | `t-title`, bold, tracking −0.025em            | `ink`                                | `sp-3`    |
 | Type line                                 | `t-small`, italic                             | `ink-faint`                          | `sp-6`    |
 | Lore                                      | `t-body`                                      | `ink-soft`                           | `sp-6`    |
 | — `r-hair` band rule —                    |                                               |                                      |           |
@@ -223,37 +240,57 @@ Structure, top to bottom, with the band rules that separate the parts:
 | Section label                             | `t-micro`, bold, uppercase, tracking 0.1em    | `accent`                             | `sp-3`    |
 | Entry                                     | `t-body`, bold lead-in                        | lead-in `ink`, text `ink-soft`       | `sp-4`    |
 
-No border box. The block gets a container for its own padding and background, and the band
-rules do the separating — the site's own outline is a 1px border that reads as a card on
-screen and as clutter on paper.
+**No box around the block, but it keeps the site's top edge.** The site draws a 1px
+outline and a white panel against a tinted page; on paper the page is already white, so a
+panel fill has nothing to sit against and the outline reads as clutter. The band rules do
+the separating instead. The one stroke kept is the site's 3px accent top border — hairline
+bands alone are too faint to say where a stat block starts.
+
+**Only the name and its type line are unbreakable.** Holding the whole opening together —
+art, lore, rule, stat header, abilities — made an unsplittable run a third of a column
+deep, which cannot fit at the foot of a column and ends it early. `section-head` is
+`sticky` so a bare ACTIONS never sits alone at the bottom of one.
 
 ## Layout
 
-Settled decisions that are not typography but interact with it:
+Decisions that are not typography but interact with it:
 
-- **Floats.** `chapter()`, `wide()` and `endpage()` all use
-  `place(top, scope: "parent", float: true)`. Floats ride to the top of a container and
-  hold their relative order, so two in a row leave the first page half empty — which is
-  what page 3 does today. `place.flush()` is the mechanism for forcing pending floats
-  down; the spine calls it between the two indexes.
+- **Column filling.** `statblock` is breakable, but it used to open with a large
+  unbreakable run — art, name, type line, lore, rule, stat header, abilities. A run a
+  third of a column deep cannot fit at the foot of one, so the column ended early. The
+  unbreakable unit is now the name and its type line; everything after may break.
+  `section-head` is `sticky`, so a bare ACTIONS never ends a column alone.
 - **`wide[]` does not escape an enclosing block.** `scope: "parent"` only reaches the page
   when the call is at top level, so a wide table nested inside `section()` silently renders
   in one column. The generator already emits wide sections at top level for this reason;
   keep it that way.
-- **Column filling.** `statblock` is breakable but opens with a large unbreakable run —
-  art, name, type line, lore, rule, stat header, abilities. When that run is a third of a
-  column it cannot fit at the bottom of one, and the column ends early. The unbreakable
-  unit shrinks to name through type line; the rest may break.
-- **The Perennial** gets a page of its own, single column. Its block runs longer than a
-  page in two columns, and shrinking its type to fit would put one creature off the scale.
+- **Floats.** `chapter()`, `wide()` and `endpage()` use
+  `place(top, scope: "parent", float: true)`. Floats ride to the top of a container and
+  hold their relative order, so two in succession put the second on its own page.
+
+### Open: the species index page
+
+The two indexes cannot share a page — the challenge-rating index is 67 rows two-up and
+fills one on its own — so the index by species floats to the next page and uses a third
+of it, with a chapter break after that nothing can fill.
+
+Three ways out, and the choice is editorial rather than typographic, so it belongs to
+whoever owns the spine:
+
+1. Accept it as a reference page. Books have them.
+2. Put the species index first, so it and the head of the CR index share a page.
+3. Move both indexes to the back of the book with the other reference matter.
+
+Setting them three-up instead of two-up does not work: "Bloodvine Sovereign" and
+"Monstrosity" need about 68mm of the 60mm a third-page column gives.
 
 ## Guardrails
 
 Two, in the same family as `check-spacing.mjs` and `check-css-specificity.mjs`:
 
 - **`scripts/check-print-tokens.mjs`** — fails the build on a `pt` or `mm` literal in
-  `print/` outside `theme.typ`, or on a `v()` call that is not `weak: true`. This is what
-  keeps the scale from being reopened one call site at a time.
+  `print/` outside `theme.typ`, and on a `v()` that is neither `weak: true` nor a `1fr`
+  spacer. This is what keeps the scale from being reopened one call site at a time.
 - **A page-image diff.** `typst compile --format png` every page at a fixed ppi before a
   change and after, and compare. A rhythm change shows up three pages downstream, where
   nobody is looking; the site's CSS work needed the same discipline and every regression
