@@ -5,7 +5,7 @@ import type { Combatant } from '../schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
-import { isFoe } from '../combat/combatant.ts'
+import { isFoe, nameOf } from '../combat/combatant.ts'
 import { survivesLongRest } from '../combat/effects.ts'
 import { setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
@@ -55,12 +55,11 @@ export type EncounterAction =
   /** Replace the whole encounter — used when hydrating from the cloud on sign-in. */
   | { type: 'load'; encounter: Encounter }
 
+/** The active combatant's id, or undefined on an empty board. */
 const activeId = (e: Encounter): string | undefined => e.combatants[e.activeIndex]?.combatantId
 
 /** A log entry before the reducer stamps its id + round. */
 export type NewLogEntry = Omit<GameLogEntry, 'id' | 'round'>
-
-const combatantLabel = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
 /**
  * Append game-log entries, stamping a globally-unique id and the round. Pass a
@@ -85,7 +84,7 @@ function withLogs(state: Encounter, entries: NewLogEntry[], round = state.round)
  */
 function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
   const out: NewLogEntry[] = []
-  const name = combatantLabel(after)
+  const name = nameOf(after)
   const sourceId = after.combatantId
 
   const dhp = after.hp.current - before.hp.current
@@ -155,12 +154,14 @@ export function moveById<T extends { combatantId: string }>(
   return [...without.slice(0, insertAt), dragged, ...without.slice(insertAt)]
 }
 
+/** The index of a combatant id; missing or undefined ids fall back to 0. */
 const indexOfId = (combatants: Combatant[], id: string | undefined): number => {
   if (!id) return 0
   const i = combatants.findIndex((c) => c.combatantId === id)
   return i >= 0 ? i : 0
 }
 
+/** Compute the next encounter state for an action, appending any game-log entries it produces. */
 export function encounterReducer(state: Encounter, action: EncounterAction): Encounter {
   switch (action.type) {
     case 'begin': {
@@ -178,7 +179,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
             ? [
                 {
                   category: 'turn' as const,
-                  message: `${combatantLabel(active)}'s turn`,
+                  message: `${nameOf(active)}'s turn`,
                   sourceId: active.combatantId,
                 },
               ]
@@ -225,7 +226,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       if (active && active.combatantId !== prevActiveId) {
         entries.push({
           category: 'turn',
-          message: `${combatantLabel(active)}'s turn`,
+          message: `${nameOf(active)}'s turn`,
           sourceId: active.combatantId,
         })
       }
@@ -243,7 +244,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
         entries.push({ category: 'turn', message: `Back to round ${prev.round}` })
       entries.push({
         category: 'turn',
-        message: `Back to ${combatantLabel(active)}'s turn`,
+        message: `Back to ${nameOf(active)}'s turn`,
         sourceId: active.combatantId,
       })
       return withLogs(prev, entries, prev.round)
@@ -406,6 +407,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
   }
 }
 
+/** A fresh local pre-combat encounter: empty board, empty log, round 0. */
 export function emptyEncounter(): Encounter {
   return {
     encounterId: 'local',

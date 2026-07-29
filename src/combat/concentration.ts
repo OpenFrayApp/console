@@ -34,8 +34,15 @@ export function concentrationPromptDC(
   return concentrationDC(damage)
 }
 
+/** Whether the combatant is holding concentration on a spell or effect. */
 export function isConcentrating(c: Combatant): boolean {
   return c.concentration !== null
+}
+
+/** Tooltip for the "C" badge: the spell (if named) and rounds left (if timed). */
+export function concentrationTitle(c: Concentration): string {
+  const base = c.spell ? `Concentrating: ${c.spell}` : 'Concentrating'
+  return c.rounds != null ? `${base} (${c.rounds} round${c.rounds === 1 ? '' : 's'} left)` : base
 }
 
 /** Start concentrating, replacing any existing concentration (one at a time). */
@@ -43,6 +50,7 @@ export function startConcentration(c: Combatant, concentration: Concentration): 
   return { ...c, concentration }
 }
 
+/** Clear any held concentration; returns the combatant unchanged when none is held. */
 export function breakConcentration(c: Combatant): Combatant {
   return c.concentration === null ? c : { ...c, concentration: null }
 }

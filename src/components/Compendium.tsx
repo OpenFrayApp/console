@@ -34,13 +34,11 @@ import { SpellCard, SpellTags } from './SpellCard.tsx'
 import { CustomSpellForm } from './CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
+import { cx } from '../lib/cx.ts'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters'
 
-function cx(...parts: (string | false | undefined)[]): string {
-  return parts.filter(Boolean).join(' ')
-}
-
+/** A tab-strip button, highlighted when its tab is the open one. */
 function TabButton({
   active,
   onClick,
@@ -66,6 +64,7 @@ function TabButton({
   )
 }
 
+/** The selectable campaign list with its count; gated (anonymous) users see a sign-in note. */
 function CampaignList({
   campaigns,
   gated,
@@ -119,6 +118,7 @@ function CampaignList({
   )
 }
 
+/** The selectable character list, rows tagged by campaign; gated users see a sign-in note. */
 function PcList({
   pcs,
   campaigns,
@@ -134,6 +134,7 @@ function PcList({
   onSelect: (id: string) => void
   emptyLabel: string
 }) {
+  /** A PC's campaign as an acronym tag; blank when unset or the campaign is gone. */
   const tag = (campaignId?: string | null): string => {
     const name = campaigns.find((c) => c.id === campaignId)?.name
     return name ? campaignAcronym(name) : ''
@@ -181,6 +182,7 @@ function PcList({
   )
 }
 
+/** The library screen: tabbed lists with search, a detail pane, and the create/edit modals. */
 export function Compendium({
   customCreatures = [],
   onCreateCreature,
@@ -361,6 +363,7 @@ export function Compendium({
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
   const selectedPc = tab === 'characters' ? rosterPcs.find((p) => p.id === selectedId) : undefined
 
+  /** Change the tab and clear both the selection and the search. */
   const switchTab = (next: Tab) => {
     setTab(next)
     setSelectedId(null)
@@ -369,6 +372,7 @@ export function Compendium({
 
   // Campaigns are signed-up-only; for anonymous users the create action prompts sign-up.
   const startNewCampaign = () => (createGated ? onGated?.() : setCampaignForm({ campaign: null }))
+  /** Create or update the campaign from the form, then select it. */
   const submitCampaign = (campaign: Campaign) => {
     if (campaignForm?.campaign) onUpdateCampaign?.(campaign)
     else {
@@ -377,6 +381,7 @@ export function Compendium({
     }
     setSelectedId(campaign.id)
   }
+  /** Delete the campaign once the GM confirms; deselects it first if it was open. */
   const removeCampaign = (campaign: Campaign) => {
     if (
       window.confirm(
@@ -390,6 +395,7 @@ export function Compendium({
 
   // Roster PCs are signed-up-only; anonymous create prompts sign-up.
   const startNewPc = () => (createGated ? onGated?.() : setPcForm({ pc: null }))
+  /** Create or update the roster PC from the form, then select it. */
   const submitPc = (pc: RosterPc) => {
     if (pcForm?.pc) onUpdatePc?.(pc)
     else {
@@ -398,6 +404,7 @@ export function Compendium({
     }
     setSelectedId(pc.id)
   }
+  /** Delete the roster PC once the GM confirms; a copy already on the board stays put. */
   const removePc = (pc: RosterPc) => {
     if (
       window.confirm(
@@ -409,10 +416,14 @@ export function Compendium({
     }
   }
 
+  /** Open the creature editor on a blank draft; when gated it prompts sign-up instead. */
   const startCreate = () =>
     createGated ? onGated?.() : setEditor({ draft: emptyDraft(), editId: null })
+  /** Open the import-creature modal; when gated it prompts sign-up instead. */
   const startImport = () => (createGated ? onGated?.() : setImporting(true))
+  /** Open the creature editor pre-filled from an existing creature. */
   const startEdit = (c: Creature) => setEditor({ draft: creatureToDraft(c), editId: c.id })
+  /** Save the editor's draft: update the edited creature, or add a new one to the library. */
   const submitEditor = (creature: Creature) => {
     if (editor?.editId) onUpdateCreature?.(creature)
     else {
@@ -420,6 +431,7 @@ export function Compendium({
       onCreateCreature(creature)
     }
   }
+  /** Delete a custom creature once the GM confirms; copies already in a fight stay put. */
   const deleteCreature = (c: Creature) => {
     if (
       window.confirm(
@@ -430,11 +442,15 @@ export function Compendium({
       onDeleteCreature?.(c.id)
     }
   }
+  /** Whether a creature is the user's own work — a "custom:" id. */
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
 
+  /** Open the spell editor on a blank draft; when gated it prompts sign-up instead. */
   const startCreateSpell = () =>
     createGated ? onGated?.() : setSpellEditor({ draft: emptySpellDraft(), editId: null })
+  /** Open the spell editor pre-filled from an existing spell. */
   const startEditSpell = (s: Spell) => setSpellEditor({ draft: spellToDraft(s), editId: s.id })
+  /** Save the editor's draft: update the edited spell or add a new one, then select it. */
   const submitSpellEditor = (spell: Spell) => {
     if (spellEditor?.editId) onUpdateSpell?.(spell)
     else {
@@ -443,12 +459,14 @@ export function Compendium({
     }
     setSelectedId(spell.id)
   }
+  /** Delete a custom spell once the GM confirms; deselects it first if it was open. */
   const deleteSpell = (s: Spell) => {
     if (window.confirm(`Delete “${s.name}” from your library? This can’t be undone.`)) {
       if (selectedId === s.id) setSelectedId(null)
       onDeleteSpell?.(s.id)
     }
   }
+  /** Whether a spell is the user's own work — a "custom:" id. */
   const isCustomSpell = (s: Spell) => s.id.startsWith('custom:')
 
   return (

@@ -6,7 +6,8 @@ import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
-import { autoLabel, instantiate } from './combat/combatant.ts'
+import { autoLabel, instantiate, nameOf } from './combat/combatant.ts'
+import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
@@ -78,6 +79,7 @@ const REPO_URL = 'https://github.com/SirDarcanos/openfray'
 /** A player rolls their own initiative; monsters and quick adds are auto-rolled. */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
 
+/** Sword icon (encounter side of the view toggle). */
 function SwordIcon() {
   return (
     <svg
@@ -97,6 +99,7 @@ function SwordIcon() {
   )
 }
 
+/** Open-book icon (compendium side of the view toggle). */
 function BookIcon() {
   return (
     <svg
@@ -114,6 +117,7 @@ function BookIcon() {
   )
 }
 
+/** Sun icon (theme button while in dark mode). */
 function SunIcon() {
   return (
     <svg
@@ -139,6 +143,7 @@ function SunIcon() {
   )
 }
 
+/** Moon icon (theme button while in light mode). */
 function MoonIcon() {
   return (
     <svg
@@ -156,6 +161,7 @@ function MoonIcon() {
   )
 }
 
+/** Gear icon (settings button). */
 function GearIcon() {
   return (
     <svg
@@ -176,6 +182,7 @@ function GearIcon() {
 
 /** Encounter / Compendium as an icon segmented control. */
 function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+  /** Class list for one toggle segment, filled when active. */
   const cell = (active: boolean) =>
     `flex items-center justify-center px-3 py-1.5 ${
       active
@@ -211,8 +218,10 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   )
 }
 
-const dexMod = (creature: Creature): number => Math.floor((creature.abilities.dex - 10) / 2)
+/** A creature's Dexterity modifier — the initiative fallback when no bonus is listed. */
+const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex)
 
+/** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
 function App() {
   const [restored] = useState(loadSession)
   // Theme is shared with the marketing site via the `openfray-theme` localStorage
@@ -233,6 +242,7 @@ function App() {
   const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(
     () => loadSettings().enabledLibraries,
   )
+  /** Set which libraries show and persist the choice to device-local settings. */
   const setEnabledLibraries = (ids: string[]) => {
     setEnabledLibrariesState(ids)
     saveSettings({ enabledLibraries: ids })
@@ -240,12 +250,14 @@ function App() {
   // Whether homebrew (custom) creations show in the compendium and pickers. On by default;
   // device-local like the library toggles.
   const [showHomebrew, setShowHomebrewState] = useState<boolean>(() => loadSettings().showHomebrew)
+  /** Set whether homebrew shows and persist the choice to device-local settings. */
   const setShowHomebrew = (value: boolean) => {
     setShowHomebrewState(value)
     saveSettings({ showHomebrew: value })
   }
   // How the compendium orders its list (by name, or by CR / spell level).
   const [librarySort, setLibrarySortState] = useState<LibrarySort>(() => loadSettings().librarySort)
+  /** Set the compendium sort order and persist the choice to device-local settings. */
   const setLibrarySort = (value: LibrarySort) => {
     setLibrarySortState(value)
     saveSettings({ librarySort: value })
@@ -378,6 +390,7 @@ function App() {
     return () => clearTimeout(handle)
   }, [encounter, theme, view, selectedId, activeCampaignId, userId])
 
+  /** Flip between dark and light; the theme effect persists the choice. */
   const toggleTheme = () => {
     track(EVENTS.themeToggled)
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
@@ -391,10 +404,12 @@ function App() {
     dispatch({ type: 'log', entry: { category, message: label } })
   }
 
+  /** Rewrite a renamed combatant's old name to the new one across past log entries. */
   const renameInLog = (oldName: string, newName: string) => {
     dispatch({ type: 'renameLog', from: oldName, to: newName })
   }
 
+  /** Add the picked creature to the fight as a fresh combatant; duplicates get numbered labels. */
   const handlePick = (creature: Creature) => {
     track(EVENTS.creatureAdded)
     const sameKind = encounter.combatants.filter(
@@ -419,26 +434,31 @@ function App() {
     saveCustomCreature(creature)
   }
 
+  /** Swap the edited creature into the library list and persist the change to the account. */
   const handleUpdateCreature = (creature: Creature) => {
     setCustomCreatures((prev) => prev.map((c) => (c.id === creature.id ? creature : c)))
     updateCustomCreature(creature)
   }
 
+  /** Drop the creature from the library list and delete it from the account. */
   const handleDeleteCreature = (id: string) => {
     setCustomCreatures((prev) => prev.filter((c) => c.id !== id))
     deleteCustomCreature(id)
   }
 
+  /** Add the new spell to the library list and persist it to the account. */
   const handleCreateSpell = (spell: Spell) => {
     setCustomSpells((prev) => [spell, ...prev])
     saveCustomSpell(spell)
   }
 
+  /** Swap the edited spell into the library list and persist the change to the account. */
   const handleUpdateSpell = (spell: Spell) => {
     setCustomSpells((prev) => prev.map((s) => (s.id === spell.id ? spell : s)))
     updateCustomSpell(spell)
   }
 
+  /** Drop the spell from the library list and delete it from the account. */
   const handleDeleteSpell = (id: string) => {
     setCustomSpells((prev) => prev.filter((s) => s.id !== id))
     deleteCustomSpell(id)
@@ -451,11 +471,13 @@ function App() {
     saveCampaign(campaign)
   }
 
+  /** Swap the edited campaign into the list and persist the change to the account. */
   const handleUpdateCampaign = (campaign: Campaign) => {
     setCampaigns((prev) => prev.map((c) => (c.id === campaign.id ? campaign : c)))
     updateCampaign(campaign)
   }
 
+  /** Drop the campaign from the list and delete it from the account. */
   const handleDeleteCampaign = (id: string) => {
     setCampaigns((prev) => prev.filter((c) => c.id !== id))
     deleteCampaign(id)
@@ -467,11 +489,13 @@ function App() {
     saveRosterPc(pc)
   }
 
+  /** Swap the edited character into the roster and persist the change to the account. */
   const handleUpdatePc = (pc: RosterPc) => {
     setRosterPcs((prev) => prev.map((p) => (p.id === pc.id ? pc : p)))
     updateRosterPc(pc)
   }
 
+  /** Drop the character from the roster and delete it from the account. */
   const handleDeletePc = (id: string) => {
     setRosterPcs((prev) => prev.filter((p) => p.id !== id))
     deleteRosterPc(id)
@@ -521,7 +545,7 @@ function App() {
   }
 
   // The view toggle opens the compendium on its default (creatures) tab; only the
-  // create-a-character flow targets the Players tab.
+  // create-a-character flow targets the Characters tab.
   const handleViewChange = (next: View) => {
     if (next === 'compendium') {
       track(EVENTS.compendiumOpened)
@@ -573,6 +597,7 @@ function App() {
       }
     }
   }
+  /** Roll initiative (1d20+mod, disadvantage when surprised), log it, and return the total. */
   const rollInit = (label: string, mod: number, disadvantage = false): number => {
     const dice = `1d20${disadvantage ? 'dis' : ''}${mod >= 0 ? `+${mod}` : `${mod}`}`
     const result = roll(dice)
@@ -580,7 +605,6 @@ function App() {
     return result.total
   }
 
-  const initLabel = (c: Combatant): string => (c.isPC ? c.name : c.label)
   // The initiative modifier: a PC's own, 0 for a quick add, and for a monster its
   // listed Initiative bonus (2024 stat blocks carry one that can exceed the Dex
   // mod — e.g. an Adult Brass Dragon is +10 with Dex 10), falling back to Dex.
@@ -598,7 +622,7 @@ function App() {
   // sitting at 0; before combat, initiative waits for Begin to roll everyone together.
   const addCombatant = (c: Combatant) => {
     const combatant =
-      encounter.round > 0 ? { ...c, initiative: rollInit(initLabel(c), initMod(c)) } : c
+      encounter.round > 0 ? { ...c, initiative: rollInit(nameOf(c), initMod(c)) } : c
     dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
     setSelectedId(combatant.combatantId)
   }
@@ -635,7 +659,7 @@ function App() {
       // app-rolled value; a value the GM typed (or edited) is always respected.
       const unedited = raw !== '' && raw === (initPrompt?.[id] ?? '')
       if (raw === '' || (disadvantage && unedited && !isPlayer(c))) {
-        initiatives[id] = rollInit(initLabel(c), initMod(c), disadvantage)
+        initiatives[id] = rollInit(nameOf(c), initMod(c), disadvantage)
       } else {
         initiatives[id] = Math.floor(Number(raw) || 0)
       }
@@ -679,10 +703,11 @@ function App() {
     for (const c of encounter.combatants) {
       // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
       initial[c.combatantId] =
-        c.status === 'dead' ? '0' : isPlayer(c) ? '' : String(rollInit(initLabel(c), initMod(c)))
+        c.status === 'dead' ? '0' : isPlayer(c) ? '' : String(rollInit(nameOf(c), initMod(c)))
     }
     setInitPrompt(initial)
   }
+  /** Advance the turn, select whoever is now active, and auto-roll recharges and save-ends. */
   const handleNextTurn = () => {
     const ending = encounter.combatants[encounter.activeIndex]
     const next = nextTurn(encounter)
@@ -949,8 +974,6 @@ function App() {
             onCancel={() => setInitPrompt(null)}
           />
         )}
-
-        {}
         <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
           {view === 'encounter' && started && encounter.combatStats ? (
             <CombatTimers

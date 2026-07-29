@@ -4,24 +4,14 @@
 import { useRef } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import { hpTier, type HpTier } from '../combat/resources.ts'
-import { isFoe } from '../combat/combatant.ts'
+import { acOf, isFoe, nameOf } from '../combat/combatant.ts'
+import { concentrationTitle } from '../combat/concentration.ts'
 import { isStable } from '../combat/deathsaves.ts'
+import { cx } from '../lib/cx.ts'
 import { EffectBadge } from './EffectBadge.tsx'
 import { DeathSavePips } from './DeathSaveControls.tsx'
 import { EditableField } from './EditableField.tsx'
 import { hpToneFor } from './hpTone.ts'
-
-const displayName = (c: Combatant): string => (c.isPC ? c.name : c.label)
-const armorClass = (c: Combatant): number => (c.isPC ? c.ac : c.creature.ac)
-
-function concentrationTitle(c: NonNullable<Combatant['concentration']>): string {
-  const base = c.spell ? `Concentrating: ${c.spell}` : 'Concentrating'
-  return c.rounds != null ? `${base} (${c.rounds} round${c.rounds === 1 ? '' : 's'} left)` : base
-}
-
-function cx(...parts: (string | false | undefined)[]): string {
-  return parts.filter(Boolean).join(' ')
-}
 
 const TIER_LABEL: Record<HpTier, string> = {
   healthy: 'Healthy',
@@ -135,7 +125,7 @@ export function CombatantRow({
           }}
           onDragEnd={() => onReorderEnd?.()}
           onClick={(e) => e.stopPropagation()}
-          aria-label={`Drag to reorder ${displayName(combatant)}`}
+          aria-label={`Drag to reorder ${nameOf(combatant)}`}
           title="Drag to reorder"
           className="shrink-0 cursor-grab text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
         >
@@ -164,7 +154,7 @@ export function CombatantRow({
                 e.stopPropagation()
                 onRemove()
               }}
-              aria-label={`Remove ${displayName(combatant)}`}
+              aria-label={`Remove ${nameOf(combatant)}`}
               title="Remove from the encounter"
               className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-rose-600 focus:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-rose-400"
             >
@@ -181,7 +171,7 @@ export function CombatantRow({
             </button>
           )}
           <span className={cx('truncate font-medium', dead && 'line-through')}>
-            {displayName(combatant)}
+            {nameOf(combatant)}
           </span>
           {combatant.concentration && (
             <span
@@ -253,7 +243,7 @@ export function CombatantRow({
           {hp.temp > 0 && <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>}
           {showTier && <span className="sr-only"> {TIER_LABEL[tier]}</span>}
         </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400">AC {armorClass(combatant)}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">AC {acOf(combatant)}</div>
       </div>
     </div>
   )
