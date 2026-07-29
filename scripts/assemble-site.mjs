@@ -11,10 +11,8 @@ import { cpSync, writeFileSync, rmSync } from 'node:fs'
 // app under /console is built separately by Vite and is unaffected.
 cpSync('site/dist', 'dist', { recursive: true })
 
-// The print edition is a local tool, not a page of the site: it loads Paged.js, repaints
-// the whole book into paper-sized pages, and exists so a maintainer can save a PDF. It
-// lives under src/pages so it renders through the site's own components and stylesheet
-// rather than restating them, and it is removed here so it never ships.
+// The print edition lives under src/pages so it renders through the site's own
+// components, but it is a local tool for saving a PDF and never ships.
 rmSync('dist/the-waking-garden/print', { recursive: true, force: true })
 
 // /docs → the Starlight handbook, built with base = /docs/ so its links and assets
