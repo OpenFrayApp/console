@@ -48,22 +48,23 @@ If the King dies, these fade over 1d10 days.
 #wide[
   #text(size: 12.5pt, weight: 800, fill: accent-deep)[Which boss to use]
   #hrule()
-#table(
+#data-table(
   columns: 3,
-  inset: (x: 3pt, y: 2.4pt),
-  stroke: (x, y) => (bottom: 0.5pt + rule-col),
-  table.header(align(left)[#label-head("Boss")], align(center)[#label-head("CR")], align(left)[#label-head("What the fight is about")]),
-  [#align(left)[Lachrymose]], [#align(center)[9]], [#align(left)[Fighting blind, and the adds it keeps shedding]],
-  [#align(left)[Thistle Colossus]], [#align(center)[10]], [#align(left)[Grinding three health bars while it Grapples the squishiest character]],
-  [#align(left)[Deepspire]], [#align(center)[11]], [#align(left)[You cannot reach most of it, and it hits harder once its crown snaps]],
-  [#align(left)[Harvest Crown]], [#align(center)[11]], [#align(left)[Terrain. The party cannot see, cannot move, must solve it with fire]],
-  [#align(left)[Bloodvine Sovereign]], [#align(center)[12]], [#align(left)[Artillery from a creature that gets stronger every time anything dies]],
-  [#align(left)[Reliquary]], [#align(center)[12]], [#align(left)[Probably not a fight. An ally that wants something]],
-  [#align(left)[Serried Crown]], [#align(center)[13]], [#align(left)[An army, not a creature. Reach and infantry]],
-  [#align(left)[Torpor]], [#align(center)[13]], [#align(left)[Slows the whole field and raises a fresh Gingerling every round]],
-  [#align(left)[Pumpkin King]], [#align(center)[14]], [#align(left)[Talks first, commands the field, second phase when Bloodied]],
-  [#align(left)[Scald]], [#align(center)[15]], [#align(left)[Speed and burst. Fire heals it — the reversal]],
-  [#align(left)[Green Multitude]], [#align(center)[16]], [#align(left)[Hitting it makes more of it]],
-  [#align(left)[Long Root]], [#align(center)[16]], [#align(left)[A puzzle. You cannot hit what you can see]],
+  aligns: (left, center, left),
+  head: ("Boss", "CR", "What the fight is about"),
+  rows: (
+    [#align(left)[Lachrymose]], [#align(center)[9]], [#align(left)[Fighting blind, and the adds it keeps shedding]],
+    [#align(left)[Thistle Colossus]], [#align(center)[10]], [#align(left)[Grinding three health bars while it Grapples the squishiest character]],
+    [#align(left)[Deepspire]], [#align(center)[11]], [#align(left)[You cannot reach most of it, and it hits harder once its crown snaps]],
+    [#align(left)[Harvest Crown]], [#align(center)[11]], [#align(left)[Terrain. The party cannot see, cannot move, must solve it with fire]],
+    [#align(left)[Bloodvine Sovereign]], [#align(center)[12]], [#align(left)[Artillery from a creature that gets stronger every time anything dies]],
+    [#align(left)[Reliquary]], [#align(center)[12]], [#align(left)[Probably not a fight. An ally that wants something]],
+    [#align(left)[Serried Crown]], [#align(center)[13]], [#align(left)[An army, not a creature. Reach and infantry]],
+    [#align(left)[Torpor]], [#align(center)[13]], [#align(left)[Slows the whole field and raises a fresh Gingerling every round]],
+    [#align(left)[Pumpkin King]], [#align(center)[14]], [#align(left)[Talks first, commands the field, second phase when Bloodied]],
+    [#align(left)[Scald]], [#align(center)[15]], [#align(left)[Speed and burst. Fire heals it — the reversal]],
+    [#align(left)[Green Multitude]], [#align(center)[16]], [#align(left)[Hitting it makes more of it]],
+    [#align(left)[Long Root]], [#align(center)[16]], [#align(left)[A puzzle. You cannot hit what you can see]],
+  ),
 )
 ]

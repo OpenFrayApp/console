@@ -52,20 +52,16 @@
   #set text(size: 7.6pt)
   #let sorted = creatures.sorted(key: c => (c.cr, c.name))
   #let half = calc.ceil(sorted.len() / 2)
-  #let idx-table(rows) = table(
+  #let idx-table(rows) = data-table(
     columns: (auto, auto, 1fr, auto),
-    inset: (x: 3pt, y: 2.2pt),
-    stroke: (x, y) => (bottom: 0.5pt + rule-col),
-    table.header(
-      align(center)[#label-head("cr")], align(right)[#label-head("xp")],
-      label-head("creature"), label-head("type"),
-    ),
-    ..rows.map(c => (
+    aligns: (center, right, left, left),
+    head: ("cr", "xp", "creature", "type"),
+    rows: rows.map(c => (
       align(center)[#cr-str(c.cr)],
       align(right)[#str(c.xp)],
       [#c.name],
       [#title-case(c.type.split(" ").last())],
-    )).flatten()
+    )).flatten(),
   )
   #grid(
     columns: (1fr, 1fr), gutter: 6mm,

@@ -7,14 +7,15 @@ Before the creatures, the ground they came out of. This chapter covers how a pla
 #section("The growth cycle")[
 Which stage a party encounters is a fact about the _place_, not about the fight.
 
-#table(
+#data-table(
   columns: 4,
-  inset: (x: 3pt, y: 2.4pt),
-  stroke: (x, y) => (bottom: 0.5pt + rule-col),
-  table.header(align(left)[#label-head("Stage")], align(left)[#label-head("Form")], align(left)[#label-head("Typical CR")], align(left)[#label-head("Tier of play")]),
-  [#align(left)[*1 — Rooted*]], [#align(left)[Awake, aware, immobile]], [#align(left)[1/8 – 1/2]], [#align(left)[Levels 1–3]],
-  [#align(left)[*2 — Uprooted*]], [#align(left)[Tears free, walks, hunts]], [#align(left)[2 – 6]], [#align(left)[Levels 4–8]],
-  [#align(left)[*3 — Crowned*]], [#align(left)[Enormous, territorial, sovereign]], [#align(left)[9 – 16]], [#align(left)[Levels 9+]],
+  aligns: (left, left, left, left),
+  head: ("Stage", "Form", "Typical CR", "Tier of play"),
+  rows: (
+    [#align(left)[*1 — Rooted*]], [#align(left)[Awake, aware, immobile]], [#align(left)[1/8 – 1/2]], [#align(left)[Levels 1–3]],
+    [#align(left)[*2 — Uprooted*]], [#align(left)[Tears free, walks, hunts]], [#align(left)[2 – 6]], [#align(left)[Levels 4–8]],
+    [#align(left)[*3 — Crowned*]], [#align(left)[Enormous, territorial, sovereign]], [#align(left)[9 – 16]], [#align(left)[Levels 9+]],
+  ),
 )
 ]
 
@@ -56,18 +57,19 @@ To add a variety that isn’t in this book, write it as a new creature with its 
 #section("Reading the bed")[
 A party that looks before it walks can tell which stage is in the field, and often what kind of ground grew it. Each sign below is a single check made from the edge of the bed — on a success, tell them the right-hand column.
 
-#table(
+#data-table(
   columns: 3,
-  inset: (x: 3pt, y: 2.4pt),
-  stroke: (x, y) => (bottom: 0.5pt + rule-col),
-  table.header(align(left)[#label-head("Sign")], align(left)[#label-head("DC (Nature or Survival)")], align(left)[#label-head("Tells them")]),
-  [#align(left)[Furrows disturbed from beneath, no tracks leading away]], [#align(left)[10]], [#align(left)[Stage 1 present]],
-  [#align(left)[Drag-marks: a broad trailing groove between prints]], [#align(left)[13]], [#align(left)[Stage 2 active]],
-  [#align(left)[Wide dead zone, stunted plants, soil gray and depleted]], [#align(left)[15]], [#align(left)[Stage 3 nearby, and it has been here years]],
-  [#align(left)[Scorched hardpan, rinds cracked and weeping sap]], [#align(left)[13]], [#align(left)[Ash ground — expect things that roll, do not melee]],
-  [#align(left)[Soil that smells of iron; bone fragments turned by the plough]], [#align(left)[14]], [#align(left)[Grave ground]],
-  [#align(left)[Compass needles drifting; frost in summer, dew in drought]], [#align(left)[15]], [#align(left)[Ley ground]],
-  [#align(left)[Total birdsong silence over a cultivated field]], [#align(left)[14]], [#align(left)[Something is hunting here now]],
+  aligns: (left, left, left),
+  head: ("Sign", "DC (Nature or Survival)", "Tells them"),
+  rows: (
+    [#align(left)[Furrows disturbed from beneath, no tracks leading away]], [#align(left)[10]], [#align(left)[Stage 1 present]],
+    [#align(left)[Drag-marks: a broad trailing groove between prints]], [#align(left)[13]], [#align(left)[Stage 2 active]],
+    [#align(left)[Wide dead zone, stunted plants, soil gray and depleted]], [#align(left)[15]], [#align(left)[Stage 3 nearby, and it has been here years]],
+    [#align(left)[Scorched hardpan, rinds cracked and weeping sap]], [#align(left)[13]], [#align(left)[Ash ground — expect things that roll, do not melee]],
+    [#align(left)[Soil that smells of iron; bone fragments turned by the plough]], [#align(left)[14]], [#align(left)[Grave ground]],
+    [#align(left)[Compass needles drifting; frost in summer, dew in drought]], [#align(left)[15]], [#align(left)[Ley ground]],
+    [#align(left)[Total birdsong silence over a cultivated field]], [#align(left)[14]], [#align(left)[Something is hunting here now]],
+  ),
 )
 ]
 
@@ -78,23 +80,24 @@ A creature within 5 feet of any Stage 1 or Stage 2 plant at 0 Hit Points can tak
 - *Failure by 4 or less:* dead, but the component is ruined.
 - *Failure by 5 or more:* the taproot retracts into the soil and regrows at half its Hit Point maximum within 30 feet, after 1 minute at Stage 1 or 1 hour at Stage 2.
 
-#table(
+#data-table(
   columns: 3,
-  inset: (x: 3pt, y: 2.4pt),
-  stroke: (x, y) => (bottom: 0.5pt + rule-col),
-  table.header(align(left)[#label-head("Species")], align(left)[#label-head("Component")], align(left)[#label-head("Suggested use")]),
-  [#align(left)[Pumpkin]], [#align(left)[Ember seed]], [#align(left)[1 flask alchemist’s fire; 3 from a Gourdstalker]],
-  [#align(left)[Onion]], [#align(left)[Bitter tear]], [#align(left)[Antitoxin, or 1 dose of blinding powder]],
-  [#align(left)[Maize]], [#align(left)[Whisper husk]], [#align(left)[Casts _alarm_ without material cost]],
-  [#align(left)[Cabbage]], [#align(left)[Layered heart]], [#align(left)[Restores 1 Hit Die on a Short Rest]],
-  [#align(left)[Tomato]], [#align(left)[Caustic fruit]], [#align(left)[Improvised grenade: 2d6 Acid, 5-ft radius, DC 12 Dex]],
-  [#align(left)[Potato]], [#align(left)[Black eye]], [#align(left)[Poison that reduces Hit Point maximum (DC 12 Con, 2d6)]],
-  [#align(left)[Garlic]], [#align(left)[Blessed clove]], [#align(left)[Undead have Disadvantage on attacks against the holder for 1 hour]],
-  [#align(left)[Chili]], [#align(left)[Ember pip]], [#align(left)[Adds 1d4 Fire damage to a weapon for 10 minutes]],
-  [#align(left)[Asparagus]], [#align(left)[Spear frond]], [#align(left)[Improvised spear, +1 damage against charging creatures]],
-  [#align(left)[Pea]], [#align(left)[Rattle pod]], [#align(left)[Thrown: 10-ft area of Difficult Terrain for 1 minute]],
-  [#align(left)[Carrot]], [#align(left)[Snapped point]], [#align(left)[Improvised piercing weapon, +1 to hit while it lasts (1 hour)]],
-  [#align(left)[Ginger]], [#align(left)[Numbing root]], [#align(left)[Chewed: Advantage on the next Constitution saving throw against poison, within 10 minutes]],
+  aligns: (left, left, left),
+  head: ("Species", "Component", "Suggested use"),
+  rows: (
+    [#align(left)[Pumpkin]], [#align(left)[Ember seed]], [#align(left)[1 flask alchemist’s fire; 3 from a Gourdstalker]],
+    [#align(left)[Onion]], [#align(left)[Bitter tear]], [#align(left)[Antitoxin, or 1 dose of blinding powder]],
+    [#align(left)[Maize]], [#align(left)[Whisper husk]], [#align(left)[Casts _alarm_ without material cost]],
+    [#align(left)[Cabbage]], [#align(left)[Layered heart]], [#align(left)[Restores 1 Hit Die on a Short Rest]],
+    [#align(left)[Tomato]], [#align(left)[Caustic fruit]], [#align(left)[Improvised grenade: 2d6 Acid, 5-ft radius, DC 12 Dex]],
+    [#align(left)[Potato]], [#align(left)[Black eye]], [#align(left)[Poison that reduces Hit Point maximum (DC 12 Con, 2d6)]],
+    [#align(left)[Garlic]], [#align(left)[Blessed clove]], [#align(left)[Undead have Disadvantage on attacks against the holder for 1 hour]],
+    [#align(left)[Chili]], [#align(left)[Ember pip]], [#align(left)[Adds 1d4 Fire damage to a weapon for 10 minutes]],
+    [#align(left)[Asparagus]], [#align(left)[Spear frond]], [#align(left)[Improvised spear, +1 damage against charging creatures]],
+    [#align(left)[Pea]], [#align(left)[Rattle pod]], [#align(left)[Thrown: 10-ft area of Difficult Terrain for 1 minute]],
+    [#align(left)[Carrot]], [#align(left)[Snapped point]], [#align(left)[Improvised piercing weapon, +1 to hit while it lasts (1 hour)]],
+    [#align(left)[Ginger]], [#align(left)[Numbing root]], [#align(left)[Chewed: Advantage on the next Constitution saving throw against poison, within 10 minutes]],
+  ),
 )
 
 An ash-grown plant’s component always detonates for 2d6 Fire if the harvester fails the check by any margin.

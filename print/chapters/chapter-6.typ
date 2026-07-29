@@ -21,17 +21,18 @@ All six are built on the same chassis — the same _Antimagic Susceptibility_, t
 
 The composition of a tool encounter should be a piece of scenery the party walked past ten minutes earlier. Let them notice the rack. Let them do nothing about it.
 
-#table(
+#data-table(
   columns: 3,
-  inset: (x: 3pt, y: 2.4pt),
-  stroke: (x, y) => (bottom: 0.5pt + rule-col),
-  table.header(align(left)[#label-head("Tool")], align(center)[#label-head("CR")], align(left)[#label-head("Does")]),
-  [#align(left)[Animated Shears]], [#align(center)[1]], [#align(left)[Strips gear off people]],
-  [#align(left)[Animated Spade]], [#align(center)[1]], [#align(left)[Digs pits, knocks people into them]],
-  [#align(left)[Animated Hoe]], [#align(center)[1]], [#align(left)[Wrecks the ground, punishes the Prone]],
-  [#align(left)[Animated Watering Can]], [#align(center)[1]], [#align(left)[Support. Heals other plants]],
-  [#align(left)[Animated Scythe]], [#align(center)[2]], [#align(left)[Reach, sweeps two targets at once]],
-  [#align(left)[Animated Hose]], [#align(center)[3]], [#align(left)[Long-range grapple, pins, drowns]],
+  aligns: (left, center, left),
+  head: ("Tool", "CR", "Does"),
+  rows: (
+    [#align(left)[Animated Shears]], [#align(center)[1]], [#align(left)[Strips gear off people]],
+    [#align(left)[Animated Spade]], [#align(center)[1]], [#align(left)[Digs pits, knocks people into them]],
+    [#align(left)[Animated Hoe]], [#align(center)[1]], [#align(left)[Wrecks the ground, punishes the Prone]],
+    [#align(left)[Animated Watering Can]], [#align(center)[1]], [#align(left)[Support. Heals other plants]],
+    [#align(left)[Animated Scythe]], [#align(center)[2]], [#align(left)[Reach, sweeps two targets at once]],
+    [#align(left)[Animated Hose]], [#align(center)[3]], [#align(left)[Long-range grapple, pins, drowns]],
+  ),
 )
 ]
 

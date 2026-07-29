@@ -89,18 +89,19 @@ function convertTable(lines) {
   )
   const cell = (c, i) => `align(${aligns[i]})[${inline(c)}]`
   return [
-    `#table(`,
+    `#data-table(`,
     `  columns: ${cols},`,
-    `  inset: (x: 3pt, y: 2.4pt),`,
-    `  stroke: (x, y) => (bottom: 0.5pt + rule-col),`,
-    `  table.header(${head.map((h, i) => `align(${aligns[i]})[#label-head("${h.replace(/"/g, '')}")]`).join(', ')}),`,
+    `  aligns: (${aligns.join(', ')}),`,
+    `  head: (${head.map((h) => JSON.stringify(h)).join(', ')}),`,
+    `  rows: (`,
     ...body.map(
       (r) =>
-        `  ${r
+        `    ${r
           .map(cell)
           .map((c) => `[#${c}]`)
           .join(', ')},`,
     ),
+    `  ),`,
     `)`,
   ].join('\n')
 }

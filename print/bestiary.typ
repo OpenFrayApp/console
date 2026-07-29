@@ -107,6 +107,28 @@
   v(1.5mm)
 }
 
+
+// ------------------------------------------------------------------ tables ---
+// One table style for the whole book: a filled header bar, hairline row rules, one
+// inset. Abilities, prose tables, rosters and indexes all go through this, so they
+// cannot drift apart — which is what made the hand-styled version feel unsystematic.
+#let head-cell(s, al: left) = table.cell(
+  fill: accent,
+  align(al, text(size: 6.9pt, weight: 700, fill: white, tracking: 0.5pt)[#upper(s)]),
+)
+
+#let data-table(columns: auto, aligns: (), head: (), rows: ()) = {
+  table(
+    columns: columns,
+    inset: (x: 5pt, y: 3.8pt),
+    stroke: (x, y) => if y == 0 { none } else { (bottom: 0.4pt + rule-col) },
+    ..if head.len() > 0 {
+      (table.header(..head.enumerate().map(p => head-cell(p.last(), al: aligns.at(p.first(), default: left)))),)
+    } else { () },
+    ..rows
+  )
+}
+
 #let label-head(s) = text(
   size: 7.4pt, weight: 700, fill: accent-deep, tracking: 0.6pt,
 )[#upper(s)]
@@ -133,11 +155,11 @@
   }
   block(above: 2.2mm, below: 2.6mm)[
     #set text(size: table-size)
-    #table(
+    #data-table(
       columns: (auto, 1fr, 1fr, auto, 1fr, 1fr),
-      inset: (x: 4pt, y: 3.2pt),
-      stroke: (x, y) => (bottom: 0.5pt + rule-col),
-      ..cells
+      aligns: (left, center, center, left, center, center),
+      head: ("", "mod", "save", "", "mod", "save"),
+      rows: cells.slice(6),
     )
   ]
 }
@@ -227,13 +249,11 @@
   })
   block(above: 2.2mm, below: 2.6mm)[
     #set text(size: table-size)
-    #table(
+    #data-table(
       columns: head.len(),
-      inset: (x: 4pt, y: 3.2pt),
-      stroke: (x, y) => (bottom: 0.5pt + rule-col),
-      align: (x, y) => aligns.at(x, default: left),
-      table.header(..head.map(h => label-head(h))),
-      ..rows.slice(2).flatten().map(c => [#c])
+      aligns: aligns,
+      head: head,
+      rows: rows.slice(2).flatten().map(c => [#c]),
     )
   ]
 }
@@ -404,17 +424,13 @@
       #entry("Terrain", terrain)
     ]
     #set text(size: table-size)
-    #table(
+    #data-table(
       columns: (1fr, auto, auto, 1.6fr),
-      inset: (x: 4pt, y: 3.2pt),
-      stroke: (x, y) => (bottom: 0.5pt + rule-col),
-      table.header(
-        label-head("creature"), align(center)[#label-head("no")],
-        align(center)[#label-head("cr")], label-head("placement"),
-      ),
-      ..roster.map(r => (
+      aligns: (left, center, center, left),
+      head: ("creature", "no", "cr", "placement"),
+      rows: roster.map(r => (
         [#r.at(0)], align(center)[#r.at(1)], align(center)[#r.at(2)], [#r.at(3)],
-      )).flatten()
+      )).flatten(),
     )
   ]
   gm-note[#entry("The idea", idea)]
