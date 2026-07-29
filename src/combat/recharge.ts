@@ -28,12 +28,6 @@ export function rechargeActions(creature: Creature): Action[] {
   ].filter(isRechargeable)
 }
 
-/** "Recharge 5–6" / "Recharge 6" label for a dice-recharge action. */
-export function rechargeRangeLabel(action: Action): string {
-  const value = action.recharge?.type === 'dice' ? action.recharge.value : 6
-  return value >= 6 ? 'Recharge 6' : `Recharge ${value}–6`
-}
-
 /**
  * Roll a recharge die. The ability returns on a roll at or above its threshold
  * (e.g. 5 for "Recharge 5–6"). Routes through the one dice chokepoint so the

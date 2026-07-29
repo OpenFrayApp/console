@@ -203,7 +203,6 @@ export const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 /** Hit-die sizes, as number strings. */
 export const HP_DICE: string[] = ['4', '6', '8', '10', '12', '20']
 export const ACTION_KINDS: ActionKind[] = ['melee', 'ranged', 'save', 'utility']
-export const SAVE_OUTCOMES: SaveOutcome[] = ['half', 'none', 'negates']
 export const DAMAGE_TYPES: DamageType[] = [
   'acid',
   'bludgeoning',
