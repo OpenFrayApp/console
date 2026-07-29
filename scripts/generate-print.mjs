@@ -31,12 +31,13 @@ const SKIP_SECTIONS = new Set(['Index by challenge rating'])
 // Sections the spine places itself, written to their own file so it can order them.
 const EXTRACT_SECTIONS = { 'Index by species': 'index-species.typ' }
 
-// Tables that need the full page rather than one column.
-// Wide sections, and the text size each wants. The indexes match the generated CR
-// index's 7.6pt; a prose table keeps the body size.
+// Tables that need the full page rather than one column, and the type token each wants.
+// The indexes take the index size; a prose table keeps the body size. These are token
+// names, never lengths — a size written into this file is one the Typst scale cannot
+// reach, which is how the two drifted apart before.
 const WIDE_SECTIONS = new Map([
   ['Which boss to use', null],
-  ['Index by species', '7.6pt'],
+  ['Index by species', 't-index'],
 ])
 
 // Creatures the book gives a page to themselves. The Perennial is the apex and its block
@@ -240,8 +241,7 @@ function convertChapter(src, { dropsLede = false } = {}) {
         // CR index's own markup, which is what "the same format" means here.
         const wideSize = WIDE_SECTIONS.get(title)
         const rendered = WIDE_SECTIONS.has(title)
-          ? `#wide[\n  #text(size: 12.5pt, weight: 800, fill: accent-deep)[${title}]\n` +
-            `  #hrule()\n` +
+          ? `#wide[\n  #wide-head(${JSON.stringify(title)})\n` +
             (wideSize ? `  #set text(size: ${wideSize})\n` : '') +
             `${inner}\n]`
           : level === 2

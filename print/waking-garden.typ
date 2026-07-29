@@ -47,9 +47,8 @@
 
 // Generated from the data at compile time, so it cannot drift from the stat blocks.
 #wide[
-  #text(size: 12.5pt, weight: 800, fill: accent-deep)[Index by challenge rating]
-  #hrule()
-  #set text(size: 7.6pt)
+  #wide-head("Index by challenge rating")
+  #set text(size: t-index)
   #let sorted = creatures.sorted(key: c => (c.cr, c.name))
   #let half = calc.ceil(sorted.len() / 2)
   #let idx-table(rows) = data-table(
@@ -64,7 +63,7 @@
     )).flatten(),
   )
   #grid(
-    columns: (1fr, 1fr), gutter: 6mm,
+    columns: (1fr, 1fr), gutter: s8,
     idx-table(sorted.slice(0, half)),
     idx-table(sorted.slice(half)),
   )
@@ -100,43 +99,43 @@
 // --------------------------------------------------------------- end page ---
 // Print-only: the web says this on its landing page and in its footer.
 #endpage[
-  #text(size: 8pt, weight: 700, fill: accent, tracking: 1.4pt)[BUILT FOR OPENFRAY]
-  #v(2mm)
-  #text(size: 20pt, weight: 800, fill: ink)[Run this book in the console]
-  #v(3mm)
+  #text(size: t-table, weight: 700, fill: accent, tracking: tr-wide)[BUILT FOR OPENFRAY]
+  #v(s3)
+  #text(size: t-chapter, weight: 800, fill: ink)[Run this book in the console]
+  #v(s5)
   #block(width: 70%)[
-    #text(size: 10.5pt, fill: ink-soft)[
+    #text(size: t-lead, fill: ink-soft)[
       OpenFray is a free, open-source combat console for running Dungeons and Dragons fights
       in your browser — 5.5e (2024) first, with 5e (2014) support. It keeps the initiative
       order, everyone's hit points, the conditions and effects on each creature, what a
       creature has left to spend, and the dice.
     ]
   ]
-  #v(5mm)
-  #text(size: 9pt)[openfray.app/console · openfray.app/docs · github.com/SirDarcanos/openfray]
-  #v(8mm)
-  #line(length: 100%, stroke: 0.5pt + rule-col)
-  #v(3mm)
-  #set text(size: 8pt, fill: ink-soft)
+  #v(s7)
+  #text(size: t-body)[openfray.app/console · openfray.app/docs · github.com/SirDarcanos/openfray]
+  #v(s9)
+  #line(length: 100%, stroke: r-hair + rule-col)
+  #v(s5)
+  #set text(size: t-table, fill: ink-soft)
   #label-head("Licensing and credits")
-  #v(2mm)
+  #v(s3)
   *Creatures and mechanics* — the stat blocks and game mechanics, every field of a creature
   entry other than its description, are licensed CC BY 4.0. Reuse them with attribution to
   OpenFray (openfray.app), a link to the licence, and a note that changes were made. \
   *Lore, art, and prose* — © 2026 OpenFray, all rights reserved. \
   *Game rules* — conditions, spell names, and rules terminology come from the System
   Reference Document 5.2.1, used under CC BY 4.0.
-  #v(3mm)
-  #block(inset: (left: 3mm), stroke: (left: 1.5pt + accent))[
+  #v(s5)
+  #block(inset: (left: s5), stroke: (left: r-mid + accent))[
     This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by
     Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is
     licensed under the Creative Commons Attribution 4.0 International License, available at
     https://creativecommons.org/licenses/by/4.0/legalcode.
   ]
-  #v(3mm)
+  #v(s5)
   // Print keeps this line; the web drops it, because the site footer already carries
   // the compatibility statement, the trademark disclaimer and the AGPL on every page.
-  #text(size: 7.4pt, fill: ink-faint)[
+  #text(size: t-label, fill: ink-faint)[
     Compatible with Dungeons and Dragons 5e (2014) and 5.5e (2024). Not affiliated with,
     endorsed, sponsored, or specifically approved by Wizards of the Coast LLC. OpenFray is
     free and ad-free, and the console's own code is licensed AGPL-3.0.

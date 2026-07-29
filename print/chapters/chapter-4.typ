@@ -46,8 +46,7 @@ If the King dies, these fade over 1d10 days.
 #show-creature("Torpor")
 
 #wide[
-  #text(size: 12.5pt, weight: 800, fill: accent-deep)[Which boss to use]
-  #hrule()
+  #wide-head("Which boss to use")
 #data-table(
   columns: 3,
   aligns: (left, center, left),

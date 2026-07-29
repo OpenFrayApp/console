@@ -3,9 +3,8 @@
 #import "../lib.typ": *
 
 #wide[
-  #text(size: 12.5pt, weight: 800, fill: accent-deep)[Index by species]
-  #hrule()
-  #set text(size: 7.6pt)
+  #wide-head("Index by species")
+  #set text(size: t-index)
 The ten cultivated species, each across all three stages. The number after each creature is its challenge rating.
 
 #data-table(

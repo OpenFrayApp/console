@@ -9,52 +9,9 @@
 //   #show: book.with(title: "…", subtitle: "…", lede: [ … ])
 // ============================================================================
 
-// ---------------------------------------------------------------- tokens ---
-// Matches openfray.app light theme.
-#let accent       = rgb("#4f46e5")
-#let accent-deep  = rgb("#4338ca")
-#let accent-tint  = rgb("#eef2ff")
-#let ink          = rgb("#0f172a")
-#let ink-soft     = rgb("#475569")
-#let ink-faint    = rgb("#94a3b8")
-#let rule-col     = rgb("#e2e8f0")
-#let rule-strong  = rgb("#cbd5e1")
-
-// Inter is the closest free match to the app's system-ui stack.
-// Typst falls through this list until it finds an installed face.
-#let body-font = ("Inter", "Helvetica Neue", "Helvetica", "Arial", "Liberation Sans")
-
-// Type scale. Sizes were picked per call site too — 12 of them, several within a
-// third of a point of each other, which reads as noise rather than hierarchy.
-#let t-micro   = 6.8pt   // art credit
-#let t-label   = 7.4pt   // small-caps labels, table headers, footer
-#let t-table   = 8.0pt   // table body
-#let t-note    = 8.6pt   // stat block body, GM notes, type line
-#let t-body    = 9.2pt   // running text
-#let t-lead    = 10.6pt  // cover lede
-#let t-title   = 12.6pt  // creature and section titles
-#let t-sub     = 15.0pt  // cover subtitle
-#let t-chapter = 21.0pt  // chapter title
-#let t-cover   = 46.0pt  // cover title
-
-#let base-size   = t-body
-#let stat-size   = t-note
-#let table-size  = t-table
-#let note-size   = t-note
-
-
-// ---------------------------------------------------------------- rhythm ---
-// Every vertical gap in the book is a step on this scale. Spacing chosen per call
-// site is what made the first proof feel unsystematic next to the web edition: 20
-// values, none of them related. Page geometry (margins, the cover) is separate.
-#let s1 = 0.6mm   // hairline: inside a line of stats
-#let s2 = 1.2mm   // within a block
-#let s3 = 1.8mm   // between related lines
-#let s4 = 2.4mm   // a label and its body; around a table
-#let s5 = 3.0mm   // between entries
-#let s7 = 4.8mm   // before a subheading
-#let s8 = 6.0mm   // between sections
-#let s9 = 7.2mm   // before a chapter element
+// The tokens live in theme.typ and are re-exported, so a chapter importing this file
+// gets both. TYPOGRAPHY.md is the specification behind them.
+#import "theme.typ": *
 
 // ---------------------------------------------------------------- helpers ---
 #let minus = "\u{2212}"   // real minus sign, not a hyphen
@@ -128,7 +85,7 @@
 )
 
 // ------------------------------------------------------------ small parts ---
-#let hrule(weight: 1.4pt, color: accent) = {
+#let hrule(weight: r-mid, color: accent) = {
   v(s3)
   line(length: 100%, stroke: weight + color)
   v(s3)
@@ -141,14 +98,14 @@
 // cannot drift apart — which is what made the hand-styled version feel unsystematic.
 #let head-cell(s, al: left) = table.cell(
   fill: accent,
-  align(al, text(size: t-label, weight: 700, fill: white, tracking: 0.5pt)[#upper(s)]),
+  align(al, text(size: t-label, weight: 700, fill: white, tracking: tr-tight)[#upper(s)]),
 )
 
 #let data-table(columns: auto, aligns: (), head: (), rows: ()) = {
   table(
     columns: columns,
-    inset: (x: 5pt, y: 3.8pt),
-    stroke: (x, y) => if y == 0 { none } else { (bottom: 0.4pt + rule-col) },
+    inset: (x: in-cell-x, y: in-cell-y),
+    stroke: (x, y) => if y == 0 { none } else { (bottom: r-hair + rule-col) },
     ..if head.len() > 0 {
       (table.header(..head.enumerate().map(p => head-cell(p.last(), al: aligns.at(p.first(), default: left)))),)
     } else { () },
@@ -157,7 +114,7 @@
 }
 
 #let label-head(s) = text(
-  size: t-label, weight: 700, fill: accent-deep, tracking: 0.6pt,
+  size: t-label, weight: 700, fill: accent-deep, tracking: tr-tight,
 )[#upper(s)]
 
 // A labelled stat line: **AC** 13
@@ -330,7 +287,7 @@
 ]
 
 #let section-head(s) = block(above: s7, below: s4)[
-  #line(length: 100%, stroke: 0.5pt + rule-col)
+  #line(length: 100%, stroke: r-hair + rule-col)
   #v(s3)
   #label-head(s)
 ]
@@ -433,7 +390,7 @@
 #let gm-note(body) = block(
   width: 100%, breakable: true, below: s8,
   inset: (left: s5, top: s3, bottom: s3),
-  stroke: (left: 1.5pt + accent),
+  stroke: (left: r-mid + accent),
 )[
   #set text(size: note-size, fill: ink-soft)
   #body
@@ -470,7 +427,7 @@
 #let chapter(number: none, eyebrow: auto, title: "", intro) = {
   pagebreak(weak: true)
   place(top, scope: "parent", float: true, clearance: s9, block(width: 100%)[
-    #text(size: t-table, weight: 700, fill: accent, tracking: 1.4pt)[
+    #text(size: t-table, weight: 700, fill: accent, tracking: tr-wide)[
       #upper(if eyebrow != auto { eyebrow }
              else if number == none { "Appendix" }
              else { "Chapter " + str(number) })
@@ -478,7 +435,7 @@
     #v(-s4)
     #text(size: t-chapter, weight: 800, fill: ink)[#title]
     #v(s3)
-    #line(length: 100%, stroke: 2.5pt + accent)
+    #line(length: 100%, stroke: r-heavy + accent)
   ])
   if intro != [] {
     block(below: s7)[#set text(size: base-size, fill: ink-soft); #intro]
@@ -498,22 +455,29 @@
 // A table that spans both columns.
 #let wide(body) = place(top, scope: "parent", float: true, clearance: s8, block(width: 100%)[#body])
 
+// The heading of a wide section. Its own role because generate-print.mjs emits it, and
+// a size written into a JavaScript string is a size the type scale cannot reach.
+#let wide-head(s) = {
+  text(size: t-title, weight: 800, fill: accent-deep)[#s]
+  hrule()
+}
+
 // ------------------------------------------------------------------ cover ---
 #let cover(title: "", subtitle: "", lede: [], meta: []) = page(
-  columns: 1, margin: (x: 20mm, y: 24mm), header: none, footer: none,
+  columns: 1, margin: cover-margin, header: none, footer: none,
 )[
-  #v(18mm)
-  #text(size: t-note, weight: 700, fill: accent, tracking: 1.6pt)[OPENFRAY · COMPENDIUM]
-  #v(14mm)
+  #v(cover-top)
+  #text(size: t-note, weight: 700, fill: accent, tracking: tr-wide)[OPENFRAY · COMPENDIUM]
+  #v(cover-gap)
   #text(size: t-cover, weight: 800, fill: ink)[#title]
   #v(s5)
   #text(size: t-sub, fill: ink-soft)[#subtitle]
   #v(s9)
-  #line(length: 36mm, stroke: 3pt + accent)
+  #line(length: cover-rule, stroke: r-heavy + accent)
   #v(s9)
   #block(width: 84%)[#text(size: t-lead, fill: ink-soft)[#lede]]
   #v(1fr)
-  #line(length: 100%, stroke: 0.5pt + rule-col)
+  #line(length: 100%, stroke: r-hair + rule-col)
   #v(s5)
   #text(size: t-body, fill: ink-soft)[#meta]
 ]
@@ -529,7 +493,7 @@
   set document(title: title, description: subtitle)
   set page(
     paper: "a4",
-    margin: (x: 14mm, top: 14mm, bottom: 16mm),
+    margin: page-margin,
     columns: 2,
     footer: context {
       set text(size: t-label, fill: ink-faint)

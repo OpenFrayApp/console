@@ -20,7 +20,7 @@
 #let show-creature(name, note: none) = {
   let c = by-name.at(name, default: none)
   if c == none {
-    block(fill: rgb("#fee2e2"), inset: 4pt)[MISSING CREATURE: #name]
+    block(fill: rgb("#fee2e2"), inset: in-box)[MISSING CREATURE: #name]
   } else {
     statblock(c)
     if note != none { gm-note(note) }
