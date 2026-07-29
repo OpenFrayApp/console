@@ -16,7 +16,7 @@
 *Appendix A* has nineteen ready-to-run encounters from level 1 to level 20, each with its terrain, its roster, and the concept it’s built around.
 ]
 
-#section-head("Stage 1 and challenge rating")
+#subhead("Stage 1 and challenge rating")
 A creature with Speed 0 is a hazard, not an encounter. Players will walk around it, and they’re right to. Every Stage 1 creature in Chapter 2 earns its listed challenge rating only when one of these is true:
 
 - *Terrain forces contact.* A walled kitchen garden, a greenhouse, a hedge maze, furrows narrow enough that a 10-foot reach covers the path.

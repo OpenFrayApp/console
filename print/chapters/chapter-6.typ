@@ -12,7 +12,7 @@ The Gardener’s _animate objects_ results are statted as six separate implement
 
 #show-creature("Pruneling")
 
-#pagebreak(weak: true)
+#colbreak(weak: true)
 
 #section("Animated tools")[
 The Gardener casts _animate objects_ on whatever is leaning against the shed wall. Six of those results are statted below, so nobody has to open the generic animated-object rules mid-fight.
@@ -22,7 +22,7 @@ All six are built on the same chassis — the same _Antimagic Susceptibility_, t
 The composition of a tool encounter should be a piece of scenery the party walked past ten minutes earlier. Let them notice the rack. Let them do nothing about it.
 
 #data-table(
-  columns: 3,
+  columns: (auto, auto, auto),
   aligns: (left, center, left),
   head: ("Tool", "CR", "Does"),
   rows: (

@@ -103,7 +103,7 @@
 // print invention, and at this size a solid accent bar is the loudest thing on the
 // page.
 #let head-cell(s, al: left) = table.cell(
-  align(al, text(size: t-micro, weight: 700, fill: ink-faint, tracking: tr-label)[#upper(s)]),
+  align(al, text(size: t-micro, weight: wt-strong, fill: ink-faint, tracking: tr-label)[#upper(s)]),
 )
 
 #let data-table(columns: auto, aligns: (), head: (), rows: ()) = {
@@ -122,11 +122,11 @@
 }
 
 #let label-head(s) = text(
-  size: t-micro, weight: 700, fill: accent, tracking: tr-label,
+  size: t-micro, weight: wt-strong, fill: accent, tracking: tr-label,
 )[#upper(s)]
 
 // A labelled stat field: an accent label and a muted value, as the site sets them.
-#let statline(label, value) = [#text(fill: accent, weight: 700)[#label] #value]
+#let statline(label, value) = [#text(fill: accent, weight: wt-strong)[#label] #value]
 
 // The four headline fields flow as one wrapping row rather than four stacked lines,
 // which is the site's layout and costs three lines of column depth per creature.
@@ -145,13 +145,15 @@
       let score = ab.at(k)
       let m = ability-mod(score)
       let sv = saves.at(k, default: m)
-      cells.push(text(fill: ink, weight: 700)[#upper(k)])
+      cells.push(text(fill: ink, weight: wt-strong)[#upper(k)])
       cells.push(align(center)[#score])
       cells.push(align(center)[#mod-str(m)])
       cells.push(align(center)[#mod-str(sv)])
     }
   }
-  block(above: sp-5, below: sp-5)[
+  // Never split: six rows read as one grid, and half of them at the foot of a column
+  // with the rest overleaf is unreadable as a stat line.
+  block(above: sp-5, below: sp-5, breakable: false)[
     #set text(size: t-small)
     #data-table(
       columns: (auto, 1fr, 1fr, 1fr, auto, 1fr, 1fr, 1fr),
@@ -305,10 +307,16 @@
 //
 // `sticky` keeps it with what follows: a bare ACTIONS at the foot of a column, with its
 // first action in the next one, is the failure this guards.
-#let section-head(s) = block(above: sp-5, below: sp-3, sticky: true)[
-  #hrule(weight: r-hair, color: rule-col, above: sp-0, below: sp-5)
-  #label-head(s)
-]
+// A stat block's band label — TRAITS, ACTIONS. No rule: one divider per band meant a
+// page of ruling rather than of structure, and space separates them perfectly well.
+//
+// `sticky` keeps it with what follows: a bare ACTIONS at the foot of a column, with its
+// first action in the next one, is the failure this guards.
+#let section-head(s) = block(above: sp-6, below: sp-3, sticky: true)[#label-head(s)]
+
+// A sub-head in running prose. It takes the same air as a section, so a reader gets one
+// rhythm for "new topic" instead of two competing ones.
+#let subhead(s) = block(above: sp-9, below: sp-2, sticky: true)[#label-head(s)]
 
 #let spellcasting-block(sc) = {
   let ability-full = (
@@ -353,12 +361,9 @@
       #creature-art(c)
       // Invisible anchor for cref(); metadata is queryable and takes no space.
       #metadata(c.name)#label("c-" + creature-slug(c.name))
-      // The site's top edge. Not a box around the block — the one stroke that says a
-      // stat block starts here, which the hairline bands alone are too faint to carry.
-      #hrule(weight: r-heavy, above: sp-0, below: sp-5)
       #block(above: sp-0, below: sp-3)[
         #set par(leading: lead-title)
-        #text(size: t-title, weight: 700, fill: ink, tracking: tr-title)[#c.name]
+        #text(size: t-title, weight: wt-title, fill: ink, tracking: tr-title)[#c.name]
       ]
       #block(above: sp-0, below: sp-0)[
         #text(size: t-small, style: "italic", fill: ink-faint)[#type-line(c)]
@@ -367,16 +372,15 @@
     #if c.at("description", default: none) != none {
       block(above: sp-6, below: sp-6)[#c.description]
     }
-    #hrule(weight: r-hair, color: rule-col, above: sp-6, below: sp-0)
+    // No band rules. The table already draws its own header and row strokes, so a rule
+    // under the abilities made two lines where one was doing the work.
     #statfields(
       ("AC", str(c.ac)),
       ("Initiative", mod-str(c.initiative) + " (" + str(10 + c.initiative) + ")"),
       ("HP", str(c.maxHp) + " (" + c.hpFormula.replace("+", " + ").replace("-", " " + minus + " ") + ")"),
       ("Speed", speed-line(c)),
     )
-    #hrule(weight: r-hair, color: rule-col, above: sp-0, below: sp-0)
     #ability-table(c)
-    #hrule(weight: r-hair, color: rule-col, above: sp-0, below: sp-5)
     #defence-lines(c)
 
     #let traits = c.at("traits", default: ())
@@ -433,13 +437,18 @@
 #let encounter(name: "", levels: "", xp: "", terrain: [], roster: (), idea: []) = {
   block(width: 100%, breakable: true, below: sp-9)[
     #block(breakable: false, width: 100%)[
+      // The seed's name is its own `## heading`, so `encounter()` is normally called
+      // with none. Rendering an empty title block left a title's worth of space under
+      // the heading with nothing in it.
+      #if name != "" {
+        block(above: sp-0, below: sp-3)[
+          #text(size: t-title, weight: wt-title, fill: ink, tracking: tr-title)[#name]
+        ]
+      }
       #block(above: sp-0, below: sp-3)[
-        #text(size: t-title, weight: 700, fill: ink, tracking: tr-title)[#name]
+        #text(size: t-small, weight: wt-strong, fill: accent)[Levels #levels · #xp XP]
       ]
-      #block(above: sp-0, below: sp-5)[
-        #text(size: t-small, weight: 600, fill: accent)[Levels #levels · #xp XP]
-      ]
-      #hrule(above: sp-5, below: sp-3)
+      #hrule(above: sp-0, below: sp-3)
       #set text(size: t-small)
       #entry("Terrain", terrain)
     ]
@@ -464,14 +473,14 @@
   pagebreak(weak: true)
   place(top, scope: "parent", float: true, clearance: sp-9, block(width: 100%)[
     #block(above: sp-0, below: sp-1)[
-      #text(size: t-micro, weight: 700, fill: accent, tracking: tr-label)[
+      #text(size: t-micro, weight: wt-strong, fill: accent, tracking: tr-label)[
         #upper(if eyebrow != auto { eyebrow }
                else if number == none { "Appendix" }
                else { "Chapter " + str(number) })
       ]
     ]
     #block(above: sp-0, below: sp-3)[
-      #text(size: t-chapter, weight: 700, fill: ink, tracking: tr-title)[#title]
+      #text(size: t-chapter, weight: wt-title, fill: ink, tracking: tr-title)[#title]
     ]
     #hrule(weight: r-heavy, above: sp-0, below: sp-0)
   ])
@@ -481,9 +490,9 @@
 }
 
 #let section(title, body) = {
-  block(width: 100%, breakable: true, below: sp-9)[
+  block(width: 100%, breakable: true, above: sp-9, below: sp-9)[
     #block(breakable: false)[
-      #text(size: t-title, weight: 700, fill: ink, tracking: tr-title)[#title]
+      #text(size: t-title, weight: wt-title, fill: ink, tracking: tr-title)[#title]
       #hrule()
     ]
     #body
@@ -496,7 +505,7 @@
 // The heading of a wide section. Its own role because generate-print.mjs emits it, and
 // a size written into a JavaScript string is a size the type scale cannot reach.
 #let wide-head(s) = {
-  text(size: t-title, weight: 700, fill: ink, tracking: tr-title)[#s]
+  text(size: t-title, weight: wt-title, fill: ink, tracking: tr-title)[#s]
   hrule()
 }
 
@@ -505,13 +514,13 @@
   columns: 1, margin: cover-margin, header: none, footer: none,
 )[
   #block(above: sp-0, below: cover-gap)[
-    #text(size: t-small, weight: 700, fill: accent, tracking: tr-label)[OPENFRAY · COMPENDIUM]
+    #text(size: t-small, weight: wt-strong, fill: accent, tracking: tr-label)[OPENFRAY · COMPENDIUM]
   ]
   #block(above: sp-0, below: sp-6)[
     // Poster type needs the display leading; on the body's 0.65em a two-line cover
     // title opens a gap the width of a paragraph between its own lines.
     #set par(leading: lead-display)
-    #text(size: d-cover, weight: 700, fill: ink, tracking: tr-title)[#title]
+    #text(size: d-cover, weight: wt-title, fill: ink, tracking: tr-title)[#title]
   ]
   #block(above: sp-0, below: sp-9)[#text(size: d-cover-sub, fill: ink-soft)[#subtitle]]
   #block(above: sp-0, below: sp-9)[#line(length: cover-rule, stroke: r-heavy + accent)]
@@ -523,10 +532,11 @@
 ]
 
 // -------------------------------------------------------------- end page ---
-#let endpage(body) = {
-  pagebreak(weak: true)
-  place(top, scope: "parent", float: true, clearance: sp-9, block(width: 100%)[#body])
-}
+// A single-column page of its own, like the cover. As a float on a two-column page it
+// crammed everything into the top third and left the rest blank.
+#let endpage(body) = page(
+  columns: 1, margin: cover-margin, header: none, footer: none,
+)[#body]
 
 // -------------------------------------------------------- document setup ---
 #let book(title: "", subtitle: "", doc) = {
@@ -551,7 +561,7 @@
   set text(font: body-font, size: t-body, fill: ink-soft, lang: "en", region: "us")
   set par(justify: false, leading: lead-body, spacing: sp-7)
   show link: it => text(fill: accent, it)
-  show strong: it => text(fill: ink, weight: 700, it)
+  show strong: it => text(fill: ink, weight: wt-strong, it)
 
   doc
 }

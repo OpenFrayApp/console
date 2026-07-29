@@ -67,6 +67,12 @@
 #let r-mid = 1.15pt // under a section title, under a table header
 #let r-heavy = 1.7pt // the chapter rule, the cover rule, a left bar
 
+// ------------------------------------------------------------------ weights ---
+// A bold lead-in at 9.2pt on paper is heavier than the same weight on a backlit
+// screen. Inline emphasis is semibold; only titles carry full bold.
+#let wt-strong = 600
+#let wt-title = 700
+
 // ------------------------------------------------------------------ tracking ---
 #let tr-label = 0.1em // `tracking-widest`: uppercase labels and eyebrows
 #let tr-title = -0.025em // `tracking-tight`: titles and creature names

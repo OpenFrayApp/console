@@ -8,9 +8,7 @@ Every plant in this book is descended from it, and most of them are literally _o
 
 It does not need to be met. That’s the point of it. But if you want one encounter that recontextualizes the entire book, this is it: the party walks into a valley and finds every species they have ever fought grafted into a single body, and the body knows their names, because it has been watching through every stem they ever cut.
 
-#pagebreak(weak: true)
-
-#section-head("Regional Effects")
+#subhead("Regional Effects")
 
 Within 6 miles of the Perennial:
 

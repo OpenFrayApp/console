@@ -74,8 +74,15 @@ const inline = (s) => {
   })
 }
 
-/** A Markdown pipe table becomes a Typst table, keeping its alignment row. */
-function convertTable(lines) {
+/**
+ * A Markdown pipe table becomes a Typst table, keeping its alignment row.
+ *
+ * `wide` is whether the table spans the page rather than sitting in a column, and it
+ * decides how the columns are sized. A full-page table should fill the measure, so its
+ * long columns share the slack. A table inside an 87mm column must not: dividing that
+ * evenly leaves each cell two words wide, so its columns size to their content.
+ */
+function convertTable(lines, wide = false) {
   const rows = lines.map((l) =>
     l
       .trim()
@@ -88,10 +95,15 @@ function convertTable(lines) {
   const aligns = align.map((a) =>
     a.startsWith(':') && a.endsWith(':') ? 'center' : a.endsWith(':') ? 'right' : 'left',
   )
+  // A short column — a CR, a count — stays `auto` either way; only the prose columns
+  // differ, and only on a wide table, where they share the leftover width.
+  const widths = Array.from({ length: cols }, (_, i) =>
+    wide && !body.every((r) => (r[i] ?? '').length <= 5) ? '1fr' : 'auto',
+  )
   const cell = (c, i) => `align(${aligns[i]})[${inline(c)}]`
   return [
     `#data-table(`,
-    `  columns: ${cols},`,
+    `  columns: (${widths.join(', ')}),`,
     `  aligns: (${aligns.join(', ')}),`,
     `  head: (${head.map((h) => JSON.stringify(h)).join(', ')}),`,
     `  rows: (`,
@@ -150,7 +162,7 @@ function convertSeed(block) {
 }
 
 /** Markdown body (no components) to Typst markup. */
-function blockToTypst(md) {
+function blockToTypst(md, wide = false) {
   const out = []
   const lines = md.split('\n')
   let i = 0
@@ -163,7 +175,7 @@ function blockToTypst(md) {
     if (line.trim().startsWith('|')) {
       const t = []
       while (i < lines.length && lines[i].trim().startsWith('|')) t.push(lines[i++])
-      out.push(convertTable(t))
+      out.push(convertTable(t, wide))
       continue
     }
     if (/^[-*]\s/.test(line.trim())) {
@@ -227,7 +239,7 @@ function convertChapter(src, { dropsLede = false } = {}) {
       while (k < chunks.length) {
         const level = chunks[k].length
         const title = chunks[k + 1].trim()
-        const inner = blockToTypst(chunks[k + 2] ?? '')
+        const inner = blockToTypst(chunks[k + 2] ?? '', WIDE_SECTIONS.has(title))
         // The spine places the indexes, so they go to their own files. The CR index is
         // skipped outright: waking-garden.typ generates a better one from the data.
         if (SKIP_SECTIONS.has(title)) {
@@ -246,7 +258,7 @@ function convertChapter(src, { dropsLede = false } = {}) {
             `${inner}\n]`
           : level === 2
             ? `#section(${JSON.stringify(title)})[\n${inner}\n]`
-            : `#section-head(${JSON.stringify(title)})\n${inner}`
+            : `#subhead(${JSON.stringify(title)})\n${inner}`
         if (extract) extracted.push({ file: extract, body: rendered })
         else out.push(rendered)
         k += 3
@@ -262,11 +274,10 @@ function convertChapter(src, { dropsLede = false } = {}) {
         const chunks = paired[1].split(/^(#{2,4})\s+(.+)$/gm)
         if (chunks[0].trim()) extras.push(blockToTypst(chunks[0]))
         for (let k = 1; k < chunks.length; k += 3) {
-          extras.push(`#section-head(${JSON.stringify(chunks[k + 1].trim())})`)
+          extras.push(`#subhead(${JSON.stringify(chunks[k + 1].trim())})`)
           extras.push(blockToTypst(chunks[k + 2] ?? ''))
         }
       }
-      if (OWN_PAGE.has(name)) out.push('#pagebreak(weak: true)')
       out.push(...extras)
       if (OWN_PAGE.has(name)) out.push('#colbreak(weak: true)')
       out.push(`#show-creature(${JSON.stringify(name)})`)
@@ -277,7 +288,10 @@ function convertChapter(src, { dropsLede = false } = {}) {
       const inner = p.text.replace(/^<Group[^>]*>|<\/Group>$/g, '')
       const names = [...inner.matchAll(/<Creature\b[^>]*\/>/g)].map((c) => attrs(c[0]).name)
       const prose = inner.replace(/<Creature\b[^>]*\/>/g, '')
-      out.push('#pagebreak(weak: true)')
+      // A column break, not a page break. On two columns a `pagebreak` here ended the
+      // page as soon as the left column filled, leaving the right one empty; a group
+      // wants a clean start, which in this layout is the next column.
+      out.push('#colbreak(weak: true)')
       out.push(`#section(${JSON.stringify(attrs(p.text).title ?? '')})[\n${blockToTypst(prose)}\n]`)
       for (const n of names) out.push(`#show-creature(${JSON.stringify(n)})`)
     } else if (p.type === 'Seed') {

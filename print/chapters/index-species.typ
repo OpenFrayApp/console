@@ -8,7 +8,7 @@
 The ten cultivated species, each across all three stages. The number after each creature is its challenge rating.
 
 #data-table(
-  columns: 4,
+  columns: (1fr, 1fr, 1fr, 1fr),
   aligns: (left, left, left, left),
   head: ("Species", "Stage 1", "Stage 2", "Stage 3"),
   rows: (

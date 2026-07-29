@@ -100,10 +100,10 @@
 // Print-only: the web says this on its landing page and in its footer.
 #endpage[
   #block(above: sp-0, below: sp-3)[
-    #text(size: t-micro, weight: 700, fill: accent, tracking: tr-label)[BUILT FOR OPENFRAY]
+    #text(size: t-micro, weight: wt-strong, fill: accent, tracking: tr-label)[BUILT FOR OPENFRAY]
   ]
   #block(above: sp-0, below: sp-6)[
-    #text(size: t-chapter, weight: 700, fill: ink, tracking: tr-title)[Run this book in the console]
+    #text(size: t-chapter, weight: wt-title, fill: ink, tracking: tr-title)[Run this book in the console]
   ]
   #block(above: sp-0, below: sp-8, width: 70%)[
     #text(size: t-large, fill: ink-soft)[
@@ -116,8 +116,10 @@
   #block(above: sp-0, below: sp-9)[
     #text(size: t-body)[openfray.app/console · openfray.app/docs · github.com/SirDarcanos/openfray]
   ]
+  // The imprint sits at the foot of the page, as it does on the cover.
+  #v(1fr)
   #hrule(weight: r-hair, color: rule-col, above: sp-0, below: sp-6)
-  #set text(size: t-micro, fill: ink-soft)
+  #set text(size: t-small, fill: ink-soft)
   #block(above: sp-0, below: sp-3)[#label-head("Licensing and credits")]
   *Creatures and mechanics* — the stat blocks and game mechanics, every field of a creature
   entry other than its description, are licensed CC BY 4.0. Reuse them with attribution to

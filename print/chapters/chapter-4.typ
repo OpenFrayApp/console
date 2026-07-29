@@ -20,7 +20,7 @@ Each of these is a legendary creature with regional or field-scale effects, and 
 
 #show-creature("Bloodvine Sovereign")
 
-#section-head("Regional Effects")
+#subhead("Regional Effects")
 
 Within 1 mile of the King’s field:
 
@@ -48,7 +48,7 @@ If the King dies, these fade over 1d10 days.
 #wide[
   #wide-head("Which boss to use")
 #data-table(
-  columns: 3,
+  columns: (1fr, auto, 1fr),
   aligns: (left, center, left),
   head: ("Boss", "CR", "What the fight is about"),
   rows: (

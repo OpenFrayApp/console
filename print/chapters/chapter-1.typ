@@ -8,7 +8,7 @@ Before the creatures, the ground they came out of. This chapter covers how a pla
 Which stage a party encounters is a fact about the _place_, not about the fight.
 
 #data-table(
-  columns: 4,
+  columns: (auto, auto, auto, auto),
   aligns: (left, left, left, left),
   head: ("Stage", "Form", "Typical CR", "Tier of play"),
   rows: (
@@ -19,7 +19,7 @@ Which stage a party encounters is a fact about the _place_, not about the fight.
 )
 ]
 
-#section-head("What drives advancement")
+#subhead("What drives advancement")
 Left in ordinary loam, a Stage 1 plant stays Stage 1 indefinitely — it will sit in that furrow and hiss at passers-by for fifty years. Advancement requires one of:
 
 - *Season and surplus.* Roughly one growing season per stage in genuinely rich soil. Slow and boring, which is how a neglected estate garden ends up dangerous.
@@ -27,13 +27,13 @@ Left in ordinary loam, a Stage 1 plant stays Stage 1 indefinitely — it will si
 - *Ambient magic.* A ley line, a wild magic scar, a druid’s failed working, a wizard’s leaking laboratory drain.
 - *Deliberate cultivation.* Somebody is _farming_ these. The most interesting version, and the one that gives you an antagonist.
 
-#section-head("What arrests it")
+#subhead("What arrests it")
 - *Harvesting* removes a plant permanently.
 - *Salting the bed* prevents any further advancement in that soil for a year.
 - *Hard frost* knocks a plant back a stage if it’s caught rooted.
 - *Crowding.* A patch that grows too dense starves itself. Stage 3 specimens are almost always solitary, surrounded by a dead zone of stunted plants that never got their share.
 
-#section-head("Bedding down")
+#subhead("Bedding down")
 A Stage 2 creature that wants to advance must root itself again and hold still for a season — the most vulnerable thing it will ever do. A bedded-down Stage 2 uses the *Rooted* trait but keeps its Stage 2 statistics otherwise. This is the best opportunity a party will ever get to kill something before it becomes a problem.
 
 #section("The soil")[
@@ -58,7 +58,7 @@ To add a variety that isn’t in this book, write it as a new creature with its 
 A party that looks before it walks can tell which stage is in the field, and often what kind of ground grew it. Each sign below is a single check made from the edge of the bed — on a success, tell them the right-hand column.
 
 #data-table(
-  columns: 3,
+  columns: (auto, auto, auto),
   aligns: (left, left, left),
   head: ("Sign", "DC (Nature or Survival)", "Tells them"),
   rows: (
@@ -81,7 +81,7 @@ A creature within 5 feet of any Stage 1 or Stage 2 plant at 0 Hit Points can tak
 - *Failure by 5 or more:* the taproot retracts into the soil and regrows at half its Hit Point maximum within 30 feet, after 1 minute at Stage 1 or 1 hour at Stage 2.
 
 #data-table(
-  columns: 3,
+  columns: (auto, auto, auto),
   aligns: (left, left, left),
   head: ("Species", "Component", "Suggested use"),
   rows: (
