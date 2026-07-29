@@ -29,6 +29,20 @@
 #let table-size  = 8pt
 #let note-size   = 8.4pt
 
+
+// ---------------------------------------------------------------- rhythm ---
+// Every vertical gap in the book is a step on this scale. Spacing chosen per call
+// site is what made the first proof feel unsystematic next to the web edition: 20
+// values, none of them related. Page geometry (margins, the cover) is separate.
+#let s1 = 0.6mm   // hairline: inside a line of stats
+#let s2 = 1.2mm   // within a block
+#let s3 = 1.8mm   // between related lines
+#let s4 = 2.4mm   // a label and its body; around a table
+#let s5 = 3.0mm   // between entries
+#let s7 = 4.8mm   // before a subheading
+#let s8 = 6.0mm   // between sections
+#let s9 = 7.2mm   // before a chapter element
+
 // ---------------------------------------------------------------- helpers ---
 #let minus = "\u{2212}"   // real minus sign, not a hyphen
 #let emdash = "—"          // declared here: Typst needs it before first use
@@ -102,9 +116,9 @@
 
 // ------------------------------------------------------------ small parts ---
 #let hrule(weight: 1.4pt, color: accent) = {
-  v(1.6mm)
+  v(s3)
   line(length: 100%, stroke: weight + color)
-  v(1.5mm)
+  v(s3)
 }
 
 
@@ -153,7 +167,7 @@
       cells.push(align(center)[#mod-str(sv)])
     }
   }
-  block(above: 2.2mm, below: 2.6mm)[
+  block(above: s4, below: s4)[
     #set text(size: table-size)
     #data-table(
       columns: (auto, 1fr, 1fr, auto, 1fr, 1fr),
@@ -201,14 +215,14 @@
   if a == none { return }
   let img = image(a.src, width: 100%)
   if a.at("full", default: false) {
-    place(top, scope: "parent", float: true, clearance: 6mm, block(width: 100%)[
+    place(top, scope: "parent", float: true, clearance: s8, block(width: 100%)[
       #img
       #if a.at("credit", default: none) != none {
         text(size: 6.6pt, fill: ink-faint)[#a.credit]
       }
     ])
   } else {
-    block(breakable: false, below: 2mm)[
+    block(breakable: false, below: s4)[
       #img
       #if a.at("credit", default: none) != none {
         text(size: 6.6pt, fill: ink-faint)[#a.credit]
@@ -247,7 +261,7 @@
     else if a.ends-with(":") { right }
     else { left }
   })
-  block(above: 2.2mm, below: 2.6mm)[
+  block(above: s4, below: s4)[
     #set text(size: table-size)
     #data-table(
       columns: head.len(),
@@ -298,13 +312,13 @@
 
 #let entry(name, body) = [#strong(emph(name + ".")) #body]
 
-#let action-block(a) = block(below: 1.6mm)[
+#let action-block(a) = block(below: s3)[
   #entry(a.name + recharge-suffix(a), fmt-action-text(a.text))
 ]
 
-#let section-head(s) = block(above: 4.2mm, below: 2.4mm)[
+#let section-head(s) = block(above: s7, below: s4)[
   #line(length: 100%, stroke: 0.5pt + rule-col)
-  #v(1.6mm)
+  #v(s3)
   #label-head(s)
 ]
 
@@ -313,14 +327,14 @@
     str: "Strength", dex: "Dexterity", con: "Constitution",
     int: "Intelligence", wis: "Wisdom", cha: "Charisma",
   ).at(sc.ability)
-  block(below: 1.6mm)[
+  block(below: s3)[
     #entry("Spellcasting", [requires no Material components and uses #ability-full as the
       spellcasting ability (spell save DC #sc.saveDc):])
     #for g in sc.groups {
       let label = if g.usage.type == "atWill" { "At Will:" } else {
         str(g.usage.at("per", default: 1)) + "/Day Each:"
       }
-      block(above: 1mm, below: 0.6mm)[
+      block(above: s2, below: s1)[
         #strong(label) #g.spells.map(s => emph(s.name)).join(", ")
       ]
     }
@@ -340,18 +354,18 @@
 
 #let statblock(c) = {
   set text(size: stat-size)
-  block(width: 100%, breakable: true, below: 6mm)[
+  block(width: 100%, breakable: true, below: s8)[
     // The opening never splits: art, name, type, lore, rule, stat header, abilities.
     #block(breakable: false, width: 100%)[
       #creature-art(c)
       // Invisible anchor for cref(); metadata is queryable and takes no space.
       #metadata(c.name)#label("c-" + creature-slug(c.name))
       #text(size: 12.5pt, weight: 800, fill: accent-deep)[#c.name]
-      #v(-2.2mm)
+      #v(-s4)
       #text(size: 8.4pt, style: "italic", fill: ink-faint)[#type-line(c)]
       #if c.at("description", default: none) != none {
-        v(0.6mm)
-        block(below: 1.2mm)[#text(size: stat-size, fill: ink-soft)[#c.description]]
+        v(s1)
+        block(below: s2)[#text(size: stat-size, fill: ink-soft)[#c.description]]
       }
       #hrule()
       #statline("AC", str(c.ac)) #linebreak()
@@ -365,7 +379,7 @@
     #let traits = c.at("traits", default: ())
     #if traits.len() > 0 {
       section-head("Traits")
-      for t in traits { block(below: 1.6mm)[#entry(t.name, fmt-action-text(t.text))] }
+      for t in traits { block(below: s3)[#entry(t.name, fmt-action-text(t.text))] }
     }
 
     #let actions = c.at("actions", default: ())
@@ -391,7 +405,7 @@
     #let la = c.at("legendaryActions", default: none)
     #if la != none {
       section-head("Legendary Actions")
-      block(below: 1.6mm)[
+      block(below: s3)[
         #strong("Legendary Action Uses: " + str(la.perRound) + ".")
         Immediately after another creature's turn, #lower(c.name) can expend a use to take one
         of the following actions. It regains all expended uses at the start of each of its turns.
@@ -404,8 +418,8 @@
 // ------------------------------------------------- Game Master commentary ---
 // Sits outside the stat block, visually separate.
 #let gm-note(body) = block(
-  width: 100%, breakable: true, below: 6mm,
-  inset: (left: 3mm, top: 1.6mm, bottom: 1.6mm),
+  width: 100%, breakable: true, below: s8,
+  inset: (left: s5, top: s3, bottom: s3),
   stroke: (left: 1.5pt + accent),
 )[
   #set text(size: note-size, fill: ink-soft)
@@ -414,10 +428,10 @@
 
 // ----------------------------------------------------------- encounter ---
 #let encounter(name: "", levels: "", xp: "", terrain: [], roster: (), idea: []) = {
-  block(width: 100%, breakable: true, below: 6mm)[
+  block(width: 100%, breakable: true, below: s8)[
     #block(breakable: false, width: 100%)[
       #text(size: 12.5pt, weight: 800, fill: accent-deep)[#name]
-      #v(-2.2mm)
+      #v(-s4)
       #text(size: 8.4pt, weight: 600, fill: accent)[Levels #levels · #xp XP]
       #hrule()
       #set text(size: stat-size)
@@ -442,24 +456,24 @@
 // every call site in the book.
 #let chapter(number: none, eyebrow: auto, title: "", intro) = {
   pagebreak(weak: true)
-  place(top, scope: "parent", float: true, clearance: 7mm, block(width: 100%)[
+  place(top, scope: "parent", float: true, clearance: s9, block(width: 100%)[
     #text(size: 8pt, weight: 700, fill: accent, tracking: 1.4pt)[
       #upper(if eyebrow != auto { eyebrow }
              else if number == none { "Appendix" }
              else { "Chapter " + str(number) })
     ]
-    #v(-2mm)
+    #v(-s4)
     #text(size: 21pt, weight: 800, fill: ink)[#title]
-    #v(1.5mm)
+    #v(s3)
     #line(length: 100%, stroke: 2.5pt + accent)
   ])
   if intro != [] {
-    block(below: 5mm)[#set text(size: base-size, fill: ink-soft); #intro]
+    block(below: s7)[#set text(size: base-size, fill: ink-soft); #intro]
   }
 }
 
 #let section(title, body) = {
-  block(width: 100%, breakable: true, below: 6mm)[
+  block(width: 100%, breakable: true, below: s8)[
     #block(breakable: false)[
       #text(size: 12.5pt, weight: 800, fill: accent-deep)[#title]
       #hrule()
@@ -469,7 +483,7 @@
 }
 
 // A table that spans both columns.
-#let wide(body) = place(top, scope: "parent", float: true, clearance: 6mm, block(width: 100%)[#body])
+#let wide(body) = place(top, scope: "parent", float: true, clearance: s8, block(width: 100%)[#body])
 
 // ------------------------------------------------------------------ cover ---
 #let cover(title: "", subtitle: "", lede: [], meta: []) = page(
@@ -479,22 +493,22 @@
   #text(size: 8.5pt, weight: 700, fill: accent, tracking: 1.6pt)[OPENFRAY · COMPENDIUM]
   #v(14mm)
   #text(size: 46pt, weight: 800, fill: ink)[#title]
-  #v(3mm)
+  #v(s5)
   #text(size: 14pt, fill: ink-soft)[#subtitle]
-  #v(8mm)
+  #v(s9)
   #line(length: 36mm, stroke: 3pt + accent)
-  #v(8mm)
+  #v(s9)
   #block(width: 84%)[#text(size: 10.5pt, fill: ink-soft)[#lede]]
   #v(1fr)
   #line(length: 100%, stroke: 0.5pt + rule-col)
-  #v(3mm)
+  #v(s5)
   #text(size: 9pt, fill: ink-soft)[#meta]
 ]
 
 // -------------------------------------------------------------- end page ---
 #let endpage(body) = {
   pagebreak(weak: true)
-  place(top, scope: "parent", float: true, clearance: 6mm, block(width: 100%)[#body])
+  place(top, scope: "parent", float: true, clearance: s8, block(width: 100%)[#body])
 }
 
 // -------------------------------------------------------- document setup ---
