@@ -24,10 +24,23 @@
 // Typst falls through this list until it finds an installed face.
 #let body-font = ("Inter", "Helvetica Neue", "Helvetica", "Arial", "Liberation Sans")
 
-#let base-size   = 9.2pt
-#let stat-size   = 8.8pt
-#let table-size  = 8pt
-#let note-size   = 8.4pt
+// Type scale. Sizes were picked per call site too — 12 of them, several within a
+// third of a point of each other, which reads as noise rather than hierarchy.
+#let t-micro   = 6.8pt   // art credit
+#let t-label   = 7.4pt   // small-caps labels, table headers, footer
+#let t-table   = 8.0pt   // table body
+#let t-note    = 8.6pt   // stat block body, GM notes, type line
+#let t-body    = 9.2pt   // running text
+#let t-lead    = 10.6pt  // cover lede
+#let t-title   = 12.6pt  // creature and section titles
+#let t-sub     = 15.0pt  // cover subtitle
+#let t-chapter = 21.0pt  // chapter title
+#let t-cover   = 46.0pt  // cover title
+
+#let base-size   = t-body
+#let stat-size   = t-note
+#let table-size  = t-table
+#let note-size   = t-note
 
 
 // ---------------------------------------------------------------- rhythm ---
@@ -128,7 +141,7 @@
 // cannot drift apart — which is what made the hand-styled version feel unsystematic.
 #let head-cell(s, al: left) = table.cell(
   fill: accent,
-  align(al, text(size: 6.9pt, weight: 700, fill: white, tracking: 0.5pt)[#upper(s)]),
+  align(al, text(size: t-label, weight: 700, fill: white, tracking: 0.5pt)[#upper(s)]),
 )
 
 #let data-table(columns: auto, aligns: (), head: (), rows: ()) = {
@@ -144,7 +157,7 @@
 }
 
 #let label-head(s) = text(
-  size: 7.4pt, weight: 700, fill: accent-deep, tracking: 0.6pt,
+  size: t-label, weight: 700, fill: accent-deep, tracking: 0.6pt,
 )[#upper(s)]
 
 // A labelled stat line: **AC** 13
@@ -218,14 +231,14 @@
     place(top, scope: "parent", float: true, clearance: s8, block(width: 100%)[
       #img
       #if a.at("credit", default: none) != none {
-        text(size: 6.6pt, fill: ink-faint)[#a.credit]
+        text(size: t-micro, fill: ink-faint)[#a.credit]
       }
     ])
   } else {
     block(breakable: false, below: s4)[
       #img
       #if a.at("credit", default: none) != none {
-        text(size: 6.6pt, fill: ink-faint)[#a.credit]
+        text(size: t-micro, fill: ink-faint)[#a.credit]
       }
     ]
   }
@@ -360,9 +373,9 @@
       #creature-art(c)
       // Invisible anchor for cref(); metadata is queryable and takes no space.
       #metadata(c.name)#label("c-" + creature-slug(c.name))
-      #text(size: 12.5pt, weight: 800, fill: accent-deep)[#c.name]
+      #text(size: t-title, weight: 800, fill: accent-deep)[#c.name]
       #v(-s4)
-      #text(size: 8.4pt, style: "italic", fill: ink-faint)[#type-line(c)]
+      #text(size: t-note, style: "italic", fill: ink-faint)[#type-line(c)]
       #if c.at("description", default: none) != none {
         v(s1)
         block(below: s2)[#text(size: stat-size, fill: ink-soft)[#c.description]]
@@ -430,9 +443,9 @@
 #let encounter(name: "", levels: "", xp: "", terrain: [], roster: (), idea: []) = {
   block(width: 100%, breakable: true, below: s8)[
     #block(breakable: false, width: 100%)[
-      #text(size: 12.5pt, weight: 800, fill: accent-deep)[#name]
+      #text(size: t-title, weight: 800, fill: accent-deep)[#name]
       #v(-s4)
-      #text(size: 8.4pt, weight: 600, fill: accent)[Levels #levels · #xp XP]
+      #text(size: t-note, weight: 600, fill: accent)[Levels #levels · #xp XP]
       #hrule()
       #set text(size: stat-size)
       #entry("Terrain", terrain)
@@ -457,13 +470,13 @@
 #let chapter(number: none, eyebrow: auto, title: "", intro) = {
   pagebreak(weak: true)
   place(top, scope: "parent", float: true, clearance: s9, block(width: 100%)[
-    #text(size: 8pt, weight: 700, fill: accent, tracking: 1.4pt)[
+    #text(size: t-table, weight: 700, fill: accent, tracking: 1.4pt)[
       #upper(if eyebrow != auto { eyebrow }
              else if number == none { "Appendix" }
              else { "Chapter " + str(number) })
     ]
     #v(-s4)
-    #text(size: 21pt, weight: 800, fill: ink)[#title]
+    #text(size: t-chapter, weight: 800, fill: ink)[#title]
     #v(s3)
     #line(length: 100%, stroke: 2.5pt + accent)
   ])
@@ -475,7 +488,7 @@
 #let section(title, body) = {
   block(width: 100%, breakable: true, below: s8)[
     #block(breakable: false)[
-      #text(size: 12.5pt, weight: 800, fill: accent-deep)[#title]
+      #text(size: t-title, weight: 800, fill: accent-deep)[#title]
       #hrule()
     ]
     #body
@@ -490,19 +503,19 @@
   columns: 1, margin: (x: 20mm, y: 24mm), header: none, footer: none,
 )[
   #v(18mm)
-  #text(size: 8.5pt, weight: 700, fill: accent, tracking: 1.6pt)[OPENFRAY · COMPENDIUM]
+  #text(size: t-note, weight: 700, fill: accent, tracking: 1.6pt)[OPENFRAY · COMPENDIUM]
   #v(14mm)
-  #text(size: 46pt, weight: 800, fill: ink)[#title]
+  #text(size: t-cover, weight: 800, fill: ink)[#title]
   #v(s5)
-  #text(size: 14pt, fill: ink-soft)[#subtitle]
+  #text(size: t-sub, fill: ink-soft)[#subtitle]
   #v(s9)
   #line(length: 36mm, stroke: 3pt + accent)
   #v(s9)
-  #block(width: 84%)[#text(size: 10.5pt, fill: ink-soft)[#lede]]
+  #block(width: 84%)[#text(size: t-lead, fill: ink-soft)[#lede]]
   #v(1fr)
   #line(length: 100%, stroke: 0.5pt + rule-col)
   #v(s5)
-  #text(size: 9pt, fill: ink-soft)[#meta]
+  #text(size: t-body, fill: ink-soft)[#meta]
 ]
 
 // -------------------------------------------------------------- end page ---
@@ -519,7 +532,7 @@
     margin: (x: 14mm, top: 14mm, bottom: 16mm),
     columns: 2,
     footer: context {
-      set text(size: 7.5pt, fill: ink-faint)
+      set text(size: t-label, fill: ink-faint)
       grid(
         columns: (1fr, auto, 1fr),
         align(left)[#title],
@@ -529,7 +542,8 @@
     },
   )
   set text(font: body-font, size: base-size, fill: ink, lang: "en", region: "us")
-  set par(justify: false, leading: 0.58em, spacing: 0.9em)
+  // Leading and paragraph spacing are part of the rhythm, not separate knobs.
+  set par(justify: false, leading: 0.64em, spacing: s5)
   show link: it => text(fill: accent-deep, it)
   show strong: it => text(fill: ink, weight: 700, it)
 
