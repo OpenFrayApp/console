@@ -214,7 +214,31 @@
   "Hit:", "Failure:", "Success:", "Trigger:", "Response:",
 )
 
-#let fmt-action-text(s) = {
+// A trait or action's `text` is markdown, so it can carry a table — the Perennial's
+// Graft table is the only one today. Without this it renders as raw pipes.
+#let md-table(lines) = {
+  let rows = lines.map(l => l.trim().trim("|").split("|").map(c => c.trim()))
+  if rows.len() < 2 { return }
+  let head = rows.first()
+  let aligns = rows.at(1).map(a => {
+    if a.starts-with(":") and a.ends-with(":") { center }
+    else if a.ends-with(":") { right }
+    else { left }
+  })
+  block(above: 1.4mm, below: 1.8mm)[
+    #set text(size: table-size)
+    #table(
+      columns: head.len(),
+      inset: (x: 3pt, y: 2.2pt),
+      stroke: (x, y) => (bottom: 0.5pt + rule-col),
+      align: (x, y) => aligns.at(x, default: left),
+      table.header(..head.map(h => label-head(h))),
+      ..rows.slice(2).flatten().map(c => [#c])
+    )
+  ]
+}
+
+#let fmt-labels(s) = {
   let parts = ((body: s, lit: false),)
   for lab in action-labels {
     let next = ()
@@ -230,6 +254,26 @@
     parts = next
   }
   parts.map(p => if p.lit { emph(p.body) } else { p.body }).join()
+}
+
+// Split the text into prose runs and tables, formatting each in its own way.
+#let fmt-action-text(s) = {
+  if not s.contains("|") { return fmt-labels(s) }
+  let out = ()
+  let prose = ()
+  let rows = ()
+  for line in s.split("\n") {
+    if line.trim().starts-with("|") {
+      if prose.len() > 0 { out.push(fmt-labels(prose.join("\n").trim())); prose = () }
+      rows.push(line)
+    } else {
+      if rows.len() > 0 { out.push(md-table(rows)); rows = () }
+      prose.push(line)
+    }
+  }
+  if prose.len() > 0 { out.push(fmt-labels(prose.join("\n").trim())) }
+  if rows.len() > 0 { out.push(md-table(rows)) }
+  out.join()
 }
 
 #let entry(name, body) = [#strong(emph(name + ".")) #body]
@@ -264,12 +308,24 @@
 }
 
 // ------------------------------------------------------------- stat block ---
+// The web links creature mentions to their anchor; print says which page instead.
+// The slug matches the web's `#c-<slug>` so one source can drive both.
+#let creature-slug(name) = lower(name).replace(" ", "-").replace("'", "").replace("’", "")
+
+/** "Rollrind (p. 12)" — falls back to the bare text if the creature isn't in the book. */
+#let cref(target, body) = context {
+  let hits = query(label(target))
+  if hits.len() == 0 { body } else { [#body (p.~#hits.first().location().page())] }
+}
+
 #let statblock(c) = {
   set text(size: stat-size)
   block(width: 100%, breakable: true, below: 6mm)[
     // The opening never splits: art, name, type, lore, rule, stat header, abilities.
     #block(breakable: false, width: 100%)[
       #creature-art(c)
+      // Invisible anchor for cref(); metadata is queryable and takes no space.
+      #metadata(c.name)#label("c-" + creature-slug(c.name))
       #text(size: 12.5pt, weight: 800, fill: accent-deep)[#c.name]
       #v(-2.2mm)
       #text(size: 8.4pt, style: "italic", fill: ink-faint)[#type-line(c)]

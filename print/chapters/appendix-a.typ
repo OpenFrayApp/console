@@ -64,7 +64,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Snaproot", "4", "1/4", "Buried across the bed in a loose grid, points up"),
     ("Numbknot", "1", "1/2", "Rooted at the well, where the air already runs cold"),
   ),
-  idea: [The Snaproot patch punishes anyone who moves like there’s nothing underfoot, and the Numbknot makes the whole bed slower to cross while they work out why. Nobody here can chase — the only danger is walking through it carelessly.],
+  idea: [The #cref("c-snaproot", [Snaproot]) patch punishes anyone who moves like there’s nothing underfoot, and the #cref("c-numbknot", [Numbknot]) makes the whole bed slower to cross while they work out why. Nobody here can chase — the only danger is walking through it carelessly.],
 )
 
 #section("The quiet acre")[
@@ -127,7 +127,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Scarecrow", "1", "5", "At the post"),
     ("Bindweed Creeper", "2", "1", "In the trodden ring, where the party will retreat to"),
   ),
-  idea: [Two lessons in one field. The Scarecrow will not leave its circle, so withdrawing works — but the Creepers are in the way and cannot be beaten by fighting. And the wheat is dry, and fire is the obvious answer, and fire is how you get a Wick.],
+  idea: [Two lessons in one field. The #cref("c-scarecrow", [Scarecrow]) will not leave its circle, so withdrawing works — but the Creepers are in the way and cannot be beaten by fighting. And the wheat is dry, and fire is the obvious answer, and fire is how you get a #cref("c-wick", [Wick]).],
 )
 
 #section("The broken fence")[
@@ -144,7 +144,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Stalkstrider", "2", "3", "Working as a pair, cutting the field in half with _Sow the Row_"),
     ("Tearmonger", "2", "2", "Rear, shedding onions as they take hits"),
   ),
-  idea: [The Stalkstriders will split the party in two and the Vinelasher will pull one half apart. Fire is the answer and the party will find it.],
+  idea: [The Stalkstriders will split the party in two and the #cref("c-vinelasher", [Vinelasher]) will pull one half apart. Fire is the answer and the party will find it.],
 )
 
 #section("The ley bottom")[
@@ -175,7 +175,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Rootlance", "1", "4", "Planted at the mouth of the path, waiting for someone to run"),
     ("Gingerling", "2", "5", "Circling wide, using the hedges for cover, never standing still"),
   ),
-  idea: [The Rootlance wants the party to charge the path and the Gingerlings want them to chase it off the path. Both instincts are wrong. This is the encounter where standing still and letting the enemy come to you is the correct, unfamiliar answer.],
+  idea: [The #cref("c-rootlance", [Rootlance]) wants the party to charge the path and the Gingerlings want them to chase it off the path. Both instincts are wrong. This is the encounter where standing still and letting the enemy come to you is the correct, unfamiliar answer.],
 )
 
 #section("The drill ground")[
@@ -190,7 +190,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Pikeling", "4", "3", "A block of four in _Formation_, holding the center"),
     ("Scorchvine", "1", "6", "Flanking wide and fast around the block"),
   ),
-  idea: [The Pikelings hold and the Scorchvine goes around. Charging the block is the wrong answer and _Set Against the Charge_ will explain why. Somebody taught them this, and the party should end the fight asking who.],
+  idea: [The Pikelings hold and the #cref("c-scorchvine", [Scorchvine]) goes around. Charging the block is the wrong answer and _Set Against the Charge_ will explain why. Somebody taught them this, and the party should end the fight asking who.],
 )
 
 #section("The sunken field")[
@@ -222,7 +222,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Pruneling", "4", "1/2", "Hidden, going for packs and components"),
     ("Bramblehead", "2", "4", "Slow, in the way, buffed by _Tender of the Plot_"),
   ),
-  idea: [Two _Patient_ creatures, one of which can walk the line on its first turn. Roll both initiatives with Disadvantage in the open so the party sees it happen and does not know why yet. The Gardener will talk first if allowed.],
+  idea: [Two _Patient_ creatures, one of which can walk the line on its first turn. Roll both initiatives with Disadvantage in the open so the party sees it happen and does not know why yet. The #cref("c-gardener", [Gardener]) will talk first if allowed.],
 )
 
 #section("The crowned acre")[
@@ -253,7 +253,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Deepspire", "1", "11", "At the center of the star, mostly underground"),
     ("Snaproot", "4", "1/4", "Scattered along the fissures, part of the same root system"),
   ),
-  idea: [Spire of Roots means the Deepspire always knows exactly where the party is within thirty feet, seen or not. The Snaproots aren’t separate creatures so much as extensions of it — killing them doesn’t slow it down, but ignoring them costs blood with every step. Early rounds favor the party if they can keep it moving; once the crown snaps, standing still stops being an option for it and starts being the only option for them.],
+  idea: [Spire of Roots means the #cref("c-deepspire", [Deepspire]) always knows exactly where the party is within thirty feet, seen or not. The Snaproots aren’t separate creatures so much as extensions of it — killing them doesn’t slow it down, but ignoring them costs blood with every step. Early rounds favor the party if they can keep it moving; once the crown snaps, standing still stops being an option for it and starts being the only option for them.],
 )
 
 #section("The churchyard siege")[
@@ -269,7 +269,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Blight Mother", "1", "7", "Uphill, behind the yews, raising everything that falls"),
     ("Gravegourd", "2", "4", "Working the flanks"),
   ),
-  idea: [The party arrives mid-fight beside a CR 12 ally that will not ask for help and will cast _Litany_ on them whether they help or not. Every plant that dies here gets back up, including the Reliquary’s own defenders, so killing things is actively counterproductive until the Blight Mother is down.],
+  idea: [The party arrives mid-fight beside a CR 12 ally that will not ask for help and will cast _Litany_ on them whether they help or not. Every plant that dies here gets back up, including the #cref("c-reliquary", [Reliquary])’s own defenders, so killing things is actively counterproductive until the #cref("c-blight-mother", [Blight Mother]) is down.],
 )
 
 #section("The long winter")[
@@ -284,7 +284,7 @@ XP totals are raw sums for budgeting against the 2024 encounter tables. They ass
     ("Torpor", "1", "13", "Center, patient, already aware they’ve arrived"),
     ("Gingerling", "2", "5", "Raised fresh from the soil as the fight goes on, not present at the start"),
   ),
-  idea: [Torpor doesn’t need to catch anyone — Creeping Numbness does that for it, and Rhizome Sovereign means the two Gingerlings on the table at the start won’t be the last. The party’s instinct will be to disengage and regroup at range; Deep Winter means Torpor’s Speed can’t be slowed in return, so the gap never actually opens. The fight rewards standing and finishing it, not managing distance.],
+  idea: [#cref("c-torpor", [Torpor]) doesn’t need to catch anyone — Creeping Numbness does that for it, and Rhizome Sovereign means the two Gingerlings on the table at the start won’t be the last. The party’s instinct will be to disengage and regroup at range; Deep Winter means Torpor’s Speed can’t be slowed in return, so the gap never actually opens. The fight rewards standing and finishing it, not managing distance.],
 )
 
 #section("The last valley")[

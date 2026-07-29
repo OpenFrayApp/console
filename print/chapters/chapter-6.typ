@@ -4,11 +4,11 @@
 
 Chapter 1 lists _deliberate cultivation_ as the most interesting reason a plant advances. This chapter is who has been doing it.
 
-Everything here either works for the Gardener or has been drawn in by it, and unlike most of Chapter 5, all of it will come at the party. One entry is deliberately non-lethal: the *Tithe-Crow* doesn’t want to kill anyone, it wants something they’re carrying, and it will trade.
+Everything here either works for the #cref("c-gardener", [Gardener]) or has been drawn in by it, and unlike most of Chapter 5, all of it will come at the party. One entry is deliberately non-lethal: the #cref("c-tithe-crow", [*Tithe-Crow*]) doesn’t want to kill anyone, it wants something they’re carrying, and it will trade.
 
 The Gardener’s _animate objects_ results are statted as six separate implements rather than one entry with a table, because a hose and a pair of shears are not the same creature.
 
-*Run the Under-Gardener before the Gardener.* They share the _Patient_ trait, and the lieutenant’s version is stripped down enough that a party can learn the mechanic from a fight that costs them Hit Points instead of a character.
+*Run the #cref("c-under-gardener", [Under-Gardener]) before the Gardener.* They share the _Patient_ trait, and the lieutenant’s version is stripped down enough that a party can learn the mechanic from a fight that costs them Hit Points instead of a character.
 
 #show-creature("Pruneling")
 

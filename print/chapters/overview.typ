@@ -30,7 +30,7 @@ A creature with Speed 0 is a hazard, not an encounter. Players will walk around 
 - *Terrain forces contact.* A walled kitchen garden, a greenhouse, a hedge maze, furrows narrow enough that a 10-foot reach covers the path.
 - *The plants are the objective.* The party needs them harvested, cleared, or taken alive.
 - *They’re guarding something.* A Stage 1 patch around a cache is a cheap, patient alarm that never sleeps and can’t be bribed.
-- *They’re supporting something mobile.* One Stalkstrider among four rooted Maize Sentinels is a better fight than either alone.
+- *They’re supporting something mobile.* One #cref("c-stalkstrider", [Stalkstrider]) among four rooted Maize Sentinels is a better fight than either alone.
 
 In open ground with no clock, halve their effective challenge rating. The ash-grown plants are the exception, because they move.
 
@@ -139,5 +139,5 @@ The ten cultivated species, each across all three stages. The number after each 
   [#align(left)[Ginger]], [#align(left)[Numbknot (1/2)]], [#align(left)[Gingerling (5)]], [#align(left)[Torpor (13)]],
 )
 
-*Variants* are their own creatures, not modifiers: Rollrind (1), Chimeweed (1), The Runt Patch (1), Drownbulb (4), Gravegourd (4), Fondvine (5), Tumblewrack (3). See _The Soil_ in Chapter 1 for which ground produces what.
+*Variants* are their own creatures, not modifiers: #cref("c-rollrind", [Rollrind]) (1), #cref("c-chimeweed", [Chimeweed]) (1), The #cref("c-runt-patch", [Runt Patch]) (1), #cref("c-drownbulb", [Drownbulb]) (4), #cref("c-gravegourd", [Gravegourd]) (4), #cref("c-fondvine", [Fondvine]) (5), #cref("c-tumblewrack", [Tumblewrack]) (3). See _The Soil_ in Chapter 1 for which ground produces what.
 ]

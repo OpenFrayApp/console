@@ -4,7 +4,7 @@
 
 _The First Furrow. Mother Root. The thing every garden is a cutting from._
 
-Every plant in this book is descended from it, and most of them are literally _of_ it — a Pumpkin King is a bud that got away, a Harvest Crown is a severed runner that took. The Perennial has been in the ground since before the ground was farmed, and it has been patiently teaching the world to cultivate itself ever since. Gardens are not something people do to it. Gardens are how it spreads.
+Every plant in this book is descended from it, and most of them are literally _of_ it — a #cref("c-pumpkin-king", [Pumpkin King]) is a bud that got away, a #cref("c-harvest-crown", [Harvest Crown]) is a severed runner that took. The #cref("c-perennial", [Perennial]) has been in the ground since before the ground was farmed, and it has been patiently teaching the world to cultivate itself ever since. Gardens are not something people do to it. Gardens are how it spreads.
 
 It does not need to be met. That’s the point of it. But if you want one encounter that recontextualizes the entire book, this is it: the party walks into a valley and finds every species they have ever fought grafted into a single body, and the body knows their names, because it has been watching through every stem they ever cut.
 

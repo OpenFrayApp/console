@@ -32,13 +32,27 @@ const TERMS = [
 /** Typst markup shares *bold* and _italic_ with Markdown but claims # and @. */
 const escapeTypst = (s) => s.replace(/([#@$\\])/g, '\\$1')
 
-// A URL is useless on paper, so links collapse to their text. The 41 creature
-// cross-references (`#c-<slug>`) should eventually become real "see p. 42" references —
-// that needs labels on each stat block in bestiary.typ and a `show ref` rule, and is a
-// refinement on top of a book that compiles.
-const convertLinks = (s) => s.replace(/\[([^\]]+)\]\([^)]+\)/g, (_, text) => text)
+const emphasise = (s) => s.replace(/\*\*([^*]+)\*\*/g, '*$1*')
 
-const inline = (s) => convertLinks(escapeTypst(s)).replace(/\*\*([^*]+)\*\*/g, '*$1*')
+// A URL is useless on paper. A link to a creature becomes a page reference — the same
+// `#c-<slug>` anchor the web uses, resolved by cref() in bestiary.typ. Anything else
+// collapses to its text.
+//
+// Links are lifted out before escaping and put back after, so escapeTypst can't mangle
+// the `#cref(…)` this generates.
+const inline = (s) => {
+  const links = []
+  const held = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, href) => {
+    links.push({ text, href })
+    return `\uE000${links.length - 1}\uE001`
+  })
+  return emphasise(escapeTypst(held)).replace(/\uE000(\d+)\uE001/g, (_, i) => {
+    const { text, href } = links[Number(i)]
+    const body = emphasise(escapeTypst(text))
+    const anchor = href.match(/#(c-[a-z0-9-]+)$/)
+    return anchor ? `#cref("${anchor[1]}", [${body}])` : body
+  })
+}
 
 /** A Markdown pipe table becomes a Typst table, keeping its alignment row. */
 function convertTable(lines) {
