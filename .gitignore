@@ -5,7 +5,6 @@
 .env.*
 !.env.example
 *.local
-local/
 
 # ───────────────────────────────────────────────────────────────
 # Dependencies
@@ -74,4 +73,3 @@ local/
 *.tsbuildinfo
 .cache/
 .tmp/
-# Print edition output (the sources are committed; the PDF is a build artifact)
