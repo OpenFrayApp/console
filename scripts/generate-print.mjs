@@ -32,7 +32,12 @@ const SKIP_SECTIONS = new Set(['Index by challenge rating'])
 const EXTRACT_SECTIONS = { 'Index by species': 'index-species.typ' }
 
 // Tables that need the full page rather than one column.
-const WIDE_SECTIONS = new Set(['Which boss to use', 'Index by species'])
+// Wide sections, and the text size each wants. The indexes match the generated CR
+// index's 7.6pt; a prose table keeps the body size.
+const WIDE_SECTIONS = new Map([
+  ['Which boss to use', null],
+  ['Index by species', '7.6pt'],
+])
 
 // Creatures the book gives a page to themselves. The Perennial is the apex and its block
 // runs the length of a page; sharing a column with the chapter's prose buried it.
@@ -232,9 +237,12 @@ function convertChapter(src, { dropsLede = false } = {}) {
         // place(scope: "parent"), which does not escape an enclosing block, so nesting
         // it silently leaves the table in one column. This also matches the generated
         // CR index's own markup, which is what "the same format" means here.
+        const wideSize = WIDE_SECTIONS.get(title)
         const rendered = WIDE_SECTIONS.has(title)
           ? `#wide[\n  #text(size: 12.5pt, weight: 800, fill: accent-deep)[${title}]\n` +
-            `  #hrule()\n${inner}\n]`
+            `  #hrule()\n` +
+            (wideSize ? `  #set text(size: ${wideSize})\n` : '') +
+            `${inner}\n]`
           : level === 2
             ? `#section(${JSON.stringify(title)})[\n${inner}\n]`
             : `#section-head(${JSON.stringify(title)})\n${inner}`

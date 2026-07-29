@@ -102,9 +102,9 @@
 
 // ------------------------------------------------------------ small parts ---
 #let hrule(weight: 1.4pt, color: accent) = {
-  v(0.9mm)
+  v(1.6mm)
   line(length: 100%, stroke: weight + color)
-  v(2.2mm)
+  v(1.5mm)
 }
 
 #let label-head(s) = text(
@@ -282,9 +282,9 @@
   #entry(a.name + recharge-suffix(a), fmt-action-text(a.text))
 ]
 
-#let section-head(s) = block(above: 4mm, below: 1.8mm)[
+#let section-head(s) = block(above: 4.2mm, below: 2.4mm)[
   #line(length: 100%, stroke: 0.5pt + rule-col)
-  #v(1mm)
+  #v(1.6mm)
   #label-head(s)
 ]
 
@@ -331,7 +331,7 @@
       #text(size: 8.4pt, style: "italic", fill: ink-faint)[#type-line(c)]
       #if c.at("description", default: none) != none {
         v(0.6mm)
-        block(below: 0mm)[#text(size: stat-size, fill: ink-soft)[#c.description]]
+        block(below: 1.2mm)[#text(size: stat-size, fill: ink-soft)[#c.description]]
       }
       #hrule()
       #statline("AC", str(c.ac)) #linebreak()

@@ -5,6 +5,7 @@
 #wide[
   #text(size: 12.5pt, weight: 800, fill: accent-deep)[Index by species]
   #hrule()
+  #set text(size: 7.6pt)
 The ten cultivated species, each across all three stages. The number after each creature is its challenge rating.
 
 #table(
