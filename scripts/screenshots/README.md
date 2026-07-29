@@ -46,8 +46,7 @@ box still lands on it.
 
 The house style, measured off the existing captures rather than guessed:
 
-- **Red `#E5484A`**, 6px stroke, ~12px corner radius. (`STYLE.md` says `#F93442`; every
-  committed screenshot uses `#E5484A`. They should be reconciled — pick one.)
+- **Red `#E5484A`** (the color `STYLE.md` specifies), 6px stroke, ~12px corner radius.
 - **Arrows** are plain block arrows: even shaft, one triangular head, straight back.
 - **Labels** are Arial Bold, red fill, ~6px white outline.
 - **Numbered discs** when the page's prose is a numbered list — and the numbers must

@@ -42,7 +42,9 @@ for (const file of FILES) {
 }
 
 if (problems.length) {
-  console.error(`\nPlain descendant prose rules that out-rank component classes (${problems.length}):\n`)
+  console.error(
+    `\nPlain descendant prose rules that out-rank component classes (${problems.length}):\n`,
+  )
   for (const p of problems) console.error(`  ${p}`)
   console.error('\nWrap them: `.doc h2 {` becomes `:where(.doc) :where(h2) {`.\n')
   process.exit(1)

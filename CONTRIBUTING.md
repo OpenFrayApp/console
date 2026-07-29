@@ -47,22 +47,60 @@ These come from the same spirit; please keep them intact:
   "anti-streak" or "feels-fair" tampering — uniform and transparent, always.
 - **Don't become a character sheet.** (Yes, it's worth saying twice.)
 
+## Getting the project running
+
+You need the Node version in [`.nvmrc`](./.nvmrc) (`nvm use`) and npm. One install
+at the root covers the app and both workspaces:
+
+```bash
+npm install
+```
+
+The repo builds three parts that ship as one site — the console, the marketing
+site, and the handbook. Each has its own dev server; most work needs only one:
+
+| Command               | What it starts             | URL                     |
+| --------------------- | -------------------------- | ----------------------- |
+| `npm run dev`         | the console (Vite)         | localhost:5199/console/ |
+| `npm run dev -w site` | the marketing site (Astro) | localhost:4321          |
+| `npm run dev -w docs` | the handbook (Starlight)   | localhost:4322/docs/    |
+
+Before opening a PR, make sure the checks you touched pass:
+
+```bash
+npm run typecheck
+npm run lint
+npm run format
+npm run test
+npm run build
+```
+
+`npm run build` builds all three parts and assembles `dist/` — it's the only check
+that proves the links _between_ the parts resolve.
+
 ## How to contribute
 
 1. **Open an issue first** for anything beyond a small fix — especially features, so
    we can sanity-check scope together before you spend time.
 2. **Fork, branch, build.** Branch names like `feat/mass-save` or `fix/turn-order`.
 3. **Keep PRs focused.** One concern per PR; easier to review, faster to merge.
-4. **Match the stack.** TypeScript, the existing patterns, and the principles above.
-   `AGENTS.md` is the source of truth for how we build here. Styling is Tailwind in both
-   the app and the marketing site, but the two use opposite light/dark conventions and the
-   site has a few rules worth reading first — see "How the site is styled" in `AGENTS.md`
-   before touching CSS there.
-5. **Follow the style guide for any words a user will read.** [`STYLE.md`](./STYLE.md)
+4. **Follow [`AGENTS.md`](./AGENTS.md)** — it is the source of truth for how we
+   build here: the architectural rules, the code style (self-explaining code, a
+   one-line header comment on every named function, no other comments unless the
+   code can't say it), and where tests live. Styling is Tailwind in both the app
+   and the marketing site, but the two use opposite light/dark conventions and the
+   site has a few rules worth reading first — see "How the site is styled" there
+   before touching CSS.
+5. **Bring tests.** Everything testable ships with tests, in `tests/` (mirroring
+   `src/`) or `site/tests/` for the site — see "Tests" in `AGENTS.md`. A behavior
+   change updates its tests in the same commit.
+6. **Follow the style guide for any words a user will read.** [`STYLE.md`](./STYLE.md)
    covers the handbook, the marketing site, and the app's own labels and messages.
-6. **Sign your commits (DCO).** Use `git commit -s`, which adds a `Signed-off-by:`
+7. **Sign your commits (DCO).** Use `git commit -s`, which adds a `Signed-off-by:`
    line certifying you have the right to submit the code under the project's
-   license.
+   license. Commits are authored by you, a person — don't add AI co-author
+   trailers (`Co-Authored-By: Claude …`) or "Generated with …" lines, whatever
+   tools you used along the way.
 
 ## Reporting bugs
 

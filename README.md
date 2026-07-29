@@ -82,6 +82,25 @@ creatures and spells, JSON creature import, a durable **Characters** roster, and
 with **Discord or Google**) to save your fights and custom content to the cloud across
 devices. Still to come: a shared read-only player view. Expect rough edges — it's alpha.
 
+## Running it locally
+
+You need the Node version in [`.nvmrc`](./.nvmrc) (`nvm use`). One install at the
+root covers everything:
+
+```bash
+npm install
+npm run dev
+```
+
+That starts the console at `localhost:5199/console/`. The repo also builds the
+marketing site (`npm run dev -w site`) and the handbook (`npm run dev -w docs`);
+the three ship together as one site, assembled into `dist/` by `npm run build`.
+`npm run test` runs the test suites.
+
+How the repo is organized, the architectural rules, and the code style live in
+[`AGENTS.md`](./AGENTS.md); the writing style for every published word lives in
+[`STYLE.md`](./STYLE.md).
+
 ## Content & licensing
 
 - **Code:** [AGPL-3.0](./LICENSE). A hosted/modified version must share its source.
@@ -102,6 +121,8 @@ devices. Still to come: a shared read-only player view. Expect rough edges — i
 Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) and our
 [Code of Conduct](./CODE_OF_CONDUCT.md). The most important contribution guideline
 is the principle above: keep OpenFray a scratchpad, not a character sheet.
+[`AGENTS.md`](./AGENTS.md) is the source of truth for how we build — humans and AI
+agents alike.
 
 ## Supporting
 

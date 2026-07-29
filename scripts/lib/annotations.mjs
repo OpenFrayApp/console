@@ -9,7 +9,7 @@
 // Runs in the page so callouts line up with real elements. `items` carry rects
 // already measured by Playwright, plus the label to attach.
 export function drawAnnotations(items) {
-  const RED = '#ff2f45'
+  const RED = '#E5484A'
   document.getElementById('of-annotations')?.remove()
 
   const layer = document.createElement('div')

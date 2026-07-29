@@ -8,6 +8,14 @@ Its counterpart for words is [`STYLE.md`](./STYLE.md) — the writing style guid
 every word we publish: the handbook, the marketing site, and the app's own labels
 and messages. **Read it before writing or changing any user-facing copy.**
 
+In here:
+
+- [The one principle](#the-one-principle--apply-it-to-every-change) — the scope test
+- [Architectural rules](#architectural-rules-do-not-violate-without-explicit-discussion)
+- [Repo layout](#repo-layout) — the three parts, the print edition, how the site is styled
+- [Code style](#code-style) · [Tests](#tests) · [Committing](#committing)
+- [Working agreements](#working-agreements) · [Licensing of content](#licensing-of-content)
+
 ---
 
 ## What OpenFray is
@@ -235,6 +243,8 @@ Before changing shared CSS or a layout, snapshot computed styles and diff after;
 regression worth catching in `site/` has been invisible to the eye and obvious in the
 numbers.
 
+### Workspaces & dev servers
+
 `site/` and `docs/` are **npm workspaces**: one `npm install` at the root covers all
 three, and each still declares its own dependencies in its own `package.json`. There is
 one lockfile, at the root.
@@ -321,30 +331,86 @@ to.
 
 ---
 
-## Working agreements for agents
+## Code style
+
+The aim is code that explains itself: names carry the meaning, comments carry only
+what a name can't.
+
+- **Every named function, method, component, and hook opens with a one-line header
+  comment saying what it does.** In TypeScript and JavaScript that's a one-line
+  JSDoc (`/** Apply a defense relation to a damage amount. */`) so editors surface
+  it on hover; in an Astro frontmatter block the same. Inline callbacks and lambdas
+  passed as arguments stay bare.
+- **No other comments unless the code can't say it.** A non-obvious _why_, a gotcha,
+  a workaround, or a 5e-rules citation earns a comment; narration of what the next
+  line does, restating a well-named symbol, banner/section dividers, and
+  self-congratulation do not. Keep comments factual and current — delete stale ones
+  rather than let them mislead.
+- **One definition per concept.** A helper needed by two files moves to a shared
+  module; never paste a second copy. Canonical homes: combatant accessors in
+  `src/combat/combatant.ts`, display formatting in `src/compendium/format.ts`,
+  schema-level derivations in `src/schema/`, the site's formatting in
+  `site/src/data/wakingGarden.ts`. (The app formats a negative as `-1`; the site's
+  game content uses the true minus `−1` per `STYLE.md` — that's why the two sides
+  keep separate formatters.)
+- **Match the file you're in** — naming, idiom, and comment density. New source
+  files start with the short AGPL header (`SPDX-License-Identifier` + copyright).
+- **Prettier and ESLint decide formatting** — run `npm run format` before
+  committing; never hand-align or fight the formatter. `npm run lint` and
+  `npm run typecheck` stay clean.
+- **All user-facing copy follows [`STYLE.md`](./STYLE.md)** — UI labels, buttons,
+  errors and empty states as much as the handbook and the marketing site.
+
+## Tests
+
+Everything testable ships with tests, and a behavior change updates its tests in
+the same commit.
+
+- **Where they live:** the root suite is `tests/`, mirroring `src/` (never
+  co-located). The site workspace's suite is `site/tests/`, mirroring `site/src/`.
+  Build scripts are covered from `tests/scripts/`.
+- **How they run:** `npm run test` at the root. Tests default to the fast node
+  environment; a component test opts into jsdom with a file docblock
+  (`// @vitest-environment jsdom`).
+- **What "testable" means here:** pure logic always (combat math, formatters,
+  parsers, transforms); components render-tested for the states that carry logic;
+  network and Supabase access behind mocks. The dice RNG and the `owner_id`/RLS
+  boundary are the two places a change can pass tests and still be wrong — test
+  them anyway, then reason about them explicitly in the PR.
+- **Spells are gated:** every spell in a shipped library needs a verdict — an
+  implementation in `src/combat/spells/*` or a reasoned entry in
+  `tests/combat/spellCoverage.data.ts` — or `spellCoverage.test.ts` fails.
+
+## Committing
+
+- **One concern per commit**, committed as the work lands — small and often beats
+  one big drop.
+- **Subject:** `Area: what changed`, imperative, sentence case after the prefix.
+  The areas in use: `App`, `Site`, `Docs`, `Print`, `Style`, `Build`, `Scripts`,
+  `Copy`, `Tests`. The body explains _why_, in prose.
+- **Sign-off (DCO):** every commit carries `Signed-off-by` — use `git commit -s`.
+  There is no CLA.
+- **Authorship is human.** Commits are authored and signed by the person making
+  them. Never add AI co-author trailers (`Co-Authored-By: Claude …`) or
+  "Generated with …" lines to a commit message, PR, or changelog.
+- **Don't push without the maintainer's go-ahead.** Pushes trigger production
+  builds on Cloudflare Pages; work is committed locally as it lands and pushed
+  once, deliberately.
+
+## Working agreements
 
 - **Keep PRs/changes focused** — one concern at a time.
-- **Minimal comments.** Let the code speak; comment only when it can't — a
-  non-obvious _why_, a gotcha, a workaround, or a 5e-rules citation. No narration
-  that restates a well-named symbol or obvious code, and no banner/section
-  dividers. A concise one-line header on a function/type is fine when its purpose
-  isn't clear from the name. Keep comments factual (no marketing/self-praise) and
-  current — delete stale ones rather than let them mislead.
 - **Be especially careful and explicit around:** auth, the `owner_id`/RLS boundary,
   anything touching user data, and the dice randomness. A change here that "works"
   in testing can still be wrong (e.g. a data-isolation leak passes functional
   tests). Call out the risk and the reasoning.
-- **Match existing style**; run the linter/formatter before committing.
-- **All user-facing copy follows [`STYLE.md`](./STYLE.md)** — UI labels, buttons,
-  errors and empty states as much as the handbook and the marketing site. Renaming a
-  label in the app means updating the handbook page and its screenshots in the same
-  change.
-- **Sign off commits** with `git commit -s` (DCO; no CLA).
 - **License:** AGPL-3.0. The running app must expose a "Source" link to the repo
   (AGPL §13). New source files get the short AGPL header.
 - **Legal pages:** any change to `site/src/pages/privacy.astro` or `terms.astro`
   must **also bump the `Last updated:` date** (`<p class="updated">`) to the current
   date, in the same edit. Never alter the legal copy without updating that date.
+- **Renaming a label in the app is a documentation change** — update the handbook
+  page and its screenshots in the same change.
 - **When unsure whether something is in scope, ask / flag — don't quietly build it.**
 
 ## Licensing of content

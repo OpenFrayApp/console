@@ -2,7 +2,8 @@
 
 How we write every word OpenFray publishes: the handbook (`docs/`), the marketing site
 (`site/`), and the app's own interface copy (`src/`). Read this before writing or editing
-copy anywhere in the repo.
+copy anywhere in the repo. This guide is about words; the code style lives in
+[`AGENTS.md`](./AGENTS.md).
 
 One guide covers all three because the reader is the same person. The rules that differ by
 surface are collected at the end, under [The handbook](#the-handbook-docs),
@@ -230,7 +231,7 @@ A screenshot in the right place saves paragraphs. A screenshot doing the explain
   are. Include the top bar or the sidebar in the first screenshot of a new area, so the reader
   can navigate to it.
 - **Capture in the app's default dark theme**, at 2× (Retina), with no browser chrome.
-- **Annotate in bright red** (`#F93442`): outlines, arrows, and short labels.
+- **Annotate in bright red** (`#E5484A`): outlines, arrows, and short labels.
   Number the annotations when the surrounding text is a numbered list, and make the
   numbers match.
 - **Use sample data.** No real names, emails, or anything you'd have to blur.
