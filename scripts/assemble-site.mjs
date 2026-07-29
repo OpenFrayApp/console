@@ -5,11 +5,17 @@
 // (base = /console/), Astro builds the marketing site into site/dist, and Starlight
 // builds the handbook into docs/dist (base = /docs/). This step copies each into
 // the dist root and writes the Pages routing rules. Output dir for Pages is dist/.
-import { cpSync, writeFileSync } from 'node:fs'
+import { cpSync, writeFileSync, rmSync } from 'node:fs'
 
 // Site root (/) → the Astro-built marketing site (home, privacy, terms, 404). The
 // app under /console is built separately by Vite and is unaffected.
 cpSync('site/dist', 'dist', { recursive: true })
+
+// The print edition is a local tool, not a page of the site: it loads Paged.js, repaints
+// the whole book into paper-sized pages, and exists so a maintainer can save a PDF. It
+// lives under src/pages so it renders through the site's own components and stylesheet
+// rather than restating them, and it is removed here so it never ships.
+rmSync('dist/the-waking-garden/print', { recursive: true, force: true })
 
 // /docs → the Starlight handbook, built with base = /docs/ so its links and assets
 // already point under /docs. Copy it in wholesale.
