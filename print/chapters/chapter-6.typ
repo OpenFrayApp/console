@@ -12,6 +12,8 @@ The Gardener’s _animate objects_ results are statted as six separate implement
 
 #show-creature("Pruneling")
 
+#pagebreak(weak: true)
+
 #section("Animated tools")[
 The Gardener casts _animate objects_ on whatever is leaning against the shed wall. Six of those results are statted below, so nobody has to open the generic animated-object rules mid-fight.
 

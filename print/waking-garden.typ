@@ -37,13 +37,13 @@
 )
 
 // ----------------------------------------------------------- front matter ---
-// The web calls this "How to use this library"; print says book.
-#chapter(title: "How to use this book")[
-  Every stat block uses the 2024 format, and nothing here assumes a setting. One Grinning
-  Gourd makes a roadside fight at level 1; the whole book makes a campaign.
-]
+// The web calls this "How to use this library"; print says book. No intro here: the
+// cover carries the lede, and repeating it was what made this page read as a mess.
+#chapter(eyebrow: "", title: "How to use this book")[]
 
 #include "chapters/overview.typ"
+
+#pagebreak(weak: true)
 
 // Generated from the data at compile time, so it cannot drift from the stat blocks.
 #wide[
@@ -73,6 +73,8 @@
     idx-table(sorted.slice(half)),
   )
 ]
+
+#include "chapters/index-species.typ"
 
 // -------------------------------------------------------------- chapters ---
 #chapter(number: 1, title: "The garden")[]

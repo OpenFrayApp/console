@@ -24,6 +24,20 @@ const OUT = 'print/chapters'
 // Counts verified against the sources on 2026-07-28. Chapter titles are not included:
 // the spine hand-authors those, so "How to use this library" becomes "How to use this
 // book" there rather than here.
+// The overview's CR index is hand-maintained for the web; print generates its own from
+// the data in waking-garden.typ, so the authored one is dropped rather than printed twice.
+const SKIP_SECTIONS = new Set(['Index by challenge rating'])
+
+// Sections the spine places itself, written to their own file so it can order them.
+const EXTRACT_SECTIONS = { 'Index by species': 'index-species.typ' }
+
+// Tables that need the full page rather than one column.
+const WIDE_SECTIONS = new Set(['Which boss to use', 'Index by species'])
+
+// Creatures the book gives a page to themselves. The Perennial is the apex and its block
+// runs the length of a page; sharing a column with the chapter's prose buried it.
+const OWN_PAGE = new Set(['Perennial'])
+
 const TERMS = [
   { from: /\blibrary\b/g, to: 'book', expect: 4 },
   { from: /\blibraries\b/g, to: 'books', expect: 0 },
@@ -164,7 +178,8 @@ function blockToTypst(md) {
   return out.join('\n\n')
 }
 
-function convertChapter(src) {
+function convertChapter(src, { dropsLede = false } = {}) {
+  const extracted = []
   // Anchored to the leading delimiters: a plain split('---') also cuts on the `---`
   // inside every Markdown table separator row, silently truncating the chapter there.
   const parsed = src.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
@@ -197,31 +212,55 @@ function convertChapter(src) {
       const md = p.text.replace(/^import .*$/gm, '').replace(/^\s*<\/?[a-z][^>]*>\s*$/gm, '')
       // A `## Heading` opens a section that runs to the next heading.
       const chunks = md.split(/^(#{2,4})\s+(.+)$/gm)
-      let k = 0
       // chunks alternate: [text, hashes, title, text, hashes, title, …]
-      if (chunks[0].trim()) out.push(blockToTypst(chunks[0]))
-      k = 1
+      // The web repeats the cover's lede as the overview's opening; print has it on the
+      // cover already, so the run before the first heading is dropped there.
+      if (chunks[0].trim() && !dropsLede) out.push(blockToTypst(chunks[0]))
+      let k = 1
       while (k < chunks.length) {
         const level = chunks[k].length
         const title = chunks[k + 1].trim()
         const inner = blockToTypst(chunks[k + 2] ?? '')
-        if (level === 2) out.push(`#section(${JSON.stringify(title)})[\n${inner}\n]`)
-        else out.push(`#section-head(${JSON.stringify(title)})\n${inner}`)
+        // The spine places the indexes, so they go to their own files. The CR index is
+        // skipped outright: waking-garden.typ generates a better one from the data.
+        if (SKIP_SECTIONS.has(title)) {
+          k += 3
+          continue
+        }
+        const extract = EXTRACT_SECTIONS[title]
+        // A wide section is emitted at top level, not nested in section(): wide[] uses
+        // place(scope: "parent"), which does not escape an enclosing block, so nesting
+        // it silently leaves the table in one column. This also matches the generated
+        // CR index's own markup, which is what "the same format" means here.
+        const rendered = WIDE_SECTIONS.has(title)
+          ? `#wide[\n  #text(size: 12.5pt, weight: 800, fill: accent-deep)[${title}]\n` +
+            `  #hrule()\n${inner}\n]`
+          : level === 2
+            ? `#section(${JSON.stringify(title)})[\n${inner}\n]`
+            : `#section-head(${JSON.stringify(title)})\n${inner}`
+        if (extract) extracted.push({ file: extract, body: rendered })
+        else out.push(rendered)
         k += 3
       }
     } else if (p.type === 'Creature') {
-      out.push(`#show-creature(${JSON.stringify(attrs(p.text).name)})`)
-      // The paired form carries extra rules content — regional effects — under the
-      // block. Two creatures use it.
+      const name = attrs(p.text).name
+      // The paired form carries extra rules content — regional effects. The web puts it
+      // under the block; print puts it before, so it reads as context for the stats
+      // rather than a footnote to them.
       const paired = p.text.match(/^<Creature[^>]*>([\s\S]*)<\/Creature>$/)
+      const extras = []
       if (paired) {
         const chunks = paired[1].split(/^(#{2,4})\s+(.+)$/gm)
-        if (chunks[0].trim()) out.push(blockToTypst(chunks[0]))
+        if (chunks[0].trim()) extras.push(blockToTypst(chunks[0]))
         for (let k = 1; k < chunks.length; k += 3) {
-          out.push(`#section-head(${JSON.stringify(chunks[k + 1].trim())})`)
-          out.push(blockToTypst(chunks[k + 2] ?? ''))
+          extras.push(`#section-head(${JSON.stringify(chunks[k + 1].trim())})`)
+          extras.push(blockToTypst(chunks[k + 2] ?? ''))
         }
       }
+      if (OWN_PAGE.has(name)) out.push('#pagebreak(weak: true)')
+      out.push(...extras)
+      if (OWN_PAGE.has(name)) out.push('#colbreak(weak: true)')
+      out.push(`#show-creature(${JSON.stringify(name)})`)
     } else if (p.type === 'Group') {
       // The web wraps title, prose and creatures in one bordered section. In print the
       // prose introduces the run and the stat blocks follow it at top level — a rule
@@ -229,6 +268,7 @@ function convertChapter(src) {
       const inner = p.text.replace(/^<Group[^>]*>|<\/Group>$/g, '')
       const names = [...inner.matchAll(/<Creature\b[^>]*\/>/g)].map((c) => attrs(c[0]).name)
       const prose = inner.replace(/<Creature\b[^>]*\/>/g, '')
+      out.push('#pagebreak(weak: true)')
       out.push(`#section(${JSON.stringify(attrs(p.text).title ?? '')})[\n${blockToTypst(prose)}\n]`)
       for (const n of names) out.push(`#show-creature(${JSON.stringify(n)})`)
     } else if (p.type === 'Seed') {
@@ -236,7 +276,7 @@ function convertChapter(src) {
     }
     // <Licensing> is skipped: print carries its own on the end page.
   }
-  return { fm, typst: out.filter((s) => s.trim()).join('\n\n') }
+  return { fm, extracted, typst: out.filter((s) => s.trim()).join('\n\n') }
 }
 
 function applyTerms(text) {
@@ -268,8 +308,22 @@ const files = readdirSync(SRC)
 const written = []
 let allProse = ''
 for (const f of files) {
-  const { fm, typst } = convertChapter(readFileSync(join(SRC, f), 'utf8'))
+  const { fm, typst, extracted } = convertChapter(readFileSync(join(SRC, f), 'utf8'), {
+    dropsLede: f === 'overview.mdx',
+  })
   allProse += typst
+  for (const e of extracted) {
+    written.push({
+      name: e.file,
+      order: Number(fm.order),
+      fm,
+      body:
+        `// Generated by scripts/generate-print.mjs from ${SRC}/${f} — do not edit.\n` +
+        `// Placed by print/waking-garden.typ.\n#import "../lib.typ": *\n\n` +
+        e.body +
+        '\n',
+    })
+  }
   const header =
     `// Generated by scripts/generate-print.mjs from ${SRC}/${f} — do not edit.\n` +
     `// Chapter order and print-only pages live in print/waking-garden.typ.\n` +

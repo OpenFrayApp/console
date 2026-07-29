@@ -8,7 +8,7 @@ Every plant in this book is descended from it, and most of them are literally _o
 
 It does not need to be met. That’s the point of it. But if you want one encounter that recontextualizes the entire book, this is it: the party walks into a valley and finds every species they have ever fought grafted into a single body, and the body knows their names, because it has been watching through every stem they ever cut.
 
-#show-creature("Perennial")
+#pagebreak(weak: true)
 
 #section-head("Regional Effects")
 
@@ -20,6 +20,10 @@ Within 6 miles of the Perennial:
 - Plant creatures within the area can’t be Charmed, commanded, turned, or spoken to by any effect that isn’t the Perennial’s. _Speak with plants_ returns only one voice, and it is not the plant’s.
 
 If the Perennial is ended for good, these fade over a full year — one season at a time, in reverse.
+
+#colbreak(weak: true)
+
+#show-creature("Perennial")
 
 #section("Running the Perennial")[
 *It should not be a surprise.* By the time a party fights this, they should have killed at least two Stage 3 bosses and noticed that each one had a scar where something was cut away from it. The Grafts table is the payoff: every ability it uses is one they have already survived, stitched onto something ten times larger.

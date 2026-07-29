@@ -20,8 +20,6 @@ Each of these is a legendary creature with regional or field-scale effects, and 
 
 #show-creature("Bloodvine Sovereign")
 
-#show-creature("Pumpkin King")
-
 #section-head("Regional Effects")
 
 Within 1 mile of the King’s field:
@@ -32,6 +30,8 @@ Within 1 mile of the King’s field:
 - Travelers who leave the field at night find themselves walking back toward it. A DC 16 Wisdom (Survival) check each hour is needed to make genuine progress away.
 
 If the King dies, these fade over 1d10 days.
+
+#show-creature("Pumpkin King")
 
 #show-creature("Serried Crown")
 
@@ -45,7 +45,9 @@ If the King dies, these fade over 1d10 days.
 
 #show-creature("Torpor")
 
-#section("Which boss to use")[
+#wide[
+  #text(size: 12.5pt, weight: 800, fill: accent-deep)[Which boss to use]
+  #hrule()
 #table(
   columns: 3,
   inset: (x: 3pt, y: 2.4pt),

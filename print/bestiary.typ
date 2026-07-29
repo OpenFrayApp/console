@@ -102,9 +102,9 @@
 
 // ------------------------------------------------------------ small parts ---
 #let hrule(weight: 1.4pt, color: accent) = {
-  v(1.2mm)
+  v(0.9mm)
   line(length: 100%, stroke: weight + color)
-  v(1.2mm)
+  v(2.2mm)
 }
 
 #let label-head(s) = text(
@@ -131,11 +131,11 @@
       cells.push(align(center)[#mod-str(sv)])
     }
   }
-  block(above: 1.5mm, below: 1.5mm)[
+  block(above: 2.2mm, below: 2.6mm)[
     #set text(size: table-size)
     #table(
       columns: (auto, 1fr, 1fr, auto, 1fr, 1fr),
-      inset: (x: 3pt, y: 2.4pt),
+      inset: (x: 4pt, y: 3.2pt),
       stroke: (x, y) => (bottom: 0.5pt + rule-col),
       ..cells
     )
@@ -225,11 +225,11 @@
     else if a.ends-with(":") { right }
     else { left }
   })
-  block(above: 1.4mm, below: 1.8mm)[
+  block(above: 2.2mm, below: 2.6mm)[
     #set text(size: table-size)
     #table(
       columns: head.len(),
-      inset: (x: 3pt, y: 2.2pt),
+      inset: (x: 4pt, y: 3.2pt),
       stroke: (x, y) => (bottom: 0.5pt + rule-col),
       align: (x, y) => aligns.at(x, default: left),
       table.header(..head.map(h => label-head(h))),
@@ -282,7 +282,7 @@
   #entry(a.name + recharge-suffix(a), fmt-action-text(a.text))
 ]
 
-#let section-head(s) = block(above: 2.6mm, below: 1.4mm)[
+#let section-head(s) = block(above: 4mm, below: 1.8mm)[
   #line(length: 100%, stroke: 0.5pt + rule-col)
   #v(1mm)
   #label-head(s)
@@ -406,7 +406,7 @@
     #set text(size: table-size)
     #table(
       columns: (1fr, auto, auto, 1.6fr),
-      inset: (x: 3pt, y: 2.6pt),
+      inset: (x: 4pt, y: 3.2pt),
       stroke: (x, y) => (bottom: 0.5pt + rule-col),
       table.header(
         label-head("creature"), align(center)[#label-head("no")],
@@ -424,11 +424,13 @@
 // `intro` is positional and last, so a call can pass it as a trailing content
 // block: #chapter(number: 1, title: "…")[ … ]. As a named parameter it rejected
 // every call site in the book.
-#let chapter(number: none, title: "", intro) = {
+#let chapter(number: none, eyebrow: auto, title: "", intro) = {
   pagebreak(weak: true)
   place(top, scope: "parent", float: true, clearance: 7mm, block(width: 100%)[
     #text(size: 8pt, weight: 700, fill: accent, tracking: 1.4pt)[
-      #upper(if number == none { "Appendix" } else { "Chapter " + str(number) })
+      #upper(if eyebrow != auto { eyebrow }
+             else if number == none { "Appendix" }
+             else { "Chapter " + str(number) })
     ]
     #v(-2mm)
     #text(size: 21pt, weight: 800, fill: ink)[#title]
