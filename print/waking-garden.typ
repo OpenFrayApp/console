@@ -99,11 +99,13 @@
 // --------------------------------------------------------------- end page ---
 // Print-only: the web says this on its landing page and in its footer.
 #endpage[
-  #text(size: t-table, weight: 700, fill: accent, tracking: tr-wide)[BUILT FOR OPENFRAY]
-  #v(s3)
-  #text(size: t-chapter, weight: 800, fill: ink)[Run this book in the console]
-  #v(s5)
-  #block(width: 70%)[
+  #block(above: s0, below: s3)[
+    #text(size: t-table, weight: 700, fill: accent, tracking: tr-wide)[BUILT FOR OPENFRAY]
+  ]
+  #block(above: s0, below: s5)[
+    #text(size: t-chapter, weight: 800, fill: ink)[Run this book in the console]
+  ]
+  #block(above: s0, below: s7, width: 70%)[
     #text(size: t-lead, fill: ink-soft)[
       OpenFray is a free, open-source combat console for running Dungeons and Dragons fights
       in your browser — 5.5e (2024) first, with 5e (2014) support. It keeps the initiative
@@ -111,28 +113,24 @@
       creature has left to spend, and the dice.
     ]
   ]
-  #v(s7)
-  #text(size: t-body)[openfray.app/console · openfray.app/docs · github.com/SirDarcanos/openfray]
-  #v(s9)
-  #line(length: 100%, stroke: r-hair + rule-col)
-  #v(s5)
+  #block(above: s0, below: s9)[
+    #text(size: t-body)[openfray.app/console · openfray.app/docs · github.com/SirDarcanos/openfray]
+  ]
+  #hrule(weight: r-hair, color: rule-col, above: s0, below: s5)
   #set text(size: t-table, fill: ink-soft)
-  #label-head("Licensing and credits")
-  #v(s3)
+  #block(above: s0, below: s3)[#label-head("Licensing and credits")]
   *Creatures and mechanics* — the stat blocks and game mechanics, every field of a creature
   entry other than its description, are licensed CC BY 4.0. Reuse them with attribution to
   OpenFray (openfray.app), a link to the licence, and a note that changes were made. \
   *Lore, art, and prose* — © 2026 OpenFray, all rights reserved. \
   *Game rules* — conditions, spell names, and rules terminology come from the System
   Reference Document 5.2.1, used under CC BY 4.0.
-  #v(s5)
-  #block(inset: (left: s5), stroke: (left: r-mid + accent))[
+  #block(above: s5, below: s5, inset: (left: s5), stroke: (left: r-mid + accent))[
     This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by
     Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is
     licensed under the Creative Commons Attribution 4.0 International License, available at
     https://creativecommons.org/licenses/by/4.0/legalcode.
   ]
-  #v(s5)
   // Print keeps this line; the web drops it, because the site footer already carries
   // the compatibility statement, the trademark disclaimer and the AGPL on every page.
   #text(size: t-label, fill: ink-faint)[

@@ -85,11 +85,13 @@
 )
 
 // ------------------------------------------------------------ small parts ---
-#let hrule(weight: r-mid, color: accent) = {
-  v(s3)
-  line(length: 100%, stroke: weight + color)
-  v(s3)
-}
+// A rule is a block, so the space around it is the caller's to set and collapses
+// against its neighbours. Baked-in `v()` made the gap the sum of this rule's opinion
+// and the enclosing block's, which is not adjustable from either end.
+#let hrule(weight: r-mid, color: accent, above: s3, below: s3) = block(
+  above: above, below: below,
+  line(length: 100%, stroke: weight + color),
+)
 
 
 // ------------------------------------------------------------------ tables ---
@@ -287,8 +289,7 @@
 ]
 
 #let section-head(s) = block(above: s7, below: s4)[
-  #line(length: 100%, stroke: r-hair + rule-col)
-  #v(s3)
+  #hrule(weight: r-hair, color: rule-col, above: s0, below: s3)
   #label-head(s)
 ]
 
@@ -330,14 +331,16 @@
       #creature-art(c)
       // Invisible anchor for cref(); metadata is queryable and takes no space.
       #metadata(c.name)#label("c-" + creature-slug(c.name))
-      #text(size: t-title, weight: 800, fill: accent-deep)[#c.name]
-      #v(-s4)
-      #text(size: t-note, style: "italic", fill: ink-faint)[#type-line(c)]
+      #block(above: s0, below: s1)[
+        #text(size: t-title, weight: 800, fill: accent-deep)[#c.name]
+      ]
+      #block(above: s0, below: s4)[
+        #text(size: t-note, style: "italic", fill: ink-faint)[#type-line(c)]
+      ]
       #if c.at("description", default: none) != none {
-        v(s1)
-        block(below: s2)[#text(size: stat-size, fill: ink-soft)[#c.description]]
+        block(above: s4, below: s4)[#text(size: stat-size, fill: ink-soft)[#c.description]]
       }
-      #hrule()
+      #hrule(above: s4, below: s3)
       #statline("AC", str(c.ac)) #linebreak()
       #statline("Initiative", mod-str(c.initiative) + " (" + str(10 + c.initiative) + ")") #linebreak()
       #statline("HP", str(c.maxHp) + " (" + c.hpFormula.replace("+", " + ").replace("-", " " + minus + " ") + ")") #linebreak()
@@ -400,10 +403,13 @@
 #let encounter(name: "", levels: "", xp: "", terrain: [], roster: (), idea: []) = {
   block(width: 100%, breakable: true, below: s8)[
     #block(breakable: false, width: 100%)[
-      #text(size: t-title, weight: 800, fill: accent-deep)[#name]
-      #v(-s4)
-      #text(size: t-note, weight: 600, fill: accent)[Levels #levels · #xp XP]
-      #hrule()
+      #block(above: s0, below: s1)[
+        #text(size: t-title, weight: 800, fill: accent-deep)[#name]
+      ]
+      #block(above: s0, below: s4)[
+        #text(size: t-note, weight: 600, fill: accent)[Levels #levels · #xp XP]
+      ]
+      #hrule(above: s4, below: s3)
       #set text(size: stat-size)
       #entry("Terrain", terrain)
     ]
@@ -427,15 +433,17 @@
 #let chapter(number: none, eyebrow: auto, title: "", intro) = {
   pagebreak(weak: true)
   place(top, scope: "parent", float: true, clearance: s9, block(width: 100%)[
-    #text(size: t-table, weight: 700, fill: accent, tracking: tr-wide)[
-      #upper(if eyebrow != auto { eyebrow }
-             else if number == none { "Appendix" }
-             else { "Chapter " + str(number) })
+    #block(above: s0, below: s1)[
+      #text(size: t-table, weight: 700, fill: accent, tracking: tr-wide)[
+        #upper(if eyebrow != auto { eyebrow }
+               else if number == none { "Appendix" }
+               else { "Chapter " + str(number) })
+      ]
     ]
-    #v(-s4)
-    #text(size: t-chapter, weight: 800, fill: ink)[#title]
-    #v(s3)
-    #line(length: 100%, stroke: r-heavy + accent)
+    #block(above: s0, below: s3)[
+      #text(size: t-chapter, weight: 800, fill: ink)[#title]
+    ]
+    #hrule(weight: r-heavy, above: s0, below: s0)
   ])
   if intro != [] {
     block(below: s7)[#set text(size: base-size, fill: ink-soft); #intro]
@@ -466,19 +474,16 @@
 #let cover(title: "", subtitle: "", lede: [], meta: []) = page(
   columns: 1, margin: cover-margin, header: none, footer: none,
 )[
-  #v(cover-top)
-  #text(size: t-note, weight: 700, fill: accent, tracking: tr-wide)[OPENFRAY · COMPENDIUM]
-  #v(cover-gap)
-  #text(size: t-cover, weight: 800, fill: ink)[#title]
-  #v(s5)
-  #text(size: t-sub, fill: ink-soft)[#subtitle]
-  #v(s9)
-  #line(length: cover-rule, stroke: r-heavy + accent)
-  #v(s9)
-  #block(width: 84%)[#text(size: t-lead, fill: ink-soft)[#lede]]
+  #block(above: s0, below: cover-gap)[
+    #text(size: t-note, weight: 700, fill: accent, tracking: tr-wide)[OPENFRAY · COMPENDIUM]
+  ]
+  #block(above: s0, below: s5)[#text(size: t-cover, weight: 800, fill: ink)[#title]]
+  #block(above: s0, below: s9)[#text(size: t-sub, fill: ink-soft)[#subtitle]]
+  #block(above: s0, below: s9)[#line(length: cover-rule, stroke: r-heavy + accent)]
+  #block(above: s0, below: s0, width: 84%)[#text(size: t-lead, fill: ink-soft)[#lede]]
+  // The one spacer that isn't rhythm: it pushes the imprint to the foot of the page.
   #v(1fr)
-  #line(length: 100%, stroke: r-hair + rule-col)
-  #v(s5)
+  #hrule(weight: r-hair, color: rule-col, above: s0, below: s5)
   #text(size: t-body, fill: ink-soft)[#meta]
 ]
 

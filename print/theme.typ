@@ -44,6 +44,12 @@
 
 // ------------------------------------------------------------ vertical rhythm ---
 // Every gap in the book is a step here. Page geometry is separate, below.
+//
+// These are block `above`/`below` values, never `v()`. Typst collapses two adjacent
+// block gaps to the larger of them; a `v()` adds instead, so a gap built from one is
+// the sum of two decisions and correcting it moves both sides. That is the mechanism
+// behind "I closed one gap and the next one opened".
+#let s0 = 0mm // suppressed: an element that sets its own distance from the last
 #let s1 = 0.6mm // hairline: inside a line of stats
 #let s2 = 1.2mm // within a block
 #let s3 = 1.8mm // between related lines
@@ -71,7 +77,9 @@
 // Page setup, not rhythm: these answer "how big is the page" rather than "how far
 // apart are two things", so they do not belong on the spacing scale.
 #let page-margin = (x: 14mm, top: 14mm, bottom: 16mm)
-#let cover-margin = (x: 20mm, y: 24mm)
-#let cover-top = 18mm // above the cover kicker
+// The cover's top inset lives in the margin, not in a leading gap: Typst discards a
+// block's `above` spacing at a container edge, so the first element on a page cannot
+// hold itself down. 42mm is the old 24mm margin plus the 18mm gap it used to add.
+#let cover-margin = (x: 20mm, top: 42mm, bottom: 24mm)
 #let cover-gap = 14mm // kicker to title
 #let cover-rule = 36mm // the short rule under the subtitle

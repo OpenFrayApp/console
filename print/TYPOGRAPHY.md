@@ -151,7 +151,9 @@ The site draws borders at 1, 2 and 3 device pixels. At `1rem = 16px = 9.2pt`, on
 | `r-medium` | 1.15pt | `accent`   | Under a section title; under a table header           |
 | `r-heavy`  | 1.7pt  | `accent`   | The chapter rule; a stat block's top edge; a left bar |
 
-Five weights today (`0.4 / 0.5 / 1.4 / 2.5 / 3pt`), none of them related.
+Five unrelated weights (`0.4 / 0.5 / 1.4 / 2.5 / 3pt`) have been merged onto three —
+`r-hair` / `r-mid` / `r-heavy`. The values above are what they become when the scale is
+re-derived; today they still hold the old `0.5 / 1.4 / 2.5`.
 
 ## The spacing model
 
@@ -166,15 +168,18 @@ Rules for the template:
    the spacing scale. Adjacent gaps then collapse and cannot double.
 2. **Paragraph rhythm is `set par(leading:, spacing:)`**, set once per context, not per
    call site.
-3. **`v()` is allowed only as `v(weak: true)`**, for optical correction. Weak spacing
-   collapses against paragraph spacing and disappears at a container edge, which is the
-   behaviour we want; plain `v()` is not.
-4. **Negative `v()` is banned.** All three current uses cancel space added elsewhere; the
-   fix is the neighbouring block's `above`, not a correction on top.
-5. **`hrule()` returns a line and nothing else.** It currently bakes `v(s3)` on both
-   sides, so the space around a rule cannot be set from the call site and stacks on top of
-   the enclosing block's own spacing.
-6. **A size, colour or gap never appears at a call site.** Call sites use roles:
+3. **`v()` is allowed only as `v(weak: true)`**, for optical correction, or `v(1fr)`,
+   which is a spacer rather than a gap. Weak spacing collapses against paragraph spacing
+   and disappears at a container edge, which is the behaviour we want; plain `v()` is not.
+4. **Negative `v()` is banned.** Every use cancelled space added elsewhere; the fix is the
+   neighbouring block's `above`, not a correction on top.
+5. **`hrule()` is a block and owns no space.** Its `above` and `below` come from the call
+   site and collapse against their neighbours. Baked-in `v()` made the gap the sum of the
+   rule's opinion and the enclosing block's, adjustable from neither end.
+6. **A page's first element cannot hold itself down.** Typst discards block `above`
+   spacing at a container edge, so a leading offset belongs in the page margin. The cover
+   lost its 18mm top inset to this and now carries it in `cover-margin`.
+7. **A size, colour or gap never appears at a call site.** Call sites use roles:
    `#creature-name`, `#kicker`, `#eyebrow`, `#section-title`, `#label-head`, `#wide-head`.
 
 ## Where the tokens live

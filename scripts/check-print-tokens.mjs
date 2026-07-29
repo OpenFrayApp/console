@@ -7,11 +7,14 @@
 // three files, none of them related to each other — and why closing one gap made the
 // next one look wrong.
 //
-// The document's second rule — vertical space comes from a block's `above`/`below`
-// rather than a plain `v()`, because Typst collapses the former and adds the latter —
-// is not enforced here yet. Twenty-three `v()` calls remain; the check lands with the
-// change that removes them, so it fails on a regression rather than on a known state.
-// It will need an exemption for the cover, where `v(1fr)` is page composition.
+// The second rule: vertical space comes from a block's `above`/`below`, which Typst
+// collapses to the larger of two adjacent gaps. A plain `v()` adds instead, so a gap
+// built from one is the sum of two decisions and correcting it moves both sides.
+//
+// Two forms stay legal. `v(weak: true)` collapses like block spacing and vanishes at a
+// container edge, which is what optical correction wants. `v(1fr)` is not a gap at all
+// — it is a spacer that divides the leftover height of a page, and the cover uses one
+// to push its imprint to the foot.
 //
 //   node scripts/check-print-tokens.mjs
 import { readFileSync, readdirSync } from 'node:fs'
@@ -22,6 +25,7 @@ const TOKENS = 'theme.typ'
 
 // Fractions and percentages are layout, not type: `1fr` and `84%` carry no scale.
 const LENGTH = /(?<![\w.])\d+(?:\.\d+)?(pt|mm|cm|in)\b/g
+const PLAIN_V = /\bv\(\s*(?!weak:|\d+(?:\.\d+)?fr\b)[^)]*\)/g
 
 const files = []
 const walk = (dir) => {
@@ -40,6 +44,9 @@ for (const file of files) {
     const code = line.replace(/\/\/.*$/, '')
     for (const m of code.matchAll(LENGTH)) {
       problems.push(`${file}:${i + 1}  ${m[0]} — move it to print/${TOKENS} and name the role`)
+    }
+    for (const m of code.matchAll(PLAIN_V)) {
+      problems.push(`${file}:${i + 1}  ${m[0]} — use a block's above/below, or v(weak: true)`)
     }
   })
 }
