@@ -67,12 +67,14 @@ export function SpellCastModal({
   // Casting a concentration spell while already concentrating needs confirmation.
   const conflictsConcentration = spell?.concentration === true && caster.concentration != null
 
+  /** Commit the cast: dismiss the confirmation, spend the use, and move to resolution. */
   const proceed = () => {
     setConfirming(false)
     onCast()
     setCast(true)
   }
 
+  /** Cast now, or confirm first when the caster is already concentrating. */
   const doCast = () => {
     if (conflictsConcentration) setConfirming(true)
     else proceed()

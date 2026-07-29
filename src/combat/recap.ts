@@ -7,6 +7,7 @@ import { isFoe } from './combatant.ts'
 import { isStable } from './deathsaves.ts'
 import type { DifficultyTier } from './difficulty.ts'
 
+/** Fresh stats as combat begins: clock running from `now` (ms), empty tallies, difficulty noted. */
 export const startStats = (now: number, difficulty: DifficultyTier | null = null): CombatStats => ({
   startedAt: now,
   activeMs: 0,
@@ -17,11 +18,13 @@ export const startStats = (now: number, difficulty: DifficultyTier | null = null
   difficulty,
 })
 
+/** Stop the active-time clock, banking the elapsed ms; a no-op when already paused. */
 export function pauseStats(s: CombatStats, now: number): CombatStats {
   if (s.runningSince == null) return s
   return { ...s, activeMs: s.activeMs + (now - s.runningSince), runningSince: null }
 }
 
+/** Restart the active-time clock from `now`; a no-op when already running. */
 export const resumeStats = (s: CombatStats, now: number): CombatStats =>
   s.runningSince != null ? s : { ...s, runningSince: now }
 
@@ -29,6 +32,7 @@ export const resumeStats = (s: CombatStats, now: number): CombatStats =>
 export const activeMillis = (s: CombatStats, now: number): number =>
   s.activeMs + (s.runningSince != null ? now - s.runningSince : 0)
 
+/** Credit damage to its dealer and refresh the biggest-hit record; amounts ≤ 0 are ignored. */
 export function addDealt(s: CombatStats, sourceId: string, amount: number): CombatStats {
   if (amount <= 0) return s
   const biggestHit =
@@ -40,6 +44,7 @@ export function addDealt(s: CombatStats, sourceId: string, amount: number): Comb
   }
 }
 
+/** Add damage to the target's taken tally; amounts ≤ 0 are ignored. */
 export function addTaken(s: CombatStats, targetId: string, amount: number): CombatStats {
   if (amount <= 0) return s
   return {
@@ -48,7 +53,9 @@ export function addTaken(s: CombatStats, targetId: string, amount: number): Comb
   }
 }
 
+/** Down or dead — any status other than active. */
 const isDefeated = (c: Combatant): boolean => c.status !== 'active'
+/** The display name on a recap line: a PC's name, a monster's board label. */
 const label = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
 /** Every foe is on the board AND defeated (down/dead). False with no foes. */
@@ -130,6 +137,7 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
   const partySize = combatants.filter((c) => c.isPC).length
   const xpPerPlayer = partySize > 0 ? Math.floor(totalXp / partySize) : null
 
+  /** Total of a tally map's values. */
   const sum = (t: Record<string, number>) => Object.values(t).reduce((a, b) => a + b, 0)
   const dealt = stats?.damageDealt ?? {}
   const taken = stats?.damageTaken ?? {}

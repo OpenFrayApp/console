@@ -24,14 +24,6 @@ export type ResolveSpell = (ref: string) => Spell | undefined
 const joinTableRows = (md: string): string =>
   md.replace(/(\|[^\n]*)\n(?:[ \t]*\n)+(?=[ \t]*\|)/g, '$1\n')
 
-/**
- * Renders compendium prose (bold, lists, paragraphs, and GFM tables — some spells
- * like Scrying carry tables), styled via arbitrary-variant classes for both themes.
- *
- * Pass `inline` to render a single line with no surrounding paragraph, so it can sit
- * beside a clickable action name. Pass `resolveSpell` to turn ingest-added
- * `spell:<id>` links into hover-preview spans.
- */
 const TABLE =
   '[&_table]:my-2 [&_table]:w-full [&_table]:text-left [&_th]:border [&_td]:border [&_th]:border-slate-300 [&_td]:border-slate-300 [&_th]:px-2 [&_td]:px-2 [&_th]:py-1 [&_td]:py-1 dark:[&_th]:border-slate-700 dark:[&_td]:border-slate-700 [&_th]:font-semibold'
 
@@ -67,6 +59,14 @@ function hoverAnchor(resolveSpell?: ResolveSpell): Components['a'] {
   }
 }
 
+/**
+ * Renders compendium prose (bold, lists, paragraphs, and GFM tables — some spells
+ * like Scrying carry tables), styled via arbitrary-variant classes for both themes.
+ *
+ * Pass `inline` to render a single line with no surrounding paragraph, so it can sit
+ * beside a clickable action name. Pass `resolveSpell` to turn ingest-added
+ * `spell:<id>` links into hover-preview spans.
+ */
 export function Markdown({
   children,
   inline = false,

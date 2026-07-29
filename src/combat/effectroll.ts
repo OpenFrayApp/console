@@ -77,6 +77,7 @@ interface Applicable {
   modifier: EffectModifier
 }
 
+/** Gather the roller's outgoing and the target's incoming effects that fit this roll kind. */
 function collect(
   roller: Combatant | undefined,
   target: Combatant | undefined,
@@ -98,11 +99,13 @@ function collect(
   return out
 }
 
+/** Format a flat bonus for display: numbers gain a sign ("+2"), dice strings pass through. */
 function describeBonus(value: number | string): string {
   if (typeof value === 'number') return value >= 0 ? `+${value}` : `${value}`
   return value
 }
 
+/** Roll a formula with both sides' effects netted in; consumeOnRoll effects are spent. */
 export function rollWithEffects(formula: string, opts: EffectRollOptions): EffectRoll {
   const { roller, target, kind } = opts
   const applicable = collect(roller, target, kind)
@@ -112,6 +115,7 @@ export function rollWithEffects(formula: string, opts: EffectRollOptions): Effec
   const bonuses: (number | string)[] = []
   const applied: AppliedEffect[] = []
 
+  /** Tally one advantage/disadvantage source into the counts and `applied`; null does nothing. */
   const addAdvantage = (state: AdvantageState | null, source: string): void => {
     if (state === 'advantage') {
       advCount += 1
@@ -179,6 +183,7 @@ export function rollWithEffects(formula: string, opts: EffectRollOptions): Effec
   const consumed = new Set(
     applicable.filter((a) => a.effect.duration.type === 'consumeOnRoll').map((a) => a.effect.id),
   )
+  /** Drop consumed effects from a combatant; same reference when it owned none of them. */
   const strip = (c: Combatant | undefined): Combatant | undefined => {
     if (!c || !c.effects.some((e) => consumed.has(e.id))) return c
     return { ...c, effects: c.effects.filter((e) => !consumed.has(e.id)) }

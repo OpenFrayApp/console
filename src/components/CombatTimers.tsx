@@ -14,6 +14,7 @@ function clock(totalSeconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
+/** Clock icon (footer combat clocks). */
 function ClockIcon() {
   return (
     <svg

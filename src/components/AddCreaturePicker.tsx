@@ -48,6 +48,7 @@ export function AddCreaturePicker({
     .filter((c) => inEnabledLibrary(c, enabledLibraries, showHomebrew))
     .filter((c) => !q || c.name.toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name))
+  /** Whether a creature is the user's own (custom: id) rather than a library entry. */
   const isCustom = (c: Creature) => c.id.startsWith('custom:')
   // Source tag (Core / ToB3): library creatures only — custom carries its own badge.
   const sourceTag = (c: Creature): string | undefined =>

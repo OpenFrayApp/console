@@ -25,6 +25,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
 
+  /** Add the quick combatant on the chosen side, then reset and close; blank name is a no-op. */
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return

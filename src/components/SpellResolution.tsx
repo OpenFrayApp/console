@@ -10,6 +10,7 @@ import { roll } from '../dice/roll.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
+/** "Cantrip" for level 0, otherwise "Level N". */
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
 
 /**
@@ -44,6 +45,7 @@ export function SpellResolution({
   const hasDamage = variant != null
   const save = mechanics.save
 
+  /** Roll the chosen variant's damage, log it, and show the total beside its formula. */
   const rollDamage = () => {
     if (!variant) return
     const formula = damageFormula(variant.damage)

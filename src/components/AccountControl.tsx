@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
 
+/** User-silhouette icon (the account menu button). */
 function UserIcon() {
   return (
     <svg

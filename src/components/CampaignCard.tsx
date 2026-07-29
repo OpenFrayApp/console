@@ -12,6 +12,7 @@ import {
   labelOf,
 } from './campaignLabels.ts'
 
+/** One label/value line (dt/dd pair) in the rules list. */
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <>

@@ -44,7 +44,9 @@ const PC_ALIGNMENTS = [
   'chaotic evil',
 ]
 
+/** Parse an ability score, clamped to 1–30; blank or invalid input becomes 10. */
 const score = (v: string): number => Math.max(1, Math.min(30, Math.floor(Number(v) || 10)))
+/** An empty list becomes undefined so optional fields drop out of the saved PC. */
 const orUndef = (xs: string[]): string[] | undefined => (xs.length ? xs : undefined)
 /** Trim a line-list to its non-empty entries, or undefined when there are none. */
 const clean = (xs: string[]): string[] | undefined => {
@@ -84,6 +86,7 @@ interface PcDraft {
   dmNotes: string
 }
 
+/** A blank PC draft: abilities seeded to 10, one empty row per roleplay list. */
 function emptyDraft(): PcDraft {
   return {
     campaignId: '',
@@ -116,7 +119,9 @@ function emptyDraft(): PcDraft {
   }
 }
 
+/** Turn a saved roster PC back into string-shaped form fields, for the Edit flow. */
 function draftFromPc(pc: RosterPc): PcDraft {
+  /** A number as an input string; absent values become the empty string. */
   const str = (n?: number): string => (n != null ? String(n) : '')
   return {
     campaignId: pc.campaignId ?? '',
@@ -163,6 +168,7 @@ function draftFromPc(pc: RosterPc): PcDraft {
   }
 }
 
+/** Parse the string draft into a RosterPc; blank fields drop out rather than becoming 0/"". */
 function buildPc(d: PcDraft, id: string): RosterPc {
   const abilities: AbilityScores = {
     str: score(d.abilities.str),
@@ -285,6 +291,7 @@ export function PcFormModal({
 
   useEffect(() => {
     if (!open) return
+    /** Close the modal on Escape. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -294,9 +301,12 @@ export function PcFormModal({
 
   if (!open) return null
 
+  /** Merge a partial update into the draft. */
   const patch = (p: Partial<PcDraft>) => setD((prev) => ({ ...prev, ...p }))
+  /** Make an onChange handler that replaces one roleplay list (traits, ideals, …). */
   const setList = (key: ListKey) => (next: string[]) => patch({ [key]: next } as Partial<PcDraft>)
 
+  /** Build and submit the PC (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
     if (!d.name.trim()) return
     onSubmit(buildPc(d, pc?.id ?? crypto.randomUUID()))

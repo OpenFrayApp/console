@@ -3,6 +3,7 @@
 
 import type { DeathSaves } from '../schema/combatant.ts'
 
+/** A row of three pips, the first `filled` of them in the given tone. */
 function Dots({ filled, tone }: { filled: number; tone: string }) {
   return (
     <span className="inline-flex gap-0.5">

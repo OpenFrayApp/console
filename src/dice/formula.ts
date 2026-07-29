@@ -59,6 +59,7 @@ const DAMAGE_TYPES: ReadonlySet<string> = new Set<DamageType>([
   'thunder',
 ])
 
+/** A DiceTerm from the parser's captures: blank count → 1; adv/dis desugars to 2 dice keep 1. */
 function diceTerm(
   sign: 1 | -1,
   countStr: string,

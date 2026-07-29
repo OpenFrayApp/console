@@ -25,6 +25,7 @@ export function EditableField({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initial)
   if (editing) {
+    /** Push the draft to `onCommit` and leave editing mode. */
     const commit = () => {
       onCommit(draft)
       setEditing(false)

@@ -36,6 +36,7 @@ export function DieRoll({
     setSettled(false)
     const start = performance.now()
     let lastSwap = 0
+    /** One spin frame: swap faces at a slowing rate, then settle on the real value. */
     const tick = (now: number) => {
       const elapsed = now - start
       if (elapsed >= SPIN_MS) {

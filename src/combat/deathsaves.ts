@@ -13,10 +13,13 @@ import { roll, type RollContext, type RollResult } from '../dice/roll.ts'
 const NEEDED = 3
 const SAVE_DC = 10
 
+/** The PC's recorded tally, defaulting to 0/0 when none has been kept yet. */
 const tally = (pc: PlayerCharacter): DeathSaves => pc.deathSaves ?? { successes: 0, failures: 0 }
 
+/** Clamp a success/failure count to the 0–3 range. */
 const clampTally = (n: number): number => Math.max(0, Math.min(NEEDED, n))
 
+/** Rebuild the tally, clamped to 0–3; reaching three failures marks the PC dead. */
 function withTally(pc: PlayerCharacter, successes: number, failures: number): PlayerCharacter {
   const failed = clampTally(failures)
   return {
@@ -26,15 +29,18 @@ function withTally(pc: PlayerCharacter, successes: number, failures: number): Pl
   }
 }
 
+/** Zero both death-save counts; the PC's status is left as it is. */
 export function resetDeathSaves(pc: PlayerCharacter): PlayerCharacter {
   return { ...pc, deathSaves: { successes: 0, failures: 0 } }
 }
 
+/** Record one success, capped at three. */
 export function markDeathSaveSuccess(pc: PlayerCharacter): PlayerCharacter {
   const { successes, failures } = tally(pc)
   return withTally(pc, successes + 1, failures)
 }
 
+/** Record failures — `count` defaults to one, a crit deals two; the third marks the PC dead. */
 export function markDeathSaveFailure(pc: PlayerCharacter, count = 1): PlayerCharacter {
   const { successes, failures } = tally(pc)
   return withTally(pc, successes, failures + count)
@@ -45,6 +51,7 @@ export function stabilize(pc: PlayerCharacter): PlayerCharacter {
   return withTally(pc, NEEDED, tally(pc).failures)
 }
 
+/** Stabilized: still unconscious at 0 HP, with three successes banked. */
 export function isStable(pc: PlayerCharacter): boolean {
   return pc.status === 'unconscious' && tally(pc).successes >= NEEDED
 }

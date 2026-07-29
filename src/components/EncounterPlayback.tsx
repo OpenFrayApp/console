@@ -7,26 +7,31 @@ import { track, EVENTS } from '../lib/analytics.ts'
 const ICON_BTN =
   'inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm disabled:cursor-not-allowed disabled:opacity-40'
 
+/** Play icon (begin or resume the fight). */
 const PlayIcon = () => (
   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true">
     <path d="M4 2.5v11l9-5.5z" />
   </svg>
 )
+/** Pause icon (hold the fight without ending it). */
 const PauseIcon = () => (
   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true">
     <path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" />
   </svg>
 )
+/** Stop icon (end the fight, back to setup). */
 const StopIcon = () => (
   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true">
     <rect x="3.5" y="3.5" width="9" height="9" rx="1" />
   </svg>
 )
+/** Skip-back icon (previous turn). */
 const PrevTurnIcon = () => (
   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true">
     <path d="M11.5 3v10L5 8zM4.5 3h1.5v10H4.5z" />
   </svg>
 )
+/** Skip-forward icon (next turn). */
 const NextTurnIcon = () => (
   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true">
     <path d="M4.5 3v10L11 8zM10 3h1.5v10H10z" />
@@ -69,6 +74,7 @@ export function TurnControls({
     </span>
   )
 }
+/** Broom icon (sweep only the foes off the board). */
 const BroomIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -89,6 +95,7 @@ const BroomIcon = () => (
     <path d="M12.5 12.5 6.5 18.5" />
   </svg>
 )
+/** Skull icon (clear everyone from the board). */
 const SkullIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -127,6 +134,7 @@ export function EncounterCleanup({
 }) {
   const grey =
     'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+  /** Confirm, then remove every combatant and wipe the game log. */
   const clearAll = () => {
     if (
       window.confirm('Remove everyone from the board and clear the game log? This can’t be undone.')
@@ -135,6 +143,7 @@ export function EncounterCleanup({
       dispatch({ type: 'clearAll' })
     }
   }
+  /** Confirm, then remove every foe; the party stays on the board. */
   const clearFoes = () => {
     if (window.confirm('Remove every foe from the board? Your players stay where they are.')) {
       track(EVENTS.clearedFoes)

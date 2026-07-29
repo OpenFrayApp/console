@@ -34,13 +34,16 @@ export function AddPcPicker({
 
   const q = query.trim().toLowerCase()
   const matches = rosterPcs.filter((pc) => !q || pc.name.toLowerCase().includes(q))
+  /** Look up a campaign's name by id; undefined when the PC has no campaign. */
   const campaignName = (id?: string | null): string | undefined =>
     campaigns.find((c) => c.id === id)?.name
 
+  /** Hand the chosen PC to onPick and close the popover. */
   const pick = (pc: RosterPc) => {
     onPick(pc)
     setOpen(false)
   }
+  /** Close the popover, then open the compendium's Characters tab via onCreate. */
   const create = () => {
     setOpen(false)
     onCreate()

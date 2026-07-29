@@ -12,6 +12,7 @@ const TONE: Record<DifficultyTier, string> = {
   deadly: 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200',
 }
 
+/** Balance-scales icon (difficulty readout). */
 function ScalesIcon() {
   return (
     <svg

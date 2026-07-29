@@ -56,8 +56,10 @@ export function CombatantControls({
   const id = combatant.combatantId
   const name = nameOf(combatant)
 
+  /** Dispatch a functional update against this combatant. */
   const apply = (update: (c: Combatant) => Combatant) => dispatch({ type: 'update', id, update })
 
+  /** Start concentration with the typed spell and duration (in rounds), then clear the form. */
   const startConc = () => {
     track(EVENTS.concentrationStarted)
     const spell = (concInput ?? '').trim()
@@ -69,6 +71,7 @@ export function CombatantControls({
   const showDeathSaves =
     combatant.isPC && combatant.status === 'unconscious' && !isStable(combatant)
 
+  /** Append an effect to this combatant's list. */
   const addEffect = (effect: Effect) =>
     dispatch({
       type: 'update',
@@ -76,6 +79,7 @@ export function CombatantControls({
       update: (c) => ({ ...c, effects: [...c.effects, effect] }),
     })
 
+  /** Drop one effect from this combatant by id. */
   const removeEffect = (effectId: string) =>
     dispatch({
       type: 'update',

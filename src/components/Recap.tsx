@@ -29,6 +29,7 @@ function duration(totalSeconds: number): string {
   return m > 0 ? `${m}m ${rem}s` : `${rem}s`
 }
 
+/** A recap tile: uppercase label, large tabular value, optional hint line underneath. */
 function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">

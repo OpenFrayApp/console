@@ -26,7 +26,9 @@ import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
+/** "Cantrip" for level 0, otherwise "Lvl N". */
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
+/** True for a user-created spell (a `custom:` id). */
 const isCustom = (s: Spell): boolean => s.id.startsWith('custom:')
 
 /**
@@ -75,10 +77,12 @@ export function CastSpellPanel({
     }
   }, [open, spells])
 
+  /** Drop the picked spell, returning to the Cast spell button. */
   const reset = () => {
     setSpell(null)
   }
 
+  /** Set the spell to cast; a concentration spell starts the chosen caster concentrating. */
   const pick = (s: Spell) => {
     reset()
     setSpell(s)
@@ -106,6 +110,7 @@ export function CastSpellPanel({
   // Source tag (Core / ToB…): library spells only — custom carries its own badge.
   const sourceTag = (s: Spell): string | undefined =>
     isCustom(s) ? undefined : librarySource(s.source)
+  /** The edition badge: a custom spell's own edition, else its library's tag. */
   const editionTag = (s: Spell): string | undefined =>
     isCustom(s) ? s.edition : libraryTag(s.source)
 

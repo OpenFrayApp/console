@@ -47,6 +47,7 @@ export function compareInitiative(
   return 0
 }
 
+/** A new array in initiative order — highest first, ties broken per compareInitiative. */
 export function sortByInitiative(
   combatants: readonly Combatant[],
   tiebreak: InitiativeTiebreak = 'dex',

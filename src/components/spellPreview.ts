@@ -8,8 +8,8 @@ const CARD_WIDTH = 384 // matches w-96
 /**
  * Position a floating spell-preview card next to an anchor rect, kept fully inside
  * the viewport: clamped horizontally, placed on whichever side (below/above the
- * anchor) has more room, and — crucially — capped to the space actually available
- * on that side so a long card never runs off the bottom of the window. The card
+ * anchor) has more room, and capped to the space actually available on that
+ * side so a long card never runs off the bottom of the window. The card
  * scrolls internally for anything that doesn't fit.
  */
 export function floatingCardStyle(rect: DOMRect): CSSProperties {
@@ -36,11 +36,14 @@ export const FLOATING_CARD =
 export function useHoverCard<T>() {
   const [card, setCard] = useState<{ value: T; style: CSSProperties } | null>(null)
   const timer = useRef<number | undefined>(undefined)
+  /** Abort any pending delayed close (the pointer came back). */
   const cancelClose = () => window.clearTimeout(timer.current)
+  /** Show the card for a value, positioned against the anchor element. */
   const open = (value: T, anchor: HTMLElement) => {
     cancelClose()
     setCard({ value, style: floatingCardStyle(anchor.getBoundingClientRect()) })
   }
+  /** Hide the card after a 150 ms grace period; entering the card cancels it. */
   const close = () => {
     cancelClose()
     timer.current = window.setTimeout(() => setCard(null), 150)

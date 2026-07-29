@@ -38,9 +38,11 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
 
+  /** Make an onChange handler that writes the input's value into the named draft field. */
   const set = (key: keyof typeof f) => (e: { target: { value: string } }) =>
     setF((prev) => ({ ...prev, [key]: e.target.value }))
 
+  /** Build the PC from the fields and add it, then reset and close; blank name is a no-op. */
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!f.name.trim()) return

@@ -93,6 +93,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<OAuthProvider | null>(null)
 
+  /** Begin the provider's OAuth redirect; a failed handoff shows the error and re-enables. */
   const start = async (provider: OAuthProvider) => {
     if (busy) return
     track(EVENTS.signInStarted)

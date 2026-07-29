@@ -51,6 +51,7 @@ import { track, EVENTS } from '../lib/analytics.ts'
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
 
+/** Tiny uppercase heading over a group of tracker rows (Dead, Players and allies, Creatures). */
 function GroupHeading({ children }: { children: string }) {
   return (
     <p className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
@@ -67,6 +68,7 @@ function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
   return out
 }
 
+/** The three-column combat screen: combatant list, selected stat block, controls and game log. */
 export function EncounterConsole({
   encounter,
   dispatch,
@@ -139,6 +141,7 @@ export function EncounterConsole({
       () => {},
     )
   }, [])
+  /** Look up the full spell for a compendium ref; undefined until the SRD list has loaded. */
   const resolveSpell = (ref?: string): Spell | undefined => (ref ? spellsById.get(ref) : undefined)
   // Link bare cast-spell names in creature prose (custom creatures aren't pre-baked).
   // Dedupe by name, preferring the 2024 (srd-5.2) entry when a spell exists in both.
@@ -172,6 +175,7 @@ export function EncounterConsole({
       })
       return
     }
+    /** Apply the parsed HP change: a negative delta damages, positive heals, a set overrides. */
     const op = (cc: Combatant): Combatant =>
       'delta' in parsed
         ? parsed.delta < 0
@@ -191,11 +195,13 @@ export function EncounterConsole({
     }
   }
 
+  /** Dismiss the concentration prompt; a failed save also ends the target's concentration. */
   const resolveConcentration = (broke = false) => {
     if (broke && concPrompt) dispatch({ type: 'endConcentration', id: concPrompt.id })
     setConcPrompt(null)
   }
 
+  /** Roll a monster action's recharge die, log it, and re-arm the ability on a success. */
   const rollRechargeFor = (c: Combatant, action: Action) => {
     if (c.isPC) return
     const { recharged, roll } = rollRecharge(action)
@@ -216,6 +222,7 @@ export function EncounterConsole({
     onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, applied)
   }
 
+  /** Mark a monster's recharge ability spent after use; no-op for PCs and ordinary actions. */
   const consumeIfRechargeable = (c: Combatant, action: Action) => {
     if (c.isPC || !isRechargeable(action)) return
     dispatch({
@@ -269,6 +276,7 @@ export function EncounterConsole({
     onNote(`${c.label} casts ${full?.name ?? titleCase(spell.name)}`, 'cast')
   }
 
+  /** Give back one spent cast of a monster's spell — the cast modal's undo. */
   const restoreSpellUseFor = (c: MonsterCombatant, spell: SpellRef) => {
     dispatch({
       type: 'update',
@@ -290,6 +298,7 @@ export function EncounterConsole({
     if (rollable) setActionFor(action)
   }
 
+  /** A combatant's tracker row, wired for selection, HP input, effects, and drag reordering. */
   const renderRow = (c: Combatant) => (
     <CombatantRow
       key={c.combatantId}
@@ -325,6 +334,7 @@ export function EncounterConsole({
     drag?.overId && drag.id !== drag.overId
       ? moveById(combatants, drag.id, drag.overId)
       : combatants
+  /** On drop, dispatch the previewed move (if any) and clear the drag state. */
   const commitReorder = () => {
     if (drag?.overId && drag.id !== drag.overId) {
       dispatch({ type: 'reorder', id: drag.id, toId: drag.overId })

@@ -9,7 +9,9 @@ export interface ImportResult {
   error?: string
 }
 
+/** Whether the value is a finite number. */
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+/** Whether the value is a non-blank string. */
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !== ''
 
 /** Field names as the GM knows them — the raw keys mean nothing to a reader. */
@@ -24,6 +26,7 @@ const FIELD_LABELS: Record<string, string> = {
   passivePerception: 'a passive Perception',
 }
 
+/** Join missing-field labels into an English list ("a name, a size and hit points"). */
 const listFields = (keys: string[]): string => {
   const named = keys.map((k) => FIELD_LABELS[k] ?? k)
   if (named.length === 1) return named[0]

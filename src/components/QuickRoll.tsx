@@ -12,6 +12,7 @@ const DICE = ['d20', 'd12', 'd10', 'd8', 'd6', 'd4']
 export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
   const [formula, setFormula] = useState('')
 
+  /** Roll the formula and log it; malformed input does nothing. Either way the box clears. */
   const submit = (input: string) => {
     const trimmed = input.trim()
     if (!trimmed) return

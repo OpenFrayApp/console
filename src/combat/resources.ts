@@ -24,6 +24,7 @@ const clampNonNegativeInt = (n: number): number => Math.max(0, Math.floor(n))
  */
 export type HpTier = 'healthy' | 'hurt' | 'bloodied' | 'critical'
 
+/** The wound tier for a current/max pair; max ≤ 0 or full HP reads as healthy. */
 export function hpTierOf(current: number, max: number): HpTier {
   if (max <= 0 || current >= max) return 'healthy'
   if (current > Math.floor(max / 2)) return 'hurt'
@@ -31,6 +32,7 @@ export function hpTierOf(current: number, max: number): HpTier {
   return 'critical'
 }
 
+/** The combatant's wound tier, read from its current and max HP. */
 export function hpTier(c: Combatant): HpTier {
   return hpTierOf(c.hp.current, c.hp.max)
 }
@@ -98,9 +100,10 @@ export function setCurrentHp(c: Combatant, value: number): Combatant {
   return { ...c, hp: { ...c.hp, current }, status, concentration }
 }
 
-/** Parse an HP/temp edit: a bare number sets the value; `+N`/`-N` adjusts it. */
+/** An HP/temp edit: a relative adjustment or an absolute value. */
 export type HpInput = { delta: number } | { set: number }
 
+/** Parse an HP/temp edit string: "+N"/"-N" → delta, bare digits → set, anything else → null. */
 export function parseHpInput(raw: string): HpInput | null {
   const s = raw.trim()
   if (/^[+-]\d+$/.test(s)) return { delta: Number(s) }
@@ -130,10 +133,12 @@ export function grantTempHp(c: Combatant, amount: number): Combatant {
   return { ...c, hp: { ...c.hp, temp } }
 }
 
+/** The stat block's slot count for a level; 0 when the creature has none there. */
 export function slotMax(c: MonsterCombatant, level: SpellLevel): number {
   return c.creature.spellcasting?.slots?.[level] ?? 0
 }
 
+/** Unspent slots at a level: the stat-block max minus what's been used. */
 export function slotsRemaining(c: MonsterCombatant, level: SpellLevel): number {
   return slotMax(c, level) - (c.slotsUsed[level] ?? 0)
 }
@@ -158,10 +163,12 @@ export function spendLegendary(c: MonsterCombatant, cost = 1): MonsterCombatant 
   return { ...c, legendaryRemaining: remaining }
 }
 
+/** Whether a limited-use ability is ready; an untracked id reads as unavailable. */
 export function isLimitedAvailable(c: MonsterCombatant, id: string): boolean {
   return c.limitedUseState[id]?.available ?? false
 }
 
+/** Mark a limited-use ability spent, until rechargeLimited flips it back. */
 export function spendLimited(c: MonsterCombatant, id: string): MonsterCombatant {
   return {
     ...c,
@@ -181,6 +188,7 @@ export function spendActionUse(c: MonsterCombatant, id: string): MonsterCombatan
   return { ...c, actionUsesSpent: { ...spent, [id]: (spent[id] ?? 0) + 1 } }
 }
 
+/** Make a limited-use ability available again, e.g. on a successful recharge roll. */
 export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombatant {
   return {
     ...c,
@@ -188,13 +196,14 @@ export function rechargeLimited(c: MonsterCombatant, id: string): MonsterCombata
   }
 }
 
-/** Per-day uses available — the higher in-lair count when the fight is in its lair. */
+/** Per-day maximum — the higher in-lair count when the fight is in its lair. */
 export function legendaryResistanceMax(c: MonsterCombatant): number {
   const base = c.creature.legendaryResistance ?? 0
   const lair = c.creature.legendaryResistanceLair
   return c.inLair && lair != null ? lair : base
 }
 
+/** Legendary Resistance uses left: the lair-aware max minus spent, never below 0. */
 export function legendaryResistanceLeft(c: MonsterCombatant): number {
   return Math.max(0, legendaryResistanceMax(c) - (c.legendaryResistanceSpent ?? 0))
 }

@@ -6,8 +6,10 @@ import type { Combatant } from '../schema/combatant.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 
+/** A rostered PC — quick adds don't count (they arrive pre-rolled like monsters). */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
 
+/** Warning-triangle icon (the Surprised toggle). */
 function WarningIcon() {
   return (
     <svg
@@ -97,7 +99,9 @@ export function InitiativePrompt({
   const [values, setValues] = useState<Record<string, string>>(initial)
   const [surprised, setSurprised] = useState<Set<string>>(() => new Set())
 
+  /** Record one combatant's typed initiative. */
   const setValue = (id: string, v: string) => setValues((prev) => ({ ...prev, [id]: v }))
+  /** Toggle a combatant's Surprised mark. */
   const toggle = (id: string) =>
     setSurprised((prev) => {
       const next = new Set(prev)
@@ -106,11 +110,13 @@ export function InitiativePrompt({
       return next
     })
 
+  /** Start combat with the entered values and the surprised set. */
   const submit = () => onStart({ values, surprised: [...surprised] })
 
   const allies = combatants.filter((c) => !isFoe(c))
   const foes = combatants.filter((c) => isFoe(c))
 
+  /** A column of rows under a heading; the first row of the first column gets autofocus. */
   const column = (list: Combatant[], heading: string, startIndex: number) =>
     list.length > 0 && (
       <div className="min-w-0 flex-1 space-y-2">

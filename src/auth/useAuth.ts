@@ -40,6 +40,7 @@ const ANONYMOUS: AuthState = {
   deleteAccount: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),
 }
 
+/** The auth state from context, or the anonymous fallback outside an AuthProvider. */
 export function useAuth(): AuthState {
   return useContext(AuthContext) ?? ANONYMOUS
 }

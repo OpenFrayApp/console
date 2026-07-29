@@ -112,6 +112,7 @@ export function EffectModal({
   // Conditions are staged here and committed on Apply, not toggled live.
   const [staged, setStaged] = useState<Set<ConditionName>>(new Set())
 
+  /** The creature's active conditions, read from its condition effects. */
   const conditionNames = (): ConditionName[] =>
     effects.filter((e) => e.icon === 'condition').map((e) => e.name as ConditionName)
 
@@ -134,6 +135,7 @@ export function EffectModal({
 
   useEffect(() => {
     if (!open) return
+    /** Close the modal on Escape. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -157,6 +159,7 @@ export function EffectModal({
     }
   }
 
+  /** Build the EffectDuration from the staged choices (save-ends carries its escape save). */
   const makeDuration = (): EffectDuration => {
     if (dur === 'consume') return { type: 'consumeOnRoll' }
     if (dur === 'save')
@@ -170,6 +173,7 @@ export function EffectModal({
     return { type: 'manual' }
   }
 
+  /** Toggle a condition in the staged set. */
   const toggleCondition = (c: ConditionName) => {
     setStaged((s) => {
       const next = new Set(s)

@@ -282,12 +282,15 @@ export const SKILL_ABILITY: Record<Skill, Ability> = {
   survival: 'wis',
 }
 
+/** A fresh random UUID for draft rows and custom ids. */
 const uid = (): string => crypto.randomUUID()
 
+/** A blank damage row (bludgeoning by default). */
 export function emptyDamageDraft(): DamageDraft {
   return { id: uid(), formula: '', type: 'bludgeoning' }
 }
 
+/** A blank action draft of the given kind; ranged attacks default to Dex, others to Str. */
 export function emptyActionDraft(kind: ActionKind = 'melee'): ActionDraft {
   return {
     id: uid(),
@@ -308,18 +311,22 @@ export function emptyActionDraft(kind: ActionKind = 'melee'): ActionDraft {
   }
 }
 
+/** A blank trait row. */
 export function emptyTraitDraft(): TraitDraft {
   return { id: uid(), name: '', text: '' }
 }
 
+/** A blank skill row (Perception, no expertise). */
 export function emptySkillDraft(): SkillDraft {
   return { id: uid(), skill: 'perception', expertise: false }
 }
 
+/** A blank at-will spell group with no spells picked yet. */
 export function emptySpellGroupDraft(): SpellGroupDraft {
   return { id: uid(), usage: 'atWill', per: '', spells: [] }
 }
 
+/** The blank monster draft a new creature starts from (Medium, d8 hit dice, edition 5.5). */
 export function emptyDraft(): MonsterDraft {
   return {
     name: '',
@@ -365,6 +372,7 @@ export function emptyDraft(): MonsterDraft {
   }
 }
 
+/** Parse a non-negative integer, or undefined when the field is blank. */
 const numOpt = (v: string): number | undefined => (has(v) ? num(v) : undefined)
 
 /** Average HP for a hit-dice pool: count × (die + 1) / 2 + modifier, floored. */
@@ -392,6 +400,7 @@ export function parseCr(v: string): number | undefined {
   return Number.isFinite(n) ? Math.max(0, n) : undefined
 }
 
+/** Parse a comma-separated list, or undefined when it has no entries. */
 const listOpt = (v: string): string[] | undefined => {
   const out = list(v)
   return out.length ? out : undefined
@@ -408,9 +417,10 @@ export function attackBonus(ability: Ability, ctx: DeriveContext): number {
   return abilityMod(ctx.abilities[ability]) + ctx.pb
 }
 
+/** Assemble an action's recharge; kind 'none' produces undefined. */
 function buildRecharge(kind: RechargeKind, value: string): Recharge | undefined {
   if (kind === 'none') return undefined
-  // Sensible defaults: a dice recharge with no threshold is "Recharge 6"; a
+  // Defaults: a dice recharge with no threshold is "Recharge 6"; a
   // per-day/round count defaults to 1.
   const v = has(value) ? num(value) : kind === 'dice' ? 6 : 1
   return { type: kind, value: v }
@@ -422,6 +432,7 @@ function appendMod(formula: string, mod: number): string {
   return mod > 0 ? `${formula}+${mod}` : `${formula}${mod}`
 }
 
+/** Filled damage rows as DamageRolls, with the ability modifier appended to the first. */
 function buildDamage(rows: DamageDraft[], mod: number): DamageRoll[] | undefined {
   // The attack's ability modifier rides on the *primary* damage only — rider
   // damage ("plus 1d6 fire") and save damage (mod 0) get just their dice.
@@ -459,9 +470,11 @@ export function buildAction(d: ActionDraft, ctx: DeriveContext): Action {
   return action
 }
 
+/** Build every draft that has a name; unnamed rows are dropped. */
 const namedActions = (rows: ActionDraft[], ctx: DeriveContext): Action[] =>
   rows.filter((a) => has(a.name)).map((a) => buildAction(a, ctx))
 
+/** Assemble the spellcasting block; empty groups drop, no ability and no groups → undefined. */
 function buildSpellcasting(draft: MonsterDraft, ctx: DeriveContext): Spellcasting | undefined {
   const groups: SpellGroup[] = draft.spellGroups
     .map((g) => ({
@@ -595,8 +608,10 @@ export function buildCreature(draft: MonsterDraft): Creature {
   return creature
 }
 
+/** A number as an input string; absent values become the empty string. */
 const str = (n: number | undefined): string => (n == null ? '' : String(n))
 
+/** Render a CR for the form field, mapping fractional values back to 1/8, 1/4, 1/2. */
 const crToString = (cr: number): string =>
   cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr)
 
@@ -630,6 +645,7 @@ function inferAttackAbility(action: Action, abilities: AbilityScores, pb: number
   return order.find((a) => abilityMod(abilities[a]) === target) ?? fallback
 }
 
+/** Turn a saved Action back into a draft: strip the baked damage mod, infer the attack ability. */
 function actionToDraft(action: Action, abilities: AbilityScores, pb: number): ActionDraft {
   const isAttack = action.kind === 'melee' || action.kind === 'ranged'
   const damage = (action.damage ?? []).map((d, i) => ({

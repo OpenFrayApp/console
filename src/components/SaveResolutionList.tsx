@@ -11,6 +11,7 @@ export interface SaveLine {
   result: SaveResult | 'pending'
 }
 
+/** Green Save, red Fail, or a grey dash while the result is pending. */
 function ResultBadge({ result }: { result: SaveResult | 'pending' }) {
   const base = 'rounded px-1.5 text-xs font-semibold uppercase tracking-wide'
   if (result === 'save') {

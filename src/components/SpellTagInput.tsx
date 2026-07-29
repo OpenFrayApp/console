@@ -11,6 +11,7 @@ import { FIELD } from './ActionEditor.tsx'
 const editionOf = (source: string | undefined): string | undefined =>
   source ? libraryTag(source.includes(':') ? source.split(':')[0] : source) : undefined
 
+/** Grey edition badge ("5.5" / "5.0"); renders nothing without a tag. */
 function EditionBadge({ tag }: { tag: string | undefined }) {
   if (!tag) return null
   return (
@@ -40,6 +41,7 @@ export function SpellTagInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const [menuStyle, setMenuStyle] = useState<CSSProperties>()
   const query = q.trim().toLowerCase()
+  /** A chip's identity: its compendium ref, else the lowercased name. */
   const keyOf = (s: { ref?: string; name: string }) => s.ref ?? s.name.toLowerCase()
   const chosen = new Set(value.map(keyOf))
   const suggestions = query
@@ -54,6 +56,7 @@ export function SpellTagInput({
       setMenuStyle(undefined)
       return
     }
+    /** Measure the input and pin the menu below it, or above when space below runs short. */
     const place = () => {
       const r = inputRef.current?.getBoundingClientRect()
       if (!r) return
@@ -77,10 +80,12 @@ export function SpellTagInput({
     }
   }, [suggestions.length])
 
+  /** Add the spell as a chip and clear the search. */
   const add = (s: Spell) => {
     onChange([...value, { name: s.name, ref: s.id }])
     setQ('')
   }
+  /** Drop the chip with this key. */
   const remove = (key: string) => onChange(value.filter((v) => keyOf(v) !== key))
 
   return (

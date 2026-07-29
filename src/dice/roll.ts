@@ -93,12 +93,14 @@ function bonusTerms(bonuses: (number | string)[]): Term[] {
   )
 }
 
+/** Resolve the crit option to a rule: `true` → RAW double-dice, absent/false → none. */
 function normalizeCrit(crit: boolean | CritRule | undefined): CritRule {
   if (crit === true) return 'double-dice'
   if (!crit) return 'none'
   return crit
 }
 
+/** Apply a keep rule: the n highest (kh) or lowest (kl) results; no rule keeps them all. */
 function keptDice(results: number[], keep: DiceTerm['keep']): number[] {
   if (!keep) return results
   const desc = [...results].sort((a, b) => b - a)
@@ -106,6 +108,7 @@ function keptDice(results: number[], keep: DiceTerm['keep']): number[] {
   return keep.mode === 'kh' ? desc.slice(0, n) : desc.slice(results.length - n)
 }
 
+/** Roll one dice term into its DieGroup: all results, the kept subset, the signed total. */
 function rollGroup(term: DiceTerm, critRule: CritRule, rand: RandomSource): DieGroup {
   // Crit rules only apply to plain damage dice — never attack/keep/adv terms.
   const rule = term.keep || term.advantage ? 'none' : critRule
@@ -139,6 +142,7 @@ function critFumble(dice: DieGroup[]): { crit: boolean; fumble: boolean } {
   return { crit: value === 20, fumble: value === 1 }
 }
 
+/** The one dice chokepoint: parse, apply adv/dis and bonuses, roll, flag attack crit/fumble. */
 export function roll(formula: string, ctx: RollContext = {}): RollResult {
   const rand = ctx.rand ?? cryptoRandom
   const critRule = normalizeCrit(ctx.crit)

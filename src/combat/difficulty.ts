@@ -73,8 +73,10 @@ const XP_BY_HP: readonly (readonly [number, number])[] = [
   [265, 13000],
 ]
 
+/** Bound n to the inclusive [lo, hi] range. */
 const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n))
 
+/** Size up a foe with no XP of its own: hit points pick a band, armor class shifts it. */
 export function estimateXp(maxHp: number, ac: number): number {
   let band = XP_BY_HP.findIndex(([hp]) => maxHp <= hp)
   if (band < 0) band = XP_BY_HP.length - 1
@@ -112,7 +114,9 @@ export interface EncounterDifficulty {
   budget: { easy: number; medium: number; hard: number; deadly: number }
 }
 
+/** Dead, and so dropped from the assessment; an unconscious PC still counts. */
 const isDown = (c: Combatant): boolean => c.status === 'dead'
+/** A throwaway quick add: PC-side with kind 'quick'. */
 const isQuickAdd = (c: Combatant): boolean => c.isPC && c.kind === 'quick'
 
 /**
@@ -182,6 +186,7 @@ export function assessEncounter(combatants: Combatant[]): EncounterDifficulty | 
   }
 }
 
+/** Index into MULTIPLIERS for a foe count, per the 5e encounter-multiplier bands. */
 function multiplierStep(foeCount: number): number {
   if (foeCount <= 1) return 0
   if (foeCount === 2) return 1

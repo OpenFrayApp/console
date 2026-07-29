@@ -102,16 +102,20 @@ export const DURATIONS: string[] = [
   'Until dispelled',
 ]
 
+/** A fresh random UUID for draft rows and custom ids. */
 const uid = (): string => crypto.randomUUID()
 
+/** A blank damage row (fire by default). */
 export function emptySpellDamageDraft(): SpellDamageDraft {
   return { id: uid(), formula: '', type: 'fire' }
 }
 
+/** A blank manual scaling row: no level picked yet, one empty damage row. */
 export function emptyScalingRowDraft(): ScalingRowDraft {
   return { id: uid(), level: '', damage: [emptySpellDamageDraft()] }
 }
 
+/** The blank spell draft a new spell starts from (level 1 Evocation, edition 5.5). */
 export function emptySpellDraft(): SpellDraft {
   return {
     name: '',
@@ -140,6 +144,7 @@ export function emptySpellDraft(): SpellDraft {
   }
 }
 
+/** Parse a spell level, clamped to 0–9; blank or invalid input becomes 0 (cantrip). */
 const clampLevel = (v: string): number => Math.max(0, Math.min(9, Math.floor(Number(v) || 0)))
 
 interface Dice {
@@ -155,11 +160,13 @@ function parseDice(formula: string): Dice | null {
   return { count: Number(m[1]), die: Number(m[2]), mod: m[3] ? Number(m[3]) : 0 }
 }
 
+/** Render parsed dice back into an `NdM`/`NdM+K`/`NdM-K` formula string. */
 function renderDice(d: Dice): string {
   const mod = d.mod > 0 ? `+${d.mod}` : d.mod < 0 ? `${d.mod}` : ''
   return `${d.count}d${d.die}${mod}`
 }
 
+/** Filled damage rows as DamageRolls; none filled → undefined. */
 function buildDamageRows(rows: SpellDamageDraft[]): DamageRoll[] | undefined {
   const out = rows
     .filter((d) => has(d.formula))
@@ -216,6 +223,7 @@ function scalingLevels(level: number): number[] {
   return out
 }
 
+/** The higher-level variants: manual rows as entered, or the increment expanded per slot/tier. */
 function buildScaling(
   draft: SpellDraft,
   level: number,
@@ -242,6 +250,7 @@ function buildScaling(
   }))
 }
 
+/** The V/S/M component flags; the materials text rides along only when M is ticked. */
 function buildComponents(draft: SpellDraft): SpellComponents {
   const components: SpellComponents = {
     verbal: draft.verbal,
@@ -297,6 +306,7 @@ export function spellVariantPreview(draft: SpellDraft): { label: string; formula
   const level = clampLevel(draft.level)
   const base = buildDamageRows(draft.damage)
   if (!base) return []
+  /** Join a damage set's dice into one display string, e.g. "8d6 + 2d4". */
   const formula = (rows: DamageRoll[]): string => rows.map((r) => r.formula).join(' + ')
   const out = [{ label: level === 0 ? 'Cantrip' : `Level ${level}`, formula: formula(base) }]
   for (const s of buildScaling(draft, level, base)) {
@@ -306,10 +316,13 @@ export function spellVariantPreview(draft: SpellDraft): { label: string; formula
   return out
 }
 
+/** Damage rolls as editable draft rows with fresh ids; absent input → empty list. */
 const damageToDrafts = (rows: DamageRoll[] | undefined): SpellDamageDraft[] =>
   (rows ?? []).map((r) => ({ id: uid(), formula: r.formula, type: r.type }))
 
+/** Whether two damage sets match, ignoring row order. */
 const sameDamage = (a: DamageRoll[], b: DamageRoll[]): boolean => {
+  /** A canonical, order-independent fingerprint of a damage set. */
   const key = (rows: DamageRoll[]) =>
     rows
       .map((r) => `${r.formula}|${r.type}`)

@@ -79,6 +79,7 @@ export function ApplySpellEffect({
 
   const targets = selfOnly && caster ? [caster] : combatants.filter((c) => c.status !== 'dead')
 
+  /** Toggle a target in the selection. */
   const toggle = (id: string) =>
     setSelected((s) => {
       const next = new Set(s)
@@ -87,6 +88,7 @@ export function ApplySpellEffect({
       return next
     })
 
+  /** Apply the effect to every selected target and note who received it. */
   const apply = () => {
     const names: string[] = []
     for (const c of targets) {

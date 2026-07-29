@@ -24,6 +24,7 @@ export interface AppSettings {
 
 const KEY = 'openfray-settings'
 
+/** Parse the stored settings JSON; missing, malformed, or blocked storage yields {}. */
 function read(): Record<string, unknown> {
   try {
     const raw = localStorage.getItem(KEY)
@@ -34,6 +35,7 @@ function read(): Record<string, unknown> {
   return {}
 }
 
+/** The persisted settings with every field sanitized and defaulted (safe with nothing stored). */
 export function loadSettings(): AppSettings {
   const data = read()
   return {

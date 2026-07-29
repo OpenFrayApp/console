@@ -51,6 +51,7 @@ function TentIcon() {
   )
 }
 
+/** A combatant's display name: a PC's name, a monster's board label. */
 const label = (c: Combatant): string => (c.isPC ? c.name : c.label)
 
 /** Modal to enter each friendly combatant's new current HP for a short rest. */
@@ -66,6 +67,7 @@ function ShortRestModal({
   const [values, setValues] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    /** Close the modal when Escape is pressed. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -73,6 +75,7 @@ function ShortRestModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  /** Apply the typed HP values and dispatch the short rest; an empty box leaves its row alone. */
   const submit = () => {
     const hp: Record<string, number> = {}
     for (const c of combatants) {
@@ -191,6 +194,7 @@ export function RestControls({
 }) {
   const [open, setOpen] = useState(false)
   const friendly = combatants.filter((c) => !isFoe(c))
+  /** Confirm, then dispatch the long rest: friendlies to full HP, short-lived effects cleared. */
   const longRest = () => {
     if (
       window.confirm(
@@ -203,6 +207,7 @@ export function RestControls({
     }
   }
 
+  /** Class string for one rest button cell; disabled swaps the hover styles for dimming. */
   const cell = (extra = ''): string =>
     `flex items-center justify-center px-3 py-1.5 text-slate-700 dark:text-slate-200 ${extra} ${
       disabled ? 'cursor-not-allowed opacity-40' : 'hover:bg-slate-100 dark:hover:bg-slate-800'

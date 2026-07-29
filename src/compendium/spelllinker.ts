@@ -30,6 +30,7 @@ export function makeSpellLinker(spells: { name: string; ref: string }[]): (text:
   // Within a cast clause: skip an existing markdown link (idempotent — baked SRD
   // prose is left as-is), otherwise link a bare spell name.
   const tokenRe = new RegExp(`(\\[[^\\]]*\\]\\([^)]*\\))|\\b${spellAlt}\\b`, 'gi')
+  /** Wrap one spell name as a `spell:` markdown link; unknown names pass through unchanged. */
   const linkName = (name: string): string => {
     const ref = refByLower.get(name.toLowerCase())
     return ref ? `[${name}](spell:${ref})` : name

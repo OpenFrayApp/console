@@ -91,6 +91,7 @@ export const CONDITION_TEXT: Record<ConditionName, string> = {
 
 const CONDITION_NAMES = Object.keys(CONDITION_TEXT) as ConditionName[]
 
+/** Type guard: the name is one of the standard conditions with reference text. */
 const isConditionName = (name: string): name is ConditionName => name in CONDITION_TEXT
 
 /** Resolve a condition name to its reference text, or undefined if unknown. */

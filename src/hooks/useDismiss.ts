@@ -16,9 +16,11 @@ export function useDismiss(
 ): void {
   useEffect(() => {
     if (!open) return
+    /** Fire onClose for a pointer-down outside the popover. */
     const onPointerDown = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
+    /** Fire onClose when Escape is pressed. */
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }

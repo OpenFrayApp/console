@@ -41,6 +41,7 @@ export function saveBonus(c: Combatant, ability: Ability): number | null {
   return c.creature.saves?.[ability] ?? abilityMod(c.creature.abilities[ability])
 }
 
+/** Render a bonus for a formula: "+5" / "-2", and empty for 0 (a bare "1d20"). */
 const formatBonus = (n: number): string => (n === 0 ? '' : n > 0 ? `+${n}` : `${n}`)
 
 /**

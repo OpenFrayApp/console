@@ -27,6 +27,7 @@ export function ImportCreatureModal({
     if (!open) return
     setText('')
     setError(null)
+    /** Close the modal on Escape. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -36,6 +37,7 @@ export function ImportCreatureModal({
 
   if (!open) return null
 
+  /** Parse the pasted JSON and import the creature (then close), or show the error inline. */
   const submit = () => {
     const result = parseImportedCreature(text)
     if (result.error || !result.creature) {

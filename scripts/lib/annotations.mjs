@@ -26,6 +26,7 @@ export function drawAnnotations(items) {
   const vw = window.innerWidth
   const vh = window.innerHeight
   const placed = []
+  /** Whether two rects collide, counting anything within 8px as touching. */
   const hits = (a, b) =>
     a.x < b.x + b.w + 8 && a.x + a.w + 8 > b.x && a.y < b.y + b.h + 8 && a.y + a.h + 8 > b.y
 

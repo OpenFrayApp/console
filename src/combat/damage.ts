@@ -14,6 +14,7 @@ export type DamageRelation = 'normal' | 'resistant' | 'immune' | 'vulnerable'
  */
 export function damageRelation(target: Combatant, type: DamageType): DamageRelation {
   const src = target.isPC ? target : target.creature
+  /** Whether a defense list names this type (case-insensitive; an absent list → false). */
   const has = (list?: string[]): boolean =>
     (list ?? []).some((entry) => entry.toLowerCase() === type)
   if (has(src.immunities)) return 'immune'

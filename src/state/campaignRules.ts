@@ -12,6 +12,7 @@ import { DEFAULT_CAMPAIGN_RULES, type CampaignRules } from '../schema/campaign.t
  */
 export const CampaignRulesContext = createContext<CampaignRules>(DEFAULT_CAMPAIGN_RULES)
 
+/** The active campaign's rules from context; the standard ruleset when no provider overrides. */
 export function useCampaignRules(): CampaignRules {
   return useContext(CampaignRulesContext)
 }

@@ -18,6 +18,7 @@ export interface DamageVariant {
   damage: DamageRoll[]
 }
 
+/** The display label for a spell level: "Cantrip" for 0, otherwise "Level N". */
 const levelLabel = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
 
 /** Base damage plus each upcast/caster-level variant. Empty when the spell deals no typed damage. */

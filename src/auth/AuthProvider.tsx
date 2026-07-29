@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /** Start the OAuth redirect to the provider; the session lands when the browser returns. */
   const signInWithProvider = async (provider: OAuthProvider): Promise<AuthResult> => {
     if (!supabase) return { error: 'Signing in isn’t available on this copy of OpenFray.' }
     // Redirect-based flow: the browser navigates to the provider and returns to
@@ -48,10 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
+  /** End the current session; a no-op when Supabase isn't configured. */
   const signOut = async (): Promise<void> => {
     await supabase?.auth.signOut()
   }
 
+  /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
     // Self-delete can't use the admin API from the browser, so this calls a

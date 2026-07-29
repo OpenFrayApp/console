@@ -12,11 +12,13 @@ const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 da
 type Note = { kind: 'ok' | 'err'; text: string } | null
 
 const PROVIDER_LABELS: Record<string, string> = { google: 'Google', discord: 'Discord' }
+/** The display label for an OAuth provider id ("google" → "Google"); email/absent → null. */
 function providerName(provider?: string): string | null {
   if (!provider || provider === 'email') return null
   return PROVIDER_LABELS[provider] ?? provider.charAt(0).toUpperCase() + provider.slice(1)
 }
 
+/** A status line for a form: ok in green, errors in red; renders nothing when null. */
 function NoteLine({ note }: { note: Note }) {
   if (!note) return null
   return (
@@ -44,6 +46,7 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
   const [delBusy, setDelBusy] = useState(false)
 
   const confirmed = confirm.trim().toLowerCase() === (user?.email ?? '').toLowerCase()
+  /** Delete the account once the typed email matches; on success the panel closes, signed out. */
   const submitDelete = async (e: FormEvent) => {
     e.preventDefault()
     if (!confirmed || delBusy) return

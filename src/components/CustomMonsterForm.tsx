@@ -32,6 +32,7 @@ import {
 } from './customMonster.ts'
 import { proficiencyBonus } from '../compendium/format.ts'
 
+/** Editable list of action drafts: one ActionEditor each, plus an add button for a new one. */
 function ActionList({
   label,
   items,
@@ -92,6 +93,7 @@ export function CustomMonsterForm({
 
   useEffect(() => {
     if (!open) return
+    /** Close the modal on Escape. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -103,6 +105,7 @@ export function CustomMonsterForm({
     if (open && spells.length === 0) loadSrdSpells().then(setSpells, () => setSpells([]))
   }, [open, spells.length])
 
+  /** Merge a partial update into the draft. */
   const patch = (p: Partial<MonsterDraft>) => setD((prev) => ({ ...prev, ...p }))
 
   const pb = proficiencyBonus(parseCr(d.cr))
@@ -118,6 +121,7 @@ export function CustomMonsterForm({
   )
   const spellBonus = d.spellAbility ? attackBonus(d.spellAbility, ctx) : null
 
+  /** Build and submit the creature (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
     if (!d.name.trim()) return
     const creature = buildCreature(d)

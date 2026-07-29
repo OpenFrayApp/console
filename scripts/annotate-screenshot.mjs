@@ -22,6 +22,7 @@ import { join, dirname } from 'node:path'
 import { drawAnnotations } from './lib/annotations.mjs'
 import { SHOTS } from './docs-screenshot-annotations.mjs'
 
+/** Resolve Playwright from node_modules or the npx cache, throwing if neither has it. */
 function loadPlaywright() {
   const require = createRequire(import.meta.url)
   const candidates = ['playwright']
@@ -42,6 +43,7 @@ function loadPlaywright() {
   throw new Error('Playwright not found. Run: npx --yes playwright --version')
 }
 
+/** Draw each listed shot's callouts over its PNG and write the result to its out path. */
 async function main() {
   const { chromium } = loadPlaywright()
   const channel = process.env.PW_CHANNEL ?? 'chrome'

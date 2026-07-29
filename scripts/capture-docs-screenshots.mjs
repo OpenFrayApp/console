@@ -27,6 +27,7 @@ const OUT = process.env.OUT_DIR ?? 'docs/src/assets/screens'
 const VIEWPORT = { width: 1440, height: 900 }
 const DEBUG = !!process.env.DEBUG
 
+/** Resolve Playwright from node_modules or the npx cache, throwing if neither has it. */
 function loadPlaywright() {
   const require = createRequire(import.meta.url)
   const candidates = ['playwright']
@@ -47,8 +48,7 @@ function loadPlaywright() {
   throw new Error('Playwright not found. Run: npx --yes playwright --version')
 }
 
-// ---------------------------------------------------------------- helpers
-
+/** Measure each item's locator(s) on the live page, then draw the callouts over them. */
 async function annotate(page, items) {
   const measured = []
   for (const item of items) {
@@ -83,6 +83,7 @@ async function annotate(page, items) {
   await page.evaluate(drawAnnotations, measured)
 }
 
+/** Draw the callouts, save OUT/<name>.png ('auto' clips to the marks), then remove them. */
 async function shot(page, name, { clip, clipTo, pad = 26, items = [] } = {}) {
   if (items.length) await annotate(page, items)
   await page.waitForTimeout(150)
@@ -107,9 +108,11 @@ async function shot(page, name, { clip, clipTo, pad = 26, items = [] } = {}) {
   console.log(`  ✓ ${name}.png`)
 }
 
+/** Print the visible controls and headings under a label; a no-op unless DEBUG=1. */
 async function dump(page, label) {
   if (!DEBUG) return
   const info = await page.evaluate(() => {
+    /** Whether an element is actually rendered: its bounding box has any size. */
     const vis = (el) => {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0
@@ -135,6 +138,7 @@ const PARTY = [
 
 const FOES = ['Ogre', 'Goblin Boss', 'Goblin Warrior', 'Mage']
 
+/** Add every PARTY member through the console's Add PC form. */
 async function addParty(page) {
   for (const pc of PARTY) {
     await page.getByRole('button', { name: 'Add PC' }).click()
@@ -148,6 +152,7 @@ async function addParty(page) {
   }
 }
 
+/** Add every FOES creature by compendium search, taking the first match. */
 async function addFoes(page) {
   for (const name of FOES) {
     await page.getByRole('button', { name: 'Add creature' }).click()
@@ -160,8 +165,7 @@ async function addFoes(page) {
   }
 }
 
-// ---------------------------------------------------------------- run
-
+/** Drive the console through every requested recipe and write the annotated shots. */
 async function main() {
   const { chromium } = loadPlaywright()
   mkdirSync(OUT, { recursive: true })
@@ -188,7 +192,9 @@ async function main() {
   const tools = page.locator('main aside')
   const diceBar = page.locator('footer form')
   const addCreature = page.getByRole('button', { name: 'Add creature' })
+  /** The tracker row for a combatant, found by the name in its text. */
   const row = (name) => tracker.locator('[role=button]').filter({ hasText: name }).first()
+  /** The panel inside the topmost open modal (the last full-screen fixed overlay). */
   const modal = () => page.locator('div.fixed.inset-0').last().locator('> div, > form').first()
 
   console.log('Capturing…')

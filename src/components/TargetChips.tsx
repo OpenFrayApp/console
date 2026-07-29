@@ -4,6 +4,7 @@
 import type { Combatant } from '../schema/combatant.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
 
+/** Sort comparator: display names, locale-aware. */
 const byName = (a: Combatant, b: Combatant): number => nameOf(a).localeCompare(nameOf(b))
 
 const chip =
@@ -34,6 +35,7 @@ export function TargetChips({
   const foes = targets.filter((t) => isFoe(t)).sort(byName)
   const both = allies.length > 0 && foes.length > 0
 
+  /** One chip group; the heading only shows when both allies and foes are present. */
   const group = (label: string, list: Combatant[]) =>
     list.length === 0 ? null : (
       <div className="space-y-1">

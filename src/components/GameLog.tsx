@@ -109,6 +109,7 @@ function describeDamage(damage: { type: string; amount: number }[]): string {
 
 const OUTCOME_LABEL = { hit: 'Hit', crit: 'Crit', miss: 'Miss' } as const
 
+/** Colored category dot for a log entry; the category name is its tooltip. */
 function Dot({ category }: { category: GameLogCategory }) {
   return (
     <span
@@ -118,6 +119,7 @@ function Dot({ category }: { category: GameLogCategory }) {
   )
 }
 
+/** One log entry: a roll with total, breakdown, and outcome, or a plain message line. */
 function LogLine({ entry }: { entry: GameLogEntry }) {
   return (
     <li className="rounded border border-slate-200 px-3 py-1.5 dark:border-slate-800">
@@ -220,6 +222,7 @@ export function GameLogModal({
     return [...byRound.entries()].sort((a, b) => a[0] - b[0])
   }, [shown])
 
+  /** A filter chip; clicking it narrows the log to one category ('all' shows everything). */
   const chip = (key: GameLogCategory | 'all', label: string) => (
     <button
       key={key}

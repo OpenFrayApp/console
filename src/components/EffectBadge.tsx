@@ -18,6 +18,7 @@ function EffectLabel({ effect }: { effect: Effect }) {
   )
 }
 
+/** Badge tone classes by effect kind: debuff rose, buff emerald, reminder amber, else slate. */
 function toneFor(icon: string | undefined): string {
   switch (icon) {
     case 'debuff':

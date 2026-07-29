@@ -31,6 +31,7 @@ function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string
     )
   }
   if (editing) {
+    /** Save the trimmed draft via onCommit and leave edit mode. */
     const commit = () => {
       onCommit(draft.trim())
       setEditing(false)

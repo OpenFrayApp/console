@@ -21,11 +21,13 @@ let spells: Promise<Spell[]> | undefined
 // Base-relative so the fetch resolves under the app's path (e.g. /console/).
 const COMPENDIUM = `${import.meta.env.BASE_URL}compendium`
 
+/** Fetch one compendium JSON file; any failure yields an empty list, never a throw. */
 const fetchList = <T>(file: string): Promise<T[]> =>
   fetch(`${COMPENDIUM}/${file}`)
     .then((r) => r.json() as Promise<T[]>)
     .catch(() => [])
 
+/** Fetch and merge every shipped library's creatures; cached after the first call. */
 export function loadSrdCreatures(): Promise<Creature[]> {
   creatures ??= Promise.all(LIBRARIES.map((l) => fetchList<Creature>(l.creaturesFile))).then(
     (lists) => lists.flat(),
@@ -33,6 +35,7 @@ export function loadSrdCreatures(): Promise<Creature[]> {
   return creatures
 }
 
+/** Fetch and merge spells from every library that ships them; cached after the first call. */
 export function loadSrdSpells(): Promise<Spell[]> {
   const withSpells = LIBRARIES.filter((l) => l.spellsFile)
   spells ??= Promise.all(withSpells.map((l) => fetchList<Spell>(l.spellsFile!))).then((lists) =>

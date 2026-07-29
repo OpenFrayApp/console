@@ -30,6 +30,7 @@ interface Row {
   total?: number
 }
 
+/** Chip classes for a Save/Fail toggle: the given tone when active, muted otherwise. */
 const TOGGLE = (active: boolean, tone: string) =>
   `rounded border px-1.5 py-0.5 text-xs font-medium ${
     active ? tone : 'border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400'
@@ -43,18 +44,19 @@ export interface GroupSaveSeed {
   damage?: string
 }
 
-/**
- * The save-resolution card: pick combatants, set ability/DC/on-save, roll monster
- * saves (PCs are recorded by the GM), then apply one damage number split by the
- * rule. Shared by the standalone Group Save and by casting a save spell, which
- * seeds the ability/on-save from the spell and the DC from the caster.
- */
+/** A queued concentration check: who owes it, at what DC, from how much damage. */
 interface ConcPrompt {
   combatant: Combatant
   dc: number
   damage: number
 }
 
+/**
+ * The save-resolution card: pick combatants, set ability/DC/on-save, roll monster
+ * saves (PCs are recorded by the GM), then apply one damage number split by the
+ * rule. Shared by the standalone Group Save and by casting a save spell, which
+ * seeds the ability/on-save from the spell and the DC from the caster.
+ */
 export function GroupSaveForm({
   combatants,
   dispatch,
@@ -79,6 +81,7 @@ export function GroupSaveForm({
   const [damage, setDamage] = useState(seed?.damage ?? '')
   const [pending, setPending] = useState<ConcPrompt[]>([])
 
+  /** Toggle a combatant in the selection. */
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev)
@@ -87,6 +90,7 @@ export function GroupSaveForm({
       return next
     })
 
+  /** Auto-roll each selected monster's save; PC rows stay blank for the GM to record. */
   const rollSaves = () => {
     track(EVENTS.groupSaveRolled)
     const request = { ability, dc: num(dc) || 10, onSave }
@@ -103,9 +107,11 @@ export function GroupSaveForm({
     setRows(next)
   }
 
+  /** Record a combatant's save or fail. */
   const setResult = (id: string, result: SaveResult) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], result } }))
 
+  /** Apply the damage per row's result (save rule + evasion); queue concentration checks. */
   const applyDamage = () => {
     const full = num(damage)
     const prompts: ConcPrompt[] = []
@@ -131,6 +137,7 @@ export function GroupSaveForm({
     else onClose()
   }
 
+  /** Settle one concentration prompt (optionally breaking it); close the card when none remain. */
   const resolveConcentration = (combatantId: string, broke = false) => {
     if (broke) dispatch({ type: 'endConcentration', id: combatantId })
     setPending((prev) => {
@@ -140,6 +147,7 @@ export function GroupSaveForm({
     })
   }
 
+  /** Roll a monster's concentration check, log it, and resolve the prompt by the outcome. */
   const rollConcentration = (p: ConcPrompt) => {
     const check = rollConcentrationCheck(p.combatant, p.damage)
     onRoll?.(`${nameOf(p.combatant)}: concentration`, check.roll, check.applied)

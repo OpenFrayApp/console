@@ -19,6 +19,7 @@ const FIELD =
 
 const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
+/** A labelled dropdown over the given options, typed to the option value union. */
 function SelectField<T extends string>({
   label,
   value,
@@ -81,6 +82,7 @@ export function CampaignFormModal({
 
   useEffect(() => {
     if (!open) return
+    /** Close the modal on Escape. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -93,6 +95,7 @@ export function CampaignFormModal({
   const setRule = <K extends keyof CampaignRules>(key: K, value: CampaignRules[K]) =>
     setRules((prev) => ({ ...prev, [key]: value }))
 
+  /** Hand the built campaign to onSubmit (edits keep the id) and close; blank name is a no-op. */
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const trimmed = name.trim()

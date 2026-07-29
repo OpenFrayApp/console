@@ -161,6 +161,7 @@ export function CustomSpellForm({
 
   useEffect(() => {
     if (!open) return
+    /** Close the modal on Escape. */
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -168,6 +169,7 @@ export function CustomSpellForm({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  /** Merge a partial update into the draft. */
   const patch = (p: Partial<SpellDraft>) => setD((prev) => ({ ...prev, ...p }))
 
   const level = Number(d.level)
@@ -178,6 +180,7 @@ export function CustomSpellForm({
     ? [...CANTRIP_TIERS]
     : Array.from({ length: 9 - level }, (_, i) => level + 1 + i)
 
+  /** Build and submit the spell (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
     if (!d.name.trim()) return
     const spell = buildSpell(d)

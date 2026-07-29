@@ -53,6 +53,7 @@ interface RolledDamage {
   result: RollResult
 }
 
+/** Roll each of the action's damage formulas (crit-aware); a negative total clamps to 0. */
 function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledDamage[] {
   return (action.damage ?? []).map((d) => {
     const result = roll(d.formula, { kind: 'damage', crit })
@@ -134,6 +135,7 @@ export function GroupSaveModal({
   )
 }
 
+/** Dialog shell for the resolvers; Escape or a click outside closes it. */
 function Modal({
   title,
   subtitle,
@@ -176,6 +178,7 @@ function Modal({
   )
 }
 
+/** The modal's subtitle: to-hit or save DC, reach/range in feet, and the damage dice. */
 function metaLine(action: Action): string {
   const bits: string[] = []
   if (action.toHit != null) bits.push(`${signed(action.toHit)} to hit`)
@@ -203,6 +206,7 @@ const DAMAGE_TONE: Partial<Record<DamageType, string>> = {
   radiant: 'bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200',
 }
 
+/** Colored pill for one damage component: amount, type, and any resist/immune/vuln note. */
 function DamagePill({
   type,
   amount,
@@ -241,6 +245,7 @@ const QUICK_CONDITIONS: ConditionName[] = [
 
 type DurationChoice = 'manual' | 'untilSource' | 'r1' | 'r10'
 
+/** Turn a duration choice into its structured EffectDuration. */
 function toDuration(choice: DurationChoice): EffectDuration {
   switch (choice) {
     case 'untilSource':
@@ -301,10 +306,12 @@ export function ConditionChips({
   )
 }
 
+/** All combatants the attacker can target: everyone except itself and the dead. */
 function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combatant[] {
   return combatants.filter((c) => c.combatantId !== attacker.combatantId && c.status !== 'dead')
 }
 
+/** The attack branch: pick one target, roll to-hit with effects, then apply editable damage. */
 function AttackResolver({
   attacker,
   action,
@@ -348,6 +355,7 @@ function AttackResolver({
   const target = targets.find((t) => selected.has(t.combatantId)) ?? null
   const title = attacker ? `${nameOf(attacker)} · ${action.name}` : `Cast ${action.name}`
 
+  /** Roll the effect-aware attack, decide hit/crit, pre-roll damage, and log one merged entry. */
   const doRoll = () => {
     if (!target) return
     track(EVENTS.attackRolled)
@@ -412,6 +420,7 @@ function AttackResolver({
     ? attack.result.crit || (!attack.result.fumble && attack.result.total >= acOf(attack.target))
     : false
 
+  /** Apply the edited damage to the target, then prompt a concentration check or close. */
   const apply = () => {
     if (!attack) return
     const amount = toNum(damage)
@@ -425,6 +434,7 @@ function AttackResolver({
     else onClose()
   }
 
+  /** Add the chosen condition to the attack's target, keyed to the attacker as source. */
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     if (!attack) return
     dispatch({
@@ -631,6 +641,7 @@ interface SaveRow {
   edited?: string
 }
 
+/** Multi-target save / area-damage resolution; with no action it is the standalone Group save. */
 export function SaveResolver({
   attacker,
   action,
@@ -683,6 +694,7 @@ export function SaveResolver({
     : 'Group save'
   const selectedTargets = targets.filter((t) => selected.has(t.combatantId))
 
+  /** Toggle a target in the selection. */
   const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev)
@@ -707,11 +719,13 @@ export function SaveResolver({
     return damageForResult(genericBase, result, onSave, evasion)
   }
 
+  /** The damage input's value: the GM's edit, else the computed default for the row's result. */
   const damageValue = (target: Combatant): string => {
     const row = rows[target.combatantId]
     return row?.edited ?? String(defaultDamage(target, row?.result))
   }
 
+  /** Roll damage once and each monster's save; PC rows wait on the GM; no-save rows auto-fail. */
   const rollSaves = () => {
     track(action ? EVENTS.saveRolled : EVENTS.groupSaveRolled)
     const request = { ability, dc: toNum(dc) || 10, onSave }
@@ -751,12 +765,15 @@ export function SaveResolver({
     onUse?.()
   }
 
+  /** Record a row's save/fail and drop the GM's damage edit so the default recomputes. */
   const setResult = (id: string, result: SaveResult) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], result, edited: undefined } }))
 
+  /** Store the GM's damage override for the row. */
   const setEdited = (id: string, edited: string) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], edited } }))
 
+  /** Apply each resolved row's damage, then queue concentration prompts or close. */
   const apply = () => {
     const prompts: { combatant: Combatant; dc: number; damage: number }[] = []
     for (const c of selectedTargets) {
@@ -778,6 +795,7 @@ export function SaveResolver({
       ? selectedTargets.filter((c) => rows[c.combatantId]?.result === 'fail')
       : selectedTargets
 
+  /** Add the chosen condition to every affected target. */
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     const affected = affectedTargets()
     if (affected.length === 0) return
@@ -798,6 +816,7 @@ export function SaveResolver({
   // advantage-against) offers to apply it to the failed targets — the resolver's
   // condition chips can't express these.
   const spellEffect = spell ? spellEffectFor(spell) : null
+  /** Apply the spell's modelled effect to each affected target, with this save as its escape. */
   const applySpellEffect = () => {
     if (!spellEffect || !spell) return
     const affected = affectedTargets()
@@ -821,6 +840,7 @@ export function SaveResolver({
     setNote(`${spell.name} → ${affected.map(nameOf).join(', ')}`)
   }
 
+  /** Clear one pending concentration prompt (optionally breaking it); close when none remain. */
   const resolveConc = (combatantId: string, broke = false) => {
     if (broke) dispatch({ type: 'endConcentration', id: combatantId })
     setPending((prev) => {

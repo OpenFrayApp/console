@@ -63,6 +63,7 @@ function skillLabel(skill: string): string {
   return skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
 }
 
+/** A recharge as its stat-block tag: "Recharge 5–6", "N/Day", or "N/Round"; none → undefined. */
 function rechargeLabel(recharge: Recharge | undefined): string | undefined {
   if (!recharge) return undefined
   if (recharge.type === 'dice') {
@@ -113,6 +114,7 @@ export function DefensesAndSenses({
   languages?: string
   gear?: string
 }) {
+  /** A [label, value] row if the value is non-empty; empty values contribute no row. */
   const present = (label: string, value?: string): [string, string][] =>
     value && value.length ? [[label, value]] : []
   // Capitalize defenses/languages at render so lowercased source data (e.g. ToB3)
@@ -152,6 +154,7 @@ const ABILITY_GROUPS: Ability[][] = [
 /** Roll a d20 + this modifier when `onCheck` is supplied (i.e. in combat). */
 export type OnCheck = (label: string, modifier: number, kind: 'save' | 'check') => void
 
+/** The value as a button rolling d20 + modifier when `onCheck` is set; plain text otherwise. */
 function RollableValue({
   label,
   modifier,
@@ -195,6 +198,7 @@ export function AbilityTable({
   onCheck?: OnCheck
 }) {
   const showSaves = saves !== undefined
+  /** The save bonus for an ability, falling back to the bare ability modifier. */
   const saveFor = (a: Ability): number => saves?.[a] ?? abilityMod(abilities[a])
   return (
     <div className="flex gap-3 text-sm">
@@ -253,6 +257,7 @@ function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: On
   )
 }
 
+/** The Skills table, one rollable bonus per skill; renders nothing when there are none. */
 function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCheck }) {
   const entries = Object.entries(skills)
   if (entries.length === 0) return null
@@ -292,6 +297,7 @@ interface Entry {
   note?: string
 }
 
+/** A titled run of "**Name.** text" entries rendered as markdown; hidden when empty. */
 function Section({
   title,
   items,
@@ -493,6 +499,7 @@ function ActionSection({
 
 const LEVEL_ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
 
+/** A spell group's usage heading: "At Will", "1st Level", or "N/Day Each". */
 function usageLabel(group: SpellGroup): string {
   if (group.usage.type === 'atWill') return 'At Will'
   if (group.usage.type === 'slots') {
@@ -501,6 +508,7 @@ function usageLabel(group: SpellGroup): string {
   return `${group.usage.per}/Day Each`
 }
 
+/** The italic intro line: casting ability, save DC, and spell attack bonus, when known. */
 function spellcastingHeader(sc: Spellcasting): string {
   const bits: string[] = []
   if (sc.ability) bits.push(`${sc.ability.toUpperCase()} as the spellcasting ability`)
@@ -538,6 +546,7 @@ function SpellcastingSection({
     cancelClose,
   } = useHoverCard<Spell>()
 
+  /** Open the spell hover card anchored to its button — only when the ref resolves. */
   const showPreview = (spell: SpellRef, el: HTMLElement) => {
     const found = resolveSpell?.(spell.ref)
     if (found) openPreview(found, el)
@@ -625,6 +634,7 @@ function SpellcastingSection({
   )
 }
 
+/** The full creature stat block; in combat the on* callbacks make HP, actions, and spells live. */
 export function CreatureStatBlock({
   creature,
   hp,
