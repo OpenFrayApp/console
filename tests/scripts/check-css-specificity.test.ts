@@ -22,11 +22,11 @@ function run(cwd: string): { status: number; output: string } {
 }
 
 /** Create the two stylesheet fixtures the script reads. */
-function styles(global: string, wakingGarden = ''): void {
+function styles(global: string, book = ''): void {
   const stylesDir = join(dir, 'site/src/styles')
   mkdirSync(stylesDir, { recursive: true })
   writeFileSync(join(stylesDir, 'global.css'), global)
-  writeFileSync(join(stylesDir, 'waking-garden.css'), wakingGarden)
+  writeFileSync(join(stylesDir, 'book.css'), book)
 }
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
@@ -62,11 +62,11 @@ describe('check-css-specificity', () => {
     expect(status).toBe(0)
   })
 
-  it('checks the waking-garden stylesheet too', () => {
+  it('checks the book stylesheet too', () => {
     dir = mkdtempSync(join(tmpdir(), 'css-'))
     styles(':where(.doc) :where(p) { margin: 0; }', '.book-body td { padding: 0; }')
     const { status, output } = run(dir)
     expect(status).toBe(1)
-    expect(output).toContain('waking-garden.css')
+    expect(output).toContain('book.css')
   })
 })
