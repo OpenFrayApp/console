@@ -409,6 +409,8 @@ Advantage/Disadvantage are capitalized there without a single exception.
   Fire spell produces a wall of fire. (The 2014 italic-lowercase style is retired.)
 - **Inline subheads take a period, not a colon**, and are set in bold: **Terrain.** not
   **Terrain:**. A stat-block data field is different — that's a bold label and a value.
+  In chapter prose they belong only to list items and Running it notes: a freestanding
+  rule gets its own heading or a Note aside, never a bold-led paragraph.
 - **Introduce every vertical list with a complete sentence ending in a colon.** Capitalize
   each item; punctuate items only when they are complete sentences.
 
