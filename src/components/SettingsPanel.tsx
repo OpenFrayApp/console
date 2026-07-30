@@ -22,8 +22,38 @@ const GROUPS: { key: 'core' | 'openfray' | 'other'; label: string }[] = [
 // homebrew can be either edition.
 const CUSTOM_BADGE = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'
 
-const IMPORTER_URL =
+const IMPORTER_CHROME_URL =
   'https://chromewebstore.google.com/detail/openfray-importer/cjooflanhdpfddpppllaelhlfpdinjfk'
+const IMPORTER_FIREFOX_URL = 'https://addons.mozilla.org/en-US/firefox/addon/openfray-importer/'
+
+/** One "get the importer" button — the same store link for every browser we ship to. */
+function ImporterLink({ href, children }: { href: string; children: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      onClick={() => track(EVENTS.importerClicked)}
+      className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="h-4 w-4"
+      >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+      {children}
+    </a>
+  )
+}
 
 /**
  * App settings, available to every user (anonymous included). Settings persist in
@@ -176,29 +206,10 @@ export function SettingsPanel({
               OpenFray Importer turns a D&amp;D Beyond creature page into an OpenFray creature you
               can add to your library, so you never retype a stat block.
             </p>
-            <a
-              href={IMPORTER_URL}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => track(EVENTS.importerClicked)}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="h-4 w-4"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Get it for Chrome
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <ImporterLink href={IMPORTER_CHROME_URL}>Get it for Chrome</ImporterLink>
+              <ImporterLink href={IMPORTER_FIREFOX_URL}>Get it for Firefox</ImporterLink>
+            </div>
           </section>
         </div>
       </div>
