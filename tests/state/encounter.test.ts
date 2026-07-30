@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { applyDamage } from '../../src/combat/resources.ts'
-import { condition } from '../../src/combat/effects.ts'
+import { condition, counter, setCount } from '../../src/combat/effects.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 
 function creature(): Creature {
@@ -349,6 +349,32 @@ describe('encounter game-log events', () => {
     expect(e.log.some((l) => l.category === 'condition' && l.message === 'a is Prone')).toBe(true)
     e = encounterReducer(e, { type: 'update', id: 'a', update: (c) => ({ ...c, effects: [] }) })
     expect(e.log.some((l) => l.message === 'a is no longer Prone')).toBe(true)
+  })
+
+  it('logs every step of a counter, which keeps its id as its tally moves', () => {
+    const depth = setCount(counter('Depth'), 2)
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [depth] }),
+    })
+    expect(e.log.some((l) => l.message === 'a gains Depth')).toBe(true)
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [setCount(depth, 3)] }),
+    })
+    expect(e.log.some((l) => l.category === 'condition' && l.message === 'a: Depth 2 → 3')).toBe(
+      true,
+    )
+    // Re-applying the same tally is not news.
+    const before = e.log.length
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [setCount(depth, 3)] }),
+    })
+    expect(e.log.length).toBe(before)
   })
 
   it('logs concentration starting', () => {

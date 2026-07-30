@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { EffectBadge } from '../../src/components/EffectBadge.tsx'
-import { condition, reminder } from '../../src/combat/effects.ts'
+import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
 
 afterEach(cleanup)
 
@@ -30,6 +30,12 @@ describe('EffectBadge', () => {
     expect(screen.getByText('Paralyzed')).toBeInTheDocument()
     expect(screen.queryByText(/save DC/)).toBeNull()
     expect(screen.getByTitle('Paralyzed — WIS save DC 15 (EoT)')).toBeInTheDocument()
+  })
+
+  it('carries a counter’s tally on the badge, so the row shows where it stands', () => {
+    render(<EffectBadge effect={setCount(counter('Depth'), 4)} />)
+    expect(screen.getByText('Depth 4')).toBeInTheDocument()
+    expect(screen.getByTitle('Depth — at 4')).toBeInTheDocument()
   })
 
   it('previews the condition rules on hover', () => {

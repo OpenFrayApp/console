@@ -6,7 +6,7 @@ import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
-import { survivesLongRest } from '../combat/effects.ts'
+import { counterOf, survivesLongRest } from '../combat/effects.ts'
 import { setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
 import { assessEncounter } from '../combat/difficulty.ts'
@@ -109,6 +109,16 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
         e.icon === 'condition' ? `${name} is no longer ${e.name}` : `${name}: ${e.name} ends`,
       sourceId,
     })
+  }
+
+  // A counter keeps its id as its tally moves, so the add/remove passes above can't
+  // see it — the whole point of one is the number, so log every step of it.
+  const countsBefore = new Map(before.effects.map((e) => [e.id, counterOf(e)]))
+  for (const e of after.effects) {
+    const was = countsBefore.get(e.id)
+    const now = counterOf(e)
+    if (was == null || now == null || was === now) continue
+    out.push({ category: 'condition', message: `${name}: ${e.name} ${was} → ${now}`, sourceId })
   }
 
   if (!before.concentration && after.concentration) {

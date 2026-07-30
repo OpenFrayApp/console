@@ -7,7 +7,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { CombatantControls } from '../../src/components/CombatantControls.tsx'
-import { condition } from '../../src/combat/effects.ts'
+import { condition, counter, setCount } from '../../src/combat/effects.ts'
 
 function creature(): Creature {
   return {
@@ -165,6 +165,79 @@ describe('CombatantControls', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Clear effects' }))
       const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
       expect(call.update(withEffects()).effects).toEqual([])
+    })
+
+    const withCounter = (start: number): MonsterCombatant => ({
+      ...monster(),
+      effects: [setCount(counter('Depth'), start)],
+    })
+
+    /** The effects the update handler in the first `update` dispatch produces. */
+    const effectsAfter = (dispatch: ReturnType<typeof vi.fn>, before: MonsterCombatant) => {
+      const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
+      return call.update(before).effects
+    }
+
+    it('raises and lowers a counter from its row', () => {
+      const dispatch = vi.fn()
+      const before = withCounter(3)
+      render(
+        <CombatantControls combatant={before} round={1} dispatch={dispatch} onRoll={() => {}} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Raise Depth' }))
+      expect(effectsAfter(dispatch, before)[0].duration).toEqual({ type: 'counter', count: 4 })
+
+      dispatch.mockClear()
+      fireEvent.click(screen.getByRole('button', { name: 'Lower Depth' }))
+      expect(effectsAfter(dispatch, before)[0].duration).toEqual({ type: 'counter', count: 2 })
+    })
+
+    it('resets a counter to zero while keeping it on the combatant', () => {
+      const dispatch = vi.fn()
+      const before = withCounter(5)
+      render(
+        <CombatantControls combatant={before} round={1} dispatch={dispatch} onRoll={() => {}} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
+      const effects = effectsAfter(dispatch, before)
+      expect(effects).toHaveLength(1)
+      expect(effects[0].duration).toEqual({ type: 'counter', count: 0 })
+    })
+
+    it('can’t take a counter below zero — Lower and Reset are disabled at 0', () => {
+      render(
+        <CombatantControls
+          combatant={withCounter(0)}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+        />,
+      )
+      expect(screen.getByRole('button', { name: 'Lower Depth' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Raise Depth' })).toBeEnabled()
+    })
+
+    it('shows the tally in the row and offers no counter buttons on other effects', () => {
+      render(
+        <CombatantControls
+          combatant={withEffects()}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+        />,
+      )
+      expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
+      cleanup()
+      render(
+        <CombatantControls
+          combatant={withCounter(4)}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+        />,
+      )
+      expect(screen.getAllByRole('listitem')[0].textContent).toContain('at 4')
     })
 
     it('offers nothing to clear when there are no effects', () => {

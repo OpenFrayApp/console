@@ -19,7 +19,7 @@ import {
 import { saveBonus } from '../combat/masssave.ts'
 import { nameOf } from '../combat/combatant.ts'
 import { signed } from '../compendium/format.ts'
-import { describeDuration } from '../combat/effects.ts'
+import { counterOf, describeDuration, setCount } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
@@ -85,6 +85,17 @@ export function CombatantControls({
       type: 'update',
       id,
       update: (c) => ({ ...c, effects: c.effects.filter((e) => e.id !== effectId) }),
+    })
+
+  /** Replace one effect on this combatant by id, leaving the rest in place. */
+  const changeEffect = (effectId: string, change: (e: Effect) => Effect) =>
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({
+        ...c,
+        effects: c.effects.map((e) => (e.id === effectId ? change(e) : e)),
+      }),
     })
 
   // Alphabetical, so a row keeps its place as effects come and go.
@@ -250,6 +261,7 @@ export function CombatantControls({
           <ul className="divide-y divide-slate-200/80 dark:divide-slate-800/80">
             {sortedEffects.map((e) => {
               const save = saveEndsOf(e)
+              const count = counterOf(e)
               return (
                 <li key={e.id} className="flex items-center justify-between gap-2 py-1 text-xs">
                   <span className="min-w-0 text-slate-700 dark:text-slate-200">
@@ -277,6 +289,36 @@ export function CombatantControls({
                       <button type="button" onClick={() => rollSaveEnds(save)} className={BTN}>
                         Roll save
                       </button>
+                    )}
+                    {count !== null && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => changeEffect(e.id, (x) => setCount(x, count - 1))}
+                          disabled={count <= 0}
+                          aria-label={`Lower ${e.name}`}
+                          className={`${BTN} disabled:opacity-50`}
+                        >
+                          −1
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => changeEffect(e.id, (x) => setCount(x, count + 1))}
+                          aria-label={`Raise ${e.name}`}
+                          className={BTN}
+                        >
+                          +1
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => changeEffect(e.id, (x) => setCount(x, 0))}
+                          disabled={count === 0}
+                          title={`Set ${e.name} back to 0, keeping it on ${name}`}
+                          className={`${BTN} disabled:opacity-50`}
+                        >
+                          Reset
+                        </button>
+                      </>
                     )}
                     <button
                       type="button"

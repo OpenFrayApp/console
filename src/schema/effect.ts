@@ -57,12 +57,17 @@ export interface EffectModifier {
 }
 
 export type EffectDurationType =
-  'consumeOnRoll' | 'rounds' | 'untilSourceTurn' | 'saveEnds' | 'manual'
+  'consumeOnRoll' | 'rounds' | 'untilSourceTurn' | 'saveEnds' | 'manual' | 'counter'
 
 export interface EffectDuration {
   type: EffectDurationType
   /** For `rounds`: how many rounds remain. */
   rounds?: number | null
+  /**
+   * For `counter`: the current tally, never below zero. Nothing in the app raises
+   * or lowers it — the GM does, from the Applied effects list.
+   */
+  count?: number
   /** For `saveEnds`: the save that clears it. */
   save?: { ability: Ability; dc: number } | null
   /**

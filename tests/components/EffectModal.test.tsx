@@ -218,6 +218,62 @@ describe('EffectModal', () => {
     expect(onApply).not.toHaveBeenCalled()
   })
 
+  it('turns the reminder into a counter starting at zero, rather than adding both', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'counter' } })
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'Depth' },
+    })
+    clickApply(dialog)
+    expect(onApply).toHaveBeenCalledOnce()
+    expect(onApply.mock.calls[0][0]).toMatchObject({
+      name: 'Depth',
+      icon: 'counter',
+      modifier: null,
+      duration: { type: 'counter', count: 0 },
+    })
+  })
+
+  it('makes an ordinary reminder for every other duration', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'Oil-soaked' },
+    })
+    clickApply(dialog)
+    expect(onApply.mock.calls[0][0]).toMatchObject({
+      icon: 'reminder',
+      duration: { type: 'manual' },
+    })
+  })
+
+  it('needs a name to make a counter — an empty reminder applies nothing', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'counter' } })
+    clickApply(dialog)
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('leaves anything staged beside a counter lasting until removed', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'counter' } })
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'Spore Load' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
+    clickApply(dialog)
+    const [poisoned, tally] = onApply.mock.calls.map((c) => c[0])
+    expect(poisoned).toMatchObject({ name: 'Poisoned', duration: { type: 'manual' } })
+    expect(tally).toMatchObject({ name: 'Spore Load', duration: { type: 'counter', count: 0 } })
+  })
+
   it('Cancel discards staged changes without applying', () => {
     const onApply = vi.fn()
     render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)

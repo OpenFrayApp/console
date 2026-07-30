@@ -6,6 +6,8 @@ import {
   advantageAgainst,
   badgeLabel,
   condition,
+  counter,
+  counterOf,
   describeDuration,
   disadvantageOn,
   flatBonus,
@@ -13,6 +15,7 @@ import {
   modifierEffect,
   reminder,
   saveEnds,
+  setCount,
   survivesLongRest,
 } from '../../src/combat/effects.ts'
 
@@ -140,6 +143,35 @@ describe('saveEnds', () => {
   })
 })
 
+describe('counter', () => {
+  it('is a reminder-only tally starting at zero', () => {
+    const e = counter('Depth')
+    expect(e.name).toBe('Depth')
+    expect(e.icon).toBe('counter')
+    expect(e.modifier).toBeNull()
+    expect(e.duration).toEqual({ type: 'counter', count: 0 })
+  })
+
+  it('reads its tally back, and nothing from a non-counter', () => {
+    expect(counterOf(setCount(counter('Depth'), 5))).toBe(5)
+    expect(counterOf(counter('Depth'))).toBe(0)
+    expect(counterOf(condition('Prone'))).toBeNull()
+    expect(counterOf(reminder('Hex', 'note'))).toBeNull()
+  })
+
+  it('setCount keeps the tally whole and never negative, and leaves other effects alone', () => {
+    const e = setCount(counter('Depth'), 2)
+    expect(counterOf(setCount(e, 6))).toBe(6)
+    expect(counterOf(setCount(e, -1))).toBe(0)
+    expect(counterOf(setCount(e, 2.7))).toBe(2)
+    expect(counterOf(setCount(e, Number.NaN))).toBe(0)
+    // The original is untouched — the reducer swaps in the returned copy.
+    expect(counterOf(e)).toBe(2)
+    const prone = condition('Prone')
+    expect(setCount(prone, 4)).toBe(prone)
+  })
+})
+
 describe('survivesLongRest', () => {
   it('keeps manual and ≥8h effects, clears short and combat-scoped ones', () => {
     expect(survivesLongRest(condition('Prone', { duration: { type: 'manual' } }))).toBe(true)
@@ -151,12 +183,22 @@ describe('survivesLongRest', () => {
     ).toBe(false)
     expect(survivesLongRest(saveEnds('Web', { ability: 'str', dc: 12 }))).toBe(false)
   })
+
+  it('keeps a counter — a rest doesn’t settle a tally, the GM does', () => {
+    expect(survivesLongRest(setCount(counter('Depth'), 4))).toBe(true)
+    expect(survivesLongRest(counter('Spore Load'))).toBe(true)
+  })
 })
 
 describe('helpers', () => {
   it('badgeLabel prefers the note, falling back to the name', () => {
     expect(badgeLabel(reminder('Hex', 'Hex: +1d6 necrotic'))).toBe('Hex: +1d6 necrotic')
     expect(badgeLabel(condition('Stunned'))).toBe('Stunned')
+  })
+
+  it('badgeLabel puts a counter’s tally on the badge — the number is the point of it', () => {
+    expect(badgeLabel(setCount(counter('Depth'), 3))).toBe('Depth 3')
+    expect(badgeLabel(counter('Spore Load'))).toBe('Spore Load 0')
   })
 
   it('isReminderOnly distinguishes mechanical effects from reminders', () => {
@@ -216,5 +258,8 @@ describe('helpers', () => {
       describeDuration({ ...reminder('Disguise Self', 'Disguised'), durationNote: '1 hour' }),
     ).toBe('1 hour')
     expect(describeDuration(condition('Prone'))).toBe('until removed')
+    // A counter has no clock to report, so it reports where it stands.
+    expect(describeDuration(setCount(counter('Depth'), 4))).toBe('at 4')
+    expect(describeDuration(counter('Depth'))).toBe('at 0')
   })
 })

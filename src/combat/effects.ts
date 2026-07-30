@@ -15,7 +15,8 @@ import type {
  * Constructors for the ~6 consequence shapes, all expressed as one Effect type —
  * conditions are Effects too, so there is one system, not two. We model the
  * board state a class feature leaves behind, never the feature itself. Anything
- * exotic uses `reminder()`, the escape hatch.
+ * exotic uses `reminder()`, the escape hatch, or `counter()` when the thing being
+ * remembered is a number that climbs.
  */
 
 const newId = (): string => crypto.randomUUID()
@@ -177,9 +178,45 @@ export function saveEnds(
   }
 }
 
-/** What to print on the badge: the reminder note if present, else the name. */
+/**
+ * A tally the GM keeps by hand — Depth, Spore Load, corruption, a doom clock.
+ * It holds a number instead of a timer: nothing in the app raises or lowers it,
+ * no clock ticks it, and it ends when the GM clears it. The escape hatch for
+ * anything a table counts that the rules engine deliberately doesn't know about.
+ */
+export function counter(name: string, opts: EffectOpts = {}): Effect {
+  return {
+    id: newId(),
+    name,
+    icon: 'counter',
+    source: opts.source,
+    modifier: null,
+    duration: { type: 'counter', count: 0 },
+    note: opts.note,
+  }
+}
+
+/** A tally is a whole number and never negative. */
+function clampCount(value: number): number {
+  return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0
+}
+
+/** The tally an effect carries, or `null` when it isn't a counter. */
+export function counterOf(effect: Effect): number | null {
+  return effect.duration.type === 'counter' ? (effect.duration.count ?? 0) : null
+}
+
+/** Set a counter's tally, floored at zero; anything else is returned untouched. */
+export function setCount(effect: Effect, count: number): Effect {
+  if (effect.duration.type !== 'counter') return effect
+  return { ...effect, duration: { ...effect.duration, count: clampCount(count) } }
+}
+
+/** What to print on the badge: the reminder note if present, else the name — with a counter's tally after it. */
 export function badgeLabel(effect: Effect): string {
-  return effect.note ?? effect.name
+  const label = effect.note ?? effect.name
+  const count = counterOf(effect)
+  return count === null ? label : `${label} ${count}`
 }
 
 /** A reminder-only effect carries no mechanical modifier. */
@@ -213,6 +250,8 @@ export function describeDuration(effect: Effect, sourceName?: string): string {
       }
       return `${rounds} round${rounds === 1 ? '' : 's'} left`
     }
+    case 'counter':
+      return `at ${d.count ?? 0}`
     case 'consumeOnRoll':
       return 'until its next roll'
     case 'untilSourceTurn':
@@ -228,11 +267,13 @@ const LONG_REST_ROUNDS = 4800
 /**
  * Does an effect outlast a long rest? Combat-scoped durations (consume-on-roll,
  * until-source-turn, save-ends) and short timed `rounds` effects clear; a GM-managed
- * `manual` effect or an explicitly ≥8h `rounds` duration survives.
+ * `manual` or `counter` effect, or an explicitly ≥8h `rounds` duration, survives.
+ * A counter tracks something a rest doesn't settle — whether the night lowers it is
+ * the GM's call, made with the +/− buttons.
  */
 export function survivesLongRest(effect: Effect): boolean {
   const d = effect.duration
-  if (d.type === 'manual') return true
+  if (d.type === 'manual' || d.type === 'counter') return true
   if (d.type === 'rounds') return (d.rounds ?? 0) >= LONG_REST_ROUNDS
   return false
 }

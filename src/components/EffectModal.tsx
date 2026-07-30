@@ -11,7 +11,7 @@ import type {
   EffectDuration,
   EffectMode,
 } from '../schema/effect.ts'
-import { condition, modifierEffect, reminder } from '../combat/effects.ts'
+import { condition, counter, modifierEffect, reminder } from '../combat/effects.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { track as recordEvent, EVENTS } from '../lib/analytics.ts'
 
@@ -36,7 +36,8 @@ const CONDITIONS: ConditionName[] = [
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
-type DurChoice = 'manual' | 'consume' | 'save' | '1r' | '1m' | '10m' | '1h' | '8h' | '24h'
+type DurChoice =
+  'manual' | 'consume' | 'save' | 'counter' | '1r' | '1m' | '10m' | '1h' | '8h' | '24h'
 
 // Timed durations in combat rounds (6s each), phrased the way spells are.
 const TIMED_ROUNDS: Partial<Record<DurChoice, number>> = {
@@ -58,6 +59,7 @@ const DURATION_OPTIONS: { value: DurChoice; label: string }[] = [
   { value: '8h', label: '8 hours' },
   { value: '24h', label: '24 hours' },
   { value: 'save', label: 'Save ends' },
+  { value: 'counter', label: 'Counter' },
 ]
 
 const APPLIES_TEXT: Record<EffectApplies, string> = {
@@ -170,6 +172,8 @@ export function EffectModal({
       }
     const rounds = TIMED_ROUNDS[dur]
     if (rounds != null) return { type: 'rounds', rounds }
+    // Counter falls through on purpose: the tally is its own effect, and anything
+    // else staged alongside it has no timer to inherit, so it lasts until removed.
     return { type: 'manual' }
   }
 
@@ -193,7 +197,8 @@ export function EffectModal({
 
   // The only apply path. Commits everything staged at once, with the chosen duration:
   // conditions (newly-checked added, unchecked removed), the modifier if one was built,
-  // and the reminder if one was typed.
+  // and the reminder if one was typed — which the Counter duration turns into a tally
+  // instead, since a counter is a reminder that happens to hold a number.
   const apply = () => {
     const duration = makeDuration()
     const current = new Set(conditionNames())
@@ -227,7 +232,7 @@ export function EffectModal({
     const text = note.trim()
     if (text) {
       recordEvent(EVENTS.effectApplied)
-      onApply(reminder(text, text, { duration }))
+      onApply(dur === 'counter' ? counter(text) : reminder(text, text, { duration }))
     }
     setOpen(false)
   }
@@ -330,7 +335,9 @@ export function EffectModal({
                   <input
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="e.g. Hex: +1d6 necrotic"
+                    placeholder={
+                      dur === 'counter' ? 'e.g. Depth, Corruption' : 'e.g. Hex: +1d6 necrotic'
+                    }
                     aria-label="Custom reminder"
                     className={`${FIELD_W} w-full`}
                   />
