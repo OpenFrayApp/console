@@ -76,6 +76,8 @@ describe('EVENTS', () => {
       librarySortChanged: 'Library sort changed',
       themeToggled: 'Theme toggled',
       importerClicked: 'Importer clicked',
+      docsOpened: 'Handbook opened',
+      bookOpened: 'Book opened',
     })
   })
 

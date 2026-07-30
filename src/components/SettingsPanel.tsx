@@ -119,7 +119,22 @@ export function SettingsPanel({
                           checked={enabledLibraries.includes(lib.id)}
                           onChange={() => toggleLibrary(lib.id)}
                         />
-                        <span>{lib.label}</span>
+                        {lib.bookUrl ? (
+                          <a
+                            href={lib.bookUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              track(EVENTS.bookOpened)
+                            }}
+                            className="underline decoration-dotted underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          >
+                            {lib.label}
+                          </a>
+                        ) : (
+                          <span>{lib.label}</span>
+                        )}
                         <span className="flex items-center gap-1.5">
                           <span className={`${BADGE} ${librarySourceBadgeClass(lib.id)}`}>
                             {lib.shortLabel}

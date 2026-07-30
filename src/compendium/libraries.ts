@@ -27,6 +27,9 @@ export interface Library {
   creaturesFile: string
   /** Absent for creatures-only libraries (e.g. a bestiary like Tome of Beasts). */
   spellsFile?: string
+  /** Where this library is published to read, for the libraries we write ourselves.
+   *  Absent for third-party books, which we reference but don't host. */
+  bookUrl?: string
 }
 
 export const LIBRARIES: Library[] = [
@@ -85,6 +88,7 @@ export const LIBRARIES: Library[] = [
     group: 'openfray',
     edition: '5.5',
     creaturesFile: 'brood-and-bloom-creatures.json',
+    bookUrl: '/brood-and-bloom/',
   },
   {
     id: 'openfray-waking-garden',
@@ -94,6 +98,7 @@ export const LIBRARIES: Library[] = [
     group: 'openfray',
     edition: '5.5',
     creaturesFile: 'waking-garden-creatures.json',
+    bookUrl: '/the-waking-garden/',
   },
 ]
 

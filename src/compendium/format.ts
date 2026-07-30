@@ -2,6 +2,10 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Senses } from '../schema/primitives.ts'
+import { LIBRARIES } from './libraries.ts'
+
+/** Where a first-party library is published, so attribution links to the book itself. */
+const bookUrl = (id: string): string | undefined => LIBRARIES.find((l) => l.id === id)?.bookUrl
 
 /** A sense range, stored in feet, printed the way a stat block does: whole miles as
  *  miles ("Tremorsense 1 mile"), everything else as feet. */
@@ -154,13 +158,13 @@ export function sourceInfo(source: string): SourceInfo {
       return {
         ruleset: 'Brood & Bloom',
         license: 'CC-BY-4.0',
-        url: 'https://openfray.app',
+        url: bookUrl(source),
       }
     case 'openfray-waking-garden':
       return {
         ruleset: 'The Waking Garden',
         license: 'CC-BY-4.0',
-        url: 'https://openfray.app',
+        url: bookUrl(source),
       }
     case 'custom':
       return { ruleset: 'Custom (you)' }

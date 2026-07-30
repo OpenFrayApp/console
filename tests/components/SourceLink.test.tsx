@@ -9,11 +9,27 @@ import { SourceLink } from '../../src/components/SourceLink.tsx'
 afterEach(cleanup)
 
 describe('SourceLink', () => {
-  it('shows the ruleset as plain text — no link, no license', () => {
+  it('links the ruleset to its source, and never shows the license', () => {
     render(<SourceLink source="srd-5.2" />)
-    expect(screen.getByText(/Basic Rules 2024/)).toBeInTheDocument()
-    expect(screen.queryByRole('link')).toBeNull()
+    const link = screen.getByRole('link', { name: /Basic Rules 2024/ })
+    expect(link).toHaveAttribute('href', 'https://www.dndbeyond.com/srd')
+    // A new tab: following a source mid-fight must not take the board off the screen.
+    expect(link).toHaveAttribute('target', '_blank')
     expect(screen.queryByText(/License/)).toBeNull()
+  })
+
+  it('links one of our own books to the book itself, not to the site root', () => {
+    render(<SourceLink source="openfray-brood-and-bloom" />)
+    expect(screen.getByRole('link', { name: /Brood & Bloom/ })).toHaveAttribute(
+      'href',
+      '/brood-and-bloom/',
+    )
+  })
+
+  it('leaves custom content unlinked — there is nowhere to send the reader', () => {
+    render(<SourceLink source="custom" />)
+    expect(screen.getByText(/Custom \(you\)/)).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
   it('folds the page into the ruleset parens', () => {

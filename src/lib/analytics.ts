@@ -58,6 +58,8 @@ export const EVENTS = {
   librarySortChanged: 'Library sort changed',
   themeToggled: 'Theme toggled',
   importerClicked: 'Importer clicked',
+  docsOpened: 'Handbook opened',
+  bookOpened: 'Book opened',
 } as const
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS]

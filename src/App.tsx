@@ -162,6 +162,27 @@ function MoonIcon() {
 }
 
 /** Gear icon (settings button). */
+/** Question mark in a circle — the handbook link. Deliberately not BookIcon, which
+ *  already means the compendium in the view toggle. */
+function HelpIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9a2.5 2.5 0 0 1 4.9.6c0 1.7-2.5 2.5-2.5 2.5" />
+      <path d="M12 17h.01" />
+    </svg>
+  )
+}
+
 function GearIcon() {
   return (
     <svg
@@ -835,6 +856,17 @@ function App() {
             )}
             <ViewToggle view={view} onChange={handleViewChange} />
             <AccountControl onSignIn={() => setAuthOpen(true)} />
+            <a
+              href="/docs/"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => track(EVENTS.docsOpened)}
+              aria-label="Handbook"
+              title="Handbook"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <HelpIcon />
+            </a>
             <button
               type="button"
               onClick={() => {
