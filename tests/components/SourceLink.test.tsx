@@ -27,7 +27,7 @@ describe('SourceLink', () => {
   })
 
   it('shows an OpenFray library (Brood & Bloom) by name, not its id', () => {
-    render(<SourceLink source="openfray-brood-bloom" />)
+    render(<SourceLink source="openfray-brood-and-bloom" />)
     expect(screen.getByText(/Brood & Bloom/)).toBeInTheDocument()
     expect(screen.queryByText(/openfray-brood/)).toBeNull()
   })

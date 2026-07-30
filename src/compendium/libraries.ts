@@ -78,13 +78,13 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'tob3-creatures.json',
   },
   {
-    id: 'openfray-brood-bloom',
+    id: 'openfray-brood-and-bloom',
     label: 'Brood & Bloom',
     shortLabel: 'B&B',
     family: 'openfray',
     group: 'openfray',
     edition: '5.5',
-    creaturesFile: 'brood-creatures.json',
+    creaturesFile: 'brood-and-bloom-creatures.json',
   },
   {
     id: 'openfray-waking-garden',

@@ -150,7 +150,7 @@ export function sourceInfo(source: string): SourceInfo {
         license: 'OGL-1.0a',
         url: 'https://koboldpress.com',
       }
-    case 'openfray-brood-bloom':
+    case 'openfray-brood-and-bloom':
       return {
         ruleset: 'Brood & Bloom',
         license: 'CC-BY-4.0',
