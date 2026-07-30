@@ -74,7 +74,7 @@ What it deliberately doesn't cover:
 - **The GIFs** (`reorder-combatants`, `set-concentration`, `use-reaction`) are recorded by
   hand.
 
-Two committed captures predate UI drift the recipes now shoot truthfully: the rest
-cluster no longer shows a "0 short rests" counter, and `add-buttons`' alt text asks for
-per-button labels the old capture never drew. Re-shooting with `--install` updates them
-to the current build.
+`layout` is the one recipe whose viewport matters: shot narrower than `LAYOUT_W`, every
+top-bar button wraps its label onto two lines and the console reads as a squeezed tablet.
+Its five numbered discs are placed from the rendered layout — the columns, the logo, the
+dice bar — so changing that width moves them instead of stranding them.

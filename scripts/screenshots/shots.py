@@ -57,7 +57,9 @@ def settings_panel():
         head = page.get_by_role("heading", name="Settings").bounding_box()
         libs = page.locator("section").nth(0).bounding_box()
         ext = page.locator("section").nth(1).bounding_box()
-        link = page.get_by_role("link", name="Get it for Chrome").bounding_box()
+        # One box over both store buttons — neither browser is the recommended one.
+        link = span(page.get_by_role("link", name="Get it for Chrome").bounding_box(),
+                    page.get_by_role("link", name="Get it for Firefox").bounding_box())
         capture(page, "settings-panel", span(head, libs, ext), {"libs": libs, "link": link}, pad=22)
     r = rects(f"{OUT}/settings-panel.json")
     c = Canvas(f"{OUT}/settings-panel.png", grow=(640, 0, 0, 0), font_size=40)
@@ -207,6 +209,37 @@ def applied_effects():
     return c.save(f"{OUT}/applied-effects.png")
 
 
+def effect_counter():
+    with console() as page:
+        seed(page)
+        start(page, ROLLS)
+        page.get_by_text("Ogre", exact=True).first.click()
+        page.wait_for_timeout(250)
+        page.get_by_role("button", name="Apply effect").click()
+        page.wait_for_timeout(400)
+        page.get_by_label("Duration").select_option("counter")
+        page.wait_for_timeout(200)
+        page.get_by_label("Custom reminder").fill("Depth")
+        page.get_by_role("button", name="Apply", exact=True).click()
+        page.wait_for_timeout(400)
+        # Raise it off zero, or the shot shows Lower and Reset greyed out.
+        for _ in range(3):
+            page.get_by_role("button", name="Raise Depth").click()
+            page.wait_for_timeout(120)
+        lst = page.get_by_text("APPLIED EFFECTS").locator("xpath=..").bounding_box()
+        low = page.get_by_role("button", name="Lower Depth").bounding_box()
+        clear = page.get_by_role("button", name="Clear", exact=True).bounding_box()
+        buttons = {"x": low["x"], "y": low["y"],
+                   "width": clear["x"] + clear["width"] - low["x"], "height": low["height"]}
+        capture(page, "effect-counter", lst, {"buttons": buttons}, pad=8)
+    r = rects(f"{OUT}/effect-counter.json")
+    c = Canvas(f"{OUT}/effect-counter.png", grow=(0, 132, 0, 0))
+    b = c.box(r["buttons"], pad=7)
+    c.label((26, 64), "Raise, lower, reset or clear it", "ls")
+    c.arrow((260, 84), ((b[0] + b[2]) / 2, b[1] - 12))
+    return c.save(f"{OUT}/effect-counter.png")
+
+
 def _open_attack(page):
     seed(page)
     start(page, ROLLS)
@@ -281,19 +314,46 @@ def dice_log():
     return c.save(f"{OUT}/dice-log.png")
 
 
+# Wide enough that every top-bar button fits its label on one line. At 1440 they wrap
+# to two, and the whole console reads as a squeezed tablet rather than the desktop
+# layout it is designed for.
+LAYOUT_W, LAYOUT_H = 1800, 1000
+
+
 def layout():
-    with console() as page:
+    with console(width=LAYOUT_W, height=LAYOUT_H) as page:
         seed(page)
         start(page, ROLLS)
         page.get_by_text("Ogre", exact=True).first.click()
         page.wait_for_timeout(400)
-        capture(page, "layout", {"x": 0, "y": 0, "width": 1440, "height": 900})
+        cols = page.evaluate(
+            """() => [...document.querySelector('div.grid.h-full').children].map(e => {
+                const r = e.getBoundingClientRect()
+                return {x: r.x, y: r.y, width: r.width, height: r.height}
+            })"""
+        )
+        capture(page, "layout", {"x": 0, "y": 0, "width": LAYOUT_W, "height": LAYOUT_H}, {
+            "logo": page.get_by_title("OpenFray home").bounding_box(),
+            # The leftmost top-bar control, so disc 1 lands in the gap beside the logo
+            # rather than on the rest icons that sit before Group save.
+            "bar": page.get_by_role("button", name="Short rest").bounding_box(),
+            "tracker": cols[0],
+            "stat": cols[1],
+            "controls": cols[2],
+            "dice": page.get_by_role("button", name="d4", exact=True).bounding_box(),
+            "legal": page.get_by_role("link", name="Privacy").bounding_box(),
+        })
     # The five areas getting-started.md numbers: top bar, tracker, stat block,
-    # controls + log, bottom bar.
+    # controls + log, bottom bar. Each disc is placed from the rendered layout rather
+    # than typed in, so a width change moves them instead of stranding them.
+    r = rects(f"{OUT}/layout.json")
     c = Canvas(f"{OUT}/layout.png", font_size=44)
-    for xy, n in (((700, 78), 1), ((490, 1560), 2), ((1720, 1560), 3),
-                  ((2700, 1600), 4), ((2170, 1745), 5)):
-        c.number(xy, n, r=30)
+    gap = lambda a, b: ((a[0] + a[2] + b[0]) / 2, a[1] + a[3] / 2)
+    c.number(gap(r["logo"], r["bar"]), 1, r=30)
+    for key, n in (("tracker", 2), ("stat", 3), ("controls", 4)):
+        x, y, w, h = r[key]
+        c.number((x + w / 2, y + h - 70), n, r=30)
+    c.number(gap(r["dice"], r["legal"]), 5, r=30)
     return c.save(f"{OUT}/layout.png")
 
 
@@ -738,6 +798,7 @@ RECIPES = {
     "tracker-row": tracker_row_shot,
     "apply-effect": apply_effect,
     "effect-badge": effect_badge,
+    "effect-counter": effect_counter,
     "applied-effects": applied_effects,
     "attack-advantage": attack_advantage,
     "attack-resolve": attack_resolve,
