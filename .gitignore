@@ -73,3 +73,6 @@ local/
 *.tsbuildinfo
 .cache/
 .tmp/
+
+# Generated stylesheet for the design-sync tokens bundle (see .design-sync/build-css.mjs)
+site/.ds-css/
