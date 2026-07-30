@@ -14,6 +14,7 @@ cpSync('site/dist', 'dist', { recursive: true })
 // The print edition lives under src/pages so it renders through the site's own
 // components, but it is a local tool for saving a PDF and never ships.
 rmSync('dist/the-waking-garden/print', { recursive: true, force: true })
+rmSync('dist/brood-and-bloom/print', { recursive: true, force: true })
 
 // /docs → the Starlight handbook, built with base = /docs/ so its links and assets
 // already point under /docs. Copy it in wholesale.
