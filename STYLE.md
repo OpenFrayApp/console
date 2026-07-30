@@ -339,9 +339,31 @@ The creature libraries we write — _The Waking Garden_, _Brood & Bloom_ — and
 editions are game text, not documentation. They follow the game's own house style rather
 than the plain-instruction rules above.
 
-**Lore is exempt.** A creature's `description`, and the flavor passages that open a chapter,
-keep their authored voice. Everything else — chapter and section prose, encounter write-ups,
-tables, and stat blocks — follows the rules below.
+**Lore is exempt** from the plain-instruction rules above, not from restraint — see
+[Register](#register). A creature's `description`, and the flavor passages that open a
+chapter, keep their authored voice. Everything else — chapter and section prose, encounter
+write-ups, tables, and stat blocks — follows the rules below.
+
+### Register
+
+Game text has two registers, and the line between them is strict:
+
+- **Rules text is neutral.** State what a thing is, what it does, and the numbers, in
+  declarative sentences. No drama, no wit, no build-up.
+- **State intent, not instruction.** Describe how a creature or rule is meant to behave —
+  "the clutch exists to place latchlings, not to deal damage" — never how the Game Master
+  must run it. No "the correct play is", "should be played as", "worth conveying". The
+  Game Master runs everything as they wish.
+- **End on information.** Don't close a section or a paragraph on an aphorism or a
+  punchline. The last sentence carries a fact, like every other sentence.
+- **Lore may carry color, sparingly.** Chapter openings and creature descriptions can have
+  voice and an occasional light joke. Plain beats ornate; one image per passage is enough.
+- **The book may say "we".** The authorial "we" ("in this book, we refer to them as
+  diseases") is fine in game content; the [words table](#words-we-use) ban on "we" is for
+  the app and its documentation.
+
+A stat block may be followed by a **Running it** note. It states the creature's intended
+behavior and its rule interactions, in the neutral register, and nothing else.
 
 ### Numbers and measurements
 
