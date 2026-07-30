@@ -9,6 +9,7 @@ The dev server must be running: `npm run dev` → http://localhost:5199/console/
 import contextlib
 import json
 import os
+import re
 from playwright.sync_api import sync_playwright
 
 URL = os.environ.get("OPENFRAY_URL", "http://localhost:5199/console/")
@@ -60,7 +61,8 @@ def add_creature(page, name, n=1):
     page.get_by_placeholder("Search creatures…").fill(name)
     page.wait_for_timeout(320)
     for _ in range(n):
-        page.get_by_role("button").filter(has_text=name).first.click()
+        # Anchored, or searching "Mage" would add the alphabetically-first "Archmage".
+        page.get_by_role("button", name=re.compile(rf"^{re.escape(name)}\b")).first.click()
         page.wait_for_timeout(220)
     page.keyboard.press("Escape")
     page.wait_for_timeout(120)

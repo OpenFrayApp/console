@@ -2,8 +2,8 @@
 // Copyright (C) 2026 OpenFray contributors
 
 // Draws the handbook's red callouts onto a PNG captured by hand. Most screenshots come
-// from capture-docs-screenshots.mjs, which drives the live app — use this only for the
-// screens that script can't reach: anything behind a sign-in, and the browser extension.
+// from the Python harness in scripts/screenshots/, which drives the live app — use this
+// only for screens it can't reach: anything behind a sign-in, and the browser extension.
 //
 //   node scripts/annotate-screenshot.mjs
 //

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-// The callout drawing shared by the two screenshot scripts: capture-docs-screenshots
-// (drives the live app) and annotate-screenshot (marks up a PNG captured by hand, for
-// screens that need a signed-in account or a browser extension). Both must look the
-// same, so the styling lives here and nowhere else.
+// The callout drawing for annotate-screenshot, which marks up a PNG captured by hand
+// (screens that need a signed-in account or a browser extension). The scripted shots
+// come from the Python harness in scripts/screenshots/, which draws the same style.
 
 // Runs in the page so callouts line up with real elements. `items` carry rects
 // already measured by Playwright, plus the label to attach.
@@ -186,14 +185,3 @@ export function drawAnnotations(items) {
   }
 }
 
-/** Union of everything drawn, so a close-up can crop to just the marked area. */
-export function measureAnnotations(pad) {
-  const marks = [...document.querySelectorAll('#of-annotations [data-of-mark]')]
-  if (!marks.length) return null
-  const rects = marks.map((m) => m.getBoundingClientRect())
-  const x = Math.max(0, Math.min(...rects.map((r) => r.left)) - pad)
-  const y = Math.max(0, Math.min(...rects.map((r) => r.top)) - pad)
-  const right = Math.min(window.innerWidth, Math.max(...rects.map((r) => r.right)) + pad)
-  const bottom = Math.min(window.innerHeight, Math.max(...rects.map((r) => r.bottom)) + pad)
-  return { x, y, width: right - x, height: bottom - y }
-}

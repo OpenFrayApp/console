@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-// Callouts for the hand-captured screenshots — the screens capture-docs-screenshots.mjs
-// can't reach because they need a signed-in account or the browser extension. Run
+// Callouts for the hand-captured screenshots — the screens no scripted recipe can
+// reach because they need a signed-in account or the browser extension. Run
 // `node scripts/annotate-screenshot.mjs` after editing.
 //
 // `rect` and `crop` are in **image pixels**, measured off the source PNG. Everything

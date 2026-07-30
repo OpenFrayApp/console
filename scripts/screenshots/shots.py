@@ -11,6 +11,7 @@ and draws the annotation the page's alt text promises. Check the result before
 installing: the alt text and the image have to agree.
 """
 
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ from pathlib import Path
 from anno import Canvas, rects
 from console import (
     OUT,
+    add_creature,
     capture,
     console,
     find_rect,
@@ -405,7 +407,329 @@ def stat_block_full():
     return c.save(f"{OUT}/stat-block-full.png")
 
 
+def add_buttons():
+    """The three add buttons, each boxed and labeled (fight/combatants.md)."""
+    with console(width=1200, height=420) as page:
+        quick = page.get_by_role("button", name="Quick add").bounding_box()
+        pc = page.get_by_role("button", name="Add PC", exact=True).bounding_box()
+        add = page.get_by_role("button", name="Add creature", exact=True).bounding_box()
+        capture(page, "add-buttons", span(quick, pc, add),
+                {"quick": quick, "pc": pc, "add": add}, pad=26)
+    r = rects(f"{OUT}/add-buttons.json")
+    c = Canvas(f"{OUT}/add-buttons.png", grow=(240, 0, 240, 290), font_size=36)
+    qb, pb, ab = c.box(r["quick"], pad=5), c.box(r["pc"], pad=5), c.box(r["add"], pad=5)
+    # Staggered rows so three adjacent labels don't collide.
+    c.label((qb[0] - 190, c.im.height - 160), "A throwaway combatant", "ls")
+    c.arrow((qb[0] + 60, c.im.height - 190), ((qb[0] + qb[2]) / 2, qb[3] + 12))
+    c.label(((pb[0] + pb[2]) / 2 - 140, c.im.height - 40), "A player character", "ls")
+    c.arrow(((pb[0] + pb[2]) / 2, c.im.height - 76), ((pb[0] + pb[2]) / 2, pb[3] + 12))
+    c.label((c.im.width - 30, c.im.height - 160), "One from the compendium", "rs")
+    c.arrow((c.im.width - 480, c.im.height - 190), ((ab[0] + ab[2]) / 2 + 40, ab[3] + 12))
+    return c.save(f"{OUT}/add-buttons.png")
+
+
+def rest_buttons():
+    """The short/long rest cluster above a selected character (fight/rests.md)."""
+    with console() as page:
+        seed(page)
+        page.get_by_text("Ren", exact=True).first.click()
+        page.wait_for_timeout(300)
+        short = page.get_by_role("button", name=re.compile("Short rest")).bounding_box()
+        long_ = page.get_by_role("button", name=re.compile("Long rest")).bounding_box()
+        cluster = span(short, long_)
+        clip = {"x": cluster["x"] - 26, "y": cluster["y"] - 20,
+                "width": cluster["width"] + 360, "height": 330}
+        capture(page, "rest-buttons", clip, {"cluster": cluster, "short": short, "long": long_})
+    r = rects(f"{OUT}/rest-buttons.json")
+    c = Canvas(f"{OUT}/rest-buttons.png", grow=(0, 280, 200, 0), font_size=40)
+    box = c.box(r["cluster"], pad=10)
+    scx = c.dx + r["short"][0] + r["short"][2] / 2
+    lcx = c.dx + r["long"][0] + r["long"][2] / 2
+    # Labels live in the grown strip above the bar — the panel below is all content.
+    c.label((lcx + 60, 100), "Long rest", "ls")
+    c.arrow((lcx + 50, 130), (lcx, box[1] - 14))
+    c.label((20, 216), "Short rest", "ls")
+    c.arrow((scx, 246), (scx, box[1] - 14))
+    return c.save(f"{OUT}/rest-buttons.png")
+
+
+def begin_shot():
+    """The play button that starts the fight, over a filled board (fight/tracker.md)."""
+    with console() as page:
+        seed(page)
+        start(page, ROLLS)
+        page.get_by_role("button", name="Stop").click()
+        page.wait_for_timeout(500)
+        play = page.get_by_role("button", name="Begin").bounding_box()
+        mira = tracker_row(page, "Mira")
+        clip = {"x": 0, "y": 0, "width": play["x"] + play["width"] + 30,
+                "height": mira["y"] + mira["height"] + 16}
+        capture(page, "begin", clip, {"play": play})
+    r = rects(f"{OUT}/begin.json")
+    c = Canvas(f"{OUT}/begin.png", font_size=44)
+    b = c.box(r["play"], pad=6)
+    mid = (b[1] + b[3]) / 2
+    c.arrow((b[0] - 320, mid), (b[0] - 16, mid))
+    c.label((b[0] - 350, mid + 16), "Begin", "rs")
+    return c.save(f"{OUT}/begin.png")
+
+
+def turn_controls():
+    """The round bar: turn buttons and pause/stop, boxed and labeled (fight/tracker.md)."""
+    with console() as page:
+        seed(page)
+        start(page, ROLLS)
+        prev = page.get_by_role("button", name=re.compile("Previous turn")).bounding_box()
+        nxt = page.get_by_role("button", name=re.compile("Next turn")).bounding_box()
+        pause = page.get_by_role("button", name=re.compile("Pause")).bounding_box()
+        stop = page.get_by_role("button", name=re.compile("^Stop")).bounding_box()
+        round_ = page.get_by_text(re.compile("Round 1", re.I)).first.bounding_box()
+        bar = span(round_, prev, nxt, pause, stop)
+        clip = {"x": bar["x"] - 26, "y": bar["y"] - 14,
+                "width": bar["width"] + 52, "height": bar["height"] + 90}
+        capture(page, "turn-controls", clip,
+                {"turns": span(prev, nxt), "ps": span(pause, stop)})
+    r = rects(f"{OUT}/turn-controls.json")
+    c = Canvas(f"{OUT}/turn-controls.png", grow=(0, 190, 0, 0), font_size=44)
+    tb, pb = c.box(r["turns"], pad=8), c.box(r["ps"], pad=8)
+    c.label((40, 70), "Move through turns", "ls")
+    c.arrow((240, 92), ((tb[0] + tb[2]) / 2 - 30, tb[1] - 14))
+    c.label((c.im.width - 40, 70), "Pause or end fight", "rs")
+    c.arrow((c.im.width - 420, 92), ((pb[0] + pb[2]) / 2 - 20, pb[1] - 14))
+    return c.save(f"{OUT}/turn-controls.png")
+
+
+def drag_handle():
+    """A row's six-dot drag handle, boxed with a callout (fight/tracker.md)."""
+    with console() as page:
+        seed(page)
+        add_creature(page, "Mage")
+        start(page, ROLLS)
+        handle = page.locator('span[aria-label="Drag to reorder Ren"]').bounding_box()
+        row = tracker_row(page, "Ren")
+        clip = {"x": row["x"] - 8, "y": row["y"] - 130,
+                "width": row["width"] + 16, "height": row["height"] + 260}
+        capture(page, "drag-handle", clip, {"handle": handle})
+    r = rects(f"{OUT}/drag-handle.json")
+    c = Canvas(f"{OUT}/drag-handle.png", font_size=44)
+    b = c.box(r["handle"], pad=6)
+    mid = (b[1] + b[3]) / 2
+    c.arrow((b[2] + 420, mid), (b[2] + 16, mid))
+    c.label((b[2] + 450, mid - 12), "Drag to move", "ls")
+    c.label((b[2] + 450, mid + 44), "a combatant", "ls")
+    return c.save(f"{OUT}/drag-handle.png")
+
+
+def _open_apply_effect(page, name):
+    """Select `name` and open its Apply effect box."""
+    page.get_by_text(name, exact=True).first.click()
+    page.wait_for_timeout(250)
+    page.get_by_role("button", name="Apply effect").click()
+    page.wait_for_timeout(400)
+
+
+def example_reckless():
+    """The worked Reckless example: an advantage modifier, written out (fight/effects.md)."""
+    with console() as page:
+        seed(page)
+        start(page, ROLLS)
+        _open_apply_effect(page, "Ren")
+        page.get_by_label("Duration").select_option(label="1 round")
+        page.get_by_role("button", name="Add a bonus or penalty").click()
+        page.wait_for_timeout(200)
+        page.get_by_label("Modifier effect").select_option(label="Advantage")
+        page.get_by_label("Applies to").select_option(label="Attack rolls")
+        page.get_by_role("radio", name="Rolls made against it").check()
+        page.get_by_label("Modifier label").fill("Reckless attack")
+        page.wait_for_timeout(200)
+        capture(page, "example-reckless", panel_of(page, "Apply effect to Ren"), pad=12)
+    return "example-reckless"  # no annotation — the derived sentence is the point
+
+
+def example_reminder():
+    """The worked reminder example: free text, until removed (fight/effects.md)."""
+    with console() as page:
+        seed(page)
+        start(page, ROLLS)
+        _open_apply_effect(page, "Zara")
+        page.get_by_label("Duration").select_option(label="Until removed")
+        reminder = page.get_by_placeholder("e.g. Hex: +1d6 necrotic")
+        reminder.fill("Covered in oil - Beware of fire damage")
+        # Blur and rewind so the capture shows the start of the note, not its tail.
+        reminder.evaluate("el => { el.blur(); el.scrollLeft = 0 }")
+        page.wait_for_timeout(200)
+        capture(page, "example-reminder", panel_of(page, "Apply effect to Zara"), pad=12)
+    return "example-reminder"  # no annotation — a plain crop
+
+
+def cast_spell():
+    """A caster's Spellcasting section: uses left, click to cast (fight/spells.md)."""
+    with console(width=1500, height=1120) as page:
+        add_creature(page, "Archmage")
+        page.get_by_text("Archmage", exact=True).first.click()
+        page.wait_for_timeout(600)
+        head = page.get_by_role("heading", name="Spellcasting").bounding_box()
+        perday = page.get_by_text("2/DAY EACH").bounding_box()
+        oneday = page.get_by_text("1/DAY EACH").bounding_box()
+        spell = page.get_by_role("button", name="Mind Blank (1)").bounding_box()
+        section = span(head, perday, oneday, spell)
+        section["width"] = max(section["width"], 1180)
+        capture(page, "cast-spell", section, {"perday": perday, "spell": spell}, pad=20)
+    r = rects(f"{OUT}/cast-spell.json")
+    c = Canvas(f"{OUT}/cast-spell.png", font_size=40)
+    pb, sb = c.box(r["perday"], pad=8), c.box(r["spell"], pad=8)
+    # The label sits beside the heading, where the panel is empty — over the At Will
+    # list it would cover the very spells the reader is being shown.
+    c.label((pb[0] + 300, 80), "Total usages available per day", "ls")
+    c.arrow((pb[0] + 285, 105), ((pb[0] + pb[2]) / 2 + 20, pb[1] - 10))
+    c.label((sb[2] + 180, sb[1] - 40), "Click to cast the spell and consume a usage", "ls")
+    c.arrow((sb[2] + 160, sb[1] - 30), (sb[2] + 10, (sb[1] + sb[3]) / 2))
+    return c.save(f"{OUT}/cast-spell.png")
+
+
+def group_save():
+    """The Group save box with its five working parts boxed (fight/saves.md)."""
+    with console(width=1440, height=1000) as page:
+        seed(page)
+        start(page, ROLLS)
+        page.get_by_role("button", name="Group save").click()
+        page.wait_for_timeout(400)
+        for target in ("Goblin Boss", "Goblin Minion", "Goblin Minion 2"):
+            page.get_by_role("button", name=target, exact=True).click()
+        page.get_by_label("Damage").fill("3d8")
+        page.wait_for_timeout(200)
+        targets = span(
+            page.get_by_text("Allies", exact=True).bounding_box(),
+            page.get_by_role("button", name="Zara", exact=True).first.bounding_box(),
+            page.get_by_role("button", name="Goblin Minion 2", exact=True).first.bounding_box(),
+        )
+        capture(page, "group-save", panel_of(page, "Group save"), {
+            "dc": page.get_by_label("Save DC").bounding_box(),
+            "onsave": page.get_by_label("On save").bounding_box(),
+            "damage": page.get_by_label("Damage").bounding_box(),
+            "targets": targets,
+            "roll": page.get_by_role("button", name="Roll saves").bounding_box(),
+        }, pad=14)
+    r = rects(f"{OUT}/group-save.json")
+    c = Canvas(f"{OUT}/group-save.png")
+    for key in ("dc", "onsave", "damage", "targets", "roll"):
+        c.box(r[key], pad=6)
+    return c.save(f"{OUT}/group-save.png")
+
+
+def _zara_down(page):
+    """Start the fight, drop Zara to 0, and record two saves and a fail."""
+    seed(page)
+    start(page, ROLLS)
+    set_hp(page, "Zara", 0)
+    page.get_by_text("Zara", exact=True).first.click()
+    page.wait_for_timeout(300)
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_timeout(150)
+    page.get_by_role("button", name="Save", exact=True).click()
+    page.wait_for_timeout(150)
+    page.get_by_role("button", name="Fail", exact=True).click()
+    page.wait_for_timeout(300)
+
+
+def death_save_row():
+    """A downed player's row, with the save/fail pips boxed (fight/death.md)."""
+    with console() as page:
+        _zara_down(page)
+        row = tracker_row(page, "Zara")
+        pips = span(
+            page.get_by_text("Saves", exact=True).locator("xpath=..").bounding_box(),
+            page.get_by_text("Fails", exact=True).locator("xpath=..").bounding_box(),
+        )
+        clip = {"x": row["x"] - 8, "y": row["y"] - 120,
+                "width": row["width"] + 16, "height": row["height"] + 250}
+        capture(page, "death-save-row", clip, {"pips": pips})
+    c = Canvas(f"{OUT}/death-save-row.png")
+    c.box(rects(f"{OUT}/death-save-row.json")["pips"], pad=8)
+    return c.save(f"{OUT}/death-save-row.png")
+
+
+def death_saves():
+    """The death-save controls: record it, or roll in the app (fight/death.md)."""
+    with console() as page:
+        _zara_down(page)
+        save = page.get_by_role("button", name="Save", exact=True).bounding_box()
+        fail = page.get_by_role("button", name="Fail", exact=True).bounding_box()
+        roll = page.get_by_role("button", name=re.compile("Roll death save")).bounding_box()
+        # The heading reads CONTROLS on screen but the uppercasing is CSS, not DOM text.
+        heading = page.get_by_text(re.compile("^Controls$", re.I)).bounding_box()
+        cluster = span(save, fail, roll)
+        clip = {"x": heading["x"] - 22, "y": heading["y"] - 16,
+                "width": cluster["width"] + 260, "height": 540}
+        capture(page, "death-saves", clip, {"cluster": cluster})
+    r = rects(f"{OUT}/death-saves.json")
+    c = Canvas(f"{OUT}/death-saves.png", font_size=44)
+    b = c.box(r["cluster"], pad=10)
+    tip = ((b[0] + b[2]) / 2 + 40, b[3] + 16)
+    c.arrow((tip[0] + 260, tip[1] + 260), tip)
+    c.label((tip[0] - 80, tip[1] + 340), "Record the player's roll", "ls")
+    c.label((tip[0] - 80, tip[1] + 396), "or let OpenFray roll", "ls")
+    return c.save(f"{OUT}/death-saves.png")
+
+
+def compendium_shot():
+    """The whole compendium, with the toggle that opens it boxed (library/compendium.md)."""
+    with console() as page:
+        page.get_by_role("button", name="Show the compendium").click()
+        page.wait_for_timeout(700)
+        page.get_by_placeholder("Search creatures…").fill("Ancient Black Dragon")
+        page.wait_for_timeout(500)
+        page.get_by_text("Ancient Black Dragon", exact=True).first.click()
+        page.wait_for_timeout(900)
+        page.get_by_placeholder("Search creatures…").fill("")
+        page.wait_for_timeout(500)
+        toggle = page.get_by_role("button", name="Show the compendium").bounding_box()
+        capture(page, "compendium", {"x": 0, "y": 0, "width": 1440, "height": 900},
+                {"toggle": toggle})
+    r = rects(f"{OUT}/compendium.json")
+    c = Canvas(f"{OUT}/compendium.png")
+    b = c.box(r["toggle"], pad=6)
+    c.arrow((b[0] - 330, b[3] + 130), (b[0] - 8, b[3] - 20))
+    return c.save(f"{OUT}/compendium.png")
+
+
+def library_badges():
+    """A slice of the creature list, two rows' badges boxed (library/compendium.md)."""
+    with console(width=1500, height=1120) as page:
+        page.get_by_role("button", name="Show the compendium").click()
+        page.wait_for_timeout(700)
+        first = page.get_by_role("button", name=re.compile("^Air Elemental")).bounding_box()
+        rows = [page.get_by_role("button", name=re.compile(f"^{name}")).bounding_box()
+                for name in ("Allosaurus", "Ancient Black Dragon")]
+        badges = [page.get_by_role("button", name=re.compile(f"^{name}"))
+                  .locator("span").filter(has_text=re.compile("Core|5\\.5e")).first.bounding_box()
+                  for name in ("Allosaurus", "Ancient Black Dragon")]
+        edges = [page.get_by_role("button", name=re.compile(f"^{name}"))
+                 .locator("span").filter(has_text="5.5e").first.bounding_box()
+                 for name in ("Allosaurus", "Ancient Black Dragon")]
+        mark = span(*badges, *edges)
+        clip = {"x": first["x"] - 10, "y": first["y"] - 14,
+                "width": first["width"] + 20, "height": 250}
+        capture(page, "library-badges", clip, {"badges": mark})
+    c = Canvas(f"{OUT}/library-badges.png")
+    c.box(rects(f"{OUT}/library-badges.json")["badges"], pad=8)
+    return c.save(f"{OUT}/library-badges.png")
+
+
 RECIPES = {
+    "add-buttons": add_buttons,
+    "begin": begin_shot,
+    "cast-spell": cast_spell,
+    "compendium": compendium_shot,
+    "death-save-row": death_save_row,
+    "death-saves": death_saves,
+    "drag-handle": drag_handle,
+    "example-reckless": example_reckless,
+    "example-reminder": example_reminder,
+    "group-save": group_save,
+    "library-badges": library_badges,
+    "rest-buttons": rest_buttons,
+    "turn-controls": turn_controls,
     "rule-sets": rule_sets,
     "settings-panel": settings_panel,
     "theme-toggle": theme_toggle,

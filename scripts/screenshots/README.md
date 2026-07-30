@@ -56,15 +56,25 @@ Arrows approach through empty space. An arrow that crosses a chip or a field hid
 something the reader needs; if the space left of a target is occupied, come in from the
 right instead.
 
-## Not covered yet
+## Not covered here
 
-- **Signed-in captures.** `characters-tab`, `campaigns-tab`, `campaign-form`,
+This harness is the **only** scripted pipeline — it owns every recipe-able capture.
+What it deliberately doesn't cover:
+
+- **Hand-captured screens** (anything behind a sign-in, and the `importer-*.png`
+  extension shots): capture them by hand, list their callouts in
+  `scripts/docs-screenshot-annotations.mjs`, and draw them with
+  `node scripts/annotate-screenshot.mjs` — the same house style, from the same rules.
+- **Signed-in recipes.** `characters-tab`, `campaigns-tab`, `campaign-form`,
   `campaign-picker`, `custom-creature`, `custom-spell`, `import-json`,
-  `add-pc-dropdown-signedin` all need an account, so no recipe exists. They'd need a
-  seeded test user and a way to sign in headlessly.
+  `add-pc-dropdown-signedin` would need a seeded test user and a headless sign-in.
 - **`spent-recharge-ability.png`** still shows the old _Core Rules 2024_ source line. It
   needs a recharge ability in its spent, greyed state, which means resolving the breath
   weapon through the save box.
 - **The GIFs** (`reorder-combatants`, `set-concentration`, `use-reaction`) are recorded by
   hand.
-- **`importer-*.png`** show Chrome and the extension, not the console.
+
+Two committed captures predate UI drift the recipes now shoot truthfully: the rest
+cluster no longer shows a "0 short rests" counter, and `add-buttons`' alt text asks for
+per-button labels the old capture never drew. Re-shooting with `--install` updates them
+to the current build.
