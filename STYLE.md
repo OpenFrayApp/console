@@ -404,8 +404,9 @@ Advantage/Disadvantage are capitalized there without a single exception.
   saving throw in running prose, spell, cantrip, spell slot.
 - This applies to game content only. The handbook, the marketing site, and the app keep
   the lowercase house forms in the [words table](#words-we-use) — "armor class" there.
-- **Italicize** spells and magic items, in lowercase: _animate objects_, _flame tongue_. The
-  italics mark the title, so a _wall of fire_ spell produces a wall of fire.
+- **Capitalize spell and magic item names**, with no italics, the way the SRD 5.2.1 text
+  writes them: Lesser Restoration, Flame Tongue. The capitals mark the title, so a Wall of
+  Fire spell produces a wall of fire. (The 2014 italic-lowercase style is retired.)
 - **Inline subheads take a period, not a colon**, and are set in bold: **Terrain.** not
   **Terrain:**. A stat-block data field is different — that's a bold label and a value.
 - **Introduce every vertical list with a complete sentence ending in a colon.** Capitalize
