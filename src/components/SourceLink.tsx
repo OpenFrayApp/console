@@ -5,11 +5,12 @@ import type { ReactNode } from 'react'
 import { sourceInfo } from '../compendium/format.ts'
 
 /**
- * Attribution line for a compendium entry — the ruleset (with the SRD page folded
- * into its parenthetical, when known), linked to the source: our own books link to the
- * book itself, third-party ones to their publisher. The license isn't shown here;
- * CC-BY attribution lives in the in-app Credits screen + CREDITS.md. `mt-auto` pins it
- * to the bottom of the stat block / spell card.
+ * Attribution line for a compendium entry — the ruleset, with the SRD page folded into
+ * its parenthetical when known. Only the books we publish ourselves are linked, and they
+ * link to the book; SRD and third-party sources are plain text, because their licenses
+ * are satisfied by CREDITS.md and a publisher's home page is not that attribution. The
+ * license isn't shown here either. `mt-auto` pins the line to the bottom of the stat
+ * block / spell card.
  */
 export function SourceLink({
   source,

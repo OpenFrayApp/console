@@ -117,7 +117,11 @@ export interface SourceInfo {
   ruleset: string
   /** Content license, e.g. "CC-BY-4.0"; absent for user-authored content. */
   license?: string
-  /** Link to the source/attribution page. */
+  /**
+   * Where to read the book, for the libraries we publish ourselves. Third-party and
+   * SRD sources carry no link: their attribution obligation is met by `CREDITS.md`,
+   * not by a stat-block link, and a publisher's home page is not that attribution.
+   */
   url?: string
 }
 
@@ -128,31 +132,26 @@ export function sourceInfo(source: string): SourceInfo {
       return {
         ruleset: 'Basic Rules 2024 (SRD 5.2.1)',
         license: 'CC-BY-4.0',
-        url: 'https://www.dndbeyond.com/srd',
       }
     case 'srd-5.1':
       return {
         ruleset: 'Basic Rules 2014 (SRD 5.1)',
         license: 'CC-BY-4.0',
-        url: 'https://www.dndbeyond.com/srd',
       }
     case 'kobold-press-tob':
       return {
         ruleset: 'Tome of Beasts',
         license: 'OGL-1.0a',
-        url: 'https://koboldpress.com',
       }
     case 'kobold-press-tob2':
       return {
         ruleset: 'Tome of Beasts 2',
         license: 'OGL-1.0a',
-        url: 'https://koboldpress.com',
       }
     case 'kobold-press-tob3':
       return {
         ruleset: 'Tome of Beasts 3',
         license: 'OGL-1.0a',
-        url: 'https://koboldpress.com',
       }
     case 'openfray-brood-and-bloom':
       return {
