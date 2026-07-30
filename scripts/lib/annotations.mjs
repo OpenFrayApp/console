@@ -184,4 +184,3 @@ export function drawAnnotations(items) {
     svg.append(head)
   }
 }
-
