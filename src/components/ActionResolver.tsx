@@ -8,8 +8,8 @@ import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import type { CritRule, RollResult } from '../dice/roll.ts'
-import { roll } from '../dice/roll.ts'
+import type { CritRule, DieGroup, RollResult } from '../dice/roll.ts'
+import { d20Group, keptFlags, roll } from '../dice/roll.ts'
 import { useCampaignRules } from '../state/campaignRules.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { meleeHitAutoCrits } from '../combat/conditionrules.ts'
@@ -205,21 +205,37 @@ const DAMAGE_TONE: Partial<Record<DamageType, string>> = {
   radiant: 'bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200',
 }
 
-/** The natural d20 behind a roll, in brackets like the game log writes it. */
-function NaturalRoll({
-  value,
+/**
+ * The d20s behind a roll, in brackets like the game log writes them. With advantage
+ * or disadvantage both dice show: the one that counted stands out, the dropped one
+ * is dimmed beside it.
+ */
+export function NaturalRoll({
+  group,
   tone = 'normal',
 }: {
-  value: number
+  group: DieGroup
   tone?: 'normal' | 'crit' | 'fumble'
 }) {
-  const toneClass =
+  const keptClass =
     tone === 'crit'
       ? 'text-emerald-600 dark:text-emerald-400'
       : tone === 'fumble'
         ? 'text-rose-600 dark:text-rose-400'
-        : 'text-slate-500 dark:text-slate-400'
-  return <span className={`text-sm font-semibold tabular-nums ${toneClass}`}>[{value}]</span>
+        : 'text-slate-900 dark:text-slate-100'
+  const kept = keptFlags(group)
+  return (
+    <span className="text-sm tabular-nums text-slate-400 dark:text-slate-500">
+      [
+      {group.results.map((value, i) => (
+        <span key={i} className={kept[i] ? `font-semibold ${keptClass}` : undefined}>
+          {i > 0 ? ', ' : ''}
+          {value}
+        </span>
+      ))}
+      ]
+    </span>
+  )
 }
 
 /** Colored pill for one damage component: amount, type, and any resist/immune/vuln note. */
@@ -384,7 +400,7 @@ function AttackResolver({
     result: RollResult
     applied: AppliedEffect[]
     target: Combatant
-    d20: number
+    d20: DieGroup | undefined
     damage: { type: DamageType; amount: number; label: string | null }[]
     /** Effective crit — a natural 20, or a melee hit on a Paralyzed/Unconscious target. */
     crit: boolean
@@ -424,7 +440,7 @@ function AttackResolver({
       const effects = rolled.target.effects
       dispatch({ type: 'update', id: target.combatantId, update: (c) => ({ ...c, effects }) })
     }
-    const d20 = result.dice.find((g) => g.sides === 20)?.kept[0] ?? result.total
+    const d20 = d20Group(result)
     const hits = result.crit || (!result.fumble && result.total >= acOf(target))
     // A melee hit on a Paralyzed/Unconscious creature is an automatic critical hit.
     const autoCrit = hits && action.kind === 'melee' && meleeHitAutoCrits(target)
@@ -580,9 +596,9 @@ function AttackResolver({
         >
           {attack ? 'Reroll' : 'Roll attack'}
         </button>
-        {attack && (
+        {attack?.d20 && (
           <NaturalRoll
-            value={attack.d20}
+            group={attack.d20}
             tone={attack.crit ? 'crit' : attack.result.fumble ? 'fumble' : 'normal'}
           />
         )}
@@ -671,8 +687,8 @@ function AttackResolver({
 interface SaveRow {
   result?: SaveResult
   total?: number
-  /** The natural d20 of an auto-rolled save, for the die animation. */
-  d20?: number
+  /** The d20 group of an auto-rolled save, so both dice show under advantage. */
+  d20?: DieGroup
   /** GM-edited damage; falls back to the computed default. */
   edited?: string
 }
@@ -781,7 +797,7 @@ export function SaveResolver({
     return {
       result: saveRoll.result,
       total: saveRoll.total,
-      d20: saveRoll.roll.dice.find((g) => g.sides === 20)?.kept[0],
+      d20: d20Group(saveRoll.roll),
     }
   }
 
@@ -1053,7 +1069,7 @@ export function SaveResolver({
                 >
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{nameOf(c)}</span>
-                    {row?.d20 != null && <NaturalRoll value={row.d20} />}
+                    {row?.d20 && <NaturalRoll group={row.d20} />}
                     {row?.total != null && (
                       <span className="tabular-nums text-slate-500 dark:text-slate-400">
                         {row.total}

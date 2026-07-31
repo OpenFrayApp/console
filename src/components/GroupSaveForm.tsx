@@ -7,6 +7,7 @@ import type { SaveOutcome } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { EncounterAction } from '../state/encounter.ts'
+import { d20Group, type DieGroup } from '../dice/roll.ts'
 import { condition } from '../combat/effects.ts'
 import { nameOf } from '../combat/combatant.ts'
 import { parseNonNegativeInt as num } from '../lib/form.ts'
@@ -19,7 +20,7 @@ import {
 } from '../combat/masssave.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
-import { ConditionChips, DamageTypeSelect, REROLL_BTN } from './ActionResolver.tsx'
+import { ConditionChips, DamageTypeSelect, NaturalRoll, REROLL_BTN } from './ActionResolver.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -28,6 +29,8 @@ const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 interface Row {
   result?: SaveResult
   total?: number
+  /** The d20 group of an auto-rolled save, so both dice show under advantage. */
+  d20?: DieGroup
 }
 
 /** Chip classes for a Save/Fail toggle: the given tone when active, muted otherwise. */
@@ -102,8 +105,8 @@ export function GroupSaveForm({
 
   /** Roll one creature's save against the current DC. Never called for a PC. */
   const rollOne = (c: Combatant): Row => {
-    const { result, total } = rollSave(c, { ability, dc: num(dc) || 10, onSave })
-    return { result, total }
+    const saveRoll = rollSave(c, { ability, dc: num(dc) || 10, onSave })
+    return { result: saveRoll.result, total: saveRoll.total, d20: d20Group(saveRoll.roll) }
   }
 
   /** Auto-roll each selected monster's save; PC rows stay blank for the GM to record. */
@@ -277,6 +280,7 @@ export function GroupSaveForm({
               </label>
               {resolved && selected.has(c.combatantId) && (
                 <span className="flex items-center gap-1">
+                  {row?.d20 && <NaturalRoll group={row.d20} />}
                   {row?.total != null && (
                     <span className="tabular-nums text-slate-500 dark:text-slate-400">
                       {row.total}

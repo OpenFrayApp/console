@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { roll } from '../../src/dice/roll.ts'
+import { d20Group, keptFlags, roll } from '../../src/dice/roll.ts'
 import type { RandomSource } from '../../src/dice/rng.ts'
 
 /** Deterministic source: yields the given die faces in order (face f -> f-1 raw). */
@@ -135,5 +135,34 @@ describe('roll', () => {
   it('folds in negative numeric bonuses', () => {
     const r = roll('1d20+5', { bonuses: [-2], rand: faceSeq(10) })
     expect(r.total).toBe(13) // 10 + 5 - 2
+  })
+})
+
+describe('keptFlags', () => {
+  it('marks the die advantage kept and the one it dropped', () => {
+    const r = roll('1d20+5', { advantage: 'advantage', rand: faceSeq(7, 18) })
+    expect(r.dice[0].results).toEqual([7, 18])
+    expect(keptFlags(r.dice[0])).toEqual([false, true])
+  })
+
+  it('drops exactly one of a tied pair', () => {
+    const r = roll('1d20', { advantage: 'disadvantage', rand: faceSeq(12, 12) })
+    expect(keptFlags(r.dice[0])).toEqual([true, false])
+  })
+
+  it('marks every die when none was dropped', () => {
+    const r = roll('2d6', { rand: faceSeq(3, 5) })
+    expect(keptFlags(r.dice[0])).toEqual([true, true])
+  })
+})
+
+describe('d20Group', () => {
+  it('finds the one d20 group behind a roll', () => {
+    const r = roll('1d20+5', { rand: faceSeq(11) })
+    expect(d20Group(r)?.results).toEqual([11])
+  })
+
+  it('gives nothing when the roll has no single d20 to show', () => {
+    expect(d20Group(roll('2d6+3', { rand: faceSeq(2, 4) }))).toBeUndefined()
   })
 })

@@ -105,6 +105,30 @@ describe('ActionResolver — attacks', () => {
     expect(entry.applied).toEqual([{ source: 'Unconscious', effect: 'advantage' }])
     expect(['hit', 'crit', 'miss']).toContain(entry.outcome)
   })
+  it('shows both d20s when the roll had advantage, one of them dimmed', () => {
+    const ogre = monster({ combatantId: 't', label: 'Ogre', status: 'unconscious' })
+    const { container } = render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), ogre]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Roll attack'))
+
+    // An Unconscious target grants advantage, so the pair is rolled and both show:
+    // the die that counted stands out, the dropped one is dimmed beside it.
+    const group = [...container.querySelectorAll('span')].find((el) =>
+      /^\[\d+, \d+\]$/.test(el.textContent ?? ''),
+    )
+    expect(group).toBeTruthy()
+    const dice = [...group!.querySelectorAll('span')]
+    expect(dice).toHaveLength(2)
+    expect(dice.filter((el) => el.className.includes('font-semibold'))).toHaveLength(1)
+  })
 })
 
 describe('ActionResolver — save actions', () => {

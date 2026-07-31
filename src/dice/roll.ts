@@ -132,6 +132,27 @@ function rollGroup(term: DiceTerm, critRule: CritRule, rand: RandomSource): DieG
   return { sides: term.sides, sign: term.sign, results, kept, total: term.sign * contribution }
 }
 
+/**
+ * Which of a group's dice counted, aligned to `results` so the UI can dim the ones
+ * advantage or a keep rule dropped. Matched one for one, so a tie between two equal
+ * dice drops exactly one of them.
+ */
+export function keptFlags(group: DieGroup): boolean[] {
+  const pool = [...group.kept]
+  return group.results.map((value) => {
+    const i = pool.indexOf(value)
+    if (i === -1) return false
+    pool.splice(i, 1)
+    return true
+  })
+}
+
+/** The d20 group behind a roll, when there is exactly one — what the UI shows raw. */
+export function d20Group(result: RollResult): DieGroup | undefined {
+  const d20s = result.dice.filter((g) => g.sides === 20)
+  return d20s.length === 1 ? d20s[0] : undefined
+}
+
 /** Crit/fumble are only meaningful for a single kept d20. */
 function critFumble(dice: DieGroup[]): { crit: boolean; fumble: boolean } {
   const d20s = dice.filter((g) => g.sides === 20)

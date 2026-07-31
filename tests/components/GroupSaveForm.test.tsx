@@ -115,8 +115,9 @@ describe('GroupSaveForm', () => {
     fireEvent.click(screen.getByLabelText('Select Thalia'))
     fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
 
-    // The monster auto-rolled: its row shows a save total plus the toggles.
-    expect(within(rowOf('Goblin A')).getByText(/^\d+$/)).toBeInTheDocument()
+    // The monster auto-rolled: its row shows the d20 it rolled, the save total, and
+    // the toggles.
+    expect(within(rowOf('Goblin A')).getAllByText(/^\d+$/).length).toBeGreaterThanOrEqual(2)
     // The PC row awaits the player's own roll: toggles, but no total.
     expect(within(rowOf('Thalia')).queryByText(/^\d+$/)).toBeNull()
     expect(within(rowOf('Thalia')).getByRole('button', { name: 'Save' })).toBeInTheDocument()
@@ -219,7 +220,7 @@ describe('GroupSaveForm', () => {
     expect(within(rowOf('Thalia')).queryByRole('button', { name: 'Reroll' })).toBeNull()
     fireEvent.click(within(rowOf('Goblin A')).getByRole('button', { name: 'Reroll' }))
 
-    expect(within(rowOf('Goblin A')).getByText(/^\d+$/)).toBeInTheDocument()
+    expect(within(rowOf('Goblin A')).getAllByText(/^\d+$/).length).toBeGreaterThanOrEqual(2)
     expect(within(rowOf('Thalia')).getByRole('button', { name: 'Save' }).className).toContain(
       'emerald',
     )
