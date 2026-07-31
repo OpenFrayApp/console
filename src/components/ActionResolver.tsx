@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
@@ -40,8 +40,6 @@ import {
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { TargetChips } from './TargetChips.tsx'
-import { DieRoll, SPIN_MS } from './DieRoll.tsx'
-import { prefersReducedMotion } from '../lib/motion.ts'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -106,7 +104,7 @@ interface ResolverProps {
 
 /**
  * Resolve a creature's action against the board. Attacks pick one target, roll
- * to-hit (animated), then editable damage to apply. Save / area actions pick any
+ * to-hit, then editable damage to apply. Save / area actions pick any
  * number of targets, resolve each save (monsters auto-roll; the GM records a PC's
  * own roll), and apply per-target damage. Monster resistances/immunities are
  * applied automatically; a PC's are the GM's to enter. Damage is never applied
@@ -205,6 +203,23 @@ const DAMAGE_TONE: Partial<Record<DamageType, string>> = {
   necrotic: 'bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200',
   psychic: 'bg-fuchsia-200 text-fuchsia-900 dark:bg-fuchsia-900/60 dark:text-fuchsia-200',
   radiant: 'bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200',
+}
+
+/** The natural d20 behind a roll, in brackets like the game log writes it. */
+function NaturalRoll({
+  value,
+  tone = 'normal',
+}: {
+  value: number
+  tone?: 'normal' | 'crit' | 'fumble'
+}) {
+  const toneClass =
+    tone === 'crit'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : tone === 'fumble'
+        ? 'text-rose-600 dark:text-rose-400'
+        : 'text-slate-500 dark:text-slate-400'
+  return <span className={`text-sm font-semibold tabular-nums ${toneClass}`}>[{value}]</span>
 }
 
 /** Colored pill for one damage component: amount, type, and any resist/immune/vuln note. */
@@ -361,8 +376,6 @@ function AttackResolver({
   // Casterless cast: the GM supplies the spell attack bonus (the spell doesn't own
   // it, the caster does). With an attacker, the action already carries its to-hit.
   const [bonus, setBonus] = useState(String(action.toHit ?? 0))
-  const [spinKey, setSpinKey] = useState(0)
-  const [revealed, setRevealed] = useState(false)
   const [attack, setAttack] = useState<{
     result: RollResult
     applied: AppliedEffect[]
@@ -378,9 +391,6 @@ function AttackResolver({
   const [adv, setAdv] = useState<'normal' | 'advantage' | 'disadvantage'>('normal')
   const [conc, setConc] = useState<{ dc: number; damage: number } | null>(null)
   const [note, setNote] = useState<string | null>(null)
-  const timer = useRef<number | undefined>(undefined)
-
-  useEffect(() => () => window.clearTimeout(timer.current), [])
 
   const target = targets.find((t) => selected.has(t.combatantId)) ?? null
   const title = attacker ? `${nameOf(attacker)} · ${action.name}` : `Cast ${action.name}`
@@ -419,8 +429,6 @@ function AttackResolver({
     const dmg = damageAgainst(target, components)
     setAttack({ result, applied, target, d20, damage: dmg, crit, autoCrit })
     setDamage(String(dmg.reduce((s, d) => s + d.amount, 0)))
-    setSpinKey((k) => k + 1)
-    setRevealed(false)
     setConc(null)
     setNote(null)
     // One merged entry per attack: the to-hit roll, the outcome, and the rolled
@@ -439,11 +447,6 @@ function AttackResolver({
       },
     })
     onUse?.()
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(
-      () => setRevealed(true),
-      prefersReducedMotion() ? 0 : SPIN_MS + 60,
-    )
   }
 
   const hit = attack
@@ -574,13 +577,12 @@ function AttackResolver({
           {attack ? 'Reroll' : 'Roll attack'}
         </button>
         {attack && (
-          <DieRoll
+          <NaturalRoll
             value={attack.d20}
-            spinKey={spinKey}
             tone={attack.crit ? 'crit' : attack.result.fumble ? 'fumble' : 'normal'}
           />
         )}
-        {revealed && attack && (
+        {attack && (
           <span className="text-sm">
             <span className="font-bold tabular-nums">{attack.result.total}</span> vs AC{' '}
             {acOf(attack.target)} ·{' '}
@@ -609,13 +611,13 @@ function AttackResolver({
         )}
       </div>
 
-      {revealed && attack && attack.applied.length > 0 && (
+      {attack && attack.applied.length > 0 && (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           {attack.applied.map(describeApplied).join(' · ')}
         </p>
       )}
 
-      {revealed && attack && (action.damage?.length ?? 0) > 0 && (
+      {attack && (action.damage?.length ?? 0) > 0 && (
         <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
           <div className="mb-2 flex flex-wrap gap-1.5">
             {attack.damage.map((d, i) => (
@@ -649,7 +651,7 @@ function AttackResolver({
         </div>
       )}
 
-      {revealed && attack && (
+      {attack && (
         <>
           <ConditionChips
             onApply={applyCondition}
@@ -715,7 +717,6 @@ export function SaveResolver({
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
   const [area, setArea] = useState<RolledDamage[]>([])
   const [resolved, setResolved] = useState(false)
-  const [spinKey, setSpinKey] = useState(0)
   const [pending, setPending] = useState<{ combatant: Combatant; dc: number; damage: number }[]>([])
   const [note, setNote] = useState<string | null>(null)
 
@@ -800,7 +801,6 @@ export function SaveResolver({
       }
     }
     setRows(next)
-    setSpinKey((k) => k + 1)
     setResolved(true)
     onUse?.()
   }
@@ -1030,7 +1030,7 @@ export function SaveResolver({
                 >
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{nameOf(c)}</span>
-                    {row?.d20 != null && <DieRoll value={row.d20} spinKey={spinKey} />}
+                    {row?.d20 != null && <NaturalRoll value={row.d20} />}
                     {row?.total != null && (
                       <span className="tabular-nums text-slate-500 dark:text-slate-400">
                         {row.total}
