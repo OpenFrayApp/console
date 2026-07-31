@@ -24,39 +24,53 @@ function drawTo(name: string, args: string[]) {
   return readFileSync(out)
 }
 
-/** PNG dimensions, straight out of the IHDR chunk. */
-const size = (png: Buffer) => `${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`
+/** Pixel dimensions of whatever the generator wrote. */
+async function size(image: Buffer) {
+  const { default: sharp } = await import('sharp')
+  const { width, height } = await sharp(image).metadata()
+  return `${width}x${height}`
+}
 
 describe('the release cover generator', () => {
-  it('draws a 2x social card', () => {
+  it('draws a 2x social card', async () => {
     // 2400x1260 is 1200x630 at 2x, so Astro has something to resize down from.
-    expect(size(drawTo('a.png', ['0.3.0']))).toBe('2400x1260')
+    expect(await size(drawTo('a.webp', ['0.3.0']))).toBe('2400x1260')
+  })
+
+  it('writes WebP, because a PNG of this costs a megabyte a release', async () => {
+    // The cover is a full-canvas gradient with a few big glyphs — the worst case for
+    // lossless compression. The same image is 984KB as a PNG. It is generated from the
+    // script, so being lossy costs nothing that isn't recoverable.
+    const image = drawTo('fmt.webp', ['0.3.0'])
+    const { default: sharp } = await import('sharp')
+    expect((await sharp(image).metadata()).format).toBe('webp')
+    expect(image.length).toBeLessThan(150 * 1024)
   })
 
   it('draws the same version identically, however long between runs', () => {
     // The field is seeded from the version, not from a clock or Math.random. A cover
     // regenerated next year has to reproduce the committed one byte for byte, or every
     // rebuild would show up as a diff.
-    expect(drawTo('b.png', ['0.3.0']).equals(drawTo('c.png', ['0.3.0']))).toBe(true)
+    expect(drawTo('b.webp', ['0.3.0']).equals(drawTo('c.webp', ['0.3.0']))).toBe(true)
   })
 
   it('draws a different field for a different version', () => {
-    expect(drawTo('d.png', ['0.4.0']).equals(drawTo('e.png', ['0.3.0']))).toBe(false)
+    expect(drawTo('d.webp', ['0.4.0']).equals(drawTo('e.webp', ['0.3.0']))).toBe(false)
   })
 
   it('takes a tagline, and it changes the picture', () => {
-    const plain = drawTo('f.png', ['0.3.0'])
-    const tagged = drawTo('g.png', ['0.3.0', '--tagline', 'The shared player view'])
+    const plain = drawTo('f.webp', ['0.3.0'])
+    const tagged = drawTo('g.webp', ['0.3.0', '--tagline', 'The shared player view'])
     expect(tagged.equals(plain)).toBe(false)
   })
 
-  it('finds the version after a switch rather than eating it', () => {
+  it('finds the version after a switch rather than eating it', async () => {
     // `--force 0.3.0` must not read 0.3.0 as the value of --force.
-    expect(size(drawTo('h.png', ['--force', '0.3.0']))).toBe('2400x1260')
+    expect(await size(drawTo('h.webp', ['--force', '0.3.0']))).toBe('2400x1260')
   })
 
   it('refuses to overwrite a cover unless told to', () => {
-    const out = join(dir, 'keep.png')
+    const out = join(dir, 'keep.webp')
     draw(['0.9.0', '--out', out])
     expect(() => draw(['0.9.0', '--out', out])).toThrow(/already exists/)
     expect(() => draw(['0.9.0', '--out', out, '--force'])).not.toThrow()
@@ -71,9 +85,9 @@ describe('the release cover generator', () => {
 
   it('prints the frontmatter lines to paste, when it wrote where a post can reach it', () => {
     const stdout = draw(['0.8.0', '--post', 'openfray-0-8-0', '--force'])
-    expect(stdout).toContain("cover: '../../assets/news/openfray-0-8-0.png'")
+    expect(stdout).toContain("cover: '../../assets/news/openfray-0-8-0.webp'")
     expect(stdout).toContain('coverAlt:')
-    rmSync(join('site/src/assets/news', 'openfray-0-8-0.png'), { force: true })
+    rmSync(join('site/src/assets/news', 'openfray-0-8-0.webp'), { force: true })
   })
 
   it('carries no logo and no site address', () => {
@@ -91,8 +105,8 @@ describe('the release cover generator', () => {
     // half, away from the numerals, so it is the wash being judged and not the text.
     const { default: sharp } = await import('sharp')
     for (const version of ['0.3.0', '0.4.0', '1.0.0']) {
-      const png = drawTo('varies.png', [version])
-      const raw = await sharp(png)
+      const image = drawTo('varies.webp', [version])
+      const raw = await sharp(image)
         .extract({ left: 1320, top: 0, width: 1080, height: 1260 })
         .resize(60, 70)
         .greyscale()
@@ -116,10 +130,10 @@ describe('the release cover generator', () => {
       return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
     }
     for (const version of ['0.3.0', '0.4.0', '0.12.0', '1.0.0']) {
-      const png = drawTo('legible.png', [version])
+      const image = drawTo('legible.webp', [version])
       // Sample the band the numerals sit in, but only the gap to their right, which is
       // the same wash they sit on and has no glyphs in it.
-      const raw = await sharp(png)
+      const raw = await sharp(image)
         .extract({ left: 2260, top: 500, width: 120, height: 300 })
         .greyscale()
         .raw()
@@ -135,8 +149,8 @@ describe('the release cover generator', () => {
     // band: anything bright there is a string that ran off the edge.
     const { default: sharp } = await import('sharp')
     for (const version of ['0.3.0', '10.24.6', '1.0.0-beta.2', '2026.07.31-nightly']) {
-      const png = drawTo('fit.png', [version])
-      const strip = await sharp(png)
+      const image = drawTo('fit.webp', [version])
+      const strip = await sharp(image)
         .extract({ left: 2400 - 80, top: 380, width: 80, height: 520 })
         .greyscale()
         .raw()

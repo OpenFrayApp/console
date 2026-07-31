@@ -9,7 +9,7 @@
 //   node scripts/make-release-cover.mjs 0.3.0
 //   node scripts/make-release-cover.mjs 0.3.0 --tagline "The player view"
 //   node scripts/make-release-cover.mjs 0.3.0 --post openfray-0-3-0
-//   node scripts/make-release-cover.mjs 0.3.0 --out some/other/path.png
+//   node scripts/make-release-cover.mjs 0.3.0 --out some/other/path.webp
 //
 // The background is seeded from the version string, so a given version always draws the
 // same image and two releases never draw the same one. Re-running for 0.3.0 next year
@@ -136,7 +136,7 @@ function vignette() {
   )
 }
 
-/** Point size for the version, stepped down so a long one still clears the rings. */
+/** Point size for the version, stepped down so a long one still fits the canvas. */
 function versionSize(version) {
   if (version.length <= 6) return 208
   if (version.length <= 9) return 168
@@ -144,7 +144,7 @@ function versionSize(version) {
   return 104
 }
 
-/** The whole cover as an SVG document. Grain is composited afterwards, in raster. */
+/** The whole cover as an SVG document. */
 function cover({ version, tagline, font }) {
   const rand = randomFrom(seedOf(version))
   const field = wash(rand)
@@ -237,7 +237,7 @@ if (extra.length) {
   process.exit(1)
 }
 
-const named = options.post ? `${options.post}.png` : `release-${version}.png`
+const named = options.post ? `${options.post}.webp` : `release-${version}.webp`
 const out = options.out ?? join(COVERS, named)
 
 if (existsSync(out) && !options.force) {
@@ -254,34 +254,26 @@ const svg = cover({
   tagline: options.tagline,
   font: options.font ?? DEFAULT_FONT,
 })
-const flat = await sharp(Buffer.from(svg, 'utf8'), { density: 144 }).png().toBuffer()
-
-// A little grain over the top. A gradient wash rendered flat looks like a computer drew
-// it; the noise is what stops the large areas of near-flat colour from banding on a
-// dark screen, and it costs nothing. Seeded from the version like everything else, so
-// the file stays reproducible.
-const grainRand = randomFrom(seedOf(`grain:${version}`))
-const speckle = Buffer.alloc(WIDTH * 2 * HEIGHT * 2 * 4)
-for (let i = 0; i < speckle.length; i += 4) {
-  const v = 118 + Math.round(grainRand() * 24)
-  speckle[i] = v
-  speckle[i + 1] = v
-  speckle[i + 2] = v
-  speckle[i + 3] = 26
-}
-const png = await sharp(flat)
-  .composite([
-    {
-      input: speckle,
-      raw: { width: WIDTH * 2, height: HEIGHT * 2, channels: 4 },
-      blend: 'soft-light',
-    },
-  ])
-  .png({ compressionLevel: 9 })
+// WebP, not PNG. A cover is a full-canvas gradient with a few large glyphs on it —
+// exactly what lossless compression is worst at, and what a lossy codec is best at. The
+// same image is 984KB as a PNG and 33KB here, and at q92 the difference is not visible
+// at any size the site serves. Committing a megabyte per release was the alternative.
+//
+// Being lossy costs nothing that matters: this file is generated, the script is the
+// source, and Astro re-encodes it to avif/webp for the page and to png for the social
+// card regardless.
+//
+// No grain layer either. One was tried, to guard the near-flat areas against banding,
+// and measurement retired it: the rasteriser already dithers the gradients (a 900px
+// slice of the wash ramps 21 levels with no single-level step in it), and the noise
+// came out at 0.09 levels of neighbour difference, which is invisible.
+const image = await sharp(Buffer.from(svg, 'utf8'), { density: 144 })
+  .webp({ quality: 92 })
   .toBuffer()
-writeFileSync(out, png)
+writeFileSync(out, image)
 
-console.log(`Drew ${out}  ${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`)
+const { width, height } = await sharp(image).metadata()
+console.log(`Drew ${out}  ${width}x${height}  ${Math.round(image.length / 1024)}KB`)
 
 // Only offer the frontmatter lines when the file landed where a post can reach it by
 // the relative path they use; --out somewhere else is the caller's business.
