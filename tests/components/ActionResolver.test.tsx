@@ -120,14 +120,16 @@ describe('ActionResolver — attacks', () => {
     fireEvent.click(screen.getByText('Roll attack'))
 
     // An Unconscious target grants advantage, so the pair is rolled and both show:
-    // the die that counted stands out, the dropped one is dimmed beside it.
+    // the die that counted stands out, the dropped one is dimmed beside it, and the
+    // arrow carries them to the total.
     const group = [...container.querySelectorAll('span')].find((el) =>
-      /^\[\d+, \d+\]$/.test(el.textContent ?? ''),
+      /^\[\d+, \d+\] → \d+$/.test(el.textContent ?? ''),
     )
     expect(group).toBeTruthy()
     const dice = [...group!.querySelectorAll('span')]
-    expect(dice).toHaveLength(2)
+    expect(dice).toHaveLength(3) // two dice and the total
     expect(dice.filter((el) => el.className.includes('font-semibold'))).toHaveLength(1)
+    expect(dice.filter((el) => el.className.includes('font-bold'))).toHaveLength(1)
   })
 })
 

@@ -8,7 +8,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { damageFormula, damageTypes, damageVariants } from '../combat/casting.ts'
 import { roll } from '../dice/roll.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
-import { Button, Select } from './ui.tsx'
+import { Button, Chip, Select } from './ui.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
 /** "Cantrip" for level 0, otherwise "Level N". */
@@ -76,9 +76,15 @@ export function SpellResolution({
               ))}
             </Select>
           )}
-          <Button variant="primary" onClick={rollDamage}>
-            {rolled ? 'Reroll damage' : 'Roll damage'}
-          </Button>
+          {rolled ? (
+            <Chip size="sm" onClick={rollDamage}>
+              Reroll damage
+            </Chip>
+          ) : (
+            <Button variant="primary" onClick={rollDamage}>
+              Roll damage
+            </Button>
+          )}
           {rolled && (
             <span className="text-sm">
               <span className="font-semibold tabular-nums">{rolled.total}</span>{' '}

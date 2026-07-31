@@ -164,34 +164,46 @@ const DAMAGE_TONE: Partial<Record<DamageType, string>> = {
 }
 
 /**
- * The d20s behind a roll, in brackets like the game log writes them. With advantage
- * or disadvantage both dice show: the one that counted stands out, the dropped one
- * is dimmed beside it.
+ * What a d20 roll came to: the dice in brackets, an arrow, then the total the
+ * modifiers made of it — `[5, 9] → 11`. With advantage or disadvantage both dice
+ * show, the one that counted standing out from the one it dropped. A lone die stays
+ * muted, since the total is the number being read.
  */
 export function NaturalRoll({
   group,
+  total,
   tone = 'normal',
 }: {
   group: DieGroup
+  /** The roll's total. Omitted where the caller shows it itself. */
+  total?: number
   tone?: 'normal' | 'crit' | 'fumble'
 }) {
   const keptClass =
     tone === 'crit'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'font-semibold text-emerald-600 dark:text-emerald-400'
       : tone === 'fumble'
-        ? 'text-rose-600 dark:text-rose-400'
-        : 'text-slate-900 dark:text-slate-100'
+        ? 'font-semibold text-rose-600 dark:text-rose-400'
+        : group.results.length > 1
+          ? 'font-semibold text-slate-900 dark:text-slate-100'
+          : undefined
   const kept = keptFlags(group)
   return (
     <span className="text-sm tabular-nums text-slate-400 dark:text-slate-500">
       [
       {group.results.map((value, i) => (
-        <span key={i} className={kept[i] ? `font-semibold ${keptClass}` : undefined}>
+        <span key={i} className={kept[i] ? keptClass : undefined}>
           {i > 0 ? ', ' : ''}
           {value}
         </span>
       ))}
       ]
+      {total != null && (
+        <>
+          {' → '}
+          <span className="font-bold text-slate-900 dark:text-slate-100">{total}</span>
+        </>
+      )}
     </span>
   )
 }
@@ -529,19 +541,25 @@ function AttackResolver({
       </fieldset>
 
       <div className="flex items-center gap-3">
-        <Button variant="primary" onClick={doRoll} disabled={!target}>
-          {attack ? 'Reroll' : 'Roll attack'}
-        </Button>
+        {attack ? (
+          <Chip size="sm" onClick={doRoll}>
+            Reroll
+          </Chip>
+        ) : (
+          <Button variant="primary" onClick={doRoll} disabled={!target}>
+            Roll attack
+          </Button>
+        )}
         {attack?.d20 && (
           <NaturalRoll
             group={attack.d20}
+            total={attack.result.total}
             tone={attack.crit ? 'crit' : attack.result.fumble ? 'fumble' : 'normal'}
           />
         )}
         {attack && (
           <span className="text-sm">
-            <span className="font-bold tabular-nums">{attack.result.total}</span> vs AC{' '}
-            {acOf(attack.target)} ·{' '}
+            vs AC {acOf(attack.target)} ·{' '}
             <span
               className={
                 hit
@@ -999,12 +1017,7 @@ export function SaveResolver({
                 >
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{nameOf(c)}</span>
-                    {row?.d20 && <NaturalRoll group={row.d20} />}
-                    {row?.total != null && (
-                      <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                        {row.total}
-                      </span>
-                    )}
+                    {row?.d20 && <NaturalRoll group={row.d20} total={row.total} />}
                     {!noSave && (
                       <>
                         <Chip

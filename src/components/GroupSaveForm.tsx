@@ -274,12 +274,7 @@ export function GroupSaveForm({
               </label>
               {resolved && selected.has(c.combatantId) && (
                 <span className="flex items-center gap-1">
-                  {row?.d20 && <NaturalRoll group={row.d20} />}
-                  {row?.total != null && (
-                    <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                      {row.total}
-                    </span>
-                  )}
+                  {row?.d20 && <NaturalRoll group={row.d20} total={row.total} />}
                   <Chip
                     size="sm"
                     tone="good"

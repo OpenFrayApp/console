@@ -250,8 +250,10 @@ def _open_attack(page):
     page.get_by_text("Ogre", exact=True).first.click()
     page.wait_for_timeout(300)
     page.get_by_text("Greatclub.", exact=False).first.click()
+    page.wait_for_selector("[role=dialog]")
     page.wait_for_timeout(400)
-    page.get_by_role("button", name="Zara", exact=True).click()
+    # Scoped to the dialog: Zara's tracker row is a button with that name too.
+    page.get_by_role("dialog").last.get_by_role("button", name="Zara", exact=True).click()
     page.wait_for_timeout(200)
 
 
