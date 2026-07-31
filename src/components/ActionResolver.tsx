@@ -426,8 +426,7 @@ function AttackResolver({
       target,
       kind: 'attack',
       range,
-      advantageSources: adv === 'advantage' ? ['Advantage'] : undefined,
-      disadvantageSources: adv === 'disadvantage' ? ['Disadvantage'] : undefined,
+      advantage: adv,
     })
     const { result, applied } = rolled
     // Persist any consumeOnRoll effects that fired (e.g. "disadvantage on its

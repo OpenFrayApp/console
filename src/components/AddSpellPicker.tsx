@@ -18,6 +18,7 @@ export function AddSpellPicker({
   showHomebrew = true,
   label,
   triggerClass,
+  align = 'right',
 }: {
   onPick: (s: Spell) => void
   customSpells?: Spell[]
@@ -25,6 +26,7 @@ export function AddSpellPicker({
   showHomebrew?: boolean
   label: string
   triggerClass: string
+  align?: 'left' | 'right'
 }) {
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const load = useCallback(() => {
@@ -35,6 +37,7 @@ export function AddSpellPicker({
     <LibraryPicker
       label={label}
       triggerClass={triggerClass}
+      align={align}
       placeholder="Search spells…"
       searchLabel="Search spells"
       entries={spells}

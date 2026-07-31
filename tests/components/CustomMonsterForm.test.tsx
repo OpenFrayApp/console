@@ -229,6 +229,9 @@ describe('CustomMonsterForm', () => {
 
     fireEvent.change(screen.getByLabelText('Creature name'), { target: { value: 'Goblin Sapper' } })
     fireEvent.click(screen.getByRole('button', { name: 'Start from…' }))
+    // The trigger sits at the modal's left edge, so the popover has to open rightwards
+    // — hung from the other edge it falls outside the modal.
+    expect(screen.getByLabelText('Search creatures').closest('div')?.className).toContain('left-0')
     await waitFor(() => screen.getByText('Goblin'))
     fireEvent.click(screen.getByText('Goblin'))
 

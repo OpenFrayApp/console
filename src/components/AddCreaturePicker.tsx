@@ -20,6 +20,7 @@ export function AddCreaturePicker({
   label = 'Add creature',
   triggerClass = TRIGGER,
   closeOnPick = false,
+  align = 'right',
 }: {
   onPick: (c: Creature) => void
   customCreatures?: Creature[]
@@ -30,6 +31,8 @@ export function AddCreaturePicker({
   triggerClass?: string
   /** Adding leaves the picker open for the next creature; starting a form closes it. */
   closeOnPick?: boolean
+  /** Which edge of the trigger the popover hangs from. */
+  align?: 'left' | 'right'
 }) {
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
   const load = useCallback(() => {
@@ -40,6 +43,7 @@ export function AddCreaturePicker({
     <LibraryPicker
       label={label}
       triggerClass={triggerClass}
+      align={align}
       placeholder="Search creatures…"
       searchLabel="Search creatures"
       entries={creatures}
