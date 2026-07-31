@@ -67,7 +67,13 @@ describe('CombatantControls', () => {
   it('toggles the reaction', () => {
     const dispatch = vi.fn()
     render(
-      <CombatantControls combatant={monster()} round={1} dispatch={dispatch} onRoll={() => {}} />,
+      <CombatantControls
+        combatant={monster()}
+        round={1}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
     )
     fireEvent.click(screen.getByText('Use reaction'))
     const call = dispatch.mock.calls[0][0]
@@ -79,7 +85,13 @@ describe('CombatantControls', () => {
   it('shows death-save controls for an unconscious PC, hidden once stable', () => {
     const dispatch = vi.fn()
     const { rerender } = render(
-      <CombatantControls combatant={downedPc()} round={1} dispatch={dispatch} onRoll={() => {}} />,
+      <CombatantControls
+        combatant={downedPc()}
+        round={1}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
     )
     expect(screen.getByText('Roll death save')).toBeInTheDocument()
 
@@ -89,6 +101,7 @@ describe('CombatantControls', () => {
         round={1}
         dispatch={dispatch}
         onRoll={() => {}}
+        onGmRoll={() => {}}
       />,
     )
     expect(screen.queryByText('Roll death save')).toBeNull()
@@ -97,7 +110,13 @@ describe('CombatantControls', () => {
   it('marks a combatant as concentrating', () => {
     const dispatch = vi.fn()
     render(
-      <CombatantControls combatant={monster()} round={3} dispatch={dispatch} onRoll={() => {}} />,
+      <CombatantControls
+        combatant={monster()}
+        round={3}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
     )
     fireEvent.click(screen.getByText('Concentrate'))
     fireEvent.change(screen.getByLabelText(/Concentration spell/), {
@@ -129,6 +148,7 @@ describe('CombatantControls', () => {
           round={1}
           dispatch={vi.fn()}
           onRoll={() => {}}
+          onGmRoll={() => {}}
         />,
       )
       const rows = screen.getAllByRole('listitem').map((li) => li.textContent)
@@ -145,6 +165,7 @@ describe('CombatantControls', () => {
           round={1}
           dispatch={vi.fn()}
           onRoll={() => {}}
+          onGmRoll={() => {}}
         />,
       )
       // Only the save-ends effect offers a roll; Prone has nothing to roll against.
@@ -160,6 +181,7 @@ describe('CombatantControls', () => {
           round={1}
           dispatch={dispatch}
           onRoll={() => {}}
+          onGmRoll={() => {}}
         />,
       )
       fireEvent.click(screen.getByRole('button', { name: 'Clear effects' }))
@@ -182,7 +204,13 @@ describe('CombatantControls', () => {
       const dispatch = vi.fn()
       const before = withCounter(3)
       render(
-        <CombatantControls combatant={before} round={1} dispatch={dispatch} onRoll={() => {}} />,
+        <CombatantControls
+          combatant={before}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
       )
       fireEvent.click(screen.getByRole('button', { name: 'Raise Depth' }))
       expect(effectsAfter(dispatch, before)[0].duration).toEqual({ type: 'counter', count: 4 })
@@ -196,7 +224,13 @@ describe('CombatantControls', () => {
       const dispatch = vi.fn()
       const before = withCounter(5)
       render(
-        <CombatantControls combatant={before} round={1} dispatch={dispatch} onRoll={() => {}} />,
+        <CombatantControls
+          combatant={before}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
       )
       fireEvent.click(screen.getByRole('button', { name: 'Reset' }))
       const effects = effectsAfter(dispatch, before)
@@ -211,6 +245,7 @@ describe('CombatantControls', () => {
           round={1}
           dispatch={vi.fn()}
           onRoll={() => {}}
+          onGmRoll={() => {}}
         />,
       )
       expect(screen.getByRole('button', { name: 'Lower Depth' })).toBeDisabled()
@@ -225,6 +260,7 @@ describe('CombatantControls', () => {
           round={1}
           dispatch={vi.fn()}
           onRoll={() => {}}
+          onGmRoll={() => {}}
         />,
       )
       expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
@@ -235,6 +271,7 @@ describe('CombatantControls', () => {
           round={1}
           dispatch={vi.fn()}
           onRoll={() => {}}
+          onGmRoll={() => {}}
         />,
       )
       expect(screen.getAllByRole('listitem')[0].textContent).toContain('at 4')
@@ -242,7 +279,13 @@ describe('CombatantControls', () => {
 
     it('offers nothing to clear when there are no effects', () => {
       render(
-        <CombatantControls combatant={monster()} round={1} dispatch={vi.fn()} onRoll={() => {}} />,
+        <CombatantControls
+          combatant={monster()}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
       )
       expect(screen.queryByRole('button', { name: 'Clear effects' })).toBeNull()
       expect(screen.queryByText('Applied effects')).toBeNull()

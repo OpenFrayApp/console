@@ -10,6 +10,13 @@ import { Modal } from './Modal.tsx'
 export type OnRoll = (label: string, result: RollResult, applied?: AppliedEffect[]) => void
 
 /**
+ * Record a roll the GM keeps to themselves — a creature's recharge or escape save,
+ * which hands the table a resource or a bonus it hasn't seen. It reads identically in
+ * the GM's own log; only the shared player view drops it.
+ */
+export type OnGmRoll = (label: string, result: RollResult) => void
+
+/**
  * Record a board event in the game log (a cast, a spent ability, a note). Defaults
  * to a plain `note`; pass a category so the entry gets the right icon and filter.
  */

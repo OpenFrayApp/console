@@ -20,8 +20,14 @@ import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
 import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from './schema/roster.ts'
 import { CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer } from './state/encounter.ts'
-import { loadSession, saveSession, type Theme, type View } from './state/persistence.ts'
-import { loadCloudEncounter, saveCloudEncounter } from './state/cloudEncounter.ts'
+import { loadSession, saveSession, type View } from './state/persistence.ts'
+import { useTheme } from './hooks/useTheme.ts'
+import {
+  claimPlayerCode,
+  loadCloudEncounter,
+  saveCloudEncounter,
+  type ClaimResult,
+} from './state/cloudEncounter.ts'
 import {
   deleteCustomCreature,
   loadCustomCreatures,
@@ -52,7 +58,14 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { RecapScreen, EndCombatPrompt } from './components/Recap.tsx'
 import { allFoesDefeated, allPlayersDown, buildRecap, type Recap } from './combat/recap.ts'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
-import { loadSettings, saveSettings, type LibrarySort } from './state/settings.ts'
+import {
+  loadSettings,
+  saveSettings,
+  type LibrarySort,
+  type PlayerViewSettings,
+} from './state/settings.ts'
+import { useBoardBroadcast } from './state/playerChannel.ts'
+import { randomPlayerCode } from './state/playerCode.ts'
 import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
@@ -70,8 +83,10 @@ import { CombatTimers } from './components/CombatTimers.tsx'
 import { CombatDifficulty } from './components/CombatDifficulty.tsx'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
+import { ThemeToggle } from './components/ThemeToggle.tsx'
+import { SharePanel } from './components/SharePanel.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
-import { GameLogModal, type OnNote, type OnRoll } from './components/GameLog.tsx'
+import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
 
 const REPO_URL = 'https://github.com/SirDarcanos/openfray'
@@ -113,50 +128,6 @@ function BookIcon() {
     >
       <path d="M12 7v14" />
       <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-    </svg>
-  )
-}
-
-/** Sun icon (theme button while in dark mode). */
-function SunIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="m6.34 17.66-1.41 1.41" />
-      <path d="m19.07 4.93-1.41 1.41" />
-    </svg>
-  )
-}
-
-/** Moon icon (theme button while in light mode). */
-function MoonIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
     </svg>
   )
 }
@@ -245,17 +216,9 @@ const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex
 /** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
 function App() {
   const [restored] = useState(loadSession)
-  // Theme is shared with the marketing site via the `openfray-theme` localStorage
-  // key. Fall back to the restored session, then dark (the default both surfaces use).
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      const stored = localStorage.getItem('openfray-theme')
-      if (stored === 'light' || stored === 'dark') return stored
-    } catch {
-      /* localStorage may be unavailable; fall through to the defaults */
-    }
-    return restored?.theme ?? 'dark'
-  })
+  // Theme is shared with the marketing site (and the player view) via the
+  // `openfray-theme` key; the restored session is the fallback, then dark.
+  const [theme, toggleTheme] = useTheme(restored?.theme ?? 'dark')
   const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   // Which content libraries the compendium/picker show. A device-local preference
@@ -283,6 +246,19 @@ function App() {
     setLibrarySortState(value)
     saveSettings({ librarySort: value })
   }
+  // What the shared player view gives away, and the code its link uses. The setting is
+  // device-local like the theme; the code is device-local while anonymous and lives on
+  // the encounter row once signed in, which is what makes it the same on every device.
+  const [playerView, setPlayerViewState] = useState<PlayerViewSettings>(
+    () => loadSettings().playerView,
+  )
+  /** Set what players see and persist the choice to device-local settings. */
+  const setPlayerView = (value: PlayerViewSettings) => {
+    setPlayerViewState(value)
+    saveSettings({ playerView: value })
+  }
+  const [playerCode, setPlayerCode] = useState<string | null>(() => loadSettings().playerViewCode)
+  const [sharing, setSharing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
   const [recap, setRecap] = useState<Recap | null>(null)
@@ -322,16 +298,6 @@ function App() {
     ? campaigns.find((c) => c.id === activeCampaignId)
     : undefined
   const activeRules = activeCampaign?.rules ?? DEFAULT_CAMPAIGN_RULES
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    // Persist to the shared key so the marketing site reflects the same choice.
-    try {
-      localStorage.setItem('openfray-theme', theme)
-    } catch {
-      /* ignore when localStorage is unavailable */
-    }
-  }, [theme])
 
   useEffect(() => {
     if (user) setAuthOpen(false)
@@ -384,6 +350,9 @@ function App() {
         cloudId.current = res.id
         dispatch({ type: 'load', encounter: res.encounter })
         setSelectedId(null)
+        // A signed-in GM's chosen name follows the account, so it wins over whatever
+        // this device happened to mint while anonymous.
+        if (res.playerCode) setPlayerCode(res.playerCode)
       }
       cloudHydrated.current = true
     })
@@ -411,10 +380,42 @@ function App() {
     return () => clearTimeout(handle)
   }, [encounter, theme, view, selectedId, activeCampaignId, userId])
 
-  /** Flip between dark and light; the theme effect persists the choice. */
-  const toggleTheme = () => {
-    track(EVENTS.themeToggled)
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  // Share the board while sharing is on. Broadcast only — nothing about the fight is
+  // written anywhere, so an anonymous GM can share without a row reaching the database.
+  useBoardBroadcast(sharing ? playerCode : null, encounter, playerView)
+
+  /**
+   * Start or stop sharing. An anonymous GM has no name to claim, so the first share
+   * mints a random code and keeps it, and the link stays the same from then on.
+   */
+  const toggleSharing = () => {
+    if (sharing) {
+      track(EVENTS.playerViewStopped)
+      setSharing(false)
+      return
+    }
+    if (!playerCode) {
+      const code = randomPlayerCode()
+      setPlayerCode(code)
+      saveSettings({ playerViewCode: code })
+    }
+    track(EVENTS.playerViewShared)
+    setSharing(true)
+  }
+
+  /**
+   * Claim a chosen name for a signed-in GM. The database's unique index is the judge —
+   * RLS means we can never see another GM's row to check first — so a rejected name
+   * leaves the current link working rather than clearing it.
+   */
+  const claimShareCode = async (code: string): Promise<ClaimResult> => {
+    if (!cloudId.current) return 'failed'
+    const result = await claimPlayerCode(cloudId.current, code)
+    if (result === 'ok') {
+      track(EVENTS.playerViewNamed)
+      setPlayerCode(code)
+    }
+    return result
   }
 
   const pushRoll: OnRoll = (label, result, applied) => {
@@ -423,6 +424,10 @@ function App() {
 
   const pushNote: OnNote = (label, category = 'note') => {
     dispatch({ type: 'log', entry: { category, message: label } })
+  }
+
+  const pushGmRoll: OnGmRoll = (label, result) => {
+    dispatch({ type: 'log', entry: { category: 'roll', message: label, result, gmOnly: true } })
   }
 
   /** Rewrite a renamed combatant's old name to the new one across past log entries. */
@@ -588,7 +593,7 @@ function App() {
     for (const action of rechargeActions(active.creature)) {
       if (active.limitedUseState[action.id]?.available === false) {
         const { recharged, roll: result } = rollRecharge(action)
-        pushRoll(`${active.label}: ${action.name} recharge`, result)
+        pushGmRoll(`${active.label}: ${action.name} recharge`, result)
         if (recharged) {
           dispatch({
             type: 'update',
@@ -608,7 +613,9 @@ function App() {
       if (save.when !== when) continue
       const bonus = saveBonus(c, save.ability) ?? 0
       const result = roll(`1d20${bonus >= 0 ? `+${bonus}` : `${bonus}`}`, { kind: 'save' })
-      pushRoll(`${c.label}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
+      // The die gives away the creature's save bonus; whether the effect ended is
+      // logged separately by the update diff, and that part the table does see.
+      pushGmRoll(`${c.label}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
       if (result.total >= save.dc) {
         dispatch({
           type: 'update',
@@ -867,6 +874,13 @@ function App() {
             >
               <HelpIcon />
             </a>
+            <SharePanel
+              code={playerCode}
+              sharing={sharing}
+              onToggleShare={toggleSharing}
+              onClaim={user ? claimShareCode : undefined}
+              onSignIn={() => setAuthOpen(true)}
+            />
             <button
               type="button"
               onClick={() => {
@@ -879,15 +893,13 @@ function App() {
             >
               <GearIcon />
             </button>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-            </button>
+            <ThemeToggle
+              theme={theme}
+              onToggle={() => {
+                track(EVENTS.themeToggled)
+                toggleTheme()
+              }}
+            />
           </div>
         </header>
 
@@ -900,6 +912,8 @@ function App() {
             onSetShowHomebrew={setShowHomebrew}
             librarySort={librarySort}
             onSetLibrarySort={setLibrarySort}
+            playerView={playerView}
+            onSetPlayerView={setPlayerView}
           />
         )}
 
@@ -937,6 +951,7 @@ function App() {
               encounter={encounter}
               dispatch={dispatch}
               onRoll={pushRoll}
+              onGmRoll={pushGmRoll}
               onNote={pushNote}
               onRename={renameInLog}
               onEditPc={handleEditEncounterPc}

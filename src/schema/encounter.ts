@@ -39,6 +39,13 @@ export interface GameLogEntry {
   /** The combatant the entry is about, when known (for future filtering). */
   sourceId?: string
   /**
+   * Bookkeeping the GM keeps to themselves — a creature's recharge and escape-save
+   * rolls, which give away resources and bonuses the table hasn't earned. The
+   * shared player view drops these; everything else it shows. A flag rather than a
+   * message match, so the app never reads meaning back out of its own prose.
+   */
+  gmOnly?: boolean
+  /**
    * For a resolved attack, collapsed onto one entry with its to-hit `result`: the
    * outcome and the damage rolled per type (omitted on a miss). Lets the log show
    * "Bite → Ogre · 27 hit · 18 piercing + 7 fire" as a single line.

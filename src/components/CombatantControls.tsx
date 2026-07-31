@@ -25,7 +25,7 @@ import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
-import type { OnRoll } from './GameLog.tsx'
+import type { OnGmRoll, OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
 const BTN =
@@ -42,6 +42,7 @@ export function CombatantControls({
   round,
   dispatch,
   onRoll,
+  onGmRoll,
 }: {
   combatant: Combatant
   /** The rest of the board, to name whoever caused a source-relative effect. */
@@ -50,6 +51,8 @@ export function CombatantControls({
   round: number
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  /** Rolls the shared player view withholds — here, a creature's escape save. */
+  onGmRoll: OnGmRoll
 }) {
   const [concInput, setConcInput] = useState<string | null>(null)
   const [concDur, setConcDur] = useState<number | null>(null)
@@ -113,7 +116,9 @@ export function CombatantControls({
     if (combatant.isPC) return
     const bonus = saveBonus(combatant, save.ability) ?? 0
     const result = roll(`1d20${signed(bonus)}`, { kind: 'save' })
-    onRoll(`${name}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
+    // The die gives away the creature's save bonus; whether the effect ended is
+    // logged separately by the update diff, and that part the table does see.
+    onGmRoll(`${name}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
     if (result.total >= save.dc) removeEffect(save.effect.id)
   }
 

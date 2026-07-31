@@ -44,7 +44,7 @@ import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback, EncounterCleanup, TurnControls } from './EncounterPlayback.tsx'
-import { GameLog, type OnNote, type OnRoll } from './GameLog.tsx'
+import { GameLog, type OnGmRoll, type OnNote, type OnRoll } from './GameLog.tsx'
 import { titleCase } from '../compendium/format.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -73,6 +73,7 @@ export function EncounterConsole({
   encounter,
   dispatch,
   onRoll,
+  onGmRoll,
   selectedId,
   onSelect,
   started,
@@ -90,6 +91,8 @@ export function EncounterConsole({
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  /** Rolls the shared player view withholds — a creature's recharge and escape saves. */
+  onGmRoll: OnGmRoll
   onNote: OnNote
   /** Open the full character editor for a roster-backed PC (saves to the DB). */
   onEditPc?: (pc: PlayerCharacter) => void
@@ -205,7 +208,7 @@ export function EncounterConsole({
   const rollRechargeFor = (c: Combatant, action: Action) => {
     if (c.isPC) return
     const { recharged, roll } = rollRecharge(action)
-    onRoll(`${c.label}: ${action.name} recharge`, roll)
+    onGmRoll(`${c.label}: ${action.name} recharge`, roll)
     if (recharged) {
       dispatch({
         type: 'update',
@@ -548,6 +551,7 @@ export function EncounterConsole({
                 round={encounter.round}
                 dispatch={dispatch}
                 onRoll={onRoll}
+                onGmRoll={onGmRoll}
               />
               {selected.isPC && selected.rosterId && onEditPc && (
                 <button
