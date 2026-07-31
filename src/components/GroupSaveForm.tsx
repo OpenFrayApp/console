@@ -20,7 +20,8 @@ import {
 } from '../combat/masssave.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
-import { ConditionChips, DamageTypeSelect, NaturalRoll, REROLL_BTN } from './ActionResolver.tsx'
+import { ConditionChips, DamageTypeSelect, NaturalRoll } from './ActionResolver.tsx'
+import { Button, Chip, Field, Select } from './ui.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -32,12 +33,6 @@ interface Row {
   /** The d20 group of an auto-rolled save, so both dice show under advantage. */
   d20?: DieGroup
 }
-
-/** Chip classes for a Save/Fail toggle: the given tone when active, muted otherwise. */
-const TOGGLE = (active: boolean, tone: string) =>
-  `rounded border px-1.5 py-0.5 text-xs font-medium ${
-    active ? tone : 'border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-  }`
 
 export interface GroupSaveSeed {
   ability?: Ability
@@ -224,44 +219,43 @@ export function GroupSaveForm({
     <div className="w-full rounded-lg border border-slate-200 p-3 dark:border-slate-800">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <button type="button" onClick={onClose} className="text-xs text-slate-500 hover:underline">
+        <Button variant="quiet" onClick={onClose}>
           Cancel
-        </button>
+        </Button>
       </div>
 
       <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
-        <select
+        <Select
           value={ability}
           onChange={(e) => setAbility(e.target.value as Ability)}
           aria-label="Save ability"
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
+          className="uppercase"
         >
           {ABILITIES.map((a) => (
             <option key={a} value={a}>
               {a.toUpperCase()}
             </option>
           ))}
-        </select>
+        </Select>
         <label className="flex items-center gap-1">
           DC
-          <input
+          <Field
             value={dc}
             onChange={(e) => setDc(e.target.value)}
             aria-label="Save DC"
             inputMode="numeric"
-            className="w-14 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+            className="w-14"
           />
         </label>
-        <select
+        <Select
           value={onSave}
           onChange={(e) => setOnSave(e.target.value as SaveOutcome)}
           aria-label="On save"
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
           <option value="half">save → half damage</option>
           <option value="none">save → no damage</option>
           <option value="negates">save → negates effect</option>
-        </select>
+        </Select>
       </div>
 
       <ul className="mb-2 max-h-48 space-y-1 overflow-auto">
@@ -286,30 +280,26 @@ export function GroupSaveForm({
                       {row.total}
                     </span>
                   )}
-                  <button
-                    type="button"
+                  <Chip
+                    size="sm"
+                    tone="good"
+                    active={row?.result === 'save'}
                     onClick={() => setResult(c.combatantId, 'save')}
-                    className={TOGGLE(
-                      row?.result === 'save',
-                      'border-emerald-400 text-emerald-700 dark:text-emerald-300',
-                    )}
                   >
                     Save
-                  </button>
-                  <button
-                    type="button"
+                  </Chip>
+                  <Chip
+                    size="sm"
+                    tone="bad"
+                    active={row?.result === 'fail'}
                     onClick={() => setResult(c.combatantId, 'fail')}
-                    className={TOGGLE(
-                      row?.result === 'fail',
-                      'border-rose-400 text-rose-700 dark:text-rose-300',
-                    )}
                   >
                     Fail
-                  </button>
+                  </Chip>
                   {!c.isPC && (
-                    <button type="button" onClick={() => reroll(c)} className={REROLL_BTN}>
+                    <Chip size="sm" onClick={() => reroll(c)}>
                       Reroll
-                    </button>
+                    </Chip>
                   )}
                 </span>
               )}
@@ -319,32 +309,23 @@ export function GroupSaveForm({
       </ul>
 
       {!resolved ? (
-        <button
-          type="button"
-          onClick={rollSaves}
-          disabled={selectedCombatants.length === 0}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <Button variant="primary" onClick={rollSaves} disabled={selectedCombatants.length === 0}>
           Roll saves
-        </button>
+        </Button>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <Field
             value={damage}
             onChange={(e) => setDamage(e.target.value)}
             placeholder="Damage"
             aria-label="Damage"
             inputMode="numeric"
-            className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+            className="w-20"
           />
           <DamageTypeSelect value={damageType} onChange={setDamageType} />
-          <button
-            type="button"
-            onClick={applyDamage}
-            className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500"
-          >
+          <Button variant="danger" onClick={applyDamage}>
             Apply
-          </button>
+          </Button>
         </div>
       )}
 

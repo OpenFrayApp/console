@@ -6,6 +6,7 @@ import type { Spell } from '../schema/spell.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
+import type { ButtonVariant } from './ui.tsx'
 
 /** "Cantrip" for level 0, otherwise "Lvl N". */
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
@@ -17,7 +18,7 @@ export function AddSpellPicker({
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
   label,
-  triggerClass,
+  variant = 'secondary',
   align = 'right',
 }: {
   onPick: (s: Spell) => void
@@ -25,7 +26,7 @@ export function AddSpellPicker({
   enabledLibraries?: string[]
   showHomebrew?: boolean
   label: string
-  triggerClass: string
+  variant?: ButtonVariant
   align?: 'left' | 'right'
 }) {
   const [spells, setSpells] = useState<Spell[] | null>(null)
@@ -36,7 +37,7 @@ export function AddSpellPicker({
   return (
     <LibraryPicker
       label={label}
-      triggerClass={triggerClass}
+      variant={variant}
       align={align}
       placeholder="Search spells…"
       searchLabel="Search spells"

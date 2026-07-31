@@ -812,8 +812,11 @@ def group_save():
         start(page, ROLLS)
         page.get_by_role("button", name="Group save").click()
         page.wait_for_timeout(400)
+        # Scoped to the dialog: a creature's tracker row and its stat-block name are
+        # buttons with the same name, and which one exists depends on who won initiative.
+        box = page.get_by_role("dialog").last
         for target in ("Goblin Boss", "Goblin Minion", "Goblin Minion 2"):
-            page.get_by_role("button", name=target, exact=True).click()
+            box.get_by_role("button", name=target, exact=True).click()
         page.get_by_label("Damage", exact=True).fill("3d8")
         page.get_by_label("Damage type").select_option("fire")
         page.wait_for_timeout(200)

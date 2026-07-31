@@ -8,6 +8,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { damageFormula, damageTypes, damageVariants } from '../combat/casting.ts'
 import { roll } from '../dice/roll.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
+import { Button, Select } from './ui.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
 /** "Cantrip" for level 0, otherwise "Level N". */
@@ -60,29 +61,24 @@ export function SpellResolution({
       {hasDamage && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {variants.length > 1 && (
-            <select
+            <Select
               value={variant.key}
               onChange={(e) => {
                 setVariantKey(e.target.value)
                 setRolled(null)
               }}
               aria-label="Cast level"
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
               {variants.map((v) => (
                 <option key={v.key} value={v.key}>
                   {v.label}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-          <button
-            type="button"
-            onClick={rollDamage}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-          >
+          <Button variant="primary" onClick={rollDamage}>
             {rolled ? 'Reroll damage' : 'Roll damage'}
-          </button>
+          </Button>
           {rolled && (
             <span className="text-sm">
               <span className="font-semibold tabular-nums">{rolled.total}</span>{' '}

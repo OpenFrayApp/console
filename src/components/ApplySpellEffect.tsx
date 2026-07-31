@@ -8,6 +8,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
 import { spellEffectFor, type SpellEffectDef } from '../combat/spellEffects.ts'
 import { TargetChips } from './TargetChips.tsx'
+import { Button } from './ui.tsx'
 
 /**
  * Default target selection. With a caster (a monster casting), only its own row is
@@ -123,14 +124,9 @@ export function ApplySpellEffect({
             emptyText="No combatants to target."
           />
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={apply}
-              disabled={selected.size === 0}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-            >
+            <Button variant="primary" onClick={apply} disabled={selected.size === 0}>
               Apply effect
-            </button>
+            </Button>
             {appliedTo != null && (
               <span className="text-sm text-emerald-600 dark:text-emerald-400">
                 {appliedTo.length > 0

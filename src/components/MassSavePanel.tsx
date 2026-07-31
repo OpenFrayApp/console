@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { GroupSaveModal } from './ActionResolver.tsx'
+import { Button } from './ui.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
 /**
@@ -24,14 +25,9 @@ export function MassSavePanel({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        disabled={combatants.length === 0}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-      >
+      <Button onClick={() => setOpen(true)} disabled={combatants.length === 0}>
         Group save
-      </button>
+      </Button>
     )
   }
 

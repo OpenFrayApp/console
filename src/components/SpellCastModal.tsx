@@ -12,6 +12,7 @@ import { titleCase } from '../compendium/format.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { Modal } from './Modal.tsx'
+import { Button } from './ui.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import type { OnRoll } from './GameLog.tsx'
 
@@ -123,32 +124,19 @@ export function SpellCastModal({
               : `You're already concentrating. Are you sure you want to cast ${spell?.name ?? titleCase(spellRef.name)}?`}
           </p>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={proceed}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-            >
+            <Button variant="primary" onClick={proceed}>
               Cast anyway
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              className="text-sm text-slate-500 hover:underline dark:text-slate-400"
-            >
+            </Button>
+            <Button variant="quiet" onClick={() => setConfirming(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : !cast ? (
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={doCast}
-            disabled={drained}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
+          <Button variant="primary" onClick={doCast} disabled={drained}>
             Cast
-          </button>
+          </Button>
           {drained && (
             <span className="text-sm text-slate-500 dark:text-slate-400">
               No uses remaining ·{' '}

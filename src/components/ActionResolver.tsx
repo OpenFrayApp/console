@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
@@ -37,9 +37,10 @@ import {
   concentrationPromptDC,
   rollConcentrationCheck,
 } from '../combat/concentration.ts'
-import { useDismiss } from '../hooks/useDismiss.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
+import { Modal } from './Modal.tsx'
 import { TargetChips } from './TargetChips.tsx'
+import { Button, Chip, Field, Select } from './ui.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -131,49 +132,6 @@ export function GroupSaveModal({
 }) {
   return (
     <SaveResolver combatants={combatants} dispatch={dispatch} onRoll={onRoll} onClose={onClose} />
-  )
-}
-
-/** Dialog shell for the resolvers; Escape or a click outside closes it. */
-function Modal({
-  title,
-  subtitle,
-  onClose,
-  children,
-  wide = false,
-}: {
-  title: string
-  subtitle?: ReactNode
-  onClose: () => void
-  children: ReactNode
-  /** Wider modal for the multi-target group save, so each row fits on one line. */
-  wide?: boolean
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  useDismiss(ref, true, onClose)
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className={`max-h-full w-full overflow-auto rounded-lg border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-900 ${wide ? 'max-w-3xl' : 'max-w-md'}`}
-      >
-        <div className="mb-1 flex items-start justify-between gap-3">
-          <h3 className="text-base font-semibold">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-sm text-slate-500 hover:underline dark:text-slate-400"
-          >
-            Close
-          </button>
-        </div>
-        {subtitle && <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
-        {children}
-      </div>
-    </div>
   )
 }
 
@@ -271,11 +229,10 @@ export function DamageTypeSelect({
   onChange: (type: DamageType | '') => void
 }) {
   return (
-    <select
+    <Select
       value={value}
       onChange={(e) => onChange(e.target.value as DamageType | '')}
       aria-label="Damage type"
-      className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
     >
       <option value="">Untyped</option>
       {DAMAGE_TYPES.map((t) => (
@@ -283,18 +240,9 @@ export function DamageTypeSelect({
           {titleCase(t)}
         </option>
       ))}
-    </select>
+    </Select>
   )
 }
-
-// Applying damage is the irreversible step, so it's deliberately understated
-// rather than a bright call-to-action.
-const APPLY_BTN =
-  'rounded-md border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50'
-
-/** A row's reroll: the same chip as Save/Fail beside it, kept quiet so it doesn't read as the action. */
-export const REROLL_BTN =
-  'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
 
 const QUICK_CONDITIONS: ConditionName[] = [
   'Prone',
@@ -343,28 +291,22 @@ export function ConditionChips({
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Apply condition
         </p>
-        <select
+        <Select
           value={choice}
           onChange={(e) => setChoice(e.target.value as DurationChoice)}
           aria-label="Condition duration"
-          className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs dark:border-slate-700 dark:bg-slate-900"
         >
           <option value="manual">until removed</option>
           {sourceName && <option value="untilSource">until {sourceName}’s next turn</option>}
           <option value="r1">1 round</option>
           <option value="r10">10 rounds</option>
-        </select>
+        </Select>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {QUICK_CONDITIONS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => onApply(c, toDuration(choice))}
-            className="rounded border border-slate-300 px-1.5 py-0.5 text-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
+          <Chip key={c} onClick={() => onApply(c, toDuration(choice))}>
             {c}
-          </button>
+          </Chip>
         ))}
       </div>
     </div>
@@ -551,12 +493,12 @@ function AttackResolver({
       {!attacker && (
         <label className="mb-3 flex items-center gap-2 text-sm">
           Spell attack bonus
-          <input
+          <Field
             value={bonus}
             onChange={(e) => setBonus(e.target.value)}
             inputMode="numeric"
             aria-label="Spell attack bonus"
-            className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+            className="w-20"
           />
         </label>
       )}
@@ -587,14 +529,9 @@ function AttackResolver({
       </fieldset>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={doRoll}
-          disabled={!target}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <Button variant="primary" onClick={doRoll} disabled={!target}>
           {attack ? 'Reroll' : 'Roll attack'}
-        </button>
+        </Button>
         {attack?.d20 && (
           <NaturalRoll
             group={attack.d20}
@@ -646,21 +583,21 @@ function AttackResolver({
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-sm">
               Damage
-              <input
+              <Field
                 value={damage}
                 onChange={(e) => setDamage(e.target.value)}
                 inputMode="numeric"
                 aria-label="Damage to apply"
-                className="ml-2 w-20 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                className="ml-2 w-20"
               />
             </label>
-            <button
-              type="button"
+            <Button
+              variant="danger"
               onClick={apply}
-              className={`${APPLY_BTN}${hit ? '' : ' opacity-40 transition-opacity hover:opacity-100'}`}
+              className={hit ? undefined : 'opacity-40 transition-opacity hover:opacity-100'}
             >
               Apply to {nameOf(attack.target)}
-            </button>
+            </Button>
           </div>
           {!hit && (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -930,7 +867,7 @@ export function SaveResolver({
 
   if (pending.length > 0) {
     return (
-      <Modal title={title} subtitle="Concentration checks" onClose={onClose} wide>
+      <Modal title={title} subtitle="Concentration checks" onClose={onClose}>
         <ul className="space-y-2">
           {pending.map((p) => (
             <li
@@ -961,7 +898,7 @@ export function SaveResolver({
   }
 
   return (
-    <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose} wide>
+    <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose}>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         {noSave ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
@@ -974,49 +911,48 @@ export function SaveResolver({
                 {ability.toUpperCase()} save
               </span>
             ) : (
-              <select
+              <Select
                 value={ability}
                 onChange={(e) => setAbility(e.target.value as Ability)}
                 aria-label="Save ability"
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
+                className="uppercase"
               >
                 {ABILITIES.map((a) => (
                   <option key={a} value={a}>
                     {a.toUpperCase()}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
             <label className="flex items-center gap-1">
               DC
-              <input
+              <Field
                 value={dc}
                 onChange={(e) => setDc(e.target.value)}
                 aria-label="Save DC"
                 inputMode="numeric"
-                className="w-14 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                className="w-14"
               />
             </label>
-            <select
+            <Select
               value={onSave}
               onChange={(e) => setOnSave(e.target.value as SaveOutcome)}
               aria-label="On save"
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
             >
               <option value="half">save → half damage</option>
               <option value="none">save → no damage</option>
               <option value="negates">save → negates effect</option>
-            </select>
+            </Select>
             {!action && (
               <>
                 <label className="flex items-center gap-1">
                   Damage
-                  <input
+                  <Field
                     value={baseDamage}
                     onChange={(e) => setBaseDamage(e.target.value)}
                     aria-label="Damage"
                     placeholder="2d6 or 3"
-                    className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                    className="w-24"
                   />
                 </label>
                 <DamageTypeSelect value={damageType} onChange={setDamageType} />
@@ -1047,14 +983,9 @@ export function SaveResolver({
       </fieldset>
 
       {!resolved ? (
-        <button
-          type="button"
-          onClick={rollSaves}
-          disabled={selectedTargets.length === 0}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <Button variant="primary" onClick={rollSaves} disabled={selectedTargets.length === 0}>
           {noSave ? 'Roll damage' : 'Roll saves'}
-        </button>
+        </Button>
       ) : (
         <>
           <ul className="space-y-1.5">
@@ -1076,31 +1007,27 @@ export function SaveResolver({
                     )}
                     {!noSave && (
                       <>
-                        <button
-                          type="button"
+                        <Chip
+                          size="sm"
+                          tone="good"
+                          active={row?.result === 'save'}
                           onClick={() => setResult(c.combatantId, 'save')}
-                          className={
-                            row?.result === 'save'
-                              ? 'rounded border border-emerald-400 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300'
-                              : 'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                          }
                         >
                           Save
-                        </button>
-                        <button
-                          type="button"
+                        </Chip>
+                        <Chip
+                          size="sm"
+                          tone="bad"
+                          active={row?.result === 'fail'}
                           onClick={() => setResult(c.combatantId, 'fail')}
-                          className={
-                            row?.result === 'fail'
-                              ? 'rounded border border-rose-400 px-1.5 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300'
-                              : 'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                          }
                         >
                           Fail
-                        </button>
+                        </Chip>
                         {!c.isPC && row?.result === 'fail' && legendaryResistanceLeft(c) > 0 && (
-                          <button
-                            type="button"
+                          <Chip
+                            size="sm"
+                            tone="warn"
+                            active
                             title="Legendary Resistance: turn this failed save into a success"
                             onClick={() => {
                               setResult(c.combatantId, 'save')
@@ -1110,15 +1037,14 @@ export function SaveResolver({
                                 update: (cc) => (cc.isPC ? cc : spendLegendaryResistance(cc)),
                               })
                             }}
-                            className="rounded border border-amber-400 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
                           >
                             Use LR ({legendaryResistanceLeft(c)})
-                          </button>
+                          </Chip>
                         )}
                         {!c.isPC && (
-                          <button type="button" onClick={() => reroll(c)} className={REROLL_BTN}>
+                          <Chip size="sm" onClick={() => reroll(c)}>
                             Reroll
-                          </button>
+                          </Chip>
                         )}
                       </>
                     )}
@@ -1137,13 +1063,13 @@ export function SaveResolver({
                         {label}
                       </span>
                     ))}
-                    <input
+                    <Field
                       value={damageValue(c)}
                       onChange={(e) => setEdited(c.combatantId, e.target.value)}
                       inputMode="numeric"
                       aria-label={`Damage to ${nameOf(c)}`}
                       disabled={!row?.result}
-                      className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900"
+                      className="w-16 disabled:opacity-50"
                     />
                   </span>
                 </li>
@@ -1151,20 +1077,16 @@ export function SaveResolver({
             })}
           </ul>
 
-          <button type="button" onClick={apply} className={`mt-3 ${APPLY_BTN}`}>
+          <Button variant="danger" onClick={apply} className="mt-3">
             Apply damage
-          </button>
+          </Button>
 
           {spellEffect && (
             <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50/50 p-2 dark:border-indigo-900/60 dark:bg-indigo-900/10">
-              <button
-                type="button"
-                onClick={applySpellEffect}
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-              >
+              <Button variant="primary" onClick={applySpellEffect}>
                 Apply {spell!.name}
                 {resolved ? ' to failed' : ''}
-              </button>
+              </Button>
               <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
                 {spellEffect.summary}
               </span>

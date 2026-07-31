@@ -237,7 +237,6 @@ export function CustomSpellForm({
               <div className="flex items-center gap-2">
                 <AddSpellPicker
                   label="Start from…"
-                  triggerClass="rounded-md border border-slate-300 px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   onPick={startFrom}
                   align="left"
                   customSpells={customSpells}

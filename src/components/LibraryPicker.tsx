@@ -13,6 +13,7 @@ import {
   libraryTag,
 } from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
+import { Button, type ButtonVariant } from './ui.tsx'
 
 /** The least a picker needs of a creature or spell: a label and its badges. */
 export interface LibraryEntry {
@@ -64,7 +65,7 @@ function EntryBadges({ entry }: { entry: LibraryEntry }) {
  */
 export function LibraryPicker<T extends LibraryEntry>({
   label,
-  triggerClass,
+  variant = 'secondary',
   disabled = false,
   align = 'right',
   placeholder,
@@ -80,7 +81,7 @@ export function LibraryPicker<T extends LibraryEntry>({
   children,
 }: {
   label: string
-  triggerClass: string
+  variant?: ButtonVariant
   disabled?: boolean
   /** Which edge of the trigger the popover hangs from. */
   align?: 'left' | 'right'
@@ -126,14 +127,9 @@ export function LibraryPicker<T extends LibraryEntry>({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        disabled={disabled}
-        className={triggerClass}
-      >
+      <Button variant={variant} onClick={() => setOpen((o) => !o)} disabled={disabled}>
         {label}
-      </button>
+      </Button>
       {open && (
         <div
           className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900`}

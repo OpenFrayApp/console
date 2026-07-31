@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import type { Outcome, Recap } from '../combat/recap.ts'
 import { DIFFICULTY_LABEL } from '../combat/difficulty.ts'
 import { useCampaignRules } from '../state/campaignRules.ts'
+import { Button } from './ui.tsx'
 
 const OUTCOME: Record<Outcome, { label: string; badge: string }> = {
   victory: {
@@ -64,13 +65,9 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
               Combat recap
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-          >
+          <Button variant="primary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -154,20 +151,10 @@ export function EndCombatPrompt({
           End combat and see the recap?
         </p>
         <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            Keep fighting
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-          >
+          <Button onClick={onCancel}>Keep fighting</Button>
+          <Button variant="primary" onClick={onConfirm}>
             End combat
-          </button>
+          </Button>
         </div>
       </div>
     </div>

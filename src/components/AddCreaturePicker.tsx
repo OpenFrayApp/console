@@ -7,9 +7,7 @@ import { loadSrdCreatures } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { formatCr } from '../compendium/format.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
-
-const TRIGGER =
-  'rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500'
+import type { ButtonVariant } from './ui.tsx'
 
 /** A search popover to pick a creature (enabled SRD libraries + custom) to add. */
 export function AddCreaturePicker({
@@ -18,7 +16,7 @@ export function AddCreaturePicker({
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
   label = 'Add creature',
-  triggerClass = TRIGGER,
+  variant = 'primary',
   closeOnPick = false,
   align = 'right',
 }: {
@@ -28,7 +26,7 @@ export function AddCreaturePicker({
   showHomebrew?: boolean
   /** The trigger's text — "Start from" on the custom-creature form. */
   label?: string
-  triggerClass?: string
+  variant?: ButtonVariant
   /** Adding leaves the picker open for the next creature; starting a form closes it. */
   closeOnPick?: boolean
   /** Which edge of the trigger the popover hangs from. */
@@ -42,7 +40,7 @@ export function AddCreaturePicker({
   return (
     <LibraryPicker
       label={label}
-      triggerClass={triggerClass}
+      variant={variant}
       align={align}
       placeholder="Search creatures…"
       searchLabel="Search creatures"
