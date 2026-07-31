@@ -8,6 +8,7 @@ import type {
   PlayerCharacter,
 } from '../schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
+import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
 import { hpTier, type HpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
@@ -106,13 +107,26 @@ function creatureRow(c: MonsterCombatant, settings: PlayerViewSettings): PlayerR
 }
 
 /**
+ * A roll with its total intact and its arithmetic gone. What gives a creature's bonus
+ * away is the breakdown — `1d20 [15] −1` states the modifier outright — while the total
+ * on its own says nothing, because the die behind it is unknown. So the table still
+ * watches the ogre roll a 19, and still can't work out what it rolls with.
+ *
+ * The effects that swung it go too: naming Bless or a Magic Resistance advantage is
+ * naming the bonus. Whether it crit, fumbled, or had advantage stays — that is board
+ * state the table watched happen.
+ */
+function rollWithoutArithmetic(result: RollResult): RollResult {
+  return { ...result, dice: [], modifier: 0 }
+}
+
+/**
  * A log entry with a creature's numbers taken out but the event left in. The table
  * should know the ogre swung and hit, that it failed its save, that it took a wound —
- * just not the die, the bonus, or how many hit points it has left.
+ * just not the bonus behind the roll or how many hit points it has left.
  *
  * The message is prose, so it is never edited: an entry whose own text carries the
- * number is rebuilt from the structured `amount` and the name instead. Anything else
- * loses its dice detail and keeps its outcome.
+ * number is rebuilt from the structured `amount` and the name instead.
  */
 function withoutNumbers(entry: GameLogEntry, name: string): GameLogEntry {
   if (entry.category === 'hp' && entry.amount != null) {
@@ -121,9 +135,11 @@ function withoutNumbers(entry: GameLogEntry, name: string): GameLogEntry {
   if (entry.category === 'heal' && entry.amount != null) {
     return { ...entry, message: `${name} is healed`, amount: undefined, result: undefined }
   }
-  // The dice and the total give away a to-hit or a save bonus; hit, miss and saved
-  // are what the table watched happen.
-  return { ...entry, result: undefined, applied: undefined }
+  return {
+    ...entry,
+    result: entry.result && rollWithoutArithmetic(entry.result),
+    applied: undefined,
+  }
 }
 
 /**

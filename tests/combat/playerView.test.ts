@@ -6,6 +6,7 @@ import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../../src/schema/encounter.ts'
 import type { Effect } from '../../src/schema/effect.ts'
+import type { RollResult } from '../../src/dice/roll.ts'
 import { PLAYER_LOG_LIMIT, playerBoard } from '../../src/combat/playerView.ts'
 import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
 
@@ -69,6 +70,21 @@ function encounter(overrides: Partial<Encounter> = {}): Encounter {
     combatants: [pc(), monster()],
     log: [],
     ...overrides,
+  }
+}
+
+/** A roll result carrying just the fields the shared view reasons about. */
+function roll(over: Partial<RollResult> = {}): RollResult {
+  return {
+    formula: '1d20',
+    kind: 'check',
+    dice: [{ sides: 20, results: [15], kept: [15], sign: 1, total: 15 }],
+    modifier: 0,
+    total: 15,
+    crit: false,
+    fumble: false,
+    advantageState: 'normal',
+    ...over,
   }
 }
 
@@ -245,33 +261,63 @@ describe('playerBoard — a creature`s numbers in the log', () => {
   })
 
   // The table watched the ogre swing and connect; what they didn't see is its to-hit.
-  it('keeps a creature`s hit and its damage, and drops the dice that got there', () => {
+  it('keeps a creature`s total, its hit and its damage, and drops the arithmetic', () => {
     const attack = entry({
       category: 'roll',
       message: 'Ogre: Greatclub → Thalia',
       sourceId: 'm',
-      result: { total: 23, dice: [], modifier: 6, advantageState: 'normal' } as never,
+      result: roll({ total: 23, modifier: 6 }),
       outcome: 'hit',
       damage: [{ type: 'bludgeoning', amount: 13 }],
     })
     const row = playerBoard(withLog(attack), DEFAULT_PLAYER_VIEW).log[0]
     expect(row.outcome).toBe('hit')
     expect(row.damage).toEqual([{ type: 'bludgeoning', amount: 13 }])
-    expect(row.result).toBeUndefined()
     expect(row.message).toBe('Ogre: Greatclub → Thalia')
+    // The total alone says nothing — the die behind it is unknown.
+    expect(row.result?.total).toBe(23)
+    expect(row.result?.dice).toEqual([])
+    expect(row.result?.modifier).toBe(0)
   })
 
-  it('says a creature failed its save without showing the die or the bonus', () => {
+  it('keeps whether a creature crit or had advantage — the table saw that happen', () => {
+    const attack = entry({
+      category: 'roll',
+      message: 'Ogre: Greatclub → Thalia',
+      sourceId: 'm',
+      result: roll({ total: 28, modifier: 6, crit: true, advantageState: 'advantage' }),
+    })
+    const row = playerBoard(withLog(attack), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.result?.crit).toBe(true)
+    expect(row.result?.advantageState).toBe('advantage')
+  })
+
+  it('says a creature failed its save, keeping the total and dropping the bonus', () => {
     const save = entry({
       category: 'roll',
       message: 'Ogre: DEX save',
       sourceId: 'm',
       saved: false,
-      result: { total: 7, dice: [], modifier: -1, advantageState: 'normal' } as never,
+      result: roll({ total: 7, modifier: -1 }),
     })
     const row = playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0]
     expect(row.saved).toBe(false)
-    expect(row.result).toBeUndefined()
+    expect(row.result?.total).toBe(7)
+    expect(row.result?.modifier).toBe(0)
+  })
+
+  // Initiative is the one roll whose total is already on the row, so hiding it would
+  // be theatre; the breakdown is the part that states the modifier outright.
+  it('keeps a creature`s initiative total and drops the modifier behind it', () => {
+    const init = entry({
+      category: 'roll',
+      message: 'Ogre: initiative',
+      sourceId: 'm',
+      result: roll({ total: 14, modifier: -1 }),
+    })
+    const row = playerBoard(withLog(init), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.result?.total).toBe(14)
+    expect(JSON.stringify(row)).not.toContain('-1')
   })
 
   it('drops the effects that swung a creature`s roll, since they name the bonus', () => {

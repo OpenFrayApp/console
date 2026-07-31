@@ -110,12 +110,19 @@ function describeRoll(result: RollResult): string {
       ? base
       : `${base} ${critBonus >= 0 ? '+' : '−'}${Math.abs(critBonus)} crit`
   })
-  let line = dice.join(' + ')
-  if (result.modifier) line += ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
-  if (result.advantageState !== 'normal') line += ` · ${result.advantageState}`
-  if (result.crit) line += ' · CRIT'
-  if (result.fumble) line += ' · FUMBLE'
-  return line
+  // Built as segments rather than appended to a string: the shared player view hands
+  // this a roll with no dice and no modifier, and a string built by appending would
+  // come back leading with its own separator.
+  const arithmetic = dice.join(' + ')
+  const withModifier =
+    arithmetic && result.modifier
+      ? `${arithmetic} ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
+      : arithmetic
+  const segments = [withModifier]
+  if (result.advantageState !== 'normal') segments.push(result.advantageState)
+  if (result.crit) segments.push('CRIT')
+  if (result.fumble) segments.push('FUMBLE')
+  return segments.filter(Boolean).join(' · ')
 }
 
 /** "18 piercing + 7 fire = 25" (the "= total" is dropped for a single type). */
@@ -189,13 +196,20 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
               {entry.result.total}
             </span>
           </div>
-          <div className="pl-3 text-xs text-slate-500 dark:text-slate-400">
-            {describeRoll(entry.result)}
-            {(() => {
-              const reasons = (entry.applied ?? []).map(describeAppliedForLog).filter(Boolean)
-              return reasons.length > 0 ? <> · {reasons.join(', ')}</> : null
-            })()}
-          </div>
+          {(() => {
+            // The shared player view strips a creature's dice and modifier, leaving the
+            // total alone — so there can be nothing left to break down, and an empty
+            // line under the total would just look like a rendering fault.
+            const breakdown = describeRoll(entry.result)
+            const reasons = (entry.applied ?? []).map(describeAppliedForLog).filter(Boolean)
+            if (!breakdown && reasons.length === 0) return null
+            return (
+              <div className="pl-3 text-xs text-slate-500 dark:text-slate-400">
+                {breakdown}
+                {reasons.length > 0 && <> · {reasons.join(', ')}</>}
+              </div>
+            )
+          })()}
           <Outcome entry={entry} />
         </>
       ) : (
