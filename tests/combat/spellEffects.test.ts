@@ -4,7 +4,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
-import { spellEffectFor, timedDuration } from '../../src/combat/spellEffects.ts'
+import {
+  delayedDamageEffect,
+  spellEffectFor,
+  timedDuration,
+} from '../../src/combat/spellEffects.ts'
 
 const monster = (dex: number): MonsterCombatant =>
   ({
@@ -140,5 +144,35 @@ describe('spellEffectFor', () => {
       rounds: 100,
     })
     expect(timedDuration(spell('x', { duration: '8 hours' }))).toEqual({ type: 'manual' })
+  })
+})
+
+describe('delayedDamageEffect', () => {
+  const vitriolic = spell('Vitriolic Sphere', {
+    mechanics: {
+      damage: [{ formula: '10d4', type: 'acid' }],
+      delayed: { damage: [{ formula: '5d4', type: 'acid' }], when: 'endOfNextTurn' },
+      save: { ability: 'dex', onSave: 'half' },
+    },
+  })
+
+  it('names what is still owed, and runs out when it comes due', () => {
+    const e = delayedDamageEffect(vitriolic, 'caster')!
+    expect(e.name).toBe('Vitriolic Sphere')
+    expect(e.note).toBe('5d4 acid at the end of this turn')
+    expect(e.icon).toBe('reminder')
+    expect(e.source).toBe('caster')
+    // One round: it clears at the end of the target's next turn, which is when the
+    // damage is due. The app never rolls it — the GM does, like any damage rider.
+    expect(e.duration).toEqual({ type: 'rounds', rounds: 1 })
+    expect(e.modifier).toBeNull()
+  })
+
+  it('gives nothing for a spell whose damage is all immediate', () => {
+    const fireball = spell('Fireball', {
+      mechanics: { damage: [{ formula: '8d6', type: 'fire' }] },
+    })
+    expect(delayedDamageEffect(fireball)).toBeNull()
+    expect(delayedDamageEffect(spell('Bless'))).toBeNull()
   })
 })

@@ -31,7 +31,7 @@ import {
 } from '../combat/masssave.ts'
 import { DAMAGE_TYPES } from './customMonster.ts'
 import { condition } from '../combat/effects.ts'
-import { spellEffectFor } from '../combat/spellEffects.ts'
+import { delayedDamageEffect, spellEffectFor } from '../combat/spellEffects.ts'
 import {
   applyConcentrationResult,
   concentrationPromptDC,
@@ -340,6 +340,7 @@ function AttackResolver({
   dispatch,
   onRoll,
   onUse,
+  spell,
   onClose,
 }: ResolverProps) {
   const { crit: critRule } = useCampaignRules()
@@ -428,11 +429,25 @@ function AttackResolver({
     ? attack.result.crit || (!attack.result.fumble && attack.result.total >= acOf(attack.target))
     : false
 
+  // A spell whose damage isn't all immediate (Acid Arrow) leaves the rest as a
+  // reminder on what it hit, due at the end of that creature's next turn.
+  const delayed = spell ? delayedDamageEffect(spell, attacker?.combatantId) : null
+
   /** Apply the edited damage to the target, then prompt a concentration check or close. */
   const apply = () => {
     if (!attack) return
     const amount = toNum(damage)
     const tgt = attack.target
+    if (delayed && hit) {
+      dispatch({
+        type: 'update',
+        id: tgt.combatantId,
+        update: (c) => ({
+          ...c,
+          effects: [...c.effects, { ...delayed, id: `${delayed.id}-${c.combatantId}` }],
+        }),
+      })
+    }
     // A crit deals two death-save failures to a downed PC (applyDamage reads this).
     const opts = { crit: attack.crit }
     const dc = concentrationPromptDC(tgt, applyDamage(tgt, amount, opts), amount)
@@ -818,12 +833,26 @@ export function SaveResolver({
   const setEdited = (id: string, edited: string) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], edited } }))
 
+  // A spell whose damage isn't all immediate (Vitriolic Sphere) leaves the rest as a
+  // reminder on each creature that failed, due at the end of its next turn.
+  const delayed = spell ? delayedDamageEffect(spell, attacker?.combatantId) : null
+
   /** Apply each resolved row's damage, then queue concentration prompts or close. */
   const apply = () => {
     const prompts: { combatant: Combatant; dc: number; damage: number }[] = []
     for (const c of selectedTargets) {
       const row = rows[c.combatantId]
       if (!row?.result) continue
+      if (delayed && row.result === 'fail') {
+        dispatch({
+          type: 'update',
+          id: c.combatantId,
+          update: (cc) => ({
+            ...cc,
+            effects: [...cc.effects, { ...delayed, id: `${delayed.id}-${cc.combatantId}` }],
+          }),
+        })
+      }
       const amount = toNum(damageValue(c))
       const promptDc = concentrationPromptDC(c, applyDamage(c, amount), amount)
       if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: amount })

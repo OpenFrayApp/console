@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import type { Effect } from '../schema/effect.ts'
 import type { Spell } from '../schema/spell.ts'
+import { reminder } from './effects.ts'
 import { SPELL_EFFECTS } from './spells/index.ts'
 import type { SpellEffectDef } from './spells/shared.ts'
 
@@ -40,6 +42,22 @@ export function isSupportSpell(spell: Spell): boolean {
   const def = SPELL_EFFECTS[normalize(spell.name)]
   if (!def || def.targeting === 'enemy') return false
   return !spell.mechanics?.damage?.length && !spell.mechanics?.attackRoll
+}
+
+/**
+ * The reminder a spell's delayed damage leaves on a target: what is owed, in what
+ * type, and when. It runs out at the end of that creature's next turn, which is when
+ * the damage comes due — the app never rolls it, the same line every damage rider
+ * (Hex, Hunter's Mark) already draws.
+ */
+export function delayedDamageEffect(spell: Spell, source?: string): Effect | null {
+  const delayed = spell.mechanics?.delayed
+  if (!delayed || delayed.damage.length === 0) return null
+  const dice = delayed.damage.map((d) => `${d.formula} ${d.type}`).join(' + ')
+  return reminder(spell.name, `${dice} at the end of this turn`, {
+    source,
+    duration: { type: 'rounds', rounds: 1 },
+  })
 }
 
 /**

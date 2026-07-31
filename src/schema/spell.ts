@@ -32,13 +32,27 @@ export interface SpellScaling {
 }
 
 /**
+ * Damage a spell deals later rather than with the cast — Acid Arrow's 2d4 and
+ * Vitriolic Sphere's 5d4, both due at the end of the target's next turn. It is never
+ * part of `damage`: rolling it with the initial hit lands damage a turn early and
+ * misses the creature's chance to react. The app reminds; the GM rolls it when due.
+ */
+export interface DelayedDamage {
+  damage: DamageRoll[]
+  /** When it comes due, counted from the target's own turns. */
+  when: 'endOfNextTurn'
+}
+
+/**
  * Structured, rollable mechanics for a spell — present only when the spell has
  * any (damage, a save, or a spell attack). Utility spells (Shield, Detect Magic)
  * have none. Only *typed* damage is captured here; healing dice are not modelled yet.
  */
 export interface SpellMechanics {
-  /** Base damage at the spell's own level. */
+  /** Base damage at the spell's own level, dealt as the spell resolves. */
   damage?: DamageRoll[]
+  /** Damage that lands on a later turn — see DelayedDamage. */
+  delayed?: DelayedDamage
   /** True when the spell resolves with a spell attack roll against AC. */
   attackRoll?: boolean
   /** Present when the spell forces a saving throw. */
