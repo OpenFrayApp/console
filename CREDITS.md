@@ -221,6 +221,28 @@ E. Gary Gygax and Dave Arneson.
 
 Book of Ebon Tides © 2022 Open Design LLC; Authors: Wolfgang Baur, Celeste Conowitch.
 
+Blood Vaults of Sister Alkava. © 2016 Open Design. Author: Bill Slavicsek.
+
+The Clattering Keep. © 2017 Open Design. Author: Jon Sawatsky.
+
+Firefalls of Ghoss. © 2018 Open Design LLC. Author: Jon Sawatsky.
+
+The Lamassu's Secrets. © 2018 Open Design LLC. Author: Richard Green.
+
+Warlock Part 1. Authors: Wolfgang Baur, Dan Dillon, Troy E. Taylor, Ben McFarland,
+Richard Green. © 2017 Open Design.
+
+Warlock 2: Dread Magic. Authors: Wolfgang Baur, Dan Dillon, Jon Sawatsky, Richard Green.
+© 2017 Open Design.
+
+Warlock 3: Undercity. Authors: James J. Haeck, Ben McFarland, Brian Suskind, Peter von
+Bleichert, Shawn Merwin. © 2018 Open Design.
+
+Warlock 4: The Dragon Empire. Authors: Wolfgang Baur, Chris Harris, James J. Haeck, Jon
+Sawatsky, Jeremy Hochhalter, Brian Suskind. © 2018 Open Design.
+
+Zobeck Gazetteer for 5th Edition. Copyright ©2018 Open Design LLC. Author: James Haeck.
+
 Creature Codex. © 2018 Open Design LLC; Authors Wolfgang Baur, Dan Dillon, Richard Green,
 James Haeck, Chris Harris, Jeremy Hochhalter, James Introcaso, Chris Lockey, Shawn Merwin,
 and Jon Sawatsky.
