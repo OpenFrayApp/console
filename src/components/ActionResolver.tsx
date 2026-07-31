@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
@@ -192,10 +192,12 @@ export function NaturalRoll({
     <span className="text-sm tabular-nums text-slate-400 dark:text-slate-500">
       [
       {group.results.map((value, i) => (
-        <span key={i} className={kept[i] ? keptClass : undefined}>
+        // The separator sits outside the die so it stays punctuation — inside, it took
+        // the colour of whichever die followed it.
+        <Fragment key={i}>
           {i > 0 ? ', ' : ''}
-          {value}
-        </span>
+          <span className={kept[i] ? keptClass : undefined}>{value}</span>
+        </Fragment>
       ))}
       ]
       {total != null && (
@@ -570,7 +572,7 @@ function AttackResolver({
               {attack.crit
                 ? 'Critical hit!'
                 : attack.result.fumble
-                  ? 'Miss (nat 1)'
+                  ? 'Critical miss!'
                   : hit
                     ? 'Hit'
                     : 'Miss'}

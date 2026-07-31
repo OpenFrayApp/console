@@ -130,6 +130,9 @@ describe('ActionResolver — attacks', () => {
     expect(dice).toHaveLength(3) // two dice and the total
     expect(dice.filter((el) => el.className.includes('font-semibold'))).toHaveLength(1)
     expect(dice.filter((el) => el.className.includes('font-bold'))).toHaveLength(1)
+    // The separator is punctuation, not part of either die — it keeps the muted colour
+    // whichever of the two was kept.
+    expect(dice.some((el) => el.textContent?.includes(','))).toBe(false)
   })
 })
 
