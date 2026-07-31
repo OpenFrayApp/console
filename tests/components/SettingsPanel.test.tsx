@@ -5,15 +5,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { SettingsPanel } from '../../src/components/SettingsPanel.tsx'
+import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../src/state/settings.ts'
 
 afterEach(cleanup)
 
 function renderPanel(
-  over: { enabledLibraries?: string[]; showHomebrew?: boolean; librarySort?: 'name' | 'cr' } = {},
+  over: {
+    enabledLibraries?: string[]
+    showHomebrew?: boolean
+    librarySort?: 'name' | 'cr'
+    playerView?: PlayerViewSettings
+  } = {},
 ) {
   const onSetEnabledLibraries = vi.fn()
   const onSetShowHomebrew = vi.fn()
   const onSetLibrarySort = vi.fn()
+  const onSetPlayerView = vi.fn()
   render(
     <SettingsPanel
       onClose={() => {}}
@@ -23,9 +30,11 @@ function renderPanel(
       onSetShowHomebrew={onSetShowHomebrew}
       librarySort={over.librarySort ?? 'name'}
       onSetLibrarySort={onSetLibrarySort}
+      playerView={over.playerView ?? DEFAULT_PLAYER_VIEW}
+      onSetPlayerView={onSetPlayerView}
     />,
   )
-  return { onSetEnabledLibraries, onSetShowHomebrew, onSetLibrarySort }
+  return { onSetEnabledLibraries, onSetShowHomebrew, onSetLibrarySort, onSetPlayerView }
 }
 
 describe('SettingsPanel', () => {

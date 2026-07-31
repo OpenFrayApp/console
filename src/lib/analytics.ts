@@ -56,7 +56,12 @@ export const EVENTS = {
   ruleSetToggled: 'Rule set toggled',
   homebrewToggled: 'Homebrew toggled',
   librarySortChanged: 'Library sort changed',
+  playerViewChanged: 'Player view setting changed',
   themeToggled: 'Theme toggled',
+  // Sharing the board with the table
+  playerViewShared: 'Player view shared',
+  playerViewStopped: 'Player view stopped',
+  playerViewNamed: 'Player view named',
   importerClicked: 'Importer clicked',
   docsOpened: 'Handbook opened',
   bookOpened: 'Book opened',

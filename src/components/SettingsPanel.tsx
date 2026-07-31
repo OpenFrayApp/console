@@ -8,9 +8,13 @@ import {
   librarySourceBadgeClass,
 } from '../compendium/libraries.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
-import type { LibrarySort } from '../state/settings.ts'
+import type { LibrarySort, PlayerViewSettings } from '../state/settings.ts'
+import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
+
+const SELECT =
+  'rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
 
 // Rule-set groups, in display order; the homebrew toggle rides along in "Other".
 const GROUPS: { key: 'core' | 'openfray' | 'other'; label: string }[] = [
@@ -69,6 +73,8 @@ export function SettingsPanel({
   onSetShowHomebrew,
   librarySort,
   onSetLibrarySort,
+  playerView,
+  onSetPlayerView,
 }: {
   onClose: () => void
   enabledLibraries: string[]
@@ -77,6 +83,8 @@ export function SettingsPanel({
   onSetShowHomebrew: (value: boolean) => void
   librarySort: LibrarySort
   onSetLibrarySort: (value: LibrarySort) => void
+  playerView: PlayerViewSettings
+  onSetPlayerView: (value: PlayerViewSettings) => void
 }) {
   // Toggle a library; never drop the last one (an empty compendium is never useful).
   const toggleLibrary = (id: string) => {
@@ -195,6 +203,59 @@ export function SettingsPanel({
                 <option value="name">Name (A–Z)</option>
                 <option value="cr">Creature CR/Spell level</option>
               </select>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Player view
+            </h3>
+            <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              Choose how much of a creature your players see on the screen you share with them.
+              Their own characters always show in full.
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="player-view-hp"
+                  className="text-sm text-slate-700 dark:text-slate-200"
+                >
+                  Creature hit points
+                </label>
+                <select
+                  id="player-view-hp"
+                  value={playerView.hp}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, hp: e.target.value as HpVisibility })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="bloodied">In words (Bloodied)</option>
+                  <option value="exact">Exact number</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="player-view-ac"
+                  className="text-sm text-slate-700 dark:text-slate-200"
+                >
+                  Creature armor class
+                </label>
+                <select
+                  id="player-view-ac"
+                  value={playerView.ac}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, ac: e.target.value as FieldVisibility })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="hidden">Hidden</option>
+                  <option value="shown">Shown</option>
+                </select>
+              </div>
             </div>
           </section>
 

@@ -14,16 +14,41 @@ import type { Encounter } from '../schema/encounter.ts'
  */
 
 /** The user's most recent encounter, or null if they have none / not configured. */
-export async function loadCloudEncounter(): Promise<{ id: string; encounter: Encounter } | null> {
+export async function loadCloudEncounter(): Promise<{
+  id: string
+  encounter: Encounter
+  playerCode: string | null
+} | null> {
   if (!supabase) return null
   const { data, error } = await supabase
     .from('encounters')
-    .select('id, state')
+    .select('id, state, player_code')
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
   if (error || !data) return null
-  return { id: data.id, encounter: data.state as Encounter }
+  return {
+    id: data.id,
+    encounter: data.state as Encounter,
+    playerCode: (data.player_code as string | null) ?? null,
+  }
+}
+
+/** Whether a chosen share code was claimed, was already somebody else's, or didn't save. */
+export type ClaimResult = 'ok' | 'taken' | 'failed'
+
+/**
+ * Claim a share code for this GM's encounter row. Uniqueness is a database index, and
+ * the write is how we ask: Row-Level Security stops one GM from ever *reading*
+ * another's row, so a lookup would come back empty and wrongly call every name free.
+ * A `23505` unique violation is the real answer, and it settles a race between two GMs
+ * claiming the same name at the same moment without a read policy or a round trip.
+ */
+export async function claimPlayerCode(id: string, code: string): Promise<ClaimResult> {
+  if (!supabase) return 'failed'
+  const { error } = await supabase.from('encounters').update({ player_code: code }).eq('id', id)
+  if (!error) return 'ok'
+  return (error as { code?: string }).code === '23505' ? 'taken' : 'failed'
 }
 
 /**
