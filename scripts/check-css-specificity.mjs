@@ -18,8 +18,8 @@
 // rather than relying on a descendant selector's accidental weight.
 import { readFileSync } from 'node:fs'
 
-const FILES = ['site/src/styles/global.css', 'site/src/styles/book.css']
-const CONTAINERS = ['.book-body', '.doc', '.book-sidebar', '.hero']
+const FILES = ['site/src/styles/global.css', 'site/src/styles/book.css', 'site/src/styles/news.css']
+const CONTAINERS = ['.book-body', '.doc', '.post-body', '.book-sidebar', '.hero']
 
 const problems = []
 
