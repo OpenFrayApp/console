@@ -21,12 +21,15 @@ function run(cwd: string): { status: number; output: string } {
   }
 }
 
-/** Create the two stylesheet fixtures the script reads. */
-function styles(global: string, book = ''): void {
+/** Create every stylesheet fixture the script reads. All of them, always: the script
+ *  reads a fixed list, so a fixture missing one fails on ENOENT rather than on the
+ *  rule under test. */
+function styles(global: string, book = '', news = ''): void {
   const stylesDir = join(dir, 'site/src/styles')
   mkdirSync(stylesDir, { recursive: true })
   writeFileSync(join(stylesDir, 'global.css'), global)
   writeFileSync(join(stylesDir, 'book.css'), book)
+  writeFileSync(join(stylesDir, 'news.css'), news)
 }
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
@@ -68,5 +71,14 @@ describe('check-css-specificity', () => {
     const { status, output } = run(dir)
     expect(status).toBe(1)
     expect(output).toContain('book.css')
+  })
+
+  it('checks the news stylesheet, and its container', () => {
+    dir = mkdtempSync(join(tmpdir(), 'css-'))
+    styles(':where(.doc) :where(p) { margin: 0; }', '', '.post-body h2 { font-size: 2rem; }')
+    const { status, output } = run(dir)
+    expect(status).toBe(1)
+    expect(output).toContain('news.css')
+    expect(output).toContain('.post-body h2')
   })
 })
