@@ -222,7 +222,10 @@ export function EncounterConsole({
   const rollCheckFor = (c: Combatant, label: string, modifier: number, kind: 'save' | 'check') => {
     const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
     const { result, applied } = rollWithEffects(formula, { roller: c, kind })
-    onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, applied)
+    onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, {
+      applied,
+      sourceId: c.combatantId,
+    })
   }
 
   /** Mark a monster's recharge ability spent after use; no-op for PCs and ordinary actions. */
@@ -539,7 +542,10 @@ export function EncounterConsole({
                       ? undefined
                       : () => {
                           const check = rollConcentrationCheck(selected, concPrompt.damage)
-                          onRoll(`${selected.label}: concentration`, check.roll, check.applied)
+                          onRoll(`${selected.label}: concentration`, check.roll, {
+                            applied: check.applied,
+                            sourceId: selected.combatantId,
+                          })
                           resolveConcentration(!check.maintained)
                         }
                   }

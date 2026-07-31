@@ -250,7 +250,7 @@ export function CombatantControls({
             onRoll={() => {
               if (!combatant.isPC) return
               const ds = rollDeathSave(combatant)
-              onRoll(`${name}: death save`, ds.result)
+              onRoll(`${name}: death save`, ds.result, { sourceId: id })
               dispatch({ type: 'update', id, update: (c) => (c.isPC ? ds.pc : c) })
             }}
           />

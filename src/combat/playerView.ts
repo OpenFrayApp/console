@@ -106,12 +106,42 @@ function creatureRow(c: MonsterCombatant, settings: PlayerViewSettings): PlayerR
 }
 
 /**
+ * A log entry with a creature's numbers taken out but the event left in. The table
+ * should know the ogre swung and hit, that it failed its save, that it took a wound —
+ * just not the die, the bonus, or how many hit points it has left.
+ *
+ * The message is prose, so it is never edited: an entry whose own text carries the
+ * number is rebuilt from the structured `amount` and the name instead. Anything else
+ * loses its dice detail and keeps its outcome.
+ */
+function withoutNumbers(entry: GameLogEntry, name: string): GameLogEntry {
+  if (entry.category === 'hp' && entry.amount != null) {
+    return { ...entry, message: `${name} takes damage`, amount: undefined, result: undefined }
+  }
+  if (entry.category === 'heal' && entry.amount != null) {
+    return { ...entry, message: `${name} is healed`, amount: undefined, result: undefined }
+  }
+  // The dice and the total give away a to-hit or a save bonus; hit, miss and saved
+  // are what the table watched happen.
+  return { ...entry, result: undefined, applied: undefined }
+}
+
+/**
  * Build the board to share from the live encounter. Pure, so what the table can see is
  * decided by a function with tests rather than by what a component happens to render.
  */
 export function playerBoard(encounter: Encounter, settings: PlayerViewSettings): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
+  // Whose numbers are withheld, by combatant id. A creature's are, unless the GM chose
+  // to show exact hit points — at which point they have said the table may do the math.
+  const guarded = new Map<string, string>()
+  if (settings.hp !== 'exact') {
+    for (const c of encounter.combatants) {
+      if (!c.isPC) guarded.set(c.combatantId, c.label)
+    }
+  }
+
   return {
     round: encounter.round,
     paused: encounter.paused === true,
@@ -119,6 +149,12 @@ export function playerBoard(encounter: Encounter, settings: PlayerViewSettings):
     rows: encounter.combatants.map((c) =>
       c.isPC ? playerCharacterRow(c) : creatureRow(c, settings),
     ),
-    log: encounter.log.filter((e) => !e.gmOnly).slice(-PLAYER_LOG_LIMIT),
+    log: encounter.log
+      .filter((e) => !e.gmOnly)
+      .slice(-PLAYER_LOG_LIMIT)
+      .map((e) => {
+        const name = e.sourceId ? guarded.get(e.sourceId) : undefined
+        return name ? withoutNumbers(e, name) : e
+      }),
   }
 }

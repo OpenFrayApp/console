@@ -88,8 +88,10 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
   const sourceId = after.combatantId
 
   const dhp = after.hp.current - before.hp.current
-  if (dhp < 0) out.push({ category: 'hp', message: `${name} takes ${-dhp} damage`, sourceId })
-  else if (dhp > 0) out.push({ category: 'heal', message: `${name} regains ${dhp} HP`, sourceId })
+  if (dhp < 0)
+    out.push({ category: 'hp', message: `${name} takes ${-dhp} damage`, sourceId, amount: -dhp })
+  else if (dhp > 0)
+    out.push({ category: 'heal', message: `${name} regains ${dhp} HP`, sourceId, amount: dhp })
 
   const beforeEffectIds = new Set(before.effects.map((e) => e.id))
   const afterEffectIds = new Set(after.effects.map((e) => e.id))

@@ -52,6 +52,14 @@ export interface GameLogEntry {
    */
   outcome?: 'hit' | 'crit' | 'miss'
   damage?: { type: string; amount: number }[]
+  /** For a saving throw: whether it succeeded. */
+  saved?: boolean
+  /**
+   * The hit points gained or lost, alongside the message that already reads them.
+   * Kept structured so the shared player view can rebuild the line without a number
+   * rather than reading one back out of the prose.
+   */
+  amount?: number
 }
 
 /**

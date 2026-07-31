@@ -418,8 +418,11 @@ function App() {
     return result
   }
 
-  const pushRoll: OnRoll = (label, result, applied) => {
-    dispatch({ type: 'log', entry: { category: 'roll', message: label, result, applied } })
+  const pushRoll: OnRoll = (label, result, details) => {
+    dispatch({
+      type: 'log',
+      entry: { category: 'roll', message: label, result, ...details },
+    })
   }
 
   const pushNote: OnNote = (label, category = 'note') => {
@@ -626,10 +629,15 @@ function App() {
     }
   }
   /** Roll initiative (1d20+mod, disadvantage when surprised), log it, and return the total. */
-  const rollInit = (label: string, mod: number, disadvantage = false): number => {
+  const rollInit = (
+    label: string,
+    mod: number,
+    disadvantage = false,
+    sourceId?: string,
+  ): number => {
     const dice = `1d20${disadvantage ? 'dis' : ''}${mod >= 0 ? `+${mod}` : `${mod}`}`
     const result = roll(dice)
-    pushRoll(`${label}: initiative${disadvantage ? ' (surprised)' : ''}`, result)
+    pushRoll(`${label}: initiative${disadvantage ? ' (surprised)' : ''}`, result, { sourceId })
     return result.total
   }
 
@@ -650,7 +658,9 @@ function App() {
   // sitting at 0; before combat, initiative waits for Begin to roll everyone together.
   const addCombatant = (c: Combatant) => {
     const combatant =
-      encounter.round > 0 ? { ...c, initiative: rollInit(nameOf(c), initMod(c)) } : c
+      encounter.round > 0
+        ? { ...c, initiative: rollInit(nameOf(c), initMod(c), false, c.combatantId) }
+        : c
     dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
     setSelectedId(combatant.combatantId)
   }
@@ -687,7 +697,7 @@ function App() {
       // app-rolled value; a value the GM typed (or edited) is always respected.
       const unedited = raw !== '' && raw === (initPrompt?.[id] ?? '')
       if (raw === '' || (disadvantage && unedited && !isPlayer(c))) {
-        initiatives[id] = rollInit(nameOf(c), initMod(c), disadvantage)
+        initiatives[id] = rollInit(nameOf(c), initMod(c), disadvantage, id)
       } else {
         initiatives[id] = Math.floor(Number(raw) || 0)
       }
@@ -731,7 +741,11 @@ function App() {
     for (const c of encounter.combatants) {
       // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
       initial[c.combatantId] =
-        c.status === 'dead' ? '0' : isPlayer(c) ? '' : String(rollInit(nameOf(c), initMod(c)))
+        c.status === 'dead'
+          ? '0'
+          : isPlayer(c)
+            ? ''
+            : String(rollInit(nameOf(c), initMod(c), false, c.combatantId))
     }
     setInitPrompt(initial)
   }

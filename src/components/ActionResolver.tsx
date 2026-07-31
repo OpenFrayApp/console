@@ -492,7 +492,10 @@ function AttackResolver({
               ? undefined
               : () => {
                   const check = rollConcentrationCheck(tgt, conc.damage)
-                  onRoll(`${nameOf(tgt)}: concentration`, check.roll, check.applied)
+                  onRoll(`${nameOf(tgt)}: concentration`, check.roll, {
+                    applied: check.applied,
+                    sourceId: tgt.combatantId,
+                  })
                   dispatch({
                     type: 'update',
                     id: tgt.combatantId,
@@ -774,7 +777,11 @@ export function SaveResolver({
       { ability, dc: toNum(dc) || 10, onSave },
       { magicResistance: magical && hasMagicResistance(c) },
     )
-    onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, saveRoll.applied)
+    onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, {
+      applied: saveRoll.applied,
+      sourceId: c.combatantId,
+      saved: saveRoll.result === 'save',
+    })
     return {
       result: saveRoll.result,
       total: saveRoll.total,
@@ -944,7 +951,10 @@ export function SaveResolver({
                     ? undefined
                     : () => {
                         const check = rollConcentrationCheck(p.combatant, p.damage)
-                        onRoll(`${nameOf(p.combatant)}: concentration`, check.roll, check.applied)
+                        onRoll(`${nameOf(p.combatant)}: concentration`, check.roll, {
+                          applied: check.applied,
+                          sourceId: p.combatant.combatantId,
+                        })
                         resolveConc(p.combatant.combatantId, !check.maintained)
                       }
                 }

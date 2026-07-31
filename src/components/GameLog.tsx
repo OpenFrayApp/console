@@ -7,7 +7,20 @@ import type { RollResult } from '../dice/roll.ts'
 import { describeApplied, type AppliedEffect } from '../combat/effectroll.ts'
 import { Modal } from './Modal.tsx'
 
-export type OnRoll = (label: string, result: RollResult, applied?: AppliedEffect[]) => void
+/** What a roll carries beyond its dice — all optional, all known only at the call site. */
+export interface RollDetails {
+  /** Effects that changed the roll: advantage, Bless, and the rest. */
+  applied?: AppliedEffect[]
+  /**
+   * Whose roll it is. The shared player view needs it to tell a creature's numbers
+   * from a character's, since the message is prose and is never read back for meaning.
+   */
+  sourceId?: string
+  /** For a saving throw: whether it succeeded. */
+  saved?: boolean
+}
+
+export type OnRoll = (label: string, result: RollResult, details?: RollDetails) => void
 
 /**
  * Record a roll the GM keeps to themselves — a creature's recharge or escape save,
@@ -126,6 +139,33 @@ function Dot({ category }: { category: GameLogCategory }) {
   )
 }
 
+/**
+ * How a roll turned out, under its breakdown: hit or miss for an attack, saved or
+ * failed for a saving throw. Rendered from the entry's own fields, so it still reads
+ * on the shared player view where a creature's dice have been withheld.
+ */
+function Outcome({ entry }: { entry: GameLogEntry }) {
+  if (!entry.outcome && entry.saved === undefined) return null
+  const missed = entry.outcome === 'miss' || entry.saved === false
+  const label = entry.outcome ? OUTCOME_LABEL[entry.outcome] : entry.saved ? 'Saved' : 'Failed'
+  return (
+    <div className="pl-3 text-xs text-slate-500 dark:text-slate-400">
+      <span
+        className={
+          missed
+            ? 'text-slate-400 dark:text-slate-500'
+            : 'font-medium text-slate-600 dark:text-slate-300'
+        }
+      >
+        {label}
+      </span>
+      {entry.outcome !== 'miss' && entry.damage && entry.damage.length > 0 && (
+        <> · {describeDamage(entry.damage)}</>
+      )}
+    </div>
+  )
+}
+
 /** One log entry: a roll with total, breakdown, and outcome, or a plain message line. */
 function LogLine({ entry }: { entry: GameLogEntry }) {
   return (
@@ -156,28 +196,17 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
               return reasons.length > 0 ? <> · {reasons.join(', ')}</> : null
             })()}
           </div>
-          {entry.outcome && (
-            <div className="pl-3 text-xs text-slate-500 dark:text-slate-400">
-              <span
-                className={
-                  entry.outcome === 'miss'
-                    ? 'text-slate-400 dark:text-slate-500'
-                    : 'font-medium text-slate-600 dark:text-slate-300'
-                }
-              >
-                {OUTCOME_LABEL[entry.outcome]}
-              </span>
-              {entry.outcome !== 'miss' && entry.damage && entry.damage.length > 0 && (
-                <> · {describeDamage(entry.damage)}</>
-              )}
-            </div>
-          )}
+          <Outcome entry={entry} />
         </>
       ) : (
-        <span className="flex items-baseline gap-1.5 text-sm text-slate-600 dark:text-slate-300">
-          <Dot category={entry.category} />
-          <span className="min-w-0">{entry.message}</span>
-        </span>
+        <>
+          <span className="flex items-baseline gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+            <Dot category={entry.category} />
+            <span className="min-w-0">{entry.message}</span>
+          </span>
+          {/* A roll whose dice were withheld still says how it went. */}
+          <Outcome entry={entry} />
+        </>
       )}
     </li>
   )

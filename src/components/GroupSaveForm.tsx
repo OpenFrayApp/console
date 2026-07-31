@@ -169,7 +169,10 @@ export function GroupSaveForm({
   /** Roll a monster's concentration check, log it, and resolve the prompt by the outcome. */
   const rollConcentration = (p: ConcPrompt) => {
     const check = rollConcentrationCheck(p.combatant, p.damage)
-    onRoll?.(`${nameOf(p.combatant)}: concentration`, check.roll, check.applied)
+    onRoll?.(`${nameOf(p.combatant)}: concentration`, check.roll, {
+      applied: check.applied,
+      sourceId: p.combatant.combatantId,
+    })
     resolveConcentration(p.combatant.combatantId, !check.maintained)
   }
 

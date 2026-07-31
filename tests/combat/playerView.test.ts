@@ -207,6 +207,130 @@ describe('playerBoard — the log', () => {
   })
 })
 
+describe('playerBoard — a creature`s numbers in the log', () => {
+  /** An encounter whose log is about the creature `m`, unless a PC id is given. */
+  const withLog = (...log: GameLogEntry[]) => encounter({ log })
+
+  it('keeps the event but drops the amount when a creature is hurt', () => {
+    const board = playerBoard(
+      withLog(
+        entry({ category: 'hp', message: 'Ogre takes 45 damage', sourceId: 'm', amount: 45 }),
+      ),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.log[0].message).toBe('Ogre takes damage')
+    expect(board.log[0].amount).toBeUndefined()
+    expect(JSON.stringify(board.log)).not.toContain('45')
+  })
+
+  it('says a creature was healed without saying by how much', () => {
+    const board = playerBoard(
+      withLog(
+        entry({ category: 'heal', message: 'Ogre regains 12 HP', sourceId: 'm', amount: 12 }),
+      ),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.log[0].message).toBe('Ogre is healed')
+    expect(JSON.stringify(board.log)).not.toContain('12')
+  })
+
+  it('leaves a player character`s hit points alone', () => {
+    const board = playerBoard(
+      withLog(
+        entry({ category: 'hp', message: 'Thalia takes 13 damage', sourceId: 'p', amount: 13 }),
+      ),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.log[0].message).toBe('Thalia takes 13 damage')
+  })
+
+  // The table watched the ogre swing and connect; what they didn't see is its to-hit.
+  it('keeps a creature`s hit and its damage, and drops the dice that got there', () => {
+    const attack = entry({
+      category: 'roll',
+      message: 'Ogre: Greatclub → Thalia',
+      sourceId: 'm',
+      result: { total: 23, dice: [], modifier: 6, advantageState: 'normal' } as never,
+      outcome: 'hit',
+      damage: [{ type: 'bludgeoning', amount: 13 }],
+    })
+    const row = playerBoard(withLog(attack), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.outcome).toBe('hit')
+    expect(row.damage).toEqual([{ type: 'bludgeoning', amount: 13 }])
+    expect(row.result).toBeUndefined()
+    expect(row.message).toBe('Ogre: Greatclub → Thalia')
+  })
+
+  it('says a creature failed its save without showing the die or the bonus', () => {
+    const save = entry({
+      category: 'roll',
+      message: 'Ogre: DEX save',
+      sourceId: 'm',
+      saved: false,
+      result: { total: 7, dice: [], modifier: -1, advantageState: 'normal' } as never,
+    })
+    const row = playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.saved).toBe(false)
+    expect(row.result).toBeUndefined()
+  })
+
+  it('drops the effects that swung a creature`s roll, since they name the bonus', () => {
+    const save = entry({
+      category: 'roll',
+      message: 'Ogre: WIS save',
+      sourceId: 'm',
+      saved: true,
+      applied: [{ effect: 'advantage', source: 'Magic Resistance' }] as never,
+    })
+    expect(playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0].applied).toBeUndefined()
+  })
+
+  // Choosing exact hit points is the GM saying the table may do the arithmetic.
+  it('withholds nothing once the GM shows exact hit points', () => {
+    const log = [
+      entry({ category: 'hp', message: 'Ogre takes 45 damage', sourceId: 'm', amount: 45 }),
+      entry({
+        category: 'roll',
+        message: 'Ogre: DEX save',
+        sourceId: 'm',
+        saved: false,
+        result: { total: 7, dice: [], modifier: -1, advantageState: 'normal' } as never,
+      }),
+    ]
+    const board = playerBoard(withLog(...log), { hp: 'exact', ac: 'hidden' })
+    expect(board.log[0].message).toBe('Ogre takes 45 damage')
+    expect(board.log[1].result).toBeDefined()
+  })
+
+  it('leaves an entry with no subject alone — it belongs to nobody in particular', () => {
+    const board = playerBoard(
+      withLog(entry({ category: 'turn', message: 'Round 2' })),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.log[0].message).toBe('Round 2')
+  })
+
+  it('carries conditions, concentration and casts through untouched', () => {
+    const board = playerBoard(
+      withLog(
+        entry({ category: 'condition', message: 'Ogre is Frightened', sourceId: 'm' }),
+        entry({
+          category: 'concentration',
+          message: 'Ogre concentrates on Hold Person',
+          sourceId: 'm',
+        }),
+        entry({ category: 'cast', message: 'Ogre casts Fireball' }),
+      ),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.log.map((e) => e.message)).toEqual([
+      'Ogre is Frightened',
+      'Ogre concentrates on Hold Person',
+      'Ogre casts Fireball',
+    ])
+  })
+})
+
 describe('playerBoard — where the fight is', () => {
   it('names whose turn it is while combat runs', () => {
     const board = playerBoard(encounter({ activeIndex: 1 }), DEFAULT_PLAYER_VIEW)

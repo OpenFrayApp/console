@@ -18,6 +18,9 @@ import { ThemeToggle } from './ThemeToggle.tsx'
  * Master runs the fight on a wide screen, and everyone else is holding a phone.
  */
 
+const COLUMN_HEADING =
+  'mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+
 /** What to say while there's no board — each state names what the reader should do next. */
 function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
   if (status === 'unavailable') {
@@ -66,7 +69,7 @@ export function PlayerView({ code }: { code: string }) {
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
 
   return (
-    <div className="flex min-h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
         <a href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
           <span className="text-indigo-500 dark:text-indigo-400">
@@ -79,29 +82,37 @@ export function PlayerView({ code }: { code: string }) {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
         {board ? (
           <>
-            <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mb-3 shrink-0 text-sm text-slate-600 dark:text-slate-300">
               <Standing round={board.round} paused={board.paused} turn={turn} />
             </p>
 
-            {board.rows.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Nobody is on the board yet.
-              </p>
-            ) : (
-              <ul className="space-y-1.5">
-                {board.rows.map((row) => (
-                  <PlayerRow key={row.id} row={row} active={row.id === board.activeId} />
-                ))}
-              </ul>
-            )}
+            {/* Two columns that scroll independently, so a long fight's log never pushes
+              the turn order off the screen — and neither one drags the other along.
+              Below `sm` there isn't width for two, so they stack and the page scrolls. */}
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:overflow-hidden">
+              <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
+                <h2 className={COLUMN_HEADING}>Turn order</h2>
+                {board.rows.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Nobody is on the board yet.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {board.rows.map((row) => (
+                      <PlayerRow key={row.id} row={row} active={row.id === board.activeId} />
+                    ))}
+                  </ul>
+                )}
+              </section>
 
-            <h2 className="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Game log
-            </h2>
-            <GameLog entries={[...board.log].reverse()} />
+              <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
+                <h2 className={COLUMN_HEADING}>Game log</h2>
+                <GameLog entries={[...board.log].reverse()} />
+              </section>
+            </div>
           </>
         ) : (
           <Standby status={status} code={code} />
