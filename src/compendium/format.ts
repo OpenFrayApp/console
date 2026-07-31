@@ -148,6 +148,11 @@ export function sourceInfo(source: string): SourceInfo {
         ruleset: 'Tome of Beasts 2',
         license: 'OGL-1.0a',
       }
+    case 'kobold-press-ccdx':
+      return {
+        ruleset: 'Creature Codex',
+        license: 'OGL-1.0a',
+      }
     case 'kobold-press-tob3':
       return {
         ruleset: 'Tome of Beasts 3',
