@@ -39,6 +39,7 @@ describe('libraries', () => {
     expect(librarySource('srd-5.2')).toBe('Core')
     expect(librarySource('srd-5.1')).toBe('Core')
     expect(librarySource('kobold-press-tob3')).toBe('ToB3')
+    expect(librarySource('kobold-press-ccdx')).toBe('CCdx')
     expect(librarySource('custom')).toBeUndefined()
   })
 

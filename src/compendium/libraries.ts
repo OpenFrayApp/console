@@ -81,6 +81,15 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'tob3-creatures.json',
   },
   {
+    id: 'kobold-press-ccdx',
+    label: 'Creature Codex (Kobold Press)',
+    shortLabel: 'CCdx',
+    family: 'tob',
+    group: 'other',
+    edition: '5.0',
+    creaturesFile: 'creature-codex-creatures.json',
+  },
+  {
     id: 'openfray-brood-and-bloom',
     label: 'Brood & Bloom',
     shortLabel: 'B&B',

@@ -74,6 +74,23 @@ were reformatted and restructured into OpenFray's schema. *Kobold Press* and *Mi
 are trademarks of Open Design; OpenFray is not affiliated with or endorsed by Kobold
 Press.
 
+### Creature Codex (Kobold Press)
+
+OpenFray includes **Open Game Content** from *Creature Codex* © 2018 Open Design LLC,
+used under the **Open Game License v1.0a**. Creature Codex designates its monster names,
+descriptions, statistics, and abilities as Open Game Content; we include **only** that.
+We do **not** include any Product Identity — artwork, sidebars, "fiction"/story text, or
+the book's unique **named individuals**, which are excluded wholesale: Baba Yaga, the
+Demon Lords (Chemosh, Chittr'k'k, Rangda, and Typhon), the Arch-Devils (Belphegor and
+Parzelon), the Animal Lords (the Bat King, Brother Ox, the Mouse King, the Queen of
+Birds, the Queen of Cats, and the Queen of Serpents), Berchta, the Monkey King, the
+Avatar of Shoth, and the Ankou Soul Herald (their generic counterparts remain OGC).
+**Changes were made**: the stat blocks were reformatted and restructured into OpenFray's
+schema. The Open Game Content was obtained from the [Open5e](https://open5e.com)
+republication of the book rather than from the book itself. *Kobold Press* and *Midgard*
+are trademarks of Open Design; OpenFray is not affiliated with or endorsed by Kobold
+Press.
+
 ### Tome of Beasts 2 (Kobold Press)
 
 OpenFray includes **Open Game Content** from *Tome of Beasts 2* © 2020 Open Design LLC,
