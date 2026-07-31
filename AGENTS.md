@@ -295,9 +295,14 @@ extension). Split a part out only when it earns that — these three do not.
 - **Phase 1 (now):** single-GM, single-device tracker + differentiators
   (resource tracking, effects, mass save, dice, SRD compendium, custom-creature
   form, identity). No multiplayer.
-- **Phase 2 (later, designed-for now):** read-only shared player view + live
-  multi-device sync — same realtime layer. Visibility flags already live on each
-  Combatant; don't render them yet, but don't remove them.
+- **Phase 2 (in progress):** the read-only **shared player view** is built —
+  `combat/playerView.ts` filters the encounter into the only shape that leaves the GM's
+  browser, and `state/playerChannel.ts` relays it over a Supabase realtime **broadcast**
+  channel that stores nothing (which is what lets an anonymous GM share without a row
+  reaching the database). What players see of a creature is a device-local setting; the
+  per-combatant `visibility` flags on `MonsterCombatant` stay unrendered, reserved for a
+  future per-creature override. Live multi-device sync for the GM's own phone is the
+  remaining half of the same layer.
 - **Deferred, never core:** D&D Beyond / Roll20 import (no public API; best-effort
   only).
 

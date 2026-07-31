@@ -78,9 +78,10 @@ conditions/effects, concentration, group saves, and honest dice with a clear rol
 plus an **encounter difficulty estimate** before you begin and an **end-of-combat recap**
 (XP, timing, and standout hits), the built-in SRD compendium (**Basic Rules 2024 and opt-in 2014 + Tome of Beasts libraries**), custom
 creatures and spells, JSON creature import, a durable **Characters** roster, and
-**campaigns** with house rules. It runs fully anonymous in the browser, or sign in (free,
-with **Discord or Google**) to save your fights and custom content to the cloud across
-devices. Still to come: a shared read-only player view.
+**campaigns** with house rules — plus a **shared read-only player view** your table follows
+on their own phones, showing the turn order and the game log with as much of a creature as
+you choose to give away. It runs fully anonymous in the browser, or sign in (free, with
+**Discord or Google**) to save your fights and custom content to the cloud across devices.
 
 ## Running it locally
 
