@@ -4,8 +4,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
-import { AuthProvider } from './auth/AuthProvider.tsx'
+import { playerCodeFromPath } from './state/playerCode.ts'
 
 // Load Fathom Analytics in production builds only — never on the dev server (localhost).
 if (import.meta.env.PROD) {
@@ -19,10 +18,36 @@ if (import.meta.env.PROD) {
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element #root not found')
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </StrictMode>,
-)
+const root = createRoot(rootElement)
+
+// Two screens share one bundle entry, told apart by the path — `/console/play/<code>`
+// is a player's shared view, everything else is the Game Master's console. They're
+// imported dynamically so Vite splits them: a player on a phone downloads the small
+// one. There is no router; Cloudflare's `/console/*` fallback serves this shell for
+// every path, so reading `location.pathname` is all the routing there is.
+const shareCode = playerCodeFromPath(window.location.pathname, import.meta.env.BASE_URL)
+
+// Promise chains rather than top-level await: the build targets browsers older than
+// module-level await, and Vite fails the build rather than shipping something they choke on.
+if (shareCode) {
+  // The player view needs no session, so it renders outside AuthProvider.
+  void import('./components/PlayerView.tsx').then(({ PlayerView }) => {
+    root.render(
+      <StrictMode>
+        <PlayerView code={shareCode} />
+      </StrictMode>,
+    )
+  })
+} else {
+  void Promise.all([import('./App.tsx'), import('./auth/AuthProvider.tsx')]).then(
+    ([{ default: App }, { AuthProvider }]) => {
+      root.render(
+        <StrictMode>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </StrictMode>,
+      )
+    },
+  )
+}

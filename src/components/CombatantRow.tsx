@@ -3,7 +3,7 @@
 
 import { useRef } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
-import { hpTier, type HpTier } from '../combat/resources.ts'
+import { hpTier } from '../combat/resources.ts'
 import { acOf, isFoe, nameOf } from '../combat/combatant.ts'
 import { concentrationTitle } from '../combat/concentration.ts'
 import { isStable } from '../combat/deathsaves.ts'
@@ -11,14 +11,7 @@ import { cx } from '../lib/cx.ts'
 import { EffectBadge } from './EffectBadge.tsx'
 import { DeathSavePips } from './DeathSaveControls.tsx'
 import { EditableField } from './EditableField.tsx'
-import { hpToneFor } from './hpTone.ts'
-
-const TIER_LABEL: Record<HpTier, string> = {
-  healthy: 'Healthy',
-  hurt: 'Hurt',
-  bloodied: 'Bloodied',
-  critical: 'Critical',
-}
+import { hpToneFor, TIER_LABEL } from './hpTone.ts'
 
 interface CombatantRowProps {
   combatant: Combatant
