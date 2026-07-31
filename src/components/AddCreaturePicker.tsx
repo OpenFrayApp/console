@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import { loadSrdCreatures } from '../compendium/srd.ts'
-import {
-  DEFAULT_ENABLED_LIBRARIES,
-  editionBadgeClass,
-  editionLabel,
-  inEnabledLibrary,
-  librarySource,
-  librarySourceBadgeClass,
-  libraryTag,
-} from '../compendium/libraries.ts'
+import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { formatCr } from '../compendium/format.ts'
-import { useDismiss } from '../hooks/useDismiss.ts'
+import { LibraryPicker } from './LibraryPicker.tsx'
+
+const TRIGGER =
+  'rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500'
 
 /** A search popover to pick a creature (enabled SRD libraries + custom) to add. */
 export function AddCreaturePicker({
@@ -22,105 +17,39 @@ export function AddCreaturePicker({
   customCreatures = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  label = 'Add creature',
+  triggerClass = TRIGGER,
+  closeOnPick = false,
 }: {
   onPick: (c: Creature) => void
   customCreatures?: Creature[]
   enabledLibraries?: string[]
   showHomebrew?: boolean
+  /** The trigger's text — "Start from" on the custom-creature form. */
+  label?: string
+  triggerClass?: string
+  /** Adding leaves the picker open for the next creature; starting a form closes it. */
+  closeOnPick?: boolean
 }) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
-  useDismiss(ref, open, close)
-
-  useEffect(() => {
-    if (open && creatures === null) {
-      loadSrdCreatures().then(setCreatures, () => setCreatures([]))
-    }
-  }, [open, creatures])
-
-  const q = query.trim().toLowerCase()
-  // Sorted alphabetically across every enabled library; the full list lives in the
-  // scroll container so you can browse all creatures, not just the first matches.
-  const matches = [...customCreatures, ...(creatures ?? [])]
-    .filter((c) => inEnabledLibrary(c, enabledLibraries, showHomebrew))
-    .filter((c) => !q || c.name.toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name))
-  /** Whether a creature is the user's own (custom: id) rather than a library entry. */
-  const isCustom = (c: Creature) => c.id.startsWith('custom:')
-  // Source tag (Core / ToB3): library creatures only — custom carries its own badge.
-  const sourceTag = (c: Creature): string | undefined =>
-    isCustom(c) ? undefined : librarySource(c.source)
-  // Edition tag: custom uses its own edition; a library creature uses its library's.
-  const editionTag = (c: Creature): string | undefined =>
-    isCustom(c) ? c.edition : libraryTag(c.source)
+  const load = useCallback(() => {
+    if (creatures === null) loadSrdCreatures().then(setCreatures, () => setCreatures([]))
+  }, [creatures])
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-      >
-        Add creature
-      </button>
-      {open && (
-        <div className="absolute right-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-          <input
-            autoFocus
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search creatures…"
-            aria-label="Search creatures"
-            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-          />
-          {creatures === null ? (
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading…</p>
-          ) : (
-            <ul className="mt-1 max-h-64 overflow-auto">
-              {matches.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => onPick(c)}
-                    className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <span className="truncate">{c.name}</span>
-                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                      {isCustom(c) && (
-                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
-                          Custom
-                        </span>
-                      )}
-                      {sourceTag(c) && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(c.source)}`}
-                        >
-                          {sourceTag(c)}
-                        </span>
-                      )}
-                      {editionTag(c) && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(c))}`}
-                        >
-                          {editionLabel(editionTag(c))}
-                        </span>
-                      )}
-                      CR {formatCr(c.cr)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {matches.length === 0 && (
-                <li className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">No matches</li>
-              )}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
+    <LibraryPicker
+      label={label}
+      triggerClass={triggerClass}
+      placeholder="Search creatures…"
+      searchLabel="Search creatures"
+      entries={creatures}
+      custom={customCreatures}
+      enabledLibraries={enabledLibraries}
+      showHomebrew={showHomebrew}
+      meta={(c) => `CR ${formatCr(c.cr)}`}
+      onOpen={load}
+      onPick={onPick}
+      closeOnPick={closeOnPick}
+    />
   )
 }

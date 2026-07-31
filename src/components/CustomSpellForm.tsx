@@ -4,6 +4,8 @@
 import { useEffect, useState } from 'react'
 import type { Spell } from '../schema/spell.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { AddSpellPicker } from './AddSpellPicker.tsx'
+import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { ABILITIES, DAMAGE_TYPES } from './customMonster.ts'
 import {
@@ -15,6 +17,7 @@ import {
   buildSpell,
   emptySpellDamageDraft,
   emptyScalingRowDraft,
+  spellToDraft,
   spellVariantPreview,
   type SpellDamageDraft,
   type SpellDraft,
@@ -144,12 +147,19 @@ export function CustomSpellForm({
   open,
   initialDraft,
   editId = null,
+  customSpells = [],
+  enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
+  showHomebrew = true,
   onClose,
   onSubmit,
 }: {
   open: boolean
   initialDraft: SpellDraft
   editId?: string | null
+  /** The GM's own spells, offered as starting points alongside the libraries. */
+  customSpells?: Spell[]
+  enabledLibraries?: string[]
+  showHomebrew?: boolean
   onClose: () => void
   onSubmit: (spell: Spell) => void
 }) {
@@ -179,6 +189,14 @@ export function CustomSpellForm({
   const manualLevels = isCantrip
     ? [...CANTRIP_TIERS]
     : Array.from({ length: 9 - level }, (_, i) => level + 1 + i)
+
+  /**
+   * Fill the form from an existing spell. The name stays the GM's — this is a new
+   * spell, not a copy — and so does the source, since what comes out is their
+   * homebrew rather than the book it started from. buildSpell mints a fresh id.
+   */
+  const startFrom = (sp: Spell) =>
+    setD((prev) => ({ ...spellToDraft(sp), name: prev.name, sourceName: '' }))
 
   /** Build and submit the spell (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
@@ -215,6 +233,21 @@ export function CustomSpellForm({
 
         <div className="max-h-[70vh] space-y-3 overflow-auto p-4">
           <Section title="Identity" open>
+            {!editId && (
+              <div className="flex items-center gap-2">
+                <AddSpellPicker
+                  label="Start from…"
+                  triggerClass="rounded-md border border-slate-300 px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  onPick={startFrom}
+                  customSpells={customSpells}
+                  enabledLibraries={enabledLibraries}
+                  showHomebrew={showHomebrew}
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Fills the form from an existing spell. Everything stays editable.
+                </span>
+              </div>
+            )}
             <input
               autoFocus
               value={d.name}

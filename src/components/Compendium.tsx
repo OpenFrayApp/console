@@ -758,6 +758,9 @@ export function Compendium({
         open={editor != null}
         initialDraft={editor?.draft ?? emptyDraft()}
         editId={editor?.editId ?? null}
+        customCreatures={customCreatures}
+        enabledLibraries={enabledLibraries}
+        showHomebrew={showHomebrew}
         onClose={() => setEditor(null)}
         onSubmit={submitEditor}
       />
@@ -772,6 +775,9 @@ export function Compendium({
         open={spellEditor != null}
         initialDraft={spellEditor?.draft ?? emptySpellDraft()}
         editId={spellEditor?.editId ?? null}
+        customSpells={customSpells}
+        enabledLibraries={enabledLibraries}
+        showHomebrew={showHomebrew}
         onClose={() => setSpellEditor(null)}
         onSubmit={submitSpellEditor}
       />

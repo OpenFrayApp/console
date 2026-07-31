@@ -4,7 +4,7 @@
 
 import type { ReactElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import {
   buildCreature,
@@ -14,7 +14,24 @@ import {
 } from '../../src/components/customMonster.ts'
 
 vi.mock('../../src/compendium/srd.ts', () => ({
-  loadSrdCreatures: () => Promise.resolve([]),
+  loadSrdCreatures: () =>
+    Promise.resolve([
+      {
+        id: 'srd-5.2:goblin',
+        source: 'srd-5.2',
+        name: 'Goblin',
+        size: 'Small',
+        type: 'humanoid',
+        ac: 15,
+        maxHp: 7,
+        hpFormula: '2d6',
+        speed: { walk: 30 },
+        abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
+        senses: { passivePerception: 9 },
+        cr: 0.25,
+        traits: [{ name: 'Nimble Escape', text: 'Disengage or Hide as a bonus action.' }],
+      },
+    ]),
   loadSrdSpells: () =>
     Promise.resolve([
       {
@@ -203,5 +220,46 @@ describe('CustomMonsterForm', () => {
       saveDc: 16, // 8 + int mod 4 + pb 4
       toHit: 8,
     })
+  })
+  it('starts a new creature from an existing one, keeping the name the GM typed', async () => {
+    const onSubmit = vi.fn()
+    await renderForm(
+      <CustomMonsterForm open initialDraft={draft()} onClose={() => {}} onSubmit={onSubmit} />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Creature name'), { target: { value: 'Goblin Sapper' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start from…' }))
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Goblin'))
+
+    // The template fills the form; the name stays the GM's and the source is theirs too.
+    expect(screen.getByLabelText('Creature name')).toHaveValue('Goblin Sapper')
+    expect(screen.getByLabelText('AC')).toHaveValue('15')
+    expect(screen.getByLabelText('Type')).toHaveValue('humanoid')
+    expect(screen.getByLabelText('Source')).toHaveValue('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    const creature = onSubmit.mock.calls[0][0] as Creature
+    expect(creature.name).toBe('Goblin Sapper')
+    expect(creature.ac).toBe(15)
+    expect(creature.traits).toEqual([
+      { name: 'Nimble Escape', text: 'Disengage or Hide as a bonus action.' },
+    ])
+    // An independent entity: its own custom id, and never the library's source.
+    expect(creature.id.startsWith('custom:')).toBe(true)
+    expect(creature.source).toBe('custom')
+  })
+
+  it('offers no starting point when editing — the form is already the creature', async () => {
+    await renderForm(
+      <CustomMonsterForm
+        open
+        initialDraft={draft({ name: 'Snik' })}
+        editId="custom:abc"
+        onClose={() => {}}
+        onSubmit={() => {}}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Start from…' })).toBeNull()
   })
 })

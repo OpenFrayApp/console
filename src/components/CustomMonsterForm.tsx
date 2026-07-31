@@ -8,6 +8,8 @@ import type { Spell } from '../schema/spell.ts'
 import type { AbilityScores } from '../schema/primitives.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { ActionEditor, FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { AddCreaturePicker } from './AddCreaturePicker.tsx'
+import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { SpellTagInput } from './SpellTagInput.tsx'
 import {
@@ -21,6 +23,7 @@ import {
   attackBonus,
   averageHp,
   buildCreature,
+  creatureToDraft,
   emptyActionDraft,
   emptySkillDraft,
   emptySpellGroupDraft,
@@ -74,6 +77,9 @@ export function CustomMonsterForm({
   open,
   initialDraft,
   editId = null,
+  customCreatures = [],
+  enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
+  showHomebrew = true,
   onClose,
   onSubmit,
 }: {
@@ -81,6 +87,10 @@ export function CustomMonsterForm({
   initialDraft: MonsterDraft
   /** Set when editing — the rebuilt creature keeps this id instead of a fresh one. */
   editId?: string | null
+  /** The GM's own creatures, offered as starting points alongside the libraries. */
+  customCreatures?: Creature[]
+  enabledLibraries?: string[]
+  showHomebrew?: boolean
   onClose: () => void
   onSubmit: (creature: Creature) => void
 }) {
@@ -121,6 +131,15 @@ export function CustomMonsterForm({
   )
   const spellBonus = d.spellAbility ? attackBonus(d.spellAbility, ctx) : null
 
+  /**
+   * Fill the form from an existing creature. The name is left to the GM — this is a
+   * new creature, not a copy — and so is the source, since what comes out is their
+   * homebrew rather than the book it started from. buildCreature mints a fresh id, so
+   * nothing links the two.
+   */
+  const startFrom = (c: Creature) =>
+    setD((prev) => ({ ...creatureToDraft(c), name: prev.name, sourceName: '' }))
+
   /** Build and submit the creature (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
     if (!d.name.trim()) return
@@ -158,6 +177,22 @@ export function CustomMonsterForm({
 
             <div className="max-h-[70vh] space-y-3 overflow-auto p-4">
               <Section title="Identity" open>
+                {!editId && (
+                  <div className="flex items-center gap-2">
+                    <AddCreaturePicker
+                      label="Start from…"
+                      triggerClass="rounded-md border border-slate-300 px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      onPick={startFrom}
+                      closeOnPick
+                      customCreatures={customCreatures}
+                      enabledLibraries={enabledLibraries}
+                      showHomebrew={showHomebrew}
+                    />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Fills the form from an existing creature. Everything stays editable.
+                    </span>
+                  </div>
+                )}
                 <input
                   autoFocus
                   value={d.name}

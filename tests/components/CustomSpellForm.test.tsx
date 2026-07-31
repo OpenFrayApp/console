@@ -3,7 +3,38 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+
+vi.mock('../../src/compendium/srd.ts', () => ({
+  loadSrdCreatures: () => Promise.resolve([]),
+  loadSrdSpells: () =>
+    Promise.resolve([
+      {
+        id: 'srd-5.2:fireball',
+        source: 'srd-5.2',
+        name: 'Fireball',
+        level: 3,
+        school: 'Evocation',
+        castingTime: 'Action',
+        range: '150 feet',
+        components: {
+          verbal: true,
+          somatic: true,
+          material: true,
+          materials: 'a tiny ball of bat guano',
+        },
+        duration: 'Instantaneous',
+        concentration: false,
+        ritual: false,
+        text: 'A bright streak flashes from you.',
+        mechanics: {
+          damage: [{ formula: '8d6', type: 'fire' }],
+          save: { ability: 'dex', onSave: 'half' },
+        },
+      },
+    ]),
+}))
+
 import { CustomSpellForm } from '../../src/components/CustomSpellForm.tsx'
 import {
   buildSpell,
@@ -211,5 +242,41 @@ describe('CustomSpellForm', () => {
     render(<CustomSpellForm open initialDraft={draft()} onClose={onClose} onSubmit={() => {}} />)
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+  it('starts a new spell from an existing one, keeping the name the GM typed', async () => {
+    const onSubmit = vi.fn()
+    render(<CustomSpellForm open initialDraft={draft()} onClose={() => {}} onSubmit={onSubmit} />)
+
+    fireEvent.change(screen.getByLabelText('Spell name'), { target: { value: 'Emberburst' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start from…' }))
+    await waitFor(() => screen.getByText('Fireball'))
+    fireEvent.click(screen.getByText('Fireball'))
+
+    expect(screen.getByLabelText('Spell name')).toHaveValue('Emberburst')
+    expect(screen.getByLabelText('Level')).toHaveValue('3')
+    expect(screen.getByLabelText('School')).toHaveValue('Evocation')
+    expect(screen.getByLabelText('Source')).toHaveValue('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    const spell = onSubmit.mock.calls[0][0] as Spell
+    expect(spell.name).toBe('Emberburst')
+    expect(spell.level).toBe(3)
+    expect(spell.mechanics?.damage).toEqual([{ formula: '8d6', type: 'fire' }])
+    expect(spell.mechanics?.save).toEqual({ ability: 'dex', onSave: 'half' })
+    expect(spell.id.startsWith('custom:')).toBe(true)
+    expect(spell.source).toBe('custom')
+  })
+
+  it('offers no starting point when editing — the form is already the spell', () => {
+    render(
+      <CustomSpellForm
+        open
+        initialDraft={draft({ name: 'Emberburst' })}
+        editId="custom:abc"
+        onClose={() => {}}
+        onSubmit={() => {}}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Start from…' })).toBeNull()
   })
 })

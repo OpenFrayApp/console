@@ -1,26 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { durationRounds, spellAction } from '../combat/casting.ts'
 import { startConcentration } from '../combat/concentration.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
-import {
-  DEFAULT_ENABLED_LIBRARIES,
-  editionBadgeClass,
-  editionLabel,
-  inEnabledLibrary,
-  librarySource,
-  librarySourceBadgeClass,
-  libraryTag,
-} from '../compendium/libraries.ts'
-import { useDismiss } from '../hooks/useDismiss.ts'
+import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { isSupportSpell } from '../combat/spellEffects.ts'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
+import { LibraryPicker } from './LibraryPicker.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
@@ -28,8 +20,6 @@ import type { OnRoll } from './GameLog.tsx'
 
 /** "Cantrip" for level 0, otherwise "Lvl N". */
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
-/** True for a user-created spell (a `custom:` id). */
-const isCustom = (s: Spell): boolean => s.id.startsWith('custom:')
 
 /**
  * Cast a spell from the compendium: roll its damage (scaled by the chosen level)
@@ -58,24 +48,13 @@ export function CastSpellPanel({
   /** When false, homebrew (custom) spells are hidden — matches the compendium/picker. */
   showHomebrew?: boolean
 }) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
   const [casterId, setCasterId] = useState<string>('')
   const caster = casterId ? combatants.find((c) => c.combatantId === casterId) : undefined
-  const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => {
-    setOpen(false)
-    setQuery('')
-  }, [])
-  useDismiss(ref, open, close)
-
-  useEffect(() => {
-    if (open && spells === null) {
-      loadSrdSpells().then(setSpells, () => setSpells([]))
-    }
-  }, [open, spells])
+  const load = useCallback(() => {
+    if (spells === null) loadSrdSpells().then(setSpells, () => setSpells([]))
+  }, [spells])
 
   /** Drop the picked spell, returning to the Cast spell button. */
   const reset = () => {
@@ -86,8 +65,6 @@ export function CastSpellPanel({
   const pick = (s: Spell) => {
     reset()
     setSpell(s)
-    setOpen(false)
-    setQuery('')
     // A concentration spell starts the chosen caster concentrating, with the spell's
     // round timer — mirroring a stat-block cast. The caster is optional, so this only
     // fires when one is picked.
@@ -107,103 +84,39 @@ export function CastSpellPanel({
     }
   }
 
-  // Source tag (Core / ToB…): library spells only — custom carries its own badge.
-  const sourceTag = (s: Spell): string | undefined =>
-    isCustom(s) ? undefined : librarySource(s.source)
-  /** The edition badge: a custom spell's own edition, else its library's tag. */
-  const editionTag = (s: Spell): string | undefined =>
-    isCustom(s) ? s.edition : libraryTag(s.source)
-
   if (!spell) {
-    const q = query.trim().toLowerCase()
-    // Every spell from the enabled libraries (so buffs like Bless show too), filtered
-    // by the active content set — not just rollable ones, and not the whole bundle.
-    const matches = [...customSpells, ...(spells ?? [])]
-      .filter((s) => inEnabledLibrary(s, enabledLibraries, showHomebrew))
-      .filter((s) => !q || s.name.toLowerCase().includes(q))
-      .sort((a, b) => a.name.localeCompare(b.name))
-
     return (
-      <div className="relative" ref={ref}>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          disabled={combatants.length === 0}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+      <LibraryPicker
+        label="Cast spell"
+        triggerClass="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        disabled={combatants.length === 0}
+        align="left"
+        placeholder="Search spells…"
+        searchLabel="Search spells"
+        // Every spell from the enabled libraries, so buffs like Bless list too — not
+        // just the rollable ones.
+        entries={spells}
+        custom={customSpells}
+        enabledLibraries={enabledLibraries}
+        showHomebrew={showHomebrew}
+        meta={(s) => levelText(s.level)}
+        onOpen={load}
+        onPick={pick}
+      >
+        <select
+          value={casterId}
+          onChange={(e) => setCasterId(e.target.value)}
+          aria-label="Caster"
+          className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
         >
-          Cast spell
-        </button>
-        {open && (
-          <div className="absolute left-0 z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-            <select
-              value={casterId}
-              onChange={(e) => setCasterId(e.target.value)}
-              aria-label="Caster"
-              className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-            >
-              <option value="">No caster (GM rolls)</option>
-              {combatants.map((c) => (
-                <option key={c.combatantId} value={c.combatantId}>
-                  {c.isPC ? c.name : c.label}
-                </option>
-              ))}
-            </select>
-            <input
-              autoFocus
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search spells…"
-              aria-label="Search spells"
-              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-            />
-            {spells === null ? (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading…</p>
-            ) : (
-              <ul className="mt-1 max-h-64 overflow-auto">
-                {matches.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => pick(s)}
-                      className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      <span className="truncate">{s.name}</span>
-                      <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                        {isCustom(s) && (
-                          <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
-                            Custom
-                          </span>
-                        )}
-                        {sourceTag(s) && (
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(s.source)}`}
-                          >
-                            {sourceTag(s)}
-                          </span>
-                        )}
-                        {editionTag(s) && (
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(editionTag(s))}`}
-                          >
-                            {editionLabel(editionTag(s))}
-                          </span>
-                        )}
-                        {levelText(s.level)}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-                {matches.length === 0 && (
-                  <li className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                    No matches
-                  </li>
-                )}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+          <option value="">No caster (GM rolls)</option>
+          {combatants.map((c) => (
+            <option key={c.combatantId} value={c.combatantId}>
+              {c.isPC ? c.name : c.label}
+            </option>
+          ))}
+        </select>
+      </LibraryPicker>
     )
   }
 
