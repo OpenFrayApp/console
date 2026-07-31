@@ -54,3 +54,76 @@ export function makeSupabaseStub(...results: QueryResult[]) {
   }
   return { client: { from }, queries }
 }
+
+/** One `send()` the channel stub captured. */
+export interface RecordedSend {
+  event: string
+  payload: unknown
+}
+
+/** A stand-in for a realtime channel that records what was sent and can replay events in. */
+export interface StubChannel {
+  name: string
+  sends: RecordedSend[]
+  tracked: unknown[]
+  removed: boolean
+  /** Presence keys the stub reports; tests set this to add or drop the GM. */
+  presence: Record<string, unknown[]>
+  /** Drive the subscribe callback, as the server would once the socket is up. */
+  ready: () => void
+  /** Deliver a broadcast to this channel's handler, as another client would. */
+  emit: (event: string, payload?: unknown) => void
+  /** Fire a presence event after setting `presence`. */
+  emitPresence: (event: 'sync' | 'join' | 'leave') => void
+}
+
+/**
+ * A chainable stand-in for `supabase.channel()`. Realtime is where the shared player
+ * view lives, so tests need to pin what actually goes over the wire — the channel
+ * name, every payload sent, and how the hooks answer events coming back.
+ */
+export function makeRealtimeStub() {
+  const channels: StubChannel[] = []
+  const channel = (name: string) => {
+    const broadcast = new Map<string, (msg: { payload: unknown }) => void>()
+    const presenceHandlers = new Map<string, () => void>()
+    const stub: StubChannel = {
+      name,
+      sends: [],
+      tracked: [],
+      removed: false,
+      presence: {},
+      ready: () => {},
+      emit: (event, payload = {}) => broadcast.get(event)?.({ payload }),
+      emitPresence: (event) => presenceHandlers.get(event)?.(),
+    }
+    channels.push(stub)
+    const api = {
+      on: (kind: string, opts: { event: string }, handler: (msg: { payload: unknown }) => void) => {
+        if (kind === 'broadcast') broadcast.set(opts.event, handler)
+        else presenceHandlers.set(opts.event, handler as unknown as () => void)
+        return api
+      },
+      subscribe: (cb?: (status: string) => void) => {
+        stub.ready = () => cb?.('SUBSCRIBED')
+        return api
+      },
+      send: ({ event, payload }: { event: string; payload: unknown }) => {
+        stub.sends.push({ event, payload })
+        return Promise.resolve('ok')
+      },
+      track: (state: unknown) => {
+        stub.tracked.push(state)
+        return Promise.resolve('ok')
+      },
+      presenceState: () => stub.presence,
+    }
+    return api
+  }
+  const removeChannel = (ch: { presenceState: () => Record<string, unknown[]> }) => {
+    const found = channels.find((c) => c.presence === ch.presenceState())
+    if (found) found.removed = true
+    return Promise.resolve('ok')
+  }
+  return { client: { channel, removeChannel }, channels }
+}
