@@ -3,9 +3,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
-import type { MonsterCombatant } from '../../src/schema/combatant.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { applySaveDamage } from '../../src/combat/masssave.ts'
 import { MassSavePanel } from '../../src/components/MassSavePanel.tsx'
 
@@ -42,6 +42,22 @@ function monster(id: string, cr?: Creature): MonsterCombatant {
     concentration: null,
     effects: [],
     visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
+  }
+}
+
+/** A lightweight PC — no abilities, so the app never rolls for them. */
+function pc(id: string, name: string): PlayerCharacter {
+  return {
+    isPC: true,
+    kind: 'pc',
+    combatantId: id,
+    name,
+    initiative: 18,
+    ac: 16,
+    status: 'active',
+    hp: { current: 30, max: 30, temp: 0 },
+    concentration: null,
+    effects: [],
   }
 }
 
@@ -107,6 +123,42 @@ describe('MassSavePanel', () => {
     fireEvent.click(screen.getByText('Fail'))
 
     expect(screen.getByLabelText('Damage to a')).toHaveValue('15')
+  })
+
+  it('rerolls one creature’s save without touching the others', () => {
+    const onRoll = vi.fn()
+    render(
+      <MassSavePanel
+        combatants={[monster('a'), monster('b')]}
+        dispatch={vi.fn()}
+        onRoll={onRoll}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
+    fireEvent.click(screen.getByRole('button', { name: 'b' }))
+    fireEvent.click(screen.getByText('Roll saves'))
+
+    // Pin 'b' by hand; rerolling 'a' must leave that alone.
+    const rowB = screen.getByLabelText('Damage to b').closest('li') as HTMLElement
+    fireEvent.click(within(rowB).getByRole('button', { name: 'Fail' }))
+    expect(onRoll).toHaveBeenCalledTimes(2)
+
+    const rowA = screen.getByLabelText('Damage to a').closest('li') as HTMLElement
+    fireEvent.click(within(rowA).getByRole('button', { name: 'Reroll' }))
+
+    expect(onRoll).toHaveBeenCalledTimes(3)
+    expect(onRoll.mock.calls[2][0]).toBe('a: DEX save')
+    expect(within(rowB).getByRole('button', { name: 'Fail' }).className).toContain('rose')
+  })
+
+  it('never offers to reroll a player’s save', () => {
+    render(<MassSavePanel combatants={[pc('p', 'Thalia')]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'Thalia' }))
+    fireEvent.click(screen.getByText('Roll saves'))
+    expect(screen.queryByRole('button', { name: 'Reroll' })).toBeNull()
   })
 
   it('half damage on a save (sanity on the helper)', () => {

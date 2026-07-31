@@ -202,6 +202,29 @@ describe('GroupSaveForm', () => {
     expect(actionsOf(dispatch, 'update')[0].update(hound).hp.current).toBe(30)
   })
 
+  it('rerolls one creature’s save and leaves a recorded PC row alone', () => {
+    render(
+      <GroupSaveForm
+        combatants={[monster('a', 'Goblin A'), pc('p', 'Thalia')]}
+        dispatch={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Select Goblin A'))
+    fireEvent.click(screen.getByLabelText('Select Thalia'))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(within(rowOf('Thalia')).getByRole('button', { name: 'Save' }))
+
+    // Only the creature can be rerolled — OpenFray never rolls a player's save.
+    expect(within(rowOf('Thalia')).queryByRole('button', { name: 'Reroll' })).toBeNull()
+    fireEvent.click(within(rowOf('Goblin A')).getByRole('button', { name: 'Reroll' }))
+
+    expect(within(rowOf('Goblin A')).getByText(/^\d+$/)).toBeInTheDocument()
+    expect(within(rowOf('Thalia')).getByRole('button', { name: 'Save' }).className).toContain(
+      'emerald',
+    )
+  })
+
   it('lets the GM record a PC result and then applies its share', () => {
     const dispatch = vi.fn()
     render(<GroupSaveForm combatants={[pc('p', 'Thalia')]} dispatch={dispatch} onClose={vi.fn()} />)

@@ -276,6 +276,10 @@ export function DamageTypeSelect({
 const APPLY_BTN =
   'rounded-md border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50'
 
+/** A row's reroll: the same chip as Save/Fail beside it, kept quiet so it doesn't read as the action. */
+export const REROLL_BTN =
+  'rounded border border-slate-300 px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+
 const QUICK_CONDITIONS: ConditionName[] = [
   'Prone',
   'Grappled',
@@ -766,10 +770,34 @@ export function SaveResolver({
     return row?.edited ?? String(defaultDamage(target, row?.result))
   }
 
+  /** Roll one creature's save against the current DC and log it. Never called for a PC. */
+  const rollOne = (c: Combatant): SaveRow => {
+    const saveRoll = rollSave(
+      c,
+      { ability, dc: toNum(dc) || 10, onSave },
+      { magicResistance: magical && hasMagicResistance(c) },
+    )
+    onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, saveRoll.applied)
+    return {
+      result: saveRoll.result,
+      total: saveRoll.total,
+      d20: saveRoll.roll.dice.find((g) => g.sides === 20)?.kept[0],
+    }
+  }
+
+  /**
+   * Reroll one creature's save. Per creature rather than for the group: the damage
+   * is one roll the whole area shares, and rerolling everyone would undo results the
+   * GM has already settled.
+   */
+  const reroll = (c: Combatant) => {
+    const row = rollOne(c)
+    setRows((prev) => ({ ...prev, [c.combatantId]: row }))
+  }
+
   /** Roll damage once and each monster's save; PC rows wait on the GM; no-save rows auto-fail. */
   const rollSaves = () => {
     track(action ? EVENTS.saveRolled : EVENTS.groupSaveRolled)
-    const request = { ability, dc: toNum(dc) || 10, onSave }
     if (action) {
       const components = rollDamageComponents(action, false)
       setArea(components)
@@ -792,12 +820,7 @@ export function SaveResolver({
       } else if (c.isPC) {
         next[c.combatantId] = {} // the player rolls; recorded below
       } else {
-        const saveRoll = rollSave(c, request, {
-          magicResistance: magical && hasMagicResistance(c),
-        })
-        const d20 = saveRoll.roll.dice.find((g) => g.sides === 20)?.kept[0]
-        next[c.combatantId] = { result: saveRoll.result, total: saveRoll.total, d20 }
-        onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, saveRoll.applied)
+        next[c.combatantId] = rollOne(c)
       }
     }
     setRows(next)
@@ -1075,6 +1098,11 @@ export function SaveResolver({
                             className="rounded border border-amber-400 px-1.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
                           >
                             Use LR ({legendaryResistanceLeft(c)})
+                          </button>
+                        )}
+                        {!c.isPC && (
+                          <button type="button" onClick={() => reroll(c)} className={REROLL_BTN}>
+                            Reroll
                           </button>
                         )}
                       </>

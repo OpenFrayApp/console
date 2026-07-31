@@ -19,7 +19,7 @@ import {
 } from '../combat/masssave.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
-import { ConditionChips, DamageTypeSelect } from './ActionResolver.tsx'
+import { ConditionChips, DamageTypeSelect, REROLL_BTN } from './ActionResolver.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -82,6 +82,15 @@ export function GroupSaveForm({
   const [damageType, setDamageType] = useState<DamageType | ''>('')
   const [pending, setPending] = useState<ConcPrompt[]>([])
 
+  // Rerolling the spell's damage upstream re-seeds this field and nothing else. The
+  // card used to be remounted on a new total instead, which threw away the targets
+  // and the saves the GM had already settled.
+  const [seeded, setSeeded] = useState(seed?.damage)
+  if (seed?.damage !== seeded) {
+    setSeeded(seed?.damage)
+    setDamage(seed?.damage ?? '')
+  }
+
   /** Toggle a combatant in the selection. */
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
@@ -91,21 +100,31 @@ export function GroupSaveForm({
       return next
     })
 
+  /** Roll one creature's save against the current DC. Never called for a PC. */
+  const rollOne = (c: Combatant): Row => {
+    const { result, total } = rollSave(c, { ability, dc: num(dc) || 10, onSave })
+    return { result, total }
+  }
+
   /** Auto-roll each selected monster's save; PC rows stay blank for the GM to record. */
   const rollSaves = () => {
     track(EVENTS.groupSaveRolled)
-    const request = { ability, dc: num(dc) || 10, onSave }
     const next: Record<string, Row> = {}
     for (const c of combatants) {
       if (!selected.has(c.combatantId)) continue
       if (c.isPC) {
         next[c.combatantId] = {} // the player rolls; GM records below
       } else {
-        const { result, total } = rollSave(c, request)
-        next[c.combatantId] = { result, total }
+        next[c.combatantId] = rollOne(c)
       }
     }
     setRows(next)
+  }
+
+  /** Reroll one creature's save — per creature, so settled rows keep their result. */
+  const reroll = (c: Combatant) => {
+    const row = rollOne(c)
+    setRows((prev) => ({ ...prev, [c.combatantId]: row }))
   }
 
   /** Record a combatant's save or fail. */
@@ -283,6 +302,11 @@ export function GroupSaveForm({
                   >
                     Fail
                   </button>
+                  {!c.isPC && (
+                    <button type="button" onClick={() => reroll(c)} className={REROLL_BTN}>
+                      Reroll
+                    </button>
+                  )}
                 </span>
               )}
             </li>

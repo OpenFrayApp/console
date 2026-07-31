@@ -81,7 +81,7 @@ export function SpellResolution({
             onClick={rollDamage}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
           >
-            Roll damage
+            {rolled ? 'Reroll damage' : 'Roll damage'}
           </button>
           {rolled && (
             <span className="text-sm">
@@ -100,8 +100,6 @@ export function SpellResolution({
 
       {save && (!hasDamage || rolled) && (
         <GroupSaveForm
-          // Re-seed the damage when a new roll comes in.
-          key={rolled?.total ?? 'noroll'}
           combatants={combatants}
           dispatch={dispatch}
           onClose={onClose}

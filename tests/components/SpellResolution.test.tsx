@@ -160,6 +160,21 @@ describe('SpellResolution', () => {
     expect((screen.getByLabelText('Damage') as HTMLInputElement).value).toBe(String(total))
   })
 
+  it('re-seeds the damage on a reroll and keeps the saves already settled', () => {
+    const { onRoll } = renderResolution(fireball(), { saveDc: 15 })
+    fireEvent.click(screen.getByRole('button', { name: 'Roll damage' }))
+    fireEvent.click(screen.getByLabelText('Select Goblin A'))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reroll damage' }))
+    const rerolled = onRoll.mock.calls[1][1].total
+
+    expect((screen.getByLabelText('Damage') as HTMLInputElement).value).toBe(String(rerolled))
+    // The card stayed put: the target is still selected and its row still resolved.
+    expect((screen.getByLabelText('Select Goblin A') as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument()
+  })
+
   it('offers upcast variants and re-arms the roll on change', () => {
     const { onRoll } = renderResolution(fireball())
     const select = screen.getByLabelText('Cast level') as HTMLSelectElement
