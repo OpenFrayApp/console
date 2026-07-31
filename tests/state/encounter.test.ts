@@ -408,3 +408,52 @@ describe('encounter game-log events', () => {
     expect(e.log).toEqual([])
   })
 })
+
+describe('settleSave', () => {
+  /** A board with one rolled, not-yet-settled save for `a`. */
+  const rolled = () =>
+    encounterReducer(
+      { ...emptyEncounter(), combatants: [monster('a', 0)] },
+      { type: 'log', entry: { category: 'roll', message: 'a: DEX save', sourceId: 'a' } },
+    )
+
+  it('leaves the rolled save with no outcome until it is settled', () => {
+    expect(rolled().log[0].saved).toBeUndefined()
+  })
+
+  it('stamps the outcome onto the creature`s own save', () => {
+    const e = encounterReducer(rolled(), { type: 'settleSave', id: 'a', saved: false })
+    expect(e.log[0].saved).toBe(false)
+  })
+
+  // Legendary Resistance is why the outcome waits: the die failed, the creature spent
+  // a use, and the log has to end up saying it saved — not walk a "Failed" back.
+  it('records a save when Legendary Resistance overturns the failure', () => {
+    const e = encounterReducer(rolled(), { type: 'settleSave', id: 'a', saved: true })
+    expect(e.log[0].saved).toBe(true)
+  })
+
+  // Spending Legendary Resistance settles the save, and applying damage then settles
+  // again — the second must not reach back and re-stamp an older roll.
+  it('settles each save once, so a second call cannot rewrite it', () => {
+    let e = encounterReducer(rolled(), { type: 'settleSave', id: 'a', saved: true })
+    e = encounterReducer(e, { type: 'settleSave', id: 'a', saved: false })
+    expect(e.log[0].saved).toBe(true)
+  })
+
+  it('settles the most recent save when a creature has rolled twice', () => {
+    let e = rolled()
+    e = encounterReducer(e, {
+      type: 'log',
+      entry: { category: 'roll', message: 'a: WIS save', sourceId: 'a' },
+    })
+    e = encounterReducer(e, { type: 'settleSave', id: 'a', saved: true })
+    expect(e.log[0].saved).toBeUndefined()
+    expect(e.log[1].saved).toBe(true)
+  })
+
+  it('is a no-op when the creature has no unsettled save', () => {
+    const e = rolled()
+    expect(encounterReducer(e, { type: 'settleSave', id: 'b', saved: true })).toBe(e)
+  })
+})

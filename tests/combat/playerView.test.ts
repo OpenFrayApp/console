@@ -292,18 +292,50 @@ describe('playerBoard — a creature`s numbers in the log', () => {
     expect(row.result?.advantageState).toBe('advantage')
   })
 
-  it('says a creature failed its save, keeping the total and dropping the bonus', () => {
+  // A save total set beside a DC the table can work out gives the modifier away, so
+  // this is the one roll where even the total goes.
+  it('says only that a creature`s save failed, with no total at all', () => {
     const save = entry({
       category: 'roll',
       message: 'Ogre: DEX save',
       sourceId: 'm',
       saved: false,
-      result: roll({ total: 7, modifier: -1 }),
+      result: roll({ total: 7, modifier: -1, kind: 'save' }),
     })
     const row = playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0]
     expect(row.saved).toBe(false)
-    expect(row.result?.total).toBe(7)
-    expect(row.result?.modifier).toBe(0)
+    expect(row.result).toBeUndefined()
+  })
+
+  // Until the GM settles it, Legendary Resistance may still overturn a failure — so
+  // an unsettled save says nothing about how it went.
+  it('shows neither outcome nor total for a save the GM has not settled yet', () => {
+    const save = entry({
+      category: 'roll',
+      message: 'Ogre: DEX save',
+      sourceId: 'm',
+      result: roll({ total: 7, modifier: -1, kind: 'save' }),
+    })
+    const row = playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.saved).toBeUndefined()
+    // Never shown at all, so the number can't flash up and then vanish on settling.
+    expect(row.result).toBeUndefined()
+  })
+
+  // An area's dice belong to the spell rather than to any one combatant, so they carry
+  // no sourceId — and would otherwise let the table work out what a creature took.
+  it('drops the dice from an area damage roll but keeps what it came to', () => {
+    const damage = entry({
+      category: 'roll',
+      message: 'Mage: Fireball fire damage',
+      result: roll({
+        total: 30,
+        dice: [{ sides: 6, results: [6, 6, 1, 4], kept: [6, 6, 1, 4], sign: 1, total: 17 }],
+      }),
+    })
+    const row = playerBoard(withLog(damage), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.result?.total).toBe(30)
+    expect(row.result?.dice).toEqual([])
   })
 
   // Initiative is the one roll whose total is already on the row, so hiding it would

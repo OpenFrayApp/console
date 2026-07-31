@@ -107,10 +107,11 @@ function creatureRow(c: MonsterCombatant, settings: PlayerViewSettings): PlayerR
 }
 
 /**
- * A roll with its total intact and its arithmetic gone. What gives a creature's bonus
- * away is the breakdown — `1d20 [15] −1` states the modifier outright — while the total
- * on its own says nothing, because the die behind it is unknown. So the table still
- * watches the ogre roll a 19, and still can't work out what it rolls with.
+ * A roll with its total intact and its arithmetic gone. What gives a bonus away is the
+ * breakdown — `1d20 [15] −1` states the modifier outright — while the total on its own
+ * says nothing, because the dice behind it are unknown. So the table still watches the
+ * fireball land for 30 and the ogre roll a 19, and still can't work out what either
+ * rolls with.
  *
  * The effects that swung it go too: naming Bless or a Magic Resistance advantage is
  * naming the bonus. Whether it crit, fumbled, or had advantage stays — that is board
@@ -135,11 +136,12 @@ function withoutNumbers(entry: GameLogEntry, name: string): GameLogEntry {
   if (entry.category === 'heal' && entry.amount != null) {
     return { ...entry, message: `${name} is healed`, amount: undefined, result: undefined }
   }
-  return {
-    ...entry,
-    result: entry.result && rollWithoutArithmetic(entry.result),
-    applied: undefined,
-  }
+  // A save is the one roll whose total means something on its own: set beside a DC the
+  // table can work out, it gives the creature's modifier away. Saved or failed is the
+  // whole of what they need — and dropping it by the roll's own kind rather than by
+  // whether it has settled means the number never flashes up and then disappears.
+  if (entry.result?.kind === 'save') return { ...entry, result: undefined }
+  return entry
 }
 
 /**
@@ -169,8 +171,16 @@ export function playerBoard(encounter: Encounter, settings: PlayerViewSettings):
       .filter((e) => !e.gmOnly)
       .slice(-PLAYER_LOG_LIMIT)
       .map((e) => {
+        // Every roll loses its arithmetic, whoever made it — an area's damage dice
+        // aren't owned by any one combatant, and the total is the part that matters.
+        // The effects that swung it go with it, since naming Bless names the bonus.
+        const shown: GameLogEntry = {
+          ...e,
+          result: e.result && rollWithoutArithmetic(e.result),
+          applied: undefined,
+        }
         const name = e.sourceId ? guarded.get(e.sourceId) : undefined
-        return name ? withoutNumbers(e, name) : e
+        return name ? withoutNumbers(shown, name) : shown
       }),
   }
 }

@@ -777,10 +777,12 @@ export function SaveResolver({
       { ability, dc: toNum(dc) || 10, onSave },
       { magicResistance: magical && hasMagicResistance(c) },
     )
+    // No outcome yet: Legendary Resistance can still turn this into a success, and the
+    // GM can override it either way. `settleSave` stamps it once it stops being
+    // provisional, so nobody reads a "Failed" that the table then walks back.
     onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, {
       applied: saveRoll.applied,
       sourceId: c.combatantId,
-      saved: saveRoll.result === 'save',
     })
     return {
       result: saveRoll.result,
@@ -833,8 +835,10 @@ export function SaveResolver({
   }
 
   /** Record a row's save/fail and drop the GM's damage edit so the default recomputes. */
-  const setResult = (id: string, result: SaveResult) =>
+  const setResult = (id: string, result: SaveResult) => {
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], result, edited: undefined } }))
+    dispatch({ type: 'settleSave', id, saved: result === 'save' })
+  }
 
   /** Store the GM's damage override for the row. */
   const setEdited = (id: string, edited: string) =>
@@ -850,6 +854,8 @@ export function SaveResolver({
     for (const c of selectedTargets) {
       const row = rows[c.combatantId]
       if (!row?.result) continue
+      // Settles any save the GM accepted as rolled without touching a chip.
+      dispatch({ type: 'settleSave', id: c.combatantId, saved: row.result === 'save' })
       if (delayed && row.result === 'fail') {
         dispatch({
           type: 'update',
