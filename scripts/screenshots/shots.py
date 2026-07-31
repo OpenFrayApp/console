@@ -32,6 +32,10 @@ from console import (
 )
 
 SCREENS = Path(__file__).resolve().parents[2] / "docs" / "src" / "assets" / "screens"
+SITE_SCREENS = Path(__file__).resolve().parents[2] / "site" / "src" / "assets" / "screenshots"
+# Recipes that belong to the marketing site rather than the handbook, and so install
+# somewhere else. Everything not listed here is a handbook capture.
+SITE_RECIPES = {"console-hero", "group-save-hero", "cast-spell-hero", "compendium-hero"}
 ROLLS = {"Zara": 21, "Mira": 20, "Tav": 13, "Ren": 10}
 
 
@@ -355,6 +359,160 @@ def layout():
         c.number((x + w / 2, y + h - 70), n, r=30)
     c.number(gap(r["dice"], r["legal"]), 5, r=30)
     return c.save(f"{OUT}/layout.png")
+
+
+# The marketing hero's board: a named party rather than the docs' Zara/Mira/Tav/Ren,
+# because this one is read as a picture of somebody's game, not as a figure to follow.
+HERO_PARTY = [
+    ("Kessa Quick", 15, 26, 5),
+    ("Elowen Vale", 12, 22, 3),
+    ("Bram Ironfist", 18, 34, 1),
+    ("Sister Mirad", 18, 27, 0),
+]
+# The Hell Hound is immune to Fire and the Quasit resists it, so one Fireball against
+# this band shows all three outcomes at once — immune, resisted, and full.
+HERO_FOES = (
+    ("Ogre", 1),
+    ("Mage", 1),
+    ("Hell Hound", 1),
+    ("Quasit", 1),
+    ("Goblin Warrior", 1),
+)
+HERO_ROLLS = {"Kessa Quick": 25, "Elowen Vale": 23, "Bram Ironfist": 19, "Sister Mirad": 2}
+
+
+def _condition(page, who, *conditions):
+    """Select a combatant and apply conditions that last until removed. The chips are
+    looked up inside the dialog: a condition already on a tracker row renders a badge
+    with the same accessible name, and the two are otherwise ambiguous."""
+    page.get_by_text(who, exact=True).first.click()
+    page.wait_for_timeout(250)
+    page.get_by_role("button", name="Apply effect").click()
+    page.wait_for_timeout(350)
+    dialog = page.get_by_role("dialog", name=f"Apply effect to {who}")
+    for c in conditions:
+        dialog.get_by_role("button", name=c, exact=True).click()
+    dialog.get_by_role("button", name="Apply", exact=True).click()
+    page.wait_for_timeout(400)
+
+
+def _hero_board(page):
+    """The board every site shot shares — a fight already fought in: two wounded, one
+    bloodied, and the conditions that make it worth looking at. One setup, so the three
+    pictures on the home page are recognisably the same encounter."""
+    seed(page, HERO_PARTY, HERO_FOES)
+    start(page, HERO_ROLLS)
+    set_hp(page, "Elowen Vale", 12)
+    set_hp(page, "Goblin Warrior", 6)
+    set_hp(page, "Ogre", 49)
+    _condition(page, "Goblin Warrior", "Prone")
+    _condition(page, "Ogre", "Prone", "Frightened")
+    page.wait_for_timeout(400)
+
+
+def _full(page, name):
+    """The whole console, which is the point of the site's shots."""
+    capture(page, name, {"x": 0, "y": 0, "width": LAYOUT_W, "height": LAYOUT_H})
+    return name  # no annotation — the site frames these, and its prose labels them
+
+
+def console_hero():
+    """The full console mid-fight, for the site's home page — not the handbook."""
+    with console(width=LAYOUT_W, height=LAYOUT_H) as page:
+        _hero_board(page)
+        return _full(page, "console-hero")
+
+
+def group_save_hero():
+    """One Fireball rolled against six creatures whose Fire defenses all differ."""
+    with console(width=LAYOUT_W, height=LAYOUT_H) as page:
+        _hero_board(page)
+        # Cast the spell rather than opening Group save by hand: only the cast path
+        # carries the damage *type*, and without "fire" the Hell Hound's immunity and
+        # the Quasit's resistance cannot be applied to what lands.
+        page.get_by_role("button", name="Cast spell").click()
+        page.wait_for_timeout(600)
+        # Naming the caster takes the save DC from the Mage's own spellcasting rather
+        # than the casterless default, so the numbers on screen are a Mage's numbers.
+        page.get_by_label("Caster").select_option(label="Mage")
+        page.wait_for_timeout(300)
+        page.get_by_placeholder("Search spells…").fill("Fireball")
+        page.wait_for_timeout(500)
+        page.get_by_role("button", name=re.compile(r"^Fireball\b")).first.click()
+        page.wait_for_timeout(900)
+        # The target chips are named for the combatant, exactly like its tracker row —
+        # so they are only unambiguous from inside the dialog.
+        box = page.get_by_role("dialog").last
+        # Two allies caught in the blast alongside the four foes: the whole point of
+        # listing both sides is that a Fireball does not respect them. Elowen Vale is
+        # left out of it — she is on 12 of 22 and a homepage does not need a dead PC.
+        for who in ("Hell Hound", "Quasit", "Ogre", "Goblin Warrior",
+                    "Bram Ironfist", "Kessa Quick"):
+            box.get_by_role("button", name=who, exact=True).click()
+            page.wait_for_timeout(90)
+        page.get_by_role("button", name="Roll saves").click()
+        page.wait_for_timeout(1100)
+        # OpenFray never rolls a player's save, so the two of them are recorded by hand
+        # — one each way, which is also what makes the list worth looking at.
+        for who, verdict in (("Bram Ironfist", "Save"), ("Kessa Quick", "Save")):
+            box.locator("li", has_text=who).first.get_by_role(
+                "button", name=verdict, exact=True).click()
+            page.wait_for_timeout(200)
+        # Stop before Apply damage: the picture is the roll, with every result on screen
+        # and the decision still the GM's.
+        page.wait_for_timeout(400)
+        return _full(page, "group-save-hero")
+
+
+def _enable_libraries(page, *names):
+    """Tick extra content libraries in Settings, on top of the 2024 rules that ship on.
+
+    The checkbox is clicked rather than its label: a first-party library's name inside
+    that label is a link to the book, so clicking the text navigates away.
+    """
+    page.get_by_role("button", name="Settings").click()
+    page.wait_for_selector("text=Libraries")
+    for name in names:
+        page.locator("label", has_text=name).locator("input[type=checkbox]").first.check()
+        page.wait_for_timeout(150)
+    page.get_by_role("button", name="Done").click()
+    page.wait_for_timeout(700)  # the newly-enabled libraries are fetched on demand
+
+
+def compendium_hero():
+    """The compendium open on a creature, for the site's libraries section.
+
+    Shot portrait rather than at the console's usual landscape: it sits in a column
+    beside three cards, and a 16:9 crop there is a third of their height with a hole
+    under it. Taller means the list and the stat block both stay readable at that width.
+    """
+    with console(width=1280, height=1500) as page:
+        _enable_libraries(page, "Tome of Beasts 3", "Brood & Bloom", "The Waking Garden")
+        page.get_by_role("button", name="Show the compendium").click()
+        page.wait_for_timeout(800)
+        page.get_by_placeholder("Search creatures…").fill("Aboleth")
+        page.wait_for_timeout(500)
+        page.get_by_text("Aboleth", exact=True).first.click()
+        page.wait_for_timeout(900)
+        # Clear the search so the list shows its full length — the count above it is
+        # part of what the section is claiming.
+        page.get_by_placeholder("Search creatures…").fill("")
+        page.wait_for_timeout(600)
+        capture(page, "compendium-hero", {"x": 0, "y": 0, "width": 1280, "height": 1500})
+        return "compendium-hero"
+
+
+def cast_spell_hero():
+    """The Mage's Fireball cast from its own stat block, card and uses showing."""
+    with console(width=LAYOUT_W, height=LAYOUT_H) as page:
+        _hero_board(page)
+        page.get_by_text("Mage", exact=True).first.click()
+        page.wait_for_timeout(500)
+        # Clicking the spell opens its card; the Cast button inside is what spends a
+        # use, so the header still reads the full 2 of its 2/Day.
+        page.get_by_role("button", name=re.compile(r"^Fireball\b")).first.click()
+        page.wait_for_timeout(700)
+        return _full(page, "cast-spell-hero")
 
 
 def game_log_modal():
@@ -781,6 +939,10 @@ RECIPES = {
     "begin": begin_shot,
     "cast-spell": cast_spell,
     "compendium": compendium_shot,
+    "console-hero": console_hero,
+    "group-save-hero": group_save_hero,
+    "cast-spell-hero": cast_spell_hero,
+    "compendium-hero": compendium_hero,
     "death-save-row": death_save_row,
     "death-saves": death_saves,
     "drag-handle": drag_handle,
@@ -822,10 +984,11 @@ def main(argv):
             return 1
         print(name, "->", RECIPES[name]())
         if install:
+            dest = SITE_SCREENS if name in SITE_RECIPES else SCREENS
             for produced in (name, "short-rest" if name == "recap" else None):
                 if produced and (Path(OUT) / f"{produced}.png").exists():
-                    shutil.copy(Path(OUT) / f"{produced}.png", SCREENS / f"{produced}.png")
-                    print("  installed", SCREENS / f"{produced}.png")
+                    shutil.copy(Path(OUT) / f"{produced}.png", dest / f"{produced}.png")
+                    print("  installed", dest / f"{produced}.png")
     return 0
 
 
