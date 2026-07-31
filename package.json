@@ -1,7 +1,7 @@
 {
   "name": "openfray",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A fast, browser-based combat console for Game Masters running D&D 5e.",
   "license": "AGPL-3.0-or-later",
