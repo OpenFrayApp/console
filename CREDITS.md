@@ -221,9 +221,9 @@ E. Gary Gygax and Dave Arneson.
 
 Book of Ebon Tides © 2022 Open Design LLC; Authors: Wolfgang Baur, Celeste Conowitch.
 
-Creature Codex © 2018 Open Design LLC; Authors Wolfgang Baur, Dan Dillon, Richard Green,
+Creature Codex. © 2018 Open Design LLC; Authors Wolfgang Baur, Dan Dillon, Richard Green,
 James Haeck, Chris Harris, Jeremy Hochhalter, James Introcaso, Chris Lockey, Shawn Merwin,
-Jon Sawatsky.
+and Jon Sawatsky.
 
 Deep Magic for 5th Edition © 2020 Open Design LLC; Authors: Dan Dillon, Chris Harris, and
 Jeff Lee.
