@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { loadSettings, saveSettings } from '../../src/state/settings.ts'
+import { DEFAULT_PLAYER_VIEW, loadSettings, saveSettings } from '../../src/state/settings.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../../src/compendium/libraries.ts'
 
 beforeEach(() => localStorage.clear())
@@ -43,5 +43,37 @@ describe('app settings (localStorage)', () => {
     saveSettings({ librarySort: 'cr' })
     expect(loadSettings().enabledLibraries).toEqual(['srd-5.1'])
     expect(loadSettings().librarySort).toBe('cr')
+  })
+})
+
+describe('player-view settings', () => {
+  it('holds a creature to a wound word and keeps its armor class off the screen', () => {
+    expect(loadSettings().playerView).toEqual(DEFAULT_PLAYER_VIEW)
+  })
+
+  it('round-trips what the GM chose', () => {
+    saveSettings({ playerView: { hp: 'exact', ac: 'shown' } })
+    expect(loadSettings().playerView).toEqual({ hp: 'exact', ac: 'shown' })
+  })
+
+  // A stored value that isn't one of the three would otherwise reach playerBoard and
+  // fall through its branches to "no hit points at all" — quiet, and the wrong quiet.
+  it('falls back to the guarded default when a stored value is nonsense', () => {
+    localStorage.setItem(
+      'openfray-settings',
+      JSON.stringify({ playerView: { hp: 'everything', ac: 'maybe' } }),
+    )
+    expect(loadSettings().playerView).toEqual(DEFAULT_PLAYER_VIEW)
+  })
+
+  it('only an explicit "shown" reveals armor class', () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { ac: 'Shown' } }))
+    expect(loadSettings().playerView.ac).toBe('hidden')
+  })
+
+  it('has no share code until a GM shares for the first time', () => {
+    expect(loadSettings().playerViewCode).toBeNull()
+    saveSettings({ playerViewCode: 'abc123' })
+    expect(loadSettings().playerViewCode).toBe('abc123')
   })
 })

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
+import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
 
 /**
  * App preferences for every user (anonymous included), persisted in `localStorage`
@@ -13,6 +14,18 @@ import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
  *  (creatures) / spell level (spells). */
 export type LibrarySort = 'name' | 'cr'
 
+/**
+ * How much of a creature the shared player view gives away. Player characters are
+ * never filtered — the table already knows its own hit points. Defaults hold a
+ * creature's hit points to a wound word and keep its armor class off the screen.
+ */
+export interface PlayerViewSettings {
+  hp: HpVisibility
+  ac: FieldVisibility
+}
+
+export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = { hp: 'bloodied', ac: 'hidden' }
+
 export interface AppSettings {
   /** Content library ids the compendium/picker show (see compendium/libraries.ts). */
   enabledLibraries: string[]
@@ -20,6 +33,15 @@ export interface AppSettings {
   showHomebrew: boolean
   /** How the compendium sorts creatures and spells. Defaults to by name. */
   librarySort: LibrarySort
+  /** What the shared player view reveals about a creature. */
+  playerView: PlayerViewSettings
+  /**
+   * The share code an anonymous GM's player-view link uses, minted on first share and
+   * kept so the link stays the same. A signed-in GM's chosen code lives on their
+   * `encounters` row instead; this is the device-local fallback, a preference like the
+   * theme rather than session state, so anonymous fights still never reach the database.
+   */
+  playerViewCode: string | null
 }
 
 const KEY = 'openfray-settings'
@@ -35,6 +57,20 @@ function read(): Record<string, unknown> {
   return {}
 }
 
+const HP_VISIBILITY: HpVisibility[] = ['exact', 'bloodied', 'hidden']
+
+/** Read back the player-view settings, falling back to the guarded defaults per field. */
+function readPlayerView(value: unknown): PlayerViewSettings {
+  const data = (value ?? {}) as Record<string, unknown>
+  return {
+    hp: HP_VISIBILITY.includes(data.hp as HpVisibility)
+      ? (data.hp as HpVisibility)
+      : DEFAULT_PLAYER_VIEW.hp,
+    // Anything but an explicit 'shown' keeps armor class off the players' screen.
+    ac: data.ac === 'shown' ? 'shown' : 'hidden',
+  }
+}
+
 /** The persisted settings with every field sanitized and defaulted (safe with nothing stored). */
 export function loadSettings(): AppSettings {
   const data = read()
@@ -44,6 +80,8 @@ export function loadSettings(): AppSettings {
     showHomebrew: data.showHomebrew !== false,
     // By name unless an explicit 'cr' is stored.
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
+    playerView: readPlayerView(data.playerView),
+    playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
   }
 }
 
