@@ -125,6 +125,22 @@ describe('MassSavePanel', () => {
     expect(screen.getByLabelText('Damage to a')).toHaveValue('15')
   })
 
+  it('shows what the typed damage formula rolled, under the type the GM picked', () => {
+    render(<MassSavePanel combatants={[monster('a')]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '2d6' } })
+    fireEvent.change(screen.getByLabelText('Damage type'), { target: { value: 'fire' } })
+    fireEvent.click(screen.getByText('Roll saves'))
+
+    // The field still reads "2d6"; the pill is the only place the total shows.
+    const pill = screen.getByText(/^\d+ fire$/)
+    const rolled = Number(pill.textContent!.split(' ')[0])
+    expect(rolled).toBeGreaterThanOrEqual(2)
+    expect(rolled).toBeLessThanOrEqual(12)
+  })
+
   it('rerolls one creature’s save without touching the others', () => {
     const onRoll = vi.fn()
     render(

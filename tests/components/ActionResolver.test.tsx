@@ -152,6 +152,28 @@ describe('ActionResolver — save actions', () => {
     expect((screen.getByLabelText('On save') as HTMLSelectElement).value).toBe('half')
   })
 
+  it('shows what was rolled, by damage type, like the attack modal does', () => {
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={fireBreath}
+        combatants={[monster(), monster({ combatantId: 't', label: 'Ogre' })]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+
+    // 2d6 fire: the pill carries the roll every target's share is split from.
+    const pill = screen.getByText(/^\d+ fire$/)
+    expect(pill).toBeInTheDocument()
+    const rolled = Number(pill.textContent!.split(' ')[0])
+    expect(rolled).toBeGreaterThanOrEqual(2)
+    expect(rolled).toBeLessThanOrEqual(12)
+  })
+
   it("applies a save spell's board effect to the targets that fail", () => {
     const dispatch = vi.fn()
     const bane: Spell = {

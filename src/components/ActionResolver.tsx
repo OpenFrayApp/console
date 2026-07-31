@@ -728,6 +728,16 @@ export function SaveResolver({
     return saveDamageFor(target, genericBase, result, onSave, evasion, damageType || undefined)
   }
 
+  // What was rolled, by type, before any target's defenses — the same pills the attack
+  // modal shows. Each row's own number carries its defenses; this is the shared roll
+  // those numbers came from.
+  const rolled: { type: DamageType; amount: number }[] =
+    area.length > 0
+      ? area.map((c) => ({ type: c.type, amount: c.amount }))
+      : damageType && genericBase > 0
+        ? [{ type: damageType, amount: genericBase }]
+        : []
+
   /** Resist/immune/vuln tags for a row — one per typed damage component in play. */
   const defenseLabels = (target: Combatant): string[] => {
     const components = area.length > 0 ? area : damageType ? [{ type: damageType }] : []
@@ -1008,6 +1018,13 @@ export function SaveResolver({
         </Button>
       ) : (
         <>
+          {rolled.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {rolled.map((d, i) => (
+                <DamagePill key={i} type={d.type} amount={d.amount} />
+              ))}
+            </div>
+          )}
           <ul className="space-y-1.5">
             {selectedTargets.map((c) => {
               const row = rows[c.combatantId]
