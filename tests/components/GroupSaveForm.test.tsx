@@ -9,7 +9,7 @@ import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combata
 import { GroupSaveForm } from '../../src/components/GroupSaveForm.tsx'
 
 /** A minimal goblin template (dex +2, con +0) for monster fixtures. */
-function creature(): Creature {
+function creature(over: Partial<Creature> = {}): Creature {
   return {
     id: 'srd:goblin',
     source: 'srd-5.2',
@@ -21,6 +21,7 @@ function creature(): Creature {
     speed: { walk: 30 },
     abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     senses: { passivePerception: 9 },
+    ...over,
   }
 }
 
@@ -181,6 +182,24 @@ describe('GroupSaveForm', () => {
     fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '24' } })
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
     expect(actionsOf(negated, 'update')[0].update(monster('a', 'Goblin A')).hp.current).toBe(30)
+  })
+
+  it('applies the target’s defenses once the GM names a damage type', () => {
+    const dispatch = vi.fn()
+    const hound = monster('a', 'Hell Hound', {
+      creature: creature({ name: 'Hell Hound', immunities: ['Fire'] }),
+    })
+    render(<GroupSaveForm combatants={[hound]} dispatch={dispatch} onClose={vi.fn()} />)
+
+    // DC 30 — the hound cannot make the save, so it takes the full share.
+    fireEvent.change(screen.getByLabelText('Save DC'), { target: { value: '30' } })
+    fireEvent.click(screen.getByLabelText('Select Hell Hound'))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '15' } })
+    fireEvent.change(screen.getByLabelText('Damage type'), { target: { value: 'fire' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(actionsOf(dispatch, 'update')[0].update(hound).hp.current).toBe(30)
   })
 
   it('lets the GM record a PC result and then applies its share', () => {

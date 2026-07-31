@@ -15,6 +15,7 @@ import {
   hasMagicResistance,
   rollSave,
   saveBonus,
+  saveDamageFor,
 } from '../../src/combat/masssave.ts'
 
 function faceSeq(...faces: number[]): RandomSource {
@@ -174,9 +175,35 @@ describe('hasEvasion / evasionApplies', () => {
   })
 })
 
+describe('saveDamageFor', () => {
+  const hellHound = monster({}, creature({ name: 'Hell Hound', immunities: ['Fire'] }))
+  const resistant = monster({}, creature({ resistances: ['Fire'] }))
+
+  it('leaves untyped damage to the save rule alone', () => {
+    expect(saveDamageFor(hellHound, 24, 'fail', 'half')).toBe(24)
+    expect(saveDamageFor(hellHound, 24, 'save', 'half')).toBe(12)
+  })
+
+  it('zeroes typed damage the target is immune to', () => {
+    expect(saveDamageFor(hellHound, 24, 'fail', 'half', false, 'fire')).toBe(0)
+    expect(saveDamageFor(hellHound, 24, 'fail', 'half', false, 'cold')).toBe(24)
+  })
+
+  it('splits on the save first, then halves again for resistance', () => {
+    expect(saveDamageFor(resistant, 25, 'save', 'half', false, 'fire')).toBe(6) // 25 → 12 → 6
+  })
+})
+
 describe('applySaveDamage', () => {
   it('applies full to a failure and half to a save', () => {
     expect(applySaveDamage(monster(), 24, 'fail', 'half').hp.current).toBe(6)
     expect(applySaveDamage(monster(), 24, 'save', 'half').hp.current).toBe(18)
+  })
+
+  it('takes the damage type into account when given one', () => {
+    const hellHound = monster({}, creature({ name: 'Hell Hound', immunities: ['Fire'] }))
+    expect(applySaveDamage(hellHound, 24, 'fail', 'half', false, { type: 'fire' }).hp.current).toBe(
+      30,
+    )
   })
 })

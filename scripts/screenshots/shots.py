@@ -427,9 +427,9 @@ def group_save_hero():
     """One Fireball rolled against six creatures whose Fire defenses all differ."""
     with console(width=LAYOUT_W, height=LAYOUT_H) as page:
         _hero_board(page)
-        # Cast the spell rather than opening Group save by hand: only the cast path
-        # carries the damage *type*, and without "fire" the Hell Hound's immunity and
-        # the Quasit's resistance cannot be applied to what lands.
+        # Cast the spell rather than opening Group save by hand: casting brings the
+        # spell's own dice and the caster's DC with it, so the numbers on screen are
+        # a Fireball's rather than ones typed in.
         page.get_by_role("button", name="Cast spell").click()
         page.wait_for_timeout(600)
         # Naming the caster takes the save DC from the Mage's own spellcasting rather
@@ -806,7 +806,7 @@ def cast_spell():
 
 
 def group_save():
-    """The Group save box with its five working parts boxed (fight/saves.md)."""
+    """The Group save box with its six working parts boxed (fight/saves.md)."""
     with console(width=1440, height=1000) as page:
         seed(page)
         start(page, ROLLS)
@@ -814,7 +814,8 @@ def group_save():
         page.wait_for_timeout(400)
         for target in ("Goblin Boss", "Goblin Minion", "Goblin Minion 2"):
             page.get_by_role("button", name=target, exact=True).click()
-        page.get_by_label("Damage").fill("3d8")
+        page.get_by_label("Damage", exact=True).fill("3d8")
+        page.get_by_label("Damage type").select_option("fire")
         page.wait_for_timeout(200)
         targets = span(
             page.get_by_text("Allies", exact=True).bounding_box(),
@@ -824,13 +825,14 @@ def group_save():
         capture(page, "group-save", panel_of(page, "Group save"), {
             "dc": page.get_by_label("Save DC").bounding_box(),
             "onsave": page.get_by_label("On save").bounding_box(),
-            "damage": page.get_by_label("Damage").bounding_box(),
+            "damage": page.get_by_label("Damage", exact=True).bounding_box(),
+            "type": page.get_by_label("Damage type").bounding_box(),
             "targets": targets,
             "roll": page.get_by_role("button", name="Roll saves").bounding_box(),
         }, pad=14)
     r = rects(f"{OUT}/group-save.json")
     c = Canvas(f"{OUT}/group-save.png")
-    for key in ("dc", "onsave", "damage", "targets", "roll"):
+    for key in ("dc", "onsave", "damage", "type", "targets", "roll"):
         c.box(r[key], pad=6)
     return c.save(f"{OUT}/group-save.png")
 

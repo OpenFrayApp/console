@@ -20,15 +20,16 @@ import {
 } from '../combat/resources.ts'
 import { adjustForDefense, damageRelation, relationLabel } from '../combat/damage.ts'
 import { acOf, nameOf } from '../combat/combatant.ts'
-import { signed } from '../compendium/format.ts'
+import { signed, titleCase } from '../compendium/format.ts'
 import { parseNonNegativeInt as toNum } from '../lib/form.ts'
 import {
-  damageForResult,
   evasionApplies,
   hasMagicResistance,
   rollSave,
+  saveDamageFor,
   type SaveResult,
 } from '../combat/masssave.ts'
+import { DAMAGE_TYPES } from './customMonster.ts'
 import { condition } from '../combat/effects.ts'
 import { spellEffectFor } from '../combat/spellEffects.ts'
 import {
@@ -223,6 +224,35 @@ function DamagePill({
       {amount} {type}
       {label ? <span className="opacity-70"> · {label}</span> : null}
     </span>
+  )
+}
+
+/**
+ * Damage type for a number the GM types. An action's damage carries its own types;
+ * this is what lets the group save apply resistances and immunities too. Untyped is
+ * the default — the app never guesses a type the GM didn't give it.
+ */
+export function DamageTypeSelect({
+  value,
+  onChange,
+}: {
+  value: DamageType | ''
+  onChange: (type: DamageType | '') => void
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as DamageType | '')}
+      aria-label="Damage type"
+      className="rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+    >
+      <option value="">Untyped</option>
+      {DAMAGE_TYPES.map((t) => (
+        <option key={t} value={t}>
+          {titleCase(t)}
+        </option>
+      ))}
+    </select>
   )
 }
 
@@ -677,8 +707,10 @@ export function SaveResolver({
   const [dc, setDc] = useState(String(save?.dc ?? 15))
   const [baseDamage, setBaseDamage] = useState('')
   // The base damage for a standalone group save, rolled once when saves are rolled
-  // (a formula like "2d6" is rolled; a bare number is taken flat).
+  // (a formula like "2d6" is rolled; a bare number is taken flat), under the type
+  // the GM picked so the targets' defenses can apply to it.
   const [genericBase, setGenericBase] = useState(0)
+  const [damageType, setDamageType] = useState<DamageType | ''>('')
   const [magical, setMagical] = useState(defaultMagical ?? false)
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
   const [area, setArea] = useState<RolledDamage[]>([])
@@ -705,18 +737,26 @@ export function SaveResolver({
 
   // Per-target damage after the save rule and the target's own defenses. With an
   // action, damage is the rolled (typed) components; for a standalone group save
-  // it's the single number the GM typed (no type, so no resistance applies).
+  // it's the single number the GM typed, under the type they picked.
   const defaultDamage = (target: Combatant, result?: SaveResult): number => {
     if (!result) return 0
     // Evasion (Dex, half-on-success): nothing on a success, half on a failure.
     const evasion = evasionApplies(target, ability, onSave)
     if (area.length > 0) {
-      return area.reduce((sum, comp) => {
-        const afterSave = damageForResult(comp.amount, result, onSave, evasion)
-        return sum + adjustForDefense(afterSave, damageRelation(target, comp.type))
-      }, 0)
+      return area.reduce(
+        (sum, comp) => sum + saveDamageFor(target, comp.amount, result, onSave, evasion, comp.type),
+        0,
+      )
     }
-    return damageForResult(genericBase, result, onSave, evasion)
+    return saveDamageFor(target, genericBase, result, onSave, evasion, damageType || undefined)
+  }
+
+  /** Resist/immune/vuln tags for a row — one per typed damage component in play. */
+  const defenseLabels = (target: Combatant): string[] => {
+    const components = area.length > 0 ? area : damageType ? [{ type: damageType }] : []
+    return components
+      .map((c) => relationLabel(damageRelation(target, c.type)))
+      .filter((label): label is string => label != null)
   }
 
   /** The damage input's value: the GM's edit, else the computed default for the row's result. */
@@ -738,7 +778,7 @@ export function SaveResolver({
       const entry = baseDamage.trim()
       if (/d/i.test(entry)) {
         const r = roll(entry, { kind: 'damage' })
-        onRoll('Group save: damage', r)
+        onRoll(`Group save: ${damageType ? `${damageType} ` : ''}damage`, r)
         setGenericBase(Math.max(0, r.total))
       } else {
         setGenericBase(toNum(baseDamage))
@@ -930,16 +970,19 @@ export function SaveResolver({
               <option value="negates">save → negates effect</option>
             </select>
             {!action && (
-              <label className="flex items-center gap-1">
-                Damage
-                <input
-                  value={baseDamage}
-                  onChange={(e) => setBaseDamage(e.target.value)}
-                  aria-label="Damage"
-                  placeholder="2d6 or 3"
-                  className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
-                />
-              </label>
+              <>
+                <label className="flex items-center gap-1">
+                  Damage
+                  <input
+                    value={baseDamage}
+                    onChange={(e) => setBaseDamage(e.target.value)}
+                    aria-label="Damage"
+                    placeholder="2d6 or 3"
+                    className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                  />
+                </label>
+                <DamageTypeSelect value={damageType} onChange={setDamageType} />
+              </>
             )}
             {targets.some(hasMagicResistance) && (
               <label
@@ -979,7 +1022,7 @@ export function SaveResolver({
           <ul className="space-y-1.5">
             {selectedTargets.map((c) => {
               const row = rows[c.combatantId]
-              const defenses = area.length ? damageAgainst(c, area).filter((d) => d.label) : []
+              const defenses = defenseLabels(c)
               return (
                 <li
                   key={c.combatantId}
@@ -1046,9 +1089,9 @@ export function SaveResolver({
                         Evasion
                       </span>
                     )}
-                    {defenses.map((d, i) => (
+                    {defenses.map((label, i) => (
                       <span key={i} className="text-[11px] text-slate-400 dark:text-slate-500">
-                        {d.label}
+                        {label}
                       </span>
                     ))}
                     <input

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useState } from 'react'
-import type { Ability } from '../schema/primitives.ts'
+import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
@@ -12,14 +12,14 @@ import { nameOf } from '../combat/combatant.ts'
 import { parseNonNegativeInt as num } from '../lib/form.ts'
 import {
   applySaveDamage,
-  damageForResult,
   evasionApplies,
   rollSave,
+  saveDamageFor,
   type SaveResult,
 } from '../combat/masssave.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
-import { ConditionChips } from './ActionResolver.tsx'
+import { ConditionChips, DamageTypeSelect } from './ActionResolver.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -79,6 +79,7 @@ export function GroupSaveForm({
   const [onSave, setOnSave] = useState<SaveOutcome>(seed?.onSave ?? 'half')
   const [rows, setRows] = useState<Record<string, Row>>({})
   const [damage, setDamage] = useState(seed?.damage ?? '')
+  const [damageType, setDamageType] = useState<DamageType | ''>('')
   const [pending, setPending] = useState<ConcPrompt[]>([])
 
   /** Toggle a combatant in the selection. */
@@ -111,25 +112,26 @@ export function GroupSaveForm({
   const setResult = (id: string, result: SaveResult) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], result } }))
 
-  /** Apply the damage per row's result (save rule + evasion); queue concentration checks. */
+  /** Apply the damage per row's result (save rule, evasion, defenses); queue concentration checks. */
   const applyDamage = () => {
     const full = num(damage)
+    const opts = { type: damageType || undefined }
     const prompts: ConcPrompt[] = []
     for (const c of combatants) {
       const result = rows[c.combatantId]?.result
       if (!result) continue
       const evasion = evasionApplies(c, ability, onSave)
-      const dealt = damageForResult(full, result, onSave, evasion)
+      const dealt = saveDamageFor(c, full, result, onSave, evasion, opts.type)
       const promptDc = concentrationPromptDC(
         c,
-        applySaveDamage(c, full, result, onSave, evasion),
+        applySaveDamage(c, full, result, onSave, evasion, opts),
         dealt,
       )
       if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: dealt })
       dispatch({
         type: 'update',
         id: c.combatantId,
-        update: (cc) => applySaveDamage(cc, full, result, onSave, evasion),
+        update: (cc) => applySaveDamage(cc, full, result, onSave, evasion, opts),
       })
     }
     // Surviving concentrators that took damage owe a concentration save next.
@@ -298,7 +300,7 @@ export function GroupSaveForm({
           Roll saves
         </button>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             value={damage}
             onChange={(e) => setDamage(e.target.value)}
@@ -307,6 +309,7 @@ export function GroupSaveForm({
             inputMode="numeric"
             className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
           />
+          <DamageTypeSelect value={damageType} onChange={setDamageType} />
           <button
             type="button"
             onClick={applyDamage}

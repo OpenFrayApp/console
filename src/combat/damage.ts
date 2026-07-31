@@ -38,6 +38,15 @@ export function adjustForDefense(amount: number, relation: DamageRelation): numb
   }
 }
 
+/**
+ * Damage after the target's defenses. Untyped damage passes through — with no type
+ * there is nothing for a resistance or immunity to match, which is why the group
+ * save asks the GM for one.
+ */
+export function damageAfterDefense(target: Combatant, amount: number, type?: DamageType): number {
+  return adjustForDefense(amount, type ? damageRelation(target, type) : 'normal')
+}
+
 /** Short tag for the UI, e.g. "resist", or `null` when damage is unmodified. */
 export function relationLabel(relation: DamageRelation): string | null {
   switch (relation) {

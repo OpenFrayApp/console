@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
-import { adjustForDefense, damageRelation } from '../../src/combat/damage.ts'
+import { adjustForDefense, damageAfterDefense, damageRelation } from '../../src/combat/damage.ts'
 
 function creature(overrides: Partial<Creature> = {}): Creature {
   return {
@@ -75,6 +75,20 @@ describe('damageRelation', () => {
   it('prioritises immunity over vulnerability when both are listed', () => {
     const both = monster(creature({ immunities: ['Fire'], vulnerabilities: ['Fire'] }))
     expect(damageRelation(both, 'fire')).toBe('immune')
+  })
+})
+
+describe('damageAfterDefense', () => {
+  const blue = monster(creature())
+
+  it('applies the relation the target has to that type', () => {
+    expect(damageAfterDefense(blue, 17, 'lightning')).toBe(0)
+    expect(damageAfterDefense(blue, 17, 'fire')).toBe(8)
+    expect(damageAfterDefense(blue, 17, 'cold')).toBe(34)
+  })
+
+  it('passes untyped damage through — nothing for a defense to match', () => {
+    expect(damageAfterDefense(blue, 17)).toBe(17)
   })
 })
 

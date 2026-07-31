@@ -9,7 +9,7 @@ import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import { applySaveDamage } from '../../src/combat/masssave.ts'
 import { MassSavePanel } from '../../src/components/MassSavePanel.tsx'
 
-function creature(): Creature {
+function creature(over: Partial<Creature> = {}): Creature {
   return {
     id: 'srd:goblin',
     source: 'srd-5.2',
@@ -21,15 +21,16 @@ function creature(): Creature {
     speed: { walk: 30 },
     abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     senses: { passivePerception: 9 },
+    ...over,
   }
 }
 
-function monster(id: string): MonsterCombatant {
+function monster(id: string, cr?: Creature): MonsterCombatant {
   return {
     isPC: false,
     combatantId: id,
     creatureId: 'srd:goblin',
-    creature: creature(),
+    creature: cr ?? creature(),
     label: id,
     initiative: 12,
     status: 'active',
@@ -72,6 +73,40 @@ describe('MassSavePanel', () => {
     expect(call?.[0].update(monster('a')).hp.current).toBe(6)
     // 'b' was not selected, so no update for it
     expect(dispatch.mock.calls.some((c) => c[0].id === 'b')).toBe(false)
+  })
+
+  it('applies the target’s defenses once the GM names a damage type', () => {
+    const dispatch = vi.fn()
+    const hellHound = monster('a', creature({ name: 'Hell Hound', immunities: ['Fire'] }))
+    render(<MassSavePanel combatants={[hellHound]} dispatch={dispatch} onRoll={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '15' } })
+    fireEvent.change(screen.getByLabelText('Damage type'), { target: { value: 'fire' } })
+    fireEvent.click(screen.getByText('Roll saves'))
+    fireEvent.click(screen.getByText('Fail'))
+
+    expect(screen.getByText('immune')).toBeInTheDocument()
+    expect(screen.getByLabelText('Damage to a')).toHaveValue('0')
+
+    fireEvent.click(screen.getByText('Apply damage'))
+    const call = dispatch.mock.calls.find((c) => c[0].type === 'update' && c[0].id === 'a')
+    expect(call?.[0].update(hellHound).hp.current).toBe(30)
+  })
+
+  it('leaves untyped damage alone, defenses or not', () => {
+    const dispatch = vi.fn()
+    const hellHound = monster('a', creature({ name: 'Hell Hound', immunities: ['Fire'] }))
+    render(<MassSavePanel combatants={[hellHound]} dispatch={dispatch} onRoll={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
+    fireEvent.change(screen.getByLabelText('Damage'), { target: { value: '15' } })
+    fireEvent.click(screen.getByText('Roll saves'))
+    fireEvent.click(screen.getByText('Fail'))
+
+    expect(screen.getByLabelText('Damage to a')).toHaveValue('15')
   })
 
   it('half damage on a save (sanity on the helper)', () => {

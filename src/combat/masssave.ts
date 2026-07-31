@@ -2,11 +2,12 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import { abilityMod, type Ability } from '../schema/primitives.ts'
+import { abilityMod, type Ability, type DamageType } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
 import type { RandomSource } from '../dice/rng.ts'
 import type { RollResult } from '../dice/roll.ts'
 import { rollWithEffects, type AppliedEffect } from './effectroll.ts'
+import { damageAfterDefense } from './damage.ts'
 import { applyDamage, type DamageOptions } from './resources.ts'
 
 /**
@@ -115,6 +116,22 @@ export function damageForResult(
   return onSave === 'half' ? Math.floor(dmg / 2) : 0
 }
 
+/**
+ * What one target actually takes: the save split first, then its own defenses —
+ * the 5e order, so a resisted half-damage save halves twice. Damage the GM left
+ * untyped has no defense to match and passes through.
+ */
+export function saveDamageFor(
+  target: Combatant,
+  full: number,
+  result: SaveResult,
+  onSave: SaveOutcome,
+  evasion = false,
+  type?: DamageType,
+): number {
+  return damageAfterDefense(target, damageForResult(full, result, onSave, evasion), type)
+}
+
 /** Apply the split damage to one combatant (failures full, saves per the rule). */
 export function applySaveDamage(
   c: Combatant,
@@ -122,7 +139,7 @@ export function applySaveDamage(
   result: SaveResult,
   onSave: SaveOutcome,
   evasion = false,
-  opts: DamageOptions = {},
+  opts: DamageOptions & { type?: DamageType } = {},
 ): Combatant {
-  return applyDamage(c, damageForResult(full, result, onSave, evasion), opts)
+  return applyDamage(c, saveDamageFor(c, full, result, onSave, evasion, opts.type), opts)
 }
