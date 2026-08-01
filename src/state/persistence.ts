@@ -24,6 +24,13 @@ export interface SessionSnapshot {
   selectedId: string | null
   /** The active campaign driving house rules (signed-in only); absent in old blobs. */
   activeCampaignId?: string | null
+  /**
+   * Whether the board was being shared with the table. Reloading the console is not
+   * the same as ending a session — the players' screens shouldn't go dark because the
+   * GM refreshed — and `sessionStorage` ends this exactly where it should: when the
+   * tab closes.
+   */
+  sharing?: boolean
 }
 
 const KEY = 'openfray:session'

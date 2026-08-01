@@ -82,6 +82,16 @@ describe('session persistence', () => {
     expect(loadSession()?.selectedId).toBe('b')
   })
 
+  // A refresh is not the end of the session: the players' screens should still be
+  // following the fight afterwards. Closing the tab is what stops it, which is what
+  // sessionStorage means.
+  it('carries the share across a reload, and reads an old blob as not sharing', () => {
+    saveSession(snapshot({ sharing: true }))
+    expect(loadSession()?.sharing).toBe(true)
+    saveSession(snapshot())
+    expect(loadSession()?.sharing ?? false).toBe(false)
+  })
+
   it('clearSession removes the saved snapshot', () => {
     saveSession(snapshot())
     clearSession()

@@ -218,7 +218,9 @@ function App() {
     saveSettings({ playerView: value })
   }
   const [playerCode, setPlayerCode] = useState<string | null>(() => loadSettings().playerViewCode)
-  const [sharing, setSharing] = useState(false)
+  // Sharing resumes after a reload and ends with the tab, which is what the session
+  // snapshot already means — a refresh mid-fight shouldn't drop the table's screens.
+  const [sharing, setSharing] = useState(() => restored?.sharing ?? false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
   const [recap, setRecap] = useState<Recap | null>(null)
@@ -331,7 +333,7 @@ function App() {
   // signed in also persist the encounter to the cloud. Background — the UI never waits.
   useEffect(() => {
     const handle = setTimeout(() => {
-      saveSession({ encounter, theme, view, selectedId, activeCampaignId })
+      saveSession({ encounter, theme, view, selectedId, activeCampaignId, sharing })
       // Guard against duplicate rows: only write once hydrated, and never start a
       // second insert while the first is in flight.
       if (userId && cloudHydrated.current && !cloudInserting.current) {
@@ -344,7 +346,7 @@ function App() {
       }
     }, 600)
     return () => clearTimeout(handle)
-  }, [encounter, theme, view, selectedId, activeCampaignId, userId])
+  }, [encounter, theme, view, selectedId, activeCampaignId, sharing, userId])
 
   // The summary travels with the board while the GM has it up, so the table reads the
   // fight's outcome on their own screens. Experience is left out of a milestone
