@@ -180,6 +180,8 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       const started = {
         ...beginEncounter(state, action.tiebreak),
         paused: false,
+        // The next entry appended is this fight's first, so the shared log can begin here.
+        fightLogStart: state.log.length,
         combatStats: startStats(Date.now(), assessEncounter(state.combatants)?.tier ?? null),
       }
       const active = started.combatants[started.activeIndex]
@@ -334,7 +336,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       }
 
     case 'clearLog':
-      return { ...state, log: [] }
+      return { ...state, log: [], fightLogStart: 0 }
 
     // A long rest restores all player characters and friendly NPCs to full HP
     // (setCurrentHp also clears death saves and wakes the unconscious); foes are
@@ -381,7 +383,15 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
     // A full board sweep is a fresh start, so the combat record resets too. (Stop
     // keeps the log — the recap reads it; clearAll is the deliberate wipe.)
     case 'clearAll':
-      return { ...state, round: 0, activeIndex: 0, paused: false, combatants: [], log: [] }
+      return {
+        ...state,
+        round: 0,
+        activeIndex: 0,
+        paused: false,
+        combatants: [],
+        log: [],
+        fightLogStart: 0,
+      }
 
     // Drag-to-reorder: move the dragged combatant to the target's slot and reset its
     // initiative to sit between its new neighbours, so the order holds (and turn

@@ -28,12 +28,22 @@ export interface PlayerViewSettings {
    * what the table felt, and it gives no bonus away.
    */
   rolls: FieldVisibility
+  /** How much of the record the shared log carries — see PlayerLogScope. */
+  log: PlayerLogScope
 }
+
+/**
+ * How much of the game log the table follows: the fight in progress, which starts
+ * fresh at every Begin and clears when the fight ends, or the whole session. The
+ * Game Master's own record is untouched either way.
+ */
+export type PlayerLogScope = 'fight' | 'session'
 
 export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   hp: 'bloodied',
   ac: 'hidden',
   rolls: 'shown',
+  log: 'fight',
 }
 
 export interface AppSettings {
@@ -80,6 +90,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
     ac: data.ac === 'shown' ? 'shown' : 'hidden',
     // Totals show unless the GM has said otherwise.
     rolls: data.rolls === 'hidden' ? 'hidden' : 'shown',
+    // The log follows the fight in hand unless the GM asked for the whole session.
+    log: data.log === 'session' ? 'session' : 'fight',
   }
 }
 

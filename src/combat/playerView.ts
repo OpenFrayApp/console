@@ -151,6 +151,18 @@ function isD20Roll(entry: GameLogEntry): boolean {
 }
 
 /**
+ * The log lines the table follows. On the default `fight` scope that is the fight in
+ * progress and nothing else: the record starts fresh at each Begin and empties when the
+ * fight ends, so the table isn't reading last fight's dice over the next one's setup.
+ * The Game Master's own log keeps everything either way.
+ */
+function scopedLog(encounter: Encounter, scope: PlayerViewSettings['log']): GameLogEntry[] {
+  if (scope === 'session') return encounter.log
+  if (encounter.round === 0) return []
+  return encounter.log.slice(Math.min(encounter.fightLogStart ?? 0, encounter.log.length))
+}
+
+/**
  * Build the board to share from the live encounter. Pure, so what the table can see is
  * decided by a function with tests rather than by what a component happens to render.
  */
@@ -178,7 +190,7 @@ export function playerBoard(encounter: Encounter, settings: PlayerViewSettings):
     rows: encounter.combatants
       .filter((c) => c.isPC || encounter.round > 0)
       .map((c) => (c.isPC ? playerCharacterRow(c) : creatureRow(c, settings))),
-    log: encounter.log
+    log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly)
       .slice(-PLAYER_LOG_LIMIT)
       .map((e) => {

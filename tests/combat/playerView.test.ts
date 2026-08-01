@@ -8,7 +8,13 @@ import type { Encounter, GameLogEntry } from '../../src/schema/encounter.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { RollResult } from '../../src/dice/roll.ts'
 import { PLAYER_LOG_LIMIT, playerBoard } from '../../src/combat/playerView.ts'
-import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
+import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../src/state/settings.ts'
+
+/** Player-view settings with the defaults filled in, so a case names only what it changes. */
+const view = (over: Partial<PlayerViewSettings> = {}): PlayerViewSettings => ({
+  ...DEFAULT_PLAYER_VIEW,
+  ...over,
+})
 
 const ogre: Creature = {
   id: 'srd:ogre',
@@ -103,7 +109,7 @@ describe('playerBoard — what a creature gives away', () => {
 
   it('sends exact hit points only when the GM asks for them', () => {
     const e = encounter({ combatants: [monster({ hp: { current: 20, max: 68, temp: 3 } })] })
-    expect(playerBoard(e, { hp: 'exact', ac: 'hidden', rolls: 'shown' }).rows[0].hp).toEqual({
+    expect(playerBoard(e, view({ hp: 'exact' })).rows[0].hp).toEqual({
       kind: 'exact',
       current: 20,
       max: 68,
@@ -112,9 +118,7 @@ describe('playerBoard — what a creature gives away', () => {
   })
 
   it('sends no hit points at all when they are hidden', () => {
-    expect(
-      playerBoard(encounter(), { hp: 'hidden', ac: 'hidden', rolls: 'shown' }).rows[1].hp,
-    ).toBeNull()
+    expect(playerBoard(encounter(), view({ hp: 'hidden' })).rows[1].hp).toBeNull()
   })
 
   it('omits the armor class key entirely rather than sending it hidden', () => {
@@ -123,15 +127,13 @@ describe('playerBoard — what a creature gives away', () => {
   })
 
   it('includes armor class when the GM turns it on', () => {
-    expect(
-      playerBoard(encounter(), { hp: 'bloodied', ac: 'shown', rolls: 'shown' }).rows[1].ac,
-    ).toBe(11)
+    expect(playerBoard(encounter(), view({ ac: 'shown' })).rows[1].ac).toBe(11)
   })
 
   it('never puts the stat block on the wire, at any setting', () => {
     for (const hp of ['exact', 'bloodied', 'hidden'] as const) {
       for (const ac of ['shown', 'hidden'] as const) {
-        const json = JSON.stringify(playerBoard(encounter(), { hp, ac, rolls: 'shown' }))
+        const json = JSON.stringify(playerBoard(encounter(), view({ hp, ac })))
         expect(json).not.toContain('creature')
         expect(json).not.toContain('greatclub')
         expect(json).not.toContain('srd:ogre')
@@ -172,7 +174,7 @@ describe('playerBoard — what a creature gives away', () => {
 
 describe('playerBoard — player characters', () => {
   it('keeps a player character whole, whatever the creature settings say', () => {
-    const board = playerBoard(encounter(), { hp: 'hidden', ac: 'hidden', rolls: 'shown' })
+    const board = playerBoard(encounter(), view({ hp: 'hidden' }))
     expect(board.rows[0]).toMatchObject({
       name: 'Thalia',
       ac: 16,
@@ -224,6 +226,48 @@ describe('playerBoard — the log', () => {
     expect(playerBoard(encounter({ log }), DEFAULT_PLAYER_VIEW).log.map((x) => x.id)).toEqual([
       'visible',
     ])
+  })
+})
+
+describe('playerBoard — how much of the log the table follows', () => {
+  /** A fight in progress whose log carries a previous fight's lines and this one's. */
+  const twoFights = (round = 2) =>
+    encounter({
+      round,
+      fightLogStart: 2,
+      log: [
+        entry({ id: 'old-1', round: 1, message: 'Combat begins — Round 1' }),
+        entry({ id: 'old-2', round: 3, message: 'Combat ends' }),
+        entry({ id: 'new-1', round: 1, message: 'Combat begins — Round 1' }),
+        entry({ id: 'new-2', round: 2, message: 'Round 2' }),
+      ],
+    })
+
+  it('carries only the fight in progress by default', () => {
+    expect(playerBoard(twoFights(), DEFAULT_PLAYER_VIEW).log.map((e) => e.id)).toEqual([
+      'new-1',
+      'new-2',
+    ])
+  })
+
+  it('empties when the fight ends, so the next one starts fresh', () => {
+    expect(playerBoard(twoFights(0), DEFAULT_PLAYER_VIEW).log).toEqual([])
+  })
+
+  it('carries the whole record when the GM asks for the session', () => {
+    const board = playerBoard(twoFights(), view({ log: 'session' }))
+    expect(board.log.map((e) => e.id)).toEqual(['old-1', 'old-2', 'new-1', 'new-2'])
+    // And a fight that has ended keeps it on screen rather than clearing.
+    expect(playerBoard(twoFights(0), view({ log: 'session' })).log).toHaveLength(4)
+  })
+
+  // An encounter saved before the marker existed, or one whose log the GM cleared
+  // mid-fight, reads as "from the top" rather than slicing past the end.
+  it('falls back to the whole log when there is no mark to start from', () => {
+    const e = encounter({ round: 2, log: [entry({ id: 'a' }), entry({ id: 'b' })] })
+    expect(playerBoard(e, DEFAULT_PLAYER_VIEW).log.map((x) => x.id)).toEqual(['a', 'b'])
+    const cleared = encounter({ round: 2, fightLogStart: 9, log: [entry({ id: 'a' })] })
+    expect(playerBoard(cleared, DEFAULT_PLAYER_VIEW).log.map((x) => x.id)).toEqual([])
   })
 })
 
@@ -364,7 +408,7 @@ describe('playerBoard — a creature`s numbers in the log', () => {
         result: { total: 7, dice: [], modifier: -1, advantageState: 'normal' } as never,
       }),
     ]
-    const board = playerBoard(withLog(...log), { hp: 'exact', ac: 'hidden', rolls: 'shown' })
+    const board = playerBoard(withLog(...log), view({ hp: 'exact' }))
     expect(board.log[0].message).toBe('Ogre takes 45 damage')
     expect(board.log[1].result).toBeDefined()
   })
@@ -518,7 +562,7 @@ describe('playerBoard — hiding a creature`s rolls', () => {
       result: roll({ total: 19, kind: 'save' }),
     })
     // Exact hit points, rolls still hidden: the two calls don't ride on each other.
-    const board = playerBoard(withLog(save), { hp: 'exact', ac: 'shown', rolls: 'hidden' })
+    const board = playerBoard(withLog(save), view({ hp: 'exact', ac: 'shown', rolls: 'hidden' }))
     expect(board.log[0].result).toBeUndefined()
   })
 })

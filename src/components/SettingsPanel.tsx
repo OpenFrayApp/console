@@ -8,7 +8,7 @@ import {
   librarySourceBadgeClass,
 } from '../compendium/libraries.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
-import type { LibrarySort, PlayerViewSettings } from '../state/settings.ts'
+import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
@@ -280,6 +280,32 @@ export function SettingsPanel({
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   What a creature's attacks, saves and checks came to. Hiding them keeps whether it
                   hit or saved, and the damage it dealt.
+                </p>
+              </div>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="player-view-log"
+                    className="text-sm text-slate-700 dark:text-slate-200"
+                  >
+                    Game log
+                  </label>
+                  <select
+                    id="player-view-log"
+                    value={playerView.log}
+                    onChange={(e) => {
+                      track(EVENTS.playerViewChanged)
+                      onSetPlayerView({ ...playerView, log: e.target.value as PlayerLogScope })
+                    }}
+                    className={SELECT}
+                  >
+                    <option value="fight">This fight only</option>
+                    <option value="session">The whole session</option>
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  On <span className="font-medium">This fight only</span>, your players' log starts
+                  fresh each time you begin a fight and clears when it ends. Yours keeps everything.
                 </p>
               </div>
             </div>

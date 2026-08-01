@@ -105,6 +105,13 @@ export interface Encounter {
   combatants: Combatant[]
   /** The full combat record — every roll and board event, in chronological order. */
   log: GameLogEntry[]
+  /**
+   * Where the current fight's record starts in `log`, stamped at Begin. The GM keeps
+   * the whole record; this is what lets the shared player view start the table's log
+   * fresh each fight. Absent on a fight begun before the field existed, and on a log
+   * that has been cleared — both read as "from the top".
+   */
+  fightLogStart?: number
   /** Set on Begin; carries the recap clock + damage tallies. Absent before combat. */
   combatStats?: CombatStats
 }

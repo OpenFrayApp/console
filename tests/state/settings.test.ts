@@ -52,8 +52,9 @@ describe('player-view settings', () => {
   })
 
   it('round-trips what the GM chose', () => {
-    saveSettings({ playerView: { hp: 'exact', ac: 'shown', rolls: 'shown' } })
-    expect(loadSettings().playerView).toEqual({ hp: 'exact', ac: 'shown', rolls: 'shown' })
+    const chosen = { ...DEFAULT_PLAYER_VIEW, hp: 'exact' as const, ac: 'shown' as const }
+    saveSettings({ playerView: chosen })
+    expect(loadSettings().playerView).toEqual(chosen)
   })
 
   // A stored value that isn't one of the three would otherwise reach playerBoard and
@@ -69,6 +70,17 @@ describe('player-view settings', () => {
   it('only an explicit "shown" reveals armor class', () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { ac: 'Shown' } }))
     expect(loadSettings().playerView.ac).toBe('hidden')
+  })
+
+  it('starts the players` log fresh with each fight', () => {
+    expect(loadSettings().playerView.log).toBe('fight')
+  })
+
+  it('keeps the whole session only when the GM asked for it', () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { log: 'everything' } }))
+    expect(loadSettings().playerView.log).toBe('fight')
+    saveSettings({ playerView: { ...DEFAULT_PLAYER_VIEW, log: 'session' } })
+    expect(loadSettings().playerView.log).toBe('session')
   })
 
   it('has no share code until a GM shares for the first time', () => {

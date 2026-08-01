@@ -390,6 +390,21 @@ describe('encounter game-log events', () => {
     ).toBe(true)
   })
 
+  // The Game Master keeps the whole record; the shared player view reads this to start
+  // the table's log fresh at each Begin.
+  it('marks where each fight`s record starts, and forgets it when the log goes', () => {
+    let e = encounterReducer(withCombatants(monster('a', 5)), { type: 'begin' })
+    expect(e.fightLogStart).toBe(0)
+    const first = e.log.length
+    e = encounterReducer(e, { type: 'stop' })
+    e = encounterReducer(e, { type: 'begin' })
+    // The second fight starts after everything the first one left behind.
+    expect(e.fightLogStart).toBe(first + 1) // + the "Combat ends" line
+    expect(e.log.slice(e.fightLogStart!)[0].message).toBe('Combat begins — Round 1')
+    expect(encounterReducer(e, { type: 'clearLog' }).fightLogStart).toBe(0)
+    expect(encounterReducer(e, { type: 'clearAll' }).fightLogStart).toBe(0)
+  })
+
   it('wipes the log on a full board sweep (clearAll) but not on stop', () => {
     let e = encounterReducer(withCombatants(monster('a', 5)), { type: 'begin' })
     expect(e.log.length).toBeGreaterThan(0)

@@ -53,6 +53,17 @@ describe('SettingsPanel — the player view', () => {
     renderPanel()
     expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
   })
+
+  it('starts the players` log fresh with each fight', () => {
+    renderPanel()
+    expect((screen.getByLabelText('Game log') as HTMLSelectElement).value).toBe('fight')
+  })
+
+  it('hands back a whole-session log', () => {
+    const { onSetPlayerView } = renderPanel()
+    fireEvent.change(screen.getByLabelText('Game log'), { target: { value: 'session' } })
+    expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, log: 'session' })
+  })
 })
 
 describe('SettingsPanel', () => {
