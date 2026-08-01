@@ -37,31 +37,39 @@ function renderPanel(
   return { onSetEnabledLibraries, onSetShowHomebrew, onSetLibrarySort, onSetPlayerView }
 }
 
+/** Open one of the settings tabs by its label. */
+const openTab = (label: string) => fireEvent.click(screen.getByRole('tab', { name: label }))
+
 describe('SettingsPanel — the player view', () => {
   it('shows a creature`s rolls by default', () => {
     renderPanel()
+    openTab('Player view')
     expect((screen.getByLabelText('Creature rolls') as HTMLSelectElement).value).toBe('shown')
   })
 
   it('hands the choice back without disturbing the others', () => {
     const { onSetPlayerView } = renderPanel()
+    openTab('Player view')
     fireEvent.change(screen.getByLabelText('Creature rolls'), { target: { value: 'hidden' } })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, rolls: 'hidden' })
   })
 
   it('says what hiding them keeps', () => {
     renderPanel()
+    openTab('Player view')
     expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
   })
 
   it('starts the players` log fresh each fight, and shares the summary', () => {
     renderPanel()
+    openTab('Player view')
     expect((screen.getByLabelText('Game log') as HTMLSelectElement).value).toBe('fight')
     expect((screen.getByLabelText('End-of-fight summary') as HTMLSelectElement).value).toBe('shown')
   })
 
   it('hands back a whole-session log and a hidden summary', () => {
     const { onSetPlayerView } = renderPanel()
+    openTab('Player view')
     fireEvent.change(screen.getByLabelText('Game log'), { target: { value: 'session' } })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, log: 'session' })
     fireEvent.change(screen.getByLabelText('End-of-fight summary'), {
@@ -108,10 +116,24 @@ describe('SettingsPanel', () => {
 
   it('links to the importer extension on the Chrome Web Store', () => {
     renderPanel()
+    openTab('Importer')
     const link = screen.getByRole('link', { name: /Get it for Chrome/ })
     expect(link.getAttribute('href')).toContain(
       'chromewebstore.google.com/detail/openfray-importer/',
     )
     expect(link.getAttribute('target')).toBe('_blank')
+  })
+
+  // The settings outgrew one scroll, so each area is a tab; Libraries is what opens.
+  it('opens on Libraries and shows one area at a time', () => {
+    renderPanel()
+    expect(screen.getByRole('tab', { name: 'Libraries' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('Sort by')).toBeVisible()
+    expect(screen.getByLabelText('Creature hit points')).not.toBeVisible()
+
+    openTab('Player view')
+    expect(screen.getByLabelText('Creature hit points')).toBeVisible()
+    expect(screen.getByLabelText('Sort by')).not.toBeVisible()
+    expect(screen.getByRole('tab', { name: 'Libraries' })).toHaveAttribute('aria-selected', 'false')
   })
 })

@@ -35,34 +35,9 @@ import { CustomSpellForm } from './CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 import { cx } from '../lib/cx.ts'
+import { TabButton } from './ui.tsx'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters'
-
-/** A tab-strip button, highlighted when its tab is the open one. */
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cx(
-        'rounded-md px-2.5 py-1 text-sm font-medium',
-        active
-          ? 'bg-indigo-600 text-white'
-          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
 
 /** The selectable campaign list with its count; gated (anonymous) users see a sign-in note. */
 function CampaignList({
@@ -472,7 +447,7 @@ export function Compendium({
   return (
     <div className="grid h-full min-h-0 gap-4 md:grid-cols-[24rem_1fr]">
       <div className="flex min-h-0 min-w-0 flex-col">
-        <div className="mb-2 flex gap-1">
+        <div role="tablist" aria-label="Compendium" className="mb-2 flex gap-1">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
           </TabButton>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import { useState } from 'react'
 import {
   LIBRARIES,
   editionBadgeClass,
@@ -10,6 +11,7 @@ import {
 import { track, EVENTS } from '../lib/analytics.ts'
 import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
+import { TabButton } from './ui.tsx'
 
 const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
 
@@ -59,11 +61,20 @@ function ImporterLink({ href, children }: { href: string; children: string }) {
   )
 }
 
+/** The settings screen's tabs, in the order they're shown. */
+const TABS = [
+  { key: 'libraries', label: 'Libraries' },
+  { key: 'player-view', label: 'Player view' },
+  { key: 'importer', label: 'Importer' },
+] as const
+
+type SettingsTab = (typeof TABS)[number]['key']
+
 /**
  * App settings, available to every user (anonymous included). Settings persist in
- * `localStorage`, so the panel doesn't need an account. Today it holds the content
- * libraries; future preferences (e.g. keyboard shortcuts) get their own section here.
- * Shown full-screen over the app; closes via Done.
+ * `localStorage`, so the panel doesn't need an account. One tab per area — the list
+ * outgrew a single scroll, and a preference nobody can find is a preference nobody
+ * uses. Shown full-screen over the app; closes via Done.
  */
 export function SettingsPanel({
   onClose,
@@ -86,6 +97,8 @@ export function SettingsPanel({
   playerView: PlayerViewSettings
   onSetPlayerView: (value: PlayerViewSettings) => void
 }) {
+  const [tab, setTab] = useState<SettingsTab>('libraries')
+
   // Toggle a library; never drop the last one (an empty compendium is never useful).
   const toggleLibrary = (id: string) => {
     const next = enabledLibraries.includes(id)
@@ -113,11 +126,26 @@ export function SettingsPanel({
           </button>
         </div>
 
+        <div role="tablist" aria-label="Settings" className="mb-4 flex gap-1">
+          {TABS.map((t) => (
+            <TabButton
+              key={t.key}
+              id={`settings-tab-${t.key}`}
+              active={tab === t.key}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </TabButton>
+          ))}
+        </div>
+
         <div className="space-y-4">
-          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Libraries
-            </h3>
+          <section
+            role="tabpanel"
+            aria-labelledby="settings-tab-libraries"
+            hidden={tab !== 'libraries'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
               Select the libraries your table uses. They add creatures and spells in the compendium,
               in the Add creature list, and in the Cast spell list.
@@ -206,10 +234,12 @@ export function SettingsPanel({
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Player view
-            </h3>
+          <section
+            role="tabpanel"
+            aria-labelledby="settings-tab-player-view"
+            hidden={tab !== 'player-view'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
               Choose how much of a creature your players see on the screen you share with them.
               Their own characters always show in full.
@@ -336,10 +366,12 @@ export function SettingsPanel({
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Browser extension
-            </h3>
+          <section
+            role="tabpanel"
+            aria-labelledby="settings-tab-importer"
+            hidden={tab !== 'importer'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
               OpenFray Importer turns a D&amp;D Beyond creature page into an OpenFray creature you
               can add to your library, so you never retype a stat block.

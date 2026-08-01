@@ -90,6 +90,32 @@ export function Chip({
   )
 }
 
+/**
+ * One button in a tab strip, filled while its tab is the open one. Put the strip in a
+ * `role="tablist"` and give each button the id its panel points back at.
+ */
+export function TabButton({
+  active,
+  className,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { active: boolean }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className={cx(
+        'rounded-md px-2.5 py-1 text-sm font-medium',
+        active
+          ? 'bg-indigo-600 text-white'
+          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+        className,
+      )}
+      {...rest}
+    />
+  )
+}
+
 const CONTROL = 'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700'
 
 /** A text input. Width is the caller's — everything else matches every other field. */
