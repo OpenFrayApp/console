@@ -52,8 +52,8 @@ describe('player-view settings', () => {
   })
 
   it('round-trips what the GM chose', () => {
-    saveSettings({ playerView: { hp: 'exact', ac: 'shown' } })
-    expect(loadSettings().playerView).toEqual({ hp: 'exact', ac: 'shown' })
+    saveSettings({ playerView: { hp: 'exact', ac: 'shown', rolls: 'shown' } })
+    expect(loadSettings().playerView).toEqual({ hp: 'exact', ac: 'shown', rolls: 'shown' })
   })
 
   // A stored value that isn't one of the three would otherwise reach playerBoard and

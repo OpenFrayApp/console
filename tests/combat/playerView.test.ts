@@ -103,7 +103,7 @@ describe('playerBoard — what a creature gives away', () => {
 
   it('sends exact hit points only when the GM asks for them', () => {
     const e = encounter({ combatants: [monster({ hp: { current: 20, max: 68, temp: 3 } })] })
-    expect(playerBoard(e, { hp: 'exact', ac: 'hidden' }).rows[0].hp).toEqual({
+    expect(playerBoard(e, { hp: 'exact', ac: 'hidden', rolls: 'shown' }).rows[0].hp).toEqual({
       kind: 'exact',
       current: 20,
       max: 68,
@@ -112,7 +112,9 @@ describe('playerBoard — what a creature gives away', () => {
   })
 
   it('sends no hit points at all when they are hidden', () => {
-    expect(playerBoard(encounter(), { hp: 'hidden', ac: 'hidden' }).rows[1].hp).toBeNull()
+    expect(
+      playerBoard(encounter(), { hp: 'hidden', ac: 'hidden', rolls: 'shown' }).rows[1].hp,
+    ).toBeNull()
   })
 
   it('omits the armor class key entirely rather than sending it hidden', () => {
@@ -121,13 +123,15 @@ describe('playerBoard — what a creature gives away', () => {
   })
 
   it('includes armor class when the GM turns it on', () => {
-    expect(playerBoard(encounter(), { hp: 'bloodied', ac: 'shown' }).rows[1].ac).toBe(11)
+    expect(
+      playerBoard(encounter(), { hp: 'bloodied', ac: 'shown', rolls: 'shown' }).rows[1].ac,
+    ).toBe(11)
   })
 
   it('never puts the stat block on the wire, at any setting', () => {
     for (const hp of ['exact', 'bloodied', 'hidden'] as const) {
       for (const ac of ['shown', 'hidden'] as const) {
-        const json = JSON.stringify(playerBoard(encounter(), { hp, ac }))
+        const json = JSON.stringify(playerBoard(encounter(), { hp, ac, rolls: 'shown' }))
         expect(json).not.toContain('creature')
         expect(json).not.toContain('greatclub')
         expect(json).not.toContain('srd:ogre')
@@ -168,7 +172,7 @@ describe('playerBoard — what a creature gives away', () => {
 
 describe('playerBoard — player characters', () => {
   it('keeps a player character whole, whatever the creature settings say', () => {
-    const board = playerBoard(encounter(), { hp: 'hidden', ac: 'hidden' })
+    const board = playerBoard(encounter(), { hp: 'hidden', ac: 'hidden', rolls: 'shown' })
     expect(board.rows[0]).toMatchObject({
       name: 'Thalia',
       ac: 16,
@@ -292,9 +296,8 @@ describe('playerBoard — a creature`s numbers in the log', () => {
     expect(row.result?.advantageState).toBe('advantage')
   })
 
-  // A save total set beside a DC the table can work out gives the modifier away, so
-  // this is the one roll where even the total goes.
-  it('says only that a creature`s save failed, with no total at all', () => {
+  // A save reads like an attack: what it came to, and how it went.
+  it('says what a creature`s save came to as well as whether it failed', () => {
     const save = entry({
       category: 'roll',
       message: 'Ogre: DEX save',
@@ -304,22 +307,8 @@ describe('playerBoard — a creature`s numbers in the log', () => {
     })
     const row = playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0]
     expect(row.saved).toBe(false)
-    expect(row.result).toBeUndefined()
-  })
-
-  // Until the GM settles it, Legendary Resistance may still overturn a failure — so
-  // an unsettled save says nothing about how it went.
-  it('shows neither outcome nor total for a save the GM has not settled yet', () => {
-    const save = entry({
-      category: 'roll',
-      message: 'Ogre: DEX save',
-      sourceId: 'm',
-      result: roll({ total: 7, modifier: -1, kind: 'save' }),
-    })
-    const row = playerBoard(withLog(save), DEFAULT_PLAYER_VIEW).log[0]
-    expect(row.saved).toBeUndefined()
-    // Never shown at all, so the number can't flash up and then vanish on settling.
-    expect(row.result).toBeUndefined()
+    expect(row.result?.total).toBe(7)
+    expect(row.result?.modifier).toBe(0)
   })
 
   // An area's dice belong to the spell rather than to any one combatant, so they carry
@@ -375,7 +364,7 @@ describe('playerBoard — a creature`s numbers in the log', () => {
         result: { total: 7, dice: [], modifier: -1, advantageState: 'normal' } as never,
       }),
     ]
-    const board = playerBoard(withLog(...log), { hp: 'exact', ac: 'hidden' })
+    const board = playerBoard(withLog(...log), { hp: 'exact', ac: 'hidden', rolls: 'shown' })
     expect(board.log[0].message).toBe('Ogre takes 45 damage')
     expect(board.log[1].result).toBeDefined()
   })
@@ -423,5 +412,93 @@ describe('playerBoard — where the fight is', () => {
     const board = playerBoard(encounter({ paused: true }), DEFAULT_PLAYER_VIEW)
     expect(board.activeId).toBeNull()
     expect(board.paused).toBe(true)
+  })
+})
+
+describe('playerBoard — hiding a creature`s rolls', () => {
+  const hidden = { ...DEFAULT_PLAYER_VIEW, rolls: 'hidden' as const }
+  const withLog = (...log: GameLogEntry[]) => encounter({ log })
+
+  it('drops the total from an attack but keeps the hit and the damage dealt', () => {
+    const attack = entry({
+      category: 'roll',
+      message: 'Ogre: Greatclub → Thalia',
+      sourceId: 'm',
+      result: roll({ total: 23, kind: 'attack' }),
+      outcome: 'hit',
+      damage: [{ type: 'bludgeoning', amount: 13 }],
+    })
+    const row = playerBoard(withLog(attack), hidden).log[0]
+    expect(row.result).toBeUndefined()
+    expect(row.outcome).toBe('hit')
+    expect(row.damage).toEqual([{ type: 'bludgeoning', amount: 13 }])
+  })
+
+  it('drops the total from a save but keeps whether it was made', () => {
+    const save = entry({
+      category: 'roll',
+      message: 'Ogre: DEX save',
+      sourceId: 'm',
+      saved: true,
+      result: roll({ total: 19, kind: 'save' }),
+    })
+    const row = playerBoard(withLog(save), hidden).log[0]
+    expect(row.result).toBeUndefined()
+    expect(row.saved).toBe(true)
+  })
+
+  // Initiative carries no kind of its own, so anything that isn't damage has to count
+  // as a d20 or it would slip through.
+  it('drops the total from initiative and from a check', () => {
+    const log = [
+      entry({
+        id: 'i',
+        category: 'roll',
+        message: 'Ogre: initiative',
+        sourceId: 'm',
+        result: roll({ total: 14, kind: 'raw' }),
+      }),
+      entry({
+        id: 'c',
+        category: 'roll',
+        message: 'Ogre: STR check',
+        sourceId: 'm',
+        result: roll({ total: 18, kind: 'check' }),
+      }),
+    ]
+    expect(playerBoard(withLog(...log), hidden).log.every((e) => e.result === undefined)).toBe(true)
+  })
+
+  // What a blow came to is what the table felt, and it gives no bonus away.
+  it('never touches a damage roll, however it is set', () => {
+    const damage = entry({
+      category: 'roll',
+      message: 'Ogre: Greatclub bludgeoning damage',
+      sourceId: 'm',
+      result: roll({ total: 13, kind: 'damage' }),
+    })
+    expect(playerBoard(withLog(damage), hidden).log[0].result?.total).toBe(13)
+  })
+
+  it('leaves a player character`s rolls alone — the setting is about creatures', () => {
+    const init = entry({
+      category: 'roll',
+      message: 'Thalia: initiative',
+      sourceId: 'p',
+      result: roll({ total: 17, kind: 'raw' }),
+    })
+    expect(playerBoard(withLog(init), hidden).log[0].result?.total).toBe(17)
+  })
+
+  it('is independent of the hit-points setting', () => {
+    const save = entry({
+      category: 'roll',
+      message: 'Ogre: DEX save',
+      sourceId: 'm',
+      result: roll({ total: 19, kind: 'save' }),
+    })
+    // Exact hit points, rolls still hidden: the two calls don't ride on each other.
+    const board = playerBoard(withLog(save), { hp: 'exact', ac: 'shown', rolls: 'hidden' })
+    expect(board.log[0].result).toBeUndefined()
   })
 })

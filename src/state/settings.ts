@@ -22,9 +22,19 @@ export type LibrarySort = 'name' | 'cr'
 export interface PlayerViewSettings {
   hp: HpVisibility
   ac: FieldVisibility
+  /**
+   * Whether a creature's d20 rolls carry their total — an attack, a save, a check,
+   * an initiative. Damage rolls are never covered by this: what a blow came to is
+   * what the table felt, and it gives no bonus away.
+   */
+  rolls: FieldVisibility
 }
 
-export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = { hp: 'bloodied', ac: 'hidden' }
+export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
+  hp: 'bloodied',
+  ac: 'hidden',
+  rolls: 'shown',
+}
 
 export interface AppSettings {
   /** Content library ids the compendium/picker show (see compendium/libraries.ts). */
@@ -68,6 +78,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
       : DEFAULT_PLAYER_VIEW.hp,
     // Anything but an explicit 'shown' keeps armor class off the players' screen.
     ac: data.ac === 'shown' ? 'shown' : 'hidden',
+    // Totals show unless the GM has said otherwise.
+    rolls: data.rolls === 'hidden' ? 'hidden' : 'shown',
   }
 }
 

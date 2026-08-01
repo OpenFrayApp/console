@@ -37,6 +37,24 @@ function renderPanel(
   return { onSetEnabledLibraries, onSetShowHomebrew, onSetLibrarySort, onSetPlayerView }
 }
 
+describe('SettingsPanel — the player view', () => {
+  it('shows a creature`s rolls by default', () => {
+    renderPanel()
+    expect((screen.getByLabelText('Creature rolls') as HTMLSelectElement).value).toBe('shown')
+  })
+
+  it('hands the choice back without disturbing the others', () => {
+    const { onSetPlayerView } = renderPanel()
+    fireEvent.change(screen.getByLabelText('Creature rolls'), { target: { value: 'hidden' } })
+    expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, rolls: 'hidden' })
+  })
+
+  it('says what hiding them keeps', () => {
+    renderPanel()
+    expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
+  })
+})
+
 describe('SettingsPanel', () => {
   it('groups the rule sets under Core / OpenFray / Other and toggles one on', () => {
     const { onSetEnabledLibraries } = renderPanel()

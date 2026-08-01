@@ -129,19 +129,25 @@ function rollWithoutArithmetic(result: RollResult): RollResult {
  * The message is prose, so it is never edited: an entry whose own text carries the
  * number is rebuilt from the structured `amount` and the name instead.
  */
-function withoutNumbers(entry: GameLogEntry, name: string): GameLogEntry {
+function withoutAmounts(entry: GameLogEntry, name: string): GameLogEntry {
   if (entry.category === 'hp' && entry.amount != null) {
     return { ...entry, message: `${name} takes damage`, amount: undefined, result: undefined }
   }
   if (entry.category === 'heal' && entry.amount != null) {
     return { ...entry, message: `${name} is healed`, amount: undefined, result: undefined }
   }
-  // A save is the one roll whose total means something on its own: set beside a DC the
-  // table can work out, it gives the creature's modifier away. Saved or failed is the
-  // whole of what they need — and dropping it by the roll's own kind rather than by
-  // whether it has settled means the number never flashes up and then disappears.
-  if (entry.result?.kind === 'save') return { ...entry, result: undefined }
   return entry
+}
+
+/**
+ * Whether a roll is one of the creature's own d20s — an attack, a save, a check, an
+ * initiative — as opposed to damage. Damage is never withheld: what a blow came to is
+ * what the table felt, and it gives no bonus away. Read from the roll's own `kind`
+ * rather than its wording, and initiative rolls carry no kind at all, so anything that
+ * isn't damage counts.
+ */
+function isD20Roll(entry: GameLogEntry): boolean {
+  return entry.result != null && entry.result.kind !== 'damage'
 }
 
 /**
@@ -151,14 +157,16 @@ function withoutNumbers(entry: GameLogEntry, name: string): GameLogEntry {
 export function playerBoard(encounter: Encounter, settings: PlayerViewSettings): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
-  // Whose numbers are withheld, by combatant id. A creature's are, unless the GM chose
-  // to show exact hit points — at which point they have said the table may do the math.
-  const guarded = new Map<string, string>()
-  if (settings.hp !== 'exact') {
-    for (const c of encounter.combatants) {
-      if (!c.isPC) guarded.set(c.combatantId, c.label)
-    }
+  // Creatures by id, with the label a rebuilt line needs. What is actually withheld is
+  // two separate calls the GM makes: how much a creature was hurt (which follows the
+  // hit-points setting, since showing exact HP and hiding the damage would be silly),
+  // and whether its d20s carry a total.
+  const creatures = new Map<string, string>()
+  for (const c of encounter.combatants) {
+    if (!c.isPC) creatures.set(c.combatantId, c.label)
   }
+  const hideAmounts = settings.hp !== 'exact'
+  const hideRolls = settings.rolls === 'hidden'
 
   return {
     round: encounter.round,
@@ -179,8 +187,12 @@ export function playerBoard(encounter: Encounter, settings: PlayerViewSettings):
           result: e.result && rollWithoutArithmetic(e.result),
           applied: undefined,
         }
-        const name = e.sourceId ? guarded.get(e.sourceId) : undefined
-        return name ? withoutNumbers(shown, name) : shown
+        const name = e.sourceId ? creatures.get(e.sourceId) : undefined
+        if (!name) return shown
+        // Hidden rolls lose the total but keep what happened: hit or miss, saved or
+        // failed, and the damage dealt.
+        const rolled = hideRolls && isD20Roll(shown) ? { ...shown, result: undefined } : shown
+        return hideAmounts ? withoutAmounts(rolled, name) : rolled
       }),
   }
 }

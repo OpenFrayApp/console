@@ -256,6 +256,32 @@ export function SettingsPanel({
                   <option value="shown">Shown</option>
                 </select>
               </div>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="player-view-rolls"
+                    className="text-sm text-slate-700 dark:text-slate-200"
+                  >
+                    Creature rolls
+                  </label>
+                  <select
+                    id="player-view-rolls"
+                    value={playerView.rolls}
+                    onChange={(e) => {
+                      track(EVENTS.playerViewChanged)
+                      onSetPlayerView({ ...playerView, rolls: e.target.value as FieldVisibility })
+                    }}
+                    className={SELECT}
+                  >
+                    <option value="shown">Shown</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  What a creature's attacks, saves and checks came to. Hiding them keeps whether it
+                  hit or saved, and the damage it dealt.
+                </p>
+              </div>
             </div>
           </section>
 
