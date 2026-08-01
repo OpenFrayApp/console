@@ -6,7 +6,8 @@ import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { spellAction } from '../combat/casting.ts'
+import { landsOnCast, spellAction, spellConcentration } from '../combat/casting.ts'
+import { startConcentration } from '../combat/concentration.ts'
 import { isSupportSpell } from '../combat/spellEffects.ts'
 import { titleCase } from '../compendium/format.ts'
 import { ActionResolver } from './ActionResolver.tsx'
@@ -22,6 +23,10 @@ import type { OnRoll } from './GameLog.tsx'
  * resolver, seeded with the caster's DC / attack bonus at the spell's fixed level
  * (no upcasting). A utility spell with no mechanics is still castable. The caster is
  * always a monster, so no roll is ever made on a player's behalf.
+ *
+ * Concentration begins when the spell takes hold — a target failed, the attack hit, or
+ * the effect landed on someone — not when Cast is pressed, so a spell the board shrugged
+ * off never leaves the caster holding something.
  */
 export function SpellCastModal({
   caster,
@@ -31,6 +36,7 @@ export function SpellCastModal({
   combatants,
   dispatch,
   onRoll,
+  round = 0,
   onCast,
   onRestore,
   onClose,
@@ -44,6 +50,8 @@ export function SpellCastModal({
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  /** Current combat round — stamped on the caster's concentration when it starts. */
+  round?: number
   /** Spend a use and log the cast. */
   onCast: () => void
   /** Give back one spent use (when out of uses). */
@@ -68,11 +76,24 @@ export function SpellCastModal({
   // Casting a concentration spell while already concentrating needs confirmation.
   const conflictsConcentration = spell?.concentration === true && caster.concentration != null
 
+  /** Start the caster concentrating on this spell, now that it has landed. */
+  const concentrate = () => {
+    if (!spell?.concentration) return
+    dispatch({
+      type: 'update',
+      id: caster.combatantId,
+      update: (c) => startConcentration(c, spellConcentration(caster, spell, round)),
+    })
+  }
+
   /** Commit the cast: dismiss the confirmation, spend the use, and move to resolution. */
   const proceed = () => {
     setConfirming(false)
     onCast()
     setCast(true)
+    // A spell with nothing to resolve and nothing to put on the board has taken hold
+    // already; everything else waits to see whether it lands.
+    if (spell && landsOnCast(spell)) concentrate()
   }
 
   /** Cast now, or confirm first when the caster is already concentrating. */
@@ -91,6 +112,9 @@ export function SpellCastModal({
         onRoll={onRoll}
         defaultMagical
         spell={spell}
+        onResolved={(landed) => {
+          if (landed) concentrate()
+        }}
         onClose={onClose}
       />
     )
@@ -161,6 +185,9 @@ export function SpellCastModal({
               caster={caster}
               combatants={combatants}
               dispatch={dispatch}
+              onApplied={(count) => {
+                if (count > 0) concentrate()
+              }}
             />
           )}
         </div>

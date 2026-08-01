@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
-import { durationRounds, spellAction } from '../combat/casting.ts'
+import { landsOnCast, spellAction, spellConcentration } from '../combat/casting.ts'
 import { startConcentration } from '../combat/concentration.ts'
 import { nameOf } from '../combat/combatant.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
@@ -67,17 +67,10 @@ export function CastSpellPanel({
   /** Start the chosen caster concentrating on the spell in hand, with its round timer. */
   const concentrate = (s: Spell) => {
     if (!caster) return
-    const saveDc = caster.isPC ? 0 : (caster.creature.spellcasting?.saveDc ?? 0)
     dispatch({
       type: 'update',
       id: caster.combatantId,
-      update: (cc) =>
-        startConcentration(cc, {
-          spell: s.name,
-          saveDc,
-          round,
-          rounds: durationRounds(s.duration),
-        }),
+      update: (cc) => startConcentration(cc, spellConcentration(caster, s, round)),
     })
   }
 
@@ -85,12 +78,14 @@ export function CastSpellPanel({
    * Set the spell to cast and record it. Concentration deliberately doesn't start here:
    * picking a spell isn't casting it, and a spell every target saves against has nothing
    * to sustain. It begins when the spell actually takes hold — see `onResolved` below,
-   * and `onApplied` for a buff.
+   * and `onApplied` for a buff. The exception is a spell with nothing to resolve and
+   * nothing to put on the board, which has taken hold the moment it's cast.
    */
   const pick = (s: Spell) => {
     reset()
     setSpell(s)
     onNote(caster ? `${nameOf(caster)} casts ${s.name}` : `${s.name} is cast`, 'cast')
+    if (s.concentration && landsOnCast(s)) concentrate(s)
   }
 
   if (!spell) {
@@ -147,8 +142,8 @@ export function CastSpellPanel({
         defaultMagical
         spell={spell}
         casterId={caster?.combatantId}
-        onResolved={(anyFailed) => {
-          if (anyFailed && spell.concentration) concentrate(spell)
+        onResolved={(landed) => {
+          if (landed && spell.concentration) concentrate(spell)
         }}
         onClose={reset}
       />

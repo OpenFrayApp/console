@@ -190,6 +190,41 @@ describe('ActionResolver — attacks', () => {
     // whichever of the two was kept.
     expect(dice.some((el) => el.textContent?.includes(','))).toBe(false)
   })
+
+  /** Render one attack at a single target, reporting how it went. */
+  const attackWith = (onResolved: ReturnType<typeof vi.fn>) =>
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), monster({ combatantId: 't', label: 'Ogre' })]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onResolved={onResolved}
+        onClose={() => {}}
+      />,
+    )
+
+  // What the caller does with this is start concentration — so an attack spell that
+  // was opened and abandoned must not leave the caster sustaining anything.
+  it('reports nothing when the attack was never rolled', () => {
+    const onResolved = vi.fn()
+    attackWith(onResolved).unmount()
+    expect(onResolved).not.toHaveBeenCalled()
+  })
+
+  it('reports whether it landed, once, from the roll that stood', () => {
+    const onResolved = vi.fn()
+    const { unmount } = attackWith(onResolved)
+    fireEvent.click(screen.getByText('Roll attack'))
+    fireEvent.click(screen.getByText('Reroll'))
+    // The roll is honest, so read the outcome the modal is showing rather than
+    // assuming one.
+    const landed = ['Hit', 'Critical hit!'].some((t) => screen.queryByText(t) != null)
+    unmount()
+    expect(onResolved).toHaveBeenCalledTimes(1)
+    expect(onResolved).toHaveBeenCalledWith(landed)
+  })
 })
 
 describe('ActionResolver — save actions', () => {

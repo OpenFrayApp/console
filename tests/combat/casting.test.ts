@@ -2,13 +2,16 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
+import type { Combatant, MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import {
   damageFormula,
   damageTypes,
   damageVariants,
   durationRounds,
+  landsOnCast,
   spellAction,
+  spellConcentration,
 } from '../../src/combat/casting.ts'
 
 const base = {
@@ -151,5 +154,71 @@ describe('durationRounds', () => {
     expect(durationRounds('1 hour')).toBeUndefined()
     expect(durationRounds('instantaneous')).toBeUndefined()
     expect(durationRounds('until dispelled')).toBeUndefined()
+  })
+})
+
+describe('spellConcentration', () => {
+  /** A monster caster whose stat block carries a spell save DC. */
+  const archmage = (saveDc?: number): MonsterCombatant =>
+    ({
+      isPC: false,
+      combatantId: 'm1',
+      creature: {
+        spellcasting: saveDc == null ? undefined : { ability: 'int', saveDc, groups: [] },
+      },
+    }) as unknown as MonsterCombatant
+
+  it("takes the caster's own save DC and the spell's round timer", () => {
+    const bless: Spell = {
+      ...base,
+      id: 'srd-5.2:bless',
+      name: 'Bless',
+      level: 1,
+      duration: 'up to 1 minute',
+      concentration: true,
+    }
+    expect(spellConcentration(archmage(16), bless, 3)).toEqual({
+      spell: 'Bless',
+      saveDc: 16,
+      round: 3,
+      rounds: 10,
+    })
+  })
+
+  it('leaves a player character with no DC — that number lives on their sheet', () => {
+    const pc = { isPC: true, combatantId: 'p1' } as PlayerCharacter as Combatant
+    expect(spellConcentration(pc, HOLD_PERSON, 1).saveDc).toBe(0)
+  })
+
+  it('leaves the timer open for a duration a fight cannot count down', () => {
+    const fly: Spell = {
+      ...base,
+      id: 'srd-5.2:fly',
+      name: 'Fly',
+      level: 3,
+      duration: 'up to 8 hours',
+      concentration: true,
+    }
+    expect(spellConcentration(archmage(), fly, 1).rounds).toBeUndefined()
+  })
+})
+
+describe('landsOnCast', () => {
+  // Wall of Force is the shape: 11 of the 5.2 spells and 17 of the 5.1 ones are like
+  // it — concentration spells that roll nothing and leave nothing on a creature.
+  it('is true for a spell with nothing to roll and nothing to put on the board', () => {
+    const wall: Spell = { ...base, id: 'srd-5.2:wall-of-force', name: 'Wall of Force', level: 5 }
+    expect(landsOnCast(wall)).toBe(true)
+  })
+
+  it('is false for a spell the board still has to answer', () => {
+    expect(landsOnCast(FIREBALL)).toBe(false)
+    expect(landsOnCast(FIRE_BOLT)).toBe(false)
+    expect(landsOnCast(HOLD_PERSON)).toBe(false)
+  })
+
+  it('is false for a buff that lands on targets the GM picks', () => {
+    const bless: Spell = { ...base, id: 'srd-5.2:bless', name: 'Bless', level: 1 }
+    expect(landsOnCast(bless)).toBe(false)
   })
 })

@@ -30,12 +30,7 @@ import { SpellLinkContext } from './spellLinkContext.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import { isFoe } from '../combat/combatant.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
-import { durationRounds } from '../combat/casting.ts'
-import {
-  concentrationPromptDC,
-  rollConcentrationCheck,
-  startConcentration,
-} from '../combat/concentration.ts'
+import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow } from './CombatantRow.tsx'
@@ -252,8 +247,8 @@ export function EncounterConsole({
     if (rollable) setActionFor(action)
   }
 
-  // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution
-  // happens in the cast modal.
+  // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution — and
+  // concentration, which waits until the spell lands — happen in the cast modal.
   const castSpellFrom = (c: MonsterCombatant, spell: SpellRef) => {
     track(EVENTS.spellCast)
     dispatch({
@@ -261,25 +256,8 @@ export function EncounterConsole({
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : castSpell(cc, spell)),
     })
-    // A concentration spell starts concentration, replacing any current one.
-    const full = resolveSpell(spell.ref)
-    if (full?.concentration) {
-      dispatch({
-        type: 'update',
-        id: c.combatantId,
-        update: (cc) =>
-          cc.isPC
-            ? cc
-            : startConcentration(cc, {
-                spell: full.name,
-                saveDc: c.creature.spellcasting?.saveDc ?? 0,
-                round: encounter.round,
-                rounds: durationRounds(full.duration),
-              }),
-      })
-    }
     // Prefer the resolved compendium name (ToB stat blocks print spell names lowercase).
-    onNote(`${c.label} casts ${full?.name ?? titleCase(spell.name)}`, 'cast')
+    onNote(`${c.label} casts ${resolveSpell(spell.ref)?.name ?? titleCase(spell.name)}`, 'cast')
   }
 
   /** Give back one spent cast of a monster's spell — the cast modal's undo. */
@@ -622,6 +600,7 @@ export function EncounterConsole({
           combatants={combatants}
           dispatch={dispatch}
           onRoll={onRoll}
+          round={encounter.round}
           onCast={() => castSpellFrom(selected, castingSpell)}
           onRestore={() => restoreSpellUseFor(selected, castingSpell)}
           onClose={() => setCastingSpell(null)}

@@ -2,7 +2,9 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Action, DamageRoll } from '../schema/action.ts'
+import type { Combatant, Concentration } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
+import { spellEffectFor } from './spellEffects.ts'
 
 /**
  * A spell supplies dice, damage type, and save ability; the *caster* supplies the
@@ -56,6 +58,21 @@ export function durationRounds(duration: string): number | undefined {
 }
 
 /**
+ * The concentration a caster takes on, once its spell has landed. The save DC is the
+ * caster's own — a monster's from its stat block, and 0 for a player character, whose
+ * DC lives on a sheet we deliberately don't read. Casting alone never starts this: a
+ * spell every target shrugged off has nothing to sustain.
+ */
+export function spellConcentration(caster: Combatant, spell: Spell, round: number): Concentration {
+  return {
+    spell: spell.name,
+    saveDc: caster.isPC ? 0 : (caster.creature.spellcasting?.saveDc ?? 0),
+    round,
+    rounds: durationRounds(spell.duration),
+  }
+}
+
+/**
  * Turn a spell into a resolvable Action so casting reuses the same attack / group
  * save modals as a monster's other actions. Damage is the spell's base level — 2024
  * monster spells are fixed to their listed level, so we never upcast here. Returns
@@ -92,4 +109,13 @@ export function spellAction(
     }
   }
   return null
+}
+
+/**
+ * Whether casting the spell is the whole of it: nothing to roll against the board, and
+ * no effect to put on anyone. There is no landing to wait for, so a concentration spell
+ * of this shape (Wall of Force, Silent Image) takes hold on the cast.
+ */
+export function landsOnCast(spell: Spell): boolean {
+  return spellAction(spell, {}) === null && spellEffectFor(spell) === null
 }

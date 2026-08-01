@@ -190,3 +190,82 @@ describe('SpellCastModal', () => {
     expect(screen.getByText('Cast — spent a use.')).toBeInTheDocument()
   })
 })
+
+// Casting is not landing. A spell every target shrugs off leaves the caster holding
+// nothing, so concentration waits for the board to answer — the same rule the GM's
+// own Cast spell panel follows.
+describe('SpellCastModal — when concentration begins', () => {
+  /** The concentration a dispatched update would start on the caster, if any. */
+  const concentrationFrom = (dispatch: ReturnType<typeof vi.fn>) =>
+    dispatch.mock.calls
+      .map((c) => c[0])
+      .filter((a) => a.type === 'update' && a.id === 'km')
+      .map((a) => a.update(caster()).concentration)
+      .find(Boolean)
+
+  /** A save spell the caster has to sustain. */
+  const holdWave = (): Spell =>
+    spell('Poison Wave', {
+      concentration: true,
+      duration: 'up to 1 minute',
+      mechanics: {
+        damage: [{ formula: '2d6', type: 'poison' }],
+        save: { ability: 'con', onSave: 'half' },
+      },
+    })
+
+  it('does not concentrate on the cast of a save spell', () => {
+    const { dispatch } = renderModal({
+      spell: holdWave(),
+      combatants: [caster(), caster({ combatantId: 't', label: 'Ogre' })],
+      round: 2,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cast' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    expect(concentrationFrom(dispatch)).toBeUndefined()
+  })
+
+  it('starts concentrating once a target has failed', () => {
+    const { dispatch } = renderModal({
+      spell: holdWave(),
+      combatants: [caster(), caster({ combatantId: 't', label: 'Ogre' })],
+      round: 2,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cast' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Fail' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+    expect(concentrationFrom(dispatch)).toMatchObject({
+      spell: 'Poison Wave',
+      saveDc: 13,
+      round: 2,
+      rounds: 10,
+    })
+  })
+
+  it('starts concentrating once a buff lands on someone', () => {
+    const { dispatch } = renderModal({
+      spell: spell('Bless', { concentration: true, duration: 'up to 1 minute' }),
+      spellRef: { name: 'bless' },
+      round: 4,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cast' }))
+    expect(concentrationFrom(dispatch)).toBeUndefined()
+    fireEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
+    expect(concentrationFrom(dispatch)).toMatchObject({ spell: 'Bless', round: 4, rounds: 10 })
+  })
+
+  // Nothing to roll and nothing to put on a creature: the cast is the whole event,
+  // so there is no landing to wait for.
+  it('concentrates on the cast when the spell touches no one', () => {
+    const { dispatch } = renderModal({
+      spell: spell('Wall of Force', { concentration: true, duration: 'up to 10 minutes' }),
+      spellRef: { name: 'wall of force' },
+      round: 1,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Cast' }))
+    expect(concentrationFrom(dispatch)).toMatchObject({ spell: 'Wall of Force', rounds: 100 })
+  })
+})

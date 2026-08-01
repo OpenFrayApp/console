@@ -128,11 +128,11 @@ interface ResolverProps {
    */
   casterId?: string
   /**
-   * How the save went, once the GM has settled it: whether anyone actually failed.
-   * A concentration spell nobody failed against has nothing to sustain, so the caller
-   * uses this to decide whether concentration begins at all.
+   * Whether the spell landed, once the GM has settled it: someone failed the save, or
+   * the attack hit. A concentration spell the board shrugged off has nothing to sustain,
+   * so the caller uses this to decide whether concentration begins at all.
    */
-  onResolved?: (anyFailed: boolean) => void
+  onResolved?: (landed: boolean) => void
   onClose: () => void
 }
 
@@ -360,6 +360,11 @@ export function ConditionChips({
   )
 }
 
+/** Whether a resolved attack landed: a crit always does, otherwise the total meets AC. */
+function attackHits(result: RollResult, target: Combatant): boolean {
+  return result.crit || (!result.fumble && result.total >= acOf(target))
+}
+
 /** All combatants the attacker can target: everyone except itself and the dead. */
 function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combatant[] {
   return combatants.filter((c) => c.combatantId !== attacker.combatantId && c.status !== 'dead')
@@ -374,6 +379,7 @@ function AttackResolver({
   onRoll,
   onUse,
   spell,
+  onResolved,
   onClose,
 }: ResolverProps) {
   const { crit: critRule } = useCampaignRules()
@@ -406,6 +412,22 @@ function AttackResolver({
   const target = targets.find((t) => selected.has(t.combatantId)) ?? null
   const title = attacker ? `${nameOf(attacker)} · ${action.name}` : `Cast ${action.name}`
 
+  // Reporting whether the attack landed, once and once only — the same deferral the
+  // save branch makes, so a reroll decides the answer rather than the first swing.
+  // Read through refs so a caller's inline arrow can't re-fire the unmount path.
+  const attackRef = useRef(attack)
+  attackRef.current = attack
+  const reportedRef = useRef(false)
+  const onResolvedRef = useRef(onResolved)
+  onResolvedRef.current = onResolved
+  const reportResolved = useCallback(() => {
+    const settled = attackRef.current
+    if (reportedRef.current || !settled) return
+    reportedRef.current = true
+    onResolvedRef.current?.(attackHits(settled.result, settled.target))
+  }, [])
+  useEffect(() => () => reportResolved(), [reportResolved])
+
   /** Roll the effect-aware attack, decide hit/crit, pre-roll damage, and log one merged entry. */
   const doRoll = () => {
     if (!target) return
@@ -431,7 +453,7 @@ function AttackResolver({
       dispatch({ type: 'update', id: target.combatantId, update: (c) => ({ ...c, effects }) })
     }
     const d20 = d20Group(result)
-    const hits = result.crit || (!result.fumble && result.total >= acOf(target))
+    const hits = attackHits(result, target)
     // A melee hit on a Paralyzed/Unconscious creature is an automatic critical hit.
     const autoCrit = hits && action.kind === 'melee' && meleeHitAutoCrits(target)
     const crit = result.crit || autoCrit
@@ -457,9 +479,7 @@ function AttackResolver({
     onUse?.()
   }
 
-  const hit = attack
-    ? attack.result.crit || (!attack.result.fumble && attack.result.total >= acOf(attack.target))
-    : false
+  const hit = attack ? attackHits(attack.result, attack.target) : false
 
   // A spell whose damage isn't all immediate (Acid Arrow) leaves the rest as a
   // reminder on what it hit, due at the end of that creature's next turn.
@@ -469,6 +489,7 @@ function AttackResolver({
   const apply = () => {
     if (!attack) return
     flush()
+    reportResolved()
     const amount = toNum(damage)
     const tgt = attack.target
     if (delayed && hit) {
