@@ -85,7 +85,9 @@ search, so every page must stand on its own.
 3. **Introduction** — two to four sentences, before the first heading: what this page covers
    and when you'd need it. Never open with a heading.
 4. **`##` sections** — one topic each, in the order a reader does the work.
-5. **A "Where to next" list** at the end of tutorial-style pages, linking the natural follow-ons.
+5. **A "Where to next" list** at the end of tutorial-style handbook pages, linking the
+   natural follow-ons. **Not on a book chapter** — those carry previous/next pagination,
+   and a hand-written list of the same links goes stale the moment a chapter moves.
 
 ### Headings
 
@@ -167,6 +169,11 @@ More:
   ampersand form appears in only two places: the **D&D Beyond** product name (we're naming
   their product), and a copyright or legal statement that has to quote the trademark.
   Nowhere else — not in titles, prose, metadata, or keywords.
+- **Name 5.5e before 5e, always.** A compatibility line reads "compatible with 5.5e and
+  5e", never the other way round: the app is 2024-first, and the order says so before the
+  sentence does. Same for any pair — Basic Rules 2024 before Basic Rules 2014, 5.5 before
+  5.0. The exception is legal copy, which keeps whatever wording it was written with; see
+  the legal-pages rule under [The website](#the-website-site).
 - **Edition names — write the ones readers search.** "DnD 5e" is the house short form,
   but "Dungeons and Dragons 5e", "5th edition", and the year forms ("DnD 2024", "Core
   Rules 2024", "2014 edition") are all correct and welcome — in page titles, descriptions,
