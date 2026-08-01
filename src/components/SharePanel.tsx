@@ -86,6 +86,9 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
       setMessage('Saved.')
     } else if (result === 'taken') {
       setMessage('That name is taken. Try another.')
+    } else if (result === 'unavailable') {
+      // Nothing the GM can do about this one, so don't send them round the loop again.
+      setMessage('Naming a link isn’t set up on this server yet. Your current link still works.')
     } else {
       setMessage('Couldn’t save that name. Try again.')
     }

@@ -34,8 +34,15 @@ export async function loadCloudEncounter(): Promise<{
   }
 }
 
-/** Whether a chosen share code was claimed, was already somebody else's, or didn't save. */
-export type ClaimResult = 'ok' | 'taken' | 'failed'
+/**
+ * How a claim went. `unavailable` is the deployment case — the column the codes live in
+ * hasn't been added to this project yet — and it matters because retrying will never
+ * fix it, so the GM shouldn't be told to try again.
+ */
+export type ClaimResult = 'ok' | 'taken' | 'unavailable' | 'failed'
+
+/** Postgres: no such column, or no such table. The schema change hasn't been applied. */
+const MISSING_SCHEMA = ['42703', '42P01']
 
 /**
  * Claim a share code for this GM's encounter row. Uniqueness is a database index, and
@@ -45,10 +52,12 @@ export type ClaimResult = 'ok' | 'taken' | 'failed'
  * claiming the same name at the same moment without a read policy or a round trip.
  */
 export async function claimPlayerCode(id: string, code: string): Promise<ClaimResult> {
-  if (!supabase) return 'failed'
+  if (!supabase) return 'unavailable'
   const { error } = await supabase.from('encounters').update({ player_code: code }).eq('id', id)
   if (!error) return 'ok'
-  return (error as { code?: string }).code === '23505' ? 'taken' : 'failed'
+  const pg = (error as { code?: string }).code
+  if (pg === '23505') return 'taken'
+  return pg && MISSING_SCHEMA.includes(pg) ? 'unavailable' : 'failed'
 }
 
 /**

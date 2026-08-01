@@ -173,13 +173,23 @@ describe('claimPlayerCode', () => {
     expect(await claimPlayerCode('row-1', 'dragons')).toBe('taken')
   })
 
-  it('never reports a name free just because the write failed for another reason', async () => {
-    const { client } = makeSupabaseStub({ error: { code: '42P01', message: 'no such table' } })
+  it('never reports a name free just because the write failed', async () => {
+    const { client } = makeSupabaseStub({ error: { code: '40001', message: 'serialization' } })
     supa.client = client
     expect(await claimPlayerCode('row-1', 'dragons')).toBe('failed')
   })
 
-  it('fails rather than pretending, with no configured client', async () => {
-    expect(await claimPlayerCode('row-1', 'dragons')).toBe('failed')
+  // The column is added by hand at deploy time, so a project that hasn't had the SQL
+  // run reports the whole feature missing rather than telling the GM to try again.
+  it('reads a missing column or table as the feature not being set up', async () => {
+    for (const code of ['42703', '42P01']) {
+      const { client } = makeSupabaseStub({ error: { code, message: 'missing' } })
+      supa.client = client
+      expect(await claimPlayerCode('row-1', 'dragons')).toBe('unavailable')
+    }
+  })
+
+  it('reports unavailable, not a failure, with no configured client', async () => {
+    expect(await claimPlayerCode('row-1', 'dragons')).toBe('unavailable')
   })
 })

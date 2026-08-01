@@ -82,6 +82,17 @@ describe('SharePanel — naming the link', () => {
     expect(link.endsWith('/play/tuesday-game')).toBe(true)
   })
 
+  // Retrying can't fix a column that was never added, so the GM is told what is
+  // actually wrong and reassured their existing link still works.
+  it('says the feature is not set up rather than asking for a retry', async () => {
+    const onClaim = vi.fn().mockResolvedValue('unavailable')
+    open({ onClaim })
+    fireEvent.change(screen.getByLabelText('Name the link'), { target: { value: 'nico' } })
+    fireEvent.click(screen.getByText('Save'))
+    await screen.findByText(/isn’t set up on this server yet/)
+    expect(screen.queryByText(/Try again/)).toBeNull()
+  })
+
   it('says so when the claim could not be saved at all', async () => {
     const onClaim = vi.fn().mockResolvedValue('failed')
     open({ onClaim })

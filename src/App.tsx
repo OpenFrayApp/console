@@ -409,6 +409,16 @@ function App() {
    * leaves the current link working rather than clearing it.
    */
   const claimShareCode = async (code: string): Promise<ClaimResult> => {
+    // The code rides on the encounter row, and a GM who has just signed in may not have
+    // one yet — the autosave is debounced. Mint it here rather than refusing the claim,
+    // guarding the insert the same way the autosave does so the two can't race a
+    // duplicate row into existence.
+    if (!cloudId.current && !cloudInserting.current) {
+      cloudInserting.current = true
+      const id = await saveCloudEncounter(null, encounter)
+      if (id) cloudId.current = id
+      cloudInserting.current = false
+    }
     if (!cloudId.current) return 'failed'
     const result = await claimPlayerCode(cloudId.current, code)
     if (result === 'ok') {
