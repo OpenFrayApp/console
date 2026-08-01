@@ -42,12 +42,12 @@ Two working tests:
 
 Before and after:
 
-| Don't                                                                         | Do                                                                                           |
-| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| "It's for the break, the rules argument, the pizza."                          | "Use **Pause** when the session stops for a break."                                          |
-| "That's the deal with reminders: you get the memory, you keep the judgement." | "OpenFray shows the reminder. It doesn't apply any effect for you."                          |
-| "This is the column you watch."                                               | "The tracker shows everyone in the fight, in initiative order."                              |
-| "OpenFray helps you _run_ a spell without playing the rulebook at you."       | "Casting a spell rolls its dice, shows its card, and offers to add its effect to the board." |
+| Don't                                                                        | Do                                                                                           |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| "It's for the break, the rules argument, the pizza."                         | "Use **Pause** when the session stops for a break."                                          |
+| "That's the deal with reminders: you get the memory, you keep the judgment." | "OpenFray shows the reminder. It doesn't apply any effect for you."                          |
+| "This is the column you watch."                                              | "The tracker shows everyone in the fight, in initiative order."                              |
+| "OpenFray helps you _run_ a spell without playing the rulebook at you."      | "Casting a spell rolls its dice, shows its card, and offers to add its effect to the board." |
 
 Contractions are fine ("don't", "you'll") — they read naturally. Rhetorical questions,
 asides, and em-dash flourishes usually are not; prefer a second sentence.

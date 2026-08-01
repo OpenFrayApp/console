@@ -224,7 +224,7 @@ utilities, and the two stylesheets hold only what a utility can't reach.
 - `scripts/check-css-specificity.mjs` fails the build on a prose rule written as a plain
   descendant selector. Wrap prose defaults in `:where()` so a component's own class wins.
 
-Three Tailwind behaviours have each caused a silent bug here. All three are invisible until
+Three Tailwind behaviors have each caused a silent bug here. All three are invisible until
 measured:
 
 1. **Preflight removes browser defaults the stylesheet never declared** — bold headings,
@@ -236,7 +236,7 @@ measured:
    when the element had been inheriting the body's `1.6`.
 
 **A class name may also be a script hook** (`.lightbox-next`, `.nav-toggle`, `.shot-thumb`).
-Keep the semantic name alongside the utilities — dropping one breaks behaviour while every
+Keep the semantic name alongside the utilities — dropping one breaks behavior while every
 computed style stays identical, so measurement cannot catch it.
 
 Before changing shared CSS or a layout, snapshot computed styles and diff after; every
