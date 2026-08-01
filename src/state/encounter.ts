@@ -224,12 +224,16 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
 
     // End combat back to setup: keep the combatants on the board, reset the clock. The
     // stats are finalized (clock stopped) and kept — App reads them for the recap.
+    // Every foe leaves the table's screen with the fight, so a reveal made during it
+    // doesn't outlive it: `shared` goes back to `auto`, which is nothing shown at round
+    // 0 and everyone shown again at the next Begin.
     case 'stop': {
       const stopped = {
         ...state,
         round: 0,
         activeIndex: 0,
         paused: false,
+        combatants: state.combatants.map((c) => (c.shared ? { ...c, shared: 'auto' as const } : c)),
         combatStats: state.combatStats && pauseStats(state.combatStats, Date.now()),
       }
       return withLogs(stopped, [{ category: 'turn', message: 'Combat ends' }], state.round)

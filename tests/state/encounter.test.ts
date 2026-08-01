@@ -7,6 +7,7 @@ import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combata
 import { applyDamage } from '../../src/combat/resources.ts'
 import { condition, counter, setCount } from '../../src/combat/effects.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
+import { onSharedBoard } from '../../src/combat/playerView.ts'
 
 function creature(): Creature {
   return {
@@ -141,6 +142,38 @@ describe('encounterReducer', () => {
     expect(e.activeIndex).toBe(0)
     expect(e.paused).toBe(false)
     expect(e.combatants.map((c) => c.combatantId)).toEqual(['a', 'b'])
+  })
+
+  // A reveal belongs to the fight it was made in: after Stop nothing the table saw
+  // during it stays on their screen, and the next Begin reveals everyone afresh.
+  it('takes every foe off the shared screen when the fight ends', () => {
+    let e = withCombatants(monster('seen', 20), monster('ambush', 10))
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'seen',
+      update: (c) => ({ ...c, shared: 'shown' }),
+    })
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'ambush',
+      update: (c) => ({ ...c, shared: 'hidden' }),
+    })
+    e = encounterReducer(e, { type: 'begin' })
+    expect(
+      onSharedBoard(
+        e.combatants.find((c) => c.combatantId === 'seen')!,
+        true,
+      ),
+    ).toBe(true)
+
+    e = encounterReducer(e, { type: 'stop' })
+    for (const c of e.combatants) {
+      expect(c.shared).toBe('auto')
+      expect(onSharedBoard(c, e.round > 0)).toBe(false)
+    }
+    // The next fight puts them back, without the GM revealing each one by hand.
+    const next = encounterReducer(e, { type: 'begin' })
+    for (const c of next.combatants) expect(onSharedBoard(c, next.round > 0)).toBe(true)
   })
 
   it('long rest restores friendly combatants to full HP, leaves foes, resets the count', () => {
