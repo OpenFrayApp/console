@@ -212,6 +212,27 @@ export function setCount(effect: Effect, count: number): Effect {
   return { ...effect, duration: { ...effect.duration, count: clampCount(count) } }
 }
 
+/** Which rolls a modifier touches, in words. */
+const APPLIES_TEXT: Record<EffectApplies, string> = {
+  attackRolls: 'attack rolls',
+  savingThrows: 'saving throws',
+  abilityChecks: 'ability checks',
+  ac: 'AC',
+  all: 'all rolls',
+}
+
+/**
+ * A modifier in plain English — "Bless: +1d4 to all rolls it makes". The effect modal
+ * shows it as you build one and the preset card shows it saved, so both read the same.
+ */
+export function describeModifier(spec: ModifierSpec): string {
+  const on = spec.direction === 'outgoing' ? 'it makes' : 'made against it'
+  const what = APPLIES_TEXT[spec.applies]
+  if (spec.mode === 'flatBonus') return `${spec.name}: ${spec.value ?? '±N'} to ${what} ${on}`
+  const mode = spec.mode === 'advantage' ? 'Advantage' : 'Disadvantage'
+  return `${spec.name}: ${mode} on ${what} ${on}`
+}
+
 /** What to print on the badge: the reminder note if present, else the name — with a counter's tally after it. */
 export function badgeLabel(effect: Effect): string {
   const label = effect.note ?? effect.name

@@ -24,6 +24,7 @@ import { counterOf, describeDuration, setCount } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
+import type { EffectPreset } from '../schema/preset.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
 import { EffectModal } from './EffectModal.tsx'
 import type { OnGmRoll, OnRoll } from './GameLog.tsx'
@@ -44,6 +45,9 @@ export function CombatantControls({
   dispatch,
   onRoll,
   onGmRoll,
+  presets,
+  enabledLibraries,
+  onSavePreset,
 }: {
   combatant: Combatant
   /** The rest of the board, to name whoever caused a source-relative effect. */
@@ -54,6 +58,12 @@ export function CombatantControls({
   onRoll: OnRoll
   /** Rolls the shared player view withholds — here, a creature's escape save. */
   onGmRoll: OnGmRoll
+  /** Effect presets offered above the Apply effect form. */
+  presets?: EffectPreset[]
+  /** Which libraries are on, so the preset picker filters like every other one. */
+  enabledLibraries?: string[]
+  /** Save what's staged as a preset; absent for an anonymous GM, who can't keep one. */
+  onSavePreset?: (preset: EffectPreset) => void
 }) {
   const [concInput, setConcInput] = useState<string | null>(null)
   const [concDur, setConcDur] = useState<number | null>(null)
@@ -132,6 +142,9 @@ export function CombatantControls({
           effects={combatant.effects}
           onApply={addEffect}
           onRemove={removeEffect}
+          presets={presets}
+          enabledLibraries={enabledLibraries}
+          onSavePreset={onSavePreset}
         />
 
         {combatant.effects.length > 0 && (

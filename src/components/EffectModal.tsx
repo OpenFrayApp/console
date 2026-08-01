@@ -8,10 +8,21 @@ import type {
   Effect,
   EffectApplies,
   EffectDirection,
-  EffectDuration,
   EffectMode,
 } from '../schema/effect.ts'
-import { condition, counter, modifierEffect, reminder } from '../combat/effects.ts'
+import type { EffectPreset } from '../schema/preset.ts'
+import {
+  DURATION_OPTIONS,
+  buildPreset,
+  draftEffects,
+  emptyDraft,
+  modifierReady,
+  presetToDraft,
+  type DurChoice,
+  type EffectDraft,
+} from './effectPreset.ts'
+import { describeModifier } from '../combat/effects.ts'
+import { LibraryPicker } from './LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { track as recordEvent, EVENTS } from '../lib/analytics.ts'
 
@@ -36,46 +47,6 @@ const CONDITIONS: ConditionName[] = [
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
-type DurChoice =
-  'manual' | 'consume' | 'save' | 'counter' | '1r' | '1m' | '10m' | '1h' | '8h' | '24h'
-
-// Timed durations in combat rounds (6s each), phrased the way spells are.
-const TIMED_ROUNDS: Partial<Record<DurChoice, number>> = {
-  '1r': 1,
-  '1m': 10,
-  '10m': 100,
-  '1h': 600,
-  '8h': 4800,
-  '24h': 14400,
-}
-
-const DURATION_OPTIONS: { value: DurChoice; label: string }[] = [
-  { value: 'manual', label: 'Until removed' },
-  { value: 'consume', label: 'This turn / next attack' },
-  { value: '1r', label: '1 round' },
-  { value: '1m', label: '1 minute' },
-  { value: '10m', label: '10 minutes' },
-  { value: '1h', label: '1 hour' },
-  { value: '8h', label: '8 hours' },
-  { value: '24h', label: '24 hours' },
-  { value: 'save', label: 'Save ends' },
-  { value: 'counter', label: 'Counter' },
-]
-
-const APPLIES_TEXT: Record<EffectApplies, string> = {
-  attackRolls: 'attack rolls',
-  savingThrows: 'saving throws',
-  abilityChecks: 'ability checks',
-  ac: 'AC',
-  all: 'all rolls',
-}
-
-/** Store a numeric amount as a number and a dice amount as a string; drop a `+`. */
-function parseAmount(raw: string): number | string {
-  const s = raw.trim().replace(/^\+/, '')
-  return /^-?\d+$/.test(s) ? Number(s) : s
-}
-
 const CHIP =
   'rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
 
@@ -89,30 +60,33 @@ export function EffectModal({
   effects,
   onApply,
   onRemove,
+  presets = [],
+  enabledLibraries,
+  onSavePreset,
 }: {
   name: string
   effects: Effect[]
   onApply: (effect: Effect) => void
   onRemove: (id: string) => void
+  /** Presets offered above the form — the GM's own, plus any an enabled library ships. */
+  presets?: EffectPreset[]
+  /** Which libraries are on, so the picker filters its rows the way every other one does. */
+  enabledLibraries?: string[]
+  /** Save what is staged as a new preset. Absent for anonymous GMs, who can't keep one. */
+  onSavePreset?: (preset: EffectPreset) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState<EffectDraft>(emptyDraft)
 
-  const [dur, setDur] = useState<DurChoice>('manual')
-  const [saveAbility, setSaveAbility] = useState<Ability>('dex')
-  const [saveDc, setSaveDc] = useState('')
-  const [saveWhen, setSaveWhen] = useState<'endOfTurn' | 'startOfTurn'>('endOfTurn')
+  /** Replace one field of the staged draft. */
+  const set = <K extends keyof EffectDraft>(key: K, value: EffectDraft[K]) =>
+    setDraft((d) => ({ ...d, [key]: value }))
 
-  const [mode, setMode] = useState<EffectMode>('advantage')
-  const [applies, setApplies] = useState<EffectApplies>('attackRolls')
-  const [direction, setDirection] = useState<EffectDirection>('incoming')
-  const [amount, setAmount] = useState('')
-  const [label, setLabel] = useState('')
-
-  const [note, setNote] = useState('')
-  // The modifier builder is collapsed by default — a condition or a reminder is the common case.
-  const [showModifier, setShowModifier] = useState(false)
-  // Conditions are staged here and committed on Apply, not toggled live.
-  const [staged, setStaged] = useState<Set<ConditionName>>(new Set())
+  /** Replace one field of the staged modifier. */
+  const setMod = <K extends keyof EffectDraft['modifier']>(
+    key: K,
+    value: EffectDraft['modifier'][K],
+  ) => setDraft((d) => ({ ...d, modifier: { ...d.modifier, [key]: value } }))
 
   /** The creature's active conditions, read from its condition effects. */
   const conditionNames = (): ConditionName[] =>
@@ -120,18 +94,7 @@ export function EffectModal({
 
   // Open with the creature's current conditions pre-selected, and everything else reset.
   const openModal = () => {
-    setStaged(new Set(conditionNames()))
-    setDur('manual')
-    setSaveAbility('dex')
-    setSaveDc('')
-    setSaveWhen('endOfTurn')
-    setMode('advantage')
-    setApplies('attackRolls')
-    setDirection('incoming')
-    setAmount('')
-    setLabel('')
-    setNote('')
-    setShowModifier(false)
+    setDraft({ ...emptyDraft(), conditions: conditionNames() })
     setOpen(true)
   }
 
@@ -148,93 +111,82 @@ export function EffectModal({
   // Switching the modifier type picks sensible defaults: advantage → against it;
   // disadvantage → on its rolls; bonus → all rolls it makes.
   const chooseMode = (m: EffectMode) => {
-    setMode(m)
-    if (m === 'flatBonus') {
-      setApplies('all')
-      setDirection('outgoing')
-    } else if (m === 'advantage') {
-      setApplies('attackRolls')
-      setDirection('incoming')
-    } else {
-      setApplies('attackRolls')
-      setDirection('outgoing')
-    }
+    const applies: EffectApplies = m === 'flatBonus' ? 'all' : 'attackRolls'
+    const direction: EffectDirection = m === 'advantage' ? 'incoming' : 'outgoing'
+    setDraft((d) => ({ ...d, modifier: { ...d.modifier, mode: m, applies, direction } }))
   }
 
-  /** Build the EffectDuration from the staged choices (save-ends carries its escape save). */
-  const makeDuration = (): EffectDuration => {
-    if (dur === 'consume') return { type: 'consumeOnRoll' }
-    if (dur === 'save')
-      return {
-        type: 'saveEnds',
-        save: { ability: saveAbility, dc: Number(saveDc) || 10 },
-        when: saveWhen,
-      }
-    const rounds = TIMED_ROUNDS[dur]
-    if (rounds != null) return { type: 'rounds', rounds }
-    // Counter falls through on purpose: the tally is its own effect, and anything
-    // else staged alongside it has no timer to inherit, so it lasts until removed.
-    return { type: 'manual' }
-  }
+  /** Toggle a condition in the staged list. */
+  const toggleCondition = (c: ConditionName) =>
+    setDraft((d) => ({
+      ...d,
+      conditions: d.conditions.includes(c)
+        ? d.conditions.filter((x) => x !== c)
+        : [...d.conditions, c],
+    }))
 
-  /** Toggle a condition in the staged set. */
-  const toggleCondition = (c: ConditionName) => {
-    setStaged((s) => {
-      const next = new Set(s)
-      if (next.has(c)) next.delete(c)
-      else next.add(c)
-      return next
-    })
-  }
+  // The picker wants a source on every row; the GM's own carry a `custom:` id instead,
+  // which is what earns them the Custom badge.
+  const pickerEntries = presets
+    .filter((p) => p.source !== undefined)
+    .map((p) => ({ ...p, source: p.source as string }))
+  const pickerCustom = presets
+    .filter((p) => p.source === undefined)
+    .map((p) => ({ ...p, source: 'custom' }))
 
-  const dirText = direction === 'outgoing' ? 'it makes' : 'made against it'
-  const summary =
-    mode === 'flatBonus'
-      ? `${label.trim() || 'Effect'}: ${amount.trim() || '±N'} to ${APPLIES_TEXT[applies]} ${dirText}`
-      : `${label.trim() || 'Effect'}: ${mode === 'advantage' ? 'Advantage' : 'Disadvantage'} on ${APPLIES_TEXT[applies]} ${dirText}`
+  const mod = draft.modifier
+  // Placeholders stand in while the builder is half-filled; the wording itself is the
+  // same one the preset card uses, so a modifier reads identically built and saved.
+  const summary = describeModifier({
+    name: mod.label.trim() || 'Effect',
+    mode: mod.mode,
+    direction: mod.direction,
+    applies: mod.applies,
+    value: mod.mode === 'flatBonus' ? mod.amount.trim() || '±N' : null,
+  })
 
-  const modifierReady = label.trim() !== '' && (mode !== 'flatBonus' || amount.trim() !== '')
-
-  // The only apply path. Commits everything staged at once, with the chosen duration:
-  // conditions (newly-checked added, unchecked removed), the modifier if one was built,
-  // and the reminder if one was typed — which the Counter duration turns into a tally
-  // instead, since a counter is a reminder that happens to hold a number.
+  // The only apply path. Commits everything staged at once: the conditions newly
+  // checked, the modifier and the reminder if they were built, and removes the
+  // conditions that were unchecked. `draftEffects` owns the mapping.
   const apply = () => {
-    const duration = makeDuration()
     const current = new Set(conditionNames())
-    for (const c of staged) {
-      if (!current.has(c)) {
-        recordEvent(EVENTS.effectApplied)
-        onApply(condition(c, { duration }))
-      }
+    const fresh = { ...draft, conditions: draft.conditions.filter((c) => !current.has(c)) }
+    for (const effect of draftEffects(fresh)) {
+      recordEvent(EVENTS.effectApplied)
+      onApply(effect)
     }
     for (const c of current) {
-      if (!staged.has(c)) {
+      if (!draft.conditions.includes(c)) {
         const existing = effects.find((e) => e.icon === 'condition' && e.name === c)
         if (existing) onRemove(existing.id)
       }
     }
-    if (modifierReady) {
-      recordEvent(EVENTS.effectApplied)
-      onApply(
-        modifierEffect(
-          {
-            name: label.trim(),
-            mode,
-            direction,
-            applies,
-            value: mode === 'flatBonus' ? parseAmount(amount) : null,
-          },
-          { duration },
-        ),
-      )
-    }
-    const text = note.trim()
-    if (text) {
-      recordEvent(EVENTS.effectApplied)
-      onApply(dur === 'counter' ? counter(text) : reminder(text, text, { duration }))
-    }
     setOpen(false)
+  }
+
+  // Picking a preset replaces whatever the last one staged — the form reads as the
+  // preset, not as a pile of them. The conditions the creature already has are kept,
+  // though: they are staged so Apply leaves them alone, and dropping them here would
+  // make Apply strip them instead.
+  const stage = (preset: EffectPreset) => {
+    recordEvent(EVENTS.presetStaged)
+    const staged = presetToDraft(preset)
+    setDraft({ ...staged, conditions: [...new Set([...conditionNames(), ...staged.conditions])] })
+  }
+
+  // Nothing to save until something is staged; a preset with no name is not offered.
+  const stagedAnything =
+    draft.conditions.length > 0 ||
+    draft.note.trim() !== '' ||
+    (draft.hasModifier && modifierReady(draft.modifier))
+
+  /** Name and keep what's staged, so the next fight is one click. */
+  const savePreset = () => {
+    const suggested = draft.note.trim() || draft.modifier.label.trim() || draft.conditions[0] || ''
+    const chosen = window.prompt('Name this preset', suggested)
+    if (chosen === null || chosen.trim() === '') return
+    recordEvent(EVENTS.presetSaved)
+    onSavePreset?.(buildPreset(draft, chosen))
   }
 
   return (
@@ -271,13 +223,32 @@ export function EffectModal({
             </div>
 
             <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
+              {presets.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <LibraryPicker
+                    label="Presets"
+                    align="left"
+                    placeholder="Search presets…"
+                    searchLabel="Search presets"
+                    entries={pickerEntries}
+                    custom={pickerCustom}
+                    enabledLibraries={enabledLibraries}
+                    showEdition={false}
+                    onPick={stage}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Fills the form below. Nothing lands until you press Apply.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <p className={LABEL}>Duration</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <select
-                      value={dur}
-                      onChange={(e) => setDur(e.target.value as DurChoice)}
+                      value={draft.duration}
+                      onChange={(e) => set('duration', e.target.value as DurChoice)}
                       aria-label="Duration"
                       className={`${FIELD_W} w-full`}
                     >
@@ -287,11 +258,11 @@ export function EffectModal({
                         </option>
                       ))}
                     </select>
-                    {dur === 'save' && (
+                    {draft.duration === 'save' && (
                       <span className="flex flex-wrap items-center gap-1 text-sm">
                         <select
-                          value={saveAbility}
-                          onChange={(e) => setSaveAbility(e.target.value as Ability)}
+                          value={draft.saveAbility}
+                          onChange={(e) => set('saveAbility', e.target.value as Ability)}
                           aria-label="Save ability"
                           className={`${FIELD_W} w-20`}
                         >
@@ -303,16 +274,18 @@ export function EffectModal({
                         </select>
                         DC
                         <input
-                          value={saveDc}
-                          onChange={(e) => setSaveDc(e.target.value)}
+                          value={draft.saveDc}
+                          onChange={(e) => set('saveDc', e.target.value)}
                           placeholder="#"
                           aria-label="Save DC"
                           inputMode="numeric"
                           className={`${FIELD_W} w-14`}
                         />
                         <select
-                          value={saveWhen}
-                          onChange={(e) => setSaveWhen(e.target.value as typeof saveWhen)}
+                          value={draft.saveWhen}
+                          onChange={(e) =>
+                            set('saveWhen', e.target.value as EffectDraft['saveWhen'])
+                          }
                           aria-label="Save timing"
                           className={`${FIELD_W} w-32`}
                         >
@@ -322,7 +295,7 @@ export function EffectModal({
                       </span>
                     )}
                   </div>
-                  {dur === 'save' && (
+                  {draft.duration === 'save' && (
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       OpenFray rolls this for a creature at the chosen moment. A player rolls their
                       own, and you record it.
@@ -333,10 +306,12 @@ export function EffectModal({
                 <div className="space-y-1">
                   <p className={LABEL}>Reminder</p>
                   <input
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
+                    value={draft.note}
+                    onChange={(e) => set('note', e.target.value)}
                     placeholder={
-                      dur === 'counter' ? 'e.g. Depth, Corruption' : 'e.g. Hex: +1d6 necrotic'
+                      draft.duration === 'counter'
+                        ? 'e.g. Depth, Corruption'
+                        : 'e.g. Hex: +1d6 necrotic'
                     }
                     aria-label="Custom reminder"
                     className={`${FIELD_W} w-full`}
@@ -348,7 +323,7 @@ export function EffectModal({
                 <p className={LABEL}>Condition</p>
                 <div className="flex flex-wrap gap-1.5">
                   {CONDITIONS.map((c) => {
-                    const active = staged.has(c)
+                    const active = draft.conditions.includes(c)
                     return (
                       <button
                         key={c}
@@ -369,10 +344,10 @@ export function EffectModal({
               </div>
 
               <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
-                {!showModifier ? (
+                {!draft.hasModifier ? (
                   <button
                     type="button"
-                    onClick={() => setShowModifier(true)}
+                    onClick={() => set('hasModifier', true)}
                     className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
                   >
                     + Add a bonus or penalty
@@ -383,7 +358,7 @@ export function EffectModal({
                       <p className={LABEL}>Modifier</p>
                       <button
                         type="button"
-                        onClick={() => setShowModifier(false)}
+                        onClick={() => set('hasModifier', false)}
                         className="text-xs text-slate-500 hover:underline dark:text-slate-400"
                       >
                         Hide
@@ -393,7 +368,7 @@ export function EffectModal({
                       <label className="space-y-1">
                         <span className="text-xs text-slate-500 dark:text-slate-400">Effect</span>
                         <select
-                          value={mode}
+                          value={mod.mode}
                           onChange={(e) => chooseMode(e.target.value as EffectMode)}
                           aria-label="Modifier effect"
                           className={FIELD}
@@ -408,8 +383,8 @@ export function EffectModal({
                           Applies to
                         </span>
                         <select
-                          value={applies}
-                          onChange={(e) => setApplies(e.target.value as EffectApplies)}
+                          value={mod.applies}
+                          onChange={(e) => setMod('applies', e.target.value as EffectApplies)}
                           aria-label="Applies to"
                           className={FIELD}
                         >
@@ -426,8 +401,8 @@ export function EffectModal({
                         <input
                           type="radio"
                           name="effect-direction"
-                          checked={direction === 'outgoing'}
-                          onChange={() => setDirection('outgoing')}
+                          checked={mod.direction === 'outgoing'}
+                          onChange={() => setMod('direction', 'outgoing')}
                         />
                         Rolls it makes
                       </label>
@@ -435,25 +410,25 @@ export function EffectModal({
                         <input
                           type="radio"
                           name="effect-direction"
-                          checked={direction === 'incoming'}
-                          onChange={() => setDirection('incoming')}
+                          checked={mod.direction === 'incoming'}
+                          onChange={() => setMod('direction', 'incoming')}
                         />
                         Rolls made against it
                       </label>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {mode === 'flatBonus' && (
+                      {mod.mode === 'flatBonus' && (
                         <input
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
+                          value={mod.amount}
+                          onChange={(e) => setMod('amount', e.target.value)}
                           placeholder="+1d4 or -2"
                           aria-label="Amount"
                           className={`${FIELD_W} w-28`}
                         />
                       )}
                       <input
-                        value={label}
-                        onChange={(e) => setLabel(e.target.value)}
+                        value={mod.label}
+                        onChange={(e) => setMod('label', e.target.value)}
                         placeholder="Label (Bless, Bane…)"
                         aria-label="Modifier label"
                         className={`${FIELD_W} min-w-0 flex-1`}
@@ -466,6 +441,17 @@ export function EffectModal({
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+              {onSavePreset && (
+                <button
+                  type="button"
+                  onClick={savePreset}
+                  disabled={!stagedAnything}
+                  title="Keep what's staged, so the next fight is one click"
+                  className="mr-auto rounded-md px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 disabled:hover:bg-transparent dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                >
+                  Save as preset
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}

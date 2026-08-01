@@ -24,6 +24,9 @@ import { CampaignCard } from './CampaignCard.tsx'
 import { CampaignFormModal } from './CampaignFormModal.tsx'
 import { campaignAcronym } from './campaignLabels.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
+import { PresetCard } from './PresetCard.tsx'
+import type { EffectPreset } from '../schema/preset.ts'
+import { isOwnPreset } from '../schema/preset.ts'
 import { CustomMonsterForm } from './CustomMonsterForm.tsx'
 import { ImportCreatureModal } from './ImportCreatureModal.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
@@ -35,9 +38,9 @@ import { CustomSpellForm } from './CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 import { cx } from '../lib/cx.ts'
-import { TabButton } from './ui.tsx'
+import { EntryBadges, TabButton } from './ui.tsx'
 
-export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters'
+export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters' | 'effects'
 
 /** The selectable campaign list with its count; gated (anonymous) users see a sign-in note. */
 function CampaignList({
@@ -79,8 +82,11 @@ function CampaignList({
               )}
             >
               <span className="truncate">{c.name}</span>
-              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
-                {c.edition}
+              <span className="flex shrink-0 items-center gap-1.5">
+                <EntryBadges
+                  edition={editionLabel(c.edition)}
+                  editionTone={editionBadgeClass(c.edition)}
+                />
               </span>
             </button>
           </li>
@@ -93,7 +99,57 @@ function CampaignList({
   )
 }
 
-/** The selectable character list, rows tagged by campaign; gated users see a sign-in note. */
+/** The preset list: the GM's own, then whatever the enabled libraries ship. */
+function PresetList({
+  presets,
+  selectedId,
+  onSelect,
+  emptyLabel,
+}: {
+  presets: EffectPreset[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  emptyLabel: string
+}) {
+  return (
+    <>
+      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+        {presets.length} {presets.length === 1 ? 'preset' : 'presets'}
+      </p>
+      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        {presets.map((p) => (
+          <li key={p.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(p.id)}
+              className={cx(
+                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
+                p.id === selectedId
+                  ? 'bg-indigo-50 font-medium text-indigo-900 dark:bg-indigo-950/60 dark:text-indigo-100'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60',
+              )}
+            >
+              <span className="min-w-0 truncate">{p.name}</span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                {/* No edition badge: a preset is board state, and a condition or a
+                    modifier reads the same in either edition. */}
+                <EntryBadges
+                  custom={isOwnPreset(p)}
+                  source={p.source && librarySource(p.source)}
+                  sourceTone={p.source && librarySourceBadgeClass(p.source)}
+                />
+              </span>
+            </button>
+          </li>
+        ))}
+        {presets.length === 0 && (
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
+        )}
+      </ul>
+    </>
+  )
+}
+
 function PcList({
   pcs,
   campaigns,
@@ -171,6 +227,9 @@ export function Compendium({
   onCreateCampaign,
   onUpdateCampaign,
   onDeleteCampaign,
+  presets = [],
+  onRenamePreset,
+  onDeletePreset,
   rosterPcs = [],
   onCreatePc,
   onUpdatePc,
@@ -219,6 +278,12 @@ export function Compendium({
   onAddPcToEncounter?: (pc: RosterPc) => void
   /** Which tab to open on (the component remounts when the view re-enters). */
   initialTab?: Tab
+  /** Every preset on offer — the GM's own first, then the enabled libraries'. */
+  presets?: EffectPreset[]
+  /** Rename one of the GM's own presets. */
+  onRenamePreset?: (preset: EffectPreset) => void
+  /** Delete one of the GM's own presets. */
+  onDeletePreset?: (id: string) => void
   /** Content library ids to show. */
   enabledLibraries?: string[]
   /** When false, homebrew (custom) creatures and spells are hidden. On by default. */
@@ -285,6 +350,15 @@ export function Compendium({
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
   }, [rosterPcs, query])
 
+  // Sorted the way the other tabs are. A preset has no challenge rating, so the CR
+  // setting falls back to the same alphabetical order rather than leaving the list in
+  // whatever order the libraries happen to ship.
+  const filteredPresets = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const list = q ? presets.filter((p) => p.name.toLowerCase().includes(q)) : presets
+    return [...list].sort((a, b) => a.name.localeCompare(b.name))
+  }, [presets, query])
+
   const entries = useMemo(() => {
     // Edition tag: a custom entry uses its own edition; an SRD entry, its library's.
     const tag = (item: { id: string; source: string; edition?: string }) =>
@@ -337,6 +411,7 @@ export function Compendium({
   const selectedCampaign =
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
   const selectedPc = tab === 'characters' ? rosterPcs.find((p) => p.id === selectedId) : undefined
+  const selectedPreset = tab === 'effects' ? presets.find((p) => p.id === selectedId) : undefined
 
   /** Change the tab and clear both the selection and the search. */
   const switchTab = (next: Tab) => {
@@ -445,9 +520,9 @@ export function Compendium({
   const isCustomSpell = (s: Spell) => s.id.startsWith('custom:')
 
   return (
-    <div className="grid h-full min-h-0 gap-4 md:grid-cols-[24rem_1fr]">
+    <div className="grid h-full min-h-0 gap-4 md:grid-cols-[26rem_minmax(0,1fr)]">
       <div className="flex min-h-0 min-w-0 flex-col">
-        <div role="tablist" aria-label="Compendium" className="mb-2 flex gap-1">
+        <div role="tablist" aria-label="Compendium" className="mb-2 flex gap-0.5">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
           </TabButton>
@@ -456,6 +531,9 @@ export function Compendium({
           </TabButton>
           <TabButton active={tab === 'characters'} onClick={() => switchTab('characters')}>
             Characters
+          </TabButton>
+          <TabButton active={tab === 'effects'} onClick={() => switchTab('effects')}>
+            Effects
           </TabButton>
           <TabButton active={tab === 'campaigns'} onClick={() => switchTab('campaigns')}>
             Campaigns
@@ -471,7 +549,18 @@ export function Compendium({
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         />
 
-        {tab === 'campaigns' ? (
+        {tab === 'effects' ? (
+          <PresetList
+            presets={filteredPresets}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            emptyLabel={
+              searching
+                ? 'No presets match that search.'
+                : 'No presets yet. Build an effect you\u2019ll use again, then Save as preset.'
+            }
+          />
+        ) : tab === 'campaigns' ? (
           <CampaignList
             campaigns={filteredCampaigns}
             gated={createGated}
@@ -513,25 +602,13 @@ export function Compendium({
                       <SpellTags concentration={e.concentration} ritual={e.ritual} />
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                      {e.custom && (
-                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
-                          Custom
-                        </span>
-                      )}
-                      {e.src && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.srcClass}`}
-                        >
-                          {e.src}
-                        </span>
-                      )}
-                      {e.lib && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${e.libClass}`}
-                        >
-                          {editionLabel(e.lib)}
-                        </span>
-                      )}
+                      <EntryBadges
+                        custom={e.custom}
+                        source={e.src}
+                        sourceTone={e.srcClass}
+                        edition={e.lib && editionLabel(e.lib)}
+                        editionTone={e.libClass}
+                      />
                       {e.meta}
                     </span>
                   </button>
@@ -565,6 +642,23 @@ export function Compendium({
               Sign in
             </button>
           </div>
+        ) : selectedPreset ? (
+          <PresetCard
+            preset={selectedPreset}
+            onRename={
+              isOwnPreset(selectedPreset) && onRenamePreset
+                ? (name) => onRenamePreset({ ...selectedPreset, name })
+                : undefined
+            }
+            onDelete={
+              isOwnPreset(selectedPreset) && onDeletePreset
+                ? () => {
+                    setSelectedId(null)
+                    onDeletePreset(selectedPreset.id)
+                  }
+                : undefined
+            }
+          />
         ) : selectedCreature ? (
           // No pt-4 here: the stat block carries its own sticky header with top padding inside its solid background.
           <SpellLinkContext.Provider value={linkSpells}>
@@ -674,9 +768,11 @@ export function Compendium({
                   ? 'Pick a campaign from the list to see its house rules, or create one.'
                   : tab === 'characters'
                     ? 'Pick a character from the list to see their details, or create one.'
-                    : createGated
-                      ? 'Pick a spell from the list to read its card, or sign in to build your own.'
-                      : 'Pick a spell from the list to read its card, or build your own.'}
+                    : tab === 'effects'
+                      ? 'Pick a preset from the list to see what it applies. Build one in a fight with Apply effect, then Save as preset.'
+                      : createGated
+                        ? 'Pick a spell from the list to read its card, or sign in to build your own.'
+                        : 'Pick a spell from the list to read its card, or build your own.'}
             </p>
             {tab === 'creatures' && (
               <div className="flex items-center gap-2">

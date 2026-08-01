@@ -41,6 +41,14 @@ import {
   updateCustomSpell,
 } from './state/cloudSpells.ts'
 import {
+  deleteEffectPreset,
+  loadEffectPresets,
+  saveEffectPreset,
+  updateEffectPreset,
+} from './state/cloudEffects.ts'
+import { libraryPresets } from './combat/presets/index.ts'
+import type { EffectPreset } from './schema/preset.ts'
+import {
   deleteCampaign,
   loadCampaigns,
   saveCampaign,
@@ -254,6 +262,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false)
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
+  const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [rosterPcs, setRosterPcs] = useState<RosterPc[]>([])
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
@@ -263,6 +272,13 @@ function App() {
     ? campaigns.find((c) => c.id === activeCampaignId)
     : undefined
   const activeRules = activeCampaign?.rules ?? DEFAULT_CAMPAIGN_RULES
+  // What the Apply effect modal offers: the Game Master's own presets first, then the
+  // ones each enabled library ships. Library presets follow the library, not the account,
+  // so an anonymous table gets them too.
+  const presets = useMemo(
+    () => [...ownPresets, ...libraryPresets(enabledLibraries)],
+    [ownPresets, enabledLibraries],
+  )
 
   useEffect(() => {
     if (user) setAuthOpen(false)
@@ -276,6 +292,7 @@ function App() {
     if (!userId) {
       setCustomCreatures([])
       setCustomSpells([])
+      setOwnPresets([])
       setCampaigns([])
       setRosterPcs([])
       setActiveCampaignId(null)
@@ -287,6 +304,9 @@ function App() {
     })
     loadCustomSpells().then((list) => {
       if (active) setCustomSpells(list)
+    })
+    loadEffectPresets().then((list) => {
+      if (active) setOwnPresets(list)
     })
     loadCampaigns().then((list) => {
       if (active) setCampaigns(list)
@@ -477,6 +497,24 @@ function App() {
   const handleDeleteSpell = (id: string) => {
     setCustomSpells((prev) => prev.filter((s) => s.id !== id))
     deleteCustomSpell(id)
+  }
+
+  /** Keep a newly-named preset in the library list and persist it to the account. */
+  const handleCreatePreset = (preset: EffectPreset) => {
+    setOwnPresets((prev) => [preset, ...prev])
+    saveEffectPreset(preset)
+  }
+
+  /** Swap the edited preset into the library list and persist the change. */
+  const handleUpdatePreset = (preset: EffectPreset) => {
+    setOwnPresets((prev) => prev.map((p) => (p.id === preset.id ? preset : p)))
+    updateEffectPreset(preset)
+  }
+
+  /** Drop the preset from the library list and delete it from the account. */
+  const handleDeletePreset = (id: string) => {
+    setOwnPresets((prev) => prev.filter((p) => p.id !== id))
+    deleteEffectPreset(id)
   }
 
   // Campaigns persist to the user's account (signed-up only). Optimistic in-memory
@@ -958,6 +996,9 @@ function App() {
                 onUpdatePc={handleUpdatePc}
                 onDeletePc={handleDeletePc}
                 onAddPcToEncounter={handleAddPcToEncounter}
+                presets={presets}
+                onRenamePreset={handleUpdatePreset}
+                onDeletePreset={handleDeletePreset}
                 initialTab={compendiumTab}
                 enabledLibraries={enabledLibraries}
                 showHomebrew={showHomebrew}
@@ -985,6 +1026,9 @@ function App() {
               onNextTurn={handleNextTurn}
               onStop={endCombat}
               onOpenLog={() => setLogOpen(true)}
+              presets={presets}
+              enabledLibraries={enabledLibraries}
+              onSavePreset={userId ? handleCreatePreset : undefined}
             />
           )}
         </main>

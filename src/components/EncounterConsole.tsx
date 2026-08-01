@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { isRollable, type Action } from '../schema/action.ts'
+import type { EffectPreset } from '../schema/preset.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { SpellLevel, SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
@@ -83,6 +84,9 @@ export function EncounterConsole({
   onEditPc,
   onEditPcDmNotes,
   onEditCreature,
+  presets,
+  enabledLibraries,
+  onSavePreset,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
@@ -107,6 +111,12 @@ export function EncounterConsole({
   onStop?: () => void
   /** Open the full game-log review modal. */
   onOpenLog: () => void
+  /** Effect presets offered in the Apply effect modal. */
+  presets?: EffectPreset[]
+  /** Which libraries are on, so the preset picker filters like every other one. */
+  enabledLibraries?: string[]
+  /** Save what's staged as a preset; absent for an anonymous GM, who can't keep one. */
+  onSavePreset?: (preset: EffectPreset) => void
 }) {
   const { combatants, activeIndex } = encounter
   const running = started && !paused
@@ -555,6 +565,9 @@ export function EncounterConsole({
                 dispatch={dispatch}
                 onRoll={onRoll}
                 onGmRoll={onGmRoll}
+                presets={presets}
+                enabledLibraries={enabledLibraries}
+                onSavePreset={onSavePreset}
               />
               {selected.isPC && selected.rosterId && onEditPc && (
                 <button

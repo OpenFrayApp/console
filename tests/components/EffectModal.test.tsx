@@ -2,18 +2,40 @@
 // Copyright (C) 2026 OpenFray contributors
 // @vitest-environment jsdom
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { EffectModal } from '../../src/components/EffectModal.tsx'
 import type { Effect } from '../../src/schema/effect.ts'
+import type { EffectPreset } from '../../src/schema/preset.ts'
+
+const DRUNK: EffectPreset = {
+  id: 'custom:drunk',
+  name: 'Drunk',
+  conditions: ['Poisoned'],
+  modifier: null,
+  note: 'Hungover in the morning',
+  duration: { type: 'rounds', rounds: 600 },
+}
 
 afterEach(cleanup)
 
 /** A stateful wrapper so condition chips reflect/toggle live combatant effects. */
-function Harness({ onEffects }: { onEffects?: (e: Effect[]) => void } = {}) {
+function Harness({
+  onEffects,
+  presets,
+  onSavePreset,
+}: {
+  onEffects?: (e: Effect[]) => void
+  presets?: EffectPreset[]
+  onSavePreset?: (p: EffectPreset) => void
+} = {}) {
   const [effects, setEffects] = useState<Effect[]>([])
+  // Applying a preset commits several effects in one tick, so the next list is read
+  // from a ref rather than the render's closure, which would still hold the old one.
+  const current = useRef<Effect[]>([])
   const sync = (next: Effect[]) => {
+    current.current = next
     setEffects(next)
     onEffects?.(next)
   }
@@ -21,8 +43,10 @@ function Harness({ onEffects }: { onEffects?: (e: Effect[]) => void } = {}) {
     <EffectModal
       name="Goblin"
       effects={effects}
-      onApply={(e) => sync([...effects, e])}
-      onRemove={(id) => sync(effects.filter((x) => x.id !== id))}
+      onApply={(e) => sync([...current.current, e])}
+      onRemove={(id) => sync(current.current.filter((x) => x.id !== id))}
+      presets={presets}
+      onSavePreset={onSavePreset}
     />
   )
 }
@@ -282,5 +306,106 @@ describe('EffectModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), { target: { value: 'x' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     expect(onApply).not.toHaveBeenCalled()
+  })
+})
+
+describe('presets', () => {
+  it('offers no Presets row and no Save as preset when there are none', () => {
+    render(<Harness />)
+    const dialog = open()
+    expect(within(dialog).queryByRole('button', { name: 'Presets' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save as preset' })).toBeNull()
+  })
+
+  it('stages a preset into the form rather than applying it', () => {
+    const applied: Effect[][] = []
+    render(<Harness presets={[DRUNK]} onEffects={(e) => applied.push(e)} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Presets' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: /Drunk/ }))
+
+    // Nothing has landed on the creature yet.
+    expect(applied).toEqual([])
+    // …but the form now carries the preset: the condition chip is pressed, the
+    // duration is the preset's, and the reminder is filled in.
+    expect(within(dialog).getByRole('button', { name: 'Poisoned' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(dialog).getByLabelText('Duration')).toHaveValue('1h')
+    expect(within(dialog).getByLabelText('Custom reminder')).toHaveValue('Hungover in the morning')
+  })
+
+  it('replaces what the last preset staged rather than piling onto it', () => {
+    const HEXED: EffectPreset = {
+      id: 'custom:hexed',
+      name: 'Hexed',
+      conditions: [],
+      modifier: null,
+      note: 'Hex: +1d6 Necrotic',
+      duration: { type: 'manual' },
+    }
+    render(<Harness presets={[DRUNK, HEXED]} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Presets' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: /Drunk/ }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Presets' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: /Hexed/ }))
+
+    // The second preset's reminder stands alone, and the first's condition is gone.
+    expect(within(dialog).getByLabelText('Custom reminder')).toHaveValue('Hex: +1d6 Necrotic')
+    expect(within(dialog).getByRole('button', { name: 'Poisoned' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(within(dialog).getByLabelText('Duration')).toHaveValue('manual')
+  })
+
+  it('commits the staged preset on Apply, under its own duration', () => {
+    let latest: Effect[] = []
+    render(<Harness presets={[DRUNK]} onEffects={(e) => (latest = e)} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Presets' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: /Drunk/ }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
+
+    expect(latest.map((e) => e.name)).toEqual(['Poisoned', 'Hungover in the morning'])
+    for (const e of latest) expect(e.duration).toEqual({ type: 'rounds', rounds: 600 })
+  })
+
+  it('only offers Save as preset once something is staged', () => {
+    render(<Harness presets={[]} onSavePreset={vi.fn()} />)
+    const dialog = open()
+    const save = screen.getByRole('button', { name: 'Save as preset' })
+    expect(save).toBeDisabled()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
+    expect(save).toBeEnabled()
+  })
+
+  it('saves what is staged under the name the GM types', () => {
+    const onSavePreset = vi.fn()
+    vi.spyOn(window, 'prompt').mockReturnValue('Knocked flat')
+    render(<Harness onSavePreset={onSavePreset} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save as preset' }))
+
+    expect(onSavePreset).toHaveBeenCalledTimes(1)
+    const saved = onSavePreset.mock.calls[0][0] as EffectPreset
+    expect(saved.name).toBe('Knocked flat')
+    expect(saved.conditions).toEqual(['Prone'])
+    expect(saved.source).toBeUndefined()
+    vi.restoreAllMocks()
+  })
+
+  it('keeps nothing when the GM cancels the name prompt', () => {
+    const onSavePreset = vi.fn()
+    vi.spyOn(window, 'prompt').mockReturnValue(null)
+    render(<Harness onSavePreset={onSavePreset} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save as preset' }))
+    expect(onSavePreset).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
   })
 })

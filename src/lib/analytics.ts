@@ -32,6 +32,8 @@ export const EVENTS = {
   manualRoll: 'Manual dice rolled',
   // Effects and resources
   effectApplied: 'Effect applied',
+  presetStaged: 'Preset staged',
+  presetSaved: 'Preset saved',
   concentrationStarted: 'Concentration started',
   legendaryResistanceUsed: 'Legendary Resistance used',
   reactionUsed: 'Reaction used',
