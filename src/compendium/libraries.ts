@@ -24,7 +24,8 @@ export interface Library {
    *  preference, not a library. */
   group: 'core' | 'openfray' | 'other'
   edition: Edition
-  creaturesFile: string
+  /** Absent for a library that ships no stat blocks (e.g. a book of spells and presets). */
+  creaturesFile?: string
   /** Absent for creatures-only libraries (e.g. a bestiary like Tome of Beasts). */
   spellsFile?: string
   /** Where this library is published to read, for the libraries we write ourselves.

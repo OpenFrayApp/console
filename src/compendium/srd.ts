@@ -27,9 +27,10 @@ const fetchList = <T>(file: string): Promise<T[]> =>
     .then((r) => r.json() as Promise<T[]>)
     .catch(() => [])
 
-/** Fetch and merge every shipped library's creatures; cached after the first call. */
+/** Fetch and merge creatures from every library that ships them; cached after the first call. */
 export function loadSrdCreatures(): Promise<Creature[]> {
-  creatures ??= Promise.all(LIBRARIES.map((l) => fetchList<Creature>(l.creaturesFile))).then(
+  const withCreatures = LIBRARIES.filter((l) => l.creaturesFile)
+  creatures ??= Promise.all(withCreatures.map((l) => fetchList<Creature>(l.creaturesFile!))).then(
     (lists) => lists.flat(),
   )
   return creatures

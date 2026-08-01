@@ -8,6 +8,7 @@ import { LIBRARIES } from '../../src/compendium/libraries.ts'
 const BASE = `${import.meta.env.BASE_URL}compendium`
 
 const SPELL_LIBRARIES = LIBRARIES.filter((l) => l.spellsFile)
+const CREATURE_LIBRARIES = LIBRARIES.filter((l) => l.creaturesFile)
 
 /** Import a fresh copy of the module, so each test starts with an empty cache. */
 async function freshSrd() {
@@ -40,9 +41,20 @@ describe('loadSrdCreatures', () => {
     const fetchMock = stubFetch()
     const srd = await freshSrd()
     const creatures = await srd.loadSrdCreatures()
-    expect(requestedUrls(fetchMock)).toEqual(LIBRARIES.map((l) => `${BASE}/${l.creaturesFile}`))
+    expect(requestedUrls(fetchMock)).toEqual(
+      CREATURE_LIBRARIES.map((l) => `${BASE}/${l.creaturesFile}`),
+    )
     expect(requestedUrls(fetchMock)[0]).toBe('/console/compendium/srd-creatures.json')
-    expect(creatures).toEqual(LIBRARIES.map((l) => ({ id: `from:${l.creaturesFile}` })))
+    expect(creatures).toEqual(CREATURE_LIBRARIES.map((l) => ({ id: `from:${l.creaturesFile}` })))
+  })
+
+  // A library can ship spells and presets and no stat blocks at all; it must contribute
+  // no request rather than one for undefined.
+  it('asks for nothing from a library that ships no creatures', async () => {
+    const fetchMock = stubFetch()
+    const srd = await freshSrd()
+    await srd.loadSrdCreatures()
+    for (const url of requestedUrls(fetchMock)) expect(url).not.toContain('undefined')
   })
 
   it('serves the cached list on a second call without fetching again', async () => {
