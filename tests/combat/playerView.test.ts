@@ -317,6 +317,44 @@ describe('playerBoard — the log', () => {
   })
 })
 
+describe('playerBoard — a creature`s conditions', () => {
+  const frightened: Effect = {
+    id: 'e1',
+    name: 'Frightened',
+    icon: 'condition',
+    modifier: null,
+    duration: { type: 'manual' },
+  }
+  const hidden = view({ effects: 'hidden' })
+
+  it('drops the badges from a creature`s row, and keeps the party`s own', () => {
+    const e = encounter({
+      combatants: [pc({ effects: [frightened] }), monster({ effects: [frightened] })],
+    })
+    const board = playerBoard(e, hidden)
+    expect(board.rows[0].effects).toHaveLength(1)
+    expect(board.rows[1].effects).toEqual([])
+  })
+
+  // A row with no badges under a log announcing the condition hides nothing.
+  it('drops the lines announcing them too', () => {
+    const e = encounter({
+      log: [
+        entry({ id: 'cond', category: 'condition', message: 'Ogre is Frightened', sourceId: 'm' }),
+        entry({
+          id: 'pc-cond',
+          category: 'condition',
+          message: 'Thalia is Blessed',
+          sourceId: 'p',
+        }),
+        entry({ id: 'turn', message: 'Round 2' }),
+      ],
+    })
+    expect(playerBoard(e, hidden).log.map((x) => x.id)).toEqual(['pc-cond', 'turn'])
+    expect(playerBoard(e, DEFAULT_PLAYER_VIEW).log).toHaveLength(3)
+  })
+})
+
 describe('playerBoard — how much of the log the table follows', () => {
   /** A fight in progress whose log carries a previous fight's lines and this one's. */
   const twoFights = (round = 2) =>

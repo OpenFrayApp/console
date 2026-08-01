@@ -123,6 +123,7 @@ function foeRow(c: Combatant, settings: PlayerViewSettings): PlayerRow {
     hp,
     // No `ac` key at all when it's hidden — an absent field can't be read off the wire.
     ...(settings.ac === 'shown' ? { ac: acOf(c) } : {}),
+    ...(settings.effects === 'hidden' ? { effects: [] } : {}),
   }
 }
 
@@ -226,6 +227,14 @@ export function playerBoard(
     ...(recap && settings.recap === 'shown' ? { recap } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly && !(e.sourceId && offBoard.has(e.sourceId)))
+      // With a creature's conditions held back, the lines announcing them go too —
+      // a row with no badges under a log reading "the Ogre is Frightened" hides nothing.
+      .filter(
+        (e) =>
+          settings.effects !== 'hidden' ||
+          e.category !== 'condition' ||
+          !(e.sourceId && creatures.has(e.sourceId)),
+      )
       .slice(-PLAYER_LOG_LIMIT)
       .map((e) => {
         // Every roll loses its arithmetic, whoever made it — an area's damage dice

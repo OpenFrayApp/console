@@ -77,6 +77,12 @@ describe('player-view settings', () => {
     expect(loadSettings().playerView.recap).toBe('shown')
   })
 
+  it('shows a creature`s conditions unless the GM hides them', () => {
+    expect(loadSettings().playerView.effects).toBe('shown')
+    localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { effects: 'hidden' } }))
+    expect(loadSettings().playerView.effects).toBe('hidden')
+  })
+
   it('shows a mid-fight arrival unless the GM holds arrivals back', () => {
     expect(loadSettings().playerView.arrivals).toBe('shown')
     localStorage.setItem(

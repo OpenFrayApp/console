@@ -28,6 +28,12 @@ export interface PlayerViewSettings {
    * what the table felt, and it gives no bonus away.
    */
   rolls: FieldVisibility
+  /**
+   * Whether a creature's conditions and effects reach the table — the badges on its
+   * row, and the log lines about them landing and clearing. What is on the party's own
+   * characters is always theirs to see.
+   */
+  effects: FieldVisibility
   /** How much of the record the shared log carries — see PlayerLogScope. */
   log: PlayerLogScope
   /** Whether the table sees the summary when a fight ends. */
@@ -52,6 +58,7 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   hp: 'bloodied',
   ac: 'hidden',
   rolls: 'shown',
+  effects: 'shown',
   log: 'fight',
   recap: 'shown',
   arrivals: 'shown',
@@ -101,6 +108,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
     ac: data.ac === 'shown' ? 'shown' : 'hidden',
     // Totals show unless the GM has said otherwise.
     rolls: data.rolls === 'hidden' ? 'hidden' : 'shown',
+    // A creature's conditions show unless the GM has said otherwise.
+    effects: data.effects === 'hidden' ? 'hidden' : 'shown',
     // The log follows the fight in hand unless the GM asked for the whole session.
     log: data.log === 'session' ? 'session' : 'fight',
     // The summary travels unless the GM has turned it off.

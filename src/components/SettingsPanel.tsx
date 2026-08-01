@@ -312,6 +312,26 @@ export function SettingsPanel({
                   hit or saved, and the damage it dealt.
                 </p>
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="player-view-effects"
+                  className="text-sm text-slate-700 dark:text-slate-200"
+                >
+                  Creature conditions
+                </label>
+                <select
+                  id="player-view-effects"
+                  value={playerView.effects}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, effects: e.target.value as FieldVisibility })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </div>
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <label
