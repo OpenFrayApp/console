@@ -149,24 +149,6 @@ function rollWithoutArithmetic(result: RollResult): RollResult {
 }
 
 /**
- * A log entry with a creature's numbers taken out but the event left in. The table
- * should know the ogre swung and hit, that it failed its save, that it took a wound —
- * just not the bonus behind the roll or how many hit points it has left.
- *
- * The message is prose, so it is never edited: an entry whose own text carries the
- * number is rebuilt from the structured `amount` and the name instead.
- */
-function withoutAmounts(entry: GameLogEntry, name: string): GameLogEntry {
-  if (entry.category === 'hp' && entry.amount != null) {
-    return { ...entry, message: `${name} takes damage`, amount: undefined, result: undefined }
-  }
-  if (entry.category === 'heal' && entry.amount != null) {
-    return { ...entry, message: `${name} is healed`, amount: undefined, result: undefined }
-  }
-  return entry
-}
-
-/**
  * Whether a roll is one of the creature's own d20s — an attack, a save, a check, an
  * initiative — as opposed to damage. Damage is never withheld: what a blow came to is
  * what the table felt, and it gives no bonus away. Read from the roll's own `kind`
@@ -201,14 +183,11 @@ export function playerBoard(
 ): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
-  // Foes by id, with the name a rebuilt line needs. What is actually withheld is two
-  // separate calls the GM makes: how much a creature was hurt (which follows the
-  // hit-points setting, since showing exact HP and hiding the damage would be silly),
-  // and whether its d20s carry a total.
-  const creatures = new Map<string, string>()
-  for (const c of encounter.combatants) {
-    if (isFoe(c)) creatures.set(c.combatantId, nameOf(c))
-  }
+  // Which combatants are foes, since what the log holds back is theirs alone. Damage
+  // isn't part of it: how hard a creature was hit, and how hard it hit back, is what
+  // the table just watched happen and what they ask about afterwards. Only the dice
+  // behind those numbers stay with the GM.
+  const creatures = new Set(encounter.combatants.filter(isFoe).map((c) => c.combatantId))
   // A creature the table can't see doesn't narrate itself either: what a foe held back
   // from the board does stays with the GM until they reveal it. An entry that merely
   // names it as someone else's target still names it — revealing it is the GM's move,
@@ -218,7 +197,6 @@ export function playerBoard(
       .filter((c) => !onSharedBoard(c, encounter.round > 0))
       .map((c) => c.combatantId),
   )
-  const hideAmounts = settings.hp !== 'exact'
   const hideRolls = settings.rolls === 'hidden'
 
   return {
@@ -259,12 +237,10 @@ export function playerBoard(
           result: e.result && rollWithoutArithmetic(e.result),
           applied: undefined,
         }
-        const name = e.sourceId ? creatures.get(e.sourceId) : undefined
-        if (!name) return shown
-        // Hidden rolls lose the total but keep what happened: hit or miss, saved or
-        // failed, and the damage dealt.
-        const rolled = hideRolls && isD20Roll(shown) ? { ...shown, result: undefined } : shown
-        return hideAmounts ? withoutAmounts(rolled, name) : rolled
+        // A creature's own d20, hidden: the total goes, and what happened stays — hit
+        // or miss, saved or failed, and the damage it dealt.
+        const byFoe = e.sourceId != null && creatures.has(e.sourceId)
+        return byFoe && hideRolls && isD20Roll(shown) ? { ...shown, result: undefined } : shown
       }),
   }
 }

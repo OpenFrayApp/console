@@ -466,27 +466,31 @@ describe('playerBoard — a creature`s numbers in the log', () => {
   /** An encounter whose log is about the creature `m`, unless a PC id is given. */
   const withLog = (...log: GameLogEntry[]) => encounter({ log })
 
-  it('keeps the event but drops the amount when a creature is hurt', () => {
-    const board = playerBoard(
-      withLog(
-        entry({ category: 'hp', message: 'Ogre takes 45 damage', sourceId: 'm', amount: 45 }),
-      ),
-      DEFAULT_PLAYER_VIEW,
-    )
-    expect(board.log[0].message).toBe('Ogre takes damage')
-    expect(board.log[0].amount).toBeUndefined()
-    expect(JSON.stringify(board.log)).not.toContain('45')
+  // How hard the party hit the ogre is what they just watched happen, and what they
+  // ask about afterwards. It gives its hit point maximum away only to arithmetic the
+  // table is welcome to do — how much is left is the row's to say, or not.
+  it('says how much a creature was hurt, at any hit-point setting', () => {
+    const hurt = entry({
+      category: 'hp',
+      message: 'Ogre takes 45 damage',
+      sourceId: 'm',
+      amount: 45,
+    })
+    for (const hp of ['exact', 'bloodied', 'hidden'] as const) {
+      const board = playerBoard(withLog(hurt), view({ hp }))
+      expect(board.log[0].message).toBe('Ogre takes 45 damage')
+      expect(board.log[0].amount).toBe(45)
+    }
   })
 
-  it('says a creature was healed without saying by how much', () => {
+  it('says how much a creature was healed', () => {
     const board = playerBoard(
       withLog(
         entry({ category: 'heal', message: 'Ogre regains 12 HP', sourceId: 'm', amount: 12 }),
       ),
-      DEFAULT_PLAYER_VIEW,
+      view({ hp: 'hidden' }),
     )
-    expect(board.log[0].message).toBe('Ogre is healed')
-    expect(JSON.stringify(board.log)).not.toContain('12')
+    expect(board.log[0].message).toBe('Ogre regains 12 HP')
   })
 
   it('leaves a player character`s hit points alone', () => {
