@@ -343,6 +343,33 @@ describe('spell uses (At Will / N per day, each spell on its own)', () => {
     expect(spellUsesRemaining(c, fireball)).toBe(0)
   })
 
+  it('shares one pool across a `shared` tier — the Fidele Angel case', () => {
+    // "1/Day: bless, daylight, …" is one casting from the whole list, not one of each.
+    const shared: Spellcasting = {
+      ability: 'cha',
+      saveDc: 14,
+      groups: [
+        {
+          usage: { type: 'perDay', per: 1, shared: true },
+          spells: [
+            { name: 'Bless', ref: 'srd-5.2:bless' },
+            { name: 'Daylight', ref: 'srd-5.2:daylight' },
+          ],
+        },
+      ],
+    }
+    const angel = monster({ creature: { ...creature(), spellcasting: shared } })
+    const [bless, daylight] = shared.groups[0].spells
+
+    expect(spellUsesRemaining(angel, bless)).toBe(1)
+    const after = castSpell(angel, bless)
+    expect(spellUsesRemaining(after, bless)).toBe(0)
+    // The other spell in the pool is spent too, which is the whole point.
+    expect(spellUsesRemaining(after, daylight)).toBe(0)
+    // And restoring through either spell gives the pool back.
+    expect(spellUsesRemaining(restoreSpellUse(after, daylight), bless)).toBe(1)
+  })
+
   it('restores one spent use, flooring at zero', () => {
     const spent = castSpell(caster(), fireball)
     expect(spellUsesRemaining(restoreSpellUse(spent, fireball), fireball)).toBe(2)

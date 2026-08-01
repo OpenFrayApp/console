@@ -245,6 +245,20 @@ export function spellUsage(c: MonsterCombatant, spell: SpellRef): SpellUsage | u
 }
 
 /**
+ * The counter a per-day cast draws on. Normally the spell's own, because the usual tier is
+ * "N/Day Each". A `shared` tier is one pool between its spells — the Fidele Angel's
+ * "1/Day: bless, daylight, hallow, …" is a single casting from that list — so every spell
+ * in it spends the same counter, keyed by the group's position in the snapshot.
+ */
+function spellUsesKey(c: MonsterCombatant, spell: SpellRef): string {
+  const key = spellKey(spell)
+  const groups = c.creature.spellcasting?.groups ?? []
+  const index = groups.findIndex((g) => g.spells.some((s) => spellKey(s) === key))
+  const usage = groups[index]?.usage
+  return usage?.type === 'perDay' && usage.shared ? `group:${index}` : key
+}
+
+/**
  * Uses left for a spell: `null` when unlimited (at-will, or a spell not gated by
  * a per-day limit), otherwise the per-day count minus what's been spent.
  */
@@ -253,7 +267,7 @@ export function spellUsesRemaining(c: MonsterCombatant, spell: SpellRef): number
   if (!usage || usage.type === 'atWill') return null
   // Slot spells share a per-level pool; surface that level's remaining slots.
   if (usage.type === 'slots') return slotsRemaining(c, String(usage.level) as SpellLevel)
-  return Math.max(0, usage.per - (c.spellUsesSpent[spellKey(spell)] ?? 0))
+  return Math.max(0, usage.per - (c.spellUsesSpent[spellUsesKey(c, spell)] ?? 0))
 }
 
 /** Spend a cast: a per-day spell's own use, or one slot of its level. No-op for
@@ -263,7 +277,7 @@ export function castSpell(c: MonsterCombatant, spell: SpellRef): MonsterCombatan
   if (!usage || usage.type === 'atWill') return c
   if (usage.type === 'slots') return spendSlot(c, String(usage.level) as SpellLevel)
   if ((spellUsesRemaining(c, spell) ?? 0) <= 0) return c
-  const key = spellKey(spell)
+  const key = spellUsesKey(c, spell)
   return {
     ...c,
     spellUsesSpent: { ...c.spellUsesSpent, [key]: (c.spellUsesSpent[key] ?? 0) + 1 },
@@ -274,7 +288,7 @@ export function castSpell(c: MonsterCombatant, spell: SpellRef): MonsterCombatan
 export function restoreSpellUse(c: MonsterCombatant, spell: SpellRef): MonsterCombatant {
   const usage = spellUsage(c, spell)
   if (usage?.type === 'slots') return restoreSlot(c, String(usage.level) as SpellLevel)
-  const key = spellKey(spell)
+  const key = spellUsesKey(c, spell)
   const spent = c.spellUsesSpent[key] ?? 0
   if (spent <= 0) return c
   return { ...c, spellUsesSpent: { ...c.spellUsesSpent, [key]: spent - 1 } }

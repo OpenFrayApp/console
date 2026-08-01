@@ -51,14 +51,20 @@ export interface SpellRef {
 /**
  * How often a spell can be cast.
  * - `atWill` — unlimited (also covers cantrips).
- * - `perDay` — the 2024 "N/Day Each" model; *each* spell in the group has its own
- *   N uses, so casting one never spends another's (tracked in `spellUsesSpent`).
+ * - `perDay` — N uses a day. By default the 2024 "N/Day Each" model: *each* spell in the
+ *   group has its own N uses, so casting one never spends another's (tracked in
+ *   `spellUsesSpent`). Set `shared` when the group is one pool between them instead —
+ *   the 2014 books wrote both, and they are different creatures to fight. The Fidele
+ *   Angel's "1/Day: bless, daylight, hallow, …" is one casting from that whole list,
+ *   not one of each.
  * - `slots` — the 2014/5.1 prepared-caster model; spells of a given level all draw
  *   from a shared pool of that level's slots (counts in `Spellcasting.slots`,
  *   consumed via `Combatant.slotsUsed`).
  */
 export type SpellUsage =
-  { type: 'atWill' } | { type: 'perDay'; per: number } | { type: 'slots'; level: number }
+  | { type: 'atWill' }
+  | { type: 'perDay'; per: number; shared?: boolean }
+  | { type: 'slots'; level: number }
 
 /** A usage tier of a spellcaster's list, e.g. "2/Day Each: Fireball, Invisibility". */
 export interface SpellGroup {
