@@ -39,12 +39,21 @@ SITE_RECIPES = {"console-hero", "group-save-hero", "cast-spell-hero", "compendiu
 ROLLS = {"Zara": 21, "Mira": 20, "Tav": 13, "Ren": 10}
 
 
+def open_settings(page, tab=None):
+    """Open Settings from the gear menu, optionally switching to one of its tabs."""
+    page.get_by_role("button", name="Settings and more").click()
+    page.get_by_role("menuitem", name="Settings").click()
+    page.wait_for_selector("[role=tablist]")
+    if tab:
+        page.get_by_role("tab", name=tab).click()
+
+
 def rule_sets():
     with console(width=1200, height=1200) as page:
-        page.get_by_role("button", name="Settings").click()
+        open_settings(page)
         page.wait_for_selector("text=Libraries")
         head = page.get_by_role("heading", name="Settings").bounding_box()
-        libs = page.locator("section").nth(0).bounding_box()
+        libs = page.locator("[role=tabpanel]").filter(has_text="Sort by").first.bounding_box()
         box = span(head, libs)
         box["height"] = libs["y"] + libs["height"] + 14 - box["y"] + 22
         box["y"] -= 22
@@ -55,28 +64,37 @@ def rule_sets():
 
 
 def settings_panel():
+    """The Settings screen on Libraries, with the tab strip called out."""
     with console(width=1200, height=1200) as page:
-        # Settings lives behind the gear menu now, so it takes two clicks to reach.
-        page.get_by_role("button", name="Settings and more").click()
-        page.get_by_role("menuitem", name="Settings").click()
+        open_settings(page)
         page.wait_for_selector("text=Libraries")
         head = page.get_by_role("heading", name="Settings").bounding_box()
-        # By heading rather than by index: the panel grows sections over time, and an
-        # index quietly reframes the shot around the wrong one.
-        libs = page.locator("section").filter(has_text="Libraries").first.bounding_box()
-        ext = page.locator("section").filter(has_text="Browser extension").first.bounding_box()
-        # One box over both store buttons — neither browser is the recommended one.
-        link = span(page.get_by_role("link", name="Get it for Chrome").bounding_box(),
-                    page.get_by_role("link", name="Get it for Firefox").bounding_box())
-        capture(page, "settings-panel", span(head, libs, ext), {"libs": libs, "link": link}, pad=22)
+        tabs = page.locator("[role=tablist]").bounding_box()
+        libs = page.locator("[role=tabpanel]").filter(has_text="Sort by").first.bounding_box()
+        capture(page, "settings-panel", span(head, libs), {"tabs": tabs, "libs": libs}, pad=22)
     r = rects(f"{OUT}/settings-panel.json")
     c = Canvas(f"{OUT}/settings-panel.png", grow=(640, 0, 0, 0), font_size=40)
-    lb, kb = c.box(r["libs"], pad=8), c.box(r["link"], pad=8)
+    tb, lb = c.box(r["tabs"], pad=8), c.box(r["libs"], pad=8)
+    c.label((600, tb[1] - 12), "One tab per area", "rs")
+    c.arrow((586, tb[1] + 8), (tb[0] - 16, tb[1] + tb[3] / 2))
     c.label((600, lb[1] + 96), "The libraries you play with", "rs")
     c.arrow((586, lb[1] + 118), (lb[0] - 16, lb[1] + 168))
-    c.label((600, kb[1] - 26), "Get the importer", "rs")
-    c.arrow((586, kb[1] - 6), (kb[0] - 16, (kb[1] + kb[3]) / 2))
     return c.save(f"{OUT}/settings-panel.png")
+
+
+def player_view_settings():
+    """The Player view tab: everything the shared screen gives away, in one list."""
+    with console(width=1200, height=1200) as page:
+        open_settings(page, tab="Player view")
+        page.wait_for_selector("text=Creature hit points")
+        head = page.get_by_role("heading", name="Settings").bounding_box()
+        panel = (
+            page.locator("[role=tabpanel]")
+            .filter(has_text="Creature hit points")
+            .first.bounding_box()
+        )
+        capture(page, "player-view-settings", span(head, panel), pad=22)
+    return "player-view-settings"  # no annotation — the labels carry it
 
 
 def theme_toggle():
@@ -970,6 +988,7 @@ RECIPES = {
     "turn-controls": turn_controls,
     "rule-sets": rule_sets,
     "settings-panel": settings_panel,
+    "player-view-settings": player_view_settings,
     "theme-toggle": theme_toggle,
     "add-pc-dropdown": add_pc_dropdown,
     "roll-initiative": roll_initiative,
