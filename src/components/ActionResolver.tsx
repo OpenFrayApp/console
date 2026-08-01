@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { Fragment, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { Spell } from '../schema/spell.ts'
-import type { EncounterAction } from '../state/encounter.ts'
+import type { EncounterAction, NewLogEntry } from '../state/encounter.ts'
 import type { CritRule, DieGroup, RollResult } from '../dice/roll.ts'
 import { d20Group, keptFlags, roll } from '../dice/roll.ts'
 import { useCampaignRules } from '../state/campaignRules.ts'
@@ -61,17 +61,37 @@ function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledD
   })
 }
 
-/** Logs one roll-log entry per damage type; the actor prefix is dropped for a casterless cast. */
-function logDamage(
+/**
+ * Roll lines the resolver holds until it closes, keyed so a reroll replaces the line it
+ * belongs to instead of adding another. Three attempts at one attack used to leave three
+ * entries in the log — and on the shared player view the table watched the Game Master
+ * fish for a hit. Only the roll that stood is recorded, when the modal goes away.
+ */
+function usePendingLog(dispatch: (action: EncounterAction) => void) {
+  const pending = useRef(new Map<string, NewLogEntry>())
+  // Recorded before anything the GM applies, so the log reads in the order it happened:
+  // the attack, then the damage it dealt. Emptying as it goes makes it safe to call from
+  // every commit path, and the unmount cleanup catches a modal simply closed.
+  const flush = useCallback(() => {
+    for (const entry of pending.current.values()) dispatch({ type: 'log', entry })
+    pending.current.clear()
+  }, [dispatch])
+  useEffect(() => () => flush(), [flush])
+  return { pending, flush }
+}
+
+/** One log line per damage type; the actor prefix is dropped for a casterless cast. */
+function damageEntries(
   components: RolledDamage[],
   attacker: Combatant | undefined,
   action: Action,
-  onRoll: OnRoll,
-): void {
+): NewLogEntry[] {
   const prefix = attacker ? `${attacker.isPC ? attacker.name : attacker.label}: ` : ''
-  for (const c of components) {
-    onRoll(`${prefix}${action.name} ${c.type} damage`, c.result)
-  }
+  return components.map((c) => ({
+    category: 'roll' as const,
+    message: `${prefix}${action.name} ${c.type} damage`,
+    result: c.result,
+  }))
 }
 
 /** Per-type damage a target takes after resistance/immunity/vulnerability. */
@@ -347,6 +367,7 @@ function AttackResolver({
   const targets = attacker
     ? targetsFor(attacker, combatants)
     : combatants.filter((c) => c.status !== 'dead')
+  const { pending, flush } = usePendingLog(dispatch)
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(targets.length === 1 ? [targets[0].combatantId] : []),
   )
@@ -408,19 +429,17 @@ function AttackResolver({
     setConc(null)
     setNote(null)
     // One merged entry per attack: the to-hit roll, the outcome, and the rolled
-    // damage per type (omitted on a miss). The applied HP change is logged
-    // separately by the reducer when the GM presses Apply.
-    dispatch({
-      type: 'log',
-      entry: {
-        category: 'roll',
-        message: `${attacker ? `${nameOf(attacker)}: ` : ''}${action.name} → ${nameOf(target)}`,
-        result,
-        applied,
-        sourceId: attacker?.combatantId,
-        outcome: crit ? 'crit' : hits ? 'hit' : 'miss',
-        damage: hits ? dmg.map((d) => ({ type: d.type, amount: d.amount })) : undefined,
-      },
+    // damage per type (omitted on a miss). Held under a fixed key so a reroll
+    // overwrites it, and recorded when the modal closes. The applied HP change is
+    // logged separately by the reducer when the GM presses Apply.
+    pending.current.set('attack', {
+      category: 'roll',
+      message: `${attacker ? `${nameOf(attacker)}: ` : ''}${action.name} → ${nameOf(target)}`,
+      result,
+      applied,
+      sourceId: attacker?.combatantId,
+      outcome: crit ? 'crit' : hits ? 'hit' : 'miss',
+      damage: hits ? dmg.map((d) => ({ type: d.type, amount: d.amount })) : undefined,
     })
     onUse?.()
   }
@@ -436,6 +455,7 @@ function AttackResolver({
   /** Apply the edited damage to the target, then prompt a concentration check or close. */
   const apply = () => {
     if (!attack) return
+    flush()
     const amount = toNum(damage)
     const tgt = attack.target
     if (delayed && hit) {
@@ -460,6 +480,7 @@ function AttackResolver({
   /** Add the chosen condition to the attack's target, keyed to the attacker as source. */
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     if (!attack) return
+    flush()
     dispatch({
       type: 'update',
       id: attack.target.combatantId,
@@ -697,6 +718,7 @@ export function SaveResolver({
   const targets = attacker
     ? targetsFor(attacker, combatants)
     : combatants.filter((c) => c.status !== 'dead')
+  const { pending: held, flush } = usePendingLog(dispatch)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [ability, setAbility] = useState<Ability>(save?.ability ?? 'dex')
   const [onSave, setOnSave] = useState<SaveOutcome>(save?.onSave ?? 'half')
@@ -777,12 +799,16 @@ export function SaveResolver({
       { ability, dc: toNum(dc) || 10, onSave },
       { magicResistance: magical && hasMagicResistance(c) },
     )
-    // No outcome yet: Legendary Resistance can still turn this into a success, and the
-    // GM can override it either way. `settleSave` stamps it once it stops being
-    // provisional, so nobody reads a "Failed" that the table then walks back.
-    onRoll(`${nameOf(c)}: ${ability.toUpperCase()} save`, saveRoll.roll, {
+    // Held under this creature's id, so a reroll replaces its line. The outcome is
+    // stamped by `setResult` and recorded when the modal closes — which is what keeps
+    // Legendary Resistance from ever showing the table a "Failed" it then walks back.
+    held.current.set(c.combatantId, {
+      category: 'roll',
+      message: `${nameOf(c)}: ${ability.toUpperCase()} save`,
+      result: saveRoll.roll,
       applied: saveRoll.applied,
       sourceId: c.combatantId,
+      saved: saveRoll.result === 'save',
     })
     return {
       result: saveRoll.result,
@@ -807,13 +833,21 @@ export function SaveResolver({
     if (action) {
       const components = rollDamageComponents(action, false)
       setArea(components)
-      if (attacker) logDamage(components, attacker, action, onRoll)
+      if (attacker) {
+        for (const entry of damageEntries(components, attacker, action)) {
+          held.current.set(`damage:${entry.message}`, entry)
+        }
+      }
     } else {
       // Standalone group save: roll the damage formula (or take a bare number flat).
       const entry = baseDamage.trim()
       if (/d/i.test(entry)) {
         const r = roll(entry, { kind: 'damage' })
-        onRoll(`Group save: ${damageType ? `${damageType} ` : ''}damage`, r)
+        held.current.set('damage:group', {
+          category: 'roll',
+          message: `Group save: ${damageType ? `${damageType} ` : ''}damage`,
+          result: r,
+        })
         setGenericBase(Math.max(0, r.total))
       } else {
         setGenericBase(toNum(baseDamage))
@@ -837,7 +871,10 @@ export function SaveResolver({
   /** Record a row's save/fail and drop the GM's damage edit so the default recomputes. */
   const setResult = (id: string, result: SaveResult) => {
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], result, edited: undefined } }))
-    dispatch({ type: 'settleSave', id, saved: result === 'save' })
+    // Legendary Resistance and a manual override both land here, and the line is still
+    // being held, so the log ends up with the outcome that stood and only that.
+    const line = held.current.get(id)
+    if (line) line.saved = result === 'save'
   }
 
   /** Store the GM's damage override for the row. */
@@ -850,12 +887,11 @@ export function SaveResolver({
 
   /** Apply each resolved row's damage, then queue concentration prompts or close. */
   const apply = () => {
+    flush()
     const prompts: { combatant: Combatant; dc: number; damage: number }[] = []
     for (const c of selectedTargets) {
       const row = rows[c.combatantId]
       if (!row?.result) continue
-      // Settles any save the GM accepted as rolled without touching a chip.
-      dispatch({ type: 'settleSave', id: c.combatantId, saved: row.result === 'save' })
       if (delayed && row.result === 'fail') {
         dispatch({
           type: 'update',
@@ -886,6 +922,7 @@ export function SaveResolver({
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     const affected = affectedTargets()
     if (affected.length === 0) return
+    flush()
     for (const c of affected) {
       dispatch({
         type: 'update',
@@ -908,6 +945,7 @@ export function SaveResolver({
     if (!spellEffect || !spell) return
     const affected = affectedTargets()
     if (affected.length === 0) return
+    flush()
     // Hand the resolver's save to the builder so a save-ends debuff carries the
     // escape save the GM just rolled against.
     const escape = { ability, dc: toNum(dc) || 10 }

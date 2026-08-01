@@ -36,13 +36,6 @@ export type EncounterAction =
   | { type: 'log'; entry: NewLogEntry }
   /** Rewrite a name across existing log entries (when a combatant is renamed). */
   | { type: 'renameLog'; from: string; to: string }
-  /**
-   * Record how a creature's saving throw finally went, once the GM has settled it.
-   * A rolled save isn't the answer yet — Legendary Resistance turns a failure into a
-   * success, and the GM can override either way — so the outcome is stamped onto the
-   * roll when it stops being provisional, not when the die lands.
-   */
-  | { type: 'settleSave'; id: string; saved: boolean }
   /** Wipe the game log. */
   | { type: 'clearLog' }
   /** Attribute damage dealt to its source (for the recap MVP). Damage *taken* is
@@ -339,24 +332,6 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
             : e,
         ),
       }
-
-    // Stamps the creature's most recent unsettled save. Idempotent by construction:
-    // once an entry carries an outcome it is skipped, so a GM who spends Legendary
-    // Resistance and then applies damage settles that one save exactly once.
-    case 'settleSave': {
-      let at = -1
-      for (let i = state.log.length - 1; i >= 0; i--) {
-        const e = state.log[i]
-        if (e.category === 'roll' && e.sourceId === action.id && e.saved === undefined) {
-          at = i
-          break
-        }
-      }
-      if (at < 0) return state
-      const log = [...state.log]
-      log[at] = { ...log[at], saved: action.saved }
-      return { ...state, log }
-    }
 
     case 'clearLog':
       return { ...state, log: [] }

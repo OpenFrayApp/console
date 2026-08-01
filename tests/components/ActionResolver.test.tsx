@@ -80,10 +80,14 @@ afterEach(() => {
 })
 
 describe('ActionResolver — attacks', () => {
+  /** Every `log` action the resolver dispatched, in order. */
+  const logs = (dispatch: ReturnType<typeof vi.fn>) =>
+    dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'log')
+
   it('logs the attack at the selected target, with advantage from an unconscious target', () => {
     const dispatch = vi.fn()
     const ogre = monster({ combatantId: 't', label: 'Ogre', status: 'unconscious' })
-    render(
+    const { unmount } = render(
       <ActionResolver
         attacker={monster()}
         action={scimitar}
@@ -95,15 +99,67 @@ describe('ActionResolver — attacks', () => {
     )
     // Single target is auto-selected; roll the attack.
     fireEvent.click(screen.getByText('Roll attack'))
-    // The attack is now one merged log entry dispatched to the encounter (to-hit +
+    unmount()
+    // The attack is one merged log entry dispatched to the encounter (to-hit +
     // outcome + damage), not a separate onRoll call.
-    const logAction = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'log')
+    const [logAction] = logs(dispatch)
     expect(logAction).toBeTruthy()
     const { entry } = logAction
     expect(entry.message).toBe('Goblin: Scimitar → Ogre')
     expect(entry.result.kind).toBe('attack')
     expect(entry.applied).toEqual([{ source: 'Unconscious', effect: 'advantage' }])
     expect(['hit', 'crit', 'miss']).toContain(entry.outcome)
+  })
+
+  // A Game Master fishing for a hit used to leave every attempt in the log, and the
+  // shared player view showed the table all of them.
+  it('records nothing until it closes, then one entry however often it was rerolled', () => {
+    const dispatch = vi.fn()
+    const ogre = monster({ combatantId: 't', label: 'Ogre' })
+    const { unmount } = render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), ogre]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Roll attack'))
+    expect(logs(dispatch)).toHaveLength(0)
+    fireEvent.click(screen.getByText('Reroll'))
+    fireEvent.click(screen.getByText('Reroll'))
+    expect(logs(dispatch)).toHaveLength(0)
+
+    unmount()
+    const recorded = logs(dispatch)
+    expect(recorded).toHaveLength(1)
+    // And it is the roll that stood: the one on screen when the modal closed.
+    expect(recorded[0].entry.message).toBe('Goblin: Scimitar → Ogre')
+  })
+
+  // Held lines are recorded before the board changes, so the log reads in the order
+  // it happened rather than putting the damage above the attack that dealt it.
+  it('records the attack before the damage it dealt', () => {
+    const dispatch = vi.fn()
+    const ogre = monster({ combatantId: 't', label: 'Ogre' })
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), ogre]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Roll attack'))
+    fireEvent.click(screen.getByText(/^Apply to /))
+
+    const kinds = dispatch.mock.calls.map((c) => c[0].type)
+    expect(kinds.indexOf('log')).toBeGreaterThanOrEqual(0)
+    expect(kinds.indexOf('log')).toBeLessThan(kinds.lastIndexOf('update'))
   })
   it('shows both d20s when the roll had advantage, one of them dimmed', () => {
     const ogre = monster({ combatantId: 't', label: 'Ogre', status: 'unconscious' })

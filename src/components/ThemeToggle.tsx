@@ -4,7 +4,7 @@
 import type { Theme } from '../state/persistence.ts'
 
 /** Sun icon — shown while the app is dark, because pressing it brings the light. */
-function SunIcon() {
+export function SunIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -30,7 +30,7 @@ function SunIcon() {
 }
 
 /** Moon icon — shown while the app is light. */
-function MoonIcon() {
+export function MoonIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -47,7 +47,8 @@ function MoonIcon() {
   )
 }
 
-/** The sun/moon button, shared by the console header and the player view's. */
+/** The standalone sun/moon button. The console keeps its theme switch inside the
+ *  settings menu; this is the player view's, which has a header of only two things. */
 export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
   const target = theme === 'dark' ? 'light' : 'dark'
   return (

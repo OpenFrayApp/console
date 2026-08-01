@@ -142,12 +142,12 @@ describe('MassSavePanel', () => {
   })
 
   it('rerolls one creature’s save without touching the others', () => {
-    const onRoll = vi.fn()
-    render(
+    const dispatch = vi.fn()
+    const { unmount } = render(
       <MassSavePanel
         combatants={[monster('a'), monster('b')]}
-        dispatch={vi.fn()}
-        onRoll={onRoll}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
       />,
     )
 
@@ -159,14 +159,37 @@ describe('MassSavePanel', () => {
     // Pin 'b' by hand; rerolling 'a' must leave that alone.
     const rowB = screen.getByLabelText('Damage to b').closest('li') as HTMLElement
     fireEvent.click(within(rowB).getByRole('button', { name: 'Fail' }))
-    expect(onRoll).toHaveBeenCalledTimes(2)
 
     const rowA = screen.getByLabelText('Damage to a').closest('li') as HTMLElement
     fireEvent.click(within(rowA).getByRole('button', { name: 'Reroll' }))
-
-    expect(onRoll).toHaveBeenCalledTimes(3)
-    expect(onRoll.mock.calls[2][0]).toBe('a: DEX save')
     expect(within(rowB).getByRole('button', { name: 'Fail' }).className).toContain('rose')
+
+    // One line each, however many times a row was rerolled — the roll that stood.
+    unmount()
+    const saves = dispatch.mock.calls
+      .map((c) => c[0])
+      .filter((a) => a.type === 'log')
+      .map((a) => a.entry.message)
+    expect(saves).toEqual(['a: DEX save', 'b: DEX save'])
+  })
+
+  // Legendary Resistance and a manual override both land on the held line, so the log
+  // records the outcome that stood rather than the one the die first gave.
+  it('records the outcome the Game Master settled on, not the one rolled', () => {
+    const dispatch = vi.fn()
+    const { unmount } = render(
+      <MassSavePanel combatants={[monster('a')]} dispatch={dispatch} onRoll={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
+    fireEvent.click(screen.getByText('Roll saves'))
+
+    const row = screen.getByLabelText('Damage to a').closest('li') as HTMLElement
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    unmount()
+
+    const [logged] = dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'log')
+    expect(logged.entry.saved).toBe(true)
   })
 
   it('never offers to reroll a player’s save', () => {

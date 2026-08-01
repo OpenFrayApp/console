@@ -83,7 +83,7 @@ import { CombatTimers } from './components/CombatTimers.tsx'
 import { CombatDifficulty } from './components/CombatDifficulty.tsx'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
-import { ThemeToggle } from './components/ThemeToggle.tsx'
+import { SettingsMenu } from './components/SettingsMenu.tsx'
 import { SharePanel } from './components/SharePanel.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/GameLog.tsx'
@@ -128,46 +128,6 @@ function BookIcon() {
     >
       <path d="M12 7v14" />
       <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-    </svg>
-  )
-}
-
-/** Gear icon (settings button). */
-/** Question mark in a circle — the handbook link. Deliberately not BookIcon, which
- *  already means the compendium in the view toggle. */
-function HelpIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M9.6 9a2.5 2.5 0 0 1 4.9.6c0 1.7-2.5 2.5-2.5 2.5" />
-      <path d="M12 17h.01" />
-    </svg>
-  )
-}
-
-function GearIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
     </svg>
   )
 }
@@ -890,17 +850,6 @@ function App() {
             )}
             <ViewToggle view={view} onChange={handleViewChange} />
             <AccountControl onSignIn={() => setAuthOpen(true)} />
-            <a
-              href="/docs/"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => track(EVENTS.docsOpened)}
-              aria-label="Handbook"
-              title="Handbook"
-              className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <HelpIcon />
-            </a>
             <SharePanel
               code={playerCode}
               sharing={sharing}
@@ -908,23 +857,15 @@ function App() {
               onClaim={user ? claimShareCode : undefined}
               onSignIn={() => setAuthOpen(true)}
             />
-            <button
-              type="button"
-              onClick={() => {
-                track(EVENTS.settingsOpened)
-                setSettingsOpen(true)
-              }}
-              aria-label="Settings"
-              title="Settings"
-              className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <GearIcon />
-            </button>
-            <ThemeToggle
+            <SettingsMenu
               theme={theme}
-              onToggle={() => {
+              onToggleTheme={() => {
                 track(EVENTS.themeToggled)
                 toggleTheme()
+              }}
+              onOpenSettings={() => {
+                track(EVENTS.settingsOpened)
+                setSettingsOpen(true)
               }}
             />
           </div>
