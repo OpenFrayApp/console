@@ -43,16 +43,16 @@ mechanics are free to reuse. The lore, art, and prose are not; all rights reserv
 terms are below, and are published with each work: in the app, on <https://openfray.app>,
 and in the print edition.
 
-- **Creatures and mechanics.** The stat blocks and game mechanics — every field of a
-  creature entry other than its `description` — are licensed under the Creative Commons
-  Attribution 4.0 International License (CC BY 4.0). You are free to share and adapt this
-  material, including commercially, provided you give appropriate credit to OpenFray
-  (<https://openfray.app>), provide a link to the licence, and indicate if changes were
-  made.
+- **Creatures, spells, and mechanics.** The stat blocks, the spells, and the game mechanics
+  — every field of a creature or spell entry other than a creature's `description` — are
+  licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+  You are free to share and adapt this material, including commercially, provided you give
+  appropriate credit to OpenFray (<https://openfray.app>), provide a link to the license,
+  and indicate if changes were made.
 - **Lore, art, and prose.** All descriptive and narrative text — including each creature's
-  `description` and the chapter text of each work — together with any artwork, is © 2026
-  OpenFray, all rights reserved. It is published to be read, and is not licensed for reuse
-  in other products.
+  `description`, each spell's origin note, and the chapter text of each work — together
+  with any artwork, is © 2026 OpenFray, all rights reserved. It is published to be read,
+  and is not licensed for reuse in other products.
 - **Game rules.** Conditions, spell names, and rules terminology come from the System
   Reference Document 5.2.1, used under CC BY 4.0 (see the SRD 5.2.1 attribution above).
 
