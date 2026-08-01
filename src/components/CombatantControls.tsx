@@ -17,7 +17,7 @@ import {
   spendLegendaryResistance,
 } from '../combat/resources.ts'
 import { saveBonus } from '../combat/masssave.ts'
-import { nameOf } from '../combat/combatant.ts'
+import { isFoe, nameOf } from '../combat/combatant.ts'
 import { signed } from '../compendium/format.ts'
 import { counterOf, describeDuration, setCount } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
@@ -203,6 +203,22 @@ export function CombatantControls({
         >
           {combatant.reactionUsed ? 'Reaction used' : 'Use reaction'}
         </button>
+
+        {!combatant.isPC && (
+          <button
+            type="button"
+            onClick={() => apply((c) => (c.isPC ? c : { ...c, side: isFoe(c) ? 'friend' : 'foe' }))}
+            aria-pressed={!isFoe(combatant)}
+            title="Which side this creature is on — a summons, a hired guard, or an ogre that has just been charmed. Allies keep nothing back from the shared player view."
+            className={
+              isFoe(combatant)
+                ? BTN
+                : 'rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+            }
+          >
+            {isFoe(combatant) ? 'Make ally' : 'Ally'}
+          </button>
+        )}
 
         {!combatant.isPC && combatant.creature.legendaryResistance != null && (
           <>

@@ -113,6 +113,13 @@ export interface MonsterCombatant extends CombatantBase {
   legendaryResistanceSpent?: number
   /** Whether the fight is in this creature's lair (raises its Legendary Resistance). */
   inLair?: boolean
+  /**
+   * Friend vs foe — a summoned wolf, a hired guard, an ogre the bard just charmed.
+   * Absent means foe, which is what a creature out of a bestiary usually is. Drives
+   * the row colour, the pre-combat grouping, the difficulty estimate, and how much
+   * of it the shared player view gives away.
+   */
+  side?: 'friend' | 'foe'
   visibility: CombatantVisibility
 }
 

@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type {
-  CombatantStatus,
-  DeathSaves,
-  MonsterCombatant,
-  PlayerCharacter,
-} from '../schema/combatant.ts'
+import type { Combatant, CombatantStatus, DeathSaves } from '../schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
@@ -14,7 +9,7 @@ import type { Recap } from './recap.ts'
 import { hpTier, type HpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
 import { badgeLabel } from './effects.ts'
-import { isFoe } from './combatant.ts'
+import { acOf, isFoe, nameOf } from './combatant.ts'
 
 /**
  * What the shared player view is allowed to know. This module is the boundary: the
@@ -75,29 +70,37 @@ export interface PlayerBoard {
  */
 export const PLAYER_LOG_LIMIT = 60
 
-/**
- * A player character's row, which is never filtered: the table wrote these numbers
- * down themselves, so hiding them would only make the screen less useful.
- */
-function playerCharacterRow(c: PlayerCharacter): PlayerRow {
+/** The board facts every row carries, whichever side of the fight it is on. */
+function baseRow(c: Combatant): Omit<PlayerRow, 'hp'> {
   return {
     id: c.combatantId,
     initiative: Math.floor(c.initiative),
-    name: c.name,
+    name: nameOf(c),
     isFoe: isFoe(c),
     status: c.status,
-    hp: { kind: 'exact', current: c.hp.current, max: c.hp.max, temp: c.hp.temp },
-    ac: c.ac,
     effects: c.effects.map((e) => ({ id: e.id, label: badgeLabel(e), icon: e.icon })),
     concentrating: c.concentration !== null,
-    deathSaves:
-      c.status === 'unconscious' ? (c.deathSaves ?? { successes: 0, failures: 0 }) : undefined,
-    stable: isStable(c) || undefined,
   }
 }
 
-/** A creature's row, cut down to the fidelity the GM's settings allow. */
-function creatureRow(c: MonsterCombatant, settings: PlayerViewSettings): PlayerRow {
+/**
+ * An ally's row, which is never filtered: a player character's numbers are the
+ * table's own, and a creature fighting for them — a summons, a hired guard — is
+ * theirs to read too.
+ */
+function allyRow(c: Combatant): PlayerRow {
+  const downed = c.isPC && c.status === 'unconscious'
+  return {
+    ...baseRow(c),
+    hp: { kind: 'exact', current: c.hp.current, max: c.hp.max, temp: c.hp.temp },
+    ac: acOf(c),
+    deathSaves: downed ? (c.deathSaves ?? { successes: 0, failures: 0 }) : undefined,
+    stable: (c.isPC && isStable(c)) || undefined,
+  }
+}
+
+/** A foe's row, cut down to the fidelity the GM's settings allow. */
+function foeRow(c: Combatant, settings: PlayerViewSettings): PlayerRow {
   const hp: PlayerHp =
     settings.hp === 'exact'
       ? { kind: 'exact', current: c.hp.current, max: c.hp.max, temp: c.hp.temp }
@@ -105,16 +108,10 @@ function creatureRow(c: MonsterCombatant, settings: PlayerViewSettings): PlayerR
         ? { kind: 'tier', tier: hpTier(c) }
         : null
   return {
-    id: c.combatantId,
-    initiative: Math.floor(c.initiative),
-    name: c.label,
-    isFoe: true,
-    status: c.status,
+    ...baseRow(c),
     hp,
     // No `ac` key at all when it's hidden — an absent field can't be read off the wire.
-    ...(settings.ac === 'shown' ? { ac: c.creature.ac } : {}),
-    effects: c.effects.map((e) => ({ id: e.id, label: badgeLabel(e), icon: e.icon })),
-    concentrating: c.concentration !== null,
+    ...(settings.ac === 'shown' ? { ac: acOf(c) } : {}),
   }
 }
 
@@ -186,13 +183,13 @@ export function playerBoard(
 ): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
-  // Creatures by id, with the label a rebuilt line needs. What is actually withheld is
-  // two separate calls the GM makes: how much a creature was hurt (which follows the
+  // Foes by id, with the name a rebuilt line needs. What is actually withheld is two
+  // separate calls the GM makes: how much a creature was hurt (which follows the
   // hit-points setting, since showing exact HP and hiding the damage would be silly),
   // and whether its d20s carry a total.
   const creatures = new Map<string, string>()
   for (const c of encounter.combatants) {
-    if (!c.isPC) creatures.set(c.combatantId, c.label)
+    if (isFoe(c)) creatures.set(c.combatantId, nameOf(c))
   }
   const hideAmounts = settings.hp !== 'exact'
   const hideRolls = settings.rolls === 'hidden'
@@ -202,11 +199,12 @@ export function playerBoard(
     paused: encounter.paused === true,
     activeId: running && active ? active.combatantId : null,
     // Until the fight begins the board is the GM's staging area — what they have lined
-    // up, and how much of it, isn't the table's to read yet. Creatures join the shared
-    // order when combat starts, which is when the party meets them.
+    // up, and how much of it, isn't the table's to read yet. Foes join the shared order
+    // when combat starts, which is when the party meets them; the party and whoever
+    // fights alongside them are there throughout.
     rows: encounter.combatants
-      .filter((c) => c.isPC || encounter.round > 0)
-      .map((c) => (c.isPC ? playerCharacterRow(c) : creatureRow(c, settings))),
+      .filter((c) => !isFoe(c) || encounter.round > 0)
+      .map((c) => (isFoe(c) ? foeRow(c, settings) : allyRow(c))),
     ...(recap && settings.recap === 'shown' ? { recap } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly)

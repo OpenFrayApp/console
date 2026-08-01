@@ -129,9 +129,10 @@ export function buildRecap(encounter: Encounter, now: number): Recap {
       ? 'victory'
       : 'inconclusive'
 
-  // XP from defeated monsters (PCs carry none, even foe-side ones).
+  // XP from defeated foes (PCs carry none, even foe-side ones; an ally that fell is
+  // not an encounter the party overcame).
   const totalXp = combatants.reduce(
-    (sum, c) => (!c.isPC && isDefeated(c) ? sum + (c.creature.xp ?? 0) : sum),
+    (sum, c) => (!c.isPC && isFoe(c) && isDefeated(c) ? sum + (c.creature.xp ?? 0) : sum),
     0,
   )
   const partySize = combatants.filter((c) => c.isPC).length

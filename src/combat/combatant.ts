@@ -11,12 +11,13 @@ import type {
 import { rechargeActions } from './recharge.ts'
 
 /**
- * Whether a combatant sits on the enemy side for colouring and grouping. A
- * board/display notion, separate from `isPC` (which drives mechanics): monsters are
- * always foes; a PC / quick add is a foe only when explicitly marked one.
+ * Whether a combatant sits on the enemy side for colouring, grouping, and what the
+ * shared player view withholds. A board notion, separate from `isPC` (which drives
+ * mechanics): a creature is a foe unless the GM says otherwise, a PC / quick add is a
+ * friend unless they do.
  */
 export function isFoe(c: Combatant): boolean {
-  return c.isPC ? c.side === 'foe' : true
+  return c.isPC ? c.side === 'foe' : c.side !== 'friend'
 }
 
 /** The display name for a combatant row: a PC's name, a monster's board label. */

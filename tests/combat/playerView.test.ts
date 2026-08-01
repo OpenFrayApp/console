@@ -172,6 +172,38 @@ describe('playerBoard — what a creature gives away', () => {
   })
 })
 
+describe('playerBoard — which side a combatant is on', () => {
+  // Whose numbers are withheld follows the side of the fight, not whether the app
+  // holds a stat block: a quick-add bandit is a foe, a summoned wolf is not.
+  it('withholds a quick-add foe`s numbers like any other creature', () => {
+    const bandit = pc({ combatantId: 'q', name: 'Bandit', kind: 'quick', side: 'foe' })
+    const board = playerBoard(encounter({ combatants: [bandit] }), DEFAULT_PLAYER_VIEW)
+    expect(board.rows[0]).toMatchObject({ name: 'Bandit', isFoe: true, hp: { kind: 'tier' } })
+    expect('ac' in board.rows[0]).toBe(false)
+  })
+
+  it('keeps an allied creature whole, and on the board before the fight', () => {
+    const wolf = monster({ combatantId: 'w', label: 'Wolf', side: 'friend' })
+    const board = playerBoard(
+      encounter({ round: 0, combatants: [pc(), wolf] }),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.rows.map((r) => r.name)).toEqual(['Thalia', 'Wolf'])
+    expect(board.rows[1]).toMatchObject({
+      isFoe: false,
+      hp: { kind: 'exact', current: 68, max: 68 },
+      ac: 11,
+    })
+  })
+
+  it('leaves death saves off an ally that has none to make', () => {
+    const wolf = monster({ combatantId: 'w', side: 'friend', status: 'unconscious' })
+    const row = playerBoard(encounter({ combatants: [wolf] }), DEFAULT_PLAYER_VIEW).rows[0]
+    expect(row.deathSaves).toBeUndefined()
+    expect(row.stable).toBeUndefined()
+  })
+})
+
 describe('playerBoard — player characters', () => {
   it('keeps a player character whole, whatever the creature settings say', () => {
     const board = playerBoard(encounter(), view({ hp: 'hidden' }))

@@ -82,6 +82,49 @@ describe('CombatantControls', () => {
     expect(call.update(monster()).reactionUsed).toBe(true)
   })
 
+  // A summons, a hired guard, an ogre the bard just charmed: which side a creature is
+  // on is the GM's to change mid-fight, and it decides what the table's screen holds back.
+  it('turns a creature into an ally and back', () => {
+    const dispatch = vi.fn()
+    render(
+      <CombatantControls
+        combatant={monster()}
+        round={1}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Make ally'))
+    expect(dispatch.mock.calls[0][0].update(monster()).side).toBe('friend')
+
+    cleanup()
+    render(
+      <CombatantControls
+        combatant={{ ...monster(), side: 'friend' }}
+        round={1}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Ally'))
+    expect(dispatch.mock.calls[1][0].update({ ...monster(), side: 'friend' }).side).toBe('foe')
+  })
+
+  it('offers no side control for a player character', () => {
+    render(
+      <CombatantControls
+        combatant={downedPc()}
+        round={1}
+        dispatch={vi.fn()}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    expect(screen.queryByText('Make ally')).toBeNull()
+  })
+
   it('shows death-save controls for an unconscious PC, hidden once stable', () => {
     const dispatch = vi.fn()
     const { rerender } = render(

@@ -116,6 +116,25 @@ describe('outcome detection', () => {
 })
 
 describe('buildRecap', () => {
+  // An ally that fell is not an encounter the party overcame, so its stat block's
+  // experience is not theirs to bank.
+  it('counts no experience for an allied creature that went down', () => {
+    const enc = encounter(
+      [
+        pc({ status: 'active' }),
+        monster({ combatantId: 'm1', status: 'dead', creature: { id: 'g', xp: 50 } as never }),
+        monster({
+          combatantId: 'w',
+          side: 'friend',
+          status: 'dead',
+          creature: { id: 'wolf', xp: 450 } as never,
+        }),
+      ],
+      { round: 2 },
+    )
+    expect(buildRecap(enc, 0).totalXp).toBe(50)
+  })
+
   it('victory: sums defeated foes XP, splits per player, totals rounds/time', () => {
     const stats = startStats(0)
     const enc = encounter(

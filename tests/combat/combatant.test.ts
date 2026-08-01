@@ -40,8 +40,10 @@ const monster = (): Combatant =>
   }) as unknown as Combatant
 
 describe('isFoe', () => {
-  it('treats every monster as a foe', () => {
+  it('treats a creature as a foe unless the GM says otherwise', () => {
     expect(isFoe(monster())).toBe(true)
+    expect(isFoe({ ...monster(), side: 'friend' } as Combatant)).toBe(false)
+    expect(isFoe({ ...monster(), side: 'foe' } as Combatant)).toBe(true)
   })
 
   it('treats a plain PC as a friend', () => {
