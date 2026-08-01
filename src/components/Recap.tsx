@@ -43,9 +43,77 @@ function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: 
   )
 }
 
+/** How the fight ended, as a colored badge. */
+export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
+  const o = OUTCOME[outcome]
+  return (
+    <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${o.badge}`}>{o.label}</span>
+  )
+}
+
+/**
+ * The recap's figures: the stat tiles and the standout hits. Shared by the Game
+ * Master's dialog and the players' own screen, so the two can't drift. `showXp` is the
+ * caller's call — a milestone campaign counts no experience.
+ */
+export function RecapSummary({ recap, showXp }: { recap: Recap; showXp: boolean }) {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {showXp && (
+          <Stat
+            label="Experience"
+            value={recap.totalXp.toLocaleString()}
+            hint={
+              recap.xpPerPlayer != null
+                ? `${recap.xpPerPlayer.toLocaleString()} per player`
+                : undefined
+            }
+          />
+        )}
+        {recap.difficulty && (
+          <Stat
+            label="Difficulty"
+            value={DIFFICULTY_LABEL[recap.difficulty]}
+            hint="before the fight"
+          />
+        )}
+        <Stat label="Rounds" value={recap.rounds} />
+        <Stat label="Time (in-game)" value={duration(recap.inGameSeconds)} />
+        <Stat label="Time (real)" value={duration(recap.activeMs / 1000)} hint="excludes pauses" />
+        <Stat label="Damage dealt" value={recap.damageDealtTotal.toLocaleString()} />
+        <Stat label="Damage taken" value={recap.damageTakenTotal.toLocaleString()} />
+        {recap.spellsCast > 0 && <Stat label="Spells cast" value={recap.spellsCast} />}
+        {recap.effectsApplied > 0 && <Stat label="Effects applied" value={recap.effectsApplied} />}
+        {recap.knockouts > 0 && (
+          <Stat label="Knockouts" value={recap.knockouts} hint="downed or killed" />
+        )}
+      </div>
+
+      {recap.awards.length > 0 && (
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {recap.awards.map((a) => (
+            <div
+              key={a.title}
+              className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                {a.title}
+              </div>
+              <div className="mt-0.5 font-semibold">{a.label}</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
+                {a.amount.toLocaleString()} damage
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 /** The end-of-combat recap. Outcome banner + XP, timing, and fight tallies. */
 export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => void }) {
-  const o = OUTCOME[recap.outcome]
   // A milestone campaign doesn't track XP, so the XP tile has nothing to say.
   const showXp = useCampaignRules().leveling !== 'milestone'
   return (
@@ -58,9 +126,7 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${o.badge}`}>
-              {o.label}
-            </span>
+            <OutcomeBadge outcome={recap.outcome} />
             <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
               Combat recap
             </h2>
@@ -69,62 +135,7 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
             Done
           </Button>
         </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {showXp && (
-            <Stat
-              label="Experience"
-              value={recap.totalXp.toLocaleString()}
-              hint={
-                recap.xpPerPlayer != null
-                  ? `${recap.xpPerPlayer.toLocaleString()} per player`
-                  : undefined
-              }
-            />
-          )}
-          {recap.difficulty && (
-            <Stat
-              label="Difficulty"
-              value={DIFFICULTY_LABEL[recap.difficulty]}
-              hint="before the fight"
-            />
-          )}
-          <Stat label="Rounds" value={recap.rounds} />
-          <Stat label="Time (in-game)" value={duration(recap.inGameSeconds)} />
-          <Stat
-            label="Time (real)"
-            value={duration(recap.activeMs / 1000)}
-            hint="excludes pauses"
-          />
-          <Stat label="Damage dealt" value={recap.damageDealtTotal.toLocaleString()} />
-          <Stat label="Damage taken" value={recap.damageTakenTotal.toLocaleString()} />
-          {recap.spellsCast > 0 && <Stat label="Spells cast" value={recap.spellsCast} />}
-          {recap.effectsApplied > 0 && (
-            <Stat label="Effects applied" value={recap.effectsApplied} />
-          )}
-          {recap.knockouts > 0 && (
-            <Stat label="Knockouts" value={recap.knockouts} hint="downed or killed" />
-          )}
-        </div>
-
-        {recap.awards.length > 0 && (
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {recap.awards.map((a) => (
-              <div
-                key={a.title}
-                className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20"
-              >
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                  {a.title}
-                </div>
-                <div className="mt-0.5 font-semibold">{a.label}</div>
-                <div className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
-                  {a.amount.toLocaleString()} damage
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <RecapSummary recap={recap} showXp={showXp} />
       </div>
     </div>
   )

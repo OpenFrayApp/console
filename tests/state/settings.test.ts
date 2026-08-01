@@ -72,8 +72,9 @@ describe('player-view settings', () => {
     expect(loadSettings().playerView.ac).toBe('hidden')
   })
 
-  it('starts the players` log fresh with each fight', () => {
+  it('starts the players` log fresh each fight, and shares the summary', () => {
     expect(loadSettings().playerView.log).toBe('fight')
+    expect(loadSettings().playerView.recap).toBe('shown')
   })
 
   it('keeps the whole session only when the GM asked for it', () => {

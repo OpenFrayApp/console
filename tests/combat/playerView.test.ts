@@ -7,7 +7,7 @@ import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combata
 import type { Encounter, GameLogEntry } from '../../src/schema/encounter.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { RollResult } from '../../src/dice/roll.ts'
-import { PLAYER_LOG_LIMIT, playerBoard } from '../../src/combat/playerView.ts'
+import { PLAYER_LOG_LIMIT, playerBoard, type PlayerRecap } from '../../src/combat/playerView.ts'
 import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../src/state/settings.ts'
 
 /** Player-view settings with the defaults filled in, so a case names only what it changes. */
@@ -268,6 +268,40 @@ describe('playerBoard — how much of the log the table follows', () => {
     expect(playerBoard(e, DEFAULT_PLAYER_VIEW).log.map((x) => x.id)).toEqual(['a', 'b'])
     const cleared = encounter({ round: 2, fightLogStart: 9, log: [entry({ id: 'a' })] })
     expect(playerBoard(cleared, DEFAULT_PLAYER_VIEW).log.map((x) => x.id)).toEqual([])
+  })
+})
+
+describe('playerBoard — the end-of-fight summary', () => {
+  const summary: PlayerRecap = {
+    outcome: 'victory',
+    difficulty: 'hard',
+    rounds: 3,
+    inGameSeconds: 18,
+    activeMs: 60_000,
+    totalXp: 450,
+    partySize: 3,
+    xpPerPlayer: 150,
+    damageDealtTotal: 88,
+    damageTakenTotal: 41,
+    spellsCast: 2,
+    effectsApplied: 1,
+    knockouts: 1,
+    awards: [],
+    showXp: true,
+  }
+
+  it('travels with the board while the GM has it up', () => {
+    const board = playerBoard(encounter({ round: 0 }), DEFAULT_PLAYER_VIEW, summary)
+    expect(board.recap).toEqual(summary)
+  })
+
+  it('is absent when the GM keeps it to themselves', () => {
+    const board = playerBoard(encounter({ round: 0 }), view({ recap: 'hidden' }), summary)
+    expect('recap' in board).toBe(false)
+  })
+
+  it('is absent when there is no summary on screen', () => {
+    expect('recap' in playerBoard(encounter(), DEFAULT_PLAYER_VIEW)).toBe(false)
   })
 })
 

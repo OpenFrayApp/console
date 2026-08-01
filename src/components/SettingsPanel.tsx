@@ -308,6 +308,31 @@ export function SettingsPanel({
                   fresh each time you begin a fight and clears when it ends. Yours keeps everything.
                 </p>
               </div>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="player-view-recap"
+                    className="text-sm text-slate-700 dark:text-slate-200"
+                  >
+                    End-of-fight summary
+                  </label>
+                  <select
+                    id="player-view-recap"
+                    value={playerView.recap}
+                    onChange={(e) => {
+                      track(EVENTS.playerViewChanged)
+                      onSetPlayerView({ ...playerView, recap: e.target.value as FieldVisibility })
+                    }}
+                    className={SELECT}
+                  >
+                    <option value="shown">Shown</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Your players see the summary of the fight while you have it open.
+                </p>
+              </div>
             </div>
           </section>
 

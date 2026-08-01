@@ -54,15 +54,20 @@ describe('SettingsPanel — the player view', () => {
     expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
   })
 
-  it('starts the players` log fresh with each fight', () => {
+  it('starts the players` log fresh each fight, and shares the summary', () => {
     renderPanel()
     expect((screen.getByLabelText('Game log') as HTMLSelectElement).value).toBe('fight')
+    expect((screen.getByLabelText('End-of-fight summary') as HTMLSelectElement).value).toBe('shown')
   })
 
-  it('hands back a whole-session log', () => {
+  it('hands back a whole-session log and a hidden summary', () => {
     const { onSetPlayerView } = renderPanel()
     fireEvent.change(screen.getByLabelText('Game log'), { target: { value: 'session' } })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, log: 'session' })
+    fireEvent.change(screen.getByLabelText('End-of-fight summary'), {
+      target: { value: 'hidden' },
+    })
+    expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, recap: 'hidden' })
   })
 })
 

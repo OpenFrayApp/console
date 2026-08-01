@@ -129,6 +129,72 @@ describe('PlayerView — live', () => {
     expect(screen.queryByText(/’s turn/)).toBeNull()
   })
 
+  it('shows the summary of the fight the GM just ended', () => {
+    link.status = 'live'
+    link.board = board({
+      round: 0,
+      activeId: null,
+      log: [],
+      recap: {
+        outcome: 'victory',
+        difficulty: 'hard',
+        rounds: 3,
+        inGameSeconds: 18,
+        activeMs: 60_000,
+        totalXp: 450,
+        partySize: 3,
+        xpPerPlayer: 150,
+        damageDealtTotal: 88,
+        damageTakenTotal: 41,
+        spellsCast: 0,
+        effectsApplied: 0,
+        knockouts: 1,
+        awards: [{ title: 'Biggest hit', label: 'Thalia', amount: 22 }],
+        showXp: true,
+      },
+    })
+    render(<PlayerView code="x" />)
+    expect(screen.getByText('How the fight went')).toBeInTheDocument()
+    expect(screen.getByText('Victory')).toBeInTheDocument()
+    expect(screen.getByText('450')).toBeInTheDocument()
+    expect(screen.getByText('Biggest hit')).toBeInTheDocument()
+  })
+
+  it('leaves experience out of a milestone campaign`s summary', () => {
+    link.status = 'live'
+    const shown = board()
+    link.board = board({
+      recap: {
+        outcome: 'inconclusive',
+        difficulty: null,
+        rounds: 1,
+        inGameSeconds: 6,
+        activeMs: 1000,
+        totalXp: 450,
+        partySize: 3,
+        xpPerPlayer: 150,
+        damageDealtTotal: 0,
+        damageTakenTotal: 0,
+        spellsCast: 0,
+        effectsApplied: 0,
+        knockouts: 0,
+        awards: [],
+        showXp: false,
+      },
+      rows: shown.rows,
+    })
+    render(<PlayerView code="x" />)
+    expect(screen.queryByText('Experience')).toBeNull()
+    expect(screen.getByText('Combat ended')).toBeInTheDocument()
+  })
+
+  it('has no summary while the fight is running', () => {
+    link.status = 'live'
+    link.board = board()
+    render(<PlayerView code="x" />)
+    expect(screen.queryByText('How the fight went')).toBeNull()
+  })
+
   it('says so when nobody is on the board yet', () => {
     link.status = 'live'
     link.board = board({ rows: [], round: 0, activeId: null })

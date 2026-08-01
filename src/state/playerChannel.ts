@@ -6,7 +6,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { PlayerViewSettings } from './settings.ts'
-import { playerBoard, type PlayerBoard } from '../combat/playerView.ts'
+import { playerBoard, type PlayerBoard, type PlayerRecap } from '../combat/playerView.ts'
 
 /**
  * The wire for the shared player view: a Supabase realtime **broadcast** channel,
@@ -45,6 +45,8 @@ export function useBoardBroadcast(
   code: string | null,
   encounter: Encounter,
   settings: PlayerViewSettings,
+  /** The summary of the fight just ended, while the GM has it on screen. */
+  recap: PlayerRecap | null = null,
 ): void {
   const channel = useRef<RealtimeChannel | null>(null)
   const latest = useRef<PlayerBoard | null>(null)
@@ -79,13 +81,13 @@ export function useBoardBroadcast(
       latest.current = null
       return
     }
-    const board = playerBoard(encounter, settings)
+    const board = playerBoard(encounter, settings, recap)
     latest.current = board
     const handle = setTimeout(() => {
       channel.current?.send({ type: 'broadcast', event: EVENT.board, payload: board })
     }, SEND_DEBOUNCE_MS)
     return () => clearTimeout(handle)
-  }, [code, encounter, settings])
+  }, [code, encounter, settings, recap])
 }
 
 /**

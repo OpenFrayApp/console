@@ -10,6 +10,7 @@ import type {
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
+import type { Recap } from './recap.ts'
 import { hpTier, type HpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
 import { badgeLabel } from './effects.ts'
@@ -47,6 +48,15 @@ export interface PlayerRow {
   stable?: boolean
 }
 
+/**
+ * The end-of-fight summary as the table sees it. The same figures the GM's own recap
+ * shows, plus whether experience travels — a milestone campaign counts none, and that
+ * is a campaign setting the boundary itself knows nothing about.
+ */
+export interface PlayerRecap extends Recap {
+  showXp: boolean
+}
+
 /** The whole message a player receives: the tracker, the log, and where the fight is. */
 export interface PlayerBoard {
   round: number
@@ -55,6 +65,8 @@ export interface PlayerBoard {
   activeId: string | null
   rows: PlayerRow[]
   log: GameLogEntry[]
+  /** The summary of the fight just ended, while the GM has it up and shares it. */
+  recap?: PlayerRecap
 }
 
 /**
@@ -166,7 +178,12 @@ function scopedLog(encounter: Encounter, scope: PlayerViewSettings['log']): Game
  * Build the board to share from the live encounter. Pure, so what the table can see is
  * decided by a function with tests rather than by what a component happens to render.
  */
-export function playerBoard(encounter: Encounter, settings: PlayerViewSettings): PlayerBoard {
+export function playerBoard(
+  encounter: Encounter,
+  settings: PlayerViewSettings,
+  /** The summary of the fight just ended, while the GM has it on screen. */
+  recap: PlayerRecap | null = null,
+): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
   // Creatures by id, with the label a rebuilt line needs. What is actually withheld is
@@ -190,6 +207,7 @@ export function playerBoard(encounter: Encounter, settings: PlayerViewSettings):
     rows: encounter.combatants
       .filter((c) => c.isPC || encounter.round > 0)
       .map((c) => (c.isPC ? playerCharacterRow(c) : creatureRow(c, settings))),
+    ...(recap && settings.recap === 'shown' ? { recap } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly)
       .slice(-PLAYER_LOG_LIMIT)

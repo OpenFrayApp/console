@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
@@ -343,9 +343,17 @@ function App() {
     return () => clearTimeout(handle)
   }, [encounter, theme, view, selectedId, activeCampaignId, userId])
 
+  // The summary travels with the board while the GM has it up, so the table reads the
+  // fight's outcome on their own screens. Experience is left out of a milestone
+  // campaign, the same call the GM's own recap makes.
+  const sharedRecap = useMemo(
+    () => (recap ? { ...recap, showXp: activeRules.leveling !== 'milestone' } : null),
+    [recap, activeRules.leveling],
+  )
+
   // Share the board while sharing is on. Broadcast only — nothing about the fight is
   // written anywhere, so an anonymous GM can share without a row reaching the database.
-  useBoardBroadcast(sharing ? playerCode : null, encounter, playerView)
+  useBoardBroadcast(sharing ? playerCode : null, encounter, playerView, sharedRecap)
 
   /**
    * Start or stop sharing. An anonymous GM has no name to claim, so the first share

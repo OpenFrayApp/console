@@ -3,9 +3,11 @@
 
 import { usePlayerBoard, type PlayerLinkStatus } from '../state/playerChannel.ts'
 import { useTheme } from '../hooks/useTheme.ts'
+import type { PlayerRecap } from '../combat/playerView.ts'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 import { GameLog } from './GameLog.tsx'
 import { PlayerRow } from './PlayerRow.tsx'
+import { OutcomeBadge, RecapSummary } from './Recap.tsx'
 import { ThemeToggle } from './ThemeToggle.tsx'
 
 /**
@@ -41,6 +43,21 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
         Master starts sharing. Leave it open — it fills in on its own.
       </p>
     </div>
+  )
+}
+
+/** How the fight went, on the table's own screens, for as long as the GM leaves it up. */
+function SharedRecap({ recap }: { recap: PlayerRecap }) {
+  return (
+    <section className="mb-4 shrink-0 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+      <div className="mb-3 flex items-center gap-2">
+        <OutcomeBadge outcome={recap.outcome} />
+        <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+          How the fight went
+        </h2>
+      </div>
+      <RecapSummary recap={recap} showXp={recap.showXp} />
+    </section>
   )
 }
 
@@ -88,6 +105,8 @@ export function PlayerView({ code }: { code: string }) {
             <p className="mb-3 shrink-0 text-sm text-slate-600 dark:text-slate-300">
               <Standing round={board.round} paused={board.paused} turn={turn} />
             </p>
+
+            {board.recap && <SharedRecap recap={board.recap} />}
 
             {/* Two columns that scroll independently, so a long fight's log never pushes
               the turn order off the screen — and neither one drags the other along.

@@ -30,6 +30,8 @@ export interface PlayerViewSettings {
   rolls: FieldVisibility
   /** How much of the record the shared log carries — see PlayerLogScope. */
   log: PlayerLogScope
+  /** Whether the table sees the summary when a fight ends. */
+  recap: FieldVisibility
 }
 
 /**
@@ -44,6 +46,7 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   ac: 'hidden',
   rolls: 'shown',
   log: 'fight',
+  recap: 'shown',
 }
 
 export interface AppSettings {
@@ -92,6 +95,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
     rolls: data.rolls === 'hidden' ? 'hidden' : 'shown',
     // The log follows the fight in hand unless the GM asked for the whole session.
     log: data.log === 'session' ? 'session' : 'fight',
+    // The summary travels unless the GM has turned it off.
+    recap: data.recap === 'hidden' ? 'hidden' : 'shown',
   }
 }
 
