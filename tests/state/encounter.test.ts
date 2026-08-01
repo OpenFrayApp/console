@@ -390,6 +390,27 @@ describe('encounter game-log events', () => {
     ).toBe(true)
   })
 
+  // Rolled before the fight exists, recorded inside it: the log reads "Combat begins",
+  // then the rolls that set the order, then whose turn it is.
+  it('records the initiative rolls under the line that opens the fight', () => {
+    const e = encounterReducer(withCombatants(monster('a', 20), monster('b', 10)), {
+      type: 'begin',
+      rolls: [
+        { category: 'roll', message: 'a: initiative', sourceId: 'a' },
+        { category: 'roll', message: 'b: initiative', sourceId: 'b' },
+      ],
+    })
+    expect(e.log.map((l) => l.message)).toEqual([
+      'Combat begins — Round 1',
+      'a: initiative',
+      'b: initiative',
+      "a's turn",
+    ])
+    // And they belong to round 1, so a fight-scoped player log carries them.
+    expect(e.log.every((l) => l.round === 1)).toBe(true)
+    expect(e.fightLogStart).toBe(0)
+  })
+
   // The Game Master keeps the whole record; the shared player view reads this to start
   // the table's log fresh at each Begin.
   it('marks where each fight`s record starts, and forgets it when the log goes', () => {

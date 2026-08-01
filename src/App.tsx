@@ -19,7 +19,7 @@ import type { Encounter } from './schema/encounter.ts'
 import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
 import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from './schema/roster.ts'
 import { CampaignRulesContext } from './state/campaignRules.ts'
-import { emptyEncounter, encounterReducer } from './state/encounter.ts'
+import { emptyEncounter, encounterReducer, type NewLogEntry } from './state/encounter.ts'
 import { loadSession, saveSession, type View } from './state/persistence.ts'
 import { useTheme } from './hooks/useTheme.ts'
 import {
@@ -240,6 +240,9 @@ function App() {
   const [logOpen, setLogOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
   const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
+  // The initiative the app pre-rolled into that box, held until the fight it starts has
+  // somewhere to record it — and dropped if the Game Master backs out of Begin.
+  const preRolled = useRef<Record<string, NewLogEntry>>({})
 
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
@@ -609,17 +612,29 @@ function App() {
       }
     }
   }
-  /** Roll initiative (1d20+mod, disadvantage when surprised), log it, and return the total. */
+  /**
+   * Roll initiative (1d20+mod, disadvantage when surprised): the total, and the line it
+   * belongs in the log. The caller records it, because a roll made while the Roll
+   * initiative box is still open belongs under the fight it starts — not above it, and
+   * not at all if the Game Master backs out.
+   */
   const rollInit = (
     label: string,
     mod: number,
     disadvantage = false,
     sourceId?: string,
-  ): number => {
+  ): { total: number; entry: NewLogEntry } => {
     const dice = `1d20${disadvantage ? 'dis' : ''}${mod >= 0 ? `+${mod}` : `${mod}`}`
     const result = roll(dice)
-    pushRoll(`${label}: initiative${disadvantage ? ' (surprised)' : ''}`, result, { sourceId })
-    return result.total
+    return {
+      total: result.total,
+      entry: {
+        category: 'roll',
+        message: `${label}: initiative${disadvantage ? ' (surprised)' : ''}`,
+        result,
+        sourceId,
+      },
+    }
   }
 
   // The initiative modifier: a PC's own, 0 for a quick add, and for a monster its
@@ -638,10 +653,12 @@ function App() {
   // straight away (like Begin) so a reinforcement slots into the order instead of
   // sitting at 0; before combat, initiative waits for Begin to roll everyone together.
   const addCombatant = (c: Combatant) => {
-    const combatant =
-      encounter.round > 0
-        ? { ...c, initiative: rollInit(nameOf(c), initMod(c), false, c.combatantId) }
-        : c
+    let combatant = c
+    if (encounter.round > 0) {
+      const { total, entry } = rollInit(nameOf(c), initMod(c), false, c.combatantId)
+      combatant = { ...c, initiative: total }
+      dispatch({ type: 'log', entry })
+    }
     dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
     setSelectedId(combatant.combatantId)
   }
@@ -664,6 +681,8 @@ function App() {
     const rule = activeRules.surprise
 
     const initiatives: Record<string, number> = {}
+    // The line each roll leaves, kept until the fight has a log to put them in.
+    const rolled: Record<string, NewLogEntry> = {}
     for (const c of encounter.combatants) {
       const id = c.combatantId
       // Dead creatures never roll — they stay dead at the bottom of the order.
@@ -678,9 +697,14 @@ function App() {
       // app-rolled value; a value the GM typed (or edited) is always respected.
       const unedited = raw !== '' && raw === (initPrompt?.[id] ?? '')
       if (raw === '' || (disadvantage && unedited && !isPlayer(c))) {
-        initiatives[id] = rollInit(nameOf(c), initMod(c), disadvantage, id)
+        const { total, entry } = rollInit(nameOf(c), initMod(c), disadvantage, id)
+        initiatives[id] = total
+        rolled[id] = entry
       } else {
         initiatives[id] = Math.floor(Number(raw) || 0)
+        // A pre-rolled number the GM left alone keeps its roll; one they typed over has
+        // no roll behind it, so nothing is recorded for it.
+        if (unedited && preRolled.current[id]) rolled[id] = preRolled.current[id]
       }
     }
 
@@ -708,7 +732,12 @@ function App() {
     }))
     const next = beginEncounter({ ...encounter, combatants }, activeRules.initiativeTiebreak)
     track(EVENTS.combatStarted)
-    dispatch({ type: 'begin', tiebreak: activeRules.initiativeTiebreak })
+    // In initiative order, so the log reads the way the tracker does.
+    const rolls = next.combatants
+      .map((c) => rolled[c.combatantId])
+      .filter((entry): entry is NewLogEntry => entry != null)
+    dispatch({ type: 'begin', tiebreak: activeRules.initiativeTiebreak, rolls })
+    preRolled.current = {}
     selectActive(next)
     autoRecharge(next)
     setInitPrompt(null)
@@ -719,14 +748,16 @@ function App() {
   const handleBegin = () => {
     if (encounter.combatants.length === 0) return
     const initial: Record<string, string> = {}
+    preRolled.current = {}
     for (const c of encounter.combatants) {
       // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
-      initial[c.combatantId] =
-        c.status === 'dead'
-          ? '0'
-          : isPlayer(c)
-            ? ''
-            : String(rollInit(nameOf(c), initMod(c), false, c.combatantId))
+      if (c.status === 'dead' || isPlayer(c)) {
+        initial[c.combatantId] = c.status === 'dead' ? '0' : ''
+        continue
+      }
+      const { total, entry } = rollInit(nameOf(c), initMod(c), false, c.combatantId)
+      initial[c.combatantId] = String(total)
+      preRolled.current[c.combatantId] = entry
     }
     setInitPrompt(initial)
   }

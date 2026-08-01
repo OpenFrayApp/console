@@ -20,7 +20,9 @@ import { assessEncounter } from '../combat/difficulty.ts'
 export type EncounterAction =
   // `tiebreak` carries the active campaign's initiative-tie rule into the sort
   // (defaults to 'dex' — the standard ruleset — when omitted, e.g. anon users).
-  | { type: 'begin'; tiebreak?: InitiativeTiebreak }
+  // `rolls` are the initiative rolls that set this order, recorded here rather than as
+  // they were made: they belong to the fight, under the line that opens it.
+  | { type: 'begin'; tiebreak?: InitiativeTiebreak; rolls?: NewLogEntry[] }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'stop' }
@@ -189,6 +191,9 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
         started,
         [
           { category: 'turn', message: 'Combat begins — Round 1' },
+          // The rolls that built this order, then whose turn it is — the fight reads
+          // in the order it happened.
+          ...(action.rolls ?? []),
           ...(active
             ? [
                 {
