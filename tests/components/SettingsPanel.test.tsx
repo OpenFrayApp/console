@@ -67,6 +67,18 @@ describe('SettingsPanel — the player view', () => {
     expect((screen.getByLabelText('End-of-fight summary') as HTMLSelectElement).value).toBe('shown')
   })
 
+  it('holds mid-fight arrivals back when asked', () => {
+    const { onSetPlayerView } = renderPanel()
+    openTab('Player view')
+    expect((screen.getByLabelText('Creatures arriving mid-fight') as HTMLSelectElement).value).toBe(
+      'shown',
+    )
+    fireEvent.change(screen.getByLabelText('Creatures arriving mid-fight'), {
+      target: { value: 'hidden' },
+    })
+    expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, arrivals: 'hidden' })
+  })
+
   it('hands back a whole-session log and a hidden summary', () => {
     const { onSetPlayerView } = renderPanel()
     openTab('Player view')

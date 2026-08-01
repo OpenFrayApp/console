@@ -29,6 +29,7 @@ import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import { isFoe } from '../combat/combatant.ts'
+import { onSharedBoard } from '../combat/playerView.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ActionResolver } from './ActionResolver.tsx'
@@ -290,6 +291,7 @@ export function EncounterConsole({
       active={running && c.combatantId === activeId}
       selected={c.combatantId === selected?.combatantId}
       onSelect={() => onSelect(c.combatantId)}
+      hiddenFromPlayers={!onSharedBoard(c, running)}
       onRemoveEffect={(effectId) =>
         dispatch({
           type: 'update',

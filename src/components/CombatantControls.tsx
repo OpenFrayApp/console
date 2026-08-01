@@ -18,6 +18,7 @@ import {
 } from '../combat/resources.ts'
 import { saveBonus } from '../combat/masssave.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
+import { onSharedBoard } from '../combat/playerView.ts'
 import { signed } from '../compendium/format.ts'
 import { counterOf, describeDuration, setCount } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
@@ -58,6 +59,7 @@ export function CombatantControls({
   const [concDur, setConcDur] = useState<number | null>(null)
   const id = combatant.combatantId
   const name = nameOf(combatant)
+  const started = round > 0
 
   /** Dispatch a functional update against this combatant. */
   const apply = (update: (c: Combatant) => Combatant) => dispatch({ type: 'update', id, update })
@@ -203,6 +205,24 @@ export function CombatantControls({
         >
           {combatant.reactionUsed ? 'Reaction used' : 'Use reaction'}
         </button>
+
+        {isFoe(combatant) && (
+          <button
+            type="button"
+            onClick={() =>
+              apply((c) => ({ ...c, shared: onSharedBoard(c, started) ? 'hidden' : 'shown' }))
+            }
+            aria-pressed={!onSharedBoard(combatant, started)}
+            title="Whether the shared player screen shows this creature. Foes appear there when the fight begins; hide one to keep an ambush off the table's board, or show it early."
+            className={
+              onSharedBoard(combatant, started)
+                ? BTN
+                : 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+            }
+          >
+            {onSharedBoard(combatant, started) ? 'Hide from players' : 'Hidden from players'}
+          </button>
+        )}
 
         {!combatant.isPC && (
           <button

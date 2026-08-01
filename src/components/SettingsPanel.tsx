@@ -315,6 +315,35 @@ export function SettingsPanel({
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <label
+                    htmlFor="player-view-arrivals"
+                    className="text-sm text-slate-700 dark:text-slate-200"
+                  >
+                    Creatures arriving mid-fight
+                  </label>
+                  <select
+                    id="player-view-arrivals"
+                    value={playerView.arrivals}
+                    onChange={(e) => {
+                      track(EVENTS.playerViewChanged)
+                      onSetPlayerView({
+                        ...playerView,
+                        arrivals: e.target.value as FieldVisibility,
+                      })
+                    }}
+                    className={SELECT}
+                  >
+                    <option value="shown">Shown</option>
+                    <option value="hidden">Hidden until revealed</option>
+                  </select>
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Where a reinforcement starts. Any creature can be hidden or revealed on its own,
+                  from its controls beside the stat block.
+                </p>
+              </div>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <label
                     htmlFor="player-view-log"
                     className="text-sm text-slate-700 dark:text-slate-200"
                   >

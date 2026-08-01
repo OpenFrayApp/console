@@ -70,6 +70,17 @@ export interface PlayerBoard {
  */
 export const PLAYER_LOG_LIMIT = 60
 
+/**
+ * Whether a combatant is on the shared board. The GM's own call on that creature wins;
+ * otherwise the fight decides — the party's side is always there, and foes join when
+ * combat begins, which is when the party meets them.
+ */
+export function onSharedBoard(c: Combatant, started: boolean): boolean {
+  if (!isFoe(c)) return true
+  if (c.shared === 'shown') return true
+  return c.shared !== 'hidden' && started
+}
+
 /** The board facts every row carries, whichever side of the fight it is on. */
 function baseRow(c: Combatant): Omit<PlayerRow, 'hp'> {
   return {
@@ -191,6 +202,15 @@ export function playerBoard(
   for (const c of encounter.combatants) {
     if (isFoe(c)) creatures.set(c.combatantId, nameOf(c))
   }
+  // A creature the table can't see doesn't narrate itself either: what a foe held back
+  // from the board does stays with the GM until they reveal it. An entry that merely
+  // names it as someone else's target still names it — revealing it is the GM's move,
+  // and this is the half the board can decide on its own.
+  const offBoard = new Set(
+    encounter.combatants
+      .filter((c) => !onSharedBoard(c, encounter.round > 0))
+      .map((c) => c.combatantId),
+  )
   const hideAmounts = settings.hp !== 'exact'
   const hideRolls = settings.rolls === 'hidden'
 
@@ -199,15 +219,13 @@ export function playerBoard(
     paused: encounter.paused === true,
     activeId: running && active ? active.combatantId : null,
     // Until the fight begins the board is the GM's staging area — what they have lined
-    // up, and how much of it, isn't the table's to read yet. Foes join the shared order
-    // when combat starts, which is when the party meets them; the party and whoever
-    // fights alongside them are there throughout.
+    // up, and how much of it, isn't the table's to read yet.
     rows: encounter.combatants
-      .filter((c) => !isFoe(c) || encounter.round > 0)
+      .filter((c) => onSharedBoard(c, encounter.round > 0))
       .map((c) => (isFoe(c) ? foeRow(c, settings) : allyRow(c))),
     ...(recap && settings.recap === 'shown' ? { recap } : {}),
     log: scopedLog(encounter, settings.log)
-      .filter((e) => !e.gmOnly)
+      .filter((e) => !e.gmOnly && !(e.sourceId && offBoard.has(e.sourceId)))
       .slice(-PLAYER_LOG_LIMIT)
       .map((e) => {
         // Every roll loses its arithmetic, whoever made it — an area's damage dice

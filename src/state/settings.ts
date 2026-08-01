@@ -32,6 +32,13 @@ export interface PlayerViewSettings {
   log: PlayerLogScope
   /** Whether the table sees the summary when a fight ends. */
   recap: FieldVisibility
+  /**
+   * Whether a foe added while the fight is running reaches the table's screen straight
+   * away. `hidden` holds every arrival back until the GM reveals it — the table hears
+   * the door before it sees what came through. Either way it's a starting point: the
+   * creature's own toggle overrules it.
+   */
+  arrivals: FieldVisibility
 }
 
 /**
@@ -47,6 +54,7 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   rolls: 'shown',
   log: 'fight',
   recap: 'shown',
+  arrivals: 'shown',
 }
 
 export interface AppSettings {
@@ -97,6 +105,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
     log: data.log === 'session' ? 'session' : 'fight',
     // The summary travels unless the GM has turned it off.
     recap: data.recap === 'hidden' ? 'hidden' : 'shown',
+    // A reinforcement lands on the table's screen unless the GM holds arrivals back.
+    arrivals: data.arrivals === 'hidden' ? 'hidden' : 'shown',
   }
 }
 

@@ -6,7 +6,7 @@ import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
-import { autoLabel, instantiate, nameOf } from './combat/combatant.ts'
+import { autoLabel, instantiate, isFoe, nameOf } from './combat/combatant.ts'
 import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
@@ -659,6 +659,11 @@ function App() {
     if (encounter.round > 0) {
       const { total, entry } = rollInit(nameOf(c), initMod(c), false, c.combatantId)
       combatant = { ...c, initiative: total }
+      // A foe arriving mid-fight follows the GM's standing choice: on the table's
+      // screen with everyone else, or held back until they reveal it.
+      if (playerView.arrivals === 'hidden' && isFoe(combatant)) {
+        combatant = { ...combatant, shared: 'hidden' }
+      }
       dispatch({ type: 'log', entry })
     }
     dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })

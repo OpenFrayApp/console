@@ -86,6 +86,14 @@ interface CombatantBase {
    * Undefined = available. Independent of any specific reaction in the stat block.
    */
   reactionUsed?: boolean
+  /**
+   * Whether this one is on the shared player board. `auto` (the default) follows the
+   * fight: foes reach the table's screen when combat begins. `shown` puts a foe there
+   * early, `hidden` keeps one off it — the ambusher in the rafters, the reinforcement
+   * the party hasn't heard yet. Only foes are ever withheld; the party's own side is
+   * on the shared board throughout.
+   */
+  shared?: 'auto' | 'shown' | 'hidden'
 }
 
 /**

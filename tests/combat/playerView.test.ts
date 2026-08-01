@@ -7,7 +7,12 @@ import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combata
 import type { Encounter, GameLogEntry } from '../../src/schema/encounter.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { RollResult } from '../../src/dice/roll.ts'
-import { PLAYER_LOG_LIMIT, playerBoard, type PlayerRecap } from '../../src/combat/playerView.ts'
+import {
+  PLAYER_LOG_LIMIT,
+  onSharedBoard,
+  playerBoard,
+  type PlayerRecap,
+} from '../../src/combat/playerView.ts'
 import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../src/state/settings.ts'
 
 /** Player-view settings with the defaults filled in, so a case names only what it changes. */
@@ -201,6 +206,57 @@ describe('playerBoard — which side a combatant is on', () => {
     const row = playerBoard(encounter({ combatants: [wolf] }), DEFAULT_PLAYER_VIEW).rows[0]
     expect(row.deathSaves).toBeUndefined()
     expect(row.stable).toBeUndefined()
+  })
+})
+
+describe('onSharedBoard', () => {
+  it('keeps the party on the shared board at all times', () => {
+    expect(onSharedBoard(pc(), false)).toBe(true)
+    expect(onSharedBoard(monster({ side: 'friend' }), false)).toBe(true)
+  })
+
+  it('brings a foe on when the fight begins', () => {
+    expect(onSharedBoard(monster(), false)).toBe(false)
+    expect(onSharedBoard(monster(), true)).toBe(true)
+  })
+
+  it('lets the GM overrule either way', () => {
+    expect(onSharedBoard(monster({ shared: 'shown' }), false)).toBe(true)
+    expect(onSharedBoard(monster({ shared: 'hidden' }), true)).toBe(false)
+  })
+})
+
+describe('playerBoard — a creature the GM is holding back', () => {
+  const ambusher = monster({ combatantId: 'a', label: 'Ambusher', shared: 'hidden' })
+
+  it('leaves it off the shared order, fight or no fight', () => {
+    const e = encounter({ round: 2, combatants: [pc(), ambusher] })
+    expect(playerBoard(e, DEFAULT_PLAYER_VIEW).rows.map((r) => r.name)).toEqual(['Thalia'])
+  })
+
+  // A creature the table can't see doesn't narrate itself either, or the log gives
+  // away both that it is there and what it is.
+  it('keeps what it did out of the shared log', () => {
+    const e = encounter({
+      round: 2,
+      combatants: [pc(), ambusher],
+      log: [
+        entry({ id: 'seen', message: 'Thalia takes damage', sourceId: 'p' }),
+        entry({ id: 'hidden', message: 'Ambusher: Dagger', sourceId: 'a' }),
+      ],
+    })
+    expect(playerBoard(e, DEFAULT_PLAYER_VIEW).log.map((x) => x.id)).toEqual(['seen'])
+  })
+
+  it('puts a revealed one on the board before the fight starts', () => {
+    const e = encounter({
+      round: 0,
+      combatants: [pc(), monster({ combatantId: 'h', label: 'Herald', shared: 'shown' })],
+    })
+    expect(playerBoard(e, DEFAULT_PLAYER_VIEW).rows.map((r) => r.name)).toEqual([
+      'Thalia',
+      'Herald',
+    ])
   })
 })
 

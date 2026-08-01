@@ -112,6 +112,49 @@ describe('CombatantControls', () => {
     expect(dispatch.mock.calls[1][0].update({ ...monster(), side: 'friend' }).side).toBe('foe')
   })
 
+  it('holds a creature off the shared screen, and puts it back', () => {
+    const dispatch = vi.fn()
+    render(
+      <CombatantControls
+        combatant={monster()}
+        round={1}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Hide from players'))
+    expect(dispatch.mock.calls[0][0].update(monster()).shared).toBe('hidden')
+
+    cleanup()
+    render(
+      <CombatantControls
+        combatant={{ ...monster(), shared: 'hidden' }}
+        round={1}
+        dispatch={dispatch}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Hidden from players'))
+    expect(dispatch.mock.calls[1][0].update({ ...monster(), shared: 'hidden' }).shared).toBe(
+      'shown',
+    )
+  })
+
+  it('offers no shared-screen control for a player character', () => {
+    render(
+      <CombatantControls
+        combatant={downedPc()}
+        round={1}
+        dispatch={vi.fn()}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    expect(screen.queryByText('Hide from players')).toBeNull()
+  })
+
   it('offers no side control for a player character', () => {
     render(
       <CombatantControls

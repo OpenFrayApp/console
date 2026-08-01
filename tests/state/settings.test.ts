@@ -77,6 +77,15 @@ describe('player-view settings', () => {
     expect(loadSettings().playerView.recap).toBe('shown')
   })
 
+  it('shows a mid-fight arrival unless the GM holds arrivals back', () => {
+    expect(loadSettings().playerView.arrivals).toBe('shown')
+    localStorage.setItem(
+      'openfray-settings',
+      JSON.stringify({ playerView: { arrivals: 'hidden' } }),
+    )
+    expect(loadSettings().playerView.arrivals).toBe('hidden')
+  })
+
   it('keeps the whole session only when the GM asked for it', () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { log: 'everything' } }))
     expect(loadSettings().playerView.log).toBe('fight')

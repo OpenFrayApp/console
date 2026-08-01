@@ -42,6 +42,22 @@ describe('App — when initiative reaches the log', () => {
     expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
   })
 
+  it('starts a mid-fight arrival off the shared screen when the GM asked for that', () => {
+    localStorage.setItem(
+      'openfray-settings',
+      JSON.stringify({ playerView: { arrivals: 'hidden' } }),
+    )
+    render(<App />)
+    addFoe('Bandit')
+    fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+    expect(screen.queryByTitle('Kept off the shared player screen')).toBeNull()
+
+    addFoe('Reinforcement')
+    expect(screen.getAllByTitle('Kept off the shared player screen')).toHaveLength(1)
+    localStorage.clear()
+  })
+
   it('records the rolls under the line that opens the fight', () => {
     render(<App />)
     addFoe('Bandit')

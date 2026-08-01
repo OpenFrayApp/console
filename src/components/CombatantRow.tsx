@@ -27,6 +27,8 @@ interface CombatantRowProps {
   onRemove?: () => void
   /** Click-to-edit current HP from a raw input ("12", "+5", "-3"). */
   onHpInput?: (raw: string) => void
+  /** This one is being kept off the shared player screen, so the GM can see which. */
+  hiddenFromPlayers?: boolean
   /** Show a drag handle, to manually reorder the turn order. */
   reorderable?: boolean
   /** This row is the one currently being dragged (rendered as a faint placeholder). */
@@ -52,6 +54,7 @@ export function CombatantRow({
   onRemoveEffect,
   onRemove,
   onHpInput,
+  hiddenFromPlayers = false,
   reorderable = false,
   dragging = false,
   onReorderStart,
@@ -172,6 +175,14 @@ export function CombatantRow({
               className="inline-flex h-5 shrink-0 items-center justify-center rounded bg-violet-200 px-1 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-200"
             >
               C
+            </span>
+          )}
+          {hiddenFromPlayers && (
+            <span
+              title="Kept off the shared player screen"
+              className="rounded bg-amber-100 px-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+            >
+              Hidden
             </span>
           )}
           {status === 'dead' && (
