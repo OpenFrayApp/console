@@ -130,6 +130,42 @@ describe('CreatureStatBlock', () => {
     expect(container.textContent).toContain('Pounce (Recharge 5–6)')
   })
 
+  it('makes every reaction clickable in combat, roll or no roll', () => {
+    // Most SRD reactions (Parry, Split) roll nothing, so rollability can't gate the
+    // click — using one still spends the creature's reaction for the round.
+    const onReaction = vi.fn()
+    const parry = {
+      id: 'parry',
+      name: 'Parry',
+      kind: 'utility' as const,
+      toHit: null,
+      text: 'It parries.',
+    }
+    render(
+      <CreatureStatBlock
+        creature={{ ...GOBLIN, reactions: [parry] }}
+        onAction={vi.fn()}
+        onReaction={onReaction}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Parry.' }))
+    expect(onReaction).toHaveBeenCalledWith(parry)
+  })
+
+  it('leaves reactions as plain text in the reference compendium', () => {
+    render(
+      <CreatureStatBlock
+        creature={{
+          ...GOBLIN,
+          reactions: [
+            { id: 'parry', name: 'Parry', kind: 'utility', toHit: null, text: 'It parries.' },
+          ],
+        }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Parry.' })).toBeNull()
+  })
+
   it('renders speeds as text, skills, defenses, and senses tables', () => {
     const { container } = render(<CreatureStatBlock creature={GOBLIN} />)
     const text = container.textContent ?? ''

@@ -33,6 +33,10 @@ vi.mock('../../src/compendium/srd.ts', () => ({
         abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
         senses: { passivePerception: 8 },
         cr: 2,
+        // A reaction that rolls nothing — the shape most SRD reactions have (Parry, Split).
+        reactions: [
+          { id: 'parry', name: 'Parry', kind: 'utility', toHit: null, text: 'It parries.' },
+        ],
       },
     ]),
   loadSrdSpells: () => Promise.resolve([]),
@@ -111,6 +115,16 @@ describe('Encounter flow', () => {
 
     expect(before).not.toBe(after)
     expect([before, after].sort()).toEqual(['Goblin', 'Ogre'])
+  })
+
+  it('using a reaction from the stat block spends the round’s reaction', async () => {
+    render(<App />)
+    await addCreature('Ogre')
+    beginCombat()
+
+    expect(screen.getByRole('button', { name: 'Use reaction' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Parry\.$/ }))
+    expect(screen.getByRole('button', { name: 'Reaction used' })).toBeInTheDocument()
   })
 
   it('edits HP by clicking it in the stat block (+N / -N / set)', async () => {

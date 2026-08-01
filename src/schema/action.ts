@@ -67,3 +67,8 @@ export interface Action {
   /** Original stat-block prose. Display only — never parsed for mechanics. */
   text?: string
 }
+
+/** An action can be resolved (rolled) if it has a to-hit, a save, or damage. */
+export function isRollable(a: Action): boolean {
+  return a.toHit != null || a.save != null || (a.damage?.length ?? 0) > 0
+}

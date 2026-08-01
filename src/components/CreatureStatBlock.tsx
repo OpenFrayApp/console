@@ -9,7 +9,7 @@ import {
   type SkillBonuses,
 } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
-import type { Action, Recharge } from '../schema/action.ts'
+import { isRollable, type Action, type Recharge } from '../schema/action.ts'
 import type {
   Creature,
   SpellGroup,
@@ -324,11 +324,6 @@ function Section({
   )
 }
 
-/** An action can be resolved (rolled) if it has a to-hit, a save, or damage. */
-function isRollable(a: Action): boolean {
-  return a.toHit != null || a.save != null || (a.damage?.length ?? 0) > 0
-}
-
 export const SECTION_HEADING =
   'mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300'
 
@@ -349,6 +344,7 @@ function ActionSection({
   actionUsesOf,
   onUseAction,
   clickAll,
+  useHint,
   legendaryRemaining,
 }: {
   title: string
@@ -365,8 +361,10 @@ function ActionSection({
   /** Spend one per-day use of an action. */
   onUseAction?: (a: Action) => void
   /** Make every action clickable (not just rollable ones) — used for legendary
-   *  actions, where clicking spends one regardless of attack/save. */
+   *  actions and reactions, where clicking spends one regardless of attack/save. */
   clickAll?: boolean
+  /** Tooltip for a `clickAll` action; defaults to the legendary wording. */
+  useHint?: string
   /** Legendary actions left — disables actions that cost more than this. */
   legendaryRemaining?: number
 }) {
@@ -416,11 +414,12 @@ function ActionSection({
               </p>
             )
           }
-          // Legendary actions: every entry is clickable (clicking spends its cost).
+          // Legendary actions and reactions: every entry is clickable, because using one
+          // spends a resource whether or not it rolls anything.
           if (onAction && clickAll) {
             const cost = a.legendaryCost ?? 1
             const cantAfford = legendaryRemaining != null && legendaryRemaining < cost
-            const legendaryHeading = `${a.name}${cost > 1 ? ` (Costs ${cost})` : ''}`
+            const clickHeading = cost > 1 ? `${a.name} (Costs ${cost})` : heading
             return (
               <p key={a.id} className={cantAfford ? 'opacity-50' : undefined}>
                 <button
@@ -428,11 +427,12 @@ function ActionSection({
                   onClick={() => onAction(a)}
                   disabled={cantAfford}
                   title={
-                    cost > 1 ? `Use this action (spends ${cost})` : 'Use this action (spends one)'
+                    useHint ??
+                    (cost > 1 ? `Use this action (spends ${cost})` : 'Use this action (spends one)')
                   }
                   className="font-semibold text-indigo-600 hover:underline disabled:no-underline disabled:hover:no-underline dark:text-indigo-400"
                 >
-                  {legendaryHeading}.
+                  {clickHeading}.
                 </button>{' '}
                 {a.text ? (
                   <Markdown inline linkConditions resolveSpell={resolveSpell}>
@@ -654,6 +654,7 @@ export function CreatureStatBlock({
   onUseAction,
   slotsLeftOf,
   resolveSpell,
+  onReaction,
   onLegendaryAction,
   legendaryRemaining,
   legendaryResistanceLeft,
@@ -694,6 +695,8 @@ export function CreatureStatBlock({
   slotsLeftOf?: (level: number) => number
   /** Resolve a spell's compendium entry for the hover preview / cast card. */
   resolveSpell?: ResolveSpell
+  /** Use a reaction (spends the round's reaction, then resolves it if it's rollable). Combat only. */
+  onReaction?: (action: Action) => void
   /** Use a legendary action (spends one, then resolves it if it's rollable). Combat only. */
   onLegendaryAction?: (action: Action) => void
   /** Legendary actions left this round, when in combat. */
@@ -858,12 +861,14 @@ export function CreatureStatBlock({
       <ActionSection
         title="Reactions"
         actions={creature.reactions}
-        onAction={onAction}
+        onAction={onReaction ?? onAction}
+        clickAll={onReaction != null}
+        useHint="Use this reaction (spends this round's reaction)"
         rechargeState={rechargeState}
         onRecharge={onRecharge}
         resolveSpell={resolveSpell}
         actionUsesOf={actionUsesOf}
-        onUseAction={onUseAction}
+        onUseAction={onReaction ?? onUseAction}
       />
       <ActionSection
         title={legendaryTitle}

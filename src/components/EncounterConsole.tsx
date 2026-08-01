@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useEffect, useMemo, useState } from 'react'
-import type { Action } from '../schema/action.ts'
+import { isRollable, type Action } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { SpellLevel, SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
@@ -29,7 +29,7 @@ import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
 import { isFoe } from '../combat/combatant.ts'
-import { onSharedBoard } from '../combat/playerView.ts'
+import { heldBack } from '../combat/playerView.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
 import { ActionResolver } from './ActionResolver.tsx'
@@ -244,8 +244,23 @@ export function EncounterConsole({
       id: c.combatantId,
       update: (cc) => (cc.isPC ? cc : spendActionUse(cc, action.id)),
     })
-    const rollable = action.toHit != null || action.save != null || (action.damage?.length ?? 0) > 0
-    if (rollable) setActionFor(action)
+    if (isRollable(action)) setActionFor(action)
+  }
+
+  // Using a reaction from the stat block spends the creature's one reaction for the
+  // round — the same resource the Use reaction control toggles — then resolves like any
+  // other action: a per-day reaction also decrements, and one with a roll opens the
+  // resolver. Most reactions (Parry, Split) roll nothing, so every one is clickable.
+  const applyReaction = (c: MonsterCombatant, action: Action) => {
+    if (!c.reactionUsed) track(EVENTS.reactionUsed)
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : { ...cc, reactionUsed: true }),
+    })
+    onNote(`${c.label} uses ${action.name}`, 'action')
+    if (actionUsesRemaining(c, action) != null) consumeLimitedAction(c, action)
+    else if (isRollable(action)) setActionFor(action)
   }
 
   // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution — and
@@ -279,8 +294,7 @@ export function EncounterConsole({
       update: (cc) => (cc.isPC ? cc : spendLegendary(cc, action.legendaryCost ?? 1)),
     })
     onNote(`${c.label} uses ${action.name}`, 'action')
-    const rollable = action.toHit != null || action.save != null || (action.damage?.length ?? 0) > 0
-    if (rollable) setActionFor(action)
+    if (isRollable(action)) setActionFor(action)
   }
 
   /** A combatant's tracker row, wired for selection, HP input, effects, and drag reordering. */
@@ -291,7 +305,7 @@ export function EncounterConsole({
       active={running && c.combatantId === activeId}
       selected={c.combatantId === selected?.combatantId}
       onSelect={() => onSelect(c.combatantId)}
-      hiddenFromPlayers={!onSharedBoard(c, running)}
+      hiddenFromPlayers={heldBack(c)}
       onRemoveEffect={(effectId) =>
         dispatch({
           type: 'update',
@@ -475,6 +489,9 @@ export function EncounterConsole({
                     selected.isPC ? null : actionUsesRemaining(selected, action)
                   }
                   onUseAction={(action) => consumeLimitedAction(selected, action)}
+                  onReaction={
+                    selected.isPC ? undefined : (action) => applyReaction(selected, action)
+                  }
                   slotsLeftOf={
                     selected.isPC
                       ? undefined
