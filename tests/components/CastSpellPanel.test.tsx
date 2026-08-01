@@ -99,7 +99,14 @@ describe('CastSpellPanel', () => {
   it('lists all spells (incl. buffs) and opens a save spell in the mass-save modal', async () => {
     const onRoll = vi.fn()
     const dispatch = vi.fn()
-    render(<CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={onRoll} />)
+    render(
+      <CastSpellPanel
+        combatants={[monster()]}
+        dispatch={dispatch}
+        onRoll={onRoll}
+        onNote={vi.fn()}
+      />,
+    )
 
     fireEvent.click(screen.getByText('Cast spell'))
     await waitFor(() => expect(screen.getByText('Fireball')).toBeTruthy())
@@ -117,7 +124,14 @@ describe('CastSpellPanel', () => {
   })
 
   it('shows the reference card for a buff spell with no rollable mechanics', async () => {
-    render(<CastSpellPanel combatants={[monster()]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+    render(
+      <CastSpellPanel
+        combatants={[monster()]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onNote={vi.fn()}
+      />,
+    )
     fireEvent.click(screen.getByText('Cast spell'))
     await waitFor(() => expect(screen.getByText('Light')).toBeTruthy())
     fireEvent.click(screen.getByText('Light'))
@@ -133,6 +147,7 @@ describe('CastSpellPanel', () => {
         combatants={[monster()]}
         dispatch={vi.fn()}
         onRoll={vi.fn()}
+        onNote={vi.fn()}
         enabledLibraries={['srd-5.1']}
       />,
     )
@@ -143,29 +158,71 @@ describe('CastSpellPanel', () => {
   })
 
   it('disables casting with no combatants', () => {
-    render(<CastSpellPanel combatants={[]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+    render(<CastSpellPanel combatants={[]} dispatch={vi.fn()} onRoll={vi.fn()} onNote={vi.fn()} />)
     expect((screen.getByText('Cast spell') as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('starts the chosen caster concentrating when a concentration spell is cast', async () => {
+  /** Open the panel, choose the monster as caster, and pick a spell. */
+  const cast = async (name: string) => {
+    fireEvent.click(screen.getByText('Cast spell'))
+    await waitFor(() => expect(screen.getByText(name)).toBeTruthy())
+    fireEvent.change(screen.getByLabelText('Caster'), { target: { value: 'g1' } })
+    fireEvent.click(screen.getByText(name))
+  }
+
+  /** The concentration a dispatched update would start on the caster, if any. */
+  const concentrationFrom = (dispatch: ReturnType<typeof vi.fn>) =>
+    dispatch.mock.calls
+      .map((c) => c[0])
+      .filter((a) => a.type === 'update' && a.id === 'g1')
+      .map((a) => a.update(monster()).concentration)
+      .find(Boolean)
+
+  it('records the cast in the game log, naming the caster', async () => {
+    const onNote = vi.fn()
+    render(
+      <CastSpellPanel
+        combatants={[monster()]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onNote={onNote}
+      />,
+    )
+    await cast('Bless')
+    expect(onNote).toHaveBeenCalledWith('Goblin (A) casts Bless', 'cast')
+  })
+
+  // Picking a spell is not casting it, and a spell nobody is affected by has nothing
+  // to sustain — so concentration waits until the effect actually lands on someone.
+  it('does not start concentrating merely because a spell was picked', async () => {
     const dispatch = vi.fn()
     render(
-      <CastSpellPanel combatants={[monster()]} dispatch={dispatch} onRoll={vi.fn()} round={2} />,
+      <CastSpellPanel
+        combatants={[monster()]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onNote={vi.fn()}
+        round={2}
+      />,
     )
-    fireEvent.click(screen.getByText('Cast spell'))
-    await waitFor(() => expect(screen.getByText('Bless')).toBeTruthy())
-    fireEvent.change(screen.getByLabelText('Caster'), { target: { value: 'g1' } })
-    fireEvent.click(screen.getByText('Bless'))
+    await cast('Bless')
+    expect(concentrationFrom(dispatch)).toBeUndefined()
+  })
 
-    const conc = dispatch.mock.calls
-      .map((c) => c[0])
-      .find((a) => a.type === 'update' && a.id === 'g1')
-    expect(conc).toBeTruthy()
-    expect(conc.update(monster()).concentration).toMatchObject({
-      spell: 'Bless',
-      round: 2,
-      rounds: 10,
-    })
+  it('starts the caster concentrating once the buff lands on someone', async () => {
+    const dispatch = vi.fn()
+    render(
+      <CastSpellPanel
+        combatants={[monster()]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onNote={vi.fn()}
+        round={2}
+      />,
+    )
+    await cast('Bless')
+    fireEvent.click(screen.getByText('Apply effect'))
+    expect(concentrationFrom(dispatch)).toMatchObject({ spell: 'Bless', round: 2, rounds: 10 })
   })
 
   it("seeds the save DC from a monster caster's spellcasting", async () => {
@@ -173,7 +230,9 @@ describe('CastSpellPanel', () => {
       ...monster(),
       creature: { ...creature(), spellcasting: { ability: 'int', saveDc: 16, groups: [] } },
     }
-    render(<CastSpellPanel combatants={[caster]} dispatch={vi.fn()} onRoll={vi.fn()} />)
+    render(
+      <CastSpellPanel combatants={[caster]} dispatch={vi.fn()} onRoll={vi.fn()} onNote={vi.fn()} />,
+    )
     fireEvent.click(screen.getByText('Cast spell'))
     await waitFor(() => expect(screen.getByText('Fireball')).toBeTruthy())
     fireEvent.change(screen.getByLabelText('Caster'), { target: { value: 'g1' } })

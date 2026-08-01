@@ -7,6 +7,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { durationRounds, spellAction } from '../combat/casting.ts'
 import { startConcentration } from '../combat/concentration.ts'
+import { nameOf } from '../combat/combatant.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { ActionResolver } from './ActionResolver.tsx'
@@ -16,7 +17,7 @@ import { LibraryPicker } from './LibraryPicker.tsx'
 import { Modal } from './Modal.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
-import type { OnRoll } from './GameLog.tsx'
+import type { OnNote, OnRoll } from './GameLog.tsx'
 
 /** "Cantrip" for level 0, otherwise "Lvl N". */
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
@@ -31,6 +32,7 @@ export function CastSpellPanel({
   combatants,
   dispatch,
   onRoll,
+  onNote,
   round = 0,
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
@@ -39,6 +41,7 @@ export function CastSpellPanel({
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  onNote: OnNote
   /** Current combat round — stamped on the caster's concentration when it starts. */
   round?: number
   /** The signed-in user's custom spells, castable alongside the SRD. */
@@ -61,27 +64,33 @@ export function CastSpellPanel({
     setSpell(null)
   }
 
-  /** Set the spell to cast; a concentration spell starts the chosen caster concentrating. */
+  /** Start the chosen caster concentrating on the spell in hand, with its round timer. */
+  const concentrate = (s: Spell) => {
+    if (!caster) return
+    const saveDc = caster.isPC ? 0 : (caster.creature.spellcasting?.saveDc ?? 0)
+    dispatch({
+      type: 'update',
+      id: caster.combatantId,
+      update: (cc) =>
+        startConcentration(cc, {
+          spell: s.name,
+          saveDc,
+          round,
+          rounds: durationRounds(s.duration),
+        }),
+    })
+  }
+
+  /**
+   * Set the spell to cast and record it. Concentration deliberately doesn't start here:
+   * picking a spell isn't casting it, and a spell every target saves against has nothing
+   * to sustain. It begins when the spell actually takes hold — see `onResolved` below,
+   * and `onApplied` for a buff.
+   */
   const pick = (s: Spell) => {
     reset()
     setSpell(s)
-    // A concentration spell starts the chosen caster concentrating, with the spell's
-    // round timer — mirroring a stat-block cast. The caster is optional, so this only
-    // fires when one is picked.
-    if (s.concentration && caster) {
-      const saveDc = caster.isPC ? 0 : (caster.creature.spellcasting?.saveDc ?? 0)
-      dispatch({
-        type: 'update',
-        id: caster.combatantId,
-        update: (cc) =>
-          startConcentration(cc, {
-            spell: s.name,
-            saveDc,
-            round,
-            rounds: durationRounds(s.duration),
-          }),
-      })
-    }
+    onNote(caster ? `${nameOf(caster)} casts ${s.name}` : `${s.name} is cast`, 'cast')
   }
 
   if (!spell) {
@@ -137,6 +146,10 @@ export function CastSpellPanel({
         onRoll={onRoll}
         defaultMagical
         spell={spell}
+        casterId={caster?.combatantId}
+        onResolved={(anyFailed) => {
+          if (anyFailed && spell.concentration) concentrate(spell)
+        }}
         onClose={reset}
       />
     )
@@ -165,6 +178,9 @@ export function CastSpellPanel({
             caster={caster}
             combatants={combatants}
             dispatch={dispatch}
+            onApplied={(count) => {
+              if (count > 0 && spell.concentration) concentrate(spell)
+            }}
           />
         </div>
       ) : (
@@ -175,6 +191,9 @@ export function CastSpellPanel({
             caster={caster}
             combatants={combatants}
             dispatch={dispatch}
+            onApplied={(count) => {
+              if (count > 0 && spell.concentration) concentrate(spell)
+            }}
           />
         </div>
       )}

@@ -173,6 +173,22 @@ describe('MassSavePanel', () => {
     expect(saves).toEqual(['a: DEX save', 'b: DEX save'])
   })
 
+  // Offering "apply to failed" when nobody failed invites the wrong click.
+  it('withdraws the spell effect once every target has made its save', () => {
+    const dispatch = vi.fn()
+    render(<MassSavePanel combatants={[monster('a')]} dispatch={dispatch} onRoll={vi.fn()} />)
+    fireEvent.click(screen.getByText('Group save'))
+    fireEvent.click(screen.getByRole('button', { name: 'a' }))
+    fireEvent.click(screen.getByText('Roll saves'))
+
+    const row = screen.getByLabelText('Damage to a').closest('li') as HTMLElement
+    fireEvent.click(within(row).getByRole('button', { name: 'Fail' }))
+    // A standalone group save carries no spell, so there is no effect row either way —
+    // what this pins is that a failure keeps the row and a save takes it away.
+    fireEvent.click(within(row).getByRole('button', { name: 'Save' }))
+    expect(screen.queryByText(/^Apply .* to failed$/)).toBeNull()
+  })
+
   // Legendary Resistance and a manual override both land on the held line, so the log
   // records the outcome that stood rather than the one the die first gave.
   it('records the outcome the Game Master settled on, not the one rolled', () => {

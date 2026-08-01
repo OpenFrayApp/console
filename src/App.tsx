@@ -808,6 +808,7 @@ function App() {
                   combatants={encounter.combatants}
                   dispatch={dispatch}
                   onRoll={pushRoll}
+                  onNote={pushNote}
                   round={encounter.round}
                   customSpells={customSpells}
                   enabledLibraries={enabledLibraries}

@@ -120,6 +120,19 @@ interface ResolverProps {
   /** The spell being cast, when this resolver is driving a spell — lets a save spell
    *  with a modelled board effect (Bane, Faerie Fire) offer to apply it on a failure. */
   spell?: Spell
+  /**
+   * Who cast the spell, when that isn't who rolls. A player character casting through
+   * the Cast spell panel is never the `attacker` — the GM types the DC and the player
+   * rolls nothing — but the spell's effects still have to be sourced to them, or ending
+   * their concentration would leave the effects behind on every target.
+   */
+  casterId?: string
+  /**
+   * How the save went, once the GM has settled it: whether anyone actually failed.
+   * A concentration spell nobody failed against has nothing to sustain, so the caller
+   * uses this to decide whether concentration begins at all.
+   */
+  onResolved?: (anyFailed: boolean) => void
   onClose: () => void
 }
 
@@ -698,6 +711,8 @@ export function SaveResolver({
   onUse,
   defaultMagical,
   spell,
+  casterId,
+  onResolved,
   onClose,
 }: {
   attacker?: MonsterCombatant
@@ -708,6 +723,8 @@ export function SaveResolver({
   onUse?: () => void
   defaultMagical?: boolean
   spell?: Spell
+  casterId?: string
+  onResolved?: (anyFailed: boolean) => void
   onClose: () => void
 }) {
   const save = action?.save ?? null
@@ -731,6 +748,22 @@ export function SaveResolver({
   const [damageType, setDamageType] = useState<DamageType | ''>('')
   const [magical, setMagical] = useState(defaultMagical ?? false)
   const [rows, setRows] = useState<Record<string, SaveRow>>({})
+
+  // Reporting how the save went, once and once only. Read through refs so the caller
+  // can pass a plain arrow without its identity re-firing the unmount path.
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  const reportedRef = useRef(false)
+  const onResolvedRef = useRef(onResolved)
+  onResolvedRef.current = onResolved
+  const reportResolved = useCallback(() => {
+    if (reportedRef.current) return
+    const settled = Object.values(rowsRef.current)
+    if (settled.length === 0) return
+    reportedRef.current = true
+    onResolvedRef.current?.(settled.some((r) => r.result === 'fail'))
+  }, [])
+  useEffect(() => () => reportResolved(), [reportResolved])
   const [area, setArea] = useState<RolledDamage[]>([])
   const [resolved, setResolved] = useState(false)
   const [pending, setPending] = useState<{ combatant: Combatant; dc: number; damage: number }[]>([])
@@ -888,6 +921,7 @@ export function SaveResolver({
   /** Apply each resolved row's damage, then queue concentration prompts or close. */
   const apply = () => {
     flush()
+    reportResolved()
     const prompts: { combatant: Combatant; dc: number; damage: number }[] = []
     for (const c of selectedTargets) {
       const row = rows[c.combatantId]
@@ -946,12 +980,13 @@ export function SaveResolver({
     const affected = affectedTargets()
     if (affected.length === 0) return
     flush()
+    reportResolved()
     // Hand the resolver's save to the builder so a save-ends debuff carries the
     // escape save the GM just rolled against.
     const escape = { ability, dc: toNum(dc) || 10 }
     for (const c of affected) {
       const effects = spellEffect.build({
-        source: attacker?.combatantId,
+        source: casterId ?? attacker?.combatantId,
         spell,
         target: c,
         save: escape,
@@ -1196,7 +1231,9 @@ export function SaveResolver({
             Apply damage
           </Button>
 
-          {spellEffect && (
+          {/* Nothing to apply to nobody: once the saves are in and every target made
+            theirs, offering "apply to failed" is an invitation to do the wrong thing. */}
+          {spellEffect && affectedTargets().length > 0 && (
             <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50/50 p-2 dark:border-indigo-900/60 dark:bg-indigo-900/10">
               <Button variant="primary" onClick={applySpellEffect}>
                 Apply {spell!.name}

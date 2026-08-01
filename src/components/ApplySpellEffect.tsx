@@ -46,18 +46,24 @@ export function ApplySpellEffect({
   caster,
   combatants,
   dispatch,
+  onApplied,
 }: {
   spell: Spell
   /** The caster, when known (a monster stat-block cast); absent for a GM "Cast spell". */
   caster?: Combatant
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
+  /** How many targets the effect landed on — a concentration spell begins here. */
+  onApplied?: (count: number) => void
 }) {
   const def = spellEffectFor(spell)
   const [selected, setSelected] = useState<Set<string>>(() =>
     def ? defaultTargets(def, caster, combatants) : new Set(),
   )
   const [appliedTo, setAppliedTo] = useState<string[] | null>(null)
+  // Read through a ref so a caller's inline arrow can't re-run the self-buff effect.
+  const onAppliedRef = useRef(onApplied)
+  onAppliedRef.current = onApplied
 
   // A self-only spell (Speak with Animals, Blur) lands on its caster and nobody else,
   // so there is nothing to choose — and nothing to confirm. Without a known caster the
@@ -74,6 +80,7 @@ export function ApplySpellEffect({
       update: (x) => ({ ...x, effects: [...x.effects, ...effects] }),
     })
     setAppliedTo([nameOf(caster)])
+    onAppliedRef.current?.(1)
   }, [def, selfOnly, caster, spell, dispatch])
 
   if (!def) return null
@@ -104,6 +111,7 @@ export function ApplySpellEffect({
       names.push(nameOf(c))
     }
     setAppliedTo(names)
+    onApplied?.(names.length)
   }
 
   return (
