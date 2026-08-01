@@ -13,7 +13,7 @@ import {
   libraryTag,
 } from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
-import { Button, type ButtonVariant } from './ui.tsx'
+import { Button, EntryBadges as Badges, type ButtonVariant } from './ui.tsx'
 
 /** The least a picker needs of a creature or spell: a label and its badges. */
 export interface LibraryEntry {
@@ -27,32 +27,24 @@ export interface LibraryEntry {
 const isCustom = (e: LibraryEntry): boolean => e.id.startsWith('custom:')
 
 /** Custom / source / edition badges for one row, in the order the compendium uses. */
-function EntryBadges({ entry }: { entry: LibraryEntry }) {
+function EntryBadges({ entry, showEdition }: { entry: LibraryEntry; showEdition: boolean }) {
   // A custom entry carries its own edition and no source badge; a library entry
   // takes both from its library.
   const source = isCustom(entry) ? undefined : librarySource(entry.source)
-  const edition = isCustom(entry) ? entry.edition : libraryTag(entry.source)
+  const edition = showEdition
+    ? isCustom(entry)
+      ? entry.edition
+      : libraryTag(entry.source)
+    : undefined
   return (
     <>
-      {isCustom(entry) && (
-        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
-          Custom
-        </span>
-      )}
-      {source && (
-        <span
-          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${librarySourceBadgeClass(entry.source)}`}
-        >
-          {source}
-        </span>
-      )}
-      {edition && (
-        <span
-          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${editionBadgeClass(edition)}`}
-        >
-          {editionLabel(edition)}
-        </span>
-      )}
+      <Badges
+        custom={isCustom(entry)}
+        source={source}
+        sourceTone={librarySourceBadgeClass(entry.source)}
+        edition={edition && editionLabel(edition)}
+        editionTone={edition && editionBadgeClass(edition)}
+      />
     </>
   )
 }
@@ -75,6 +67,7 @@ export function LibraryPicker<T extends LibraryEntry>({
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
   meta,
+  showEdition = true,
   onOpen,
   onPick,
   closeOnPick = true,
@@ -95,6 +88,9 @@ export function LibraryPicker<T extends LibraryEntry>({
   showHomebrew?: boolean
   /** Trailing text for a row, e.g. "CR 5" or "Lvl 3". */
   meta?: (entry: T) => ReactNode
+  /** Whether rows carry an edition badge. Off for content that isn't edition-specific,
+   *  like an effect preset — a condition reads the same in either edition. */
+  showEdition?: boolean
   /** Fired when the popover opens, so the caller can fetch the entries. */
   onOpen?: () => void
   onPick: (entry: T) => void
@@ -160,7 +156,7 @@ export function LibraryPicker<T extends LibraryEntry>({
                   >
                     <span className="truncate">{e.name}</span>
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                      <EntryBadges entry={e} />
+                      <EntryBadges entry={e} showEdition={showEdition} />
                       {meta?.(e)}
                     </span>
                   </button>

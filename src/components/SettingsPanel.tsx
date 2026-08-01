@@ -11,9 +11,7 @@ import {
 import { track, EVENTS } from '../lib/analytics.ts'
 import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
-import { TabButton } from './ui.tsx'
-
-const BADGE = 'rounded px-1.5 py-0.5 text-[10px] font-medium'
+import { Badge, CUSTOM_TONE, TabButton } from './ui.tsx'
 
 const SELECT =
   'rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
@@ -24,9 +22,6 @@ const GROUPS: { key: 'core' | 'openfray' | 'other'; label: string }[] = [
   { key: 'openfray', label: 'OpenFray' },
   { key: 'other', label: 'Other' },
 ]
-// The compendium's "Custom" badge, reused on the homebrew row — no edition badge, since
-// homebrew can be either edition.
-const CUSTOM_BADGE = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'
 
 const IMPORTER_CHROME_URL =
   'https://chromewebstore.google.com/detail/openfray-importer/cjooflanhdpfddpppllaelhlfpdinjfk'
@@ -170,7 +165,7 @@ export function SettingsPanel({
                         />
                         <span>Homebrew creations</span>
                         <span className="flex items-center gap-1.5">
-                          <span className={`${BADGE} ${CUSTOM_BADGE}`}>Custom</span>
+                          <Badge tone={CUSTOM_TONE}>Custom</Badge>
                         </span>
                       </label>
                     )}
@@ -202,12 +197,10 @@ export function SettingsPanel({
                           <span>{lib.label}</span>
                         )}
                         <span className="flex items-center gap-1.5">
-                          <span className={`${BADGE} ${librarySourceBadgeClass(lib.id)}`}>
-                            {lib.shortLabel}
-                          </span>
-                          <span className={`${BADGE} ${editionBadgeClass(lib.edition)}`}>
+                          <Badge tone={librarySourceBadgeClass(lib.id)}>{lib.shortLabel}</Badge>
+                          <Badge tone={editionBadgeClass(lib.edition)}>
                             {editionLabel(lib.edition)}
-                          </span>
+                          </Badge>
                         </span>
                       </label>
                     ))}

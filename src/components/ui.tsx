@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes } from 'react'
+import type {
+  ButtonHTMLAttributes,
+  HTMLAttributes,
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+} from 'react'
 import { cx } from '../lib/cx.ts'
 
 /**
@@ -126,4 +131,58 @@ export function Field({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
 /** A select, sized and bordered like Field so a row of both lines up. */
 export function Select({ className, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select className={cx(CONTROL, 'dark:bg-slate-900', className)} {...rest} />
+}
+
+/**
+ * The one badge: a source, an edition, "Custom", a challenge rating. The caller passes
+ * the text and the color classes — `librarySourceBadgeClass` / `editionBadgeClass` and
+ * friends — and everything else (radius, padding, weight, size) is the same everywhere,
+ * so a badge in the compendium list, the Settings panel and every picker match.
+ */
+export function Badge({
+  tone,
+  className,
+  ...rest
+}: HTMLAttributes<HTMLSpanElement> & { tone?: string }) {
+  return (
+    <span
+      className={cx('rounded px-1.5 py-0.5 text-[10px] font-medium', tone, className)}
+      {...rest}
+    />
+  )
+}
+
+/** The indigo "Custom" tone, for anything the Game Master authored themselves. */
+export const CUSTOM_TONE =
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'
+
+/**
+ * The badge set every list row and picker row carries, in one order: Custom, then where
+ * it came from, then which edition. Rendering these separately per list is how they
+ * drifted — the compendium showed all three, the campaign list showed bare text, the
+ * preset list showed only a source.
+ */
+export function EntryBadges({
+  custom = false,
+  source,
+  sourceTone,
+  edition,
+  editionTone,
+}: {
+  /** The Game Master's own work, rather than a library's. */
+  custom?: boolean
+  /** Compact source label ("Core", "ToB3", "B&B"); absent on custom entries. */
+  source?: string
+  sourceTone?: string
+  /** Edition label ("5.5e" / "5e"). */
+  edition?: string
+  editionTone?: string
+}) {
+  return (
+    <>
+      {custom && <Badge tone={CUSTOM_TONE}>Custom</Badge>}
+      {source && <Badge tone={sourceTone}>{source}</Badge>}
+      {edition && <Badge tone={editionTone}>{edition}</Badge>}
+    </>
+  )
 }
