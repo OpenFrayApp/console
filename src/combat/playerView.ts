@@ -87,6 +87,16 @@ export function onSharedBoard(c: Combatant, started: boolean): boolean {
   return c.shared !== 'hidden' && started
 }
 
+/**
+ * Whether the GM deliberately held this one back, as opposed to a foe simply waiting
+ * for the fight to start. Only the deliberate case is worth flagging on the board: every
+ * foe is off the table's screen before Begin, and saying so on each row reads as a
+ * per-creature problem to undo rather than the default it is.
+ */
+export function heldBack(c: Combatant): boolean {
+  return isFoe(c) && c.shared === 'hidden'
+}
+
 /** The board facts every row carries, whichever side of the fight it is on. */
 function baseRow(c: Combatant): Omit<PlayerRow, 'hp'> {
   return {

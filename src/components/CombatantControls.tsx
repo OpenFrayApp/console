@@ -18,7 +18,7 @@ import {
 } from '../combat/resources.ts'
 import { saveBonus } from '../combat/masssave.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
-import { onSharedBoard } from '../combat/playerView.ts'
+import { heldBack, onSharedBoard } from '../combat/playerView.ts'
 import { signed } from '../compendium/format.ts'
 import { counterOf, describeDuration, setCount } from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
@@ -212,15 +212,15 @@ export function CombatantControls({
             onClick={() =>
               apply((c) => ({ ...c, shared: onSharedBoard(c, started) ? 'hidden' : 'shown' }))
             }
-            aria-pressed={!onSharedBoard(combatant, started)}
+            aria-pressed={heldBack(combatant)}
             title="Whether the shared player screen shows this creature. Foes appear there when the fight begins; hide one to keep an ambush off the table's board, or show it early."
             className={
-              onSharedBoard(combatant, started)
-                ? BTN
-                : 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+              heldBack(combatant)
+                ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                : BTN
             }
           >
-            {onSharedBoard(combatant, started) ? 'Hide from players' : 'Hidden from players'}
+            {onSharedBoard(combatant, started) ? 'Hide from players' : 'Show to players'}
           </button>
         )}
 

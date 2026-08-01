@@ -9,6 +9,7 @@ import type { Effect } from '../../src/schema/effect.ts'
 import type { RollResult } from '../../src/dice/roll.ts'
 import {
   PLAYER_LOG_LIMIT,
+  heldBack,
   onSharedBoard,
   playerBoard,
   type PlayerRecap,
@@ -223,6 +224,19 @@ describe('onSharedBoard', () => {
   it('lets the GM overrule either way', () => {
     expect(onSharedBoard(monster({ shared: 'shown' }), false)).toBe(true)
     expect(onSharedBoard(monster({ shared: 'hidden' }), true)).toBe(false)
+  })
+})
+
+describe('heldBack', () => {
+  it("counts only the GM's own choice, not a foe waiting for the fight to start", () => {
+    expect(heldBack(monster())).toBe(false)
+    expect(heldBack(monster({ shared: 'shown' }))).toBe(false)
+    expect(heldBack(monster({ shared: 'hidden' }))).toBe(true)
+  })
+
+  it("never applies to the party's own side", () => {
+    expect(heldBack(pc())).toBe(false)
+    expect(heldBack(monster({ side: 'friend', shared: 'hidden' }))).toBe(false)
   })
 })
 

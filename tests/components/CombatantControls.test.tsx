@@ -136,10 +136,26 @@ describe('CombatantControls', () => {
         onGmRoll={() => {}}
       />,
     )
-    fireEvent.click(screen.getByText('Hidden from players'))
+    fireEvent.click(screen.getByText('Show to players'))
     expect(dispatch.mock.calls[1][0].update({ ...monster(), shared: 'hidden' }).shared).toBe(
       'shown',
     )
+  })
+
+  it('names the reveal before the fight, when every foe is off the shared screen', () => {
+    render(
+      <CombatantControls
+        combatant={monster()}
+        round={0}
+        dispatch={vi.fn()}
+        onRoll={() => {}}
+        onGmRoll={() => {}}
+      />,
+    )
+    // Not yet started is not the same as held back: the button offers the reveal, and
+    // nothing marks the creature as one the GM chose to hide.
+    const button = screen.getByText('Show to players')
+    expect(button.getAttribute('aria-pressed')).toBe('false')
   })
 
   it('offers no shared-screen control for a player character', () => {
