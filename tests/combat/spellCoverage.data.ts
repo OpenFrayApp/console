@@ -9,6 +9,12 @@
  * creature.** Area, object, terrain, summon, pure-information and instantaneous spells
  * have no combatant to hang a badge on, so they belong here.
  *
+ * Brood & Bloom adds a second reading of the same rule. Its spells move Depth, Spore
+ * Load, and disease stages around, and those are the book's own counters — carried by a
+ * character between sessions, not by the board. A spell whose only lingering consequence
+ * is one of them is a scratchpad miss, not board state, so it is skipped like any other
+ * effect the GM adjudicates.
+ *
  * A new content library fails `spellCoverage.test.ts` until each of its spells is
  * either given an entry in `SPELL_EFFECTS` or added here.
  */
@@ -83,6 +89,10 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'sunburst',
     'thunderwave',
     'vitriolic sphere',
+    // Brood & Bloom: the rider is Depth or Spore Load, the book's own counters.
+    'efflorescence',
+    'exacerbation',
+    "prosector's purgation",
   ]),
 
   // HP and condition removal are fields the GM edits, not effects to badge.
@@ -126,6 +136,9 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'simulacrum',
     'summon dragon',
     'unseen servant',
+    // Brood & Bloom: both put a creature on the board — a stage 4 form, or a Crypt Instar.
+    'extirpation',
+    'laying-in',
   ]),
 
   // Shapes the map, not the creatures standing on it.
@@ -149,6 +162,11 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'wall of stone',
     'wall of thorns',
     'wind wall',
+    // Brood & Bloom: ground the party stands on — contaminated, suppressed, or sealed.
+    'bloom interdict',
+    'glebe',
+    'lazaret sill',
+    'sequestration',
   ]),
 
   // Acts on an object or a place; no combatant carries it.
@@ -181,6 +199,11 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'teleportation circle',
     'thaumaturgy',
     'tiny hut',
+    // Brood & Bloom: a corpse, a flame, or a light placed in the world.
+    'discharge',
+    'douter',
+    'false wakelight',
+    'unction',
   ]),
 
   // Returns information or paints a scene; the GM narrates the outcome.
@@ -205,6 +228,10 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'speak with dead',
     'speak with plants',
     'true strike',
+    // Brood & Bloom: what they return is a reading of a body or the ground.
+    'anamnesis',
+    'brood inquest',
+    'fair copy',
   ]),
 
   // Moves someone somewhere; the board change is who is on it.
@@ -227,6 +254,10 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'remove curse',
     'time stop',
     'wish',
+    // Brood & Bloom: each moves a graft, its Depth, or the stage of a disease.
+    'assumption of the case',
+    'countenance',
+    'second assignment',
   ]),
 
   // Lies dormant until triggered; nothing to track until it fires.

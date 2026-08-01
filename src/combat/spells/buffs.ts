@@ -596,6 +596,16 @@ export const BUFF_SPELLS: SpellEffectTable = {
   },
 
   // — Necromancy —
+  'chantry tithe': {
+    summary: 'The caster gains 5 temporary HP whenever another creature nearby casts a spell',
+    targeting: 'self',
+    build: ({ source, spell }) => [
+      reminder('Chantry Tithe', '5 temp HP when others cast', {
+        source,
+        duration: timedDuration(spell),
+      }),
+    ],
+  },
   'vampiric touch': {
     summary: 'Heals the caster half the necrotic damage dealt',
     targeting: 'self',
@@ -623,6 +633,33 @@ export const BUFF_SPELLS: SpellEffectTable = {
   },
 
   // — Transmutation —
+  instar: {
+    summary: '20 temporary HP, a 2d8 natural weapon, and advantage against Frightened and Charmed',
+    targeting: 'self',
+    build: ({ source, spell }) => [
+      reminder('Instar', '20 temp HP & a natural weapon', {
+        source,
+        duration: timedDuration(spell),
+      }),
+    ],
+  },
+  preferment: {
+    // The permanent cost — the caster's own case advances a stage — is the book's
+    // disease counter, not board state, so only the minute of benefits is badged.
+    summary: '+20 Speed, advantage on attacks and Constitution saves, 10 temporary HP each turn',
+    targeting: 'self',
+    build: ({ source, spell }) => [
+      advOn('Preferment', 'attackRolls', {
+        source,
+        duration: timedDuration(spell),
+        note: 'Advantage on attacks',
+      }),
+      reminder('Preferment', '+20 Speed; 10 temp HP/turn', {
+        source,
+        duration: timedDuration(spell),
+      }),
+    ],
+  },
   shillelagh: {
     summary: 'The weapon uses the caster’s spellcasting ability',
     targeting: 'self',

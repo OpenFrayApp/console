@@ -548,6 +548,17 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
   },
 
   // — Transmutation —
+  latchwork: {
+    summary: 'Disadvantage on its next attack roll',
+    targeting: 'enemy',
+    build: ({ source }) => [
+      disadvantageOn('Latchwork', {
+        source,
+        duration: CONSUME,
+        note: 'Disadv. on its next attack',
+      }),
+    ],
+  },
   'blindness/deafness': {
     summary: 'Blinded or Deafened — the caster’s choice',
     targeting: 'enemy',

@@ -97,6 +97,7 @@ export const LIBRARIES: Library[] = [
     group: 'openfray',
     edition: '5.5',
     creaturesFile: 'brood-and-bloom-creatures.json',
+    spellsFile: 'brood-and-bloom-spells.json',
     bookUrl: '/brood-and-bloom/',
   },
   {
