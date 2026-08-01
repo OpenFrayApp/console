@@ -48,8 +48,8 @@ function encounter(overrides: Partial<Encounter> = {}): Encounter {
 }
 
 describe('loadCloudEncounter', () => {
-  it('returns null without a configured client (anonymous mode)', async () => {
-    expect(await loadCloudEncounter()).toBeNull()
+  it('reports a failure without a configured client, never an empty account', async () => {
+    expect(await loadCloudEncounter()).toEqual({ status: 'failed' })
   })
 
   it('reads the single newest row from the encounters table', async () => {
@@ -57,6 +57,7 @@ describe('loadCloudEncounter', () => {
     const { client, queries } = makeSupabaseStub({ data: { id: 'row-1', state: enc } })
     supa.client = client
     expect(await loadCloudEncounter()).toEqual({
+      status: 'loaded',
       id: 'row-1',
       encounter: enc,
       playerCode: null,
@@ -79,19 +80,22 @@ describe('loadCloudEncounter', () => {
       data: { id: 'row-1', state: encounter(), player_code: 'tuesday-game' },
     })
     supa.client = client
-    expect((await loadCloudEncounter())?.playerCode).toBe('tuesday-game')
+    const res = await loadCloudEncounter()
+    expect(res.status === 'loaded' && res.playerCode).toBe('tuesday-game')
   })
 
-  it('falls back to null on a query error', async () => {
+  // These two used to be the same answer, and conflating them is what turned one
+  // failed read into an orphaned encounter plus a duplicate row.
+  it('reports a failed read as failed, never as an empty account', async () => {
     const { client } = makeSupabaseStub({ data: null, error: { message: 'boom' } })
     supa.client = client
-    expect(await loadCloudEncounter()).toBeNull()
+    expect(await loadCloudEncounter()).toEqual({ status: 'failed' })
   })
 
-  it('falls back to null when the user has no saved encounter', async () => {
+  it('reports a genuinely empty account as empty', async () => {
     const { client } = makeSupabaseStub({ data: null, error: null })
     supa.client = client
-    expect(await loadCloudEncounter()).toBeNull()
+    expect(await loadCloudEncounter()).toEqual({ status: 'empty' })
   })
 })
 

@@ -346,7 +346,7 @@ function App() {
     let active = true
     loadCloudEncounter().then((res) => {
       if (!active) return
-      if (res) {
+      if (res.status === 'loaded') {
         cloudId.current = res.id
         dispatch({ type: 'load', encounter: res.encounter })
         setSelectedId(null)
@@ -354,7 +354,10 @@ function App() {
         // this device happened to mint while anonymous.
         if (res.playerCode) setPlayerCode(res.playerCode)
       }
-      cloudHydrated.current = true
+      // Only write once the answer is known. A read that failed is not "this user has
+      // no row" — treating it as one is what orphaned encounters into duplicates, and
+      // the fight is safe in sessionStorage meanwhile.
+      cloudHydrated.current = res.status !== 'failed'
     })
     return () => {
       active = false

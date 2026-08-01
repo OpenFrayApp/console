@@ -13,21 +13,31 @@ import type { Encounter } from '../schema/encounter.ts'
  * is null), so their state stays in `sessionStorage`.
  */
 
-/** The user's most recent encounter, or null if they have none / not configured. */
-export async function loadCloudEncounter(): Promise<{
-  id: string
-  encounter: Encounter
-  playerCode: string | null
-} | null> {
-  if (!supabase) return null
+/**
+ * What the load found. `empty` and `failed` are kept apart on purpose: they used to
+ * both come back as null, and the caller read that as "this user has no row" and
+ * inserted one — so a single failed read orphaned the GM's encounter and started a
+ * duplicate. A failure now says so, and the caller declines to write rather than
+ * guessing.
+ */
+export type LoadedEncounter =
+  | { status: 'loaded'; id: string; encounter: Encounter; playerCode: string | null }
+  | { status: 'empty' }
+  | { status: 'failed' }
+
+/** The user's most recent encounter. */
+export async function loadCloudEncounter(): Promise<LoadedEncounter> {
+  if (!supabase) return { status: 'failed' }
   const { data, error } = await supabase
     .from('encounters')
     .select('id, state, player_code')
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  if (error || !data) return null
+  if (error) return { status: 'failed' }
+  if (!data) return { status: 'empty' }
   return {
+    status: 'loaded',
     id: data.id,
     encounter: data.state as Encounter,
     playerCode: (data.player_code as string | null) ?? null,
