@@ -21,6 +21,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'assemble-'))
   // The three build outputs assemble-site.mjs merges, in miniature.
   file('site/dist/index.html', '<html>home</html>')
+  file('site/dist/404.html', '<html>site not found</html>')
   file('site/dist/privacy/index.html')
   file('site/dist/the-waking-garden/index.html')
   file('site/dist/the-waking-garden/print/index.html', '<html>print</html>')
@@ -55,6 +56,15 @@ describe('assemble-site', () => {
     expect(redirects).toContain('/docs               /docs/                301')
     expect(redirects).toMatch(/\/docs\/concepts\/effects\/\s+\/docs\/fight\/effects\/\s+301/)
     expect(redirects.endsWith('\n')).toBe(true)
+  })
+
+  // Deep links into the app — /console/play/<code> — are answered by the closest
+  // 404.html rather than by the _redirects proxy, which has never fired on Pages.
+  it('leaves the app shell as the console`s own 404 page', () => {
+    expect(readFileSync(join(dir, 'dist/console/404.html'), 'utf8')).toContain('app')
+    // Not at the root: the marketing site keeps its own, or every unknown URL there
+    // would answer with the console.
+    expect(readFileSync(join(dir, 'dist/404.html'), 'utf8')).not.toContain('app')
   })
 
   it('overwrites the sitemap index to cover both the site and the handbook', () => {

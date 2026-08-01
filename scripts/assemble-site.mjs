@@ -5,7 +5,7 @@
 // (base = /console/), Astro builds the marketing site into site/dist, and Starlight
 // builds the handbook into docs/dist (base = /docs/). This step copies each into
 // the dist root and writes the Pages routing rules. Output dir for Pages is dist/.
-import { cpSync, writeFileSync, rmSync } from 'node:fs'
+import { copyFileSync, cpSync, writeFileSync, rmSync } from 'node:fs'
 
 // Site root (/) → the Astro-built marketing site (home, privacy, terms, 404). The
 // app under /console is built separately by Vite and is unaffected.
@@ -48,6 +48,15 @@ const redirects = [
   '',
 ].join('\n')
 writeFileSync('dist/_redirects', redirects)
+
+// The app shell again as the console's own 404 page. Pages looks for the closest
+// `404.html` from the requested path upward, so this is what actually answers a deep
+// link like /console/play/<code>: the shell loads and `main.tsx` reads the path. The
+// `_redirects` proxy above is the rule that ought to do it — it has been in the file
+// since launch and has never fired on a splat, while every 301 beside it works — so
+// the fallback is what the feature relies on. It has to be inside dist/console: at the
+// root it would swallow every unknown path on the marketing site too.
+copyFileSync('dist/console/index.html', 'dist/console/404.html')
 
 // One sitemap index at the domain root, covering both the marketing site and the
 // handbook. Each part builds its own sitemap-0.xml (@astrojs/sitemap); the docs are a
