@@ -240,3 +240,53 @@ describe('CastSpellPanel', () => {
     expect((screen.getByLabelText('Save DC') as HTMLInputElement).value).toBe('16')
   })
 })
+
+// The GM has already said who they mean by selecting a row or by taking that
+// creature's turn, so the picker opens on them rather than on "No caster".
+describe('CastSpellPanel — who is casting', () => {
+  const second = (): MonsterCombatant => ({ ...monster(), combatantId: 'g2', label: 'Goblin (B)' })
+
+  /** Render the panel with a prefilled caster and open its picker. */
+  const openWith = (defaultCasterId?: string | null) => {
+    const view = render(
+      <CastSpellPanel
+        combatants={[monster(), second()]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onNote={vi.fn()}
+        defaultCasterId={defaultCasterId}
+      />,
+    )
+    fireEvent.click(screen.getByText('Cast spell'))
+    return view
+  }
+
+  it('opens on the combatant the GM is looking at', () => {
+    openWith('g2')
+    expect((screen.getByLabelText('Caster') as HTMLSelectElement).value).toBe('g2')
+  })
+
+  it('follows the board when the selection moves on', () => {
+    const { rerender } = openWith('g1')
+    rerender(
+      <CastSpellPanel
+        combatants={[monster(), second()]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onNote={vi.fn()}
+        defaultCasterId="g2"
+      />,
+    )
+    expect((screen.getByLabelText('Caster') as HTMLSelectElement).value).toBe('g2')
+  })
+
+  it('leaves the GM casting when nobody is selected', () => {
+    openWith(null)
+    expect((screen.getByLabelText('Caster') as HTMLSelectElement).value).toBe('')
+  })
+
+  it('falls back to no caster when the prefilled one has left the board', () => {
+    openWith('gone')
+    expect((screen.getByLabelText('Caster') as HTMLSelectElement).value).toBe('')
+  })
+})

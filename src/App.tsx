@@ -770,6 +770,10 @@ function App() {
 
   const started = encounter.round > 0
   const paused = encounter.paused === true
+  // Cast spell opens on whoever the GM is looking at — the selected combatant, or the
+  // one whose turn it is — so the common case needs no pick at all.
+  const defaultCasterId =
+    selectedId ?? (started ? encounter.combatants[encounter.activeIndex]?.combatantId : undefined)
 
   return (
     <CampaignRulesContext.Provider value={activeRules}>
@@ -810,6 +814,7 @@ function App() {
                   onRoll={pushRoll}
                   onNote={pushNote}
                   round={encounter.round}
+                  defaultCasterId={defaultCasterId}
                   customSpells={customSpells}
                   enabledLibraries={enabledLibraries}
                   showHomebrew={showHomebrew}

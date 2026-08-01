@@ -34,6 +34,7 @@ export function CastSpellPanel({
   onRoll,
   onNote,
   round = 0,
+  defaultCasterId,
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
@@ -44,6 +45,8 @@ export function CastSpellPanel({
   onNote: OnNote
   /** Current combat round — stamped on the caster's concentration when it starts. */
   round?: number
+  /** Who the caster starts as: the combatant the GM has selected, or whose turn it is. */
+  defaultCasterId?: string | null
   /** The signed-in user's custom spells, castable alongside the SRD. */
   customSpells?: Spell[]
   /** Only spells from these libraries (plus custom) are listed — matches the picker. */
@@ -53,7 +56,14 @@ export function CastSpellPanel({
 }) {
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
-  const [casterId, setCasterId] = useState<string>('')
+  // The caster follows the board — whoever the GM is looking at is who they're about to
+  // cast as — and a different pick from the dropdown stands until the board moves on.
+  const [casterId, setCasterId] = useState<string>(defaultCasterId ?? '')
+  const [lastDefault, setLastDefault] = useState(defaultCasterId)
+  if (defaultCasterId !== lastDefault) {
+    setLastDefault(defaultCasterId)
+    setCasterId(defaultCasterId ?? '')
+  }
   const caster = casterId ? combatants.find((c) => c.combatantId === casterId) : undefined
   const load = useCallback(() => {
     if (spells === null) loadSrdSpells().then(setSpells, () => setSpells([]))
@@ -107,7 +117,8 @@ export function CastSpellPanel({
         onPick={pick}
       >
         <select
-          value={casterId}
+          // Falls back to no caster when the prefilled one has left the board.
+          value={caster ? casterId : ''}
           onChange={(e) => setCasterId(e.target.value)}
           aria-label="Caster"
           className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
