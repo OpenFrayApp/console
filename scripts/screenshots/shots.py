@@ -56,11 +56,15 @@ def rule_sets():
 
 def settings_panel():
     with console(width=1200, height=1200) as page:
-        page.get_by_role("button", name="Settings").click()
+        # Settings lives behind the gear menu now, so it takes two clicks to reach.
+        page.get_by_role("button", name="Settings and more").click()
+        page.get_by_role("menuitem", name="Settings").click()
         page.wait_for_selector("text=Libraries")
         head = page.get_by_role("heading", name="Settings").bounding_box()
-        libs = page.locator("section").nth(0).bounding_box()
-        ext = page.locator("section").nth(1).bounding_box()
+        # By heading rather than by index: the panel grows sections over time, and an
+        # index quietly reframes the shot around the wrong one.
+        libs = page.locator("section").filter(has_text="Libraries").first.bounding_box()
+        ext = page.locator("section").filter(has_text="Browser extension").first.bounding_box()
         # One box over both store buttons — neither browser is the recommended one.
         link = span(page.get_by_role("link", name="Get it for Chrome").bounding_box(),
                     page.get_by_role("link", name="Get it for Firefox").bounding_box())
@@ -76,10 +80,15 @@ def settings_panel():
 
 
 def theme_toggle():
+    """The gear menu open, since light and dark now live in it alongside the handbook."""
     with console(width=1200, height=1200) as page:
-        theme = page.get_by_role("button", name="Switch to light mode").bounding_box()
+        gear = page.get_by_role("button", name="Settings and more")
+        gear.click()
+        page.wait_for_selector("[role=menu]")
+        theme = page.get_by_role("menuitem", name="Switch to light mode").bounding_box()
+        menu = page.locator("[role=menu]").bounding_box()
         sign = page.get_by_role("button", name="Sign in").bounding_box()
-        capture(page, "theme-toggle", span(sign, theme), {"theme": theme}, pad=22)
+        capture(page, "theme-toggle", span(sign, gear.bounding_box(), menu), {"theme": theme}, pad=22)
     r = rects(f"{OUT}/theme-toggle.json")
     c = Canvas(f"{OUT}/theme-toggle.png", grow=(0, 130, 320, 0))
     b = c.box(r["theme"], pad=8)
