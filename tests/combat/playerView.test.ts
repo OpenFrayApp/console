@@ -397,6 +397,37 @@ describe('playerBoard — how much of the log the table follows', () => {
   })
 })
 
+describe('playerBoard — the fight`s clocks', () => {
+  const stats = {
+    startedAt: 1_000,
+    activeMs: 90_000,
+    runningSince: 5_000,
+    damageDealt: { m: 30 },
+    damageTaken: { p: 12 },
+    biggestHit: { sourceId: 'm', amount: 30 },
+  }
+
+  it('carries the clock, and only the clock', () => {
+    const board = playerBoard(encounter({ round: 2, combatStats: stats }), DEFAULT_PLAYER_VIEW)
+    expect(board.timers).toEqual({ activeMs: 90_000, runningSince: 5_000 })
+    // The tallies beside it in CombatStats are the GM's own.
+    expect(JSON.stringify(board)).not.toContain('damageDealt')
+    expect(JSON.stringify(board)).not.toContain('biggestHit')
+  })
+
+  it('leaves them off when the GM would rather not show them', () => {
+    const board = playerBoard(
+      encounter({ round: 2, combatStats: stats }),
+      view({ timers: 'hidden' }),
+    )
+    expect('timers' in board).toBe(false)
+  })
+
+  it('has no clock before a fight has started', () => {
+    expect('timers' in playerBoard(encounter({ round: 0 }), DEFAULT_PLAYER_VIEW)).toBe(false)
+  })
+})
+
 describe('playerBoard — the end-of-fight summary', () => {
   const summary: PlayerRecap = {
     outcome: 'victory',

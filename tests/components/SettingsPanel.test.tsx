@@ -67,6 +67,13 @@ describe('SettingsPanel — the player view', () => {
     expect((screen.getByLabelText('End-of-fight summary') as HTMLSelectElement).value).toBe('shown')
   })
 
+  it('hides the fight clocks when asked', () => {
+    const { onSetPlayerView } = renderPanel()
+    openTab('Player view')
+    fireEvent.change(screen.getByLabelText('Fight clocks'), { target: { value: 'hidden' } })
+    expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, timers: 'hidden' })
+  })
+
   it('hides a creature`s conditions when asked', () => {
     const { onSetPlayerView } = renderPanel()
     openTab('Player view')

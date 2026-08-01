@@ -63,14 +63,22 @@ export interface GameLogEntry {
 }
 
 /**
+ * Just the running clock: banked active time, and when the current stretch started
+ * (null while paused). Enough for a live readout, and the only part of a fight's
+ * stats the shared player view is ever given.
+ */
+export interface CombatClock {
+  activeMs: number
+  runningSince: number | null
+}
+
+/**
  * Combat clock + tallies kept while a fight runs, read by the end-of-combat recap.
  * The IRL clock excludes paused time (`activeMs` accumulates; `runningSince` is when
  * it last started, null while paused/ended). See `combat/recap.ts`.
  */
-export interface CombatStats {
+export interface CombatStats extends CombatClock {
   startedAt: number
-  activeMs: number
-  runningSince: number | null
   /** combatantId → damage dealt (only where a source is known; drives the MVP). */
   damageDealt: Record<string, number>
   /** combatantId → damage taken (every HP loss, captured by the reducer). */

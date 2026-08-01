@@ -387,6 +387,26 @@ export function SettingsPanel({
                   fresh each time you begin a fight and clears when it ends. Yours keeps everything.
                 </p>
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="player-view-timers"
+                  className="text-sm text-slate-700 dark:text-slate-200"
+                >
+                  Fight clocks
+                </label>
+                <select
+                  id="player-view-timers"
+                  value={playerView.timers}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, timers: e.target.value as FieldVisibility })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </div>
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <label

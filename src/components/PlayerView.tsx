@@ -4,6 +4,7 @@
 import { usePlayerBoard, type PlayerLinkStatus } from '../state/playerChannel.ts'
 import { useTheme } from '../hooks/useTheme.ts'
 import type { PlayerRecap } from '../combat/playerView.ts'
+import { CombatTimers } from './CombatTimers.tsx'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 import { GameLog } from './GameLog.tsx'
 import { PlayerRow } from './PlayerRow.tsx'
@@ -102,9 +103,18 @@ export function PlayerView({ code }: { code: string }) {
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
         {board ? (
           <>
-            <p className="mb-3 shrink-0 text-sm text-slate-600 dark:text-slate-300">
-              <Standing round={board.round} paused={board.paused} turn={turn} />
-            </p>
+            <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                <Standing round={board.round} paused={board.paused} turn={turn} />
+              </p>
+              {board.timers && (
+                <CombatTimers
+                  stats={board.timers}
+                  round={board.round}
+                  running={board.round > 0 && !board.paused}
+                />
+              )}
+            </div>
 
             {board.recap && <SharedRecap recap={board.recap} />}
 

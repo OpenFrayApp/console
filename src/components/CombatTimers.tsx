@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useEffect, useState } from 'react'
-import type { CombatStats } from '../schema/encounter.ts'
+import type { CombatClock } from '../schema/encounter.ts'
 import { activeMillis } from '../combat/recap.ts'
 
 /** Seconds → `m:ss` (or `h:mm:ss` past an hour), for a live clock readout. */
@@ -46,7 +46,7 @@ export function CombatTimers({
   round,
   running,
 }: {
-  stats: CombatStats
+  stats: CombatClock
   round: number
   /** Combat is started and not paused — drives the 1s tick. */
   running: boolean

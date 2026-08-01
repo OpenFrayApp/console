@@ -77,6 +77,12 @@ describe('player-view settings', () => {
     expect(loadSettings().playerView.recap).toBe('shown')
   })
 
+  it('shows the fight clocks unless the GM hides them', () => {
+    expect(loadSettings().playerView.timers).toBe('shown')
+    localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { timers: 'hidden' } }))
+    expect(loadSettings().playerView.timers).toBe('hidden')
+  })
+
   it('shows a creature`s conditions unless the GM hides them', () => {
     expect(loadSettings().playerView.effects).toBe('shown')
     localStorage.setItem('openfray-settings', JSON.stringify({ playerView: { effects: 'hidden' } }))

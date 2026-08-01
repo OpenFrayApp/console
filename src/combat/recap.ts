@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
-import type { CombatStats, Encounter } from '../schema/encounter.ts'
+import type { CombatClock, CombatStats, Encounter } from '../schema/encounter.ts'
 import { isFoe } from './combatant.ts'
 import { isStable } from './deathsaves.ts'
 import type { DifficultyTier } from './difficulty.ts'
@@ -29,7 +29,7 @@ export const resumeStats = (s: CombatStats, now: number): CombatStats =>
   s.runningSince != null ? s : { ...s, runningSince: now }
 
 /** Total active (non-paused) milliseconds up to `now`. */
-export const activeMillis = (s: CombatStats, now: number): number =>
+export const activeMillis = (s: CombatClock, now: number): number =>
   s.activeMs + (s.runningSince != null ? now - s.runningSince : 0)
 
 /** Credit damage to its dealer and refresh the biggest-hit record; amounts ≤ 0 are ignored. */

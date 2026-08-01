@@ -188,6 +188,21 @@ describe('PlayerView — live', () => {
     expect(screen.getByText('Combat ended')).toBeInTheDocument()
   })
 
+  it('ticks the fight`s clocks when the GM shares them', () => {
+    link.status = 'live'
+    link.board = board({ timers: { activeMs: 90_000, runningSince: null } })
+    render(<PlayerView code="x" />)
+    expect(screen.getByText('1:30')).toBeInTheDocument() // real time, paused clock
+    expect(screen.getByText('0:12')).toBeInTheDocument() // in-game: round 2 × 6s
+  })
+
+  it('shows no clocks when the board carries none', () => {
+    link.status = 'live'
+    link.board = board()
+    render(<PlayerView code="x" />)
+    expect(screen.queryByText(/In-game/)).toBeNull()
+  })
+
   it('has no summary while the fight is running', () => {
     link.status = 'live'
     link.board = board()

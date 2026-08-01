@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant, CombatantStatus, DeathSaves } from '../schema/combatant.ts'
-import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
+import type { CombatClock, Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
 import type { Recap } from './recap.ts'
@@ -60,6 +60,12 @@ export interface PlayerBoard {
   activeId: string | null
   rows: PlayerRow[]
   log: GameLogEntry[]
+  /**
+   * The fight's clock, when the GM shares it: enough for the table's own screen to
+   * tick along. Only the two clock fields travel — the damage tallies beside them in
+   * `CombatStats` are the GM's.
+   */
+  timers?: CombatClock
   /** The summary of the fight just ended, while the GM has it up and shares it. */
   recap?: PlayerRecap
 }
@@ -224,6 +230,14 @@ export function playerBoard(
     rows: encounter.combatants
       .filter((c) => onSharedBoard(c, encounter.round > 0))
       .map((c) => (isFoe(c) ? foeRow(c, settings) : allyRow(c))),
+    ...(encounter.combatStats && encounter.round > 0 && settings.timers === 'shown'
+      ? {
+          timers: {
+            activeMs: encounter.combatStats.activeMs,
+            runningSince: encounter.combatStats.runningSince,
+          },
+        }
+      : {}),
     ...(recap && settings.recap === 'shown' ? { recap } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly && !(e.sourceId && offBoard.has(e.sourceId)))

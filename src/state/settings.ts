@@ -36,6 +36,8 @@ export interface PlayerViewSettings {
   effects: FieldVisibility
   /** How much of the record the shared log carries — see PlayerLogScope. */
   log: PlayerLogScope
+  /** Whether the table's screen carries the fight's clocks — real time, and in-game. */
+  timers: FieldVisibility
   /** Whether the table sees the summary when a fight ends. */
   recap: FieldVisibility
   /**
@@ -60,6 +62,7 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   rolls: 'shown',
   effects: 'shown',
   log: 'fight',
+  timers: 'shown',
   recap: 'shown',
   arrivals: 'shown',
 }
@@ -112,6 +115,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
     effects: data.effects === 'hidden' ? 'hidden' : 'shown',
     // The log follows the fight in hand unless the GM asked for the whole session.
     log: data.log === 'session' ? 'session' : 'fight',
+    // The clocks travel unless the GM has turned them off.
+    timers: data.timers === 'hidden' ? 'hidden' : 'shown',
     // The summary travels unless the GM has turned it off.
     recap: data.recap === 'hidden' ? 'hidden' : 'shown',
     // A reinforcement lands on the table's screen unless the GM holds arrivals back.
