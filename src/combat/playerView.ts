@@ -172,9 +172,12 @@ export function playerBoard(encounter: Encounter, settings: PlayerViewSettings):
     round: encounter.round,
     paused: encounter.paused === true,
     activeId: running && active ? active.combatantId : null,
-    rows: encounter.combatants.map((c) =>
-      c.isPC ? playerCharacterRow(c) : creatureRow(c, settings),
-    ),
+    // Until the fight begins the board is the GM's staging area — what they have lined
+    // up, and how much of it, isn't the table's to read yet. Creatures join the shared
+    // order when combat starts, which is when the party meets them.
+    rows: encounter.combatants
+      .filter((c) => c.isPC || encounter.round > 0)
+      .map((c) => (c.isPC ? playerCharacterRow(c) : creatureRow(c, settings))),
     log: encounter.log
       .filter((e) => !e.gmOnly)
       .slice(-PLAYER_LOG_LIMIT)

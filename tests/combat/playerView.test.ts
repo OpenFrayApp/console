@@ -398,6 +398,26 @@ describe('playerBoard — a creature`s numbers in the log', () => {
   })
 })
 
+describe('playerBoard — creatures before the fight starts', () => {
+  it('shares only the party while the GM is still setting the board up', () => {
+    const board = playerBoard(encounter({ round: 0 }), DEFAULT_PLAYER_VIEW)
+    expect(board.rows.map((r) => r.name)).toEqual(['Thalia'])
+  })
+
+  it('withholds how many creatures are waiting, not just what they are', () => {
+    const e = encounter({
+      round: 0,
+      combatants: [monster({ combatantId: 'm1' }), monster({ combatantId: 'm2' })],
+    })
+    expect(playerBoard(e, DEFAULT_PLAYER_VIEW).rows).toEqual([])
+  })
+
+  it('brings the creatures in when combat begins', () => {
+    const board = playerBoard(encounter({ round: 1 }), DEFAULT_PLAYER_VIEW)
+    expect(board.rows.map((r) => r.name)).toEqual(['Thalia', 'Ogre'])
+  })
+})
+
 describe('playerBoard — where the fight is', () => {
   it('names whose turn it is while combat runs', () => {
     const board = playerBoard(encounter({ activeIndex: 1 }), DEFAULT_PLAYER_VIEW)
