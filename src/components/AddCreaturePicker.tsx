@@ -6,6 +6,7 @@ import type { Creature } from '../schema/creature.ts'
 import { loadSrdCreatures } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import { formatCr } from '../compendium/format.ts'
+import type { LibrarySort } from '../state/settings.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
 import type { ButtonVariant } from './ui.tsx'
 
@@ -15,6 +16,7 @@ export function AddCreaturePicker({
   customCreatures = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  librarySort = 'name',
   label = 'Add creature',
   variant = 'primary',
   closeOnPick = false,
@@ -24,6 +26,8 @@ export function AddCreaturePicker({
   customCreatures?: Creature[]
   enabledLibraries?: string[]
   showHomebrew?: boolean
+  /** The compendium's sort setting — 'cr' lists by challenge rating. */
+  librarySort?: LibrarySort
   /** The trigger's text — "Start from" on the custom-creature form. */
   label?: string
   variant?: ButtonVariant
@@ -48,6 +52,7 @@ export function AddCreaturePicker({
       custom={customCreatures}
       enabledLibraries={enabledLibraries}
       showHomebrew={showHomebrew}
+      sortKey={librarySort === 'cr' ? (c) => c.cr ?? 0 : undefined}
       meta={(c) => `CR ${formatCr(c.cr)}`}
       onOpen={load}
       onPick={onPick}

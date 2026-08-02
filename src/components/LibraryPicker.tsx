@@ -52,8 +52,9 @@ function EntryBadges({ entry, showEdition }: { entry: LibraryEntry; showEdition:
 /**
  * The search popover every content picker uses — Add creature, Cast spell, and the
  * "start from" on the custom forms. A trigger button opens a search over the enabled
- * libraries plus the GM's own entries, alphabetical, each row badged with where it
- * came from. The list is only fetched once the popover opens (`onOpen`).
+ * libraries plus the GM's own entries, sorted the way the compendium is, each row
+ * badged with where it came from. The list is only fetched once the popover opens
+ * (`onOpen`).
  */
 export function LibraryPicker<T extends LibraryEntry>({
   label,
@@ -66,6 +67,7 @@ export function LibraryPicker<T extends LibraryEntry>({
   custom = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  sortKey,
   meta,
   showEdition = true,
   onOpen,
@@ -86,6 +88,9 @@ export function LibraryPicker<T extends LibraryEntry>({
   custom?: T[]
   enabledLibraries?: string[]
   showHomebrew?: boolean
+  /** Numeric sort key (CR, spell level). When set, the list sorts by it ascending
+   *  with name as tiebreak — the compendium's CR/level order; otherwise alphabetical. */
+  sortKey?: (entry: T) => number
   /** Trailing text for a row, e.g. "CR 5" or "Lvl 3". */
   meta?: (entry: T) => ReactNode
   /** Whether rows carry an edition badge. Off for content that isn't edition-specific,
@@ -114,12 +119,17 @@ export function LibraryPicker<T extends LibraryEntry>({
   }, [open, onOpen])
 
   const q = query.trim().toLowerCase()
-  // Sorted alphabetically across every enabled library; the whole list lives in the
-  // scroll container, so it browses as well as it searches.
+  // Sorted across every enabled library — by the caller's key when given, else
+  // alphabetically; the whole list lives in the scroll container, so it browses as
+  // well as it searches.
   const matches = [...custom, ...(entries ?? [])]
     .filter((e) => inEnabledLibrary(e, enabledLibraries, showHomebrew))
     .filter((e) => !q || e.name.toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) =>
+      sortKey
+        ? sortKey(a) - sortKey(b) || a.name.localeCompare(b.name)
+        : a.name.localeCompare(b.name),
+    )
 
   return (
     <div className="relative" ref={ref}>

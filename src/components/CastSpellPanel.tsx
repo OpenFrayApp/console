@@ -10,6 +10,7 @@ import { startConcentration } from '../combat/concentration.ts'
 import { nameOf } from '../combat/combatant.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
+import type { LibrarySort } from '../state/settings.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { isSupportSpell } from '../combat/spellEffects.ts'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
@@ -38,6 +39,7 @@ export function CastSpellPanel({
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  librarySort = 'name',
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
@@ -53,6 +55,8 @@ export function CastSpellPanel({
   enabledLibraries?: string[]
   /** When false, homebrew (custom) spells are hidden — matches the compendium/picker. */
   showHomebrew?: boolean
+  /** The compendium's sort setting — 'cr' lists by spell level. */
+  librarySort?: LibrarySort
 }) {
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
@@ -112,6 +116,7 @@ export function CastSpellPanel({
         custom={customSpells}
         enabledLibraries={enabledLibraries}
         showHomebrew={showHomebrew}
+        sortKey={librarySort === 'cr' ? (s) => s.level : undefined}
         meta={(s) => levelText(s.level)}
         onOpen={load}
         onPick={pick}

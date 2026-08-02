@@ -10,6 +10,7 @@ import { loadSrdSpells } from '../compendium/srd.ts'
 import { ActionEditor, FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { AddCreaturePicker } from './AddCreaturePicker.tsx'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
+import type { LibrarySort } from '../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { SpellTagInput } from './SpellTagInput.tsx'
 import {
@@ -80,6 +81,7 @@ export function CustomMonsterForm({
   customCreatures = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  librarySort = 'name',
   onClose,
   onSubmit,
 }: {
@@ -91,6 +93,8 @@ export function CustomMonsterForm({
   customCreatures?: Creature[]
   enabledLibraries?: string[]
   showHomebrew?: boolean
+  /** The compendium's sort setting, passed through to the Start from picker. */
+  librarySort?: LibrarySort
   onClose: () => void
   onSubmit: (creature: Creature) => void
 }) {
@@ -187,6 +191,7 @@ export function CustomMonsterForm({
                       customCreatures={customCreatures}
                       enabledLibraries={enabledLibraries}
                       showHomebrew={showHomebrew}
+                      librarySort={librarySort}
                     />
                     <span className="text-xs text-slate-500 dark:text-slate-400">
                       Fills the form from an existing creature. Everything stays editable.

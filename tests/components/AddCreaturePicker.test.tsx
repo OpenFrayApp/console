@@ -70,6 +70,36 @@ describe('AddCreaturePicker', () => {
     expect(screen.getByText('ToB3')).toBeTruthy()
   })
 
+  it('lists by challenge rating, name as tiebreak, when the sort setting is cr', async () => {
+    render(
+      <AddCreaturePicker
+        onPick={vi.fn()}
+        enabledLibraries={['srd-5.2', 'kobold-press-tob3']}
+        librarySort="cr"
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Add creature'))
+    await waitFor(() => screen.getByText('Goblin'))
+
+    const names = screen.getAllByRole('listitem').map((li) => li.textContent ?? '')
+    expect(names[0]).toContain('Goblin')
+    expect(names[1]).toContain('Clockwork Myrmidon')
+  })
+
+  it('keeps the alphabetical order under the default name sort', async () => {
+    render(
+      <AddCreaturePicker onPick={vi.fn()} enabledLibraries={['srd-5.2', 'kobold-press-tob3']} />,
+    )
+
+    fireEvent.click(screen.getByText('Add creature'))
+    await waitFor(() => screen.getByText('Goblin'))
+
+    const names = screen.getAllByRole('listitem').map((li) => li.textContent ?? '')
+    expect(names[0]).toContain('Clockwork Myrmidon')
+    expect(names[1]).toContain('Goblin')
+  })
+
   it('shows the source badge even with a single library enabled', async () => {
     render(<AddCreaturePicker onPick={vi.fn()} enabledLibraries={['srd-5.2']} />)
 

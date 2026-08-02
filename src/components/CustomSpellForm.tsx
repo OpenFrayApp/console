@@ -6,6 +6,7 @@ import type { Spell } from '../schema/spell.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { AddSpellPicker } from './AddSpellPicker.tsx'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
+import type { LibrarySort } from '../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { ABILITIES, DAMAGE_TYPES } from './customMonster.ts'
 import {
@@ -150,6 +151,7 @@ export function CustomSpellForm({
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  librarySort = 'name',
   onClose,
   onSubmit,
 }: {
@@ -160,6 +162,8 @@ export function CustomSpellForm({
   customSpells?: Spell[]
   enabledLibraries?: string[]
   showHomebrew?: boolean
+  /** The compendium's sort setting, passed through to the Start from picker. */
+  librarySort?: LibrarySort
   onClose: () => void
   onSubmit: (spell: Spell) => void
 }) {
@@ -242,6 +246,7 @@ export function CustomSpellForm({
                   customSpells={customSpells}
                   enabledLibraries={enabledLibraries}
                   showHomebrew={showHomebrew}
+                  librarySort={librarySort}
                 />
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   Fills the form from an existing spell. Everything stays editable.

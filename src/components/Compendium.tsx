@@ -832,6 +832,7 @@ export function Compendium({
         customCreatures={customCreatures}
         enabledLibraries={enabledLibraries}
         showHomebrew={showHomebrew}
+        librarySort={librarySort}
         onClose={() => setEditor(null)}
         onSubmit={submitEditor}
       />
@@ -849,6 +850,7 @@ export function Compendium({
         customSpells={customSpells}
         enabledLibraries={enabledLibraries}
         showHomebrew={showHomebrew}
+        librarySort={librarySort}
         onClose={() => setSpellEditor(null)}
         onSubmit={submitSpellEditor}
       />

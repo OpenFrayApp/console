@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react'
 import type { Spell } from '../schema/spell.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
+import type { LibrarySort } from '../state/settings.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
 import type { ButtonVariant } from './ui.tsx'
 
@@ -17,6 +18,7 @@ export function AddSpellPicker({
   customSpells = [],
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
+  librarySort = 'name',
   label,
   variant = 'secondary',
   align = 'right',
@@ -25,6 +27,8 @@ export function AddSpellPicker({
   customSpells?: Spell[]
   enabledLibraries?: string[]
   showHomebrew?: boolean
+  /** The compendium's sort setting — 'cr' lists by spell level. */
+  librarySort?: LibrarySort
   label: string
   variant?: ButtonVariant
   align?: 'left' | 'right'
@@ -45,6 +49,7 @@ export function AddSpellPicker({
       custom={customSpells}
       enabledLibraries={enabledLibraries}
       showHomebrew={showHomebrew}
+      sortKey={librarySort === 'cr' ? (s) => s.level : undefined}
       meta={(s) => levelText(s.level)}
       onOpen={load}
       onPick={onPick}

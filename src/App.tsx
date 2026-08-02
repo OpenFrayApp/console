@@ -902,6 +902,7 @@ function App() {
                   customSpells={customSpells}
                   enabledLibraries={enabledLibraries}
                   showHomebrew={showHomebrew}
+                  librarySort={librarySort}
                 />
               </div>
             )}
@@ -935,6 +936,7 @@ function App() {
                   customCreatures={customCreatures}
                   enabledLibraries={enabledLibraries}
                   showHomebrew={showHomebrew}
+                  librarySort={librarySort}
                 />
               </div>
             )}
