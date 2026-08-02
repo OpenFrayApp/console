@@ -748,8 +748,15 @@ function App() {
       } else {
         initiatives[id] = Math.floor(Number(raw) || 0)
         // A pre-rolled number the GM left alone keeps its roll; one they typed over has
-        // no roll behind it, so nothing is recorded for it.
+        // no dice behind it, so the log states the number instead — the only record a
+        // player's hand-rolled initiative gets in either view.
         if (unedited && preRolled.current[id]) rolled[id] = preRolled.current[id]
+        else
+          rolled[id] = {
+            category: 'note',
+            message: `${nameOf(c)}: initiative ${initiatives[id]}`,
+            sourceId: id,
+          }
       }
     }
 

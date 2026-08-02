@@ -70,4 +70,18 @@ describe('App — when initiative reaches the log', () => {
     expect(begins).toBeGreaterThanOrEqual(0)
     expect(rolled).toBeGreaterThan(begins)
   })
+
+  it('logs an initiative the GM typed by hand, dice-free', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    addFoe('Bandit')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
+    fireEvent.change(screen.getByLabelText('Initiative for Thalia'), { target: { value: '17' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+
+    expect(logLines().some((t) => t?.includes('Thalia: initiative 17'))).toBe(true)
+  })
 })
