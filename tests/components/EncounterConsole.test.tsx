@@ -4,6 +4,8 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import type { Creature } from '../../src/schema/creature.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 
 vi.mock('../../src/compendium/srd.ts', () => ({
   loadSrdCreatures: () =>
@@ -44,6 +46,7 @@ vi.mock('../../src/compendium/srd.ts', () => ({
 
 // The encounter flow spans the header toolbar (App) and the console body.
 const { default: App } = await import('../../src/App.tsx')
+const { EncounterConsole } = await import('../../src/components/EncounterConsole.tsx')
 
 // Clear sessionStorage too: the debounced autosave can fire during longer tests and
 // would otherwise restore stale combatants/log into the next test's fresh App.
@@ -225,5 +228,101 @@ describe('Encounter flow', () => {
     // One die each, logged separately.
     expect(screen.getByText(/Goblin: Frightened \(DEX save\)/)).toBeInTheDocument()
     expect(screen.getByText(/Goblin: Restrained \(DEX save\)/)).toBeInTheDocument()
+  })
+})
+
+describe('Stat-block quick rolls', () => {
+  const ogre: Creature = {
+    id: 'srd:ogre',
+    source: 'srd-5.2',
+    name: 'Ogre',
+    size: 'Large',
+    type: 'giant',
+    ac: 11,
+    maxHp: 68,
+    speed: { walk: 40 },
+    abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
+    senses: { passivePerception: 8 },
+  }
+
+  const monster: MonsterCombatant = {
+    isPC: false,
+    combatantId: 'm',
+    creatureId: ogre.id,
+    creature: ogre,
+    label: 'Ogre',
+    initiative: 12,
+    status: 'active',
+    hp: { current: 68, max: 68, temp: 0 },
+    slotsUsed: {},
+    spellUsesSpent: {},
+    limitedUseState: {},
+    legendaryRemaining: 0,
+    concentration: null,
+    effects: [],
+    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
+  }
+
+  const thalia: PlayerCharacter = {
+    isPC: true,
+    combatantId: 'p',
+    name: 'Thalia',
+    initiative: 17,
+    ac: 16,
+    status: 'active',
+    hp: { current: 22, max: 40, temp: 0 },
+    concentration: null,
+    effects: [],
+    abilities: { str: 10, dex: 14, con: 12, int: 10, wis: 10, cha: 10 },
+  }
+
+  /** Render the console around one selected combatant, with the roll sinks mocked. */
+  const renderConsole = (selectedId: string) => {
+    const onRoll = vi.fn()
+    render(
+      <EncounterConsole
+        encounter={{
+          encounterId: 'local',
+          ownerId: null,
+          round: 1,
+          activeIndex: 0,
+          combatants: [thalia, monster],
+          log: [],
+        }}
+        dispatch={vi.fn()}
+        onRoll={onRoll}
+        onGmRoll={vi.fn()}
+        onNote={vi.fn()}
+        onRename={vi.fn()}
+        selectedId={selectedId}
+        onSelect={vi.fn()}
+        started={true}
+        paused={false}
+        onBegin={vi.fn()}
+        onNextTurn={vi.fn()}
+        onOpenLog={vi.fn()}
+      />,
+    )
+    return onRoll
+  }
+
+  it("keeps a foe's ability save out of the shared player view", () => {
+    const onRoll = renderConsole('m')
+    fireEvent.click(screen.getByTitle('Roll DEX save'))
+    expect(onRoll).toHaveBeenCalledWith(
+      'Ogre: DEX save',
+      expect.anything(),
+      expect.objectContaining({ gmOnly: true }),
+    )
+  })
+
+  it("shares an ally's ability check as before", () => {
+    const onRoll = renderConsole('p')
+    fireEvent.click(screen.getByTitle('Roll DEX check'))
+    expect(onRoll).toHaveBeenCalledWith(
+      'Thalia: DEX check',
+      expect.anything(),
+      expect.objectContaining({ gmOnly: undefined }),
+    )
   })
 })

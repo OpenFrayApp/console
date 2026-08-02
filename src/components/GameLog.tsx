@@ -18,6 +18,8 @@ export interface RollDetails {
   sourceId?: string
   /** For a saving throw: whether it succeeded. */
   saved?: boolean
+  /** Keep the roll off the shared player view — GM bookkeeping (see GameLogEntry). */
+  gmOnly?: boolean
 }
 
 export type OnRoll = (label: string, result: RollResult, details?: RollDetails) => void

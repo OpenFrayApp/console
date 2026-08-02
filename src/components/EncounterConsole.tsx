@@ -228,9 +228,13 @@ export function EncounterConsole({
   const rollCheckFor = (c: Combatant, label: string, modifier: number, kind: 'save' | 'check') => {
     const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
     const { result, applied } = rollWithEffects(formula, { roller: c, kind })
+    // A foe's ad-hoc save or check from its stat block is the GM's bookkeeping, like
+    // its recharge and escape saves — there is no DC here, so there is no Saved/Failed
+    // for the table; a save the table should watch goes through the group-save flow.
     onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, {
       applied,
       sourceId: c.combatantId,
+      gmOnly: isFoe(c) || undefined,
     })
   }
 
