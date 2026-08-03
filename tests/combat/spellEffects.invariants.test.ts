@@ -5,8 +5,12 @@ import { describe, expect, it } from 'vitest'
 import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { Spell } from '../../src/schema/spell.ts'
-import { SPELL_EFFECTS, type SpellEffectDef } from '../../src/combat/spellEffects.ts'
-import { badgeLabel } from '../../src/combat/effects.ts'
+import {
+  SPELL_EFFECTS,
+  spellEffectFor,
+  type SpellEffectDef,
+} from '../../src/combat/spellEffects.ts'
+import { badgeLabel, groupEffects } from '../../src/combat/effects.ts'
 import { resolveCondition } from '../../src/compendium/conditions.ts'
 
 /**
@@ -14,6 +18,8 @@ import { resolveCondition } from '../../src/compendium/conditions.ts'
  * covered without writing a test for it. The note is the entire badge on the
  * combatant row (`badgeLabel` returns `note ?? name`), which is why its length and
  * its overlap with a condition name are correctness properties, not cosmetics.
+ * A multi-effect entry renders as one bundle badge, so the row-noise caps count
+ * badges through the same grouping the row uses, not raw effects.
  */
 
 /** The badge is one chip on a crowded row; a save-ends chip also appends "· save DC N". */
@@ -66,7 +72,11 @@ describe('spell effect invariants', () => {
       expect(effect.duration.type, `${name}: missing duration`).toBeTruthy()
 
       const label = badgeLabel(effect)
-      const limit = effect.duration.type === 'saveEnds' ? MAX_SAVE_ENDS_NOTE : MAX_NOTE
+      // A bundled effect's row badge is the bundle's name; its own label shows only
+      // in the Applied effects list, so just the general cap applies. A loose
+      // save-ends effect draws its DC beside the label, hence the tighter limit.
+      const bundled = def.build({ spell: spellFor(name), target: target() }).length >= 2
+      const limit = effect.duration.type === 'saveEnds' && !bundled ? MAX_SAVE_ENDS_NOTE : MAX_NOTE
       expect(
         label.length,
         `${name}: badge "${label}" is ${label.length} chars`,
@@ -109,8 +119,8 @@ describe('spell effect invariants', () => {
     const first = def.build({ spell, target: target() })
     const second = def.build({ spell, target: target() })
     expect(first.length, `${name}: built nothing`).toBeGreaterThan(0)
-    // Two badges is the ceiling; more turns the row into noise.
-    expect(first.length, `${name}: builds ${first.length} effects`).toBeLessThanOrEqual(2)
+    // Four parts is the ceiling — more turns the Applied effects list into a form.
+    expect(first.length, `${name}: builds ${first.length} effects`).toBeLessThanOrEqual(4)
     expect(new Set(first.map((e) => e.id)).size, `${name}: duplicate ids in one build`).toBe(
       first.length,
     )
@@ -119,6 +129,30 @@ describe('spell effect invariants', () => {
         second.map((e) => e.id),
         `${name}: reused an id across builds`,
       ).not.toContain(id)
+    }
+  })
+
+  it.each(entries)('%s renders as at most two badges, bundling several parts', (name) => {
+    // Through spellEffectFor, where the bundle is stamped — the same path the app takes.
+    const spell = spellFor(name)
+    const wrapped = spellEffectFor(spell)!
+    const first = wrapped.build({ spell, target: target() })
+    // Two badges is the row's ceiling; a multi-part spell folds into one bundle badge.
+    expect(
+      groupEffects(first).length,
+      `${name}: renders ${groupEffects(first).length} badges`,
+    ).toBeLessThanOrEqual(2)
+    if (first.length >= 2) {
+      const bundles = new Set(first.map((e) => e.bundle?.id))
+      expect(bundles.size, `${name}: parts split across bundles`).toBe(1)
+      expect(first[0].bundle?.name, `${name}: bundle not named after the spell`).toBe(spell.name)
+      // Each target gets its own bundle, so clearing one leaves the other alone.
+      const second = wrapped.build({ spell, target: target() })
+      expect(second[0].bundle?.id, `${name}: bundle id reused across builds`).not.toBe(
+        first[0].bundle?.id,
+      )
+    } else {
+      expect(first[0].bundle, `${name}: a lone effect needs no bundle`).toBeUndefined()
     }
   })
 

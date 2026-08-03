@@ -27,3 +27,15 @@ export function saveEndsOf(effect: Effect): SaveEnds | null {
 export function saveEndsEffects(effects: Effect[]): SaveEnds[] {
   return effects.map(saveEndsOf).filter((s): s is SaveEnds => s !== null)
 }
+
+/**
+ * The effect ids a successful escape save clears: the effect itself, plus every
+ * bundle-mate it was applied with. A spell's repeated save "ends the spell", so when
+ * Slow's anchor is shaken off, its Speed and AC parts go with it. Timers are
+ * different — a bundle's durations still tick one by one.
+ */
+export function saveEndsClears(effect: Effect, all: Effect[]): string[] {
+  if (!effect.bundle) return [effect.id]
+  const bundleId = effect.bundle.id
+  return all.filter((e) => e.id === effect.id || e.bundle?.id === bundleId).map((e) => e.id)
+}

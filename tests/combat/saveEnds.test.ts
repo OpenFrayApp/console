@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { describe, expect, it } from 'vitest'
-import { saveEndsEffects, saveEndsOf } from '../../src/combat/saveEnds.ts'
+import { saveEndsClears, saveEndsEffects, saveEndsOf } from '../../src/combat/saveEnds.ts'
 import type { Ability } from '../../src/schema/primitives.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 
@@ -66,5 +66,34 @@ describe('saveEndsEffects', () => {
     expect(
       saveEndsEffects([manual, saveEnd('Stunned', 'con', 13)]).map((s) => s.effect.name),
     ).toEqual(['Stunned'])
+  })
+})
+
+describe('saveEndsClears', () => {
+  const inBundle = (id: string, bundleId: string, over: Partial<Effect> = {}): Effect => ({
+    id,
+    name: 'Slow',
+    modifier: null,
+    duration: { type: 'rounds', rounds: 10 },
+    bundle: { id: bundleId, name: 'Slow' },
+    ...over,
+  })
+
+  it('clears only the effect itself when it was applied alone', () => {
+    const anchor = saveEnd('Frightened', 'wis', 12)
+    const other = saveEnd('Restrained', 'dex', 15)
+    expect(saveEndsClears(anchor, [anchor, other])).toEqual([anchor.id])
+  })
+
+  it('clears every bundle-mate with the anchor — the save ends the whole spell', () => {
+    const anchor = { ...saveEnd('Slow', 'wis', 15), bundle: { id: 'b1', name: 'Slow' } }
+    const speed = inBundle('speed', 'b1')
+    const saves = inBundle('saves', 'b1')
+    const unrelated = inBundle('other', 'b2', { name: 'Haste' })
+    expect(saveEndsClears(anchor, [anchor, speed, saves, unrelated])).toEqual([
+      anchor.id,
+      'speed',
+      'saves',
+    ])
   })
 })

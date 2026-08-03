@@ -28,7 +28,7 @@ import {
   groupEffects,
   setCount,
 } from '../combat/effects.ts'
-import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
+import { saveEndsClears, saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
 import type { EffectPreset } from '../schema/preset.ts'
@@ -133,7 +133,8 @@ export function CombatantControls({
   }
 
   // Monster escape save (PCs roll their own). One die per effect — effects that share
-  // an ability and DC came from different sources, so one roll can't end both.
+  // an ability and DC came from different sources, so one roll can't end both. A
+  // success also clears the effect's bundle-mates — the save ends the whole spell.
   const rollSaveEnds = (save: SaveEnds) => {
     if (combatant.isPC) return
     const bonus = saveBonus(combatant, save.ability) ?? 0
@@ -141,7 +142,16 @@ export function CombatantControls({
     // The die gives away the creature's save bonus; whether the effect ended is
     // logged separately by the update diff, and that part the table does see.
     onGmRoll(`${name}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
-    if (result.total >= save.dc) removeEffect(save.effect.id)
+    if (result.total >= save.dc) {
+      dispatch({
+        type: 'update',
+        id,
+        update: (c) => {
+          const gone = new Set(saveEndsClears(save.effect, c.effects))
+          return { ...c, effects: c.effects.filter((e) => !gone.has(e.id)) }
+        },
+      })
+    }
   }
 
   return (
@@ -375,7 +385,18 @@ export function CombatantControls({
                     </span>
                     <button
                       type="button"
-                      onClick={() => group.effects.forEach((e) => removeEffect(e.id))}
+                      // One dispatch for the lot, so the log reads one "ends" line.
+                      onClick={() => {
+                        const gone = new Set(group.effects.map((e) => e.id))
+                        dispatch({
+                          type: 'update',
+                          id,
+                          update: (c) => ({
+                            ...c,
+                            effects: c.effects.filter((e) => !gone.has(e.id)),
+                          }),
+                        })
+                      }}
                       title={`Clear ${group.bundle.name} and everything it applied`}
                       className={`${BTN} shrink-0`}
                     >
@@ -408,6 +429,8 @@ export function CombatantControls({
     const count = counterOf(e)
     // A modifier's name alone can't tell two apart — Intoxication narrows checks in
     // one effect and saves in another — so its row reads out what it actually does.
+    // A bundled reminder shows its note too: the row badge carries only the bundle's
+    // name, so this line is the one place its text is read.
     const label = e.modifier
       ? describeModifier({
           name: e.name,
@@ -418,7 +441,9 @@ export function CombatantControls({
           abilities: e.modifier.abilities,
           acBase: e.modifier.acBase,
         })
-      : e.name
+      : e.bundle && e.note
+        ? e.note
+        : e.name
     const row = (
       <div className="flex items-center justify-between gap-2 py-1 text-xs">
         <span className="min-w-0 text-slate-700 dark:text-slate-200">

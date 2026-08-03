@@ -61,22 +61,28 @@ export function delayedDamageEffect(spell: Spell, source?: string): Effect | nul
 }
 
 /**
- * The board effect a spell applies, or null if we don't model one. Two things are
+ * The board effect a spell applies, or null if we don't model one. Three things are
  * stamped on here rather than in every entry: the concentration flag (so ending the
- * caster's concentration clears the effect from every target) and the spell's own
+ * caster's concentration clears the effect from every target), the spell's own
  * duration wording (so an effect the round clock can't tick — "8 hours" — can still
- * say how long it lasts).
+ * say how long it lasts), and — when a spell leaves more than one effect — a bundle
+ * named after the spell, so Haste's four parts land as one badge and clear together.
+ * The bundle is minted per build, so each target gets its own.
  */
 export function spellEffectFor(spell: Spell): SpellEffectDef | null {
   const def = SPELL_EFFECTS[normalize(spell.name)]
   if (!def) return null
   return {
     ...def,
-    build: (ctx) =>
-      def.build(ctx).map((effect) => ({
+    build: (ctx) => {
+      const built = def.build(ctx).map((effect) => ({
         ...effect,
         ...(spell.concentration && { concentration: true as const }),
         ...(effect.duration.type === 'manual' && { durationNote: spell.duration }),
-      })),
+      }))
+      if (built.length < 2) return built
+      const bundle = { id: crypto.randomUUID(), name: spell.name }
+      return built.map((effect) => ({ ...effect, bundle }))
+    },
   }
 }

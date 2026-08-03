@@ -12,7 +12,7 @@ import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { saveBonus } from './combat/masssave.ts'
-import { saveEndsEffects } from './combat/saveEnds.ts'
+import { saveEndsClears, saveEndsEffects } from './combat/saveEnds.ts'
 import { rechargeLimited } from './combat/resources.ts'
 import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
@@ -634,6 +634,7 @@ function App() {
   // Auto-roll a monster's save-ends effects at the chosen moment of its turn (PCs
   // roll their own — never rolled for them). One die per effect: two effects that
   // share an ability and DC came from different sources, so one roll can't end both.
+  // A success also clears the effect's bundle-mates — the save ends the whole spell.
   const autoRollSaveEnds = (c: Combatant | undefined, when: 'startOfTurn' | 'endOfTurn') => {
     if (!c || c.isPC) return
     for (const save of saveEndsEffects(c.effects)) {
@@ -647,7 +648,10 @@ function App() {
         dispatch({
           type: 'update',
           id: c.combatantId,
-          update: (cc) => ({ ...cc, effects: cc.effects.filter((x) => x.id !== save.effect.id) }),
+          update: (cc) => {
+            const gone = new Set(saveEndsClears(save.effect, cc.effects))
+            return { ...cc, effects: cc.effects.filter((x) => !gone.has(x.id)) }
+          },
         })
       }
     }

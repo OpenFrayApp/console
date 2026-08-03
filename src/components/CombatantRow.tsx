@@ -22,8 +22,9 @@ interface CombatantRowProps {
   selected?: boolean
   /** Selects this combatant when the row is clicked. */
   onSelect?: () => void
-  /** When set, effect badges become removable. */
-  onRemoveEffect?: (effectId: string) => void
+  /** When set, effect badges become removable. A bundle's badge passes every member,
+   * in one call, so the whole thing clears as one board update and one log line. */
+  onRemoveEffect?: (effectIds: string[]) => void
   /** Removes this combatant from the encounter (the on-hover X). */
   onRemove?: () => void
   /** Click-to-edit current HP from a raw input ("12", "+5", "-3"). */
@@ -212,9 +213,7 @@ export function CombatantRow({
                 key={group.bundle?.id ?? group.effects[0].id}
                 group={group}
                 onRemove={
-                  onRemoveEffect
-                    ? () => group.effects.forEach((e) => onRemoveEffect(e.id))
-                    : undefined
+                  onRemoveEffect ? () => onRemoveEffect(group.effects.map((e) => e.id)) : undefined
                 }
               />
             ))}

@@ -435,10 +435,38 @@ describe('CombatantControls', () => {
         />,
       )
       fireEvent.click(screen.getByTitle('Clear Drunk and everything it applied'))
-      // One remove per member; folding them over the combatant leaves only Prone.
+      // One dispatch for the lot — so the log reads one "Drunk ends" line.
       const updates = dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'update')
-      const after = updates.reduce((c, a) => a.update(c), before)
-      expect(after.effects.map((e: Effect) => e.name)).toEqual(['Prone'])
+      expect(updates).toHaveLength(1)
+      expect(updates[0].update(before).effects.map((e: Effect) => e.name)).toEqual(['Prone'])
+    })
+
+    it('clears the whole bundle when its escape save succeeds — the save ends the spell', () => {
+      const dispatch = vi.fn()
+      const bundle = { id: 'b2', name: 'Slow' }
+      // DC 0 cannot be failed, so the roll always succeeds without stubbing the dice.
+      const anchor = condition('Paralyzed', {
+        bundle,
+        duration: { type: 'saveEnds', save: { ability: 'wis', dc: 0 } },
+      })
+      const before: MonsterCombatant = {
+        ...monster(),
+        effects: [anchor, reminder('No Reactions', 'No Reactions', { bundle }), condition('Prone')],
+      }
+      render(
+        <CombatantControls
+          combatant={before}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Roll save' }))
+      const updates = dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'update')
+      expect(updates).toHaveLength(1)
+      // The anchor and its bundle-mate go together; the loose Prone stays.
+      expect(updates[0].update(before).effects.map((e: Effect) => e.name)).toEqual(['Prone'])
     })
 
     it('hides an effect from the player view and shows it again from its row', () => {

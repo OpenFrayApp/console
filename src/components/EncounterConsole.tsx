@@ -330,11 +330,14 @@ export function EncounterConsole({
       selected={c.combatantId === selected?.combatantId}
       onSelect={() => onSelect(c.combatantId)}
       hiddenFromPlayers={heldBack(c)}
-      onRemoveEffect={(effectId) =>
+      onRemoveEffect={(effectIds) =>
         dispatch({
           type: 'update',
           id: c.combatantId,
-          update: (cc) => ({ ...cc, effects: cc.effects.filter((e) => e.id !== effectId) }),
+          update: (cc) => ({
+            ...cc,
+            effects: cc.effects.filter((e) => !effectIds.includes(e.id)),
+          }),
         })
       }
       onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
