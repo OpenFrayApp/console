@@ -34,10 +34,12 @@ describe('AddPcPicker', () => {
     expect(screen.getByText('Grog')).toBeInTheDocument()
     expect(screen.getByText('SoE')).toBeInTheDocument() // Sands of Eternity
 
+    // Picking keeps the popover open, like Add creature — the party is several picks.
     fireEvent.click(screen.getByRole('button', { name: /Thalia/ }))
     expect(onPick).toHaveBeenCalledWith(rosterPcs[0])
-    // Picking closes the popover.
-    expect(screen.queryByText('Grog')).toBeNull()
+    expect(screen.getByText('Grog')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Grog/ }))
+    expect(onPick).toHaveBeenCalledWith(rosterPcs[1])
   })
 
   it('filters the saved characters with the search box', () => {

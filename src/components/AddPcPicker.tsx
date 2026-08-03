@@ -38,11 +38,8 @@ export function AddPcPicker({
   const campaignName = (id?: string | null): string | undefined =>
     campaigns.find((c) => c.id === id)?.name
 
-  /** Hand the chosen PC to onPick and close the popover. */
-  const pick = (pc: RosterPc) => {
-    onPick(pc)
-    setOpen(false)
-  }
+  // Picking deliberately keeps the popover open, like Add creature: dropping the
+  // whole party in is several picks in a row. Escape or a click outside closes it.
   /** Close the popover, then open the compendium's Characters tab via onCreate. */
   const create = () => {
     setOpen(false)
@@ -79,7 +76,7 @@ export function AddPcPicker({
                 <li key={pc.id}>
                   <button
                     type="button"
-                    onClick={() => pick(pc)}
+                    onClick={() => onPick(pc)}
                     className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     <span className="truncate">{pc.name}</span>
