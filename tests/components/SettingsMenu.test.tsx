@@ -28,11 +28,12 @@ describe('SettingsMenu', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
-  it('opens the three items', () => {
+  it('opens the four items', () => {
     menu()
     expect(screen.getByText('Settings')).toBeInTheDocument()
     expect(screen.getByText('Light mode')).toBeInTheDocument()
     expect(screen.getByText('Handbook')).toBeInTheDocument()
+    expect(screen.getByText('Report a bug')).toBeInTheDocument()
   })
 
   it('opens the settings panel and gets out of the way', () => {
@@ -63,6 +64,13 @@ describe('SettingsMenu', () => {
     menu()
     const link = screen.getByText('Handbook').closest('a')
     expect(link).toHaveAttribute('href', '/docs/')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('sends a bug report to a fresh GitHub issue, in its own tab', () => {
+    menu()
+    const link = screen.getByText('Report a bug').closest('a')
+    expect(link).toHaveAttribute('href', 'https://github.com/SirDarcanos/openfray/issues/new')
     expect(link).toHaveAttribute('target', '_blank')
   })
 
