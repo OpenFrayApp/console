@@ -52,6 +52,13 @@ describe('SourceLink', () => {
     expect(screen.queryByText(/openfray-brood/)).toBeNull()
   })
 
+  it('shows an OpenFray library (Strong Waters) by its full title, and links the book', () => {
+    render(<SourceLink source="openfray-strong-waters" />)
+    const link = screen.getByRole('link', { name: /On Strong Waters and Potent Simples/ })
+    expect(link).toHaveAttribute('href', '/strong-waters/')
+    expect(screen.queryByText(/openfray-strong/)).toBeNull()
+  })
+
   it('shows an OpenFray library (The Waking Garden) by name, not its id', () => {
     render(<SourceLink source="openfray-waking-garden" />)
     expect(screen.getByText(/The Waking Garden/)).toBeInTheDocument()

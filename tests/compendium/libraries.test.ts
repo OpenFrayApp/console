@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  LIBRARIES,
   DEFAULT_ENABLED_LIBRARIES,
   editionBadgeClass,
   inEnabledLibrary,
@@ -56,6 +57,21 @@ describe('libraries', () => {
   it('colors edition badges so 5.5 and 5.0 differ', () => {
     expect(editionBadgeClass('5.5')).not.toBe(editionBadgeClass('5.0'))
     expect(editionBadgeClass(undefined)).toBeTruthy()
+  })
+
+  it('ships content from every library — a registry entry is a claim there is something there', () => {
+    for (const lib of LIBRARIES) {
+      expect(lib.creaturesFile ?? lib.spellsFile, `${lib.id} declares no content file`).toBeTruthy()
+    }
+  })
+
+  it('carries a book of spells and presets with no bestiary', () => {
+    const sw = LIBRARIES.find((l) => l.id === 'openfray-strong-waters')!
+    expect(sw.creaturesFile).toBeUndefined()
+    expect(sw.spellsFile).toBe('strong-waters-spells.json')
+    expect(sw.bookUrl).toBe('/strong-waters/')
+    expect(librarySource('openfray-strong-waters')).toBe('SW&PS')
+    expect(libraryTag('openfray-strong-waters')).toBe('5.5')
   })
 
   it('sanitizes a stored list: drops unknown ids, falls back when empty/invalid', () => {

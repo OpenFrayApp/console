@@ -51,6 +51,8 @@ describe('loadSrdCreatures', () => {
   // A library can ship spells and presets and no stat blocks at all; it must contribute
   // no request rather than one for undefined.
   it('asks for nothing from a library that ships no creatures', async () => {
+    // Guards the guard: the assertion below is vacuous unless such a library is shipped.
+    expect(CREATURE_LIBRARIES.length).toBeLessThan(LIBRARIES.length)
     const fetchMock = stubFetch()
     const srd = await freshSrd()
     await srd.loadSrdCreatures()
@@ -63,15 +65,15 @@ describe('loadSrdCreatures', () => {
     const first = await srd.loadSrdCreatures()
     const second = await srd.loadSrdCreatures()
     expect(second).toBe(first)
-    expect(fetchMock).toHaveBeenCalledTimes(LIBRARIES.length)
+    expect(fetchMock).toHaveBeenCalledTimes(CREATURE_LIBRARIES.length)
   })
 
   it('degrades a failed file to an empty list without breaking the merge', async () => {
     stubFetch('srd-creatures.json')
     const srd = await freshSrd()
     const creatures = await srd.loadSrdCreatures()
-    const others = LIBRARIES.filter((l) => l.creaturesFile !== 'srd-creatures.json')
-    expect(others.length).toBe(LIBRARIES.length - 1)
+    const others = CREATURE_LIBRARIES.filter((l) => l.creaturesFile !== 'srd-creatures.json')
+    expect(others.length).toBe(CREATURE_LIBRARIES.length - 1)
     expect(creatures).toEqual(others.map((l) => ({ id: `from:${l.creaturesFile}` })))
   })
 })
@@ -122,6 +124,6 @@ describe('loadSrdSpells', () => {
     await srd.loadSrdSpells()
     await srd.loadSrdCreatures()
     await srd.loadSrdSpells()
-    expect(fetchMock).toHaveBeenCalledTimes(LIBRARIES.length + SPELL_LIBRARIES.length)
+    expect(fetchMock).toHaveBeenCalledTimes(CREATURE_LIBRARIES.length + SPELL_LIBRARIES.length)
   })
 })

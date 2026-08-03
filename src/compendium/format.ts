@@ -164,6 +164,12 @@ export function sourceInfo(source: string): SourceInfo {
         license: 'CC-BY-4.0',
         url: bookUrl(source),
       }
+    case 'openfray-strong-waters':
+      return {
+        ruleset: 'On Strong Waters and Potent Simples',
+        license: 'CC-BY-4.0',
+        url: bookUrl(source),
+      }
     case 'openfray-waking-garden':
       return {
         ruleset: 'The Waking Garden',

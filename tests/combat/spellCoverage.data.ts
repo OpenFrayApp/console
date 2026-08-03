@@ -204,6 +204,10 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'douter',
     'false wakelight',
     'unction',
+    // Strong Waters: the craft's own three — a plant, a still, a stoppered jar.
+    'hasten the root',
+    'stay the turning',
+    'steady fire',
   ]),
 
   // Returns information or paints a scene; the GM narrates the outcome.
@@ -258,6 +262,16 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     'assumption of the case',
     'countenance',
     'second assignment',
+    // Strong Waters: each moves a substance, a count, or Exhaustion the book defers —
+    // the apothecary's own bookkeeping, kept by the Game Master and not by the board.
+    'cast it up',
+    'draw the dose',
+    'hold the dose',
+    'keep the dreams',
+    'keep the watch',
+    'lay the pain by',
+    'soften the fall',
+    'still the wanting',
   ]),
 
   // Lies dormant until triggered; nothing to track until it fires.

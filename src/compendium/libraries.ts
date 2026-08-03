@@ -102,6 +102,17 @@ export const LIBRARIES: Library[] = [
     bookUrl: '/brood-and-bloom/',
   },
   {
+    id: 'openfray-strong-waters',
+    label: 'On Strong Waters and Potent Simples',
+    shortLabel: 'SW&PS',
+    family: 'openfray',
+    group: 'openfray',
+    edition: '5.5',
+    // No creatures: an apothecary's book ships spells and presets and no stat blocks.
+    spellsFile: 'strong-waters-spells.json',
+    bookUrl: '/strong-waters/',
+  },
+  {
     id: 'openfray-waking-garden',
     label: 'The Waking Garden',
     shortLabel: 'TWG',
