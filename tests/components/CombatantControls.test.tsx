@@ -6,8 +6,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
+import type { Effect } from '../../src/schema/effect.ts'
 import { CombatantControls } from '../../src/components/CombatantControls.tsx'
-import { condition, counter, setCount } from '../../src/combat/effects.ts'
+import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
 
 function creature(): Creature {
   return {
@@ -391,6 +392,90 @@ describe('CombatantControls', () => {
       )
       expect(screen.queryByRole('button', { name: 'Clear effects' })).toBeNull()
       expect(screen.queryByText('Applied effects')).toBeNull()
+    })
+
+    const bundle = { id: 'b1', name: 'Drunk' }
+    const withBundle = (): MonsterCombatant => ({
+      ...monster(),
+      effects: [
+        condition('Poisoned', { bundle, duration: { type: 'rounds', rounds: 600 } }),
+        reminder('Rough morning', 'Rough morning', { bundle }),
+        condition('Prone'),
+      ],
+    })
+
+    it('lists a bundle under its own name with its members beneath it', () => {
+      render(
+        <CombatantControls
+          combatant={withBundle()}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      expect(screen.getByText('Drunk')).toBeInTheDocument()
+      expect(screen.getByText('Poisoned')).toBeInTheDocument()
+      expect(screen.getByText('Rough morning')).toBeInTheDocument()
+      // One Clear all for the bundle; one Clear per member, plus the loose Prone's.
+      expect(screen.getAllByRole('button', { name: 'Clear all' })).toHaveLength(1)
+      expect(screen.getAllByRole('button', { name: 'Clear' })).toHaveLength(3)
+    })
+
+    it('clears the whole bundle from its header, one member at a time underneath', () => {
+      const dispatch = vi.fn()
+      const before = withBundle()
+      render(
+        <CombatantControls
+          combatant={before}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      fireEvent.click(screen.getByTitle('Clear Drunk and everything it applied'))
+      // One remove per member; folding them over the combatant leaves only Prone.
+      const updates = dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'update')
+      const after = updates.reduce((c, a) => a.update(c), before)
+      expect(after.effects.map((e: Effect) => e.name)).toEqual(['Prone'])
+    })
+
+    it('hides an effect from the player view and shows it again from its row', () => {
+      const dispatch = vi.fn()
+      const before: MonsterCombatant = { ...monster(), effects: [condition('Prone')] }
+      render(
+        <CombatantControls
+          combatant={before}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Hide' }))
+      expect(effectsAfter(dispatch, before)[0].gmOnly).toBe(true)
+    })
+
+    it('marks a hidden effect and offers to show it', () => {
+      const dispatch = vi.fn()
+      const hidden: MonsterCombatant = {
+        ...monster(),
+        effects: [{ ...condition('Prone'), gmOnly: true }],
+      }
+      render(
+        <CombatantControls
+          combatant={hidden}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      const toggle = screen.getByRole('button', { name: 'Hidden' })
+      expect(toggle).toHaveAttribute('aria-pressed', 'true')
+      fireEvent.click(toggle)
+      expect(effectsAfter(dispatch, hidden)[0].gmOnly).toBeUndefined()
     })
   })
 })

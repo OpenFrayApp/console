@@ -2,10 +2,10 @@
 // Copyright (C) 2026 OpenFray contributors
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { EffectBadge } from '../../src/components/EffectBadge.tsx'
-import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
+import { EffectBadge, EffectGroupBadge } from '../../src/components/EffectBadge.tsx'
+import { condition, counter, groupEffects, reminder, setCount } from '../../src/combat/effects.ts'
 
 afterEach(cleanup)
 
@@ -44,5 +44,34 @@ describe('EffectBadge', () => {
     expect(
       screen.getByText(/automatically fail Strength and Dexterity saving throws/i),
     ).toBeInTheDocument()
+  })
+})
+
+describe('EffectGroupBadge', () => {
+  const bundle = { id: 'b1', name: 'Drunk' }
+  const drunk = () =>
+    groupEffects([
+      condition('Poisoned', { bundle }),
+      reminder('Rough morning', 'Rough morning', { bundle }),
+    ])[0]
+
+  it('shows a bundle as one badge carrying its name, with the parts in the title', () => {
+    render(<EffectGroupBadge group={drunk()} />)
+    expect(screen.getByText('Drunk')).toBeInTheDocument()
+    expect(screen.queryByText('Poisoned')).toBeNull()
+    expect(screen.getByTitle('Drunk — Poisoned, Rough morning')).toBeInTheDocument()
+  })
+
+  it('removes the whole bundle from its ×', () => {
+    const onRemove = vi.fn()
+    render(<EffectGroupBadge group={drunk()} onRemove={onRemove} />)
+    fireEvent.click(screen.getByTitle('Remove Drunk (Poisoned, Rough morning)'))
+    expect(onRemove).toHaveBeenCalledOnce()
+  })
+
+  it('renders a loose single effect exactly as the plain badge does', () => {
+    const group = groupEffects([setCount(counter('Depth'), 4)])[0]
+    render(<EffectGroupBadge group={group} />)
+    expect(screen.getByText('Depth 4')).toBeInTheDocument()
   })
 })

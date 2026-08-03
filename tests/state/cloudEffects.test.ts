@@ -31,10 +31,11 @@ function preset(overrides: Partial<EffectPreset> = {}): EffectPreset {
   return {
     id: 'custom:drunk',
     name: 'Drunk',
-    conditions: ['Poisoned'],
-    modifier: null,
-    note: 'Hungover in the morning',
     duration: { type: 'rounds', rounds: 600 },
+    parts: [
+      { kind: 'condition', condition: 'Poisoned' },
+      { kind: 'reminder', note: 'Hungover in the morning' },
+    ],
     ...overrides,
   }
 }
@@ -65,6 +66,52 @@ describe('loadEffectPresets', () => {
     const { client } = makeSupabaseStub({ data: null, error: { message: 'boom' } })
     supa.client = client
     expect(await loadEffectPresets()).toEqual([])
+  })
+
+  it('upgrades a row saved before parts — the flat fields become parts on read', async () => {
+    const legacy = {
+      id: 'custom:old',
+      name: 'Old Drunk',
+      conditions: ['Poisoned'],
+      modifier: null,
+      note: 'Hungover in the morning',
+      duration: { type: 'rounds', rounds: 600 },
+    }
+    const { client } = makeSupabaseStub({ data: [{ data: legacy }] })
+    supa.client = client
+    expect(await loadEffectPresets()).toEqual([
+      {
+        id: 'custom:old',
+        name: 'Old Drunk',
+        duration: { type: 'rounds', rounds: 600 },
+        parts: [
+          { kind: 'condition', condition: 'Poisoned' },
+          { kind: 'reminder', note: 'Hungover in the morning' },
+        ],
+      },
+    ])
+  })
+
+  it('turns a legacy counter preset into a counter part with a manual duration', async () => {
+    const legacy = {
+      id: 'custom:depth',
+      name: 'Depth',
+      conditions: [],
+      modifier: null,
+      note: 'Depth',
+      duration: { type: 'counter' },
+      counter: true,
+    }
+    const { client } = makeSupabaseStub({ data: [{ data: legacy }] })
+    supa.client = client
+    expect(await loadEffectPresets()).toEqual([
+      {
+        id: 'custom:depth',
+        name: 'Depth',
+        duration: { type: 'manual' },
+        parts: [{ kind: 'counter', name: 'Depth' }],
+      },
+    ])
   })
 })
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { ConditionName } from '../../schema/effect.ts'
-import type { EffectPreset } from '../../schema/preset.ts'
+import type { EffectPreset, PresetPart } from '../../schema/preset.ts'
 
 /**
  * The three things _On Strong Waters and Potent Simples_ counts: the four levels of
@@ -13,92 +12,120 @@ import type { EffectPreset } from '../../schema/preset.ts'
  * what the console runs. The first chapter owns the rules — the saving throw, the
  * thresholds, what an excess is — and a preset carries only what the board has to show.
  *
- * Ability-scoped Advantage and Disadvantage has no Effect shape: `applies` scopes to a
- * category of roll, never to an ability, so a modifier for "Disadvantage on Wisdom
- * checks" would reach every check the creature makes. Those lines are reminders instead,
- * exactly as a disease stage's Hit Point maximum is in `broodAndBloom.ts`.
- *
- * Two things about a reminder decide how these are worded. Applying one mints an Effect
- * whose *name* is the note, and that name is drawn on the combatant's row in the tracker
- * — so a note names its level or degree first, or the row shows a rule with nothing
- * saying which one it is, and a long note costs four lines of the row. Each therefore
- * states only what its own step adds; the ladder in full is the book's card in appendix
- * B, which is where a Game Master reads it rather than off a badge mid-fight.
+ * A creature holds one Intoxication level at a time and "the effects of a level include
+ * those below it" (chapter 4), so each level is a bundle carrying the whole of what that
+ * level does: one badge, mechanically complete on its own, replaced as the level moves.
+ * The ability-scoped lines are real modifiers now; what still has no Effect shape — a
+ * Speed reduction, Advantage against one condition, the degrees' day-without rules —
+ * stays a reminder the Game Master adjudicates. Craving is hidden from the player view:
+ * a count the table reads is a rule the table starts playing to.
  */
 
 const SOURCE = 'openfray-strong-waters'
 
-/** One level of Intoxication, stating what that level adds to the ones below it. */
-function level(n: 1 | 2 | 3 | 4, note: string, conditions: ConditionName[] = []): EffectPreset {
+/** Disadvantage on the named ability checks — the track's recurring shape. */
+function checksDisadvantage(name: string, abilities: ('wis' | 'dex' | 'cha')[]): PresetPart {
+  return {
+    kind: 'modifier',
+    modifier: {
+      name,
+      mode: 'disadvantage',
+      direction: 'outgoing',
+      applies: 'abilityChecks',
+      abilities,
+    },
+  }
+}
+
+/** Disadvantage on the named saving throws. */
+function savesDisadvantage(name: string, abilities: ('wis' | 'dex')[]): PresetPart {
+  return {
+    kind: 'modifier',
+    modifier: {
+      name,
+      mode: 'disadvantage',
+      direction: 'outgoing',
+      applies: 'savingThrows',
+      abilities,
+    },
+  }
+}
+
+/** The level-1 line with no shape: Advantage against one condition only. */
+const MERRY_NOTE: PresetPart = {
+  kind: 'reminder',
+  note: 'Advantage on saves vs. Frightened',
+}
+
+/** One level of Intoxication, carrying everything the level does, its own and inherited. */
+function level(n: 1 | 2 | 3 | 4, parts: PresetPart[]): EffectPreset {
   return {
     id: `${SOURCE}:intoxication-${n}`,
     name: `Intoxication ${n}`,
     source: SOURCE,
-    conditions,
-    modifier: null,
-    note,
     duration: { type: 'manual' },
+    parts,
   }
 }
 
 /**
- * One degree of an addiction. It carries no Exhaustion condition even though the second
- * and third lay one down: the degree is recorded permanently and the Exhaustion belongs
- * only to a day gone without, so the Game Master adds it on the days it is true.
+ * One degree of an addiction — a record, not a day's state. Its reminders describe the
+ * days the creature goes without; they are cumulative, so each degree carries the whole
+ * ladder up to itself. It carries no Exhaustion condition even though the second lays
+ * one down: the degree is recorded permanently and the Exhaustion belongs only to a day
+ * gone without, so the Game Master adds it on the days it is true.
  */
-function degree(n: 1 | 2 | 3, note: string): EffectPreset {
+function degree(n: 1 | 2 | 3, notes: string[]): EffectPreset {
   return {
     id: `${SOURCE}:addicted-${n}`,
     name: `Addicted ${n}`,
     source: SOURCE,
-    conditions: [],
-    modifier: null,
-    note,
     duration: { type: 'manual' },
+    parts: notes.map((note) => ({ kind: 'reminder' as const, note })),
   }
 }
+
+// Telegraphic on purpose: these lines live on the board, and the book has the prose.
+const HABIT = 'Day without: Disadvantage on WIS and CHA checks'
+const NEED = 'Day without: 1 Exhaustion no Long Rest removes; pressed: save at Disadvantage'
+const RUIN = 'Measure in reach: save or take it, with the entry’s excess'
 
 export const STRONG_WATERS_PRESETS: EffectPreset[] = [
   {
     id: `${SOURCE}:craving`,
     name: 'Craving',
     source: SOURCE,
-    conditions: [],
-    modifier: null,
-    note: 'Craving',
     duration: { type: 'manual' },
-    counter: true,
+    parts: [{ kind: 'counter', name: 'Craving', gmOnly: true }],
   },
 
-  // Intoxication — the fourth chapter's track. A creature holds one level at a time, and
-  // the track falls by a level for each hour it spends without drinking.
-  level(
-    1,
-    'Intoxication 1, merry — Advantage on saves against being Frightened, Disadvantage on Wisdom checks',
-  ),
-  level(
-    2,
-    'Intoxication 2, loose — also Disadvantage on Dexterity checks, Dexterity saves and Wisdom saves',
-  ),
-  level(3, 'Intoxication 3, blind — also Speed −10 ft.', ['Poisoned']),
-  level(
-    4,
-    'Intoxication 4, insensible — Unconscious 1d4 hours, and damage doesn’t end it. DC 15 Wisdom (Medicine) rouses it 1 minute. 1 Exhaustion level when it ends',
-    ['Unconscious'],
-  ),
+  // Intoxication — the fourth chapter's track. One level at a time; each level includes
+  // the effects of those below it, so each bundle is complete on its own.
+  level(1, [checksDisadvantage('Intoxication', ['wis']), MERRY_NOTE]),
+  level(2, [
+    checksDisadvantage('Intoxication', ['wis', 'dex']),
+    savesDisadvantage('Intoxication', ['dex', 'wis']),
+    MERRY_NOTE,
+  ]),
+  level(3, [
+    { kind: 'condition', condition: 'Poisoned' },
+    checksDisadvantage('Intoxication', ['wis', 'dex']),
+    savesDisadvantage('Intoxication', ['dex', 'wis']),
+    { kind: 'reminder', note: 'Speed −10 ft.' },
+    MERRY_NOTE,
+  ]),
+  level(4, [
+    { kind: 'condition', condition: 'Unconscious' },
+    { kind: 'reminder', note: 'Unconscious 1d4 hours; damage doesn’t wake it' },
+    { kind: 'reminder', note: 'DC 15 Medicine rouses it 1 min; 1 Exhaustion when it ends' },
+    checksDisadvantage('Intoxication', ['wis', 'dex']),
+    savesDisadvantage('Intoxication', ['dex', 'wis']),
+    { kind: 'reminder', note: 'Speed −10 ft.' },
+  ]),
 
-  // The three degrees — the first chapter's, shared by both catalogs. Each describes a
-  // day the creature goes without, and their effects are cumulative.
-  degree(
-    1,
-    'Addicted 1, the habit — a day gone without gives Disadvantage on Wisdom and Charisma checks',
-  ),
-  degree(
-    2,
-    'Addicted 2, the need — also 1 Exhaustion level no Long Rest removes, and a pressed measure calls the saving throw with Disadvantage',
-  ),
-  degree(
-    3,
-    'Addicted 3, the ruin — also any measure within reach calls the saving throw; on a failure it takes one, with the entry’s excess',
-  ),
+  // The three degrees — the first chapter's, shared by both catalogs. Cumulative, and
+  // every line describes a day the creature goes without.
+  degree(1, [HABIT]),
+  degree(2, [HABIT, NEED]),
+  degree(3, [HABIT, NEED, RUIN]),
 ]

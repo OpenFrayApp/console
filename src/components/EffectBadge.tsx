@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Effect } from '../schema/effect.ts'
-import { badgeLabel, describeDuration } from '../combat/effects.ts'
+import { badgeLabel, describeDuration, type EffectGroup } from '../combat/effects.ts'
 import { resolveCondition } from '../compendium/conditions.ts'
 import { HoverCondition } from './HoverCondition.tsx'
 
@@ -59,6 +59,51 @@ export function EffectBadge({ effect, onRemove }: { effect: Effect; onRemove?: (
   return (
     <span title={title} className={className}>
       <EffectLabel effect={effect} />
+    </span>
+  )
+}
+
+/**
+ * A group of effects as one badge. A bundle — Drunk, a disease stage — shows the
+ * bundle's name alone, with its parts in the hover title; removing it clears every
+ * member. A loose single effect renders exactly as before.
+ */
+export function EffectGroupBadge({
+  group,
+  onRemove,
+}: {
+  group: EffectGroup
+  /** Remove the whole group — every member for a bundle. */
+  onRemove?: () => void
+}) {
+  if (!group.bundle) {
+    const effect = group.effects[0]
+    return effect ? <EffectBadge effect={effect} onRemove={onRemove} /> : null
+  }
+  // The bundle badge takes its tone from its most telling member: a condition
+  // beats a modifier beats a reminder, so a stage carrying Poisoned reads as one.
+  const rank = ['condition', 'debuff', 'buff', 'reminder', 'counter']
+  const lead = [...group.effects].sort(
+    (a, b) => rank.indexOf(a.icon ?? '') - rank.indexOf(b.icon ?? ''),
+  )[0]
+  const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(lead?.icon)}`
+  const partNames = group.effects.map((e) => e.name).join(', ')
+  if (onRemove) {
+    return (
+      <button
+        type="button"
+        onClick={onRemove}
+        title={`Remove ${group.bundle.name} (${partNames})`}
+        className={`${className} hover:opacity-80`}
+      >
+        {group.bundle.name}
+        <span aria-hidden>×</span>
+      </button>
+    )
+  }
+  return (
+    <span title={`${group.bundle.name} — ${partNames}`} className={className}>
+      {group.bundle.name}
     </span>
   )
 }

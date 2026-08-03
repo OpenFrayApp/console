@@ -6,64 +6,110 @@ import {
   buildPreset,
   draftEffects,
   emptyDraft,
+  emptyModifier,
   presetToDraft,
   type DurChoice,
   type EffectDraft,
 } from '../../src/components/effectPreset.ts'
+import type { EffectPreset, PresetPart } from '../../src/schema/preset.ts'
 import { BROOD_AND_BLOOM_PRESETS } from '../../src/combat/presets/broodAndBloom.ts'
 import { STRONG_WATERS_PRESETS } from '../../src/combat/presets/strongWaters.ts'
 import { libraryPresets } from '../../src/combat/presets/index.ts'
+
+/** The parts of one kind, since most assertions care about a single shape. */
+function partsOf<K extends PresetPart['kind']>(
+  preset: EffectPreset,
+  kind: K,
+): Extract<PresetPart, { kind: K }>[] {
+  return preset.parts.filter((p): p is Extract<PresetPart, { kind: K }> => p.kind === kind)
+}
 
 /** A draft with everything staged, so a round-trip has something to lose. */
 function fullDraft(): EffectDraft {
   return {
     ...emptyDraft(),
     duration: '1h',
+    bundleName: 'Drunk',
     conditions: ['Poisoned', 'Prone'],
-    hasModifier: true,
-    modifier: {
-      label: 'Drunk',
-      mode: 'disadvantage',
-      applies: 'abilityChecks',
-      direction: 'outgoing',
-      amount: '',
-    },
-    note: 'Hungover in the morning',
+    modifiers: [
+      {
+        label: 'Drunk',
+        mode: 'disadvantage',
+        applies: 'abilityChecks',
+        direction: 'outgoing',
+        amount: '',
+        abilities: ['wis'],
+      },
+    ],
+    notes: ['Hungover in the morning'],
+    counters: [{ name: 'Craving', gmOnly: true }],
   }
 }
 
 describe('draftEffects', () => {
-  it('commits the conditions, the modifier and the reminder under one duration', () => {
+  it('commits the conditions, the modifiers, the reminders and the counters at once', () => {
     const effects = draftEffects(fullDraft())
     expect(effects.map((e) => e.name)).toEqual([
       'Poisoned',
       'Prone',
       'Drunk',
       'Hungover in the morning',
+      'Craving',
     ])
-    for (const e of effects) expect(e.duration).toEqual({ type: 'rounds', rounds: 600 })
+    for (const e of effects) {
+      if (e.duration.type === 'counter') continue
+      expect(e.duration).toEqual({ type: 'rounds', rounds: 600 })
+    }
+  })
+
+  it('stamps one bundle on the timed parts, and never on a counter', () => {
+    const effects = draftEffects(fullDraft())
+    const bundles = new Set(
+      effects.filter((e) => e.duration.type !== 'counter').map((e) => e.bundle?.id),
+    )
+    expect(bundles.size).toBe(1)
+    expect([...bundles][0]).toBeTruthy()
+    for (const e of effects) {
+      if (e.duration.type !== 'counter') expect(e.bundle?.name).toBe('Drunk')
+      else expect(e.bundle).toBeUndefined()
+    }
+  })
+
+  it('mints a fresh bundle per application, so two Drunk creatures never share one', () => {
+    const a = draftEffects(fullDraft())[0].bundle?.id
+    const b = draftEffects(fullDraft())[0].bundle?.id
+    expect(a).not.toBe(b)
+  })
+
+  it('applies loose effects with no bundle when the name is blank', () => {
+    const effects = draftEffects({ ...fullDraft(), bundleName: '' })
+    for (const e of effects) expect(e.bundle).toBeUndefined()
+  })
+
+  it('carries a modifier narrowed to its abilities', () => {
+    const effects = draftEffects(fullDraft())
+    const drunk = effects.find((e) => e.name === 'Drunk')!
+    expect(drunk.modifier?.abilities).toEqual(['wis'])
+  })
+
+  it('keeps a counter gmOnly and the rest visible', () => {
+    const effects = draftEffects(fullDraft())
+    expect(effects.find((e) => e.name === 'Craving')?.gmOnly).toBe(true)
+    expect(effects.find((e) => e.name === 'Poisoned')?.gmOnly).toBeUndefined()
   })
 
   it('leaves out a modifier that was never finished', () => {
-    const draft = { ...fullDraft(), modifier: { ...fullDraft().modifier, label: '' } }
+    const draft = { ...fullDraft(), modifiers: [{ ...emptyModifier(), label: '' }] }
     expect(draftEffects(draft).map((e) => e.name)).not.toContain('Drunk')
   })
 
-  it('turns the reminder into a tally under the Counter duration, and nothing else', () => {
-    const effects = draftEffects({ ...emptyDraft(), duration: 'counter', note: 'Depth' })
-    expect(effects).toHaveLength(1)
-    expect(effects[0].duration).toEqual({ type: 'counter', count: 0 })
-  })
-
-  // A tally has no timer, so a condition staged beside it has none to inherit.
-  it('leaves a condition staged with a counter lasting until removed', () => {
-    const effects = draftEffects({
+  it('skips blank reminders and unnamed counters — staged UI state, not parts', () => {
+    const draft: EffectDraft = {
       ...emptyDraft(),
-      duration: 'counter',
-      conditions: ['Poisoned'],
-      note: 'Spore Load',
-    })
-    expect(effects.find((e) => e.name === 'Poisoned')!.duration).toEqual({ type: 'manual' })
+      notes: ['', '  '],
+      counters: [{ name: '', gmOnly: false }],
+    }
+    expect(draftEffects(draft)).toHaveLength(0)
   })
 
   it('mints a fresh id for every effect, so applying twice never collides', () => {
@@ -81,20 +127,9 @@ describe('buildPreset / presetToDraft', () => {
   })
 
   it('round-trips every duration the modal offers', () => {
-    const choices: DurChoice[] = [
-      'manual',
-      'consume',
-      'save',
-      'counter',
-      '1r',
-      '1m',
-      '10m',
-      '1h',
-      '8h',
-      '24h',
-    ]
+    const choices: DurChoice[] = ['manual', 'consume', 'save', '1r', '1m', '10m', '1h', '8h', '24h']
     for (const duration of choices) {
-      const draft: EffectDraft = { ...emptyDraft(), duration, saveDc: '15', note: 'x' }
+      const draft: EffectDraft = { ...emptyDraft(), duration, saveDc: '15', notes: ['x'] }
       const back = presetToDraft(buildPreset(draft, 'n'))
       expect(back.duration, duration).toBe(duration)
       // The DC only survives on the duration that carries one.
@@ -104,11 +139,20 @@ describe('buildPreset / presetToDraft', () => {
 
   it('applies the same effects before and after a round-trip', () => {
     const draft = fullDraft()
-    // Ids are minted per application, so compare everything but them.
-    const withoutId = (e: { id: string }) => ({ ...e, id: '' })
-    const direct = draftEffects(draft).map(withoutId)
-    const viaPreset = draftEffects(presetToDraft(buildPreset(draft, 'Drunk'))).map(withoutId)
+    // Ids and bundle ids are minted per application, so compare everything but them.
+    const strip = (e: { id: string; bundle?: { id: string; name: string } }) => ({
+      ...e,
+      id: '',
+      bundle: e.bundle ? { ...e.bundle, id: '' } : undefined,
+    })
+    const direct = draftEffects(draft).map(strip)
+    const viaPreset = draftEffects(presetToDraft(buildPreset(draft, 'Drunk'))).map(strip)
     expect(viaPreset).toEqual(direct)
+  })
+
+  it('names the staged bundle after the preset', () => {
+    const preset = buildPreset(fullDraft(), 'Hexed')
+    expect(presetToDraft(preset).bundleName).toBe('Hexed')
   })
 
   it('gives each saved preset its own id', () => {
@@ -117,11 +161,80 @@ describe('buildPreset / presetToDraft', () => {
   })
 })
 
+describe('the Custom duration', () => {
+  it('turns an amount and unit into rounds — 3 hours is 1800', () => {
+    const draft: EffectDraft = {
+      ...emptyDraft(),
+      duration: 'custom',
+      customAmount: '3',
+      customUnit: 'hours',
+      conditions: ['Poisoned'],
+    }
+    expect(draftEffects(draft)[0].duration).toEqual({ type: 'rounds', rounds: 1800 })
+  })
+
+  it('counts in every unit the picker offers', () => {
+    const rounds = (amount: string, unit: EffectDraft['customUnit']): unknown =>
+      draftEffects({
+        ...emptyDraft(),
+        duration: 'custom',
+        customAmount: amount,
+        customUnit: unit,
+        conditions: ['Prone'],
+      })[0].duration
+    expect(rounds('7', 'rounds')).toEqual({ type: 'rounds', rounds: 7 })
+    expect(rounds('5', 'minutes')).toEqual({ type: 'rounds', rounds: 50 })
+    expect(rounds('2', 'days')).toEqual({ type: 'rounds', rounds: 28800 })
+  })
+
+  it('falls back to until-removed when the amount is blank or nonsense', () => {
+    for (const customAmount of ['', '0', '-2', 'abc']) {
+      const draft: EffectDraft = {
+        ...emptyDraft(),
+        duration: 'custom',
+        customAmount,
+        conditions: ['Prone'],
+      }
+      expect(draftEffects(draft)[0].duration, customAmount).toEqual({ type: 'manual' })
+    }
+  })
+
+  it('round-trips through a preset, keeping the amount in its own unit', () => {
+    const draft: EffectDraft = {
+      ...emptyDraft(),
+      duration: 'custom',
+      customAmount: '3',
+      customUnit: 'hours',
+      notes: ['x'],
+    }
+    const back = presetToDraft(buildPreset(draft, 'n'))
+    expect(back.duration).toBe('custom')
+    expect(back.customAmount).toBe('3')
+    expect(back.customUnit).toBe('hours')
+  })
+
+  it('reads an odd round count back as rounds rather than rounding it', () => {
+    const back = presetToDraft({
+      id: 'custom:x',
+      name: 'n',
+      duration: { type: 'rounds', rounds: 17 },
+      parts: [{ kind: 'condition', condition: 'Prone' }],
+    })
+    expect(back.duration).toBe('custom')
+    expect(back.customAmount).toBe('17')
+    expect(back.customUnit).toBe('rounds')
+  })
+})
+
 describe('the Brood & Bloom presets', () => {
+  const byName = (n: string) => BROOD_AND_BLOOM_PRESETS.find((p) => p.name === n)!
+
   it('ships four stages for each of the seven diseases, plus the two counters', () => {
     expect(BROOD_AND_BLOOM_PRESETS).toHaveLength(30)
-    const counters = BROOD_AND_BLOOM_PRESETS.filter((p) => p.counter)
-    expect(counters.map((p) => p.name)).toEqual(['Depth', 'Spore Load'])
+    const counterOnly = BROOD_AND_BLOOM_PRESETS.filter((p) =>
+      p.parts.every((x) => x.kind === 'counter'),
+    )
+    expect(counterOnly.map((p) => p.name)).toEqual(['Depth', 'Spore Load'])
   })
 
   it("gives every preset a unique id under the library's source", () => {
@@ -140,13 +253,41 @@ describe('the Brood & Bloom presets', () => {
   })
 
   it('carries the conditions the stages actually name', () => {
-    const byName = (n: string) => BROOD_AND_BLOOM_PRESETS.find((p) => p.name === n)!
-    expect(byName('Chantry Drought 4').conditions).toEqual(['Incapacitated', 'Unconscious'])
-    expect(byName('Mortification 3').conditions).toEqual(['Poisoned'])
-    expect(byName('Ankylosis 4').conditions).toEqual(['Incapacitated'])
-    // Stage 1 of every disease is a reminder only — nothing it does has an Effect shape.
-    expect(byName('Sallow Rot 1').conditions).toEqual([])
-    expect(byName('Sallow Rot 1').modifier).toBeNull()
+    const conditions = (n: string) => partsOf(byName(n), 'condition').map((p) => p.condition)
+    expect(conditions('Chantry Drought 4')).toEqual(['Incapacitated', 'Unconscious'])
+    expect(conditions('Mortification 3')).toEqual(['Poisoned'])
+    expect(conditions('Ankylosis 4')).toEqual(['Incapacitated'])
+    expect(conditions('Sallow Rot 1')).toEqual([])
+  })
+
+  it('carries every stage`s brood counter, hidden from the player view', () => {
+    for (const p of BROOD_AND_BLOOM_PRESETS) {
+      const counters = partsOf(p, 'counter')
+      expect(counters, p.name).toHaveLength(1)
+      expect(counters[0].gmOnly, p.name).toBe(true)
+    }
+    // Inquiline diseases ride with Depth; Sporophore diseases with Spore Load.
+    expect(partsOf(byName('Sallow Rot 2'), 'counter')[0].name).toBe('Depth')
+    expect(partsOf(byName('The Forgetting 1'), 'counter')[0].name).toBe('Depth')
+    expect(partsOf(byName('Mortification 2'), 'counter')[0].name).toBe('Spore Load')
+    expect(partsOf(byName('Metaplasia 4'), 'counter')[0].name).toBe('Spore Load')
+  })
+
+  it('turns the book`s ability-scoped Disadvantage into real modifiers', () => {
+    const mods = (n: string) => partsOf(byName(n), 'modifier').map((p) => p.modifier)
+    expect(mods('Mortification 2')).toEqual([
+      {
+        name: 'Mortification',
+        mode: 'disadvantage',
+        direction: 'outgoing',
+        applies: 'savingThrows',
+        abilities: ['con'],
+      },
+    ])
+    expect(mods('Ankylosis 2')[0].abilities).toEqual(['dex'])
+    // Stage effects last until the disease ends, so stage 3 still carries stage 2's.
+    expect(mods('Mortification 3')[0].abilities).toEqual(['con'])
+    expect(mods('Ankylosis 3')[0].abilities).toEqual(['dex'])
   })
 
   it('follows the library, not the account', () => {
@@ -156,12 +297,27 @@ describe('the Brood & Bloom presets', () => {
   })
 })
 
+describe('every shipped preset', () => {
+  // Board text, not book text: a reminder is drawn on rows and in the log, so it is
+  // written telegraphically and the prose stays in the chapters.
+  it('keeps each reminder short enough for the board', () => {
+    for (const p of [...BROOD_AND_BLOOM_PRESETS, ...STRONG_WATERS_PRESETS]) {
+      for (const part of partsOf(p, 'reminder')) {
+        expect(part.note.length, `${p.name}: "${part.note}"`).toBeLessThanOrEqual(90)
+      }
+    }
+  })
+})
+
 describe('the Strong Waters presets', () => {
   const byName = (n: string) => STRONG_WATERS_PRESETS.find((p) => p.name === n)!
 
   it('ships the four Intoxication levels, the three degrees, and Craving as the one counter', () => {
     expect(STRONG_WATERS_PRESETS).toHaveLength(8)
-    expect(STRONG_WATERS_PRESETS.filter((p) => p.counter).map((p) => p.name)).toEqual(['Craving'])
+    const counterOnly = STRONG_WATERS_PRESETS.filter((p) =>
+      p.parts.every((x) => x.kind === 'counter'),
+    )
+    expect(counterOnly.map((p) => p.name)).toEqual(['Craving'])
     expect(STRONG_WATERS_PRESETS.filter((p) => p.name.startsWith('Intoxication'))).toHaveLength(4)
     expect(STRONG_WATERS_PRESETS.filter((p) => p.name.startsWith('Addicted'))).toHaveLength(3)
   })
@@ -182,37 +338,59 @@ describe('the Strong Waters presets', () => {
   })
 
   it('carries only the two conditions the levels actually name', () => {
-    expect(byName('Intoxication 3').conditions).toEqual(['Poisoned'])
-    expect(byName('Intoxication 4').conditions).toEqual(['Unconscious'])
-    expect(byName('Intoxication 1').conditions).toEqual([])
-    expect(byName('Intoxication 2').conditions).toEqual([])
+    const conditions = (n: string) => partsOf(byName(n), 'condition').map((p) => p.condition)
+    expect(conditions('Intoxication 3')).toEqual(['Poisoned'])
+    expect(conditions('Intoxication 4')).toEqual(['Unconscious'])
+    expect(conditions('Intoxication 1')).toEqual([])
+    expect(conditions('Intoxication 2')).toEqual([])
   })
 
-  it('opens every note with its own name — the applied badge takes the note as its name', () => {
-    for (const p of STRONG_WATERS_PRESETS) {
-      expect(p.note, p.name).toMatch(new RegExp(`^${p.name}`))
-    }
+  it('makes each level whole — its effects include those of the levels below it', () => {
+    // Chapter 4: a creature holds one level at a time, so each bundle carries the
+    // full ladder up to itself. Level 2's save Disadvantage must still be at level 4.
+    const saves = (n: string) =>
+      partsOf(byName(n), 'modifier').find((p) => p.modifier.applies === 'savingThrows')
+    expect(saves('Intoxication 2')?.modifier.abilities).toEqual(['dex', 'wis'])
+    expect(saves('Intoxication 3')?.modifier.abilities).toEqual(['dex', 'wis'])
+    expect(saves('Intoxication 4')?.modifier.abilities).toEqual(['dex', 'wis'])
+    expect(saves('Intoxication 1')).toBeUndefined()
   })
 
-  it('keeps a note short enough for a tracker row, one step at a time', () => {
-    for (const p of STRONG_WATERS_PRESETS) {
-      expect(p.note!.length, `${p.name} is too long for the row`).toBeLessThan(160)
-    }
-    // Level 2 adds to level 1 rather than restating it; the full ladder is appendix B.
-    expect(byName('Intoxication 2').note).not.toMatch(/Frightened/)
+  it('scopes the check Disadvantage to Wisdom at level 1, and Dexterity from level 2', () => {
+    const checks = (n: string) =>
+      partsOf(byName(n), 'modifier').find((p) => p.modifier.applies === 'abilityChecks')
+    expect(checks('Intoxication 1')?.modifier.abilities).toEqual(['wis'])
+    expect(checks('Intoxication 2')?.modifier.abilities).toEqual(['wis', 'dex'])
   })
 
-  it('leaves a degree free of Exhaustion — the level belongs to a day gone without', () => {
+  it('keeps what has no Effect shape as reminders — the Frightened line, the Speed', () => {
+    const notes = (n: string) => partsOf(byName(n), 'reminder').map((p) => p.note)
+    expect(notes('Intoxication 1').join(' ')).toMatch(/Frightened/)
+    expect(notes('Intoxication 3').join(' ')).toMatch(/Speed −10 ft\./)
+  })
+
+  it('hides Craving from the player view', () => {
+    const craving = partsOf(byName('Craving'), 'counter')[0]
+    expect(craving.gmOnly).toBe(true)
+  })
+
+  it('leaves a degree free of conditions and modifiers — its rules describe a day gone without', () => {
     for (const n of [1, 2, 3]) {
       const p = byName(`Addicted ${n}`)
-      expect(p.conditions, p.name).toEqual([])
-      expect(p.modifier, p.name).toBeNull()
+      expect(partsOf(p, 'condition'), p.name).toEqual([])
+      expect(partsOf(p, 'modifier'), p.name).toEqual([])
     }
-    expect(byName('Addicted 2').note).toMatch(/Exhaustion/)
+    expect(
+      partsOf(byName('Addicted 2'), 'reminder')
+        .map((p) => p.note)
+        .join(' '),
+    ).toMatch(/Exhaustion/)
   })
 
-  it('ships no modifier anywhere — no Effect shape scopes to one ability', () => {
-    for (const p of STRONG_WATERS_PRESETS) expect(p.modifier, p.name).toBeNull()
+  it('makes each degree whole — the ladder is cumulative', () => {
+    const count = (n: string) => partsOf(byName(n), 'reminder').length
+    expect(count('Addicted 1')).toBeLessThan(count('Addicted 2'))
+    expect(count('Addicted 2')).toBeLessThan(count('Addicted 3'))
   })
 
   it('rides its own library, alongside the other one', () => {

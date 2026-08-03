@@ -20,7 +20,13 @@ import { saveBonus } from '../combat/masssave.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
 import { heldBack, onSharedBoard } from '../combat/playerView.ts'
 import { signed } from '../compendium/format.ts'
-import { counterOf, describeDuration, setCount } from '../combat/effects.ts'
+import {
+  counterOf,
+  describeDuration,
+  describeModifier,
+  groupEffects,
+  setCount,
+} from '../combat/effects.ts'
 import { saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
@@ -86,12 +92,12 @@ export function CombatantControls({
   const showDeathSaves =
     combatant.isPC && combatant.status === 'unconscious' && !isStable(combatant)
 
-  /** Append an effect to this combatant's list. */
-  const addEffect = (effect: Effect) =>
+  /** Append the applied effects in one update, so a bundle logs as one event. */
+  const addEffects = (applied: Effect[]) =>
     dispatch({
       type: 'update',
       id,
-      update: (c) => ({ ...c, effects: [...c.effects, effect] }),
+      update: (c) => ({ ...c, effects: [...c.effects, ...applied] }),
     })
 
   /** Drop one effect from this combatant by id. */
@@ -113,8 +119,11 @@ export function CombatantControls({
       }),
     })
 
-  // Alphabetical, so a row keeps its place as effects come and go.
-  const sortedEffects = [...combatant.effects].sort((a, b) => a.name.localeCompare(b.name))
+  // Alphabetical by display name, so a row keeps its place as effects come and go;
+  // a bundle sorts once, under its own name, with its members kept together.
+  const sortedGroups = groupEffects(combatant.effects).sort((a, b) =>
+    (a.bundle?.name ?? a.effects[0].name).localeCompare(b.bundle?.name ?? b.effects[0].name),
+  )
 
   /** Name of whoever caused an effect, for a source-relative duration. */
   const sourceName = (e: Effect): string | undefined => {
@@ -140,7 +149,7 @@ export function CombatantControls({
         <EffectModal
           name={name}
           effects={combatant.effects}
-          onApply={addEffect}
+          onApply={addEffects}
           onRemove={removeEffect}
           presets={presets}
           enabledLibraries={enabledLibraries}
@@ -311,84 +320,150 @@ export function CombatantControls({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Applied effects
           </p>
-          {/* Two columns — what it is, and what to do about it — so the buttons line up. */}
+          {/* Two columns — what it is, and what to do about it — so the buttons line up.
+              A bundle gets a header row with one Clear for the lot; its members keep
+              their own rows beneath it, so one part can still be cleared alone. */}
           <ul className="divide-y divide-slate-200/80 dark:divide-slate-800/80">
-            {sortedEffects.map((e) => {
-              const save = saveEndsOf(e)
-              const count = counterOf(e)
-              return (
-                <li key={e.id} className="flex items-center justify-between gap-2 py-1 text-xs">
-                  <span className="min-w-0 text-slate-700 dark:text-slate-200">
-                    <span className="font-medium">{e.name}</span>{' '}
-                    <span className="text-slate-500 dark:text-slate-400">
-                      ·{' '}
-                      {save ? (
-                        <>
-                          {save.ability.toUpperCase()} save DC {save.dc} (
-                          <abbr
-                            title={save.when === 'startOfTurn' ? 'Start of turn' : 'End of turn'}
-                            className="cursor-help underline decoration-dotted underline-offset-2"
-                          >
-                            {save.when === 'startOfTurn' ? 'SoT' : 'EoT'}
-                          </abbr>
-                          )
-                        </>
-                      ) : (
-                        describeDuration(e, sourceName(e))
-                      )}
+            {sortedGroups.map((group) =>
+              group.bundle ? (
+                <li key={group.bundle.id} className="py-1 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                      {group.bundle.name}
                     </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1">
-                    {save && !combatant.isPC && (
-                      <button type="button" onClick={() => rollSaveEnds(save)} className={BTN}>
-                        Roll save
-                      </button>
-                    )}
-                    {count !== null && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => changeEffect(e.id, (x) => setCount(x, count - 1))}
-                          disabled={count <= 0}
-                          aria-label={`Lower ${e.name}`}
-                          className={`${BTN} disabled:opacity-50`}
-                        >
-                          −1
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => changeEffect(e.id, (x) => setCount(x, count + 1))}
-                          aria-label={`Raise ${e.name}`}
-                          className={BTN}
-                        >
-                          +1
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => changeEffect(e.id, (x) => setCount(x, 0))}
-                          disabled={count === 0}
-                          title={`Set ${e.name} back to 0, keeping it on ${name}`}
-                          className={`${BTN} disabled:opacity-50`}
-                        >
-                          Reset
-                        </button>
-                      </>
-                    )}
                     <button
                       type="button"
-                      onClick={() => removeEffect(e.id)}
-                      title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
-                      className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+                      onClick={() => group.effects.forEach((e) => removeEffect(e.id))}
+                      title={`Clear ${group.bundle.name} and everything it applied`}
+                      className={`${BTN} shrink-0`}
                     >
-                      Clear
+                      Clear all
                     </button>
-                  </span>
+                  </div>
+                  <ul className="mt-0.5 list-disc space-y-0.5 pl-4 marker:text-slate-400 dark:marker:text-slate-500">
+                    {group.effects.map((e) => (
+                      <EffectRow key={e.id} effect={e} bulleted />
+                    ))}
+                  </ul>
                 </li>
-              )
-            })}
+              ) : (
+                <EffectRow key={group.effects[0].id} effect={group.effects[0]} />
+              ),
+            )}
           </ul>
         </div>
       )}
     </div>
   )
+
+  /**
+   * One effect's line in the Applied effects list, with its own controls. Inside a
+   * bundle the line is a bulleted item, so the flex layout moves to an inner div —
+   * a flex `li` stops being a list item and loses its marker.
+   */
+  function EffectRow({ effect: e, bulleted = false }: { effect: Effect; bulleted?: boolean }) {
+    const save = saveEndsOf(e)
+    const count = counterOf(e)
+    // A modifier's name alone can't tell two apart — Intoxication narrows checks in
+    // one effect and saves in another — so its row reads out what it actually does.
+    const label = e.modifier
+      ? describeModifier({
+          name: e.name,
+          mode: e.modifier.mode,
+          direction: e.modifier.direction,
+          applies: e.modifier.applies,
+          value: e.modifier.value,
+          abilities: e.modifier.abilities,
+        })
+      : e.name
+    const row = (
+      <div className="flex items-center justify-between gap-2 py-1 text-xs">
+        <span className="min-w-0 text-slate-700 dark:text-slate-200">
+          <span className="font-medium">{label}</span>{' '}
+          <span className="text-slate-500 dark:text-slate-400">
+            ·{' '}
+            {save ? (
+              <>
+                {save.ability.toUpperCase()} save DC {save.dc} (
+                <abbr
+                  title={save.when === 'startOfTurn' ? 'Start of turn' : 'End of turn'}
+                  className="cursor-help underline decoration-dotted underline-offset-2"
+                >
+                  {save.when === 'startOfTurn' ? 'SoT' : 'EoT'}
+                </abbr>
+                )
+              </>
+            ) : (
+              describeDuration(e, sourceName(e))
+            )}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          {save && !combatant.isPC && (
+            <button type="button" onClick={() => rollSaveEnds(save)} className={BTN}>
+              Roll save
+            </button>
+          )}
+          {count !== null && (
+            <>
+              <button
+                type="button"
+                onClick={() => changeEffect(e.id, (x) => setCount(x, count - 1))}
+                disabled={count <= 0}
+                aria-label={`Lower ${e.name}`}
+                className={`${BTN} disabled:opacity-50`}
+              >
+                −1
+              </button>
+              <button
+                type="button"
+                onClick={() => changeEffect(e.id, (x) => setCount(x, count + 1))}
+                aria-label={`Raise ${e.name}`}
+                className={BTN}
+              >
+                +1
+              </button>
+              <button
+                type="button"
+                onClick={() => changeEffect(e.id, (x) => setCount(x, 0))}
+                disabled={count === 0}
+                title={`Set ${e.name} back to 0, keeping it on ${name}`}
+                className={`${BTN} disabled:opacity-50`}
+              >
+                Reset
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() =>
+              changeEffect(e.id, (x) => ({ ...x, gmOnly: x.gmOnly ? undefined : true }))
+            }
+            aria-pressed={e.gmOnly === true}
+            title={
+              e.gmOnly
+                ? `${e.name} is hidden from the player view — click to show it`
+                : `Hide ${e.name} from the player view`
+            }
+            className={
+              e.gmOnly
+                ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                : BTN
+            }
+          >
+            {e.gmOnly ? 'Hidden' : 'Hide'}
+          </button>
+          <button
+            type="button"
+            onClick={() => removeEffect(e.id)}
+            title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
+            className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+          >
+            Clear
+          </button>
+        </span>
+      </div>
+    )
+    return <li className={bulleted ? 'list-item' : 'list-none'}>{row}</li>
+  }
 }

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { supabase } from '../lib/supabase.ts'
-import type { EffectPreset } from '../schema/preset.ts'
+import { upgradePreset, type EffectPreset, type LegacyEffectPreset } from '../schema/preset.ts'
 
 /**
  * The signed-in user's effect presets — the bundles they apply more than once, saved as
@@ -11,7 +11,7 @@ import type { EffectPreset } from '../schema/preset.ts'
  * the enabled libraries and belong to nobody.
  */
 
-/** Every preset the user owns, newest first. */
+/** Every preset the user owns, newest first — rows saved before parts upgrade on read. */
 export async function loadEffectPresets(): Promise<EffectPreset[]> {
   if (!supabase) return []
   const { data, error } = await supabase
@@ -19,7 +19,7 @@ export async function loadEffectPresets(): Promise<EffectPreset[]> {
     .select('data')
     .order('updated_at', { ascending: false })
   if (error || !data) return []
-  return data.map((row) => row.data as EffectPreset)
+  return data.map((row) => upgradePreset(row.data as EffectPreset | LegacyEffectPreset))
 }
 
 /** Save a newly-named preset. Best-effort; never blocks the UI. */

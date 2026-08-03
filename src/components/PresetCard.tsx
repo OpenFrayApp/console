@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { EffectPreset } from '../schema/preset.ts'
+import type { EffectPreset, PresetPart } from '../schema/preset.ts'
 import { isOwnPreset } from '../schema/preset.ts'
 import { describeDuration, describeModifier } from '../combat/effects.ts'
 import { draftEffects, presetToDraft } from './effectPreset.ts'
@@ -29,25 +29,39 @@ export function PresetCard({
   const draft = presetToDraft(preset)
   const effects = draftEffects(draft)
 
+  /** The parts of one kind, so each summary row lists only its own. */
+  const of = <K extends PresetPart['kind']>(kind: K) =>
+    preset.parts.filter((p): p is Extract<PresetPart, { kind: K }> => p.kind === kind)
+  const conditions = of('condition')
+  const modifiers = of('modifier')
+  const reminders = of('reminder')
+  const counters = of('counter')
+
   // What kind of preset it is, named by what it actually carries. A Game Master
   // scanning the list wants this before the detail.
   const kinds = [
-    preset.conditions.length > 0 && (preset.conditions.length === 1 ? 'condition' : 'conditions'),
-    preset.modifier && (preset.modifier.mode === 'flatBonus' ? 'modifier' : preset.modifier.mode),
-    preset.counter ? 'counter' : preset.note && 'reminder',
+    conditions.length > 0 && (conditions.length === 1 ? 'condition' : 'conditions'),
+    modifiers.length > 0 && (modifiers.length === 1 ? 'modifier' : 'modifiers'),
+    reminders.length > 0 && 'reminder',
+    counters.length > 0 && (counters.length === 1 ? 'counter' : 'counters'),
   ].filter((k): k is string => typeof k === 'string')
   const kind = kinds.length ? `${kinds.join(' · ')}` : 'empty'
 
   // The duration every condition and modifier in the bundle shares. A counter has no
-  // timer at all — it holds a tally — so it names itself instead.
-  const timed = effects.find((e) => e.duration.type !== 'counter') ?? effects[0]
-  const duration = preset.counter ? 'Counter' : timed ? describeDuration(timed) : undefined
+  // timer at all — it holds a tally — so only the timed parts speak for it.
+  const timed = effects.find((e) => e.duration.type !== 'counter')
+  const duration = timed ? describeDuration(timed) : counters.length > 0 ? 'Counter' : undefined
 
   const rows: [string, string | undefined][] = [
     ['Duration', duration],
-    ['Conditions', preset.conditions.join(', ')],
-    ['Modifier', preset.modifier ? describeModifier(preset.modifier) : undefined],
-    [preset.counter ? 'Counter' : 'Reminder', preset.note ?? undefined],
+    ['Conditions', conditions.map((p) => p.condition).join(', ') || undefined],
+    ['Modifiers', modifiers.map((p) => describeModifier(p.modifier)).join('; ') || undefined],
+    ['Reminders', reminders.map((p) => p.note).join('; ') || undefined],
+    [
+      counters.length === 1 ? 'Counter' : 'Counters',
+      counters.map((p) => (p.gmOnly ? `${p.name} (hidden from players)` : p.name)).join(', ') ||
+        undefined,
+    ],
   ]
 
   /** Ask for a new name, then commit it. */

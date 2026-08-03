@@ -8,7 +8,8 @@ import { acOf, isFoe, nameOf } from '../combat/combatant.ts'
 import { concentrationTitle } from '../combat/concentration.ts'
 import { isStable } from '../combat/deathsaves.ts'
 import { cx } from '../lib/cx.ts'
-import { EffectBadge } from './EffectBadge.tsx'
+import { groupEffects } from '../combat/effects.ts'
+import { EffectGroupBadge } from './EffectBadge.tsx'
 import { DeathSavePips } from './DeathSaveControls.tsx'
 import { EditableField } from './EditableField.tsx'
 import { hpToneFor, TIER_LABEL } from './hpTone.ts'
@@ -204,12 +205,17 @@ export function CombatantRow({
 
         {combatant.effects.length > 0 && (
           // Labels only — durations and escape saves live in the Applied effects list.
+          // A bundle's members render as one badge and clear together.
           <div className="mt-1 flex flex-wrap gap-1">
-            {combatant.effects.map((e) => (
-              <EffectBadge
-                key={e.id}
-                effect={e}
-                onRemove={onRemoveEffect ? () => onRemoveEffect(e.id) : undefined}
+            {groupEffects(combatant.effects).map((group) => (
+              <EffectGroupBadge
+                key={group.bundle?.id ?? group.effects[0].id}
+                group={group}
+                onRemove={
+                  onRemoveEffect
+                    ? () => group.effects.forEach((e) => onRemoveEffect(e.id))
+                    : undefined
+                }
               />
             ))}
           </div>

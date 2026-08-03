@@ -12,28 +12,35 @@ import type { EffectPreset } from '../../src/schema/preset.ts'
 const DRUNK: EffectPreset = {
   id: 'custom:drunk',
   name: 'Drunk',
-  conditions: ['Poisoned'],
-  modifier: null,
-  note: 'Hungover in the morning',
   duration: { type: 'rounds', rounds: 600 },
+  parts: [
+    { kind: 'condition', condition: 'Poisoned' },
+    { kind: 'reminder', note: 'Hungover in the morning' },
+  ],
 }
 
 afterEach(cleanup)
+
+/** Every effect the modal committed, across Apply presses, flattened. */
+const applied = (fn: ReturnType<typeof vi.fn>): Effect[] =>
+  fn.mock.calls.flatMap((c) => c[0] as Effect[])
 
 /** A stateful wrapper so condition chips reflect/toggle live combatant effects. */
 function Harness({
   onEffects,
   presets,
   onSavePreset,
+  initial = [],
 }: {
   onEffects?: (e: Effect[]) => void
   presets?: EffectPreset[]
   onSavePreset?: (p: EffectPreset) => void
+  initial?: Effect[]
 } = {}) {
-  const [effects, setEffects] = useState<Effect[]>([])
+  const [effects, setEffects] = useState<Effect[]>(initial)
   // Applying a preset commits several effects in one tick, so the next list is read
   // from a ref rather than the render's closure, which would still hold the old one.
-  const current = useRef<Effect[]>([])
+  const current = useRef<Effect[]>(initial)
   const sync = (next: Effect[]) => {
     current.current = next
     setEffects(next)
@@ -43,7 +50,7 @@ function Harness({
     <EffectModal
       name="Goblin"
       effects={effects}
-      onApply={(e) => sync([...current.current, e])}
+      onApply={(list) => sync([...current.current, ...list])}
       onRemove={(id) => sync(current.current.filter((x) => x.id !== id))}
       presets={presets}
       onSavePreset={onSavePreset}
@@ -78,11 +85,25 @@ describe('EffectModal', () => {
     expect(onApply).not.toHaveBeenCalled()
     clickApply(dialog)
     expect(onApply).toHaveBeenCalledOnce()
-    expect(onApply.mock.calls[0][0]).toMatchObject({
+    expect(applied(onApply)[0]).toMatchObject({
       name: 'Prone',
       icon: 'condition',
       duration: { type: 'rounds', rounds: 10 },
     })
+  })
+
+  it('builds a custom duration from an amount and a unit', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'custom' } })
+    fireEvent.change(within(dialog).getByLabelText('Duration amount'), { target: { value: '3' } })
+    fireEvent.change(within(dialog).getByLabelText('Duration unit'), {
+      target: { value: 'hours' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
+    clickApply(dialog)
+    expect(applied(onApply)[0].duration).toEqual({ type: 'rounds', rounds: 1800 })
   })
 
   it('builds an advantage-against modifier with a clear direction', () => {
@@ -94,10 +115,44 @@ describe('EffectModal', () => {
       target: { value: 'Faerie Fire' },
     })
     clickApply(dialog)
-    expect(onApply.mock.calls[0][0]).toMatchObject({
+    expect(applied(onApply)[0]).toMatchObject({
       name: 'Faerie Fire',
       modifier: { mode: 'advantage', direction: 'incoming', applies: 'attackRolls', value: null },
     })
+  })
+
+  it('narrows a checks modifier to the abilities the GM picks', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = openModifier()
+    fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
+      target: { value: 'disadvantage' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Applies to'), {
+      target: { value: 'abilityChecks' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'WIS' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'CHA' }))
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'The habit' },
+    })
+    clickApply(dialog)
+    expect(applied(onApply)[0].modifier).toMatchObject({
+      mode: 'disadvantage',
+      applies: 'abilityChecks',
+      abilities: ['wis', 'cha'],
+    })
+  })
+
+  it('offers the ability picker only where it means something', () => {
+    render(<EffectModal name="Goblin" effects={[]} onApply={() => {}} onRemove={() => {}} />)
+    const dialog = openModifier()
+    // Attack rolls carry no ability, so there is nothing to narrow.
+    expect(within(dialog).queryByRole('button', { name: 'WIS' })).toBeNull()
+    fireEvent.change(within(dialog).getByLabelText('Applies to'), {
+      target: { value: 'savingThrows' },
+    })
+    expect(within(dialog).getByRole('button', { name: 'WIS' })).not.toBeNull()
   })
 
   it('commits a condition and a modifier together on Apply', () => {
@@ -110,10 +165,41 @@ describe('EffectModal', () => {
       target: { value: 'Ensnared' },
     })
     clickApply(dialog)
-    expect(onApply).toHaveBeenCalledTimes(2)
-    const names = onApply.mock.calls.map((c) => c[0].name)
+    const names = applied(onApply).map((e) => e.name)
+    expect(names).toHaveLength(2)
     expect(names).toContain('Restrained')
     expect(names).toContain('Ensnared')
+  })
+
+  it('stages a second modifier alongside the first', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = openModifier()
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'First' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add a bonus or penalty' }))
+    const labels = within(dialog).getAllByLabelText('Modifier label')
+    expect(labels).toHaveLength(2)
+    fireEvent.change(labels[1], { target: { value: 'Second' } })
+    clickApply(dialog)
+    expect(applied(onApply).map((e) => e.name)).toEqual(['First', 'Second'])
+  })
+
+  it('removes one staged modifier without touching the other', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = openModifier()
+    fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
+      target: { value: 'First' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add a bonus or penalty' }))
+    fireEvent.change(within(dialog).getAllByLabelText('Modifier label')[1], {
+      target: { value: 'Second' },
+    })
+    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Remove' })[0])
+    clickApply(dialog)
+    expect(applied(onApply).map((e) => e.name)).toEqual(['Second'])
   })
 
   it('builds a flat bonus, dropping a leading + and keeping dice as a string', () => {
@@ -128,7 +214,7 @@ describe('EffectModal', () => {
       target: { value: 'Bless' },
     })
     clickApply(dialog)
-    expect(onApply.mock.calls[0][0].modifier).toMatchObject({
+    expect(applied(onApply)[0].modifier).toMatchObject({
       mode: 'flatBonus',
       applies: 'all', // switching to bonus defaults applies→everything, direction→its rolls
       direction: 'outgoing',
@@ -146,7 +232,7 @@ describe('EffectModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Amount'), { target: { value: '-2' } })
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), { target: { value: 'Bane' } })
     clickApply(dialog)
-    expect(onApply.mock.calls[0][0].modifier.value).toBe(-2)
+    expect(applied(onApply)[0].modifier?.value).toBe(-2)
   })
 
   it('skips the modifier when it has no label', () => {
@@ -176,7 +262,22 @@ describe('EffectModal', () => {
     // There is no per-field Add button any more.
     expect(within(dialog).queryByRole('button', { name: 'Add' })).toBeNull()
     clickApply(dialog)
-    expect(onApply.mock.calls[0][0]).toMatchObject({ note: 'Hex: +1d6 necrotic', modifier: null })
+    expect(applied(onApply)[0]).toMatchObject({ note: 'Hex: +1d6 necrotic', modifier: null })
+  })
+
+  it('stages a second reminder alongside the first', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'First note' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add another reminder' }))
+    fireEvent.change(within(dialog).getByLabelText('Reminder 2'), {
+      target: { value: 'Second note' },
+    })
+    clickApply(dialog)
+    expect(applied(onApply).map((e) => e.name)).toEqual(['First note', 'Second note'])
   })
 
   it('builds a save-ends duration with a roll timing (default end of turn)', () => {
@@ -188,7 +289,7 @@ describe('EffectModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Save DC'), { target: { value: '15' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
     clickApply(dialog)
-    expect(onApply.mock.calls[0][0].duration).toEqual({
+    expect(applied(onApply)[0].duration).toEqual({
       type: 'saveEnds',
       save: { ability: 'wis', dc: 15 },
       when: 'endOfTurn',
@@ -205,7 +306,7 @@ describe('EffectModal', () => {
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
     clickApply(dialog)
-    expect(onApply.mock.calls[0][0].duration.when).toBe('startOfTurn')
+    expect(applied(onApply)[0].duration.when).toBe('startOfTurn')
   })
 
   it('stages a condition chip on and off without applying', () => {
@@ -242,62 +343,6 @@ describe('EffectModal', () => {
     expect(onApply).not.toHaveBeenCalled()
   })
 
-  it('turns the reminder into a counter starting at zero, rather than adding both', () => {
-    const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
-    const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'counter' } })
-    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
-      target: { value: 'Depth' },
-    })
-    clickApply(dialog)
-    expect(onApply).toHaveBeenCalledOnce()
-    expect(onApply.mock.calls[0][0]).toMatchObject({
-      name: 'Depth',
-      icon: 'counter',
-      modifier: null,
-      duration: { type: 'counter', count: 0 },
-    })
-  })
-
-  it('makes an ordinary reminder for every other duration', () => {
-    const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
-    const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
-      target: { value: 'Oil-soaked' },
-    })
-    clickApply(dialog)
-    expect(onApply.mock.calls[0][0]).toMatchObject({
-      icon: 'reminder',
-      duration: { type: 'manual' },
-    })
-  })
-
-  it('needs a name to make a counter — an empty reminder applies nothing', () => {
-    const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
-    const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'counter' } })
-    clickApply(dialog)
-    expect(onApply).not.toHaveBeenCalled()
-  })
-
-  it('leaves anything staged beside a counter lasting until removed', () => {
-    const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
-    const dialog = open()
-    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'counter' } })
-    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
-      target: { value: 'Spore Load' },
-    })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
-    clickApply(dialog)
-    const [poisoned, tally] = onApply.mock.calls.map((c) => c[0])
-    expect(poisoned).toMatchObject({ name: 'Poisoned', duration: { type: 'manual' } })
-    expect(tally).toMatchObject({ name: 'Spore Load', duration: { type: 'counter', count: 0 } })
-  })
-
   it('Cancel discards staged changes without applying', () => {
     const onApply = vi.fn()
     render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
@@ -306,6 +351,106 @@ describe('EffectModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), { target: { value: 'x' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     expect(onApply).not.toHaveBeenCalled()
+  })
+})
+
+describe('counters', () => {
+  it('adds a counter from its own control, starting at zero, beside a timed condition', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1h' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
+    fireEvent.change(within(dialog).getByLabelText('Counter 1 name'), {
+      target: { value: 'Spore Load' },
+    })
+    clickApply(dialog)
+    const [poisoned, tally] = applied(onApply)
+    // The condition keeps the shared duration; the counter has no timer at all.
+    expect(poisoned).toMatchObject({ name: 'Poisoned', duration: { type: 'rounds', rounds: 600 } })
+    expect(tally).toMatchObject({
+      name: 'Spore Load',
+      icon: 'counter',
+      duration: { type: 'counter', count: 0 },
+    })
+  })
+
+  it('needs a name — an empty counter row applies nothing', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
+    clickApply(dialog)
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('hides a counter from the player view when ticked', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
+    fireEvent.change(within(dialog).getByLabelText('Counter 1 name'), {
+      target: { value: 'Depth' },
+    })
+    fireEvent.click(within(dialog).getByLabelText('Hidden from players'))
+    clickApply(dialog)
+    expect(applied(onApply)[0]).toMatchObject({ name: 'Depth', gmOnly: true })
+  })
+
+  it('leaves a counter the creature already carries alone — its tally survives', () => {
+    const depth: Effect = {
+      id: 'e1',
+      name: 'Depth',
+      icon: 'counter',
+      modifier: null,
+      duration: { type: 'counter', count: 4 },
+      gmOnly: true,
+    }
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[depth]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
+    fireEvent.change(within(dialog).getByLabelText('Counter 1 name'), {
+      target: { value: 'Depth' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
+    clickApply(dialog)
+    // Prone lands; a second Depth does not.
+    expect(applied(onApply).map((e) => e.name)).toEqual(['Prone'])
+  })
+})
+
+describe('bundles', () => {
+  it('offers a bundle name once two parts are staged, and stamps it on Apply', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
+    expect(within(dialog).queryByLabelText('Bundle name')).toBeNull()
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'Rough morning ahead' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Bundle name'), {
+      target: { value: 'Drunk' },
+    })
+    clickApply(dialog)
+    const [a, b] = applied(onApply)
+    expect(a.bundle?.name).toBe('Drunk')
+    expect(b.bundle?.name).toBe('Drunk')
+    expect(a.bundle?.id).toBe(b.bundle?.id)
+  })
+
+  it('applies loose effects when the bundle name stays blank', () => {
+    const onApply = vi.fn()
+    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
+    fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
+      target: { value: 'Oil-soaked' },
+    })
+    clickApply(dialog)
+    for (const e of applied(onApply)) expect(e.bundle).toBeUndefined()
   })
 })
 
@@ -327,23 +472,22 @@ describe('presets', () => {
     // Nothing has landed on the creature yet.
     expect(applied).toEqual([])
     // …but the form now carries the preset: the condition chip is pressed, the
-    // duration is the preset's, and the reminder is filled in.
+    // duration is the preset's, the reminder is filled in, and the bundle is named.
     expect(within(dialog).getByRole('button', { name: 'Poisoned' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
     expect(within(dialog).getByLabelText('Duration')).toHaveValue('1h')
     expect(within(dialog).getByLabelText('Custom reminder')).toHaveValue('Hungover in the morning')
+    expect(within(dialog).getByLabelText('Bundle name')).toHaveValue('Drunk')
   })
 
   it('replaces what the last preset staged rather than piling onto it', () => {
     const HEXED: EffectPreset = {
       id: 'custom:hexed',
       name: 'Hexed',
-      conditions: [],
-      modifier: null,
-      note: 'Hex: +1d6 Necrotic',
       duration: { type: 'manual' },
+      parts: [{ kind: 'reminder', note: 'Hex: +1d6 Necrotic' }],
     }
     render(<Harness presets={[DRUNK, HEXED]} />)
     const dialog = open()
@@ -354,6 +498,7 @@ describe('presets', () => {
 
     // The second preset's reminder stands alone, and the first's condition is gone.
     expect(within(dialog).getByLabelText('Custom reminder')).toHaveValue('Hex: +1d6 Necrotic')
+    expect(within(dialog).queryByLabelText('Reminder 2')).toBeNull()
     expect(within(dialog).getByRole('button', { name: 'Poisoned' })).toHaveAttribute(
       'aria-pressed',
       'false',
@@ -361,7 +506,7 @@ describe('presets', () => {
     expect(within(dialog).getByLabelText('Duration')).toHaveValue('manual')
   })
 
-  it('commits the staged preset on Apply, under its own duration', () => {
+  it('commits the staged preset on Apply as one named bundle', () => {
     let latest: Effect[] = []
     render(<Harness presets={[DRUNK]} onEffects={(e) => (latest = e)} />)
     const dialog = open()
@@ -370,7 +515,11 @@ describe('presets', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
     expect(latest.map((e) => e.name)).toEqual(['Poisoned', 'Hungover in the morning'])
-    for (const e of latest) expect(e.duration).toEqual({ type: 'rounds', rounds: 600 })
+    for (const e of latest) {
+      expect(e.duration).toEqual({ type: 'rounds', rounds: 600 })
+      expect(e.bundle?.name).toBe('Drunk')
+    }
+    expect(latest[0].bundle?.id).toBe(latest[1].bundle?.id)
   })
 
   it('only offers Save as preset once something is staged', () => {
@@ -393,7 +542,7 @@ describe('presets', () => {
     expect(onSavePreset).toHaveBeenCalledTimes(1)
     const saved = onSavePreset.mock.calls[0][0] as EffectPreset
     expect(saved.name).toBe('Knocked flat')
-    expect(saved.conditions).toEqual(['Prone'])
+    expect(saved.parts).toEqual([{ kind: 'condition', condition: 'Prone' }])
     expect(saved.source).toBeUndefined()
     vi.restoreAllMocks()
   })
