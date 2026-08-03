@@ -3,6 +3,7 @@
 
 import type { EffectPreset } from '../../schema/preset.ts'
 import { BROOD_AND_BLOOM_PRESETS } from './broodAndBloom.ts'
+import { STRONG_WATERS_PRESETS } from './strongWaters.ts'
 
 /**
  * Effect presets a library ships. They follow the library rather than the account:
@@ -15,6 +16,7 @@ import { BROOD_AND_BLOOM_PRESETS } from './broodAndBloom.ts'
  */
 const BY_LIBRARY: Record<string, EffectPreset[]> = {
   'openfray-brood-and-bloom': BROOD_AND_BLOOM_PRESETS,
+  'openfray-strong-waters': STRONG_WATERS_PRESETS,
 }
 
 /** The presets shipped by the enabled libraries, in the order the libraries list them. */

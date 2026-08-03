@@ -11,6 +11,7 @@ import {
   type EffectDraft,
 } from '../../src/components/effectPreset.ts'
 import { BROOD_AND_BLOOM_PRESETS } from '../../src/combat/presets/broodAndBloom.ts'
+import { STRONG_WATERS_PRESETS } from '../../src/combat/presets/strongWaters.ts'
 import { libraryPresets } from '../../src/combat/presets/index.ts'
 
 /** A draft with everything staged, so a round-trip has something to lose. */
@@ -152,5 +153,73 @@ describe('the Brood & Bloom presets', () => {
     expect(libraryPresets([])).toEqual([])
     expect(libraryPresets(['srd-5.2'])).toEqual([])
     expect(libraryPresets(['openfray-brood-and-bloom'])).toEqual(BROOD_AND_BLOOM_PRESETS)
+  })
+})
+
+describe('the Strong Waters presets', () => {
+  const byName = (n: string) => STRONG_WATERS_PRESETS.find((p) => p.name === n)!
+
+  it('ships the four Intoxication levels, the three degrees, and Craving as the one counter', () => {
+    expect(STRONG_WATERS_PRESETS).toHaveLength(8)
+    expect(STRONG_WATERS_PRESETS.filter((p) => p.counter).map((p) => p.name)).toEqual(['Craving'])
+    expect(STRONG_WATERS_PRESETS.filter((p) => p.name.startsWith('Intoxication'))).toHaveLength(4)
+    expect(STRONG_WATERS_PRESETS.filter((p) => p.name.startsWith('Addicted'))).toHaveLength(3)
+  })
+
+  it("gives every preset a unique id under the library's source", () => {
+    const ids = STRONG_WATERS_PRESETS.map((p) => p.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const p of STRONG_WATERS_PRESETS) {
+      expect(p.source).toBe('openfray-strong-waters')
+      expect(p.id.startsWith('openfray-strong-waters:')).toBe(true)
+    }
+  })
+
+  it('applies something for every preset — a reminder at least', () => {
+    for (const p of STRONG_WATERS_PRESETS) {
+      expect(draftEffects(presetToDraft(p)).length, p.name).toBeGreaterThan(0)
+    }
+  })
+
+  it('carries only the two conditions the levels actually name', () => {
+    expect(byName('Intoxication 3').conditions).toEqual(['Poisoned'])
+    expect(byName('Intoxication 4').conditions).toEqual(['Unconscious'])
+    expect(byName('Intoxication 1').conditions).toEqual([])
+    expect(byName('Intoxication 2').conditions).toEqual([])
+  })
+
+  it('opens every note with its own name — the applied badge takes the note as its name', () => {
+    for (const p of STRONG_WATERS_PRESETS) {
+      expect(p.note, p.name).toMatch(new RegExp(`^${p.name}`))
+    }
+  })
+
+  it('keeps a note short enough for a tracker row, one step at a time', () => {
+    for (const p of STRONG_WATERS_PRESETS) {
+      expect(p.note!.length, `${p.name} is too long for the row`).toBeLessThan(160)
+    }
+    // Level 2 adds to level 1 rather than restating it; the full ladder is appendix B.
+    expect(byName('Intoxication 2').note).not.toMatch(/Frightened/)
+  })
+
+  it('leaves a degree free of Exhaustion — the level belongs to a day gone without', () => {
+    for (const n of [1, 2, 3]) {
+      const p = byName(`Addicted ${n}`)
+      expect(p.conditions, p.name).toEqual([])
+      expect(p.modifier, p.name).toBeNull()
+    }
+    expect(byName('Addicted 2').note).toMatch(/Exhaustion/)
+  })
+
+  it('ships no modifier anywhere — no Effect shape scopes to one ability', () => {
+    for (const p of STRONG_WATERS_PRESETS) expect(p.modifier, p.name).toBeNull()
+  })
+
+  it('rides its own library, alongside the other one', () => {
+    expect(libraryPresets(['openfray-strong-waters'])).toEqual(STRONG_WATERS_PRESETS)
+    expect(libraryPresets(['openfray-brood-and-bloom', 'openfray-strong-waters'])).toEqual([
+      ...BROOD_AND_BLOOM_PRESETS,
+      ...STRONG_WATERS_PRESETS,
+    ])
   })
 })
