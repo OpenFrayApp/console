@@ -61,10 +61,12 @@ describe('ApplySpellEffect', () => {
     const action = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
     expect(action).toBeTruthy()
     expect(action.id).toBe('p1')
-    // The update adds the Bless effect to the combatant.
+    // The update adds Bless's two parts — attacks and saves — as one named bundle.
     const updated = action.update(thalia) as Combatant
-    expect(updated.effects).toHaveLength(1)
-    expect(updated.effects[0].name).toBe('Bless')
+    expect(updated.effects).toHaveLength(2)
+    expect(updated.effects.map((e) => e.name)).toEqual(['Bless', 'Bless'])
+    expect(new Set(updated.effects.map((e) => e.bundle?.id)).size).toBe(1)
+    expect(updated.effects[0].bundle?.name).toBe('Bless')
     expect(screen.getByText(/Applied to Thalia/)).toBeInTheDocument()
   })
 

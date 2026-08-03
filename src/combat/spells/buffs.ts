@@ -508,11 +508,20 @@ export const BUFF_SPELLS: SpellEffectTable = {
     summary: '+1d4 to attack rolls and saving throws',
     targeting: 'ally',
     multi: true,
+    // Attack rolls and saving throws, per the text — never ability checks, which one
+    // 'all' modifier would also have reached.
     build: ({ source, spell }) => [
       flatBonus('Bless', '1d4', {
         source,
+        applies: 'attackRolls',
         duration: timedDuration(spell),
-        note: '+1d4 to attacks & saves',
+        note: '+1d4 attacks',
+      }),
+      flatBonus('Bless', '1d4', {
+        source,
+        applies: 'savingThrows',
+        duration: timedDuration(spell),
+        note: '+1d4 saves',
       }),
     ],
   },
