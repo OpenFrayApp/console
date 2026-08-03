@@ -6,7 +6,7 @@ import type { CombatClock, Encounter, GameLogEntry } from '../schema/encounter.t
 import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
 import type { Recap } from './recap.ts'
-import { hpTier, type HpTier } from './resources.ts'
+import { effectiveMaxHp, hpTier, type HpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
 import { badgeLabel } from './effects.ts'
 import { acOf, isFoe, nameOf } from './combatant.ts'
@@ -140,7 +140,7 @@ function allyRow(c: Combatant): PlayerRow {
   const downed = c.isPC && c.status === 'unconscious'
   return {
     ...baseRow(c),
-    hp: { kind: 'exact', current: c.hp.current, max: c.hp.max, temp: c.hp.temp },
+    hp: { kind: 'exact', current: c.hp.current, max: effectiveMaxHp(c), temp: c.hp.temp },
     ac: acOf(c),
     deathSaves: downed ? (c.deathSaves ?? { successes: 0, failures: 0 }) : undefined,
     stable: (c.isPC && isStable(c)) || undefined,
@@ -151,7 +151,7 @@ function allyRow(c: Combatant): PlayerRow {
 function foeRow(c: Combatant, settings: PlayerViewSettings): PlayerRow {
   const hp: PlayerHp =
     settings.hp === 'exact'
-      ? { kind: 'exact', current: c.hp.current, max: c.hp.max, temp: c.hp.temp }
+      ? { kind: 'exact', current: c.hp.current, max: effectiveMaxHp(c), temp: c.hp.temp }
       : settings.hp === 'bloodied'
         ? { kind: 'tier', tier: hpTier(c) }
         : null

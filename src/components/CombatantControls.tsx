@@ -2,7 +2,8 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import { useState } from 'react'
-import type { Combatant } from '../schema/combatant.ts'
+import type { ArmorName, Combatant } from '../schema/combatant.ts'
+import { ARMOR, ARMOR_NAMES } from '../schema/pcStats.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import {
   isStable,
@@ -246,6 +247,47 @@ export function CombatantControls({
           </button>
         )}
 
+        {combatant.isPC && combatant.acAuto && (
+          // Don and doff at the table: the armor worn is combat state, and the AC
+          // derivation follows it live. Only a character deriving its AC shows this —
+          // with a typed AC the control would move nothing.
+          <span className="inline-flex items-center gap-2">
+            <select
+              value={combatant.armor ?? ''}
+              onChange={(e) =>
+                apply((c) =>
+                  c.isPC
+                    ? { ...c, armor: (e.target.value || undefined) as ArmorName | undefined }
+                    : c,
+                )
+              }
+              aria-label={`Armor worn by ${name}`}
+              title="What's on right now — AC follows"
+              className="rounded border border-slate-300 bg-white px-1 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">Unarmored</option>
+              {ARMOR_NAMES.map((a) => (
+                <option key={a} value={a}>
+                  {ARMOR[a].label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => apply((c) => (c.isPC ? { ...c, shield: !c.shield } : c))}
+              aria-pressed={combatant.shield === true}
+              title="Whether the shield is in hand — AC follows"
+              className={
+                combatant.shield
+                  ? 'rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                  : BTN
+              }
+            >
+              Shield
+            </button>
+          </span>
+        )}
+
         {!combatant.isPC && (
           <button
             type="button"
@@ -374,6 +416,7 @@ export function CombatantControls({
           applies: e.modifier.applies,
           value: e.modifier.value,
           abilities: e.modifier.abilities,
+          acBase: e.modifier.acBase,
         })
       : e.name
     const row = (

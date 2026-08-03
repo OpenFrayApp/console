@@ -119,8 +119,8 @@ describe('spellEffectFor', () => {
     expect(build(monster(16)).note).toBe('AC 16 unarmored')
     expect(build(pc(12)).note).toBe('AC 14 unarmored')
     // Anonymous PCs and quick adds carry no ability scores.
-    expect(build(pc()).note).toBe('AC 13 + Dex')
-    expect(build().note).toBe('AC 13 + Dex')
+    expect(build(pc()).note).toBe('AC 13 + Dex unarmored')
+    expect(build().note).toBe('AC 13 + Dex unarmored')
   })
 
   it('offers Fly and Mind Blank as ally reminders', () => {

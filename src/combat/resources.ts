@@ -32,9 +32,25 @@ export function hpTierOf(current: number, max: number): HpTier {
   return 'critical'
 }
 
-/** The combatant's wound tier, read from its current and max HP. */
+/**
+ * The hit point maximum with the active `maxHp` effects folded in — a disease's
+ * "HP max −10" is a number now. Floors at 0; the stored `hp.max` stays the true
+ * maximum, so clearing the effect gives the ceiling back (current HP does not
+ * spring back with it — the reducer clamped it down when the reduction landed).
+ */
+export function effectiveMaxHp(c: Combatant): number {
+  const delta = c.effects.reduce((sum, e) => {
+    const m = e.modifier
+    return m?.applies === 'maxHp' && m.mode === 'flatBonus' && typeof m.value === 'number'
+      ? sum + m.value
+      : sum
+  }, 0)
+  return Math.max(0, c.hp.max + delta)
+}
+
+/** The combatant's wound tier, read from its current and effective max HP. */
 export function hpTier(c: Combatant): HpTier {
-  return hpTierOf(c.hp.current, c.hp.max)
+  return hpTierOf(c.hp.current, effectiveMaxHp(c))
 }
 
 /** Bloodied-or-worse: at or below half max HP. */
@@ -51,7 +67,7 @@ export function isBloodied(c: Combatant): boolean {
 function statusForHp(c: Combatant, current: number, overkill: number): CombatantStatus {
   if (current > 0) return 'active'
   if (!c.isPC) return 'dead'
-  return overkill >= c.hp.max ? 'dead' : 'unconscious'
+  return overkill >= effectiveMaxHp(c) ? 'dead' : 'unconscious'
 }
 
 export interface DamageOptions {
@@ -86,7 +102,7 @@ export function applyDamage(c: Combatant, amount: number, opts: DamageOptions = 
  * recomputes status the same way.
  */
 export function setCurrentHp(c: Combatant, value: number): Combatant {
-  const current = Math.max(0, Math.min(c.hp.max, Math.floor(value)))
+  const current = Math.max(0, Math.min(effectiveMaxHp(c), Math.floor(value)))
   if (current > 0 && c.isPC) {
     return {
       ...c,
@@ -111,9 +127,9 @@ export function parseHpInput(raw: string): HpInput | null {
   return null
 }
 
-/** Heal up to max HP. Healing above 0 revives a downed/dead creature (revivify). */
+/** Heal up to the effective max HP. Healing above 0 revives a downed/dead creature (revivify). */
 export function applyHealing(c: Combatant, amount: number): Combatant {
-  const current = Math.min(c.hp.max, c.hp.current + clampNonNegativeInt(amount))
+  const current = Math.min(effectiveMaxHp(c), c.hp.current + clampNonNegativeInt(amount))
   if (current <= 0) return { ...c, hp: { ...c.hp, current } }
   // Back above 0: conscious again, and a revived PC's death saves reset.
   if (c.isPC) {

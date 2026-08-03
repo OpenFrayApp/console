@@ -22,15 +22,18 @@ import {
   setCurrentHp,
   slotsRemaining,
   spellUsesRemaining,
+  effectiveMaxHp,
   spendActionUse,
   spendLegendary,
   spendLimited,
 } from '../combat/resources.ts'
+import { effectiveSpeeds } from '../combat/speed.ts'
+import { classLabel } from '../schema/pcStats.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
-import { isFoe } from '../combat/combatant.ts'
+import { acOf, isFoe } from '../combat/combatant.ts'
 import { heldBack } from '../combat/playerView.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
@@ -441,14 +444,19 @@ export function EncounterConsole({
                 subtitle={
                   selected.kind === 'quick'
                     ? 'Quick add'
-                    : ['Player character', selected.race, selected.alignment]
+                    : [
+                        'Player character',
+                        selected.race,
+                        classLabel(selected),
+                        selected.alignment && titleCase(selected.alignment),
+                      ]
                         .filter(Boolean)
                         .join(' · ')
                 }
-                ac={selected.ac}
-                hp={selected.hp}
+                ac={acOf(selected)}
+                hp={{ ...selected.hp, max: effectiveMaxHp(selected) }}
                 initiativeMod={selected.initiativeMod ?? 0}
-                speed={selected.speed}
+                speed={selected.speed && effectiveSpeeds(selected.speed, selected.effects)}
                 abilities={selected.abilities}
                 resistances={selected.resistances}
                 immunities={selected.immunities}
@@ -487,7 +495,9 @@ export function EncounterConsole({
               <SpellLinkContext.Provider value={linkSpells}>
                 <CreatureStatBlock
                   creature={selected.creature}
-                  hp={selected.hp}
+                  hp={{ ...selected.hp, max: effectiveMaxHp(selected) }}
+                  liveAc={acOf(selected)}
+                  liveSpeed={effectiveSpeeds(selected.creature.speed, selected.effects)}
                   concentration={selected.concentration}
                   label={selected.label}
                   onRename={(label) => {

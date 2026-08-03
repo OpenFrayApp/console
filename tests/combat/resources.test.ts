@@ -9,6 +9,7 @@ import {
   applyDamage,
   applyHealing,
   castSpell,
+  effectiveMaxHp,
   grantTempHp,
   hpTier,
   isBloodied,
@@ -27,6 +28,7 @@ import {
   spendSlot,
   spendActionUse,
 } from '../../src/combat/resources.ts'
+import { modifierEffect } from '../../src/combat/effects.ts'
 import type { Spellcasting } from '../../src/schema/creature.ts'
 
 function creature(): Creature {
@@ -245,6 +247,45 @@ describe('grantTempHp', () => {
   it('keeps the higher value (temp HP does not stack)', () => {
     expect(grantTempHp(monster({ hp: { current: 40, max: 40, temp: 8 } }), 5).hp.temp).toBe(8)
     expect(grantTempHp(monster({ hp: { current: 40, max: 40, temp: 3 } }), 9).hp.temp).toBe(9)
+  })
+})
+
+describe('effectiveMaxHp', () => {
+  /** A maxHp-reduction effect, the shape a disease stage now carries. */
+  const maxHpMod = (value: number) =>
+    modifierEffect({
+      name: 'Sallow Rot',
+      mode: 'flatBonus',
+      direction: 'outgoing',
+      applies: 'maxHp',
+      value,
+    })
+
+  it('is the stored max with no maxHp effects', () => {
+    expect(effectiveMaxHp(monster())).toBe(40)
+  })
+
+  it('folds reductions in, flooring at 0, and leaves hp.max itself untouched', () => {
+    const sick = monster({ effects: [maxHpMod(-10)] })
+    expect(effectiveMaxHp(sick)).toBe(30)
+    expect(sick.hp.max).toBe(40)
+    expect(effectiveMaxHp(monster({ effects: [maxHpMod(-99)] }))).toBe(0)
+  })
+
+  it('caps healing at the effective max while the reduction lasts', () => {
+    const sick = monster({ hp: { current: 20, max: 40, temp: 0 }, effects: [maxHpMod(-10)] })
+    expect(applyHealing(sick, 50).hp.current).toBe(30)
+  })
+
+  it('caps a typed HP number the same way', () => {
+    const sick = monster({ hp: { current: 20, max: 40, temp: 0 }, effects: [maxHpMod(-10)] })
+    expect(setCurrentHp(sick, 40).hp.current).toBe(30)
+  })
+
+  it('reads the wound tier against the effective max', () => {
+    // 20/40 is bloodied at half — but with the max down to 20, 20/20 is healthy.
+    const sick = monster({ hp: { current: 20, max: 40, temp: 0 }, effects: [maxHpMod(-20)] })
+    expect(hpTier(sick)).toBe('healthy')
   })
 })
 

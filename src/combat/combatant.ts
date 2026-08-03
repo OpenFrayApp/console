@@ -8,6 +8,8 @@ import type {
   LimitedUseState,
   MonsterCombatant,
 } from '../schema/combatant.ts'
+import { deriveAc } from '../schema/pcStats.ts'
+import { abilityMod } from '../schema/primitives.ts'
 import { rechargeActions } from './recharge.ts'
 
 /**
@@ -25,9 +27,27 @@ export function nameOf(c: Combatant): string {
   return c.isPC ? c.name : c.label
 }
 
-/** A combatant's armor class: entered directly on a PC, from the stat block on a monster. */
+/**
+ * A combatant's armor class, effects included. A monster reads its stat block; a PC
+ * reads the GM's number — or, for a roster character set to derive it, the live
+ * derivation from class, abilities, and the armor currently worn, so donning and
+ * doffing at the table moves the number by itself. On top of the base, `ac` effects
+ * fold in: numeric flat modifiers add, and an alternative unarmored base (Mage
+ * Armor's 13 + DEX) lifts an unarmored PC to the better of the two.
+ */
 export function acOf(c: Combatant): number {
-  return c.isPC ? c.ac : c.creature.ac
+  let base = c.isPC ? ((c.acAuto ? deriveAc(c) : null) ?? c.ac) : c.creature.ac
+  let delta = 0
+  for (const e of c.effects) {
+    const m = e.modifier
+    if (m?.applies !== 'ac' || m.mode !== 'flatBonus') continue
+    if (typeof m.value === 'number') delta += m.value
+    // The alternative base needs to know "unarmored", which only a PC's facts say.
+    if (m.acBase != null && c.isPC && !c.armor && c.abilities) {
+      base = Math.max(base, m.acBase + abilityMod(c.abilities.dex) + (c.shield ? 2 : 0))
+    }
+  }
+  return base + delta
 }
 
 /**

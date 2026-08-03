@@ -2,8 +2,36 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Speeds } from '../schema/primitives.ts'
+import type { Effect } from '../schema/effect.ts'
 
 const MOVE_KEYS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const
+
+/**
+ * Speeds with the active `speed` effects folded in: flat deltas first, then any
+ * halving, then a `'zero'` pins everything at 0 — each movement floors at 0. The
+ * disease stages' "Speed −10 ft." is a number the board moves now, not a note.
+ */
+export function effectiveSpeeds(speed: Speeds, effects: Effect[]): Speeds {
+  const mods = effects.flatMap((e) =>
+    e.modifier?.applies === 'speed' && e.modifier.mode === 'flatBonus' ? [e.modifier.value] : [],
+  )
+  if (mods.length === 0) return speed
+  const delta = mods.reduce<number>((sum, v) => (typeof v === 'number' ? sum + v : sum), 0)
+  const halved = mods.includes('half')
+  const zeroed = mods.includes('zero')
+  const out: Speeds = { ...speed }
+  for (const k of MOVE_KEYS) {
+    const base = speed[k]
+    if (typeof base !== 'number') continue
+    if (zeroed) {
+      out[k] = 0
+      continue
+    }
+    const moved = Math.max(0, base + delta)
+    out[k] = halved ? Math.floor(moved / 2) : moved
+  }
+  return out
+}
 
 const SPEED_LABEL: Record<(typeof MOVE_KEYS)[number], string> = {
   walk: 'Walk',

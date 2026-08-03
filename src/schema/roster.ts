@@ -8,7 +8,8 @@ import {
   type Senses,
   type Speeds,
 } from './primitives.ts'
-import type { CharacterDetails, PlayerCharacter } from './combatant.ts'
+import type { ArmorName, CharacterDetails, PcClass, PlayerCharacter } from './combatant.ts'
+import { deriveAc, deriveInitiativeMod } from './pcStats.ts'
 
 /**
  * A durable player character a signed-up user keeps in their party roster — the
@@ -21,9 +22,10 @@ import type { CharacterDetails, PlayerCharacter } from './combatant.ts'
  * a fresh, mutable {@link PlayerCharacter} via {@link rosterPcToCombatant}. Editing
  * the roster entry never touches a fight in progress.
  *
- * Still lightweight, still not a character sheet: the GM transcribes these facts;
- * the app never derives class, level, or what an ability does. Ability scores feed
- * the Dexterity initiative tiebreak and the derived initiative modifier.
+ * Still lightweight, still not a character sheet: the GM transcribes these facts,
+ * and the two derivations the maintainer carved out (issues #5/#6) — armor class
+ * and the initiative modifier — read them. The app still never models what a class
+ * can *do*.
  */
 export interface RosterPc extends CharacterDetails {
   /** Stable id, generated client-side; matches the row's `data->>id`. */
@@ -45,13 +47,44 @@ export interface RosterPc extends CharacterDetails {
   abilities?: AbilityScores
   /** The campaign this PC belongs to, or null/absent when unassigned. A stored tag. */
   campaignId?: string | null
+  /**
+   * The build facts the derivations read (issues #5/#6): the sheet's class and level,
+   * transcribed, and the armor worn. With `acAuto` the armor class derives from them;
+   * otherwise `ac` above stays the GM's own number, as it always was. A typed
+   * `initiativeMod` overrides the derived one — the +3 fighter whose bonus comes from
+   * a feat the app deliberately doesn't know about.
+   */
+  class?: PcClass
+  level?: number
+  armor?: ArmorName
+  /** A magic armor's enhancement (+1, +2, +3); counts only while armor is worn. */
+  armorBonus?: number
+  shield?: boolean
+  /** A magic shield's enhancement, on top of the shield's own +2. */
+  shieldBonus?: number
+  acAuto?: boolean
+  initiativeMod?: number
+}
+
+/** The armor class a roster PC shows: derived when asked and possible, else as typed. */
+export function rosterAc(pc: RosterPc): number {
+  const derived = pc.acAuto ? deriveAc(pc) : null
+  return derived ?? Math.max(0, Math.floor(pc.ac) || 0)
+}
+
+/** The initiative modifier a roster PC rolls with: the override, else derived, else DEX. */
+export function rosterInitiativeMod(pc: RosterPc): number {
+  if (pc.initiativeMod !== undefined) return pc.initiativeMod
+  const derived = deriveInitiativeMod(pc)
+  if (derived !== null) return derived
+  return pc.abilities ? abilityMod(pc.abilities.dex) : 0
 }
 
 /**
  * Instantiate a roster PC into a fresh combatant for the encounter — a new id, full
  * HP, no carried-over combat state. The template stays untouched (snapshot, don't
- * reference). The initiative modifier is derived from Dexterity; the campaign tag is
- * roster metadata and does not travel onto the combatant.
+ * reference). AC and the initiative modifier come from `rosterAc` and
+ * `rosterInitiativeMod`; the campaign tag is roster metadata and stays behind.
  */
 export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
   const maxHp = Math.max(1, Math.floor(pc.maxHp) || 1)
@@ -62,8 +95,16 @@ export function rosterPcToCombatant(pc: RosterPc): PlayerCharacter {
     rosterId: pc.id,
     name: pc.name,
     initiative: 0, // rolled/entered when combat begins
-    initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : 0,
-    ac: Math.max(0, Math.floor(pc.ac) || 0),
+    initiativeMod: rosterInitiativeMod(pc),
+    ac: rosterAc(pc),
+    // The build facts travel too, so donning and doffing at the table re-derives.
+    class: pc.class,
+    level: pc.level,
+    armor: pc.armor,
+    armorBonus: pc.armorBonus,
+    shield: pc.shield,
+    shieldBonus: pc.shieldBonus,
+    acAuto: pc.acAuto,
     senses: pc.senses,
     languages: pc.languages,
     resistances: pc.resistances,
@@ -101,9 +142,16 @@ export function syncCombatantFromRoster(combatant: PlayerCharacter, pc: RosterPc
   return {
     ...combatant,
     name: pc.name,
-    ac: Math.max(0, Math.floor(pc.ac) || 0),
+    ac: rosterAc(pc),
+    class: pc.class,
+    level: pc.level,
+    armor: pc.armor,
+    armorBonus: pc.armorBonus,
+    shield: pc.shield,
+    shieldBonus: pc.shieldBonus,
+    acAuto: pc.acAuto,
     hp: { ...combatant.hp, max, current: Math.min(combatant.hp.current, max) },
-    initiativeMod: pc.abilities ? abilityMod(pc.abilities.dex) : combatant.initiativeMod,
+    initiativeMod: pc.abilities ? rosterInitiativeMod(pc) : combatant.initiativeMod,
     speed: pc.speed,
     abilities: pc.abilities,
     senses: pc.senses,

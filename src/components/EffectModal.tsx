@@ -20,7 +20,7 @@ import {
   type EffectDraft,
   type ModifierDraft,
 } from './effectPreset.ts'
-import { describeModifier } from '../combat/effects.ts'
+import { describeModifier, isStatApplies } from '../combat/effects.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { track as recordEvent, EVENTS } from '../lib/analytics.ts'
@@ -92,6 +92,17 @@ function ModifierBuilder({
         : [...modifier.abilities, a],
     )
 
+  // A stat target (AC, Speed, HP max) has no direction and only takes a flat value,
+  // so choosing one collapses the builder to amount + label.
+  const stat = isStatApplies(modifier.applies)
+  const chooseApplies = (applies: EffectApplies) => {
+    if (isStatApplies(applies)) {
+      onChange({ ...modifier, applies, mode: 'flatBonus', direction: 'outgoing' })
+    } else {
+      onChange({ ...modifier, applies })
+    }
+  }
+
   // Placeholders stand in while the builder is half-filled; the wording itself is the
   // same one the preset card uses, so a modifier reads identically built and saved.
   const summary = describeModifier({
@@ -120,8 +131,9 @@ function ModifierBuilder({
           <select
             value={modifier.mode}
             onChange={(e) => chooseMode(e.target.value as EffectMode)}
+            disabled={stat}
             aria-label="Modifier effect"
-            className={FIELD}
+            className={`${FIELD} disabled:opacity-50`}
           >
             <option value="advantage">Advantage</option>
             <option value="disadvantage">Disadvantage</option>
@@ -132,7 +144,7 @@ function ModifierBuilder({
           <span className="text-xs text-slate-500 dark:text-slate-400">Applies to</span>
           <select
             value={modifier.applies}
-            onChange={(e) => set('applies', e.target.value as EffectApplies)}
+            onChange={(e) => chooseApplies(e.target.value as EffectApplies)}
             aria-label="Applies to"
             className={FIELD}
           >
@@ -140,6 +152,9 @@ function ModifierBuilder({
             <option value="savingThrows">Saving throws</option>
             <option value="abilityChecks">Ability checks</option>
             <option value="all">Everything</option>
+            <option value="ac">Armor Class</option>
+            <option value="speed">Speed</option>
+            <option value="maxHp">HP maximum</option>
           </select>
         </label>
       </div>
@@ -169,31 +184,33 @@ function ModifierBuilder({
           </span>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        <span className={LABEL}>On</span>
-        <label className="flex items-center gap-1">
-          <input
-            type="radio"
-            checked={modifier.direction === 'outgoing'}
-            onChange={() => set('direction', 'outgoing')}
-          />
-          Rolls it makes
-        </label>
-        <label className="flex items-center gap-1">
-          <input
-            type="radio"
-            checked={modifier.direction === 'incoming'}
-            onChange={() => set('direction', 'incoming')}
-          />
-          Rolls made against it
-        </label>
-      </div>
+      {!stat && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className={LABEL}>On</span>
+          <label className="flex items-center gap-1">
+            <input
+              type="radio"
+              checked={modifier.direction === 'outgoing'}
+              onChange={() => set('direction', 'outgoing')}
+            />
+            Rolls it makes
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="radio"
+              checked={modifier.direction === 'incoming'}
+              onChange={() => set('direction', 'incoming')}
+            />
+            Rolls made against it
+          </label>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {modifier.mode === 'flatBonus' && (
           <input
             value={modifier.amount}
             onChange={(e) => set('amount', e.target.value)}
-            placeholder="+1d4 or -2"
+            placeholder={modifier.applies === 'speed' ? '-10, half or zero' : '+1d4 or -2'}
             aria-label="Amount"
             className={`${FIELD_W} w-28`}
           />

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { applyDamage } from '../../src/combat/resources.ts'
-import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
+import { condition, counter, modifierEffect, reminder, setCount } from '../../src/combat/effects.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 import { onSharedBoard } from '../../src/combat/playerView.ts'
 
@@ -436,6 +436,28 @@ describe('encounter game-log events', () => {
     const depthLines = e.log.filter((l) => l.message.includes('Depth'))
     expect(depthLines.length).toBeGreaterThanOrEqual(3)
     expect(depthLines.every((l) => l.gmOnly)).toBe(true)
+  })
+
+  it('clamps current HP down when a maxHp reduction lands, and it stays down after', () => {
+    const rot = modifierEffect({
+      name: 'Sallow Rot',
+      mode: 'flatBonus',
+      direction: 'outgoing',
+      applies: 'maxHp',
+      value: -3,
+    })
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [rot] }),
+    })
+    let a = e.combatants[0]
+    expect(a.hp.current).toBe(4) // the helper's monsters hold 7/7
+    expect(a.hp.max).toBe(7)
+    // Curing the disease restores the ceiling, not the lost hit points.
+    e = encounterReducer(e, { type: 'update', id: 'a', update: (c) => ({ ...c, effects: [] }) })
+    a = e.combatants[0]
+    expect(a.hp.current).toBe(4)
   })
 
   it('logs every step of a counter, which keeps its id as its tally moves', () => {

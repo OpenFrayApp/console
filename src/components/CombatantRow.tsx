@@ -3,7 +3,7 @@
 
 import { useRef } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
-import { hpTier } from '../combat/resources.ts'
+import { effectiveMaxHp, hpTier } from '../combat/resources.ts'
 import { acOf, isFoe, nameOf } from '../combat/combatant.ts'
 import { concentrationTitle } from '../combat/concentration.ts'
 import { isStable } from '../combat/deathsaves.ts'
@@ -248,7 +248,7 @@ export function CombatantRow({
             ) : (
               <span className={hpToneFor(tier)}>{hp.current}</span>
             )}
-            <span className="text-slate-400 dark:text-slate-500">/{hp.max}</span>
+            <span className="text-slate-400 dark:text-slate-500">/{effectiveMaxHp(combatant)}</span>
           </span>
           {hp.temp > 0 && <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>}
           {showTier && <span className="sr-only"> {TIER_LABEL[tier]}</span>}

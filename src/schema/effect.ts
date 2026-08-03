@@ -32,8 +32,14 @@ export type ConditionName =
   | 'Stunned'
   | 'Unconscious'
 
-/** Which category of roll a modifier touches. */
-export type EffectApplies = 'attackRolls' | 'savingThrows' | 'abilityChecks' | 'ac' | 'all'
+/**
+ * Which category of roll a modifier touches — or, for the last three, which of the
+ * creature's numbers it moves: armor class, Speed, or the hit point maximum. The
+ * stat targets take flat values only ({@link EffectModifier.value}); a Speed value
+ * may also be `'half'` or `'zero'`, the two reductions the rules phrase that way.
+ */
+export type EffectApplies =
+  'attackRolls' | 'savingThrows' | 'abilityChecks' | 'ac' | 'speed' | 'maxHp' | 'all'
 
 export type EffectMode = 'advantage' | 'disadvantage' | 'flatBonus'
 
@@ -61,6 +67,12 @@ export interface EffectModifier {
    * doesn't know is never matched against a narrowed modifier.
    */
   abilities?: Ability[]
+  /**
+   * For an `ac` modifier: an alternative unarmored base — Mage Armor's 13 + DEX.
+   * A player character wearing no armor uses the better of this and their own base;
+   * anyone whose "unarmored" the app can't know keeps reading it as a reminder.
+   */
+  acBase?: number
 }
 
 /**

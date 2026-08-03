@@ -59,6 +59,16 @@ it never models class/level/spells, derives a build, or runs what a character ca
 GM-entered defenses are "what damage this takes" — a board consequence — not a sheet
 we read.
 
+**One deliberate carve-out (issues #5/#6, maintainer-decided 2026-08-03):** a
+signed-in roster character may also carry a **class, level, and the armor worn**, and
+exactly two numbers derive from them — **armor class** (the SRD armor table, shield,
+magic enhancements, and the Barbarian/Monk unarmored formulas) and the **initiative
+modifier** (DEX, plus Jack of All Trades) — each behind an opt-in, with the GM's
+typed number always available instead. `src/schema/pcStats.ts` is the whole of it.
+This is still transcription plus a lookup, not a rules engine: nothing else may read
+class or level without the maintainer widening this carve-out explicitly, and the
+anonymous forms never gain these fields.
+
 If a feature is useful but fails the test, it is still a no. When a request tempts
 you toward "it should really _know_ X about the player," stop — that temptation is
 the signal, not a reason to proceed. Flag it rather than building it.

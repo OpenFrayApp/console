@@ -125,6 +125,8 @@ export interface ModifierSpec {
   value?: number | string | null
   /** Narrows a saves/checks modifier to these abilities; absent = every ability. */
   abilities?: Ability[]
+  /** For an `ac` modifier: an alternative unarmored base (Mage Armor's 13). */
+  acBase?: number
 }
 
 /** Whether a modifier helps the creature (buff) or hurts it (debuff) — badge tone. */
@@ -162,6 +164,7 @@ export function modifierEffect(spec: ModifierSpec, opts: EffectOpts = {}): Effec
       value: spec.mode === 'flatBonus' ? (spec.value ?? null) : null,
       direction: spec.direction,
       ...(spec.abilities && spec.abilities.length > 0 ? { abilities: spec.abilities } : {}),
+      ...(spec.acBase != null ? { acBase: spec.acBase } : {}),
     },
     duration: opts.duration ?? { type: 'manual' },
     note: opts.note,
@@ -244,7 +247,14 @@ const APPLIES_TEXT: Record<EffectApplies, string> = {
   savingThrows: 'saving throws',
   abilityChecks: 'ability checks',
   ac: 'AC',
+  speed: 'Speed',
+  maxHp: 'HP max',
   all: 'all rolls',
+}
+
+/** The applies targets that move a stat rather than a roll — no direction, flat values. */
+export function isStatApplies(applies: EffectApplies): boolean {
+  return applies === 'ac' || applies === 'speed' || applies === 'maxHp'
 }
 
 /** Full ability names for the wording an ability-narrowed modifier reads with. */
@@ -272,11 +282,28 @@ function appliesText(spec: ModifierSpec): string {
   return `${abilityList(spec.abilities)} ${rolls}`
 }
 
+/** A flat stat value in words: "−10 to Speed", "Speed halved", "13 + DEX to AC". */
+function describeStat(spec: ModifierSpec): string {
+  const what = APPLIES_TEXT[spec.applies]
+  if (spec.acBase != null) return `${spec.name}: ${spec.acBase} + DEX to AC while unarmored`
+  if (spec.value === 'half') return `${spec.name}: ${what} halved`
+  if (spec.value === 'zero') return `${spec.name}: ${what} 0`
+  return `${spec.name}: ${describeBonusValue(spec.value)} to ${what}`
+}
+
+/** Format a flat value for prose: numbers gain a sign, dice strings pass through. */
+function describeBonusValue(value: number | string | null | undefined): string {
+  if (typeof value === 'number') return value >= 0 ? `+${value}` : `${value}`
+  return String(value ?? '±N')
+}
+
 /**
  * A modifier in plain English — "Bless: +1d4 to all rolls it makes". The effect modal
  * shows it as you build one and the preset card shows it saved, so both read the same.
+ * A stat target (AC, Speed, HP max) has no direction, so no "it makes" tail.
  */
 export function describeModifier(spec: ModifierSpec): string {
+  if (isStatApplies(spec.applies)) return describeStat(spec)
   const on = spec.direction === 'outgoing' ? 'it makes' : 'made against it'
   const what = appliesText(spec)
   if (spec.mode === 'flatBonus') return `${spec.name}: ${spec.value ?? '±N'} to ${what} ${on}`

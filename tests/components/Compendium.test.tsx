@@ -267,6 +267,37 @@ describe('Compendium', () => {
     expect(onCreatePc.mock.calls[0][0].name).toBe('Grog')
   })
 
+  it('shows the sheet with the initiative override and the derived AC, not raw DEX', async () => {
+    render(
+      <Compendium
+        onCreateCreature={() => {}}
+        rosterPcs={[
+          {
+            id: 'p1',
+            name: 'Rega',
+            ac: 16,
+            maxHp: 38,
+            abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+            // The Alert feat's +3, typed by hand — DEX alone would read +0.
+            initiativeMod: 3,
+            acAuto: true,
+            armor: 'chain-mail',
+            class: 'Fighter',
+            level: 5,
+            alignment: 'lawful good',
+          },
+        ]}
+      />,
+    )
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Characters'))
+    fireEvent.click(screen.getByRole('button', { name: /Rega/ }))
+    expect(screen.getByText('+3')).toBeInTheDocument() // the override, not +0
+    expect(screen.getByText('16')).toBeInTheDocument() // chain mail, derived
+    // The subtitle carries the class line and a title-cased alignment.
+    expect(screen.getByText(/Fighter 5 · Lawful Good/)).toBeInTheDocument()
+  })
+
   it('adds a roster PC to the encounter, edits, and deletes it from the card', async () => {
     const onAddPcToEncounter = vi.fn()
     const onUpdatePc = vi.fn()

@@ -43,7 +43,7 @@ type Row = [key: string, targeting: string, badge: string, badge2014?: string]
 
 const EXPECTED: Row[] = [
   ['resistance', 'ally', '+1d4 to a saving throw'],
-  ['mage armor', 'ally', 'AC 13 + Dex'],
+  ['mage armor', 'ally', 'AC 13 + Dex unarmored'],
   ['protection from evil and good', 'ally', 'Disadv. from listed types'],
   ['sanctuary', 'ally', 'Attackers save or divert'],
   ['shield', 'self', '+5 AC'],

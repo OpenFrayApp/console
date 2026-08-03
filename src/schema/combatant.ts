@@ -139,6 +139,41 @@ export interface MonsterCombatant extends CombatantBase {
  *   just name / HP / AC. Shown as "Quick add".
  * Defaults to `pc` when `kind` is absent.
  */
+/** The twelve SRD classes a roster character may name. One class — the sheet's main. */
+export type PcClass =
+  | 'Barbarian'
+  | 'Bard'
+  | 'Cleric'
+  | 'Druid'
+  | 'Fighter'
+  | 'Monk'
+  | 'Paladin'
+  | 'Ranger'
+  | 'Rogue'
+  | 'Sorcerer'
+  | 'Warlock'
+  | 'Wizard'
+
+/**
+ * The SRD armor list, kebab-cased, plus Mage Armor — many tables leave the spell
+ * on all day, so it wears like armor here (casting it on someone else still works
+ * through the spell). Absent armor means unarmored.
+ */
+export type ArmorName =
+  | 'mage-armor'
+  | 'padded'
+  | 'leather'
+  | 'studded-leather'
+  | 'hide'
+  | 'chain-shirt'
+  | 'scale-mail'
+  | 'breastplate'
+  | 'half-plate'
+  | 'ring-mail'
+  | 'chain-mail'
+  | 'splint'
+  | 'plate'
+
 export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   isPC: true
   kind?: 'pc' | 'quick'
@@ -159,6 +194,22 @@ export interface PlayerCharacter extends CombatantBase, CharacterDetails {
   ac: number
   /** Initiative modifier; used to roll at combat start when no value is entered. */
   initiativeMod?: number
+  /**
+   * The build facts a signed-in roster character carries for the AC and initiative
+   * derivations (issues #5/#6) — never present on an anonymous or quick-added PC.
+   * `class` and `level` are transcribed from the sheet; `armor`/`shield` are what's
+   * worn right now, so donning and doffing at the table is a combatant edit. With
+   * `acAuto` set the armor class derives live; without it, `ac` is the GM's number.
+   */
+  class?: PcClass
+  level?: number
+  armor?: ArmorName
+  /** A magic armor's enhancement (+1, +2, +3); counts only while armor is worn. */
+  armorBonus?: number
+  shield?: boolean
+  /** A magic shield's enhancement, on top of the shield's own +2. */
+  shieldBonus?: number
+  acAuto?: boolean
   /** Passive Perception only — the anonymous quick form's lightweight field. */
   passivePerception?: number
   /** Full senses (PP + darkvision/etc.), carried from a durable roster PC. */

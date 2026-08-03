@@ -75,6 +75,44 @@ describe('rosterPcToCombatant', () => {
   it('links the combatant back to its saved roster character', () => {
     expect(rosterPcToCombatant(base).rosterId).toBe('pc-1')
   })
+
+  it('derives AC from class and armor when asked to, and keeps the typed AC otherwise', () => {
+    const monk: RosterPc = { ...base, class: 'Monk', acAuto: true }
+    expect(rosterPcToCombatant(monk).ac).toBe(12) // 10 + DEX 2 + WIS 0
+    // Same facts without the checkbox: the GM's number stands.
+    expect(rosterPcToCombatant({ ...monk, acAuto: false }).ac).toBe(16)
+    // Asked to derive but with nothing to derive from: fall back to the typed AC.
+    expect(rosterPcToCombatant({ ...monk, abilities: undefined }).ac).toBe(16)
+  })
+
+  it('derives armored AC with magic enhancements riding their items', () => {
+    const fighter: RosterPc = {
+      ...base,
+      class: 'Fighter',
+      acAuto: true,
+      armor: 'plate',
+      armorBonus: 1,
+      shield: true,
+      shieldBonus: 1,
+    }
+    expect(rosterPcToCombatant(fighter).ac).toBe(22) // 18 + 1 + 2 + 1
+  })
+
+  it('lets a typed initiative override the derivation — the feat the app cannot know', () => {
+    expect(rosterPcToCombatant({ ...base, initiativeMod: 3 }).initiativeMod).toBe(3)
+    expect(rosterPcToCombatant({ ...base, initiativeMod: 0 }).initiativeMod).toBe(0)
+  })
+
+  it('gives a Bard of level 2+ half proficiency on top of DEX (Jack of All Trades)', () => {
+    expect(rosterPcToCombatant({ ...base, class: 'Bard', level: 9 }).initiativeMod).toBe(4) // 2 + ⌊4/2⌋
+  })
+
+  it('carries the build facts onto the combatant so don and doff can re-derive', () => {
+    const c = rosterPcToCombatant({ ...base, class: 'Monk', level: 5, acAuto: true })
+    expect(c.class).toBe('Monk')
+    expect(c.level).toBe(5)
+    expect(c.acAuto).toBe(true)
+  })
 })
 
 describe('syncCombatantFromRoster', () => {

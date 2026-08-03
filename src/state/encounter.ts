@@ -7,7 +7,7 @@ import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
 import { counterOf, survivesLongRest } from '../combat/effects.ts'
-import { setCurrentHp } from '../combat/resources.ts'
+import { effectiveMaxHp, setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
 import { assessEncounter } from '../combat/difficulty.ts'
 
@@ -324,9 +324,16 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
 
     case 'update': {
       const before = state.combatants.find((c) => c.combatantId === action.id)
-      const combatants = state.combatants.map((c) =>
-        c.combatantId === action.id ? action.update(c) : c,
-      )
+      const combatants = state.combatants.map((c) => {
+        if (c.combatantId !== action.id) return c
+        const updated = action.update(c)
+        // A maxHp effect landing lowers the ceiling; current HP follows it down and,
+        // per the rules, does not spring back when the reduction ends.
+        const ceiling = effectiveMaxHp(updated)
+        return updated.hp.current > ceiling
+          ? { ...updated, hp: { ...updated.hp, current: ceiling } }
+          : updated
+      })
       const after = combatants.find((c) => c.combatantId === action.id)
       // Any HP drop — action damage, a save, a manual edit — is damage taken.
       const lost = before && after ? before.hp.current - after.hp.current : 0

@@ -271,6 +271,35 @@ describe('helpers', () => {
     ).toBe('2 days left')
   })
 
+  it('describeModifier words a stat target without a direction tail', () => {
+    const stat = (applies: 'ac' | 'speed' | 'maxHp', value: number | string): string =>
+      describeModifier({
+        name: 'Sallow Rot',
+        mode: 'flatBonus',
+        direction: 'outgoing',
+        applies,
+        value,
+      })
+    expect(stat('maxHp', -10)).toBe('Sallow Rot: -10 to HP max')
+    expect(stat('speed', -10)).toBe('Sallow Rot: -10 to Speed')
+    expect(stat('speed', 'half')).toBe('Sallow Rot: Speed halved')
+    expect(stat('speed', 'zero')).toBe('Sallow Rot: Speed 0')
+    expect(stat('ac', 2)).toBe('Sallow Rot: +2 to AC')
+  })
+
+  it('describeModifier words an alternative unarmored base the way the spell reads', () => {
+    expect(
+      describeModifier({
+        name: 'Mage Armor',
+        mode: 'flatBonus',
+        direction: 'outgoing',
+        applies: 'ac',
+        value: null,
+        acBase: 13,
+      }),
+    ).toBe('Mage Armor: 13 + DEX to AC while unarmored')
+  })
+
   it('describeModifier names the abilities a narrowed modifier touches', () => {
     expect(
       describeModifier({

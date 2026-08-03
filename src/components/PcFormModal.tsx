@@ -4,8 +4,11 @@
 import { useEffect, useState } from 'react'
 import type { Ability, AbilityScores, Edition, Senses, Speeds } from '../schema/primitives.ts'
 import type { Campaign } from '../schema/campaign.ts'
-import type { RosterPc } from '../schema/roster.ts'
+import type { ArmorName, PcClass } from '../schema/combatant.ts'
+import { rosterInitiativeMod, type RosterPc } from '../schema/roster.ts'
+import { ARMOR, ARMOR_NAMES, PC_CLASSES, deriveAc } from '../schema/pcStats.ts'
 import { abilityMod } from '../schema/primitives.ts'
+import { signed } from '../compendium/format.ts'
 import { hasValue as has, parseList as list, parseNonNegativeInt as num } from '../lib/form.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { FormSection as Section } from './FormSection.tsx'
@@ -69,6 +72,17 @@ interface PcDraft {
   alignment: string
   faith: string
   edition: Edition
+  /** '' = no class chosen; the derivations then treat the PC as classless. */
+  pcClass: string
+  level: string
+  /** '' = unarmored. */
+  armor: string
+  armorBonus: string
+  shield: boolean
+  shieldBonus: string
+  acAuto: boolean
+  /** '' = derive from DEX (and class); a number overrides — feats the app can't know. */
+  initiativeMod: string
   ac: string
   hp: string
   speed: Record<SpeedKey, string> & { hover: boolean }
@@ -95,6 +109,14 @@ function emptyDraft(): PcDraft {
     alignment: '',
     faith: '',
     edition: '5.5',
+    pcClass: '',
+    level: '',
+    armor: '',
+    armorBonus: '',
+    shield: false,
+    shieldBonus: '',
+    acAuto: false,
+    initiativeMod: '',
     ac: '',
     hp: '',
     speed: { walk: '', fly: '', swim: '', climb: '', burrow: '', hover: false },
@@ -130,6 +152,14 @@ function draftFromPc(pc: RosterPc): PcDraft {
     alignment: pc.alignment ?? '',
     faith: pc.faith ?? '',
     edition: pc.edition ?? '5.5',
+    pcClass: pc.class ?? '',
+    level: str(pc.level),
+    armor: pc.armor ?? '',
+    armorBonus: str(pc.armorBonus),
+    shield: Boolean(pc.shield),
+    shieldBonus: str(pc.shieldBonus),
+    acAuto: Boolean(pc.acAuto),
+    initiativeMod: str(pc.initiativeMod),
     ac: str(pc.ac),
     hp: str(pc.maxHp),
     speed: {
@@ -199,6 +229,16 @@ function buildPc(d: PcDraft, id: string): RosterPc {
     alignment: d.alignment || undefined,
     faith: d.faith.trim() || undefined,
     edition: d.edition,
+    ...(d.pcClass ? { class: d.pcClass as PcClass } : {}),
+    ...(has(d.level) ? { level: Math.max(1, Math.min(20, num(d.level))) } : {}),
+    // Armor and shield belong to the automatic AC; with it off the fields are
+    // hidden, and hidden values don't save.
+    ...(d.acAuto && d.armor ? { armor: d.armor as ArmorName } : {}),
+    ...(d.acAuto && d.armor && has(d.armorBonus) ? { armorBonus: num(d.armorBonus) } : {}),
+    ...(d.acAuto && d.shield ? { shield: true } : {}),
+    ...(d.acAuto && d.shield && has(d.shieldBonus) ? { shieldBonus: num(d.shieldBonus) } : {}),
+    ...(d.acAuto ? { acAuto: true } : {}),
+    ...(has(d.initiativeMod) ? { initiativeMod: Math.trunc(Number(d.initiativeMod)) || 0 } : {}),
     ac: num(d.ac),
     maxHp: Math.max(1, num(d.hp)),
     speed: Object.keys(speed).length ? speed : undefined,
@@ -306,6 +346,36 @@ export function PcFormModal({
   /** Make an onChange handler that replaces one roleplay list (traits, ideals, …). */
   const setList = (key: ListKey) => (next: string[]) => patch({ [key]: next } as Partial<PcDraft>)
 
+  // Live derivations, so the form shows the number the board will use as it's built.
+  const facts = {
+    class: (d.pcClass || undefined) as PcClass | undefined,
+    level: has(d.level) ? num(d.level) : undefined,
+    abilities: {
+      str: score(d.abilities.str),
+      dex: score(d.abilities.dex),
+      con: score(d.abilities.con),
+      int: score(d.abilities.int),
+      wis: score(d.abilities.wis),
+      cha: score(d.abilities.cha),
+    },
+    armor: (d.armor || undefined) as ArmorName | undefined,
+    armorBonus: has(d.armorBonus) ? num(d.armorBonus) : undefined,
+    shield: d.shield,
+    shieldBonus: d.shield && has(d.shieldBonus) ? num(d.shieldBonus) : undefined,
+  }
+  const derivedAc = deriveAc(facts)
+  const acExplainer = [
+    facts.armor
+      ? `${ARMOR[facts.armor].label}${facts.armorBonus ? ` +${facts.armorBonus}` : ''}`
+      : d.pcClass === 'Barbarian'
+        ? 'Unarmored Defense (DEX + CON)'
+        : d.pcClass === 'Monk' && !d.shield
+          ? 'Unarmored Defense (DEX + WIS)'
+          : 'no armor (10 + DEX)',
+    ...(d.shield ? [`shield${facts.shieldBonus ? ` +${facts.shieldBonus}` : ''}`] : []),
+  ].join(' and ')
+  const derivedInit = signed(rosterInitiativeMod({ id: '', name: '', ac: 0, maxHp: 1, ...facts }))
+
   /** Build and submit the PC (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
     if (!d.name.trim()) return
@@ -375,6 +445,29 @@ export function PcFormModal({
             />
             <div className="grid grid-cols-2 gap-2">
               <select
+                value={d.pcClass}
+                onChange={(e) => patch({ pcClass: e.target.value })}
+                aria-label="Class"
+                className={FIELD}
+              >
+                <option value="">No class</option>
+                {PC_CLASSES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={d.level}
+                onChange={(e) => patch({ level: e.target.value })}
+                placeholder="Level"
+                aria-label="Level"
+                inputMode="numeric"
+                className={FIELD}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select
                 value={d.alignment}
                 onChange={(e) => patch({ alignment: e.target.value })}
                 aria-label="Alignment"
@@ -400,16 +493,89 @@ export function PcFormModal({
           </Section>
 
           <Section title="Defense & HP" open>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={LABEL}>AC</span>
+            <label className="flex items-center gap-2 text-sm">
               <input
-                value={d.ac}
-                onChange={(e) => patch({ ac: e.target.value })}
-                placeholder="AC"
-                aria-label="AC"
-                inputMode="numeric"
-                className={`${FIELD_W} w-16`}
+                type="checkbox"
+                checked={d.acAuto}
+                onChange={(e) => patch({ acAuto: e.target.checked })}
               />
+              Calculate AC automatically
+            </label>
+            {d.acAuto && (
+              <>
+                <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+                  <select
+                    value={d.armor}
+                    onChange={(e) => patch({ armor: e.target.value })}
+                    aria-label="Armor"
+                    className={FIELD}
+                  >
+                    <option value="">Unarmored</option>
+                    {ARMOR_NAMES.map((a) => (
+                      <option key={a} value={a}>
+                        {ARMOR[a].label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={d.armorBonus}
+                    onChange={(e) => patch({ armorBonus: e.target.value })}
+                    disabled={!d.armor}
+                    aria-label="Magic armor bonus"
+                    title="A magic armor's enhancement"
+                    className={`${FIELD_W} w-20 disabled:opacity-50`}
+                  >
+                    <option value="">—</option>
+                    <option value="1">+1</option>
+                    <option value="2">+2</option>
+                    <option value="3">+3</option>
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={d.shield}
+                      onChange={(e) => patch({ shield: e.target.checked })}
+                    />
+                    Shield
+                  </label>
+                  <select
+                    value={d.shieldBonus}
+                    onChange={(e) => patch({ shieldBonus: e.target.value })}
+                    disabled={!d.shield}
+                    aria-label="Magic shield bonus"
+                    title="A magic shield's enhancement, on top of its +2"
+                    className={`${FIELD_W} w-20 disabled:opacity-50`}
+                  >
+                    <option value="">—</option>
+                    <option value="1">+1</option>
+                    <option value="2">+2</option>
+                    <option value="3">+3</option>
+                  </select>
+                </div>
+              </>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {d.acAuto ? (
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  <span className={LABEL}>AC</span>{' '}
+                  <span className="font-semibold tabular-nums">{derivedAc ?? '—'}</span>
+                  <span className="text-slate-500 dark:text-slate-400"> from {acExplainer}</span>
+                </p>
+              ) : (
+                <>
+                  <span className={LABEL}>AC</span>
+                  <input
+                    value={d.ac}
+                    onChange={(e) => patch({ ac: e.target.value })}
+                    placeholder="AC"
+                    aria-label="AC"
+                    inputMode="numeric"
+                    className={`${FIELD_W} w-16`}
+                  />
+                </>
+              )}
               <span className={LABEL}>Max HP</span>
               <input
                 value={d.hp}
@@ -418,6 +584,16 @@ export function PcFormModal({
                 aria-label="Max HP"
                 inputMode="numeric"
                 className={`${FIELD_W} w-20`}
+              />
+              <span className={LABEL}>Initiative</span>
+              <input
+                value={d.initiativeMod}
+                onChange={(e) => patch({ initiativeMod: e.target.value })}
+                placeholder={derivedInit}
+                aria-label="Initiative modifier"
+                title="Leave blank to derive it; type the sheet's bonus when a feat changes it"
+                inputMode="numeric"
+                className={`${FIELD_W} w-16`}
               />
             </div>
           </Section>

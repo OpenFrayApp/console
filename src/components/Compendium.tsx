@@ -5,8 +5,9 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Campaign } from '../schema/campaign.ts'
-import type { RosterPc } from '../schema/roster.ts'
-import { formatCr } from '../compendium/format.ts'
+import { rosterAc, rosterInitiativeMod, type RosterPc } from '../schema/roster.ts'
+import { formatCr, titleCase } from '../compendium/format.ts'
+import { classLabel } from '../schema/pcStats.ts'
 import type { LibrarySort } from '../state/settings.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
@@ -32,7 +33,6 @@ import { ImportCreatureModal } from './ImportCreatureModal.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './customMonster.ts'
 import { PcStatBlock } from './PcStatBlock.tsx'
 import { PcFormModal } from './PcFormModal.tsx'
-import { abilityMod } from '../schema/primitives.ts'
 import { SpellCard, SpellTags } from './SpellCard.tsx'
 import { CustomSpellForm } from './CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts'
@@ -693,14 +693,15 @@ export function Compendium({
             subtitle={[
               'Player character',
               selectedPc.race,
-              selectedPc.alignment,
+              classLabel(selectedPc),
+              selectedPc.alignment && titleCase(selectedPc.alignment),
               campaigns.find((c) => c.id === selectedPc.campaignId)?.name,
             ]
               .filter(Boolean)
               .join(' · ')}
-            ac={selectedPc.ac}
+            ac={rosterAc(selectedPc)}
             hp={{ current: selectedPc.maxHp, max: selectedPc.maxHp, temp: 0 }}
-            initiativeMod={selectedPc.abilities ? abilityMod(selectedPc.abilities.dex) : 0}
+            initiativeMod={rosterInitiativeMod(selectedPc)}
             speed={selectedPc.speed}
             abilities={selectedPc.abilities}
             resistances={selectedPc.resistances}

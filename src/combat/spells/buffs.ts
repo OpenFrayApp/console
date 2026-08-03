@@ -51,12 +51,23 @@ export const BUFF_SPELLS: SpellEffectTable = {
   'mage armor': {
     summary: 'AC 13 + Dex while unarmored',
     targeting: 'ally',
-    // Mage Armor *sets* the AC rather than adding to it, so it stays a reminder — but
-    // we work the number out when the target's Dex is on the board.
+    // An alternative unarmored base: a PC with build facts derives it live (so
+    // donning armor turns it off by itself); anyone else gets the worked-out note.
     build: ({ source, target }) => {
       const dex = dexModifier(target)
-      const note = dex == null ? 'AC 13 + Dex' : `AC ${13 + dex} unarmored`
-      return [reminder('Mage Armor', note, { source, duration: MANUAL })]
+      const note = dex == null ? 'AC 13 + Dex unarmored' : `AC ${13 + dex} unarmored`
+      return [
+        modifierEffect(
+          {
+            name: 'Mage Armor',
+            mode: 'flatBonus',
+            direction: 'outgoing',
+            applies: 'ac',
+            acBase: 13,
+          },
+          { source, duration: MANUAL, note },
+        ),
+      ]
     },
   },
   'protection from evil and good': {

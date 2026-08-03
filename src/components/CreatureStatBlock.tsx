@@ -9,6 +9,7 @@ import {
   type SaveBonuses,
   type Skill,
   type SkillBonuses,
+  type Speeds,
 } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
 import { isRollable, type Action, type Recharge } from '../schema/action.ts'
@@ -651,6 +652,8 @@ function SpellcastingSection({
 export function CreatureStatBlock({
   creature,
   hp,
+  liveAc,
+  liveSpeed,
   concentration,
   label,
   onRename,
@@ -677,6 +680,10 @@ export function CreatureStatBlock({
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
   hp?: HitPoints
+  /** Armor class with active effects folded in (combat); the stat block's otherwise. */
+  liveAc?: number
+  /** Speeds with active effects folded in (combat); the stat block's otherwise. */
+  liveSpeed?: Speeds
   /** Live concentration, when in combat — drives the "C" badge. */
   concentration?: Concentration | null
   /** The combatant's display name (shown in the tracker); defaults to the creature name. */
@@ -758,7 +765,7 @@ export function CreatureStatBlock({
     ) : (
       <span className="text-slate-400 dark:text-slate-500">—</span>
     )
-  const speeds = speedLines(creature.speed)
+  const speeds = speedLines(liveSpeed ?? creature.speed)
 
   return (
     <div className="@container flex flex-1 flex-col space-y-4">
@@ -779,7 +786,7 @@ export function CreatureStatBlock({
         speeds={speeds}
         stats={
           <>
-            <HeaderStat label="AC" value={creature.ac} />
+            <HeaderStat label="AC" value={liveAc ?? creature.ac} />
             <HeaderStat
               label={creature.hpFormula ? `HP (${creature.hpFormula})` : 'HP'}
               value={hpValue}

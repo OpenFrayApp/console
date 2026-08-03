@@ -38,7 +38,7 @@ describe('PcFormModal', () => {
     expect(saved.name).toBe('Thalia')
     expect(saved.ac).toBe(16)
     expect(saved.maxHp).toBe(38)
-    // No Init field — the modifier is derived from DEX at instantiation time.
+    // Initiative left blank stays absent — derived at instantiation time.
     expect('initiativeMod' in saved).toBe(false)
     expect(saved.abilities).toEqual({ str: 10, dex: 14, con: 10, int: 10, wis: 10, cha: 10 })
     expect(saved.campaignId).toBe('camp-1')
@@ -177,5 +177,77 @@ describe('PcFormModal', () => {
     expect(screen.getByRole('button', { name: 'Create PC' })).toBeDisabled()
     fireEvent.submit(screen.getByRole('dialog'))
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('captures class, level, armor with enhancements, and the auto-AC choice', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Bruni' } })
+    fireEvent.change(screen.getByLabelText('Class'), { target: { value: 'Fighter' } })
+    fireEvent.change(screen.getByLabelText('Level'), { target: { value: '5' } })
+    // The armor block only exists once automatic AC is on.
+    fireEvent.click(screen.getByLabelText('Calculate AC automatically'))
+    fireEvent.change(screen.getByLabelText('Armor'), { target: { value: 'plate' } })
+    fireEvent.change(screen.getByLabelText('Magic armor bonus'), { target: { value: '1' } })
+    fireEvent.click(screen.getByLabelText('Shield'))
+    fireEvent.change(screen.getByLabelText('Magic shield bonus'), { target: { value: '1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+
+    const saved = onSubmit.mock.calls[0][0] as RosterPc
+    expect(saved.class).toBe('Fighter')
+    expect(saved.level).toBe(5)
+    expect(saved.armor).toBe('plate')
+    expect(saved.armorBonus).toBe(1)
+    expect(saved.shield).toBe(true)
+    expect(saved.shieldBonus).toBe(1)
+    expect(saved.acAuto).toBe(true)
+  })
+
+  it('shows the armor block and the derived AC only once auto is on', () => {
+    render(<PcFormModal open onClose={() => {}} onSubmit={() => {}} />)
+    // With a typed AC there is nothing armor could move, so no armor fields.
+    expect(screen.queryByLabelText('Armor')).toBeNull()
+    expect(screen.queryByLabelText('Shield')).toBeNull()
+    fireEvent.click(screen.getByLabelText('Calculate AC automatically'))
+    fireEvent.change(screen.getByLabelText('Armor'), { target: { value: 'chain-mail' } })
+    expect(screen.queryByLabelText('AC')).toBeNull()
+    expect(screen.getByText('16')).toBeInTheDocument()
+    expect(screen.getByText(/from Chain Mail/)).toBeInTheDocument()
+  })
+
+  it('takes a typed initiative override and leaves it out when blank', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Rega' } })
+    fireEvent.change(screen.getByLabelText('Initiative modifier'), { target: { value: '3' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+    expect((onSubmit.mock.calls[0][0] as RosterPc).initiativeMod).toBe(3)
+  })
+
+  it('drops an armor enhancement when the armor comes off', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Nix' } })
+    fireEvent.click(screen.getByLabelText('Calculate AC automatically'))
+    fireEvent.change(screen.getByLabelText('Armor'), { target: { value: 'plate' } })
+    fireEvent.change(screen.getByLabelText('Magic armor bonus'), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText('Armor'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+    const saved = onSubmit.mock.calls[0][0] as RosterPc
+    expect('armor' in saved).toBe(false)
+    expect('armorBonus' in saved).toBe(false)
+  })
+
+  it('does not save armor facts left over from before auto-AC was turned off', () => {
+    const onSubmit = vi.fn()
+    render(<PcFormModal open onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Nix' } })
+    fireEvent.click(screen.getByLabelText('Calculate AC automatically'))
+    fireEvent.change(screen.getByLabelText('Armor'), { target: { value: 'plate' } })
+    fireEvent.click(screen.getByLabelText('Calculate AC automatically')) // back off
+    fireEvent.click(screen.getByRole('button', { name: 'Create PC' }))
+    const saved = onSubmit.mock.calls[0][0] as RosterPc
+    expect('armor' in saved).toBe(false)
+    expect('acAuto' in saved).toBe(false)
   })
 })
