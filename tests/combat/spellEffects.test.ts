@@ -145,6 +145,72 @@ describe('spellEffectFor', () => {
     })
     expect(timedDuration(spell('x', { duration: '8 hours' }))).toEqual({ type: 'manual' })
   })
+
+  it('lands Haste as one bundle: +2 AC, advantage on Dex saves, double Speed, a reminder', () => {
+    const haste = spell('Haste')
+    const effects = spellEffectFor(haste)!.build({ source: 'caster', spell: haste })
+    expect(effects).toHaveLength(4)
+    // One bundle named after the spell, so the row shows one badge that clears whole.
+    expect(new Set(effects.map((e) => e.bundle?.id)).size).toBe(1)
+    expect(effects[0].bundle?.name).toBe('Haste')
+    expect(effects.map((e) => e.modifier?.applies)).toEqual([
+      'ac',
+      'savingThrows',
+      'speed',
+      undefined,
+    ])
+    expect(effects[1].modifier?.abilities).toEqual(['dex'])
+    expect(effects[2].modifier?.value).toBe('double')
+    // A second target gets its own bundle — clearing one leaves the other alone.
+    const again = spellEffectFor(haste)!.build({ source: 'caster', spell: haste })
+    expect(again[0].bundle?.id).not.toBe(effects[0].bundle?.id)
+  })
+
+  it('gives Slow its four parts, with the escape save riding the anchor alone', () => {
+    const slow = spell('Slow')
+    const effects = spellEffectFor(slow)!.build({
+      source: 'caster',
+      spell: slow,
+      save: { ability: 'wis', dc: 15 },
+    })
+    expect(effects.map((e) => e.modifier?.applies)).toEqual([
+      'ac',
+      'savingThrows',
+      'speed',
+      undefined,
+    ])
+    expect(effects[0].duration).toMatchObject({ type: 'saveEnds' })
+    expect(effects[1].duration.type).not.toBe('saveEnds')
+    expect(effects[1].modifier).toMatchObject({ value: -2, abilities: ['dex'] })
+    expect(effects[2].modifier?.value).toBe('half')
+  })
+
+  it('moves Aid and Longstrider onto the numbers they change', () => {
+    const [aid] = spellEffectFor(spell('Aid'))!.build({ spell: spell('Aid') })
+    expect(aid.modifier).toMatchObject({ applies: 'maxHp', value: 5 })
+    const [stride] = spellEffectFor(spell('Longstrider'))!.build({ spell: spell('Longstrider') })
+    expect(stride.modifier).toMatchObject({ applies: 'speed', value: 10 })
+  })
+
+  it('branches Enthrall by edition: a −10 penalty in 2024, disadvantage in 2014', () => {
+    const s2024 = spell('Enthrall', { edition: '5.5' })
+    const [newer] = spellEffectFor(s2024)!.build({ spell: s2024 })
+    expect(newer.modifier).toMatchObject({ mode: 'flatBonus', value: -10, abilities: ['wis'] })
+    const s2014 = spell('Enthrall', { edition: '5.0' })
+    const [older] = spellEffectFor(s2014)!.build({ spell: s2014 })
+    expect(older.modifier).toMatchObject({ mode: 'disadvantage', abilities: ['wis'] })
+  })
+
+  it('scopes Ray of Enfeeblement to Strength in 2024 and to a reminder in 2014', () => {
+    const s2024 = spell('Ray of Enfeeblement', { edition: '5.5' })
+    const newer = spellEffectFor(s2024)!.build({ spell: s2024 })
+    expect(newer.map((e) => e.modifier?.abilities ?? null)).toEqual([['str'], ['str'], null])
+    // 2014 imposes no disadvantage at all — only half Strength-weapon damage.
+    const s2014 = spell('Ray of Enfeeblement', { edition: '5.0' })
+    const older = spellEffectFor(s2014)!.build({ spell: s2014 })
+    expect(older).toHaveLength(1)
+    expect(older[0].modifier).toBeNull()
+  })
 })
 
 describe('delayedDamageEffect', () => {

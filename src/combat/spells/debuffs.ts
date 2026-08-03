@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import type { Ability } from '../../schema/primitives.ts'
 import {
   advantageAgainst,
   condition,
@@ -32,8 +33,17 @@ import {
 const disadvOn = (
   name: string,
   applies: 'savingThrows' | 'abilityChecks' | 'attackRolls' | 'all',
-  opts: { source?: string; duration?: ReturnType<typeof timedDuration>; note?: string },
-) => modifierEffect({ name, mode: 'disadvantage', direction: 'outgoing', applies }, opts)
+  opts: {
+    source?: string
+    duration?: ReturnType<typeof timedDuration>
+    note?: string
+    abilities?: Ability[]
+  },
+) =>
+  modifierEffect(
+    { name, mode: 'disadvantage', direction: 'outgoing', applies, abilities: opts.abilities },
+    opts,
+  )
 
 export const DEBUFF_SPELLS: SpellEffectTable = {
   // — Abjuration —
@@ -252,16 +262,33 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
     ],
   },
   enthrall: {
-    summary: 'Disadvantage on Perception checks to notice anything else',
+    // 2024 is a flat −10 to Wisdom (Perception) checks; 2014 is disadvantage instead.
+    summary: 'Its Perception checks suffer while the words distract it',
     targeting: 'enemy',
     multi: true,
-    build: ({ source, spell }) => [
-      disadvOn('Enthrall', 'abilityChecks', {
-        source,
-        duration: timedDuration(spell),
-        note: 'Disadv. on Perception',
-      }),
-    ],
+    build: ({ source, spell }) =>
+      is2024(spell)
+        ? [
+            modifierEffect(
+              {
+                name: 'Enthrall',
+                mode: 'flatBonus',
+                direction: 'outgoing',
+                applies: 'abilityChecks',
+                value: -10,
+                abilities: ['wis'],
+              },
+              { source, duration: timedDuration(spell), note: '−10 Perception' },
+            ),
+          ]
+        : [
+            disadvOn('Enthrall', 'abilityChecks', {
+              source,
+              duration: timedDuration(spell),
+              note: 'Disadv. on Perception',
+              abilities: ['wis'],
+            }),
+          ],
   },
   'hold person': {
     summary: 'Paralyzed until it saves',
@@ -355,16 +382,40 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
     ],
   },
   'irresistible dance': {
-    summary: 'Charmed into dancing; disadvantage on attacks and Dex saves',
+    // 2024 adds the Charmed condition; 2014 dances without it. Both impose
+    // disadvantage on the dancer's attacks and Dex saves and give its attackers
+    // advantage. The escape save rides the first part and clears the bundle.
+    summary: 'Dancing: disadvantage on attacks and Dex saves; attackers have advantage',
     targeting: 'enemy',
-    build: (ctx) => [
-      condition('Charmed', { source: ctx.source, duration: saveOrTimed(ctx) }),
-      disadvOn('Irresistible Dance', 'attackRolls', {
-        source: ctx.source,
-        duration: timedDuration(ctx.spell),
-        note: 'Dancing: disadv. attacks',
-      }),
-    ],
+    build: (ctx) => {
+      const rest = [
+        disadvOn('Irresistible Dance', 'attackRolls', {
+          source: ctx.source,
+          duration: timedDuration(ctx.spell),
+          note: 'Dancing: disadv. attacks',
+        }),
+        disadvOn('Irresistible Dance', 'savingThrows', {
+          source: ctx.source,
+          duration: timedDuration(ctx.spell),
+          note: 'Disadv. on Dex saves',
+          abilities: ['dex'],
+        }),
+        advantageAgainst('Irresistible Dance', {
+          source: ctx.source,
+          duration: timedDuration(ctx.spell),
+          note: 'Attackers: advantage',
+        }),
+      ]
+      if (!is2024(ctx.spell)) {
+        rest[0] = disadvOn('Irresistible Dance', 'attackRolls', {
+          source: ctx.source,
+          duration: saveOrTimed(ctx),
+          note: 'Dancing: disadv. attacks',
+        })
+        return rest
+      }
+      return [condition('Charmed', { source: ctx.source, duration: saveOrTimed(ctx) }), ...rest]
+    },
   },
   'mass suggestion': {
     summary: 'Charmed into following the suggested course',
@@ -485,19 +536,25 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
     ],
   },
   'phantasmal killer': {
-    // 2024 imposes disadvantage; 2014 frightens instead.
+    // 2024 imposes disadvantage on ability checks and attack rolls — saves are
+    // untouched; 2014 frightens instead.
     summary: 'Tormented by an illusion of its deepest fear',
     targeting: 'enemy',
-    build: ({ source, spell }) =>
-      is2024(spell)
+    build: (ctx) =>
+      is2024(ctx.spell)
         ? [
-            disadvOn('Phantasmal Killer', 'all', {
-              source,
-              duration: timedDuration(spell),
-              note: 'Disadv. checks & attacks',
+            disadvOn('Phantasmal Killer', 'abilityChecks', {
+              source: ctx.source,
+              duration: saveOrTimed(ctx),
+              note: 'Disadv. on checks',
+            }),
+            disadvOn('Phantasmal Killer', 'attackRolls', {
+              source: ctx.source,
+              duration: timedDuration(ctx.spell),
+              note: 'Disadv. on attacks',
             }),
           ]
-        : [condition('Frightened', { source, duration: timedDuration(spell) })],
+        : [condition('Frightened', { source: ctx.source, duration: timedDuration(ctx.spell) })],
   },
   weird: {
     summary: 'Frightened by its own nightmare',
@@ -510,15 +567,36 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
 
   // — Necromancy —
   'ray of enfeeblement': {
+    // 2024 enfeebles Strength-based D20 Tests and every damage roll; 2014 only
+    // halves Strength-weapon damage, which no roll category expresses.
     summary: 'Weakened: disadvantage and less damage',
     targeting: 'enemy',
-    build: (ctx) => [
-      disadvOn('Ray of Enfeeblement', 'all', {
-        source: ctx.source,
-        duration: saveOrTimed(ctx),
-        note: is2024(ctx.spell) ? 'Disadv. on Str tests' : 'Half damage with Str',
-      }),
-    ],
+    build: (ctx) =>
+      is2024(ctx.spell)
+        ? [
+            disadvOn('Ray of Enfeeblement', 'abilityChecks', {
+              source: ctx.source,
+              duration: saveOrTimed(ctx),
+              note: 'Disadv. Str checks',
+              abilities: ['str'],
+            }),
+            disadvOn('Ray of Enfeeblement', 'savingThrows', {
+              source: ctx.source,
+              duration: timedDuration(ctx.spell),
+              note: 'Disadv. Str saves',
+              abilities: ['str'],
+            }),
+            reminder('Ray of Enfeeblement', '−1d8 dmg; Str atk disadv', {
+              source: ctx.source,
+              duration: timedDuration(ctx.spell),
+            }),
+          ]
+        : [
+            reminder('Ray of Enfeeblement', 'Half damage with Str', {
+              source: ctx.source,
+              duration: saveOrTimed(ctx),
+            }),
+          ],
   },
   'bestow curse': {
     summary: 'Cursed: disadvantage on the chosen ability',
@@ -595,12 +673,33 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
     summary: 'Half Speed, −2 AC and Dex saves, one action per turn',
     targeting: 'enemy',
     multi: true,
+    // The escape save rides the AC part alone; shaking it off clears the whole
+    // bundle, so the Speed and Dex-save parts carry the plain timer.
     build: (ctx) => [
       flatBonus('Slow', -2, {
         source: ctx.source,
         applies: 'ac',
         duration: saveOrTimed(ctx),
-        note: '−2 AC & Dex saves',
+        note: '−2 AC',
+      }),
+      modifierEffect(
+        {
+          name: 'Slow',
+          mode: 'flatBonus',
+          direction: 'outgoing',
+          applies: 'savingThrows',
+          value: -2,
+          abilities: ['dex'],
+        },
+        { source: ctx.source, duration: timedDuration(ctx.spell), note: '−2 Dex saves' },
+      ),
+      modifierEffect(
+        { name: 'Slow', mode: 'flatBonus', direction: 'outgoing', applies: 'speed', value: 'half' },
+        { source: ctx.source, duration: timedDuration(ctx.spell), note: 'Speed halved' },
+      ),
+      reminder('Slow', 'No Reactions; 1 action', {
+        source: ctx.source,
+        duration: timedDuration(ctx.spell),
       }),
     ],
   },

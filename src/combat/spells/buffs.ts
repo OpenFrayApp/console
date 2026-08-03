@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
+import type { Ability } from '../../schema/primitives.ts'
 import { condition, flatBonus, modifierEffect, reminder } from '../effects.ts'
 import {
   CONSUME,
@@ -14,15 +15,26 @@ import {
 /**
  * Spells whose consequence lands on the caster or an ally. Notes are the badge text
  * on the combatant row, so they stay short; a condition effect carries no note at all
- * (the condition name is the label, and it hovers to the rules text).
+ * (the condition name is the label, and it hovers to the rules text). A spell that
+ * leaves more than one effect lands them as one bundle named after it — that is
+ * stamped in `spellEffectFor`, not here.
  */
 
 /** Advantage on the target's own rolls of one kind (Enhance Ability, Foresight). */
 const advOn = (
   name: string,
   applies: 'savingThrows' | 'abilityChecks' | 'attackRolls' | 'all',
-  opts: { source?: string; duration?: ReturnType<typeof timedDuration>; note?: string },
-) => modifierEffect({ name, mode: 'advantage', direction: 'outgoing', applies }, opts)
+  opts: {
+    source?: string
+    duration?: ReturnType<typeof timedDuration>
+    note?: string
+    abilities?: Ability[]
+  },
+) =>
+  modifierEffect(
+    { name, mode: 'advantage', direction: 'outgoing', applies, abilities: opts.abilities },
+    opts,
+  )
 
 /** Attack rolls *against* the target are made at disadvantage (Blur, Holy Aura). */
 const attackersDisadv = (
@@ -116,54 +128,75 @@ export const BUFF_SPELLS: SpellEffectTable = {
     summary: 'HP maximum and current HP increase by 5',
     targeting: 'ally',
     multi: true,
-    build: ({ source }) => [reminder('Aid', '+5 HP max & current', { source, duration: MANUAL })],
+    // The maximum moves on its own; the +5 current is the GM's edit, so the note says so.
+    build: ({ source }) => [
+      modifierEffect(
+        { name: 'Aid', mode: 'flatBonus', direction: 'outgoing', applies: 'maxHp', value: 5 },
+        { source, duration: MANUAL, note: '+5 HP max & current' },
+      ),
+    ],
   },
   'pass without trace': {
     summary: '+10 to Dexterity (Stealth) checks',
     targeting: 'ally',
     multi: true,
     build: ({ source, spell }) => [
-      flatBonus('Pass without Trace', 10, {
-        source,
-        applies: 'abilityChecks',
-        duration: timedDuration(spell),
-        note: '+10 Stealth',
-      }),
+      modifierEffect(
+        {
+          name: 'Pass without Trace',
+          mode: 'flatBonus',
+          direction: 'outgoing',
+          applies: 'abilityChecks',
+          value: 10,
+          abilities: ['dex'],
+        },
+        { source, duration: timedDuration(spell), note: '+10 Stealth' },
+      ),
     ],
   },
   'protection from poison': {
     summary: 'Advantage on saves against poison; resistance to Poison damage',
     targeting: 'ally',
+    // The advantage is condition-scoped ("to avoid or end the Poisoned condition"),
+    // which no roll category expresses — an auto-applied modifier would fire on every
+    // save, so this reminds instead.
     build: ({ source }) => [
-      advOn('Protection from Poison', 'savingThrows', {
+      reminder('Protection from Poison', 'Adv. vs poison; resist', {
         source,
         duration: MANUAL,
-        note: 'Adv. vs poison; resist',
       }),
     ],
   },
   'warding bond': {
-    summary: '+1 AC and saves; shares the damage it takes with the caster',
+    summary: '+1 AC and saves; resistance to all damage, shared with the caster',
     targeting: 'ally',
     build: ({ source }) => [
       flatBonus('Warding Bond', 1, {
         source,
         applies: 'ac',
         duration: MANUAL,
-        note: '+1 AC & saves',
+        note: '+1 AC',
       }),
-      reminder('Warding Bond', 'Shares damage w/ caster', { source, duration: MANUAL }),
+      flatBonus('Warding Bond', 1, {
+        source,
+        applies: 'savingThrows',
+        duration: MANUAL,
+        note: '+1 saves',
+      }),
+      reminder('Warding Bond', 'Resist all; caster shares dmg', { source, duration: MANUAL }),
     ],
   },
   'beacon of hope': {
     summary: 'Advantage on Wisdom and death saves; healing is maximised',
     targeting: 'ally',
     multi: true,
+    // Death saves aren't ability-keyed, so the Wisdom narrowing carries them in the note.
     build: ({ source, spell }) => [
       advOn('Beacon of Hope', 'savingThrows', {
         source,
         duration: timedDuration(spell),
         note: 'Adv. Wis & death saves',
+        abilities: ['wis'],
       }),
       reminder('Beacon of Hope', 'Healing is maximised', {
         source,
@@ -665,7 +698,23 @@ export const BUFF_SPELLS: SpellEffectTable = {
         duration: timedDuration(spell),
         note: 'Advantage on attacks',
       }),
-      reminder('Preferment', '+20 Speed; 10 temp HP/turn', {
+      advOn('Preferment', 'savingThrows', {
+        source,
+        duration: timedDuration(spell),
+        note: 'Adv. on CON saves',
+        abilities: ['con'],
+      }),
+      modifierEffect(
+        {
+          name: 'Preferment',
+          mode: 'flatBonus',
+          direction: 'outgoing',
+          applies: 'speed',
+          value: 20,
+        },
+        { source, duration: timedDuration(spell), note: '+20 ft Speed' },
+      ),
+      reminder('Preferment', '10 temp HP/turn; no fear/charm', {
         source,
         duration: timedDuration(spell),
       }),
@@ -710,7 +759,18 @@ export const BUFF_SPELLS: SpellEffectTable = {
     summary: 'Speed increases by 10 feet',
     targeting: 'ally',
     multi: true,
-    build: ({ source }) => [reminder('Longstrider', '+10 ft Speed', { source, duration: MANUAL })],
+    build: ({ source }) => [
+      modifierEffect(
+        {
+          name: 'Longstrider',
+          mode: 'flatBonus',
+          direction: 'outgoing',
+          applies: 'speed',
+          value: 10,
+        },
+        { source, duration: MANUAL, note: '+10 ft Speed' },
+      ),
+    ],
   },
   'alter self': {
     summary: 'Altered form: aquatic, changed appearance, or natural weapons',
@@ -818,7 +878,27 @@ export const BUFF_SPELLS: SpellEffectTable = {
         source,
         applies: 'ac',
         duration: timedDuration(spell),
-        note: '+2 AC & an extra action',
+        note: '+2 AC',
+      }),
+      advOn('Haste', 'savingThrows', {
+        source,
+        duration: timedDuration(spell),
+        note: 'Adv. on Dex saves',
+        abilities: ['dex'],
+      }),
+      modifierEffect(
+        {
+          name: 'Haste',
+          mode: 'flatBonus',
+          direction: 'outgoing',
+          applies: 'speed',
+          value: 'double',
+        },
+        { source, duration: timedDuration(spell), note: 'Speed doubled' },
+      ),
+      reminder('Haste', 'Extra action; lethargy at end', {
+        source,
+        duration: timedDuration(spell),
       }),
     ],
   },
