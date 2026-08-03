@@ -72,7 +72,7 @@ describe('PcStatBlock', () => {
     const onCheck = vi.fn()
     render(<PcStatBlock {...base} onCheck={onCheck} />)
     fireEvent.click(screen.getByTitle('Roll DEX check'))
-    expect(onCheck).toHaveBeenCalledWith('DEX check', 2, 'check')
+    expect(onCheck).toHaveBeenCalledWith('DEX check', 2, 'check', 'dex')
   })
 
   it('leaves modifiers as plain text when not in combat', () => {

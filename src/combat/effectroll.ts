@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant } from '../schema/combatant.ts'
+import type { Ability } from '../schema/primitives.ts'
 import type { ConditionName, Effect, EffectApplies, EffectModifier } from '../schema/effect.ts'
 import type { AdvantageState } from '../dice/formula.ts'
 import type { RandomSource } from '../dice/rng.ts'
@@ -37,6 +38,12 @@ export interface EffectRollOptions {
   roller?: Combatant
   target?: Combatant
   kind: RollKind
+  /**
+   * Which ability a save or check rolls, when the caller knows it — what lets an
+   * ability-narrowed modifier ("Disadvantage on Wisdom checks") match. Left unset,
+   * narrowed modifiers simply don't fire; the engine never guesses.
+   */
+  ability?: Ability
   /** Attack range — drives Prone (melee = advantage, ranged = disadvantage). */
   range?: AttackRange
   /** Extra advantage sources beyond effects, e.g. a trait like "Magic Resistance". */
@@ -81,22 +88,44 @@ interface Applicable {
   modifier: EffectModifier
 }
 
-/** Gather the roller's outgoing and the target's incoming effects that fit this roll kind. */
+/**
+ * Whether a modifier narrowed to particular abilities matches this roll. Only saves
+ * and checks carry an ability, so a narrowed modifier never touches an attack — and
+ * when the caller didn't say which ability rolls, it doesn't fire at all.
+ */
+function abilitiesMatch(m: EffectModifier, kind: RollKind, ability: Ability | undefined): boolean {
+  if (!m.abilities || m.abilities.length === 0) return true
+  if (kind !== 'save' && kind !== 'check') return false
+  return ability !== undefined && m.abilities.includes(ability)
+}
+
+/** Gather the roller's outgoing and the target's incoming effects that fit this roll. */
 function collect(
   roller: Combatant | undefined,
   target: Combatant | undefined,
   kind: RollKind,
+  ability: Ability | undefined,
 ): Applicable[] {
   const out: Applicable[] = []
   for (const effect of roller?.effects ?? []) {
     const m = effect.modifier
-    if (m && m.direction === 'outgoing' && appliesToKind(m.applies, kind)) {
+    if (
+      m &&
+      m.direction === 'outgoing' &&
+      appliesToKind(m.applies, kind) &&
+      abilitiesMatch(m, kind, ability)
+    ) {
       out.push({ effect, modifier: m })
     }
   }
   for (const effect of target?.effects ?? []) {
     const m = effect.modifier
-    if (m && m.direction === 'incoming' && appliesToKind(m.applies, kind)) {
+    if (
+      m &&
+      m.direction === 'incoming' &&
+      appliesToKind(m.applies, kind) &&
+      abilitiesMatch(m, kind, ability)
+    ) {
       out.push({ effect, modifier: m })
     }
   }
@@ -112,7 +141,7 @@ function describeBonus(value: number | string): string {
 /** Roll a formula with both sides' effects netted in; consumeOnRoll effects are spent. */
 export function rollWithEffects(formula: string, opts: EffectRollOptions): EffectRoll {
   const { roller, target, kind } = opts
-  const applicable = collect(roller, target, kind)
+  const applicable = collect(roller, target, kind, opts.ability)
 
   let advCount = 0
   let disCount = 0

@@ -6,6 +6,7 @@ import type {
   ConditionName,
   Effect,
   EffectApplies,
+  EffectBundle,
   EffectDirection,
   EffectDuration,
   EffectMode,
@@ -25,6 +26,18 @@ interface EffectOpts {
   source?: string
   duration?: EffectDuration
   note?: string
+  /** The named bundle this effect is applied as part of, if any. */
+  bundle?: EffectBundle
+  /** Keep it off the shared player view. */
+  gmOnly?: boolean
+}
+
+/** The bundle and player-view fields an effect carries only when set. */
+function commonOpts(opts: EffectOpts): Pick<Effect, 'bundle' | 'gmOnly'> {
+  return {
+    ...(opts.bundle ? { bundle: opts.bundle } : {}),
+    ...(opts.gmOnly ? { gmOnly: true } : {}),
+  }
 }
 
 /** A 5e condition (Prone, Frightened, …). Reminder-only; manual duration by default. */
@@ -37,6 +50,7 @@ export function condition(name: ConditionName, opts: EffectOpts = {}): Effect {
     modifier: null,
     duration: opts.duration ?? { type: 'manual' },
     note: opts.note,
+    ...commonOpts(opts),
   }
 }
 
@@ -55,6 +69,7 @@ export function advantageAgainst(name: string, opts: EffectOpts = {}): Effect {
     },
     duration: opts.duration ?? { type: 'untilSourceTurn' },
     note: opts.note ?? 'Attacks against it have advantage',
+    ...commonOpts(opts),
   }
 }
 
@@ -73,6 +88,7 @@ export function disadvantageOn(name: string, opts: EffectOpts = {}): Effect {
     },
     duration: opts.duration ?? { type: 'consumeOnRoll' },
     note: opts.note ?? 'Disadvantage on its next attack',
+    ...commonOpts(opts),
   }
 }
 
@@ -95,6 +111,7 @@ export function flatBonus(
     },
     duration: opts.duration ?? { type: 'rounds', rounds: 10 },
     note: opts.note ?? `${value} to rolls`,
+    ...commonOpts(opts),
   }
 }
 
@@ -106,6 +123,8 @@ export interface ModifierSpec {
   applies: EffectApplies
   /** For `flatBonus`: a number (−2) or formula (`"1d4"`); ignored for adv/disadv. */
   value?: number | string | null
+  /** Narrows a saves/checks modifier to these abilities; absent = every ability. */
+  abilities?: Ability[]
 }
 
 /** Whether a modifier helps the creature (buff) or hurts it (debuff) — badge tone. */
@@ -142,9 +161,11 @@ export function modifierEffect(spec: ModifierSpec, opts: EffectOpts = {}): Effec
       mode: spec.mode,
       value: spec.mode === 'flatBonus' ? (spec.value ?? null) : null,
       direction: spec.direction,
+      ...(spec.abilities && spec.abilities.length > 0 ? { abilities: spec.abilities } : {}),
     },
     duration: opts.duration ?? { type: 'manual' },
     note: opts.note,
+    ...commonOpts(opts),
   }
 }
 
@@ -158,6 +179,7 @@ export function reminder(name: string, note: string, opts: EffectOpts = {}): Eff
     modifier: null,
     duration: opts.duration ?? { type: 'manual' },
     note,
+    ...commonOpts(opts),
   }
 }
 
@@ -175,6 +197,7 @@ export function saveEnds(
     modifier: null,
     duration: { type: 'saveEnds', save },
     note: opts.note,
+    ...commonOpts(opts),
   }
 }
 
@@ -184,15 +207,18 @@ export function saveEnds(
  * no clock ticks it, and it ends when the GM clears it. The escape hatch for
  * anything a table counts that the rules engine deliberately doesn't know about.
  */
-export function counter(name: string, opts: EffectOpts = {}): Effect {
+export function counter(name: string, opts: EffectOpts & { count?: number } = {}): Effect {
   return {
     id: newId(),
     name,
     icon: 'counter',
     source: opts.source,
     modifier: null,
-    duration: { type: 'counter', count: 0 },
+    duration: { type: 'counter', count: clampCount(opts.count ?? 0) },
     note: opts.note,
+    // A counter never joins a bundle — its tally outlives whatever applied it — so
+    // only the player-view flag carries over.
+    ...(opts.gmOnly ? { gmOnly: true } : {}),
   }
 }
 
@@ -221,13 +247,38 @@ const APPLIES_TEXT: Record<EffectApplies, string> = {
   all: 'all rolls',
 }
 
+/** Full ability names for the wording an ability-narrowed modifier reads with. */
+const ABILITY_TEXT: Record<Ability, string> = {
+  str: 'Strength',
+  dex: 'Dexterity',
+  con: 'Constitution',
+  int: 'Intelligence',
+  wis: 'Wisdom',
+  cha: 'Charisma',
+}
+
+/** "Wisdom", "Wisdom and Charisma", "Strength, Dexterity, and Constitution". */
+function abilityList(abilities: Ability[]): string {
+  const names = abilities.map((a) => ABILITY_TEXT[a])
+  if (names.length <= 1) return names[0] ?? ''
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`
+}
+
+/** What a modifier touches, in words — narrowed to its abilities when it names any. */
+function appliesText(spec: ModifierSpec): string {
+  if (!spec.abilities || spec.abilities.length === 0) return APPLIES_TEXT[spec.applies]
+  const rolls = spec.applies === 'savingThrows' ? 'saving throws' : 'checks'
+  return `${abilityList(spec.abilities)} ${rolls}`
+}
+
 /**
  * A modifier in plain English — "Bless: +1d4 to all rolls it makes". The effect modal
  * shows it as you build one and the preset card shows it saved, so both read the same.
  */
 export function describeModifier(spec: ModifierSpec): string {
   const on = spec.direction === 'outgoing' ? 'it makes' : 'made against it'
-  const what = APPLIES_TEXT[spec.applies]
+  const what = appliesText(spec)
   if (spec.mode === 'flatBonus') return `${spec.name}: ${spec.value ?? '±N'} to ${what} ${on}`
   const mode = spec.mode === 'advantage' ? 'Advantage' : 'Disadvantage'
   return `${spec.name}: ${mode} on ${what} ${on}`
@@ -238,6 +289,37 @@ export function badgeLabel(effect: Effect): string {
   const label = effect.note ?? effect.name
   const count = counterOf(effect)
   return count === null ? label : `${label} ${count}`
+}
+
+/** Effects rendered together: a bundle's members under its name, or one loose effect. */
+export interface EffectGroup {
+  /** The bundle the members share, or null for a single effect on its own. */
+  bundle: EffectBundle | null
+  effects: Effect[]
+}
+
+/**
+ * Group a combatant's effects for display: members of one bundle come together as
+ * one group, in the order the first of them appears; everything else stands alone.
+ * Presentation only — durations still tick per effect.
+ */
+export function groupEffects(effects: Effect[]): EffectGroup[] {
+  const out: EffectGroup[] = []
+  const byBundle = new Map<string, EffectGroup>()
+  for (const e of effects) {
+    if (e.bundle) {
+      let group = byBundle.get(e.bundle.id)
+      if (!group) {
+        group = { bundle: e.bundle, effects: [] }
+        byBundle.set(e.bundle.id, group)
+        out.push(group)
+      }
+      group.effects.push(e)
+    } else {
+      out.push({ bundle: null, effects: [e] })
+    }
+  }
+  return out
 }
 
 /** A reminder-only effect carries no mechanical modifier. */
@@ -267,7 +349,9 @@ export function describeDuration(effect: Effect, sourceName?: string): string {
         const minutes = Math.round(rounds / 10)
         if (minutes < 60) return `${minutes} minutes left`
         const hours = Math.round(minutes / 60)
-        return `${hours} hour${hours === 1 ? '' : 's'} left`
+        if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'} left`
+        const days = Math.round(hours / 24)
+        return `${days} days left`
       }
       return `${rounds} round${rounds === 1 ? '' : 's'} left`
     }

@@ -176,6 +176,50 @@ describe('playerBoard — what a creature gives away', () => {
     ])
     expect(JSON.stringify(board)).not.toContain('saveEnds')
   })
+
+  it('never sends a gmOnly effect, on a creature or a player character', () => {
+    const depth: Effect = {
+      id: 'e1',
+      name: 'Depth',
+      icon: 'counter',
+      modifier: null,
+      duration: { type: 'counter', count: 4 },
+      gmOnly: true,
+    }
+    const board = playerBoard(
+      encounter({ combatants: [monster({ effects: [depth] }), pc({ effects: [depth] })] }),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.rows[0].effects).toEqual([])
+    expect(board.rows[1].effects).toEqual([])
+    expect(JSON.stringify(board)).not.toContain('Depth')
+  })
+
+  it('collapses a bundle to one label carrying the bundle`s name', () => {
+    const bundle = { id: 'b1', name: 'Drunk' }
+    const poisoned: Effect = {
+      id: 'e1',
+      name: 'Poisoned',
+      icon: 'condition',
+      modifier: null,
+      duration: { type: 'rounds', rounds: 600 },
+      bundle,
+    }
+    const note: Effect = {
+      id: 'e2',
+      name: 'Rough morning ahead',
+      icon: 'reminder',
+      modifier: null,
+      duration: { type: 'manual' },
+      bundle,
+    }
+    const board = playerBoard(
+      encounter({ combatants: [monster({ effects: [poisoned, note] })] }),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.rows[0].effects).toEqual([{ id: 'b1', label: 'Drunk', icon: 'condition' }])
+    expect(JSON.stringify(board)).not.toContain('Poisoned')
+  })
 })
 
 describe('playerBoard — which side a combatant is on', () => {

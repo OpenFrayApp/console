@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { applyDamage } from '../../src/combat/resources.ts'
-import { condition, counter, setCount } from '../../src/combat/effects.ts'
+import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 import { onSharedBoard } from '../../src/combat/playerView.ts'
 
@@ -382,6 +382,60 @@ describe('encounter game-log events', () => {
     expect(e.log.some((l) => l.category === 'condition' && l.message === 'a is Prone')).toBe(true)
     e = encounterReducer(e, { type: 'update', id: 'a', update: (c) => ({ ...c, effects: [] }) })
     expect(e.log.some((l) => l.message === 'a is no longer Prone')).toBe(true)
+  })
+
+  it('logs a bundle applied and cleared as one line naming the bundle', () => {
+    const bundle = { id: 'b1', name: 'Drunk' }
+    const parts = [
+      condition('Poisoned', { bundle }),
+      reminder('Rough morning', 'Rough morning', { bundle }),
+    ]
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: parts }),
+    })
+    expect(e.log.filter((l) => l.category === 'condition')).toHaveLength(1)
+    expect(e.log.some((l) => l.message === 'a gains Drunk')).toBe(true)
+    e = encounterReducer(e, { type: 'update', id: 'a', update: (c) => ({ ...c, effects: [] }) })
+    expect(e.log.some((l) => l.message === 'a: Drunk ends')).toBe(true)
+    expect(e.log.some((l) => l.message === 'a is no longer Poisoned')).toBe(false)
+  })
+
+  it('losing one part of a bundle names the part, not the bundle', () => {
+    const bundle = { id: 'b1', name: 'Drunk' }
+    const poisoned = condition('Poisoned', { bundle })
+    const note = reminder('Rough morning', 'Rough morning', { bundle })
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [poisoned, note] }),
+    })
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [note] }),
+    })
+    expect(e.log.some((l) => l.message === 'a is no longer Poisoned')).toBe(true)
+    expect(e.log.some((l) => l.message === 'a: Drunk ends')).toBe(false)
+  })
+
+  it('stamps gmOnly on the lines of a gmOnly effect, counter steps included', () => {
+    const depth = counter('Depth', { gmOnly: true })
+    let e = encounterReducer(withCombatants(monster('a', 0)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [depth] }),
+    })
+    e = encounterReducer(e, {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [setCount(depth, 1)] }),
+    })
+    e = encounterReducer(e, { type: 'update', id: 'a', update: (c) => ({ ...c, effects: [] }) })
+    const depthLines = e.log.filter((l) => l.message.includes('Depth'))
+    expect(depthLines.length).toBeGreaterThanOrEqual(3)
+    expect(depthLines.every((l) => l.gmOnly)).toBe(true)
   })
 
   it('logs every step of a counter, which keeps its id as its tally moves', () => {

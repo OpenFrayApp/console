@@ -3,9 +3,11 @@
 
 import {
   abilityMod,
+  SKILL_ABILITY,
   type Ability,
   type AbilityScores as AbilityScoreMap,
   type SaveBonuses,
+  type Skill,
   type SkillBonuses,
 } from '../schema/primitives.ts'
 import { speedLines } from '../combat/speed.ts'
@@ -152,19 +154,26 @@ const ABILITY_GROUPS: Ability[][] = [
 ]
 
 /** Roll a d20 + this modifier when `onCheck` is supplied (i.e. in combat). */
-export type OnCheck = (label: string, modifier: number, kind: 'save' | 'check') => void
+export type OnCheck = (
+  label: string,
+  modifier: number,
+  kind: 'save' | 'check',
+  ability?: Ability,
+) => void
 
 /** The value as a button rolling d20 + modifier when `onCheck` is set; plain text otherwise. */
 function RollableValue({
   label,
   modifier,
   kind,
+  ability,
   onCheck,
   children,
 }: {
   label: string
   modifier: number
   kind: 'save' | 'check'
+  ability?: Ability
   onCheck?: OnCheck
   children: string
 }) {
@@ -172,7 +181,7 @@ function RollableValue({
   return (
     <button
       type="button"
-      onClick={() => onCheck(label, modifier, kind)}
+      onClick={() => onCheck(label, modifier, kind, ability)}
       title={`Roll ${label}`}
       className="text-indigo-600 hover:underline dark:text-indigo-400"
     >
@@ -224,6 +233,7 @@ export function AbilityTable({
                     label={`${a.toUpperCase()} check`}
                     modifier={abilityMod(abilities[a])}
                     kind="check"
+                    ability={a}
                     onCheck={onCheck}
                   >
                     {signed(abilityMod(abilities[a]))}
@@ -235,6 +245,7 @@ export function AbilityTable({
                       label={`${a.toUpperCase()} save`}
                       modifier={saveFor(a)}
                       kind="save"
+                      ability={a}
                       onCheck={onCheck}
                     >
                       {signed(saveFor(a))}
@@ -278,6 +289,7 @@ function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCh
                 label={skillLabel(skill)}
                 modifier={bonus as number}
                 kind="check"
+                ability={SKILL_ABILITY[skill as Skill]}
                 onCheck={onCheck}
               >
                 {signed(bonus as number)}

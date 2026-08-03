@@ -6,7 +6,13 @@ import type { Creature } from '../../src/schema/creature.ts'
 import type { CombatantStatus, MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { RandomSource } from '../../src/dice/rng.ts'
-import { advantageAgainst, condition, disadvantageOn, flatBonus } from '../../src/combat/effects.ts'
+import {
+  advantageAgainst,
+  condition,
+  disadvantageOn,
+  flatBonus,
+  modifierEffect,
+} from '../../src/combat/effects.ts'
 import { rollWithEffects } from '../../src/combat/effectroll.ts'
 
 function faceSeq(...faces: number[]): RandomSource {
@@ -196,5 +202,108 @@ describe('rollWithEffects', () => {
       rand: faceSeq(11),
     })
     expect(result.advantageState).toBe('normal')
+  })
+
+  describe('ability-narrowed modifiers', () => {
+    /** "Disadvantage on Wisdom checks" — the Intoxication 1 shape. */
+    const wisChecks = () =>
+      modifierEffect({
+        name: 'Intoxication',
+        mode: 'disadvantage',
+        direction: 'outgoing',
+        applies: 'abilityChecks',
+        abilities: ['wis'],
+      })
+
+    it('fires on a check of a named ability', () => {
+      const roller = combatant('r', [wisChecks()])
+      const { result, applied } = rollWithEffects('1d20', {
+        roller,
+        kind: 'check',
+        ability: 'wis',
+        rand: faceSeq(18, 4),
+      })
+      expect(result.advantageState).toBe('disadvantage')
+      expect(applied).toContainEqual({ source: 'Intoxication', effect: 'disadvantage' })
+    })
+
+    it('stays out of a check of any other ability', () => {
+      const roller = combatant('r', [wisChecks()])
+      const { result, applied } = rollWithEffects('1d20', {
+        roller,
+        kind: 'check',
+        ability: 'str',
+        rand: faceSeq(11),
+      })
+      expect(result.advantageState).toBe('normal')
+      expect(applied).toHaveLength(0)
+    })
+
+    it('never fires when the roll’s ability is unknown', () => {
+      const roller = combatant('r', [wisChecks()])
+      const { result } = rollWithEffects('1d20', { roller, kind: 'check', rand: faceSeq(11) })
+      expect(result.advantageState).toBe('normal')
+    })
+
+    it('never touches an attack roll, whatever the applies says', () => {
+      const roller = combatant('r', [
+        modifierEffect({
+          name: 'Shaky',
+          mode: 'disadvantage',
+          direction: 'outgoing',
+          applies: 'all',
+          abilities: ['dex'],
+        }),
+      ])
+      const { result } = rollWithEffects('1d20', {
+        roller,
+        kind: 'attack',
+        rand: faceSeq(11),
+      })
+      expect(result.advantageState).toBe('normal')
+    })
+
+    it('matches saves against its ability list (Disadvantage on Dex and Wis saves)', () => {
+      const roller = combatant('r', [
+        modifierEffect({
+          name: 'Intoxication',
+          mode: 'disadvantage',
+          direction: 'outgoing',
+          applies: 'savingThrows',
+          abilities: ['dex', 'wis'],
+        }),
+      ])
+      const dex = rollWithEffects('1d20', {
+        roller,
+        kind: 'save',
+        ability: 'dex',
+        rand: faceSeq(18, 4),
+      })
+      expect(dex.result.advantageState).toBe('disadvantage')
+      const con = rollWithEffects('1d20', {
+        roller,
+        kind: 'save',
+        ability: 'con',
+        rand: faceSeq(11),
+      })
+      expect(con.result.advantageState).toBe('normal')
+    })
+
+    it('an un-narrowed modifier still applies whether or not the ability is known', () => {
+      const roller = combatant('r', [flatBonus('Bless', '1d4', { applies: 'savingThrows' })])
+      const known = rollWithEffects('1d20', {
+        roller,
+        kind: 'save',
+        ability: 'con',
+        rand: faceSeq(10, 2),
+      })
+      expect(known.result.total).toBe(12)
+      const unknown = rollWithEffects('1d20', {
+        roller,
+        kind: 'save',
+        rand: faceSeq(10, 2),
+      })
+      expect(unknown.result.total).toBe(12)
+    })
   })
 })

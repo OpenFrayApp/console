@@ -9,8 +9,10 @@ import {
   counter,
   counterOf,
   describeDuration,
+  describeModifier,
   disadvantageOn,
   flatBonus,
+  groupEffects,
   isReminderOnly,
   modifierEffect,
   reminder,
@@ -261,5 +263,76 @@ describe('helpers', () => {
     // A counter has no clock to report, so it reports where it stands.
     expect(describeDuration(setCount(counter('Depth'), 4))).toBe('at 4')
     expect(describeDuration(counter('Depth'))).toBe('at 0')
+  })
+
+  it('describeDuration says long custom durations in days', () => {
+    expect(
+      describeDuration(condition('Prone', { duration: { type: 'rounds', rounds: 28800 } })),
+    ).toBe('2 days left')
+  })
+
+  it('describeModifier names the abilities a narrowed modifier touches', () => {
+    expect(
+      describeModifier({
+        name: 'Intoxication',
+        mode: 'disadvantage',
+        direction: 'outgoing',
+        applies: 'abilityChecks',
+        abilities: ['wis'],
+      }),
+    ).toBe('Intoxication: Disadvantage on Wisdom checks it makes')
+    expect(
+      describeModifier({
+        name: 'Intoxication',
+        mode: 'disadvantage',
+        direction: 'outgoing',
+        applies: 'savingThrows',
+        abilities: ['dex', 'wis'],
+      }),
+    ).toBe('Intoxication: Disadvantage on Dexterity and Wisdom saving throws it makes')
+  })
+
+  it('builders carry a bundle and the player-view flag only when set', () => {
+    const bundle = { id: 'b1', name: 'Drunk' }
+    const bundled = condition('Poisoned', { bundle })
+    expect(bundled.bundle).toEqual(bundle)
+    expect('gmOnly' in bundled).toBe(false)
+    const hidden = reminder('Secret', 'Secret', { gmOnly: true })
+    expect(hidden.gmOnly).toBe(true)
+    const plain = condition('Prone')
+    expect('bundle' in plain).toBe(false)
+  })
+
+  it('counter never joins a bundle — its tally outlives whatever applied it', () => {
+    const bundle = { id: 'b1', name: 'Sallow Rot 1' }
+    const depth = counter('Depth', { bundle, gmOnly: true, count: 3 })
+    expect(depth.bundle).toBeUndefined()
+    expect(depth.gmOnly).toBe(true)
+    expect(counterOf(depth)).toBe(3)
+  })
+})
+
+describe('groupEffects', () => {
+  it('groups bundle members together, in first-seen order, leaving singles alone', () => {
+    const bundle = { id: 'b1', name: 'Drunk' }
+    const prone = condition('Prone')
+    const poisoned = condition('Poisoned', { bundle })
+    const depth = counter('Depth')
+    const note = reminder('Rough morning', 'Rough morning', { bundle })
+    const groups = groupEffects([prone, poisoned, depth, note])
+    expect(groups).toHaveLength(3)
+    expect(groups[0]).toEqual({ bundle: null, effects: [prone] })
+    expect(groups[1]).toEqual({ bundle, effects: [poisoned, note] })
+    expect(groups[2]).toEqual({ bundle: null, effects: [depth] })
+  })
+
+  it('keeps two bundles apart even when they share a name', () => {
+    const a = { id: 'b1', name: 'Drunk' }
+    const b = { id: 'b2', name: 'Drunk' }
+    const groups = groupEffects([
+      condition('Poisoned', { bundle: a }),
+      condition('Prone', { bundle: b }),
+    ])
+    expect(groups).toHaveLength(2)
   })
 })

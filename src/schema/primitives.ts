@@ -38,6 +38,28 @@ export type Skill =
 
 export type SkillBonuses = Partial<Record<Skill, number>>
 
+/** The ability each skill checks with, per the 5e skill list. */
+export const SKILL_ABILITY: Record<Skill, Ability> = {
+  acrobatics: 'dex',
+  animalHandling: 'wis',
+  arcana: 'int',
+  athletics: 'str',
+  deception: 'cha',
+  history: 'int',
+  insight: 'wis',
+  intimidation: 'cha',
+  investigation: 'int',
+  medicine: 'wis',
+  nature: 'int',
+  perception: 'wis',
+  performance: 'cha',
+  persuasion: 'cha',
+  religion: 'int',
+  sleightOfHand: 'dex',
+  stealth: 'dex',
+  survival: 'wis',
+}
+
 /** Damage types are metadata tags for display/resistance — never used in math. */
 export type DamageType =
   | 'acid'

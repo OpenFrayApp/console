@@ -54,6 +54,26 @@ export interface EffectModifier {
    */
   value: number | string | null
   direction: EffectDirection
+  /**
+   * Narrows a saving-throw or ability-check modifier to particular abilities —
+   * "Disadvantage on Wisdom checks" is `applies: 'abilityChecks', abilities: ['wis']`.
+   * Absent (or empty) means every ability, and a roll whose ability the engine
+   * doesn't know is never matched against a narrowed modifier.
+   */
+  abilities?: Ability[]
+}
+
+/**
+ * The bundle an effect was applied as part of — a preset like Drunk, or several
+ * parts the GM staged and named together. Presentation and lifecycle only, never a
+ * seventh consequence shape: members render as one badge carrying the bundle's
+ * name and clear together, while their durations still tick one by one.
+ */
+export interface EffectBundle {
+  /** Minted per application, so two Drunk creatures hold two distinct bundles. */
+  id: string
+  /** What the badge on the tracker row says: "Drunk", "Mortification 3". */
+  name: string
 }
 
 export type EffectDurationType =
@@ -107,4 +127,11 @@ export interface Effect {
    * kept for effects the clock can't tick. Display-only — nothing derives from it.
    */
   durationNote?: string
+  /** Set when this effect was applied as part of a named bundle. */
+  bundle?: EffectBundle
+  /**
+   * Held back from the shared player view — a Depth counter, a secret the table
+   * shouldn't read. The GM sees it as ever; `playerBoard()` never sends it.
+   */
+  gmOnly?: boolean
 }

@@ -87,6 +87,7 @@ export function rollSave(
   const { result, applied } = rollWithEffects(`1d20${formatBonus(bonus)}`, {
     roller: c,
     kind: 'save',
+    ability: request.ability,
     rand: ctx.rand,
     advantageSources: ctx.magicResistance ? ['Magic Resistance'] : [],
   })

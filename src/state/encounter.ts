@@ -97,21 +97,50 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
 
   const beforeEffectIds = new Set(before.effects.map((e) => e.id))
   const afterEffectIds = new Set(after.effects.map((e) => e.id))
+  // Effects applied together as a named bundle make one line naming the bundle,
+  // not one per part; a `gmOnly` effect's line is the GM's alone, like the effect.
+  const bundlesLogged = new Set<string>()
   for (const e of after.effects) {
     if (beforeEffectIds.has(e.id)) continue
+    if (e.bundle) {
+      if (bundlesLogged.has(e.bundle.id)) continue
+      bundlesLogged.add(e.bundle.id)
+      out.push({
+        category: 'condition',
+        message: `${name} gains ${e.bundle.name}`,
+        sourceId,
+        gmOnly: e.gmOnly,
+      })
+      continue
+    }
     out.push({
       category: 'condition',
       message: e.icon === 'condition' ? `${name} is ${e.name}` : `${name} gains ${e.name}`,
       sourceId,
+      gmOnly: e.gmOnly,
     })
   }
+  const bundlesEnded = new Set<string>()
   for (const e of before.effects) {
     if (afterEffectIds.has(e.id) || e.duration.type === 'consumeOnRoll') continue
+    // A bundle cleared whole ends as one line; losing a single part names the part.
+    if (e.bundle && !after.effects.some((a) => a.bundle?.id === e.bundle?.id)) {
+      if (bundlesEnded.has(e.bundle.id)) continue
+      bundlesEnded.add(e.bundle.id)
+      out.push({
+        category: 'condition',
+        message: `${name}: ${e.bundle.name} ends`,
+        sourceId,
+        gmOnly: e.gmOnly,
+      })
+      continue
+    }
     out.push({
       category: 'condition',
       message:
         e.icon === 'condition' ? `${name} is no longer ${e.name}` : `${name}: ${e.name} ends`,
       sourceId,
+      gmOnly: e.gmOnly,
     })
   }
 
@@ -122,7 +151,12 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
     const was = countsBefore.get(e.id)
     const now = counterOf(e)
     if (was == null || now == null || was === now) continue
-    out.push({ category: 'condition', message: `${name}: ${e.name} ${was} → ${now}`, sourceId })
+    out.push({
+      category: 'condition',
+      message: `${name}: ${e.name} ${was} → ${now}`,
+      sourceId,
+      gmOnly: e.gmOnly,
+    })
   }
 
   if (!before.concentration && after.concentration) {

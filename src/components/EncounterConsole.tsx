@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { isRollable, type Action } from '../schema/action.ts'
+import type { Ability } from '../schema/primitives.ts'
 import type { EffectPreset } from '../schema/preset.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { SpellLevel, SpellRef } from '../schema/creature.ts'
@@ -225,9 +226,15 @@ export function EncounterConsole({
   }
 
   // Effect-aware so Bless etc. fold into the d20.
-  const rollCheckFor = (c: Combatant, label: string, modifier: number, kind: 'save' | 'check') => {
+  const rollCheckFor = (
+    c: Combatant,
+    label: string,
+    modifier: number,
+    kind: 'save' | 'check',
+    ability?: Ability,
+  ) => {
     const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
-    const { result, applied } = rollWithEffects(formula, { roller: c, kind })
+    const { result, applied } = rollWithEffects(formula, { roller: c, kind, ability })
     // A foe's ad-hoc save or check from its stat block is the GM's bookkeeping, like
     // its recharge and escape saves — there is no DC here, so there is no Saved/Failed
     // for the table; a save the table should watch goes through the group-save flow.
@@ -472,7 +479,9 @@ export function EncounterConsole({
                     ? (text) => onEditPcDmNotes(selected, text)
                     : undefined
                 }
-                onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
+                onCheck={(label, modifier, kind, ability) =>
+                  rollCheckFor(selected, label, modifier, kind, ability)
+                }
               />
             ) : (
               <SpellLinkContext.Provider value={linkSpells}>
@@ -494,7 +503,9 @@ export function EncounterConsole({
                   onAction={setActionFor}
                   rechargeState={rechargeStateOf(selected)}
                   onRecharge={(action) => rollRechargeFor(selected, action)}
-                  onCheck={(label, modifier, kind) => rollCheckFor(selected, label, modifier, kind)}
+                  onCheck={(label, modifier, kind, ability) =>
+                    rollCheckFor(selected, label, modifier, kind, ability)
+                  }
                   onCastSpell={setCastingSpell}
                   spellUsesOf={(spell) =>
                     selected.isPC ? null : spellUsesRemaining(selected, spell)
