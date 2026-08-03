@@ -171,6 +171,11 @@ def tracker_row_shot():
 
 def apply_effect():
     with console() as page:
+        # The Presets row only shows once a library ships presets; Brood & Bloom does.
+        open_settings(page)
+        page.get_by_role("checkbox", name="Brood & Bloom").check()
+        page.get_by_role("button", name="Done").click()
+        page.wait_for_timeout(300)
         seed(page)
         start(page, ROLLS)
         page.get_by_text("Ogre", exact=True).first.click()
@@ -183,19 +188,43 @@ def apply_effect():
             page.get_by_role("button", name="Poisoned", exact=True).bounding_box(),
             page.get_by_role("button", name="Invisible", exact=True).bounding_box(), last))
         capture(page, "apply-effect", panel_of(page, "Apply effect to Ogre"), {
+            "presets": page.get_by_role("button", name="Presets").bounding_box(),
             "duration": page.get_by_label("Duration").bounding_box(),
             "reminder": page.get_by_placeholder("e.g. Hex: +1d6 necrotic").bounding_box(),
             "condition": {"x": first["x"], "y": first["y"], "width": edge - first["x"],
                           "height": last["y"] + last["height"] - first["y"]},
+            "counter": page.get_by_role("button", name="Add counter").bounding_box(),
             "modifier": page.get_by_role("button", name="Add a bonus or penalty").bounding_box(),
         }, pad=14)
-    # Numbered to match the 1–4 list on fight/effects.md.
+    # Numbered to match the staging steps 1–6 on fight/effects.md.
     r = rects(f"{OUT}/apply-effect.json")
     c = Canvas(f"{OUT}/apply-effect.png", grow=(52, 46, 0, 0), font_size=34)
-    for n, key in enumerate(["duration", "reminder", "condition", "modifier"], 1):
+    for n, key in enumerate(["presets", "duration", "reminder", "condition", "counter",
+                             "modifier"], 1):
         b = c.box(r[key], pad=7)
         c.number((b[0] - 4, b[1] - 6), n, r=22)
     return c.save(f"{OUT}/apply-effect.png")
+
+
+def add_bous_penalty_effect():
+    """The modifier builder with its ability chips, filled for a Wisdom-checks penalty
+    (fight/effects.md). The filename's typo is the committed one; keep them matching."""
+    with console() as page:
+        seed(page)
+        start(page, ROLLS)
+        _open_apply_effect(page, "Ogre")
+        page.get_by_role("button", name="Add a bonus or penalty").click()
+        page.wait_for_timeout(200)
+        page.get_by_label("Modifier effect").select_option(label="Disadvantage")
+        page.get_by_label("Applies to").select_option(label="Ability checks")
+        page.get_by_role("radio", name="Rolls it makes").check()
+        page.get_by_role("button", name="WIS", exact=True).click()
+        page.get_by_label("Modifier label").fill("Drunk")
+        page.wait_for_timeout(200)
+        box = page.get_by_label("Modifier label").locator(
+            "xpath=ancestor::div[contains(@class,'rounded')][1]").bounding_box()
+        capture(page, "add-bous-penalty-effect", box, pad=12)
+    return "add-bous-penalty-effect"  # no annotation — the derived sentence is the point
 
 
 def _frightened_ogre(page):
@@ -248,9 +277,10 @@ def effect_counter():
         page.wait_for_timeout(250)
         page.get_by_role("button", name="Apply effect").click()
         page.wait_for_timeout(400)
-        page.get_by_label("Duration").select_option("counter")
+        # A counter is its own staged part now, not a duration choice.
+        page.get_by_role("button", name="Add counter").click()
         page.wait_for_timeout(200)
-        page.get_by_label("Custom reminder").fill("Depth")
+        page.get_by_label("Counter 1 name").fill("Depth")
         page.get_by_role("button", name="Apply", exact=True).click()
         page.wait_for_timeout(400)
         # Raise it off zero, or the shot shows Lower and Reset greyed out.
@@ -994,6 +1024,7 @@ RECIPES = {
     "roll-initiative": roll_initiative,
     "tracker-row": tracker_row_shot,
     "apply-effect": apply_effect,
+    "add-bous-penalty-effect": add_bous_penalty_effect,
     "effect-badge": effect_badge,
     "effect-counter": effect_counter,
     "applied-effects": applied_effects,
