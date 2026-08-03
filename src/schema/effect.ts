@@ -36,7 +36,8 @@ export type ConditionName =
  * Which category of roll a modifier touches — or, for the last three, which of the
  * creature's numbers it moves: armor class, Speed, or the hit point maximum. The
  * stat targets take flat values only ({@link EffectModifier.value}); a Speed value
- * may also be `'half'` or `'zero'`, the two reductions the rules phrase that way.
+ * may also be `'half'`, `'zero'`, or `'double'`, the three changes the rules phrase
+ * that way (Slow, a web, Haste).
  */
 export type EffectApplies =
   'attackRolls' | 'savingThrows' | 'abilityChecks' | 'ac' | 'speed' | 'maxHp' | 'all'

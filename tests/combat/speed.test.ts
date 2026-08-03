@@ -30,6 +30,18 @@ describe('effectiveSpeeds', () => {
     expect(effectiveSpeeds({ walk: 40 }, [speedMod(-10), speedMod('half')])).toEqual({ walk: 15 })
   })
 
+  it('doubles after deltas, and a doubling and a halving cancel out', () => {
+    expect(effectiveSpeeds({ walk: 30 }, [speedMod('double')])).toEqual({ walk: 60 })
+    expect(effectiveSpeeds({ walk: 30, fly: 60 }, [speedMod(-10), speedMod('double')])).toEqual({
+      walk: 40,
+      fly: 100,
+    })
+    // Haste and Slow together: ×2 then ÷2 is a straight speed.
+    expect(effectiveSpeeds({ walk: 30 }, [speedMod('double'), speedMod('half')])).toEqual({
+      walk: 30,
+    })
+  })
+
   it('pins everything at 0 for a zero effect, whatever else applies', () => {
     expect(effectiveSpeeds({ walk: 30, fly: 60 }, [speedMod('zero'), speedMod(-5)])).toEqual({
       walk: 0,

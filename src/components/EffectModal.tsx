@@ -210,7 +210,7 @@ function ModifierBuilder({
           <input
             value={modifier.amount}
             onChange={(e) => set('amount', e.target.value)}
-            placeholder={modifier.applies === 'speed' ? '-10, half or zero' : '+1d4 or -2'}
+            placeholder={modifier.applies === 'speed' ? '-10, half, zero, double' : '+1d4 or -2'}
             aria-label="Amount"
             className={`${FIELD_W} w-28`}
           />

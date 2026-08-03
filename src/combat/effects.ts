@@ -288,6 +288,7 @@ function describeStat(spec: ModifierSpec): string {
   if (spec.acBase != null) return `${spec.name}: ${spec.acBase} + DEX to AC while unarmored`
   if (spec.value === 'half') return `${spec.name}: ${what} halved`
   if (spec.value === 'zero') return `${spec.name}: ${what} 0`
+  if (spec.value === 'double') return `${spec.name}: ${what} doubled`
   return `${spec.name}: ${describeBonusValue(spec.value)} to ${what}`
 }
 
