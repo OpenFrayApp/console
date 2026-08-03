@@ -38,10 +38,10 @@ and never invoke the OGL. Required attribution:
 
 ## OpenFray original content
 
-*Brood & Bloom* and *The Waking Garden* are © 2026 OpenFray. The stat blocks and game
-mechanics are free to reuse. The lore, art, and prose are not; all rights reserved. The
-terms are below, and are published with each work: in the app, on <https://openfray.app>,
-and in the print edition.
+*Brood & Bloom*, *The Waking Garden*, and *On Strong Waters and Potent Simples* are ©
+2026 OpenFray. The stat blocks and game mechanics are free to reuse. The lore, art, and
+prose are not; all rights reserved. The terms are below, and are published with each work:
+in the app, on <https://openfray.app>, and in the print edition.
 
 - **Creatures, spells, and mechanics.** The stat blocks, the spells, and the game mechanics
   — every field of a creature or spell entry other than a creature's `description` — are
