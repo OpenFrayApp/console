@@ -35,7 +35,13 @@ SCREENS = Path(__file__).resolve().parents[2] / "docs" / "src" / "assets" / "scr
 SITE_SCREENS = Path(__file__).resolve().parents[2] / "site" / "src" / "assets" / "screenshots"
 # Recipes that belong to the marketing site rather than the handbook, and so install
 # somewhere else. Everything not listed here is a handbook capture.
-SITE_RECIPES = {"console-hero", "group-save-hero", "cast-spell-hero", "compendium-hero"}
+SITE_RECIPES = {
+    "console-hero",
+    "group-save-hero",
+    "cast-spell-hero",
+    "compendium-hero",
+    "player-view-hero",
+}
 ROLLS = {"Zara": 21, "Mira": 20, "Tav": 13, "Ren": 10}
 
 
@@ -480,6 +486,31 @@ def console_hero():
     with console(width=LAYOUT_W, height=LAYOUT_H) as page:
         _hero_board(page)
         return _full(page, "console-hero")
+
+
+def player_view_hero():
+    """The shared player view, for the site's home page: the same fight as the console
+    shot, arriving on the table's own screen. Drives the real broadcast — a GM page
+    starts sharing and a second page opens the link — so the shot is what players
+    actually receive, not a mock. Needs the dev server's Supabase env."""
+    with console(width=LAYOUT_W, height=LAYOUT_H) as page:
+        _hero_board(page)
+        page.get_by_role("button", name="Share with players").click()
+        page.wait_for_timeout(400)
+        page.get_by_role("button", name="Start sharing").click()
+        page.wait_for_timeout(600)
+        url = page.locator("input[readonly]").input_value()
+        # Tall enough for the whole turn order, no taller: the footer's "nothing here
+        # is saved" line belongs in the shot, sitting under the content rather than a
+        # screen below it.
+        player = page.context.new_page()
+        player.set_viewport_size({"width": 1080, "height": 780})
+        player.goto(url)
+        player.wait_for_selector("text=Kessa Quick", timeout=20000)
+        player.wait_for_timeout(800)
+        capture(player, "player-view-hero", {"x": 0, "y": 0, "width": 1080, "height": 780})
+        player.close()
+        return "player-view-hero"
 
 
 def group_save_hero():
@@ -1025,6 +1056,7 @@ RECIPES = {
     "tracker-row": tracker_row_shot,
     "apply-effect": apply_effect,
     "add-bous-penalty-effect": add_bous_penalty_effect,
+    "player-view-hero": player_view_hero,
     "effect-badge": effect_badge,
     "effect-counter": effect_counter,
     "applied-effects": applied_effects,
