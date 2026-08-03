@@ -529,7 +529,7 @@ def _enable_libraries(page, *names):
     The checkbox is clicked rather than its label: a first-party library's name inside
     that label is a link to the book, so clicking the text navigates away.
     """
-    page.get_by_role("button", name="Settings").click()
+    open_settings(page)
     page.wait_for_selector("text=Libraries")
     for name in names:
         page.locator("label", has_text=name).locator("input[type=checkbox]").first.check()
