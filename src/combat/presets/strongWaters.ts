@@ -15,10 +15,10 @@ import type { EffectPreset, PresetPart } from '../../schema/preset.ts'
  * A creature holds one Intoxication level at a time and "the effects of a level include
  * those below it" (chapter 4), so each level is a bundle carrying the whole of what that
  * level does: one badge, mechanically complete on its own, replaced as the level moves.
- * The ability-scoped lines are real modifiers now; what still has no Effect shape — a
- * Speed reduction, Advantage against one condition, the degrees' day-without rules —
- * stays a reminder the Game Master adjudicates. Craving is hidden from the player view:
- * a count the table reads is a rule the table starts playing to.
+ * The ability-scoped lines and the Speed reduction are real modifiers now; what still
+ * has no Effect shape — Advantage against one condition, the degrees' day-without
+ * rules — stays a reminder the Game Master adjudicates. Craving is hidden from the
+ * player view: a count the table reads is a rule the table starts playing to.
  */
 
 const SOURCE = 'openfray-strong-waters'
@@ -55,6 +55,18 @@ function savesDisadvantage(name: string, abilities: ('wis' | 'dex')[]): PresetPa
 const MERRY_NOTE: PresetPart = {
   kind: 'reminder',
   note: 'Advantage on saves vs. Frightened',
+}
+
+/** The blind level's slur: 10 feet off every Speed, a number the board moves itself. */
+const SLOWED: PresetPart = {
+  kind: 'modifier',
+  modifier: {
+    name: 'Intoxication',
+    mode: 'flatBonus',
+    direction: 'outgoing',
+    applies: 'speed',
+    value: -10,
+  },
 }
 
 /** One level of Intoxication, carrying everything the level does, its own and inherited. */
@@ -111,7 +123,7 @@ export const STRONG_WATERS_PRESETS: EffectPreset[] = [
     { kind: 'condition', condition: 'Poisoned' },
     checksDisadvantage('Intoxication', ['wis', 'dex']),
     savesDisadvantage('Intoxication', ['dex', 'wis']),
-    { kind: 'reminder', note: 'Speed −10 ft.' },
+    SLOWED,
     MERRY_NOTE,
   ]),
   level(4, [
@@ -120,7 +132,7 @@ export const STRONG_WATERS_PRESETS: EffectPreset[] = [
     { kind: 'reminder', note: 'DC 15 Medicine rouses it 1 min; 1 Exhaustion when it ends' },
     checksDisadvantage('Intoxication', ['wis', 'dex']),
     savesDisadvantage('Intoxication', ['dex', 'wis']),
-    { kind: 'reminder', note: 'Speed −10 ft.' },
+    SLOWED,
   ]),
 
   // The three degrees — the first chapter's, shared by both catalogs. Cumulative, and

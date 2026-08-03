@@ -11,10 +11,11 @@ import type { EffectPreset, PresetPart } from '../../schema/preset.ts'
  * A stage is a bundle: applied, it lands as one badge named for the stage, and it
  * carries its brood's counter with it — hidden from the player view, and left alone
  * when the creature already has one, so a tally survives the stage advancing. What a
- * stage does that has an Effect shape is a real part (a condition, a Disadvantage
- * narrowed to an ability); the rest — a Speed reduction, a Hit Point maximum, a
- * Vulnerability — stays a reminder, deliberately: the app models the six consequences
- * and reminds the Game Master of everything else.
+ * stage does that has an Effect shape is a real part — a condition, a Disadvantage
+ * narrowed to an ability, and the stage's Speed, Hit Point maximum, and Armor Class
+ * numbers, which the board moves itself now. The rest — a Vulnerability, a rest
+ * rule, what a stage becomes — stays a reminder, deliberately: the app models the
+ * six consequences and reminds the Game Master of everything else.
  *
  * The text is condensed from the book's disease tables — chapter 4 for the Inquiline,
  * chapter 5 for the Sporophore. The Necrophore infects nobody and has no diseases.
@@ -49,6 +50,18 @@ function note(text: string): PresetPart {
   return { kind: 'reminder', note: text }
 }
 
+/** A flat stat change — a stage's Speed, HP-maximum, or AC number as a real modifier. */
+function stat(
+  name: string,
+  applies: 'speed' | 'maxHp' | 'ac',
+  value: number | 'half' | 'zero',
+): PresetPart {
+  return {
+    kind: 'modifier',
+    modifier: { name, mode: 'flatBonus', direction: 'outgoing', applies, value },
+  }
+}
+
 /**
  * A brood's counter on its own — for the exposure that comes before any disease. Six
  * points converts: the case contracts at stage 1, or advances one stage, and the
@@ -69,9 +82,18 @@ export const BROOD_AND_BLOOM_PRESETS: EffectPreset[] = [
   broodCounter('spore-load', 'Spore Load'),
 
   // Inquiline — the sallow line.
-  stage('sallow-rot', 'Sallow Rot', 1, DEPTH, [note('Speed −5 ft.; no Short Rest benefit')]),
-  stage('sallow-rot', 'Sallow Rot', 2, DEPTH, [note('HP max −10; Speed −10 ft.')]),
-  stage('sallow-rot', 'Sallow Rot', 3, DEPTH, [note('HP max −30 in all; healing halved')]),
+  stage('sallow-rot', 'Sallow Rot', 1, DEPTH, [
+    stat('Sallow Rot', 'speed', -5),
+    note('No Short Rest benefit'),
+  ]),
+  stage('sallow-rot', 'Sallow Rot', 2, DEPTH, [
+    stat('Sallow Rot', 'maxHp', -10),
+    stat('Sallow Rot', 'speed', -10),
+  ]),
+  stage('sallow-rot', 'Sallow Rot', 3, DEPTH, [
+    stat('Sallow Rot', 'maxHp', -30),
+    note('Healing halved'),
+  ]),
   stage('sallow-rot', 'Sallow Rot', 4, DEPTH, [
     note('Dies; the graft matures into a Quagdam in 1d4 days'),
   ]),
@@ -122,7 +144,8 @@ export const BROOD_AND_BLOOM_PRESETS: EffectPreset[] = [
         abilities: ['con'],
       },
     },
-    note('HP max −10; the CON-save Disadvantage includes the save to recede'),
+    stat('Mortification', 'maxHp', -10),
+    note('CON Disadvantage includes the save to recede'),
   ]),
   stage('mortification', 'Mortification', 3, SPORE_LOAD, [
     { kind: 'condition', condition: 'Poisoned' },
@@ -136,7 +159,8 @@ export const BROOD_AND_BLOOM_PRESETS: EffectPreset[] = [
         abilities: ['con'],
       },
     },
-    note('HP max −30 in all; healing halved'),
+    stat('Mortification', 'maxHp', -30),
+    note('Healing halved'),
   ]),
   stage('mortification', 'Mortification', 4, SPORE_LOAD, [
     note('Dies; rises as a Drowned Chorus in 1d4 days'),
@@ -146,16 +170,23 @@ export const BROOD_AND_BLOOM_PRESETS: EffectPreset[] = [
   stage('calcination', 'Calcination', 1, SPORE_LOAD, [
     note('Mild heat or cold is extreme for it: DC 10 CON save per unsuited hour or 1 Exhaustion'),
   ]),
-  stage('calcination', 'Calcination', 2, SPORE_LOAD, [note('Vulnerable to Fire; Speed −10 ft.')]),
+  stage('calcination', 'Calcination', 2, SPORE_LOAD, [
+    stat('Calcination', 'speed', -10),
+    note('Vulnerable to Fire'),
+  ]),
   stage('calcination', 'Calcination', 3, SPORE_LOAD, [
-    note('Vulnerable to Bludgeoning too; Speed halved'),
+    stat('Calcination', 'speed', 'half'),
+    note('Vulnerable to Bludgeoning too'),
   ]),
   stage('calcination', 'Calcination', 4, SPORE_LOAD, [
     note('Dies standing; walks as a Cinderwalk in 1d4 days'),
   ]),
 
   // Sporophore — the reredos line.
-  stage('ankylosis', 'Ankylosis', 1, SPORE_LOAD, [note('Speed −5 ft.; Resistant to Piercing')]),
+  stage('ankylosis', 'Ankylosis', 1, SPORE_LOAD, [
+    stat('Ankylosis', 'speed', -5),
+    note('Resistant to Piercing'),
+  ]),
   stage('ankylosis', 'Ankylosis', 2, SPORE_LOAD, [
     {
       kind: 'modifier',
@@ -167,7 +198,8 @@ export const BROOD_AND_BLOOM_PRESETS: EffectPreset[] = [
         abilities: ['dex'],
       },
     },
-    note('Speed −10 ft.; Resistance extends to Slashing'),
+    stat('Ankylosis', 'speed', -10),
+    note('Resistance extends to Slashing'),
   ]),
   stage('ankylosis', 'Ankylosis', 3, SPORE_LOAD, [
     {
@@ -180,11 +212,13 @@ export const BROOD_AND_BLOOM_PRESETS: EffectPreset[] = [
         abilities: ['dex'],
       },
     },
-    note('Speed −15 ft.; AC +2'),
+    stat('Ankylosis', 'speed', -15),
+    stat('Ankylosis', 'ac', 2),
   ]),
   stage('ankylosis', 'Ankylosis', 4, SPORE_LOAD, [
     { kind: 'condition', condition: 'Incapacitated' },
-    note('Speed 0; doesn’t die — hardens into a Buttress in 1d4 days'),
+    stat('Ankylosis', 'speed', 'zero'),
+    note('Doesn’t die — hardens into a Buttress in 1d4 days'),
   ]),
 
   // Sporophore — the orcshroom line.

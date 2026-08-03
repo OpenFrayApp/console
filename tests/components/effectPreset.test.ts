@@ -283,11 +283,34 @@ describe('the Brood & Bloom presets', () => {
         applies: 'savingThrows',
         abilities: ['con'],
       },
+      {
+        name: 'Mortification',
+        mode: 'flatBonus',
+        direction: 'outgoing',
+        applies: 'maxHp',
+        value: -10,
+      },
     ])
     expect(mods('Ankylosis 2')[0].abilities).toEqual(['dex'])
     // Stage effects last until the disease ends, so stage 3 still carries stage 2's.
     expect(mods('Mortification 3')[0].abilities).toEqual(['con'])
     expect(mods('Ankylosis 3')[0].abilities).toEqual(['dex'])
+  })
+
+  it('turns the stage`s Speed, HP-maximum, and AC numbers into stat modifiers', () => {
+    const stat = (n: string, applies: string) =>
+      partsOf(byName(n), 'modifier').find((p) => p.modifier.applies === applies)?.modifier
+    // Each stage states its whole toll, so the values are absolute, not increments.
+    expect(stat('Sallow Rot 1', 'speed')?.value).toBe(-5)
+    expect(stat('Sallow Rot 2', 'speed')?.value).toBe(-10)
+    expect(stat('Sallow Rot 2', 'maxHp')?.value).toBe(-10)
+    expect(stat('Sallow Rot 3', 'maxHp')?.value).toBe(-30)
+    expect(stat('Calcination 3', 'speed')?.value).toBe('half')
+    expect(stat('Ankylosis 3', 'speed')?.value).toBe(-15)
+    expect(stat('Ankylosis 3', 'ac')?.value).toBe(2)
+    expect(stat('Ankylosis 4', 'speed')?.value).toBe('zero')
+    // What has no shape stays a reminder: a Vulnerability, a rest rule.
+    expect(partsOf(byName('Calcination 2'), 'reminder')[0].note).toBe('Vulnerable to Fire')
   })
 
   it('follows the library, not the account', () => {
@@ -363,10 +386,14 @@ describe('the Strong Waters presets', () => {
     expect(checks('Intoxication 2')?.modifier.abilities).toEqual(['wis', 'dex'])
   })
 
-  it('keeps what has no Effect shape as reminders — the Frightened line, the Speed', () => {
+  it('keeps what has no Effect shape as a reminder, and moves the Speed to a modifier', () => {
     const notes = (n: string) => partsOf(byName(n), 'reminder').map((p) => p.note)
     expect(notes('Intoxication 1').join(' ')).toMatch(/Frightened/)
-    expect(notes('Intoxication 3').join(' ')).toMatch(/Speed −10 ft\./)
+    const speed = (n: string) =>
+      partsOf(byName(n), 'modifier').find((p) => p.modifier.applies === 'speed')?.modifier
+    expect(speed('Intoxication 3')?.value).toBe(-10)
+    expect(speed('Intoxication 4')?.value).toBe(-10)
+    expect(speed('Intoxication 2')).toBeUndefined()
   })
 
   it('hides Craving from the player view', () => {
