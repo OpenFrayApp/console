@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Nightly backup of the Supabase database to Cloudflare R2. The free tier takes no
+# automatic backups, so this is the only restore path a signed-in Game Master's
+# creatures, spells, characters, campaigns and in-progress fight have.
+#
+# The dump NEVER becomes a workflow artifact: this repository is public, and artifacts
+# on a public repo are downloadable by anyone. It goes straight to a private bucket,
+# encrypted first when BACKUP_AGE_RECIPIENT is set.
+#
+# Setup (repository secrets) and the restore procedure are in local/deploy.md.
+name: Supabase backup
+
+# No GitHub API calls are made, so no token permissions are needed. An empty map at
+# the root applies least privilege to every job (CodeQL).
+permissions: {}
+
+on:
+  schedule:
+    # Daily at 03:41 UTC — after the day's play in Europe and the Americas, and on an
+    # off-round minute to miss the top-of-hour scheduling backlog on Actions.
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dump and verify only — upload nothing'
+        type: boolean
+        default: false
+
+concurrency:
+  # Two dumps at once would race on the same daily key for no benefit.
+  group: supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Lifted to the job so the steps below can branch on it: the `secrets` context
+      # is not available in a step-level `if`.
+      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install a pg_dump new enough for the server
+        # pg_dump refuses a server newer than itself, and the runner's bundled client
+        # trails Supabase. PGDG carries the current major, which reads older ones too.
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version
+
+      - name: Install age
+        if: env.BACKUP_AGE_RECIPIENT != ''
+        run: sudo apt-get install -y -qq age
+
+      - name: Warn when the dump would be stored unencrypted
+        if: env.BACKUP_AGE_RECIPIENT == ''
+        run: |
+          echo "::warning::No BACKUP_AGE_RECIPIENT secret — the dump will be stored unencrypted. It contains auth.users, and so every signed-in user's email address."
+
+      - name: Dump, verify, upload, prune
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto # R2 ignores the region; the CLI insists on one
+        run: scripts/backup-supabase.sh ${{ inputs.dry_run && '--dry-run' || '' }}
