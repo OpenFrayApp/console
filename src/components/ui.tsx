@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type {
+  AnchorHTMLAttributes,
   ButtonHTMLAttributes,
   HTMLAttributes,
   InputHTMLAttributes,
@@ -39,6 +40,12 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   quiet: 'text-slate-500 hover:underline dark:text-slate-400',
 }
 
+/** The look both Button and LinkButton wear, so the two can never drift apart. */
+function buttonClass(variant: ButtonVariant, size: ButtonSize) {
+  const base = variant === 'quiet' ? 'text-sm' : `${BUTTON_SIZE[size]} disabled:opacity-50`
+  return cx(base, BUTTON_VARIANT[variant])
+}
+
 /** A button. Pick the variant by what pressing it does, the size by how dense the row is. */
 export function Button({
   variant = 'secondary',
@@ -47,8 +54,20 @@ export function Button({
   type = 'button',
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: ButtonSize }) {
-  const base = variant === 'quiet' ? 'text-sm' : `${BUTTON_SIZE[size]} disabled:opacity-50`
-  return <button type={type} className={cx(base, BUTTON_VARIANT[variant], className)} {...rest} />
+  return <button type={type} className={cx(buttonClass(variant, size), className)} {...rest} />
+}
+
+/**
+ * A link wearing the Button look, for the controls that have to be an anchor — only a
+ * real link opens a new tab, and a button can only imitate one.
+ */
+export function LinkButton({
+  variant = 'secondary',
+  size = 'md',
+  className,
+  ...rest
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: ButtonVariant; size?: ButtonSize }) {
+  return <a className={cx(buttonClass(variant, size), className)} {...rest} />
 }
 
 /** How a chip reads once it's on: the outcome it stands for. */

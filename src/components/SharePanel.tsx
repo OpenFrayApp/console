@@ -5,25 +5,57 @@ import { useCallback, useRef, useState } from 'react'
 import type { ClaimResult } from '../state/cloudEncounter.ts'
 import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../state/playerCode.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
-import { Button } from './ui.tsx'
+import { Button, LinkButton } from './ui.tsx'
 import { cx } from '../lib/cx.ts'
+
+/** The shape every icon in this panel is drawn on. */
+const ICON = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+} as const
 
 /** Screen icon — the board as the table sees it. */
 function ScreenIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
+    <svg {...ICON} className="h-5 w-5">
       <rect x="2" y="3" width="20" height="14" rx="2" />
       <path d="M8 21h8" />
       <path d="M12 17v4" />
+    </svg>
+  )
+}
+
+/** Copy icon — one sheet laid over another. */
+function CopyIcon() {
+  return (
+    <svg {...ICON} className="h-4 w-4">
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+    </svg>
+  )
+}
+
+/** Check icon — the link is on the clipboard. */
+function CheckIcon() {
+  return (
+    <svg {...ICON} className="h-4 w-4">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+/** External-link icon — the view, opened somewhere else. */
+function OpenIcon() {
+  return (
+    <svg {...ICON} className="h-4 w-4">
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     </svg>
   )
 }
@@ -40,8 +72,8 @@ interface SharePanelProps {
 }
 
 /**
- * The Game Master's control for the shared player view: start and stop sharing, copy
- * the link, and — signed in — choose what it's called. What players *see* is a setting
+ * The Game Master's control for the shared player view: start and stop sharing, copy or
+ * open the link, and — signed in — choose what it's called. What players *see* is a setting
  * rather than a control here, because it's a preference for every fight, not a
  * decision made while sharing one.
  */
@@ -148,9 +180,26 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                   onFocus={(e) => e.currentTarget.select()}
                   className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                 />
-                <Button size="sm" onClick={copy}>
-                  {copied ? 'Copied' : 'Copy'}
+                <Button
+                  size="sm"
+                  onClick={copy}
+                  aria-label={copied ? 'Copied' : 'Copy the link'}
+                  title={copied ? 'Copied' : 'Copy the link'}
+                  className="inline-flex items-center justify-center px-1.5"
+                >
+                  {copied ? <CheckIcon /> : <CopyIcon />}
                 </Button>
+                <LinkButton
+                  size="sm"
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open the player view in a new tab"
+                  title="Open the player view in a new tab"
+                  className="inline-flex items-center justify-center px-1.5"
+                >
+                  <OpenIcon />
+                </LinkButton>
               </div>
             </div>
           )}

@@ -50,6 +50,36 @@ describe('SharePanel', () => {
     open()
     expect(screen.getByText(/Anyone with the link can watch/)).toBeInTheDocument()
   })
+
+  // Both controls are icon-only, so the accessible name is the only name they have.
+  it('puts the link on the clipboard and confirms it', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy the link' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/play/')))
+    await screen.findByRole('button', { name: 'Copied' })
+    vi.unstubAllGlobals()
+  })
+
+  it('says so when the clipboard is blocked, rather than claiming it copied', async () => {
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    })
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy the link' }))
+    await screen.findByText(/Select the link and copy it yourself/)
+    expect(screen.queryByRole('button', { name: 'Copied' })).toBeNull()
+    vi.unstubAllGlobals()
+  })
+
+  it('opens the player view in a new tab, as a real link', () => {
+    open()
+    const link = screen.getByRole('link', { name: 'Open the player view in a new tab' })
+    expect(link.getAttribute('href')?.endsWith('/play/tuesday-game')).toBe(true)
+    expect(link).toHaveAttribute('target', '_blank')
+  })
 })
 
 describe('SharePanel — naming the link', () => {
