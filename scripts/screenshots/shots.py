@@ -189,24 +189,29 @@ def apply_effect():
         page.get_by_role("button", name="Apply effect").click()
         page.wait_for_timeout(400)
         first = page.get_by_role("button", name="Prone", exact=True).bounding_box()
-        last = page.get_by_role("button", name="Exhaustion", exact=True).bounding_box()
+        last = page.get_by_role("button", name="Unconscious", exact=True).bounding_box()
         edge = max(b["x"] + b["width"] for b in (
             page.get_by_role("button", name="Poisoned", exact=True).bounding_box(),
             page.get_by_role("button", name="Invisible", exact=True).bounding_box(), last))
+        # Exhaustion carries a level, so it is its own row of chips: None through 6.
+        none = page.get_by_role("button", name="No Exhaustion").bounding_box()
+        six = page.get_by_role("button", name="Exhaustion 6").bounding_box()
         capture(page, "apply-effect", panel_of(page, "Apply effect to Ogre"), {
             "presets": page.get_by_role("button", name="Presets").bounding_box(),
             "duration": page.get_by_label("Duration").bounding_box(),
             "reminder": page.get_by_placeholder("e.g. Hex: +1d6 necrotic").bounding_box(),
             "condition": {"x": first["x"], "y": first["y"], "width": edge - first["x"],
                           "height": last["y"] + last["height"] - first["y"]},
+            "exhaustion": {"x": none["x"], "y": none["y"],
+                           "width": six["x"] + six["width"] - none["x"], "height": none["height"]},
             "counter": page.get_by_role("button", name="Add counter").bounding_box(),
             "modifier": page.get_by_role("button", name="Add a bonus or penalty").bounding_box(),
         }, pad=14)
-    # Numbered to match the staging steps 1–6 on fight/effects.md.
+    # Numbered to match the staging steps 1–7 on fight/effects.md.
     r = rects(f"{OUT}/apply-effect.json")
     c = Canvas(f"{OUT}/apply-effect.png", grow=(52, 46, 0, 0), font_size=34)
-    for n, key in enumerate(["presets", "duration", "reminder", "condition", "counter",
-                             "modifier"], 1):
+    for n, key in enumerate(["presets", "duration", "reminder", "condition", "exhaustion",
+                             "counter", "modifier"], 1):
         b = c.box(r[key], pad=7)
         c.number((b[0] - 4, b[1] - 6), n, r=22)
     return c.save(f"{OUT}/apply-effect.png")
