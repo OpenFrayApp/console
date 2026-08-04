@@ -25,6 +25,10 @@ beforeEach(() => {
   file('site/dist/privacy/index.html')
   file('site/dist/the-waking-garden/index.html')
   file('site/dist/the-waking-garden/print/index.html', '<html>print</html>')
+  file('site/dist/brood-and-bloom/index.html')
+  file('site/dist/brood-and-bloom/print/index.html', '<html>print</html>')
+  file('site/dist/strong-waters/index.html')
+  file('site/dist/strong-waters/print/index.html', '<html>print</html>')
   file('site/dist/sitemap-index.xml', '<sitemapindex>site-only</sitemapindex>')
   file('docs/dist/index.html', '<html>docs</html>')
   file('dist/console/index.html', '<html>app</html>')
@@ -44,9 +48,13 @@ describe('assemble-site', () => {
     expect(readFileSync(join(dir, 'dist/console/index.html'), 'utf8')).toContain('app')
   })
 
-  it('removes the print edition — a local tool, never shipped', () => {
-    expect(existsSync(join(dir, 'dist/the-waking-garden/print'))).toBe(false)
-    expect(existsSync(join(dir, 'dist/the-waking-garden/index.html'))).toBe(true)
+  // Every book's print route, not just the first: a new book that forgets its rmSync
+  // line publishes the print edition, and nothing else would catch it.
+  it('removes every print edition — a local tool, never shipped', () => {
+    for (const book of ['the-waking-garden', 'brood-and-bloom', 'strong-waters']) {
+      expect(existsSync(join(dir, `dist/${book}/print`))).toBe(false)
+      expect(existsSync(join(dir, `dist/${book}/index.html`))).toBe(true)
+    }
   })
 
   it('writes the Pages redirects: slash normalisation, SPA fallback, moved docs URLs', () => {
