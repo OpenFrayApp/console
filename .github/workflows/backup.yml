@@ -45,13 +45,23 @@ jobs:
       - name: Install a pg_dump new enough for the server
         # pg_dump refuses a server newer than itself, and the runner's bundled client
         # trails Supabase. PGDG carries the current major, which reads older ones too.
+        #
+        # Installing it is only half the job: `pg_dump` on Ubuntu is pg_wrapper, which
+        # resolves to the version of whichever *local* cluster owns the port being
+        # connected to. The session pooler is on 5432, the runner has its own
+        # PostgreSQL there, and so the wrapper handed over that cluster's 16.x client
+        # and it refused the 17.x server. PG_DUMP names the real binary instead —
+        # newest installed, so a future Supabase upgrade needs only the version bump
+        # in apt-get above.
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version
+          newest=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)
+          echo "PG_DUMP=$newest/pg_dump" >> "$GITHUB_ENV"
+          "$newest/pg_dump" --version
 
       - name: Install age
         if: env.BACKUP_AGE_RECIPIENT != ''

@@ -22,6 +22,7 @@
 #   AWS_SECRET_ACCESS_KEY  R2 token secret  (read by aws-cli itself)
 #   BACKUP_AGE_RECIPIENT   optional age public key; set it and the dump is encrypted
 #   BACKUP_KEEP_DAYS       optional, default 30
+#   PG_DUMP                optional path to a specific pg_dump — see the note below
 
 set -euo pipefail
 
@@ -29,6 +30,13 @@ DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
 
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-30}"
+
+# On Debian and Ubuntu, `pg_dump` is not the binary — it is pg_wrapper, which picks a
+# version from the *local* cluster listening on the port you connect to. The session
+# pooler is on 5432, the runner has its own PostgreSQL there, and so the wrapper hands
+# over that cluster's pg_dump however new a client is installed alongside it. It then
+# refuses the newer Supabase server. Point PG_DUMP at a real binary to settle it.
+PG_DUMP="${PG_DUMP:-pg_dump}"
 STAMP="$(date -u +%Y-%m-%d)"
 WORK="$(mktemp -d)"
 DUMP="$WORK/openfray-$STAMP.sql.gz"
@@ -101,7 +109,7 @@ prune() {
 }
 
 need SUPABASE_DB_URL
-have pg_dump
+have "$PG_DUMP"
 have gzip
 if ! $DRY_RUN; then
   need R2_BUCKET
@@ -114,8 +122,8 @@ fi
 # every row points at a user a restored project has never heard of — the two schemas
 # are only a backup together. It is also why encrypting this is worth the trouble:
 # auth.users holds the email addresses people signed in with.
-echo "backup: dumping public + auth …"
-pg_dump "$SUPABASE_DB_URL" \
+echo "backup: dumping public + auth with $("$PG_DUMP" --version) …"
+"$PG_DUMP" "$SUPABASE_DB_URL" \
   --schema=public \
   --schema=auth \
   --clean \
