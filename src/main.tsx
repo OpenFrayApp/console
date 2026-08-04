@@ -30,6 +30,9 @@ const shareCode = playerCodeFromPath(window.location.pathname, import.meta.env.B
 // Promise chains rather than top-level await: the build targets browsers older than
 // module-level await, and Vite fails the build rather than shipping something they choke on.
 if (shareCode) {
+  // Both screens are served the same shell, so the player's tab would otherwise carry the
+  // console's title — and a Game Master usually has both open.
+  document.title = 'Player view — OpenFray'
   // The player view needs no session, so it renders outside AuthProvider.
   void import('./components/PlayerView.tsx').then(({ PlayerView }) => {
     root.render(
