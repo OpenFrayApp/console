@@ -4,11 +4,13 @@
 import type { Effect } from '../schema/effect.ts'
 import { badgeLabel, describeDuration, type EffectGroup } from '../combat/effects.ts'
 import { resolveCondition } from '../compendium/conditions.ts'
+import { useCampaignEdition } from '../state/campaignRules.ts'
 import { HoverCondition } from './HoverCondition.tsx'
 
 /** The badge text, wrapped in a condition hover preview when the effect is a condition. */
 function EffectLabel({ effect }: { effect: Effect }) {
-  const condition = effect.icon === 'condition' ? resolveCondition(effect.name) : undefined
+  const edition = useCampaignEdition()
+  const condition = effect.icon === 'condition' ? resolveCondition(effect.name, edition) : undefined
   const label = badgeLabel(effect)
   if (!condition) return <>{label}</>
   return (
@@ -88,6 +90,14 @@ export function EffectGroupBadge({
   )[0]
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(lead?.icon)}`
   const partNames = group.effects.map((e) => e.name).join(', ')
+  // A bundle led by a condition — Exhaustion 3, a disease stage carrying Poisoned —
+  // reads its rules on hover like a loose condition badge does.
+  const label =
+    lead?.icon === 'condition' ? (
+      <BundleLabel lead={lead} name={group.bundle.name} />
+    ) : (
+      group.bundle.name
+    )
   if (onRemove) {
     return (
       <button
@@ -96,14 +106,26 @@ export function EffectGroupBadge({
         title={`Remove ${group.bundle.name} (${partNames})`}
         className={`${className} hover:opacity-80`}
       >
-        {group.bundle.name}
+        {label}
         <span aria-hidden>×</span>
       </button>
     )
   }
   return (
     <span title={`${group.bundle.name} — ${partNames}`} className={className}>
-      {group.bundle.name}
+      {label}
     </span>
+  )
+}
+
+/** A bundle's name with the reference card of the condition leading it, on hover. */
+function BundleLabel({ lead, name }: { lead: Effect; name: string }) {
+  const edition = useCampaignEdition()
+  const condition = resolveCondition(lead.name, edition)
+  if (!condition) return <>{name}</>
+  return (
+    <HoverCondition name={condition.name} text={condition.text} className="cursor-help">
+      {name}
+    </HoverCondition>
   )
 }

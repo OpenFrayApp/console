@@ -34,18 +34,19 @@ export function hpTierOf(current: number, max: number): HpTier {
 
 /**
  * The hit point maximum with the active `maxHp` effects folded in — a disease's
- * "HP max −10" is a number now. Floors at 0; the stored `hp.max` stays the true
- * maximum, so clearing the effect gives the ceiling back (current HP does not
- * spring back with it — the reducer clamped it down when the reduction landed).
+ * "HP max −10" is a number now. Flat deltas apply first, then a `'half'` halves what
+ * is left (2014 Exhaustion's fourth level), rounding down. Floors at 0; the stored
+ * `hp.max` stays the true maximum, so clearing the effect gives the ceiling back
+ * (current HP does not spring back with it — the reducer clamped it down when the
+ * reduction landed).
  */
 export function effectiveMaxHp(c: Combatant): number {
-  const delta = c.effects.reduce((sum, e) => {
-    const m = e.modifier
-    return m?.applies === 'maxHp' && m.mode === 'flatBonus' && typeof m.value === 'number'
-      ? sum + m.value
-      : sum
-  }, 0)
-  return Math.max(0, c.hp.max + delta)
+  const mods = c.effects.flatMap((e) =>
+    e.modifier?.applies === 'maxHp' && e.modifier.mode === 'flatBonus' ? [e.modifier.value] : [],
+  )
+  const delta = mods.reduce<number>((sum, v) => (typeof v === 'number' ? sum + v : sum), 0)
+  const max = Math.max(0, c.hp.max + delta)
+  return mods.includes('half') ? Math.floor(max / 2) : max
 }
 
 /** The combatant's wound tier, read from its current and effective max HP. */

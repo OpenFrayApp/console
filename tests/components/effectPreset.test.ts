@@ -428,3 +428,50 @@ describe('the Strong Waters presets', () => {
     ])
   })
 })
+
+describe('an Exhaustion part', () => {
+  it('saves the change the staged level would make, not the level', () => {
+    // Staged at 3 on a creature already carrying 1 — the preset is worth two levels.
+    const draft: EffectDraft = { ...emptyDraft(), exhaustion: 3, exhaustionBase: 1 }
+    expect(buildPreset(draft, 'A night in the cold').parts).toEqual([
+      { kind: 'exhaustion', levels: 2 },
+    ])
+  })
+
+  it('saves nothing when the level was not moved', () => {
+    const draft: EffectDraft = { ...emptyDraft(), exhaustion: 2, exhaustionBase: 2 }
+    expect(buildPreset(draft, 'Nothing doing').parts).toEqual([])
+  })
+
+  it('saves a negative change for a preset that relieves it', () => {
+    const draft: EffectDraft = { ...emptyDraft(), exhaustion: 0, exhaustionBase: 2 }
+    expect(buildPreset(draft, 'Greater Restoration').parts).toEqual([
+      { kind: 'exhaustion', levels: -2 },
+    ])
+  })
+
+  it('stages against the level the creature already carries — it is cumulative', () => {
+    const preset: EffectPreset = {
+      id: 'custom:cold',
+      name: 'A night in the cold',
+      duration: { type: 'manual' },
+      parts: [{ kind: 'exhaustion', levels: 1 }],
+    }
+    expect(presetToDraft(preset, 0).exhaustion).toBe(1)
+    expect(presetToDraft(preset, 2).exhaustion).toBe(3)
+    // And it never stages past the level that kills.
+    expect(presetToDraft(preset, 6).exhaustion).toBe(6)
+  })
+
+  it('round-trips the change through a save and a stage', () => {
+    const draft: EffectDraft = { ...emptyDraft(), exhaustion: 3, exhaustionBase: 1 }
+    const saved = buildPreset(draft, 'A night in the cold')
+    expect(presetToDraft(saved, 1).exhaustion).toBe(3)
+    expect(presetToDraft(saved, 1).exhaustionBase).toBe(1)
+  })
+
+  it('mints no Effect of its own — the level lands through its own action', () => {
+    const draft: EffectDraft = { ...emptyDraft(), exhaustion: 3, exhaustionBase: 0 }
+    expect(draftEffects(draft)).toEqual([])
+  })
+})

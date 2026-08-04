@@ -4,6 +4,7 @@
 import type { EffectPreset, PresetPart } from '../schema/preset.ts'
 import { isOwnPreset } from '../schema/preset.ts'
 import { describeDuration, describeModifier } from '../combat/effects.ts'
+import { describeExhaustionChange } from '../combat/exhaustion.ts'
 import { draftEffects, presetToDraft } from './effectPreset.ts'
 import { SourceLink } from './SourceLink.tsx'
 import { MetaTable } from './CreatureStatBlock.tsx'
@@ -36,6 +37,8 @@ export function PresetCard({
   const modifiers = of('modifier')
   const reminders = of('reminder')
   const counters = of('counter')
+  // Exhaustion is stored as a change, so the card states the change: "Gains 2 levels".
+  const levels = of('exhaustion').reduce((n, p) => n + p.levels, 0)
 
   // What kind of preset it is, named by what it actually carries. A Game Master
   // scanning the list wants this before the detail.
@@ -44,6 +47,7 @@ export function PresetCard({
     modifiers.length > 0 && (modifiers.length === 1 ? 'modifier' : 'modifiers'),
     reminders.length > 0 && 'reminder',
     counters.length > 0 && (counters.length === 1 ? 'counter' : 'counters'),
+    levels !== 0 && 'Exhaustion',
   ].filter((k): k is string => typeof k === 'string')
   const kind = kinds.length ? `${kinds.join(' · ')}` : 'empty'
 
@@ -62,6 +66,7 @@ export function PresetCard({
       counters.map((p) => (p.gmOnly ? `${p.name} (hidden from players)` : p.name)).join(', ') ||
         undefined,
     ],
+    ['Exhaustion', levels === 0 ? undefined : describeExhaustionChange(levels)],
   ]
 
   /** Ask for a new name, then commit it. */

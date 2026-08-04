@@ -18,6 +18,25 @@ describe('resolveCondition', () => {
   it('returns undefined for an unknown name', () => {
     expect(resolveCondition('Dazzled')).toBeUndefined()
   })
+
+  it('reads the 2024 wording by default, and for a 2024 campaign', () => {
+    expect(resolveCondition('Exhaustion')?.text).toBe(CONDITION_TEXT.Exhaustion)
+    expect(resolveCondition('Exhaustion', '5.5')?.text).toBe(CONDITION_TEXT.Exhaustion)
+  })
+
+  it('reads the 2014 table for a 2014 campaign — the one condition that differs', () => {
+    const text = resolveCondition('Exhaustion', '5.0')?.text ?? ''
+    expect(text).not.toBe(CONDITION_TEXT.Exhaustion)
+    expect(text).toContain('Hit point maximum halved')
+    expect(text).toContain('Death')
+  })
+
+  it('leaves every other condition alone whichever edition asks', () => {
+    for (const name of Object.keys(CONDITION_TEXT)) {
+      if (name === 'Exhaustion') continue
+      expect(resolveCondition(name, '5.0')?.text).toBe(resolveCondition(name, '5.5')?.text)
+    }
+  })
 })
 
 describe('linkifyConditions', () => {

@@ -252,7 +252,7 @@ describe('grantTempHp', () => {
 
 describe('effectiveMaxHp', () => {
   /** A maxHp-reduction effect, the shape a disease stage now carries. */
-  const maxHpMod = (value: number) =>
+  const maxHpMod = (value: number | string) =>
     modifierEffect({
       name: 'Sallow Rot',
       mode: 'flatBonus',
@@ -286,6 +286,14 @@ describe('effectiveMaxHp', () => {
     // 20/40 is bloodied at half — but with the max down to 20, 20/20 is healthy.
     const sick = monster({ hp: { current: 20, max: 40, temp: 0 }, effects: [maxHpMod(-20)] })
     expect(hpTier(sick)).toBe('healthy')
+  })
+
+  it('halves the maximum for a "half" value — 2014 Exhaustion’s fourth level', () => {
+    expect(effectiveMaxHp(monster({ effects: [maxHpMod('half')] }))).toBe(20)
+  })
+
+  it('takes the deltas off first, then halves what is left, rounding down', () => {
+    expect(effectiveMaxHp(monster({ effects: [maxHpMod(-5), maxHpMod('half')] }))).toBe(17)
   })
 })
 

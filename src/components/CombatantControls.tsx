@@ -28,6 +28,13 @@ import {
   groupEffects,
   setCount,
 } from '../combat/effects.ts'
+import {
+  EXHAUSTION_MAX,
+  exhaustionLevel,
+  isExhaustion,
+  describeExhaustion,
+} from '../combat/exhaustion.ts'
+import { useCampaignEdition } from '../state/campaignRules.ts'
 import { saveEndsClears, saveEndsOf, type SaveEnds } from '../combat/saveEnds.ts'
 import { roll } from '../dice/roll.ts'
 import type { Effect } from '../schema/effect.ts'
@@ -77,6 +84,11 @@ export function CombatantControls({
   const id = combatant.combatantId
   const name = nameOf(combatant)
   const started = round > 0
+  const edition = useCampaignEdition()
+  const exhaustion = exhaustionLevel(combatant.effects)
+
+  /** Set the Exhaustion level; the reducer rebuilds what the edition's rules give it. */
+  const setExhaustion = (level: number) => dispatch({ type: 'setExhaustion', id, level, edition })
 
   /** Dispatch a functional update against this combatant. */
   const apply = (update: (c: Combatant) => Combatant) => dispatch({ type: 'update', id, update })
@@ -120,6 +132,21 @@ export function CombatantControls({
       }),
     })
 
+  /** Hold a whole bundle back from the player view, or give it back, in one update. */
+  const setBundleHidden = (members: Effect[], hidden: boolean) => {
+    const ids = new Set(members.map((e) => e.id))
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({
+        ...c,
+        effects: c.effects.map((e) =>
+          ids.has(e.id) ? { ...e, gmOnly: hidden ? true : undefined } : e,
+        ),
+      }),
+    })
+  }
+
   // Alphabetical by display name, so a row keeps its place as effects come and go;
   // a bundle sorts once, under its own name, with its members kept together.
   const sortedGroups = groupEffects(combatant.effects).sort((a, b) =>
@@ -162,6 +189,7 @@ export function CombatantControls({
           effects={combatant.effects}
           onApply={addEffects}
           onRemove={removeEffect}
+          onSetExhaustion={setExhaustion}
           presets={presets}
           enabledLibraries={enabledLibraries}
           onSavePreset={onSavePreset}
@@ -376,43 +404,95 @@ export function CombatantControls({
               A bundle gets a header row with one Clear for the lot; its members keep
               their own rows beneath it, so one part can still be cleared alone. */}
           <ul className="divide-y divide-slate-200/80 dark:divide-slate-800/80">
-            {sortedGroups.map((group) =>
-              group.bundle ? (
+            {sortedGroups.map((group) => {
+              if (!group.bundle) {
+                return <EffectRow key={group.effects[0].id} effect={group.effects[0]} />
+              }
+              // Exhaustion is the one bundle whose parts are derived rather than
+              // staged: they are what the level implies, so the level's own buttons
+              // live here and the parts carry none of their own.
+              const leveled = group.effects.some(isExhaustion)
+              const hidden = group.effects.every((e) => e.gmOnly)
+              return (
                 <li key={group.bundle.id} className="py-1 text-xs">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                    <span
+                      className="font-bold text-slate-700 dark:text-slate-200"
+                      title={leveled ? describeExhaustion(exhaustion, edition) : undefined}
+                    >
                       {group.bundle.name}
                     </span>
-                    <button
-                      type="button"
-                      // One dispatch for the lot, so the log reads one "ends" line.
-                      onClick={() => {
-                        const gone = new Set(group.effects.map((e) => e.id))
-                        dispatch({
-                          type: 'update',
-                          id,
-                          update: (c) => ({
-                            ...c,
-                            effects: c.effects.filter((e) => !gone.has(e.id)),
-                          }),
-                        })
-                      }}
-                      title={`Clear ${group.bundle.name} and everything it applied`}
-                      className={`${BTN} shrink-0`}
-                    >
-                      Clear all
-                    </button>
+                    <span className="flex shrink-0 items-center gap-1">
+                      {leveled && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setExhaustion(exhaustion - 1)}
+                            aria-label={`Lower ${name}'s Exhaustion`}
+                            className={BTN}
+                          >
+                            −1
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExhaustion(exhaustion + 1)}
+                            disabled={exhaustion >= EXHAUSTION_MAX}
+                            aria-label={`Raise ${name}'s Exhaustion`}
+                            className={`${BTN} disabled:opacity-50`}
+                          >
+                            +1
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        // Every member at once: the shared board reads a bundle from
+                        // any part it can see, so hiding one part would hide nothing.
+                        onClick={() => setBundleHidden(group.effects, !hidden)}
+                        aria-pressed={hidden}
+                        title={
+                          hidden
+                            ? `${group.bundle.name} is hidden from the player view — click to show it`
+                            : `Hide ${group.bundle.name} from the player view`
+                        }
+                        className={
+                          hidden
+                            ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                            : BTN
+                        }
+                      >
+                        {hidden ? 'Hidden' : 'Hide'}
+                      </button>
+                      <button
+                        type="button"
+                        // One dispatch for the lot, so the log reads one "ends" line.
+                        onClick={() => {
+                          if (leveled) return setExhaustion(0)
+                          const gone = new Set(group.effects.map((e) => e.id))
+                          dispatch({
+                            type: 'update',
+                            id,
+                            update: (c) => ({
+                              ...c,
+                              effects: c.effects.filter((e) => !gone.has(e.id)),
+                            }),
+                          })
+                        }}
+                        title={`Clear ${group.bundle.name} and everything it applied`}
+                        className={`${BTN} shrink-0`}
+                      >
+                        Clear all
+                      </button>
+                    </span>
                   </div>
                   <ul className="mt-0.5 list-disc space-y-0.5 pl-4 marker:text-slate-400 dark:marker:text-slate-500">
                     {group.effects.map((e) => (
-                      <EffectRow key={e.id} effect={e} bulleted />
+                      <EffectRow key={e.id} effect={e} bulleted derived={leveled} />
                     ))}
                   </ul>
                 </li>
-              ) : (
-                <EffectRow key={group.effects[0].id} effect={group.effects[0]} />
-              ),
-            )}
+              )
+            })}
           </ul>
         </div>
       )}
@@ -422,11 +502,21 @@ export function CombatantControls({
   /**
    * One effect's line in the Applied effects list, with its own controls. Inside a
    * bundle the line is a bulleted item, so the flex layout moves to an inner div —
-   * a flex `li` stops being a list item and loses its marker.
+   * a flex `li` stops being a list item and loses its marker. A `derived` part reads
+   * out what it does and carries no controls: it is what a level implies, so changing
+   * it alone would only put the bundle out of step with its own number.
    */
-  function EffectRow({ effect: e, bulleted = false }: { effect: Effect; bulleted?: boolean }) {
+  function EffectRow({
+    effect: e,
+    bulleted = false,
+    derived = false,
+  }: {
+    effect: Effect
+    bulleted?: boolean
+    derived?: boolean
+  }) {
     const save = saveEndsOf(e)
-    const count = counterOf(e)
+    const count = derived ? null : counterOf(e)
     // A modifier's name alone can't tell two apart — Intoxication narrows checks in
     // one effect and saves in another — so its row reads out what it actually does.
     // A bundled reminder shows its note too: the row badge carries only the bundle's
@@ -472,7 +562,7 @@ export function CombatantControls({
               Roll save
             </button>
           )}
-          {count !== null && (
+          {!derived && count !== null && (
             <>
               <button
                 type="button"
@@ -502,33 +592,37 @@ export function CombatantControls({
               </button>
             </>
           )}
-          <button
-            type="button"
-            onClick={() =>
-              changeEffect(e.id, (x) => ({ ...x, gmOnly: x.gmOnly ? undefined : true }))
-            }
-            aria-pressed={e.gmOnly === true}
-            title={
-              e.gmOnly
-                ? `${e.name} is hidden from the player view — click to show it`
-                : `Hide ${e.name} from the player view`
-            }
-            className={
-              e.gmOnly
-                ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-                : BTN
-            }
-          >
-            {e.gmOnly ? 'Hidden' : 'Hide'}
-          </button>
-          <button
-            type="button"
-            onClick={() => removeEffect(e.id)}
-            title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
-            className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
-          >
-            Clear
-          </button>
+          {!derived && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  changeEffect(e.id, (x) => ({ ...x, gmOnly: x.gmOnly ? undefined : true }))
+                }
+                aria-pressed={e.gmOnly === true}
+                title={
+                  e.gmOnly
+                    ? `${e.name} is hidden from the player view — click to show it`
+                    : `Hide ${e.name} from the player view`
+                }
+                className={
+                  e.gmOnly
+                    ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                    : BTN
+                }
+              >
+                {e.gmOnly ? 'Hidden' : 'Hide'}
+              </button>
+              <button
+                type="button"
+                onClick={() => removeEffect(e.id)}
+                title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
+                className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+              >
+                Clear
+              </button>
+            </>
+          )}
         </span>
       </div>
     )

@@ -7,8 +7,11 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
+import type { Edition } from '../../src/schema/primitives.ts'
 import { CombatantControls } from '../../src/components/CombatantControls.tsx'
 import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
+import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
+import { CampaignEditionContext } from '../../src/state/campaignRules.ts'
 
 function creature(): Creature {
   return {
@@ -504,6 +507,102 @@ describe('CombatantControls', () => {
       expect(toggle).toHaveAttribute('aria-pressed', 'true')
       fireEvent.click(toggle)
       expect(effectsAfter(dispatch, hidden)[0].gmOnly).toBeUndefined()
+    })
+  })
+
+  describe('Exhaustion', () => {
+    const exhausted = (level: number, edition: Edition = '5.5'): MonsterCombatant => ({
+      ...monster(),
+      effects: exhaustionEffects(level, edition),
+    })
+
+    /** Render a combatant, optionally inside a campaign playing a given edition. */
+    const show = (
+      combatant: MonsterCombatant,
+      dispatch: ReturnType<typeof vi.fn>,
+      edition?: Edition,
+    ) => {
+      const controls = (
+        <CombatantControls
+          combatant={combatant}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />
+      )
+      render(
+        edition ? (
+          <CampaignEditionContext.Provider value={edition}>
+            {controls}
+          </CampaignEditionContext.Provider>
+        ) : (
+          controls
+        ),
+      )
+    }
+
+    it('steps the level from the bundle header, not the anchor row', () => {
+      const dispatch = vi.fn()
+      show(exhausted(2), dispatch)
+      fireEvent.click(screen.getByRole('button', { name: "Raise Goblin's Exhaustion" }))
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith({
+        type: 'setExhaustion',
+        id: 'm',
+        level: 3,
+        edition: '5.5',
+      })
+
+      dispatch.mockClear()
+      fireEvent.click(screen.getByRole('button', { name: "Lower Goblin's Exhaustion" }))
+      expect(dispatch.mock.calls[0][0]).toMatchObject({ type: 'setExhaustion', level: 1 })
+    })
+
+    it('carries the campaign edition into the change', () => {
+      const dispatch = vi.fn()
+      show(exhausted(1, '5.0'), dispatch, '5.0')
+      fireEvent.click(screen.getByRole('button', { name: "Raise Goblin's Exhaustion" }))
+      expect(dispatch.mock.calls[0][0]).toMatchObject({ edition: '5.0', level: 2 })
+    })
+
+    it('stops at 6, the level that kills', () => {
+      show(exhausted(6), vi.fn())
+      expect(screen.getByRole('button', { name: "Raise Goblin's Exhaustion" })).toBeDisabled()
+    })
+
+    it('clears the whole condition through the same action, so the log reads one line', () => {
+      const dispatch = vi.fn()
+      show(exhausted(3), dispatch)
+      fireEvent.click(screen.getByRole('button', { name: 'Clear all' }))
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith({
+        type: 'setExhaustion',
+        id: 'm',
+        level: 0,
+        edition: '5.5',
+      })
+    })
+
+    it('gives the derived parts no controls of their own', () => {
+      show(exhausted(3), vi.fn())
+      // The parts are what the level implies; the level's own buttons are the header's.
+      expect(screen.queryByRole('button', { name: 'Raise Exhaustion' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Clear Exhaustion' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Hide Exhaustion' })).toBeNull()
+    })
+
+    it('reads each part out, so what the level landed is on screen', () => {
+      show(exhausted(3), vi.fn())
+      expect(screen.getByText('Exhaustion 3: -6 to all rolls it makes')).not.toBeNull()
+      expect(screen.getByText('Exhaustion 3: -15 to Speed')).not.toBeNull()
+    })
+
+    it('hides the whole bundle at once — one visible part would share it anyway', () => {
+      const dispatch = vi.fn()
+      const before = exhausted(2)
+      show(before, dispatch)
+      fireEvent.click(screen.getByRole('button', { name: 'Hide' }))
+      const call = dispatch.mock.calls.map((c) => c[0]).find((a) => a.type === 'update')
+      expect(call.update(before).effects.every((e: Effect) => e.gmOnly)).toBe(true)
     })
   })
 })

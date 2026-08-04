@@ -14,6 +14,7 @@ import {
   modifierEffect,
 } from '../../src/combat/effects.ts'
 import { rollWithEffects } from '../../src/combat/effectroll.ts'
+import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
 
 function faceSeq(...faces: number[]): RandomSource {
   let i = 0
@@ -305,5 +306,53 @@ describe('rollWithEffects', () => {
       })
       expect(unknown.result.total).toBe(12)
     })
+  })
+})
+
+describe('Exhaustion', () => {
+  it('2024: takes 2 per level off every d20 test the creature makes', () => {
+    const roller = combatant('r', exhaustionEffects(3, '5.5'))
+    for (const kind of ['attack', 'save', 'check'] as const) {
+      const out = rollWithEffects('1d20', { roller, kind, rand: faceSeq(15) })
+      expect(out.result.total).toBe(9)
+      expect(out.applied).toContainEqual({ source: 'Exhaustion 3', effect: '-6' })
+    }
+  })
+
+  it('2024: never touches a roll made against the creature', () => {
+    const out = rollWithEffects('1d20', {
+      roller: combatant('r'),
+      target: combatant('t', exhaustionEffects(3, '5.5')),
+      kind: 'attack',
+      rand: faceSeq(15),
+    })
+    expect(out.result.total).toBe(15)
+  })
+
+  it('2014: level 1 is Disadvantage on ability checks and nothing more', () => {
+    const roller = combatant('r', exhaustionEffects(1, '5.0'))
+    const check = rollWithEffects('1d20', { roller, kind: 'check', rand: faceSeq(15, 4) })
+    expect(check.result.advantageState).toBe('disadvantage')
+    expect(check.result.total).toBe(4)
+    expect(
+      rollWithEffects('1d20', { roller, kind: 'attack', rand: faceSeq(15) }).result.advantageState,
+    ).toBe('normal')
+  })
+
+  it('2014: level 3 reaches attacks and saves too', () => {
+    const roller = combatant('r', exhaustionEffects(3, '5.0'))
+    for (const kind of ['attack', 'save', 'check'] as const) {
+      const out = rollWithEffects('1d20', { roller, kind, rand: faceSeq(15, 4) })
+      expect(out.result.advantageState).toBe('disadvantage')
+    }
+  })
+
+  it('2014: the level lands no flat penalty — that is the 2024 rule', () => {
+    const out = rollWithEffects('1d20', {
+      roller: combatant('r', exhaustionEffects(5, '5.0')),
+      kind: 'save',
+      rand: faceSeq(15, 4),
+    })
+    expect(out.result.total).toBe(4)
   })
 })

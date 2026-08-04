@@ -21,11 +21,14 @@ import {
   type ModifierDraft,
 } from './effectPreset.ts'
 import { describeModifier, isStatApplies } from '../combat/effects.ts'
+import { describeExhaustion, exhaustionLevel } from '../combat/exhaustion.ts'
+import { useCampaignEdition } from '../state/campaignRules.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { track as recordEvent, EVENTS } from '../lib/analytics.ts'
 
-// Ordered roughly by table frequency.
+// Ordered roughly by table frequency. Exhaustion isn't here — it carries a level, so
+// it gets its own control below rather than a toggle.
 const CONDITIONS: ConditionName[] = [
   'Prone',
   'Grappled',
@@ -41,8 +44,10 @@ const CONDITIONS: ConditionName[] = [
   'Petrified',
   'Deafened',
   'Unconscious',
-  'Exhaustion',
 ]
+
+/** The levels the Exhaustion control offers, with 0 meaning the condition is off. */
+const EXHAUSTION_LEVELS = [0, 1, 2, 3, 4, 5, 6]
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
@@ -239,6 +244,7 @@ export function EffectModal({
   effects,
   onApply,
   onRemove,
+  onSetExhaustion,
   presets = [],
   enabledLibraries,
   onSavePreset,
@@ -248,6 +254,8 @@ export function EffectModal({
   /** Commit every staged effect in one go — one board update, one log line per bundle. */
   onApply: (effects: Effect[]) => void
   onRemove: (id: string) => void
+  /** Set the Exhaustion level, which lands through its own action rather than as parts. */
+  onSetExhaustion: (level: number) => void
   /** Presets offered above the form — the GM's own, plus any an enabled library ships. */
   presets?: EffectPreset[]
   /** Which libraries are on, so the picker filters its rows the way every other one does. */
@@ -257,6 +265,8 @@ export function EffectModal({
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<EffectDraft>(emptyDraft)
+  const edition = useCampaignEdition()
+  const currentExhaustion = exhaustionLevel(effects)
 
   /** Replace one field of the staged draft. */
   const set = <K extends keyof EffectDraft>(key: K, value: EffectDraft[K]) =>
@@ -266,9 +276,15 @@ export function EffectModal({
   const conditionNames = (): ConditionName[] =>
     effects.filter((e) => e.icon === 'condition').map((e) => e.name as ConditionName)
 
-  // Open with the creature's current conditions pre-selected, and everything else reset.
+  // Open with the creature's current conditions and Exhaustion level pre-selected, and
+  // everything else reset.
   const openModal = () => {
-    setDraft({ ...emptyDraft(), conditions: conditionNames() })
+    setDraft({
+      ...emptyDraft(),
+      conditions: conditionNames(),
+      exhaustion: currentExhaustion,
+      exhaustionBase: currentExhaustion,
+    })
     setOpen(true)
   }
 
@@ -323,6 +339,9 @@ export function EffectModal({
         if (existing) onRemove(existing.id)
       }
     }
+    // Exhaustion lands last and on its own: setting a level rebuilds the penalties the
+    // edition gives it, which is a different job from minting the staged parts.
+    if (draft.exhaustion !== currentExhaustion) onSetExhaustion(draft.exhaustion)
     setOpen(false)
   }
 
@@ -332,7 +351,9 @@ export function EffectModal({
   // Apply strip them instead.
   const stage = (preset: EffectPreset) => {
     recordEvent(EVENTS.presetStaged)
-    const staged = presetToDraft(preset)
+    // A preset's Exhaustion is a change, so it stages against what the creature already
+    // carries — a night in the cold costs a level whatever it started on.
+    const staged = presetToDraft(preset, currentExhaustion)
     setDraft({ ...staged, conditions: [...new Set([...conditionNames(), ...staged.conditions])] })
   }
 
@@ -559,6 +580,34 @@ export function EffectModal({
                 </div>
               </div>
 
+              <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
+                <p className={LABEL}>Exhaustion</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {EXHAUSTION_LEVELS.map((level) => {
+                    const active = draft.exhaustion === level
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        aria-pressed={active}
+                        aria-label={level === 0 ? 'No Exhaustion' : `Exhaustion ${level}`}
+                        onClick={() => set('exhaustion', level)}
+                        className={
+                          active
+                            ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
+                            : CHIP
+                        }
+                      >
+                        {level === 0 ? 'None' : level}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {describeExhaustion(draft.exhaustion, edition)}
+                </p>
+              </div>
+
               <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
                 {draft.counters.length > 0 && <p className={LABEL}>Counters</p>}
                 {draft.counters.map((c, i) => (
@@ -662,7 +711,7 @@ export function EffectModal({
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Named, everything above lands as one badge and clears together. Leave it blank
-                    for separate badges. A counter always stands alone.
+                    for separate badges. A counter and an Exhaustion level always stand alone.
                   </p>
                 </div>
               )}

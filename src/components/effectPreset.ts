@@ -13,6 +13,7 @@ import type {
 } from '../schema/effect.ts'
 import type { EffectPreset, PresetPart } from '../schema/preset.ts'
 import { condition, counter, modifierEffect, reminder } from '../combat/effects.ts'
+import { clampLevel } from '../combat/exhaustion.ts'
 
 /**
  * The Apply effect modal's staged state, and the pure mapping between it, the Effects
@@ -99,6 +100,18 @@ export interface EffectDraft {
   /** Reminder texts; empties are staged UI state and commit nothing. */
   notes: string[]
   counters: CounterDraft[]
+  /**
+   * The staged Exhaustion level, 0–6. It lands through its own action rather than as a
+   * minted Effect, because setting a level rebuilds the penalties the campaign's edition
+   * gives it.
+   */
+  exhaustion: number
+  /**
+   * The level the creature was already at when the form opened. A preset saves the
+   * *change* between the two, since Exhaustion is cumulative — so staging 3 on a
+   * creature already at 1 keeps "gains 2 levels", which is what Apply just did.
+   */
+  exhaustionBase: number
 }
 
 /** A blank modifier for the builder to start from. */
@@ -127,6 +140,8 @@ export function emptyDraft(): EffectDraft {
     modifiers: [],
     notes: [''],
     counters: [],
+    exhaustion: 0,
+    exhaustionBase: 0,
   }
 }
 
@@ -201,6 +216,9 @@ export function draftParts(draft: EffectDraft): PresetPart[] {
     const name = c.name.trim()
     if (name) out.push({ kind: 'counter', name, ...(c.gmOnly ? { gmOnly: true } : {}) })
   }
+  // The change the staged level would make, not the level itself — see EffectDraft.
+  const levels = draft.exhaustion - draft.exhaustionBase
+  if (levels !== 0) out.push({ kind: 'exhaustion', levels })
   return out
 }
 
@@ -223,7 +241,10 @@ export function draftEffects(draft: EffectDraft): Effect[] {
     else if (part.kind === 'modifier') out.push(modifierEffect(part.modifier, { duration, bundle }))
     else if (part.kind === 'reminder')
       out.push(reminder(part.note, part.note, { duration, bundle }))
-    else out.push(counter(part.name, { count: part.start, gmOnly: part.gmOnly }))
+    else if (part.kind === 'counter')
+      out.push(counter(part.name, { count: part.start, gmOnly: part.gmOnly }))
+    // An Exhaustion part mints nothing here: a level lands through its own action, which
+    // rebuilds the penalties the campaign's edition gives it.
   }
   return out
 }
@@ -260,9 +281,14 @@ function durationChoice(duration: EffectDuration): DurChoice {
   return 'manual'
 }
 
-/** Stage a saved preset back into the form, ready to apply or adjust. */
-export function presetToDraft(preset: EffectPreset): EffectDraft {
+/**
+ * Stage a saved preset back into the form, ready to apply or adjust. An Exhaustion part
+ * is a change, so it is staged against `exhaustionBase` — the level the creature is
+ * already at — and clamped to the 0–6 the rules allow.
+ */
+export function presetToDraft(preset: EffectPreset, exhaustionBase = 0): EffectDraft {
   const base = emptyDraft()
+  const levels = preset.parts.reduce((n, p) => (p.kind === 'exhaustion' ? n + p.levels : n), 0)
   const save = preset.duration.type === 'saveEnds' ? preset.duration.save : null
   const choice = durationChoice(preset.duration)
   const custom =
@@ -298,5 +324,7 @@ export function presetToDraft(preset: EffectPreset): EffectDraft {
     counters: preset.parts.flatMap((p) =>
       p.kind === 'counter' ? [{ name: p.name, gmOnly: p.gmOnly === true }] : [],
     ),
+    exhaustion: clampLevel(exhaustionBase + levels),
+    exhaustionBase,
   }
 }

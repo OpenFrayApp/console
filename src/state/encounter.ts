@@ -4,9 +4,11 @@
 import type { Combatant } from '../schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { InitiativeTiebreak } from '../schema/campaign.ts'
+import type { Edition } from '../schema/primitives.ts'
 import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
 import { counterOf, survivesLongRest } from '../combat/effects.ts'
+import { clampLevel, exhaustionLevel, withExhaustion } from '../combat/exhaustion.ts'
 import { effectiveMaxHp, setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
 import { assessEncounter } from '../combat/difficulty.ts'
@@ -34,6 +36,8 @@ export type EncounterAction =
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
   /** End `id`'s concentration and clear the effects it was sustaining, board-wide. */
   | { type: 'endConcentration'; id: string }
+  /** Set `id`'s Exhaustion level, rebuilding the penalties the edition's rules give it. */
+  | { type: 'setExhaustion'; id: string; level: number; edition: Edition }
   /** Append a game-log entry; the reducer stamps its id + current round. */
   | { type: 'log'; entry: NewLogEntry }
   /** Rewrite a name across existing log entries (when a combatant is renamed). */
@@ -362,6 +366,38 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
         combatants[i] === before ? [] : diffCombatantLogs(before, combatants[i]),
       )
       return withLogs({ ...state, combatants }, logs)
+    }
+
+    // Setting the level replaces the whole Exhaustion bundle — under the 2014 table the
+    // parts differ level by level, so there is nothing stable to patch — and the generic
+    // effect diff would read that as one bundle ending and another beginning. The level
+    // is the news, so this action logs it itself: one line, whatever moved underneath.
+    case 'setExhaustion': {
+      const target = state.combatants.find((c) => c.combatantId === action.id)
+      if (!target) return state
+      const was = exhaustionLevel(target.effects)
+      const now = clampLevel(action.level)
+      if (was === now) return state
+      const combatants = state.combatants.map((c) => {
+        if (c.combatantId !== action.id) return c
+        const updated = { ...c, effects: withExhaustion(c.effects, now, action.edition) }
+        // A halved hit point maximum lowers the ceiling; current HP follows it down and,
+        // per the rules, does not spring back when the level drops again.
+        const ceiling = effectiveMaxHp(updated)
+        return updated.hp.current > ceiling
+          ? { ...updated, hp: { ...updated.hp, current: ceiling } }
+          : updated
+      })
+      const name = nameOf(target)
+      const message =
+        now === 0
+          ? `${name}: Exhaustion ends`
+          : was === 0
+            ? `${name} gains Exhaustion ${now}`
+            : `${name}: Exhaustion ${was} → ${now}`
+      return withLogs({ ...state, combatants }, [
+        { category: 'condition', message, sourceId: action.id },
+      ])
     }
 
     case 'recordDamage':

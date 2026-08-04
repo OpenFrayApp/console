@@ -18,7 +18,7 @@ import { roll } from './dice/roll.ts'
 import type { Encounter } from './schema/encounter.ts'
 import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
 import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from './schema/roster.ts'
-import { CampaignRulesContext } from './state/campaignRules.ts'
+import { CampaignEditionContext, CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer, type NewLogEntry } from './state/encounter.ts'
 import { loadSession, saveSession, type View } from './state/persistence.ts'
 import { useTheme } from './hooks/useTheme.ts'
@@ -272,6 +272,8 @@ function App() {
     ? campaigns.find((c) => c.id === activeCampaignId)
     : undefined
   const activeRules = activeCampaign?.rules ?? DEFAULT_CAMPAIGN_RULES
+  // No campaign means the 2024 rules, the console's default everywhere else too.
+  const activeEdition = activeCampaign?.edition ?? '5.5'
   // What the Apply effect modal offers: the Game Master's own presets first, then the
   // ones each enabled library ships. Library presets follow the library, not the account,
   // so an anonymous table gets them too.
@@ -872,280 +874,286 @@ function App() {
 
   return (
     <CampaignRulesContext.Provider value={activeRules}>
-      <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-          <div className="flex items-center gap-4 lg:gap-0">
-            {/* Logo links back to the marketing site; spans the initiative column so
+      <CampaignEditionContext.Provider value={activeEdition}>
+        <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+          <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+            <div className="flex items-center gap-4 lg:gap-0">
+              {/* Logo links back to the marketing site; spans the initiative column so
               Group/Cast line up with the stat block. */}
-            <a
-              href="/"
-              title="OpenFray home"
-              className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
-            >
-              <span className="text-indigo-500 dark:text-indigo-400">
-                <CrossedSwordsIcon />
-              </span>
-              <h1 className="text-xl font-semibold tracking-tight">
-                <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
-              </h1>
-            </a>
-            {view === 'encounter' && encounter.combatants.length > 0 && (
-              <div className="flex items-center gap-2 lg:pl-4">
-                <RestControls
-                  combatants={encounter.combatants}
-                  dispatch={dispatch}
-                  disabled={started}
-                  shortRests={encounter.shortRests ?? 0}
-                  showCounter={!!user}
-                />
-                <MassSavePanel
-                  combatants={encounter.combatants}
-                  dispatch={dispatch}
-                  onRoll={pushRoll}
-                />
-                <CastSpellPanel
-                  combatants={encounter.combatants}
-                  dispatch={dispatch}
-                  onRoll={pushRoll}
-                  onNote={pushNote}
-                  round={encounter.round}
-                  defaultCasterId={defaultCasterId}
-                  customSpells={customSpells}
-                  enabledLibraries={enabledLibraries}
-                  showHomebrew={showHomebrew}
-                  librarySort={librarySort}
-                />
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {view === 'encounter' && (
-              <div className="flex items-center gap-2">
-                <AddQuickForm
-                  onAdd={(c) => {
-                    track(EVENTS.quickAdded)
-                    addCombatant(c)
-                  }}
-                />
-                {user ? (
-                  <AddPcPicker
-                    rosterPcs={rosterPcs}
-                    campaigns={campaigns}
-                    onPick={handleAddPcToEncounter}
-                    onCreate={openRosterCreate}
+              <a
+                href="/"
+                title="OpenFray home"
+                className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
+              >
+                <span className="text-indigo-500 dark:text-indigo-400">
+                  <CrossedSwordsIcon />
+                </span>
+                <h1 className="text-xl font-semibold tracking-tight">
+                  <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+                </h1>
+              </a>
+              {view === 'encounter' && encounter.combatants.length > 0 && (
+                <div className="flex items-center gap-2 lg:pl-4">
+                  <RestControls
+                    combatants={encounter.combatants}
+                    dispatch={dispatch}
+                    disabled={started}
+                    shortRests={encounter.shortRests ?? 0}
+                    showCounter={!!user}
                   />
-                ) : (
-                  <AddPcForm
+                  <MassSavePanel
+                    combatants={encounter.combatants}
+                    dispatch={dispatch}
+                    onRoll={pushRoll}
+                  />
+                  <CastSpellPanel
+                    combatants={encounter.combatants}
+                    dispatch={dispatch}
+                    onRoll={pushRoll}
+                    onNote={pushNote}
+                    round={encounter.round}
+                    defaultCasterId={defaultCasterId}
+                    customSpells={customSpells}
+                    enabledLibraries={enabledLibraries}
+                    showHomebrew={showHomebrew}
+                    librarySort={librarySort}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {view === 'encounter' && (
+                <div className="flex items-center gap-2">
+                  <AddQuickForm
                     onAdd={(c) => {
-                      track(EVENTS.pcAdded)
+                      track(EVENTS.quickAdded)
                       addCombatant(c)
                     }}
                   />
-                )}
-                <AddCreaturePicker
-                  onPick={handlePick}
+                  {user ? (
+                    <AddPcPicker
+                      rosterPcs={rosterPcs}
+                      campaigns={campaigns}
+                      onPick={handleAddPcToEncounter}
+                      onCreate={openRosterCreate}
+                    />
+                  ) : (
+                    <AddPcForm
+                      onAdd={(c) => {
+                        track(EVENTS.pcAdded)
+                        addCombatant(c)
+                      }}
+                    />
+                  )}
+                  <AddCreaturePicker
+                    onPick={handlePick}
+                    customCreatures={customCreatures}
+                    enabledLibraries={enabledLibraries}
+                    showHomebrew={showHomebrew}
+                    librarySort={librarySort}
+                  />
+                </div>
+              )}
+              <ViewToggle view={view} onChange={handleViewChange} />
+              <AccountControl onSignIn={() => setAuthOpen(true)} />
+              <SharePanel
+                code={playerCode}
+                sharing={sharing}
+                onToggleShare={toggleSharing}
+                onClaim={user ? claimShareCode : undefined}
+                onSignIn={() => setAuthOpen(true)}
+              />
+              <SettingsMenu
+                theme={theme}
+                onToggleTheme={() => {
+                  track(EVENTS.themeToggled)
+                  toggleTheme()
+                }}
+                onOpenSettings={() => {
+                  track(EVENTS.settingsOpened)
+                  setSettingsOpen(true)
+                }}
+              />
+            </div>
+          </header>
+
+          {settingsOpen && (
+            <SettingsPanel
+              onClose={() => setSettingsOpen(false)}
+              enabledLibraries={enabledLibraries}
+              onSetEnabledLibraries={setEnabledLibraries}
+              showHomebrew={showHomebrew}
+              onSetShowHomebrew={setShowHomebrew}
+              librarySort={librarySort}
+              onSetLibrarySort={setLibrarySort}
+              playerView={playerView}
+              onSetPlayerView={setPlayerView}
+            />
+          )}
+
+          <main className="min-h-0 flex-1 overflow-hidden">
+            {view === 'compendium' ? (
+              <div className="h-full w-full overflow-hidden px-6 py-6">
+                <Compendium
                   customCreatures={customCreatures}
+                  onCreateCreature={handleCreateCreature}
+                  onUpdateCreature={handleUpdateCreature}
+                  onDeleteCreature={handleDeleteCreature}
+                  customSpells={customSpells}
+                  onCreateSpell={handleCreateSpell}
+                  onUpdateSpell={handleUpdateSpell}
+                  onDeleteSpell={handleDeleteSpell}
+                  campaigns={campaigns}
+                  onCreateCampaign={handleCreateCampaign}
+                  onUpdateCampaign={handleUpdateCampaign}
+                  onDeleteCampaign={handleDeleteCampaign}
+                  rosterPcs={rosterPcs}
+                  onCreatePc={handleCreatePc}
+                  onUpdatePc={handleUpdatePc}
+                  onDeletePc={handleDeletePc}
+                  onAddPcToEncounter={handleAddPcToEncounter}
+                  presets={presets}
+                  onRenamePreset={handleUpdatePreset}
+                  onDeletePreset={handleDeletePreset}
+                  initialTab={compendiumTab}
                   enabledLibraries={enabledLibraries}
                   showHomebrew={showHomebrew}
                   librarySort={librarySort}
+                  createGated={!user}
+                  onGated={() => setAuthOpen(true)}
                 />
               </div>
-            )}
-            <ViewToggle view={view} onChange={handleViewChange} />
-            <AccountControl onSignIn={() => setAuthOpen(true)} />
-            <SharePanel
-              code={playerCode}
-              sharing={sharing}
-              onToggleShare={toggleSharing}
-              onClaim={user ? claimShareCode : undefined}
-              onSignIn={() => setAuthOpen(true)}
-            />
-            <SettingsMenu
-              theme={theme}
-              onToggleTheme={() => {
-                track(EVENTS.themeToggled)
-                toggleTheme()
-              }}
-              onOpenSettings={() => {
-                track(EVENTS.settingsOpened)
-                setSettingsOpen(true)
-              }}
-            />
-          </div>
-        </header>
-
-        {settingsOpen && (
-          <SettingsPanel
-            onClose={() => setSettingsOpen(false)}
-            enabledLibraries={enabledLibraries}
-            onSetEnabledLibraries={setEnabledLibraries}
-            showHomebrew={showHomebrew}
-            onSetShowHomebrew={setShowHomebrew}
-            librarySort={librarySort}
-            onSetLibrarySort={setLibrarySort}
-            playerView={playerView}
-            onSetPlayerView={setPlayerView}
-          />
-        )}
-
-        <main className="min-h-0 flex-1 overflow-hidden">
-          {view === 'compendium' ? (
-            <div className="h-full w-full overflow-hidden px-6 py-6">
-              <Compendium
-                customCreatures={customCreatures}
-                onCreateCreature={handleCreateCreature}
-                onUpdateCreature={handleUpdateCreature}
-                onDeleteCreature={handleDeleteCreature}
-                customSpells={customSpells}
-                onCreateSpell={handleCreateSpell}
-                onUpdateSpell={handleUpdateSpell}
-                onDeleteSpell={handleDeleteSpell}
-                campaigns={campaigns}
-                onCreateCampaign={handleCreateCampaign}
-                onUpdateCampaign={handleUpdateCampaign}
-                onDeleteCampaign={handleDeleteCampaign}
-                rosterPcs={rosterPcs}
-                onCreatePc={handleCreatePc}
-                onUpdatePc={handleUpdatePc}
-                onDeletePc={handleDeletePc}
-                onAddPcToEncounter={handleAddPcToEncounter}
+            ) : (
+              <EncounterConsole
+                encounter={encounter}
+                dispatch={dispatch}
+                onRoll={pushRoll}
+                onGmRoll={pushGmRoll}
+                onNote={pushNote}
+                onRename={renameInLog}
+                onEditPc={handleEditEncounterPc}
+                onEditPcDmNotes={handleEditEncounterPcDmNotes}
+                onEditCreature={handleEditEncounterCreature}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                started={started}
+                paused={paused}
+                onBegin={handleBegin}
+                onNextTurn={handleNextTurn}
+                onStop={endCombat}
+                onOpenLog={() => setLogOpen(true)}
                 presets={presets}
-                onRenamePreset={handleUpdatePreset}
-                onDeletePreset={handleDeletePreset}
-                initialTab={compendiumTab}
                 enabledLibraries={enabledLibraries}
-                showHomebrew={showHomebrew}
-                librarySort={librarySort}
-                createGated={!user}
-                onGated={() => setAuthOpen(true)}
-              />
-            </div>
-          ) : (
-            <EncounterConsole
-              encounter={encounter}
-              dispatch={dispatch}
-              onRoll={pushRoll}
-              onGmRoll={pushGmRoll}
-              onNote={pushNote}
-              onRename={renameInLog}
-              onEditPc={handleEditEncounterPc}
-              onEditPcDmNotes={handleEditEncounterPcDmNotes}
-              onEditCreature={handleEditEncounterCreature}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              started={started}
-              paused={paused}
-              onBegin={handleBegin}
-              onNextTurn={handleNextTurn}
-              onStop={endCombat}
-              onOpenLog={() => setLogOpen(true)}
-              presets={presets}
-              enabledLibraries={enabledLibraries}
-              onSavePreset={userId ? handleCreatePreset : undefined}
-            />
-          )}
-        </main>
-
-        {logOpen && (
-          <GameLogModal
-            entries={encounter.log}
-            onClose={() => setLogOpen(false)}
-            onClear={() => dispatch({ type: 'clearLog' })}
-          />
-        )}
-
-        {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
-
-        {endPrompt && (
-          <EndCombatPrompt onConfirm={endCombat} onCancel={() => setEndPrompt(false)} />
-        )}
-        {recap && <RecapScreen recap={recap} onClose={() => setRecap(null)} />}
-
-        {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
-          on-board copy's character fields (HP and combat state stay put). */}
-        <PcFormModal
-          open={encounterPcEdit != null}
-          pc={encounterPcEdit?.pc}
-          campaigns={campaigns}
-          onClose={() => setEncounterPcEdit(null)}
-          onSubmit={(updated) => {
-            handleUpdatePc(updated)
-            if (encounterPcEdit) {
-              dispatch({
-                type: 'update',
-                id: encounterPcEdit.combatantId,
-                update: (x) => (x.isPC ? syncCombatantFromRoster(x, updated) : x),
-              })
-            }
-          }}
-        />
-
-        {/* Editing a custom creature from the encounter: saves to the library/DB only;
-          the in-progress fight keeps its snapshot (AGENTS.md rule #4). */}
-        <CustomMonsterForm
-          open={encounterCreatureEdit != null}
-          initialDraft={encounterCreatureEdit?.draft ?? emptyDraft()}
-          editId={encounterCreatureEdit?.editId ?? null}
-          onClose={() => setEncounterCreatureEdit(null)}
-          onSubmit={handleUpdateCreature}
-        />
-
-        {initPrompt && (
-          <InitiativePrompt
-            combatants={encounter.combatants}
-            initial={initPrompt}
-            onStart={startCombat}
-            onCancel={() => setInitPrompt(null)}
-          />
-        )}
-        <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
-          {view === 'encounter' && started && encounter.combatStats ? (
-            <CombatTimers
-              stats={encounter.combatStats}
-              round={encounter.round}
-              running={started && !paused}
-            />
-          ) : view === 'encounter' ? (
-            <CombatDifficulty combatants={encounter.combatants} />
-          ) : (
-            <div className="hidden lg:block" aria-hidden="true" />
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
-            {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
-            {view === 'encounter' && user && (
-              <CampaignPicker
-                campaigns={campaigns}
-                activeId={activeCampaignId}
-                onChange={setActiveCampaignId}
+                onSavePreset={userId ? handleCreatePreset : undefined}
               />
             )}
-          </div>
-          <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
-            <a href="/privacy">Privacy</a>
-            <span>·</span>
-            <a href="/terms">Terms</a>
-            <span>·</span>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="OpenFray on GitHub"
-              title="GitHub"
-              className="inline-flex items-center hover:text-slate-900 dark:hover:text-slate-200"
-            >
-              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" className="h-4 w-4">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-              </svg>
-            </a>
-            &nbsp;
-            <span>
-              <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">
-                AGPL-3.0
+          </main>
+
+          {logOpen && (
+            <GameLogModal
+              entries={encounter.log}
+              onClose={() => setLogOpen(false)}
+              onClear={() => dispatch({ type: 'clearLog' })}
+            />
+          )}
+
+          {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
+
+          {endPrompt && (
+            <EndCombatPrompt onConfirm={endCombat} onCancel={() => setEndPrompt(false)} />
+          )}
+          {recap && <RecapScreen recap={recap} onClose={() => setRecap(null)} />}
+
+          {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
+          on-board copy's character fields (HP and combat state stay put). */}
+          <PcFormModal
+            open={encounterPcEdit != null}
+            pc={encounterPcEdit?.pc}
+            campaigns={campaigns}
+            onClose={() => setEncounterPcEdit(null)}
+            onSubmit={(updated) => {
+              handleUpdatePc(updated)
+              if (encounterPcEdit) {
+                dispatch({
+                  type: 'update',
+                  id: encounterPcEdit.combatantId,
+                  update: (x) => (x.isPC ? syncCombatantFromRoster(x, updated) : x),
+                })
+              }
+            }}
+          />
+
+          {/* Editing a custom creature from the encounter: saves to the library/DB only;
+          the in-progress fight keeps its snapshot (AGENTS.md rule #4). */}
+          <CustomMonsterForm
+            open={encounterCreatureEdit != null}
+            initialDraft={encounterCreatureEdit?.draft ?? emptyDraft()}
+            editId={encounterCreatureEdit?.editId ?? null}
+            onClose={() => setEncounterCreatureEdit(null)}
+            onSubmit={handleUpdateCreature}
+          />
+
+          {initPrompt && (
+            <InitiativePrompt
+              combatants={encounter.combatants}
+              initial={initPrompt}
+              onStart={startCombat}
+              onCancel={() => setInitPrompt(null)}
+            />
+          )}
+          <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
+            {view === 'encounter' && started && encounter.combatStats ? (
+              <CombatTimers
+                stats={encounter.combatStats}
+                round={encounter.round}
+                running={started && !paused}
+              />
+            ) : view === 'encounter' ? (
+              <CombatDifficulty combatants={encounter.combatants} />
+            ) : (
+              <div className="hidden lg:block" aria-hidden="true" />
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
+              {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
+              {view === 'encounter' && user && (
+                <CampaignPicker
+                  campaigns={campaigns}
+                  activeId={activeCampaignId}
+                  onChange={setActiveCampaignId}
+                />
+              )}
+            </div>
+            <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
+              <a href="/privacy">Privacy</a>
+              <span>·</span>
+              <a href="/terms">Terms</a>
+              <span>·</span>
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="OpenFray on GitHub"
+                title="GitHub"
+                className="inline-flex items-center hover:text-slate-900 dark:hover:text-slate-200"
+              >
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" className="h-4 w-4">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                </svg>
               </a>
-            </span>
-          </div>
-        </footer>
-      </div>
+              &nbsp;
+              <span>
+                <a
+                  href="https://www.gnu.org/licenses/agpl-3.0.html"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  AGPL-3.0
+                </a>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>
   )
 }

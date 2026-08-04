@@ -52,6 +52,7 @@ function Harness({
       effects={effects}
       onApply={(list) => sync([...current.current, ...list])}
       onRemove={(id) => sync(current.current.filter((x) => x.id !== id))}
+      onSetExhaustion={() => {}}
       presets={presets}
       onSavePreset={onSavePreset}
     />
@@ -77,7 +78,15 @@ const clickApply = (dialog: HTMLElement) =>
 describe('EffectModal', () => {
   it('applies a staged condition with the chosen duration on Apply', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1m' } }) // 1 minute = 10 rounds
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
@@ -94,7 +103,15 @@ describe('EffectModal', () => {
 
   it('builds a custom duration from an amount and a unit', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'custom' } })
     fireEvent.change(within(dialog).getByLabelText('Duration amount'), { target: { value: '3' } })
@@ -108,7 +125,15 @@ describe('EffectModal', () => {
 
   it('builds an advantage-against modifier with a clear direction', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     // Defaults: Advantage / attack rolls / made against it.
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
@@ -123,7 +148,15 @@ describe('EffectModal', () => {
 
   it('narrows a checks modifier to the abilities the GM picks', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
       target: { value: 'disadvantage' },
@@ -145,7 +178,15 @@ describe('EffectModal', () => {
   })
 
   it('offers the ability picker only where it means something', () => {
-    render(<EffectModal name="Goblin" effects={[]} onApply={() => {}} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={() => {}}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     // Attack rolls carry no ability, so there is nothing to narrow.
     expect(within(dialog).queryByRole('button', { name: 'WIS' })).toBeNull()
@@ -157,7 +198,15 @@ describe('EffectModal', () => {
 
   it('commits a condition and a modifier together on Apply', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Restrained' }))
     fireEvent.click(within(dialog).getByRole('button', { name: '+ Add a bonus or penalty' }))
@@ -173,7 +222,15 @@ describe('EffectModal', () => {
 
   it('stages a second modifier alongside the first', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
       target: { value: 'First' },
@@ -188,7 +245,15 @@ describe('EffectModal', () => {
 
   it('removes one staged modifier without touching the other', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier label'), {
       target: { value: 'First' },
@@ -204,7 +269,15 @@ describe('EffectModal', () => {
 
   it('builds a flat bonus, dropping a leading + and keeping dice as a string', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
       target: { value: 'flatBonus' },
@@ -224,7 +297,15 @@ describe('EffectModal', () => {
 
   it('stores a plain numeric amount as a number (Bane −2)', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     fireEvent.change(within(dialog).getByLabelText('Modifier effect'), {
       target: { value: 'flatBonus' },
@@ -237,7 +318,15 @@ describe('EffectModal', () => {
 
   it('skips the modifier when it has no label', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = openModifier()
     // Built nothing valid (no label) and staged nothing else — Apply commits nothing.
     clickApply(dialog)
@@ -245,7 +334,15 @@ describe('EffectModal', () => {
   })
 
   it('keeps the modifier builder collapsed until asked for', () => {
-    render(<EffectModal name="Goblin" effects={[]} onApply={() => {}} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={() => {}}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     expect(within(dialog).queryByLabelText('Modifier label')).toBeNull()
     fireEvent.click(within(dialog).getByRole('button', { name: '+ Add a bonus or penalty' }))
@@ -254,7 +351,15 @@ describe('EffectModal', () => {
 
   it('applies a custom reminder on Apply, no Add button needed', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
       target: { value: 'Hex: +1d6 necrotic' },
@@ -267,7 +372,15 @@ describe('EffectModal', () => {
 
   it('stages a second reminder alongside the first', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
       target: { value: 'First note' },
@@ -282,7 +395,15 @@ describe('EffectModal', () => {
 
   it('builds a save-ends duration with a roll timing (default end of turn)', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save ability'), { target: { value: 'wis' } })
@@ -298,7 +419,15 @@ describe('EffectModal', () => {
 
   it('records a start-of-turn save timing', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
     fireEvent.change(within(dialog).getByLabelText('Save timing'), {
@@ -330,7 +459,15 @@ describe('EffectModal', () => {
     }
     const onRemove = vi.fn()
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[existing]} onApply={onApply} onRemove={onRemove} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[existing]}
+        onApply={onApply}
+        onRemove={onRemove}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     // The creature already has Prone, so its chip starts checked.
     expect(within(dialog).getByRole('button', { name: 'Prone' })).toHaveAttribute(
@@ -345,7 +482,15 @@ describe('EffectModal', () => {
 
   it('Cancel discards staged changes without applying', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Prone' }))
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), { target: { value: 'x' } })
@@ -357,7 +502,15 @@ describe('EffectModal', () => {
 describe('counters', () => {
   it('adds a counter from its own control, starting at zero, beside a timed condition', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1h' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
@@ -378,7 +531,15 @@ describe('counters', () => {
 
   it('needs a name — an empty counter row applies nothing', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
     clickApply(dialog)
@@ -387,7 +548,15 @@ describe('counters', () => {
 
   it('hides a counter from the player view when ticked', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
     fireEvent.change(within(dialog).getByLabelText('Counter 1 name'), {
@@ -408,7 +577,15 @@ describe('counters', () => {
       gmOnly: true,
     }
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[depth]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[depth]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: '+ Add counter' }))
     fireEvent.change(within(dialog).getByLabelText('Counter 1 name'), {
@@ -424,7 +601,15 @@ describe('counters', () => {
 describe('bundles', () => {
   it('offers a bundle name once two parts are staged, and stamps it on Apply', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
     expect(within(dialog).queryByLabelText('Bundle name')).toBeNull()
@@ -443,7 +628,15 @@ describe('bundles', () => {
 
   it('applies loose effects when the bundle name stays blank', () => {
     const onApply = vi.fn()
-    render(<EffectModal name="Goblin" effects={[]} onApply={onApply} onRemove={() => {}} />)
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
     const dialog = open()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Poisoned' }))
     fireEvent.change(within(dialog).getByLabelText('Custom reminder'), {
@@ -556,5 +749,106 @@ describe('presets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save as preset' }))
     expect(onSavePreset).not.toHaveBeenCalled()
     vi.restoreAllMocks()
+  })
+})
+
+describe('EffectModal — Exhaustion', () => {
+  /** Render with only the Exhaustion handler wired, which is all these need. */
+  const renderWith = (onSetExhaustion: (level: number) => void, effects: Effect[] = []) =>
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={effects}
+        onApply={() => {}}
+        onRemove={() => {}}
+        onSetExhaustion={onSetExhaustion}
+      />,
+    )
+
+  /** The Exhaustion anchor at a level, as the modal would read it off a creature. */
+  const at = (level: number): Effect => ({
+    id: 'ex',
+    name: 'Exhaustion',
+    icon: 'condition',
+    modifier: null,
+    duration: { type: 'counter', count: level },
+    bundle: { id: 'b', name: `Exhaustion ${level}` },
+  })
+
+  it('is a level rather than a condition chip', () => {
+    renderWith(() => {})
+    const dialog = open()
+    expect(within(dialog).queryByRole('button', { name: 'Exhaustion' })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Exhaustion 3' })).not.toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'No Exhaustion' })).not.toBeNull()
+  })
+
+  it('stages a level without applying it, then commits it on Apply', () => {
+    const onSetExhaustion = vi.fn()
+    renderWith(onSetExhaustion)
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Exhaustion 2' }))
+    expect(onSetExhaustion).not.toHaveBeenCalled()
+    clickApply(dialog)
+    expect(onSetExhaustion).toHaveBeenCalledExactlyOnceWith(2)
+  })
+
+  it('opens on the level the creature already carries, and leaves it alone', () => {
+    const onSetExhaustion = vi.fn()
+    renderWith(onSetExhaustion, [at(4)])
+    const dialog = open()
+    expect(within(dialog).getByRole('button', { name: 'Exhaustion 4' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    clickApply(dialog)
+    expect(onSetExhaustion).not.toHaveBeenCalled()
+  })
+
+  it('clears the condition by staging None', () => {
+    const onSetExhaustion = vi.fn()
+    renderWith(onSetExhaustion, [at(2)])
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'No Exhaustion' }))
+    clickApply(dialog)
+    expect(onSetExhaustion).toHaveBeenCalledExactlyOnceWith(0)
+  })
+
+  it('stages a preset’s level on top of what the creature carries, not instead of it', () => {
+    const cold: EffectPreset = {
+      id: 'custom:cold',
+      name: 'A night in the cold',
+      duration: { type: 'manual' },
+      parts: [{ kind: 'exhaustion', levels: 1 }],
+    }
+    const onSetExhaustion = vi.fn()
+    render(
+      <EffectModal
+        name="Goblin"
+        effects={[at(2)]}
+        onApply={() => {}}
+        onRemove={() => {}}
+        onSetExhaustion={onSetExhaustion}
+        presets={[cold]}
+      />,
+    )
+    const dialog = open()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Presets' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: /A night in the cold/ }))
+    expect(within(dialog).getByRole('button', { name: 'Exhaustion 3' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    clickApply(dialog)
+    expect(onSetExhaustion).toHaveBeenCalledExactlyOnceWith(3)
+  })
+
+  it('spells out what the staged level does, in the rules the campaign plays', () => {
+    renderWith(() => {})
+    const dialog = open()
+    expect(within(dialog).getByText('No Exhaustion.')).not.toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Exhaustion 3' }))
+    // No campaign in a bare render, so the 2024 default.
+    expect(within(dialog).getByText('Level 3: -6 to every d20 roll, Speed -15 ft.')).not.toBeNull()
   })
 })

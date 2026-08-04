@@ -2,6 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { ConditionName } from '../schema/effect.ts'
+import type { Edition } from '../schema/primitives.ts'
 
 /**
  * Reference text for the 15 standard 5e conditions, shown in the hover preview on
@@ -89,14 +90,40 @@ export const CONDITION_TEXT: Record<ConditionName, string> = {
   ].join('\n\n'),
 }
 
+/**
+ * Exhaustion under the 2014 rules, which state it as a table of six rows rather than
+ * one formula. It is the only condition the console applies differently by edition —
+ * a 2014 campaign gets these levels, so the card has to read them back. Verbatim from
+ * SRD 5.1, which is dual-licensed and which we take under CC-BY-4.0, as everywhere.
+ */
+const EXHAUSTION_2014 = [
+  '**Cumulative Levels.** Some special abilities and environmental hazards, such as starvation and the long-term effects of freezing or scorching temperatures, can lead to a special condition called exhaustion. Exhaustion is measured in six levels, and its effects are cumulative.',
+  '**Level 1.** Disadvantage on ability checks.',
+  '**Level 2.** Speed halved.',
+  '**Level 3.** Disadvantage on attack rolls and saving throws.',
+  '**Level 4.** Hit point maximum halved.',
+  '**Level 5.** Speed reduced to zero.',
+  '**Level 6.** Death.',
+  '**Removing Levels.** Finishing a long rest reduces a creature’s exhaustion level by 1, provided that the creature has also ingested some food and drink.',
+].join('\n\n')
+
 const CONDITION_NAMES = Object.keys(CONDITION_TEXT) as ConditionName[]
 
 /** Type guard: the name is one of the standard conditions with reference text. */
 const isConditionName = (name: string): name is ConditionName => name in CONDITION_TEXT
 
-/** Resolve a condition name to its reference text, or undefined if unknown. */
-export function resolveCondition(name: string): { name: ConditionName; text: string } | undefined {
-  return isConditionName(name) ? { name, text: CONDITION_TEXT[name] } : undefined
+/**
+ * Resolve a condition name to its reference text, or undefined if unknown. Pass the
+ * campaign's edition to get the 2014 wording where the two differ — which is only
+ * Exhaustion, the one condition whose mechanics the console reads by edition.
+ */
+export function resolveCondition(
+  name: string,
+  edition: Edition = '5.5',
+): { name: ConditionName; text: string } | undefined {
+  if (!isConditionName(name)) return undefined
+  const text = name === 'Exhaustion' && edition === '5.0' ? EXHAUSTION_2014 : CONDITION_TEXT[name]
+  return { name, text }
 }
 
 // Matches an existing markdown link (so we never rewrite inside one) OR a

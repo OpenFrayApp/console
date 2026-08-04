@@ -4,8 +4,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
-import { applyDamage } from '../../src/combat/resources.ts'
+import type { Encounter } from '../../src/schema/encounter.ts'
+import { applyDamage, effectiveMaxHp } from '../../src/combat/resources.ts'
 import { condition, counter, modifierEffect, reminder, setCount } from '../../src/combat/effects.ts'
+import { exhaustionLevel } from '../../src/combat/exhaustion.ts'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 import { onSharedBoard } from '../../src/combat/playerView.ts'
 
@@ -551,5 +553,109 @@ describe('encounter game-log events', () => {
       update: (c) => ({ ...c, reactionUsed: true }),
     })
     expect(e.log).toEqual([])
+  })
+})
+
+describe('setExhaustion', () => {
+  /** The messages one board change wrote, so a level move can be counted as well as read. */
+  const messages = (before: Encounter, after: Encounter) =>
+    after.log.slice(before.log.length).map((l) => l.message)
+
+  const level = (e: Encounter, id: string) =>
+    exhaustionLevel(e.combatants.find((c) => c.combatantId === id)!.effects)
+
+  it('applies a level and says so once, whatever it landed underneath', () => {
+    const before = withCombatants(monster('a', 5))
+    const after = encounterReducer(before, {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 3,
+      edition: '5.5',
+    })
+    expect(level(after, 'a')).toBe(3)
+    expect(messages(before, after)).toEqual(['a gains Exhaustion 3'])
+  })
+
+  it('logs a move between levels as the move, not as a bundle swapped out', () => {
+    const at3 = encounterReducer(withCombatants(monster('a', 5)), {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 3,
+      edition: '5.0',
+    })
+    const at4 = encounterReducer(at3, { type: 'setExhaustion', id: 'a', level: 4, edition: '5.0' })
+    expect(messages(at3, at4)).toEqual(['a: Exhaustion 3 → 4'])
+  })
+
+  it('ends the condition at 0, clearing every part with it', () => {
+    const at2 = encounterReducer(withCombatants(monster('a', 5)), {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 2,
+      edition: '5.0',
+    })
+    const gone = encounterReducer(at2, { type: 'setExhaustion', id: 'a', level: 0, edition: '5.0' })
+    expect(gone.combatants[0].effects).toEqual([])
+    expect(messages(at2, gone)).toEqual(['a: Exhaustion ends'])
+  })
+
+  it('reads the edition it is given: 2014 level 4 halves the hit point maximum', () => {
+    const e = encounterReducer(withCombatants(monster('a', 5)), {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 4,
+      edition: '5.0',
+    })
+    // The goblin's 7 HP maximum halves to 3, and current HP follows the ceiling down.
+    expect(effectiveMaxHp(e.combatants[0])).toBe(3)
+    expect(e.combatants[0].hp.current).toBe(3)
+    expect(e.combatants[0].hp.max).toBe(7)
+  })
+
+  it('leaves current HP where it fell when the level drops again', () => {
+    let e = encounterReducer(withCombatants(monster('a', 5)), {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 4,
+      edition: '5.0',
+    })
+    e = encounterReducer(e, { type: 'setExhaustion', id: 'a', level: 1, edition: '5.0' })
+    expect(effectiveMaxHp(e.combatants[0])).toBe(7)
+    expect(e.combatants[0].hp.current).toBe(3)
+  })
+
+  it('does nothing, and logs nothing, when the level is already there', () => {
+    const at2 = encounterReducer(withCombatants(monster('a', 5)), {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 2,
+      edition: '5.5',
+    })
+    const again = encounterReducer(at2, {
+      type: 'setExhaustion',
+      id: 'a',
+      level: 2,
+      edition: '5.5',
+    })
+    expect(again).toBe(at2)
+  })
+
+  it('leaves the creature’s other effects alone', () => {
+    let e = encounterReducer(withCombatants(monster('a', 5)), {
+      type: 'update',
+      id: 'a',
+      update: (c) => ({ ...c, effects: [condition('Prone')] }),
+    })
+    e = encounterReducer(e, { type: 'setExhaustion', id: 'a', level: 2, edition: '5.5' })
+    expect(e.combatants[0].effects.some((x) => x.name === 'Prone')).toBe(true)
+    e = encounterReducer(e, { type: 'setExhaustion', id: 'a', level: 0, edition: '5.5' })
+    expect(e.combatants[0].effects.map((x) => x.name)).toEqual(['Prone'])
+  })
+
+  it('ignores a combatant that isn’t on the board', () => {
+    const e = withCombatants(monster('a', 5))
+    expect(encounterReducer(e, { type: 'setExhaustion', id: 'z', level: 1, edition: '5.5' })).toBe(
+      e,
+    )
   })
 })

@@ -15,16 +15,22 @@ import type { ModifierSpec } from '../combat/effects.ts'
  */
 
 /**
- * One part of a preset: a condition, a modifier, a reminder, or a counter. The
- * timed parts share the preset's one duration; a counter has no timer to share and
- * always lands as its own independent effect, outside the applied bundle.
+ * One part of a preset: a condition, a modifier, a reminder, a counter, or a change in
+ * Exhaustion. The timed parts share the preset's one duration; a counter has no timer to
+ * share and always lands as its own independent effect, outside the applied bundle.
  * `gmOnly` keeps a part off the shared player view.
+ *
+ * Exhaustion is the one part stored as a **change** rather than a value: the rules make
+ * it cumulative ("each time you receive it, you gain 1 Exhaustion level"), so a night in
+ * the cold costs a level whatever the creature was already carrying. `levels` may be
+ * negative for a preset that relieves it.
  */
 export type PresetPart =
   | { kind: 'condition'; condition: ConditionName; gmOnly?: boolean }
   | { kind: 'modifier'; modifier: ModifierSpec; gmOnly?: boolean }
   | { kind: 'reminder'; note: string; gmOnly?: boolean }
   | { kind: 'counter'; name: string; start?: number; gmOnly?: boolean }
+  | { kind: 'exhaustion'; levels: number }
 
 export interface EffectPreset {
   /** `custom:<uuid>` for the GM's own; `<library>:<slug>` for one a library ships. */
