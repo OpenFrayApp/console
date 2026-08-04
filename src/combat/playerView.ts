@@ -101,14 +101,22 @@ export function heldBack(c: Combatant): boolean {
  * The effect labels a row shares. A `gmOnly` effect never enters the message — the
  * same absent-field rule the rest of the boundary follows — and a bundle's members
  * collapse to one label carrying the bundle's name, never the parts.
+ *
+ * **One hidden part hides the bundle.** A bundle travels as a single label, so there
+ * is no finer thing to withhold: sending it because a *second* part was left visible
+ * would show the table exactly the name the Game Master meant to keep. Erring toward
+ * withholding is also the only safe direction for a boundary to err in.
  */
 function sharedEffects(c: Combatant): PlayerRow['effects'] {
   const out: PlayerRow['effects'] = []
+  const hiddenBundles = new Set(
+    c.effects.flatMap((e) => (e.gmOnly && e.bundle ? [e.bundle.id] : [])),
+  )
   const bundlesSent = new Set<string>()
   for (const e of c.effects) {
     if (e.gmOnly) continue
     if (e.bundle) {
-      if (bundlesSent.has(e.bundle.id)) continue
+      if (hiddenBundles.has(e.bundle.id) || bundlesSent.has(e.bundle.id)) continue
       bundlesSent.add(e.bundle.id)
       out.push({ id: e.bundle.id, label: e.bundle.name, icon: e.icon })
     } else {

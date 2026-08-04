@@ -487,7 +487,7 @@ export function CombatantControls({
                   </div>
                   <ul className="mt-0.5 list-disc space-y-0.5 pl-4 marker:text-slate-400 dark:marker:text-slate-500">
                     {group.effects.map((e) => (
-                      <EffectRow key={e.id} effect={e} bulleted derived={leveled} />
+                      <EffectRow key={e.id} effect={e} bundled derived={leveled} />
                     ))}
                   </ul>
                 </li>
@@ -500,19 +500,22 @@ export function CombatantControls({
   )
 
   /**
-   * One effect's line in the Applied effects list, with its own controls. Inside a
-   * bundle the line is a bulleted item, so the flex layout moves to an inner div —
-   * a flex `li` stops being a list item and loses its marker. A `derived` part reads
-   * out what it does and carries no controls: it is what a level implies, so changing
-   * it alone would only put the bundle out of step with its own number.
+   * One effect's line in the Applied effects list, with its own controls. A `bundled`
+   * line is a bulleted item, so the flex layout moves to an inner div — a flex `li`
+   * stops being a list item and loses its marker — and it carries no **Hide**: a
+   * bundle reaches the shared board as one label, so hiding it is the header's job and
+   * a per-part toggle would look like it did something while doing nothing. Clearing
+   * one part is still meaningful, so **Clear** stays. A `derived` part carries nothing
+   * at all: it is what a level implies, so changing it alone would only put the bundle
+   * out of step with its own number.
    */
   function EffectRow({
     effect: e,
-    bulleted = false,
+    bundled = false,
     derived = false,
   }: {
     effect: Effect
-    bulleted?: boolean
+    bundled?: boolean
     derived?: boolean
   }) {
     const save = saveEndsOf(e)
@@ -592,40 +595,40 @@ export function CombatantControls({
               </button>
             </>
           )}
+          {!derived && !bundled && (
+            <button
+              type="button"
+              onClick={() =>
+                changeEffect(e.id, (x) => ({ ...x, gmOnly: x.gmOnly ? undefined : true }))
+              }
+              aria-pressed={e.gmOnly === true}
+              title={
+                e.gmOnly
+                  ? `${e.name} is hidden from the player view — click to show it`
+                  : `Hide ${e.name} from the player view`
+              }
+              className={
+                e.gmOnly
+                  ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  : BTN
+              }
+            >
+              {e.gmOnly ? 'Hidden' : 'Hide'}
+            </button>
+          )}
           {!derived && (
-            <>
-              <button
-                type="button"
-                onClick={() =>
-                  changeEffect(e.id, (x) => ({ ...x, gmOnly: x.gmOnly ? undefined : true }))
-                }
-                aria-pressed={e.gmOnly === true}
-                title={
-                  e.gmOnly
-                    ? `${e.name} is hidden from the player view — click to show it`
-                    : `Hide ${e.name} from the player view`
-                }
-                className={
-                  e.gmOnly
-                    ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-                    : BTN
-                }
-              >
-                {e.gmOnly ? 'Hidden' : 'Hide'}
-              </button>
-              <button
-                type="button"
-                onClick={() => removeEffect(e.id)}
-                title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
-                className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
-              >
-                Clear
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => removeEffect(e.id)}
+              title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
+              className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+            >
+              Clear
+            </button>
           )}
         </span>
       </div>
     )
-    return <li className={bulleted ? 'list-item' : 'list-none'}>{row}</li>
+    return <li className={bundled ? 'list-item' : 'list-none'}>{row}</li>
   }
 }

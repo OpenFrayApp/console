@@ -221,6 +221,46 @@ describe('playerBoard — what a creature gives away', () => {
     expect(board.rows[0].effects).toEqual([{ id: 'b1', label: 'Drunk', icon: 'condition' }])
     expect(JSON.stringify(board)).not.toContain('Poisoned')
   })
+
+  // A bundle travels as one label, so there is no finer thing to withhold. Sending it
+  // because a second part was left visible would show the table the very name the Game
+  // Master meant to keep — and an encounter saved before the per-part Hide was removed
+  // can still carry exactly that half-hidden shape.
+  it('withholds a whole bundle when any one of its parts is hidden', () => {
+    const bundle = { id: 'b2', name: 'The curse' }
+    const part = (id: string, gmOnly?: true): Effect => ({
+      id,
+      name: id,
+      icon: 'condition',
+      modifier: null,
+      duration: { type: 'manual' },
+      bundle,
+      ...(gmOnly ? { gmOnly } : {}),
+    })
+    const board = playerBoard(
+      encounter({ combatants: [monster({ effects: [part('visible'), part('secret', true)] })] }),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.rows[0].effects).toEqual([])
+    expect(JSON.stringify(board)).not.toContain('The curse')
+  })
+
+  it('still shares a bundle whose parts are all visible, whatever their order', () => {
+    const bundle = { id: 'b3', name: 'Haste' }
+    const part = (id: string): Effect => ({
+      id,
+      name: id,
+      icon: 'buff',
+      modifier: null,
+      duration: { type: 'manual' },
+      bundle,
+    })
+    const board = playerBoard(
+      encounter({ combatants: [monster({ effects: [part('a'), part('b'), part('c')] })] }),
+      DEFAULT_PLAYER_VIEW,
+    )
+    expect(board.rows[0].effects).toEqual([{ id: 'b3', label: 'Haste', icon: 'buff' }])
+  })
 })
 
 describe('playerBoard — which side a combatant is on', () => {

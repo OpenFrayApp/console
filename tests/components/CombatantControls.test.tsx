@@ -472,6 +472,56 @@ describe('CombatantControls', () => {
       expect(updates[0].update(before).effects.map((e: Effect) => e.name)).toEqual(['Prone'])
     })
 
+    // A bundle reaches the shared board as one label, so a per-part Hide could never
+    // hide anything — it read as a working control that did nothing.
+    it('offers no per-part Hide inside a bundle, but keeps per-part Clear', () => {
+      const bundle = { id: 'b1', name: 'Drunk' }
+      const bundled: MonsterCombatant = {
+        ...monster(),
+        effects: [
+          { ...condition('Poisoned'), bundle },
+          { ...reminder('Hangover', 'Rough morning'), bundle },
+        ],
+      }
+      render(
+        <CombatantControls
+          combatant={bundled}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      // One Hide, on the bundle header — not one per part.
+      expect(screen.getAllByRole('button', { name: 'Hide' })).toHaveLength(1)
+      // Both parts keep their own Clear, alongside the header's Clear all.
+      expect(screen.getAllByRole('button', { name: 'Clear' })).toHaveLength(2)
+      expect(screen.getByRole('button', { name: 'Clear all' })).not.toBeNull()
+    })
+
+    it('hides every part of a bundle at once from the header', () => {
+      const dispatch = vi.fn()
+      const bundle = { id: 'b1', name: 'Drunk' }
+      const before: MonsterCombatant = {
+        ...monster(),
+        effects: [
+          { ...condition('Poisoned'), bundle },
+          { ...reminder('Hangover', 'Rough morning'), bundle },
+        ],
+      }
+      render(
+        <CombatantControls
+          combatant={before}
+          round={1}
+          dispatch={dispatch}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Hide' }))
+      expect(effectsAfter(dispatch, before).every((e: Effect) => e.gmOnly)).toBe(true)
+    })
+
     it('hides an effect from the player view and shows it again from its row', () => {
       const dispatch = vi.fn()
       const before: MonsterCombatant = { ...monster(), effects: [condition('Prone')] }
