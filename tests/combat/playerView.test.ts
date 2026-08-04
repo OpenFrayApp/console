@@ -92,6 +92,7 @@ function roll(over: Partial<RollResult> = {}): RollResult {
     kind: 'check',
     dice: [{ sides: 20, results: [15], kept: [15], sign: 1, total: 15 }],
     modifier: 0,
+    modifiers: [],
     total: 15,
     crit: false,
     fumble: false,

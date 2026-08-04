@@ -115,6 +115,47 @@ describe('GameLog feed', () => {
     expect(screen.getByText(/Reckless Attack/)).toBeInTheDocument()
     expect(screen.queryByText(/Reckless Attack: advantage/)).toBeNull()
   })
+
+  it('reads each flat modifier out, so a penalty never hides inside a sum', () => {
+    // The creature's own +1, and Exhaustion's −6 folded in by the effect layer.
+    const result = roll('1d20+1', { kind: 'check', bonuses: [-6], rand: faceSeq(17) })
+    render(
+      <GameLog
+        entries={[
+          {
+            id: 'r3',
+            round: 1,
+            category: 'roll',
+            message: 'Dominik Turretso: STR check',
+            result,
+            applied: [{ source: 'Exhaustion 3', effect: '-6' }],
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText(/1d20 \[17\] \+1 -6/)).toBeInTheDocument()
+    expect(screen.getByText('12')).toBeInTheDocument()
+  })
+
+  it('names a flat modifier’s cause only — the breakdown already prints the number', () => {
+    const result = roll('1d20+1', { kind: 'check', bonuses: [-6], rand: faceSeq(17) })
+    render(
+      <GameLog
+        entries={[
+          {
+            id: 'r4',
+            round: 1,
+            category: 'roll',
+            message: 'STR check',
+            result,
+            applied: [{ source: 'Exhaustion 3', effect: '-6' }],
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText(/· Exhaustion 3$/)).toBeInTheDocument()
+    expect(screen.queryByText(/Exhaustion 3: -6/)).toBeNull()
+  })
 })
 
 describe('GameLogModal', () => {

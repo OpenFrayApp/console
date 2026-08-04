@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react'
 import type { GameLogCategory, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
-import { describeApplied, type AppliedEffect } from '../combat/effectroll.ts'
+import type { AppliedEffect } from '../combat/effectroll.ts'
 import { Modal } from './Modal.tsx'
 
 /** What a roll carries beyond its dice — all optional, all known only at the call site. */
@@ -80,16 +80,14 @@ const CATEGORY_ORDER: GameLogCategory[] = [
 ]
 
 /**
- * How an applied effect reads in the log, where `describeRoll` already prints the
- * advantage/disadvantage state. So an adv/disadv effect only needs to name its
- * *cause* (e.g. "Reckless Attack"); a generic "Advantage"/"Disadvantage" chip adds
- * nothing over the state and is dropped. Flat bonuses (Bless) keep their detail.
+ * How an applied effect reads in the log. `describeRoll` already prints what every
+ * effect did — the advantage state, and each flat modifier on its own — so the line
+ * beside it names the *cause* and nothing else: "Exhaustion 3", not "Exhaustion 3:
+ * -6" over a breakdown that already reads `+1 -6`. An effect named after its own mode
+ * ("Disadvantage: disadvantage") would say nothing at all, so it is dropped.
  */
 function describeAppliedForLog(a: AppliedEffect): string | null {
-  if (a.effect === 'advantage' || a.effect === 'disadvantage') {
-    return a.source.toLowerCase() === a.effect.toLowerCase() ? null : a.source
-  }
-  return describeApplied(a)
+  return a.source.toLowerCase() === a.effect.toLowerCase() ? null : a.source
 }
 
 /**
@@ -116,10 +114,13 @@ function describeRoll(result: RollResult): string {
   // this a roll with no dice and no modifier, and a string built by appending would
   // come back leading with its own separator.
   const arithmetic = dice.join(' + ')
-  const withModifier =
-    arithmetic && result.modifier
-      ? `${arithmetic} ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
-      : arithmetic
+  // Each flat modifier on its own — a creature's own +1 alongside an effect's −6 reads
+  // as "+1 -6", where the sum alone would say -5 and hide where it came from.
+  const flats = (result.modifiers ?? (result.modifier ? [result.modifier] : []))
+    .filter((m) => m !== 0)
+    .map((m) => (m >= 0 ? `+${m}` : `${m}`))
+    .join(' ')
+  const withModifier = arithmetic && flats ? `${arithmetic} ${flats}` : arithmetic
   const segments = [withModifier]
   if (result.advantageState !== 'normal') segments.push(result.advantageState)
   if (result.crit) segments.push('CRIT')

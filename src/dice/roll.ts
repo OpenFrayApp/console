@@ -46,6 +46,12 @@ export interface RollResult {
   dice: DieGroup[]
   /** Sum of flat numeric modifiers (dice are not counted here). */
   modifier: number
+  /**
+   * Each flat modifier on its own, in the order it was added — the creature's own
+   * bonus first, then whatever the effects contributed. The breakdown reads them out
+   * rather than the sum, so `+1 -6` says where a −5 came from.
+   */
+  modifiers: number[]
   total: number
   /** Natural 20 on a single d20. */
   crit: boolean
@@ -177,12 +183,14 @@ export function roll(formula: string, ctx: RollContext = {}): RollResult {
   }
 
   const dice: DieGroup[] = []
+  const modifiers: number[] = []
   let modifier = 0
   let total = 0
   let advantageState: AdvantageState = 'normal'
 
   for (const term of terms) {
     if (term.kind === 'flat') {
+      modifiers.push(term.value)
       modifier += term.value
       total += term.value
       continue
@@ -201,6 +209,7 @@ export function roll(formula: string, ctx: RollContext = {}): RollResult {
     kind: ctx.kind ?? 'raw',
     dice,
     modifier,
+    modifiers,
     total,
     crit,
     fumble,
