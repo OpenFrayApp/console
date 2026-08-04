@@ -40,7 +40,8 @@ jobs:
       # is not available in a step-level `if`.
       BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
     steps:
-      - uses: actions/checkout@v4
+      # v5 runs on Node 24; v4 targets the deprecated Node 20 and warns every run.
+      - uses: actions/checkout@v5
 
       - name: Install a pg_dump new enough for the server
         # pg_dump refuses a server newer than itself, and the runner's bundled client
