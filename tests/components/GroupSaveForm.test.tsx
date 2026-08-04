@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { GroupSaveForm } from '../../src/components/GroupSaveForm.tsx'
+import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
 
 /** A minimal goblin template (dex +2, con +0) for monster fixtures. */
 function creature(over: Partial<Creature> = {}): Creature {
@@ -266,6 +267,33 @@ describe('GroupSaveForm', () => {
     expect(after.effects).toHaveLength(1)
     expect(after.effects[0].name).toBe('Prone')
     expect(after.effects[0].duration).toEqual({ type: 'manual' })
+  })
+
+  it('raises the failed targets’ Exhaustion by one, each from its own level', () => {
+    const dispatch = vi.fn()
+    render(
+      <GroupSaveForm
+        combatants={[
+          monster('a', 'Goblin A'),
+          monster('b', 'Goblin B', {
+            effects: exhaustionEffects(2, '5.5'),
+          }),
+        ]}
+        dispatch={dispatch}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Save DC'), { target: { value: '30' } })
+    fireEvent.click(screen.getByLabelText('Select Goblin A'))
+    fireEvent.click(screen.getByLabelText('Select Goblin B'))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: '+1 Exhaustion' }))
+
+    // Each starts from what it already carries, not from a shared number.
+    expect(actionsOf(dispatch, 'setExhaustion')).toEqual([
+      { type: 'setExhaustion', id: 'a', level: 1, edition: '5.5' },
+      { type: 'setExhaustion', id: 'b', level: 3, edition: '5.5' },
+    ])
   })
 
   it('queues a concentration check for a damaged, surviving concentrator', () => {

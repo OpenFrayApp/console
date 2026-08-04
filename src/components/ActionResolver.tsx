@@ -10,7 +10,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction, NewLogEntry } from '../state/encounter.ts'
 import type { CritRule, DieGroup, RollResult } from '../dice/roll.ts'
 import { d20Group, keptFlags, roll } from '../dice/roll.ts'
-import { useCampaignRules } from '../state/campaignRules.ts'
+import { useCampaignEdition, useCampaignRules } from '../state/campaignRules.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { meleeHitAutoCrits } from '../combat/conditionrules.ts'
 import {
@@ -31,6 +31,7 @@ import {
 } from '../combat/masssave.ts'
 import { DAMAGE_TYPES } from './customMonster.ts'
 import { condition } from '../combat/effects.ts'
+import { EXHAUSTION_MAX, exhaustionLevel } from '../combat/exhaustion.ts'
 import { delayedDamageEffect, spellEffectFor } from '../combat/spellEffects.ts'
 import {
   applyConcentrationResult,
@@ -323,12 +324,20 @@ function toDuration(choice: DurationChoice): EffectDuration {
  * Apply a condition to the targets the action affected (one tap), with a chosen
  * duration. "Until {source}'s turn" (e.g. the Assassin's Poisoned-until-its-next-
  * turn) is offered when there's a source to key it to.
+ *
+ * Exhaustion sits apart from the chips because it is a level rather than a state: a
+ * great many creatures cost a failed save one level, from the Troll's missing limbs
+ * to a salt devil's scimitar, and the chip raises whatever the target already carries
+ * by one. It takes no duration — a level lasts until the Game Master lowers it.
  */
 export function ConditionChips({
   onApply,
+  onExhaustion,
   sourceName,
 }: {
   onApply: (name: ConditionName, duration: EffectDuration) => void
+  /** Raise the affected targets' Exhaustion by one. Absent where there is none to raise. */
+  onExhaustion?: () => void
   sourceName?: string
 }) {
   const [choice, setChoice] = useState<DurationChoice>('manual')
@@ -355,6 +364,11 @@ export function ConditionChips({
             {c}
           </Chip>
         ))}
+        {onExhaustion && (
+          <Chip onClick={onExhaustion} title="Raises the level it already has; no duration">
+            +1 Exhaustion
+          </Chip>
+        )}
       </div>
     </div>
   )
@@ -383,6 +397,7 @@ function AttackResolver({
   onClose,
 }: ResolverProps) {
   const { crit: critRule } = useCampaignRules()
+  const edition = useCampaignEdition()
   const targets = attacker
     ? targetsFor(attacker, combatants)
     : combatants.filter((c) => c.status !== 'dead')
@@ -524,6 +539,15 @@ function AttackResolver({
       }),
     })
     setNote(`${name} → ${nameOf(attack.target)}`)
+  }
+
+  /** Raise the target's Exhaustion by one — the rider a great many attacks carry. */
+  const applyExhaustion = () => {
+    if (!attack) return
+    flush()
+    const level = exhaustionLevel(attack.target.effects) + 1
+    dispatch({ type: 'setExhaustion', id: attack.target.combatantId, level, edition })
+    setNote(`Exhaustion ${Math.min(level, EXHAUSTION_MAX)} → ${nameOf(attack.target)}`)
   }
 
   if (conc && attack) {
@@ -704,6 +728,7 @@ function AttackResolver({
         <>
           <ConditionChips
             onApply={applyCondition}
+            onExhaustion={applyExhaustion}
             sourceName={attacker ? nameOf(attacker) : undefined}
           />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
@@ -748,6 +773,7 @@ export function SaveResolver({
   onResolved?: (anyFailed: boolean) => void
   onClose: () => void
 }) {
+  const edition = useCampaignEdition()
   const save = action?.save ?? null
   // An action with damage but no save deals automatic area damage — no save roll.
   const noSave = !!action && !save && (action.damage?.length ?? 0) > 0
@@ -989,6 +1015,22 @@ export function SaveResolver({
       })
     }
     setNote(`${name} → ${affected.map(nameOf).join(', ')}`)
+  }
+
+  /** Raise every affected target's Exhaustion by one — each from its own level. */
+  const applyExhaustion = () => {
+    const affected = affectedTargets()
+    if (affected.length === 0) return
+    flush()
+    for (const c of affected) {
+      dispatch({
+        type: 'setExhaustion',
+        id: c.combatantId,
+        level: exhaustionLevel(c.effects) + 1,
+        edition,
+      })
+    }
+    setNote(`+1 Exhaustion → ${affected.map(nameOf).join(', ')}`)
   }
 
   // A save spell with a modelled non-condition effect (Bane's −1d4, Faerie Fire's
@@ -1268,6 +1310,7 @@ export function SaveResolver({
 
           <ConditionChips
             onApply={applyCondition}
+            onExhaustion={applyExhaustion}
             sourceName={attacker ? nameOf(attacker) : undefined}
           />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}

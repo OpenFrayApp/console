@@ -95,7 +95,11 @@ export const NOT_MODELLED: Record<string, SkipReason> = {
     "prosector's purgation",
   ]),
 
-  // HP and condition removal are fields the GM edits, not effects to badge.
+  // HP and condition removal are fields the GM edits, not effects to badge. Greater
+  // Restoration is the one that also reaches Exhaustion, which the board does hold as a
+  // level now — but the spell offers a menu (a condition, a charm, an ability score, an
+  // HP-maximum reduction, or the level) and only the Game Master knows which was chosen,
+  // so it stays a card to read with the level's own −1 a click away.
   ...skip('HEALING', [
     'create food and water',
     'cure wounds',

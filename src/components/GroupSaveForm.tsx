@@ -9,6 +9,8 @@ import type { ConditionName, EffectDuration } from '../schema/effect.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { d20Group, type DieGroup } from '../dice/roll.ts'
 import { condition } from '../combat/effects.ts'
+import { exhaustionLevel } from '../combat/exhaustion.ts'
+import { useCampaignEdition } from '../state/campaignRules.ts'
 import { nameOf } from '../combat/combatant.ts'
 import { parseNonNegativeInt as num } from '../lib/form.ts'
 import {
@@ -177,18 +179,33 @@ export function GroupSaveForm({
   }
 
   const resolved = Object.keys(rows).length > 0
+  const edition = useCampaignEdition()
   const selectedCombatants = combatants.filter((c) => selected.has(c.combatantId))
 
   // Conditions land on those who failed (or all selected pre-roll), like a save action.
-  const applyCondition = (name: ConditionName, duration: EffectDuration) => {
-    const affected = resolved
+  const affectedTargets = () =>
+    resolved
       ? selectedCombatants.filter((c) => rows[c.combatantId]?.result === 'fail')
       : selectedCombatants
-    for (const c of affected) {
+
+  const applyCondition = (name: ConditionName, duration: EffectDuration) => {
+    for (const c of affectedTargets()) {
       dispatch({
         type: 'update',
         id: c.combatantId,
         update: (cc) => ({ ...cc, effects: [...cc.effects, condition(name, { duration })] }),
+      })
+    }
+  }
+
+  /** Raise every affected target's Exhaustion by one — each from its own level. */
+  const applyExhaustion = () => {
+    for (const c of affectedTargets()) {
+      dispatch({
+        type: 'setExhaustion',
+        id: c.combatantId,
+        level: exhaustionLevel(c.effects) + 1,
+        edition,
       })
     }
   }
@@ -327,7 +344,7 @@ export function GroupSaveForm({
         </div>
       )}
 
-      {resolved && <ConditionChips onApply={applyCondition} />}
+      {resolved && <ConditionChips onApply={applyCondition} onExhaustion={applyExhaustion} />}
     </div>
   )
 }

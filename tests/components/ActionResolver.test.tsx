@@ -9,6 +9,7 @@ import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Action } from '../../src/schema/action.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import { ActionResolver } from '../../src/components/ActionResolver.tsx'
+import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
 
 function creature(over: Partial<Creature> = {}): Creature {
   return {
@@ -109,6 +110,29 @@ describe('ActionResolver — attacks', () => {
     expect(entry.result.kind).toBe('attack')
     expect(entry.applied).toEqual([{ source: 'Unconscious', effect: 'advantage' }])
     expect(['hit', 'crit', 'miss']).toContain(entry.outcome)
+  })
+
+  // A great many creatures cost a failed save one level, from the Troll's missing
+  // limbs to a salt devil's scimitar. None of that is data on the action — the
+  // stat-block text is display-only — so the chip serves all of them.
+  it('raises the target’s Exhaustion by one from the condition chips', () => {
+    const dispatch = vi.fn()
+    const ogre = monster({ combatantId: 't', label: 'Ogre', effects: exhaustionEffects(1, '5.5') })
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), ogre]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Roll attack'))
+    fireEvent.click(screen.getByRole('button', { name: '+1 Exhaustion' }))
+    expect(dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'setExhaustion')).toEqual([
+      { type: 'setExhaustion', id: 't', level: 2, edition: '5.5' },
+    ])
   })
 
   // A Game Master fishing for a hit used to leave every attempt in the log, and the
