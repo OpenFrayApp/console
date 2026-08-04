@@ -74,10 +74,13 @@ cutoff_date() {
     date -u -v-"${KEEP_DAYS}"d +%Y-%m-%d
 }
 
-# Refuse a dump that is empty, corrupt, or missing a table the app writes. Without
-# this the job would happily upload zero bytes every night and look healthy.
+# Refuse a dump that is empty, corrupt, missing a table the app writes, or carrying no
+# data at all. Without this the job would happily upload zero bytes every night and look
+# healthy. The row counts are printed rather than asserted, because a table can be
+# legitimately empty — but *every* table empty is a schema-only dump, which is the shape
+# a lost permission or a stray --schema-only takes, and that is fatal.
 verify() {
-  local body size missing=()
+  local body size counts total missing=()
   gzip -t "$DUMP" || die "dump is not a valid gzip stream"
   body=$(gzip -dc "$DUMP")
   size=${#body}
@@ -87,7 +90,21 @@ verify() {
   done
   grep -q '"auth"."users"' <<<"$body" || missing+=("auth.users")
   [[ ${#missing[@]} -eq 0 ]] || die "dump is missing: ${missing[*]}"
-  echo "backup: verified $size bytes, ${#TABLES[@]} tables + auth.users, $(wc -c <"$DUMP" | tr -d ' ') compressed"
+
+  # One line per COPY block: the qualified table name and how many rows it carried.
+  counts=$(awk '
+    /^COPY /                  { t = $2; n = 0; inblk = 1; next }
+    inblk && $0 == "\\."      { printf "%s %d\n", t, n; inblk = 0; next }
+    inblk                     { n++ }
+  ' <<<"$body")
+
+  echo "backup: $size bytes uncompressed, $(wc -c <"$DUMP" | tr -d ' ') compressed"
+  awk '$1 ~ /"public"|"auth"\."(users|identities)"/ { printf "backup:   %-32s %s rows\n", $1, $2 }' \
+    <<<"$counts"
+
+  total=$(awk '$1 ~ /"public"/ { s += $2 } END { print s + 0 }' <<<"$counts")
+  [[ "$total" -gt 0 ]] || die "every table is empty — this is a schema-only dump, not a backup"
+  echo "backup: verified — $total rows across ${#TABLES[@]} tables"
 }
 
 # Delete dailies older than the cutoff. Done here rather than by a bucket lifecycle
