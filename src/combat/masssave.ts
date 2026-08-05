@@ -4,7 +4,7 @@
 import type { Combatant } from '../schema/combatant.ts'
 import { abilityMod, type Ability, type DamageType } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
-import type { RandomSource } from '@openfray/dice'
+import type { RandomSource } from 'opendice'
 import type { RollResult } from '../dice/roll.ts'
 import { rollWithEffects, type AppliedEffect } from './effectroll.ts'
 import { damageAfterDefense } from './damage.ts'

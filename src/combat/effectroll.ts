@@ -4,7 +4,7 @@
 import type { Combatant } from '../schema/combatant.ts'
 import type { Ability } from '../schema/primitives.ts'
 import type { ConditionName, Effect, EffectApplies, EffectModifier } from '../schema/effect.ts'
-import type { AdvantageState, RandomSource } from '@openfray/dice'
+import type { AdvantageState, RandomSource } from 'opendice'
 import { roll, type CritRule, type RollKind, type RollResult } from '../dice/roll.ts'
 import { conditionAttackAdvantage, type AttackRange } from './conditionrules.ts'
 

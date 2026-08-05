@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { CombatantStatus, MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
-import type { RandomSource } from '@openfray/dice'
+import type { RandomSource } from 'opendice'
 import {
   advantageAgainst,
   condition,

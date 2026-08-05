@@ -2,7 +2,7 @@
 // Copyright (C) 2026 OpenFray contributors
 
 import type { Combatant, Concentration } from '../schema/combatant.ts'
-import type { RandomSource } from '@openfray/dice'
+import type { RandomSource } from 'opendice'
 import type { RollResult } from '../dice/roll.ts'
 import { rollSave } from './masssave.ts'
 import type { AppliedEffect } from './effectroll.ts'

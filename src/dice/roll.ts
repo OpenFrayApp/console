@@ -10,15 +10,15 @@ import {
   type RandomSource,
   type RollResult as DiceRollResult,
   type AdvantageState,
-} from '@openfray/dice'
+} from 'opendice'
 import { DAMAGE_TYPES, type DamageType } from '../schema/primitives.ts'
 
-export { keptFlags } from '@openfray/dice'
-export type { DieGroup, RandomSource } from '@openfray/dice'
+export { keptFlags } from 'opendice'
+export type { DieGroup, RandomSource } from 'opendice'
 
 /**
  * The one dice chokepoint. Presets, the manual box, monster attacks, and mass saves all
- * route through this. `@openfray/dice` owns the randomness and the grammar; what lives
+ * route through this. `opendice` owns the randomness and the grammar; what lives
  * here is the 5e sitting on top of them — what kind of roll it is, how a crit inflates
  * damage, and which damage type the total counts as. Effect-awareness layers on top via
  * effectroll.ts, which resolves the net advantage/bonuses and passes them in here.

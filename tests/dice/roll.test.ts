@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { d20Group, keptFlags, roll } from '../../src/dice/roll.ts'
-import type { RandomSource } from '@openfray/dice'
+import type { RandomSource } from 'opendice'
 
 /** Deterministic source: yields the given die faces in order (face f -> f-1 raw). */
 function faceSeq(...faces: number[]): RandomSource {

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { PlayerCharacter } from '../../src/schema/combatant.ts'
-import type { RandomSource } from '@openfray/dice'
+import type { RandomSource } from 'opendice'
 import {
   isStable,
   markDeathSaveFailure,

@@ -3,7 +3,7 @@
 
 import type { Creature } from '../schema/creature.ts'
 import type { HpMethod } from '../schema/campaign.ts'
-import { parseFormula } from '@openfray/dice'
+import { parseFormula } from 'opendice'
 import { roll } from '../dice/roll.ts'
 
 /**

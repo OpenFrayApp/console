@@ -3,7 +3,7 @@
 
 import type { Action } from '../schema/action.ts'
 import type { Creature } from '../schema/creature.ts'
-import type { RandomSource } from '@openfray/dice'
+import type { RandomSource } from 'opendice'
 import { roll, type RollResult } from '../dice/roll.ts'
 
 /**
