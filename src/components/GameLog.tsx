@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react'
 import type { GameLogCategory, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
+import { describeDamageWorking, describeRoll } from '../dice/describe.ts'
 import type { AppliedEffect } from '../combat/effectroll.ts'
 import { Modal } from './Modal.tsx'
 
@@ -90,44 +91,6 @@ function describeAppliedForLog(a: AppliedEffect): string | null {
   return a.source.toLowerCase() === a.effect.toLowerCase() ? null : a.source
 }
 
-/**
- * A one-line breakdown of a roll. Each die group reads `NdM [v, v, …]`; when dice
- * are dropped (advantage / keep-highest) the kept ones follow as `→ k`.
- */
-function describeRoll(result: RollResult): string {
-  const dice = result.dice.map((g) => {
-    const head = `${g.sign < 0 ? '−' : ''}${g.results.length}d${g.sides}`
-    const rolls = `[${g.results.join(', ')}]`
-    const base =
-      g.results.length === g.kept.length
-        ? `${head} ${rolls}`
-        : `${head} ${rolls} → ${g.kept.join(', ')}`
-    // A crit rule (maximised normal dice, or a doubled total) adds to this group
-    // beyond the kept dice — surface it so the breakdown reconciles with the total.
-    const keptSum = g.sign * g.kept.reduce((a, b) => a + b, 0)
-    const critBonus = g.total - keptSum
-    return critBonus === 0
-      ? base
-      : `${base} ${critBonus >= 0 ? '+' : '−'}${Math.abs(critBonus)} crit`
-  })
-  // Built as segments rather than appended to a string: the shared player view hands
-  // this a roll with no dice and no modifier, and a string built by appending would
-  // come back leading with its own separator.
-  const arithmetic = dice.join(' + ')
-  // Each flat modifier on its own — a creature's own +1 alongside an effect's −6 reads
-  // as "+1 -6", where the sum alone would say -5 and hide where it came from.
-  const flats = (result.modifiers ?? (result.modifier ? [result.modifier] : []))
-    .filter((m) => m !== 0)
-    .map((m) => (m >= 0 ? `+${m}` : `${m}`))
-    .join(' ')
-  const withModifier = arithmetic && flats ? `${arithmetic} ${flats}` : arithmetic
-  const segments = [withModifier]
-  if (result.advantageState !== 'normal') segments.push(result.advantageState)
-  if (result.crit) segments.push('CRIT')
-  if (result.fumble) segments.push('FUMBLE')
-  return segments.filter(Boolean).join(' · ')
-}
-
 /** "18 piercing + 7 fire = 25" (the "= total" is dropped for a single type). */
 function describeDamage(damage: { type: string; amount: number }[]): string {
   const parts = damage.filter((d) => d.amount > 0)
@@ -176,6 +139,25 @@ function Outcome({ entry }: { entry: GameLogEntry }) {
   )
 }
 
+/**
+ * The dice behind the damage, one line per type, under the totals — the same working
+ * the to-hit line shows. Nothing renders on the shared player view, which strips a
+ * roll's arithmetic before the table sees it: a damage breakdown states the creature's
+ * bonus outright, where the total on its own is just what the blow came to.
+ */
+function DamageWorking({ entry }: { entry: GameLogEntry }) {
+  if (entry.outcome === 'miss') return null
+  const lines = describeDamageWorking(entry.damage ?? [])
+  if (lines.length === 0) return null
+  return (
+    <div className="pl-3 text-xs text-slate-500 dark:text-slate-400">
+      {lines.map((line, i) => (
+        <div key={i}>{line}</div>
+      ))}
+    </div>
+  )
+}
+
 /** One log entry: a roll with total, breakdown, and outcome, or a plain message line. */
 function LogLine({ entry }: { entry: GameLogEntry }) {
   return (
@@ -214,6 +196,7 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
             )
           })()}
           <Outcome entry={entry} />
+          <DamageWorking entry={entry} />
         </>
       ) : (
         <>
@@ -223,6 +206,7 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
           </span>
           {/* A roll whose dice were withheld still says how it went. */}
           <Outcome entry={entry} />
+          <DamageWorking entry={entry} />
         </>
       )}
     </li>

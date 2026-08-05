@@ -271,9 +271,12 @@ export function playerBoard(
         // Every roll loses its arithmetic, whoever made it — an area's damage dice
         // aren't owned by any one combatant, and the total is the part that matters.
         // The effects that swung it go with it, since naming Bless names the bonus.
+        // The damage's own dice go the same way as the roll's. "18 bludgeoning" is what
+        // the blow came to; "2d8 [5, 3] +5" is the creature's damage bonus, stated.
         const shown: GameLogEntry = {
           ...e,
           result: e.result && rollWithoutArithmetic(e.result),
+          damage: e.damage?.map((d) => ({ type: d.type, amount: d.amount })),
           applied: undefined,
         }
         // A creature's own d20, hidden: the total goes, and what happened stays — hit

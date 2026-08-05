@@ -633,6 +633,22 @@ describe('playerBoard — a creature`s numbers in the log', () => {
     expect(row.result?.modifier).toBe(0)
   })
 
+  // The Game Master's log shows the dice behind the damage; those dice state the
+  // creature's damage bonus, which is the whole of what the table isn't given.
+  it('drops the damage dice too, keeping what the blow came to', () => {
+    const attack = entry({
+      category: 'roll',
+      message: 'Ogre: Greatclub → Thalia',
+      sourceId: 'm',
+      result: roll({ total: 23, modifier: 6 }),
+      outcome: 'hit',
+      damage: [{ type: 'bludgeoning', amount: 13, result: roll({ total: 13, modifier: 4 }) }],
+    })
+    const row = playerBoard(withLog(attack), DEFAULT_PLAYER_VIEW).log[0]
+    expect(row.damage).toEqual([{ type: 'bludgeoning', amount: 13 }])
+    expect(row.damage?.[0].result).toBeUndefined()
+  })
+
   it('keeps whether a creature crit or had advantage — the table saw that happen', () => {
     const attack = entry({
       category: 'roll',

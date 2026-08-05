@@ -51,7 +51,12 @@ export interface GameLogEntry {
    * "Bite → Ogre · 27 hit · 18 piercing + 7 fire" as a single line.
    */
   outcome?: 'hit' | 'crit' | 'miss'
-  damage?: { type: string; amount: number }[]
+  /**
+   * `result` is the dice behind this component, so the log can show the working the
+   * way the to-hit line does. Absent when there was nothing to roll. `amount` is what
+   * the target actually takes, so the two differ when a resistance halved it.
+   */
+  damage?: { type: string; amount: number; result?: RollResult }[]
   /** For a saving throw: whether it succeeded. */
   saved?: boolean
   /**

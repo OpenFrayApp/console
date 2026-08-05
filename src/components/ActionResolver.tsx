@@ -10,6 +10,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction, NewLogEntry } from '../state/encounter.ts'
 import type { CritRule, DieGroup, RollResult } from '../dice/roll.ts'
 import { d20Group, keptFlags, roll } from '../dice/roll.ts'
+import { describeRoll } from '../dice/describe.ts'
 import { useCampaignEdition, useCampaignRules } from '../state/campaignRules.ts'
 import { describeApplied, rollWithEffects, type AppliedEffect } from '../combat/effectroll.ts'
 import { meleeHitAutoCrits } from '../combat/conditionrules.ts'
@@ -98,10 +99,15 @@ function damageEntries(
 function damageAgainst(
   target: Combatant,
   components: RolledDamage[],
-): { type: DamageType; amount: number; label: string | null }[] {
+): { type: DamageType; amount: number; label: string | null; result: RollResult }[] {
   return components.map((c) => {
     const rel = damageRelation(target, c.type)
-    return { type: c.type, amount: adjustForDefense(c.amount, rel), label: relationLabel(rel) }
+    return {
+      type: c.type,
+      amount: adjustForDefense(c.amount, rel),
+      label: relationLabel(rel),
+      result: c.result,
+    }
   })
 }
 
@@ -248,16 +254,22 @@ function DamagePill({
   type,
   amount,
   label,
+  result,
 }: {
   type: DamageType
   amount: number
   label?: string | null
+  result?: RollResult
 }) {
   const tone =
     DAMAGE_TONE[type] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
+  // The dice that made it, in the pill's own faint tone: damage that arrives as a bare
+  // total is the one number in a fight nobody can check.
+  const working = result ? describeRoll(result) : ''
   return (
     <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>
       {amount} {type}
+      {working ? <span className="opacity-70"> · {working}</span> : null}
       {label ? <span className="opacity-70"> · {label}</span> : null}
     </span>
   )
@@ -412,7 +424,7 @@ function AttackResolver({
     applied: AppliedEffect[]
     target: Combatant
     d20: DieGroup | undefined
-    damage: { type: DamageType; amount: number; label: string | null }[]
+    damage: { type: DamageType; amount: number; label: string | null; result: RollResult }[]
     /** Effective crit — a natural 20, or a melee hit on a Paralyzed/Unconscious target. */
     crit: boolean
     /** True when the crit came from the helpless-target rule, not a natural 20. */
@@ -488,7 +500,9 @@ function AttackResolver({
       applied,
       sourceId: attacker?.combatantId,
       outcome: crit ? 'crit' : hits ? 'hit' : 'miss',
-      damage: hits ? dmg.map((d) => ({ type: d.type, amount: d.amount })) : undefined,
+      damage: hits
+        ? dmg.map((d) => ({ type: d.type, amount: d.amount, result: d.result }))
+        : undefined,
     })
     onUse?.()
   }
@@ -693,7 +707,13 @@ function AttackResolver({
         <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
           <div className="mb-2 flex flex-wrap gap-1.5">
             {attack.damage.map((d, i) => (
-              <DamagePill key={i} type={d.type} amount={d.amount} label={d.label} />
+              <DamagePill
+                key={i}
+                type={d.type}
+                amount={d.amount}
+                label={d.label}
+                result={d.result}
+              />
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -850,9 +870,9 @@ export function SaveResolver({
   // What was rolled, by type, before any target's defenses — the same pills the attack
   // modal shows. Each row's own number carries its defenses; this is the shared roll
   // those numbers came from.
-  const rolled: { type: DamageType; amount: number }[] =
+  const rolled: { type: DamageType; amount: number; result?: RollResult }[] =
     area.length > 0
-      ? area.map((c) => ({ type: c.type, amount: c.amount }))
+      ? area.map((c) => ({ type: c.type, amount: c.amount, result: c.result }))
       : damageType && genericBase > 0
         ? [{ type: damageType, amount: genericBase }]
         : []
@@ -1201,7 +1221,7 @@ export function SaveResolver({
           {rolled.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {rolled.map((d, i) => (
-                <DamagePill key={i} type={d.type} amount={d.amount} />
+                <DamagePill key={i} type={d.type} amount={d.amount} result={d.result} />
               ))}
             </div>
           )}

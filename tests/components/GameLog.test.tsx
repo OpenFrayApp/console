@@ -68,6 +68,76 @@ describe('GameLog feed', () => {
     expect(screen.getByText(/18 piercing \+ 7 fire = 25/)).toBeInTheDocument()
   })
 
+  it('shows the dice behind the damage, not just its total', () => {
+    render(
+      <GameLog
+        entries={[
+          {
+            id: 'a2',
+            round: 1,
+            category: 'roll',
+            message: 'Ogre: Greatclub → TeeFey',
+            result: roll('1d20+6', { kind: 'attack', rand: faceSeq(18) }),
+            outcome: 'hit',
+            damage: [
+              {
+                type: 'bludgeoning',
+                amount: 13,
+                result: roll('2d8+4', { kind: 'damage', rand: faceSeq(5, 4) }),
+              },
+            ],
+          },
+        ]}
+      />,
+    )
+    // The outcome line above it already reads "Hit · 13 bludgeoning", so the one damage
+    // type isn't named twice.
+    expect(screen.getByText('2d8 [5, 4] +4')).toBeInTheDocument()
+  })
+
+  it('names each damage type when several were rolled', () => {
+    render(
+      <GameLog
+        entries={[
+          {
+            id: 'a4',
+            round: 1,
+            category: 'roll',
+            message: 'Dragon: Bite → TeeFey',
+            result: roll('1d20+10', { kind: 'attack', rand: faceSeq(15) }),
+            outcome: 'hit',
+            damage: [
+              { type: 'piercing', amount: 9, result: roll('2d6', { rand: faceSeq(5, 4) }) },
+              { type: 'fire', amount: 7, result: roll('2d6', { rand: faceSeq(3, 4) }) },
+            ],
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText('9 piercing · 2d6 [5, 4]')).toBeInTheDocument()
+    expect(screen.getByText('7 fire · 2d6 [3, 4]')).toBeInTheDocument()
+  })
+
+  it('leaves the damage line as a total when there were no dice to show', () => {
+    render(
+      <GameLog
+        entries={[
+          {
+            id: 'a3',
+            round: 1,
+            category: 'roll',
+            message: 'Rat: Bite → TeeFey',
+            result: roll('1d20+4', { kind: 'attack', rand: faceSeq(12) }),
+            outcome: 'hit',
+            damage: [{ type: 'piercing', amount: 1 }],
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText(/1 piercing/)).toBeInTheDocument()
+    expect(screen.queryByText(/·\s*d/)).toBeNull()
+  })
+
   it('shows a miss without a damage breakdown', () => {
     const result = roll('1d20+7', { kind: 'attack', rand: faceSeq(2) })
     render(
