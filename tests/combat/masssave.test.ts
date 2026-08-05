@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
-import type { RandomSource } from '../../src/dice/rng.ts'
+import type { RandomSource } from '@openfray/dice'
 import { flatBonus } from '../../src/combat/effects.ts'
 import {
   applySaveDamage,

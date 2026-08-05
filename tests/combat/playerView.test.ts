@@ -90,7 +90,18 @@ function roll(over: Partial<RollResult> = {}): RollResult {
   return {
     formula: '1d20',
     kind: 'check',
-    dice: [{ sides: 20, results: [15], kept: [15], sign: 1, total: 15 }],
+    dice: [
+      {
+        sides: 20,
+        results: [15],
+        kept: [15],
+        sign: 1,
+        multiplier: 1,
+        total: 15,
+        naturalHigh: false,
+        naturalLow: false,
+      },
+    ],
     modifier: 0,
     modifiers: [],
     total: 15,
@@ -657,7 +668,18 @@ describe('playerBoard — a creature`s numbers in the log', () => {
       message: 'Mage: Fireball fire damage',
       result: roll({
         total: 30,
-        dice: [{ sides: 6, results: [6, 6, 1, 4], kept: [6, 6, 1, 4], sign: 1, total: 17 }],
+        dice: [
+          {
+            sides: 6,
+            results: [6, 6, 1, 4],
+            kept: [6, 6, 1, 4],
+            sign: 1,
+            multiplier: 1,
+            total: 17,
+            naturalHigh: false,
+            naturalLow: false,
+          },
+        ],
       }),
     })
     const row = playerBoard(withLog(damage), DEFAULT_PLAYER_VIEW).log[0]

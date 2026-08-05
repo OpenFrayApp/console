@@ -8,7 +8,8 @@ import { AddSpellPicker } from './AddSpellPicker.tsx'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import type { LibrarySort } from '../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
-import { ABILITIES, DAMAGE_TYPES } from './customMonster.ts'
+import { ABILITIES } from './customMonster.ts'
+import { DAMAGE_TYPES } from '../schema/primitives.ts'
 import {
   CASTING_TIMES,
   DURATIONS,

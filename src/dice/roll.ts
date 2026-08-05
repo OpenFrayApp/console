@@ -1,27 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import type { DamageType } from '../schema/primitives.ts'
-import { cryptoRandom, rollDie, type RandomSource } from './rng.ts'
 import {
   parseFormula,
-  type AdvantageState,
+  roll as rollDice,
+  rollDie,
   type DiceTerm,
-  type FlatTerm,
-  type Term,
-} from './formula.ts'
+  type DieGroup,
+  type RandomSource,
+  type RollResult as DiceRollResult,
+  type AdvantageState,
+} from '@openfray/dice'
+import { DAMAGE_TYPES, type DamageType } from '../schema/primitives.ts'
+
+export { keptFlags } from '@openfray/dice'
+export type { DieGroup, RandomSource } from '@openfray/dice'
 
 /**
- * The one dice chokepoint. Presets, the manual box, monster attacks, and mass saves
- * all route through this. Effect-awareness layers on top via effectroll.ts, which
- * resolves the net advantage/bonuses and passes them in here.
+ * The one dice chokepoint. Presets, the manual box, monster attacks, and mass saves all
+ * route through this. `@openfray/dice` owns the randomness and the grammar; what lives
+ * here is the 5e sitting on top of them — what kind of roll it is, how a crit inflates
+ * damage, and which damage type the total counts as. Effect-awareness layers on top via
+ * effectroll.ts, which resolves the net advantage/bonuses and passes them in here.
  */
 
 export type RollKind = 'attack' | 'save' | 'check' | 'damage' | 'raw'
 
 /**
- * How a critical hit inflates damage dice. Only plain damage dice are affected
- * (never attack rolls, never flat modifiers):
+ * How a critical hit inflates damage dice. Only plain damage dice are affected — never
+ * attack rolls, never flat modifiers, and never a group that keeps or explodes, where
+ * "twice as many dice" has no one meaning:
  * - `none`          — not a crit
  * - `double-dice`   — RAW: roll twice as many dice
  * - `double-total`  — roll once, then double the dice total
@@ -29,41 +37,21 @@ export type RollKind = 'attack' | 'save' | 'check' | 'damage' | 'raw'
  */
 export type CritRule = 'none' | 'double-dice' | 'double-total' | 'max-plus-roll'
 
-export interface DieGroup {
-  sides: number
-  sign: 1 | -1
-  /** Every die rolled, including those dropped by adv/dis/keep. */
-  results: number[]
-  /** The dice kept toward the total. */
-  kept: number[]
-  /** This group's signed contribution to the total (after any crit rule). */
-  total: number
-}
-
-export interface RollResult {
-  formula: string
+/**
+ * A roll as the console records it: the dice package's result, plus the three things
+ * only this game knows. `tag` is swapped for `damageType` because the package carries a
+ * label it never interprets, while here it is always one of the 5e damage types.
+ */
+export interface RollResult extends Omit<DiceRollResult, 'tag'> {
   kind: RollKind
-  dice: DieGroup[]
-  /** Sum of flat numeric modifiers (dice are not counted here). */
-  modifier: number
-  /**
-   * Each flat modifier on its own, in the order it was added — the creature's own
-   * bonus first, then whatever the effects contributed. The breakdown reads them out
-   * rather than the sum, so `+1 -6` says where a −5 came from.
-   */
-  modifiers: number[]
-  total: number
-  /** Natural 20 on a single d20. */
+  /** Natural 20 on a single d20, on an attack roll. */
   crit: boolean
-  /** Natural 1 on a single d20. */
+  /** Natural 1 on a single d20, on an attack roll. */
   fumble: boolean
-  advantageState: AdvantageState
   damageType?: DamageType
 }
 
 export interface RollContext {
-  rollerId?: string
-  targetId?: string
   kind?: RollKind
   /** Crit handling for damage dice. `true` is shorthand for RAW `double-dice`. */
   crit?: boolean | CritRule
@@ -75,30 +63,6 @@ export interface RollContext {
   rand?: RandomSource
 }
 
-/** Apply adv/dis to the first plain d20 term (roll two, keep highest/lowest). */
-function applyAdvantage(terms: Term[], advantage: 'advantage' | 'disadvantage'): Term[] {
-  let applied = false
-  return terms.map((t) => {
-    if (applied || t.kind !== 'dice' || t.sides !== 20 || t.keep || t.advantage) {
-      return t
-    }
-    applied = true
-    return {
-      ...t,
-      count: 2,
-      keep: { mode: advantage === 'advantage' ? 'kh' : 'kl', n: 1 },
-      advantage,
-    }
-  })
-}
-
-/** Turn extra bonuses (numbers or formula fragments) into additive terms. */
-function bonusTerms(bonuses: (number | string)[]): Term[] {
-  return bonuses.flatMap((b) =>
-    typeof b === 'number' ? [{ kind: 'flat', value: b } satisfies FlatTerm] : parseFormula(b).terms,
-  )
-}
-
 /** Resolve the crit option to a rule: `true` → RAW double-dice, absent/false → none. */
 function normalizeCrit(crit: boolean | CritRule | undefined): CritRule {
   if (crit === true) return 'double-dice'
@@ -106,51 +70,79 @@ function normalizeCrit(crit: boolean | CritRule | undefined): CritRule {
   return crit
 }
 
-/** Apply a keep rule: the n highest (kh) or lowest (kl) results; no rule keeps them all. */
-function keptDice(results: number[], keep: DiceTerm['keep']): number[] {
-  if (!keep) return results
-  const desc = [...results].sort((a, b) => b - a)
-  const n = Math.min(keep.n, results.length)
-  return keep.mode === 'kh' ? desc.slice(0, n) : desc.slice(results.length - n)
-}
-
-/** Roll one dice term into its DieGroup: all results, the kept subset, the signed total. */
-function rollGroup(term: DiceTerm, critRule: CritRule, rand: RandomSource): DieGroup {
-  // Crit rules only apply to plain damage dice — never attack/keep/adv terms.
-  const rule = term.keep || term.advantage ? 'none' : critRule
-  const count = term.count * (rule === 'double-dice' ? 2 : 1)
-  const results: number[] = []
-  for (let i = 0; i < count; i++) results.push(rollDie(term.sides, rand))
-  const kept = keptDice(results, term.keep)
-  const sum = kept.reduce((a, b) => a + b, 0)
-
-  let contribution: number
-  switch (rule) {
-    case 'double-total':
-      contribution = sum * 2
-      break
-    case 'max-plus-roll':
-      contribution = term.count * term.sides + sum
-      break
-    default: // 'none' and 'double-dice' (the extra dice are already rolled)
-      contribution = sum
-  }
-  return { sides: term.sides, sign: term.sign, results, kept, total: term.sign * contribution }
+/**
+ * The dice terms behind a result's groups, in the same order. `roll()` appends the
+ * bonuses' terms after the formula's own, and emits one group per dice term, so the two
+ * line up by index.
+ */
+function diceTerms(formula: string, bonuses: (number | string)[]): DiceTerm[] {
+  const terms = [
+    ...parseFormula(formula, { tags: DAMAGE_TYPES }).terms,
+    ...bonuses.flatMap((b) => (typeof b === 'string' ? parseFormula(b).terms : [])),
+  ]
+  return terms.filter((t): t is DiceTerm => t.kind === 'dice')
 }
 
 /**
- * Which of a group's dice counted, aligned to `results` so the UI can dim the ones
- * advantage or a keep rule dropped. Matched one for one, so a tie between two equal
- * dice drops exactly one of them.
+ * Whether a crit rule touches this group. Plain damage dice only: a group that dropped
+ * dice was a keep rule or an advantage roll, and an exploding one has no fixed number of
+ * dice to double or maximum to add. `term.keep`/`advantage` catch what the formula said;
+ * the length check catches advantage applied at roll time, which the formula doesn't show.
  */
-export function keptFlags(group: DieGroup): boolean[] {
-  const pool = [...group.kept]
-  return group.results.map((value) => {
-    const i = pool.indexOf(value)
-    if (i === -1) return false
-    pool.splice(i, 1)
-    return true
+function critEligible(term: DiceTerm, group: DieGroup): boolean {
+  return (
+    !term.keep && !term.advantage && !term.explode && group.results.length === group.kept.length
+  )
+}
+
+/**
+ * Apply the crit rule to one group, returning what it now contributes. The extra dice of
+ * `double-dice` are rolled here rather than by re-writing the formula, so the roll log
+ * still reads `4d6 [3, 4, 5, 1]` — one group of eight dice, not two of four.
+ */
+function critGroup(
+  group: DieGroup,
+  term: DiceTerm,
+  rule: CritRule,
+  rand: RandomSource | undefined,
+): DieGroup {
+  const scale = group.sign * group.multiplier
+  switch (rule) {
+    case 'double-dice': {
+      const extra = Array.from({ length: term.count }, () => rollDie(group.sides, rand))
+      const sum = extra.reduce((a, b) => a + b, 0)
+      return {
+        ...group,
+        results: [...group.results, ...extra],
+        kept: [...group.kept, ...extra],
+        total: group.total + scale * sum,
+        // A second helping of dice is no longer one die showing its top face.
+        naturalHigh: false,
+        naturalLow: false,
+      }
+    }
+    case 'double-total':
+      return { ...group, multiplier: group.multiplier * 2, total: group.total * 2 }
+    case 'max-plus-roll':
+      return { ...group, total: group.total + scale * term.count * group.sides }
+    default:
+      return group
+  }
+}
+
+/** Apply the crit rule across a result's groups, leaving the ones it doesn't touch alone. */
+function applyCrit(
+  dice: DieGroup[],
+  terms: DiceTerm[],
+  rule: CritRule,
+  rand: RandomSource | undefined,
+): { dice: DieGroup[]; total: number } {
+  const crit = dice.map((group, i) => {
+    const term = terms[i]
+    return term && critEligible(term, group) ? critGroup(group, term, rule, rand) : group
   })
+  const shift = crit.reduce((sum, g, i) => sum + (g.total - dice[i].total), 0)
+  return { dice: crit, total: shift }
 }
 
 /** The d20 group behind a roll, when there is exactly one — what the UI shows raw. */
@@ -159,61 +151,90 @@ export function d20Group(result: RollResult): DieGroup | undefined {
   return d20s.length === 1 ? d20s[0] : undefined
 }
 
-/** Crit/fumble are only meaningful for a single kept d20. */
+/**
+ * Crit and fumble on an attack: the roll's one d20 showing 20 or 1. `naturalHigh` and
+ * `naturalLow` are already false unless that group kept a single die, which is what makes
+ * a 20 among two rolled dice count only when it's the one advantage kept.
+ */
 function critFumble(dice: DieGroup[]): { crit: boolean; fumble: boolean } {
   const d20s = dice.filter((g) => g.sides === 20)
-  if (d20s.length !== 1 || d20s[0].kept.length !== 1) {
-    return { crit: false, fumble: false }
+  if (d20s.length !== 1) return { crit: false, fumble: false }
+  return { crit: d20s[0].naturalHigh, fumble: d20s[0].naturalLow }
+}
+
+/** A formula's trailing damage type, and the formula with it removed. */
+function splitDamageType(formula: string): { expr: string; damageType?: DamageType } {
+  const source = formula.trim()
+  const match = /\s+([a-z]+)$/i.exec(source)
+  if (!match) return { expr: source }
+  const tag = match[1].toLowerCase() as DamageType
+  if (!DAMAGE_TYPES.includes(tag)) return { expr: source }
+  return { expr: source.slice(0, match.index), damageType: tag }
+}
+
+/**
+ * Total a damage entry that rolls nothing — the stat blocks that read "1 piercing
+ * damage", of which the SRD has some forty. There is nothing to roll, so nothing is:
+ * the numbers are added up and reported with an empty `dice` list. The dice package
+ * refuses these outright, which is the right call for a dice library and the wrong
+ * answer for a console that has to show the 1. Crit rules inflate dice, so none apply.
+ */
+function flatResult(source: string, expr: string, bonuses: (number | string)[]): RollResult {
+  const values = [
+    ...expr.split(/(?=[+-])/).map(Number),
+    ...bonuses.map((b) => {
+      if (typeof b !== 'number') {
+        throw new Error(`Cannot add "${b}" to "${source}", which rolls no dice`)
+      }
+      return b
+    }),
+  ]
+  const total = values.reduce((a, b) => a + b, 0)
+  return {
+    formula: source,
+    kind: 'raw',
+    dice: [],
+    modifier: total,
+    modifiers: values,
+    total,
+    crit: false,
+    fumble: false,
+    advantageState: 'normal',
   }
-  const value = d20s[0].kept[0]
-  return { crit: value === 20, fumble: value === 1 }
 }
 
 /** The one dice chokepoint: parse, apply adv/dis and bonuses, roll, flag attack crit/fumble. */
 export function roll(formula: string, ctx: RollContext = {}): RollResult {
-  const rand = ctx.rand ?? cryptoRandom
-  const critRule = normalizeCrit(ctx.crit)
-  const parsed = parseFormula(formula)
-  let terms = parsed.terms
-  if (ctx.advantage && ctx.advantage !== 'normal') {
-    terms = applyAdvantage(terms, ctx.advantage)
-  }
-  if (ctx.bonuses && ctx.bonuses.length > 0) {
-    terms = [...terms, ...bonusTerms(ctx.bonuses)]
+  const bonuses = ctx.bonuses ?? []
+  const { expr, damageType } = splitDamageType(formula)
+  if (/^[+-]?\d+(?:[+-]\d+)*$/.test(expr.replace(/\s+/g, ''))) {
+    const flat = flatResult(formula.trim(), expr.replace(/\s+/g, ''), bonuses)
+    return { ...flat, kind: ctx.kind ?? 'raw', ...(damageType ? { damageType } : {}) }
   }
 
-  const dice: DieGroup[] = []
-  const modifiers: number[] = []
-  let modifier = 0
-  let total = 0
-  let advantageState: AdvantageState = 'normal'
+  const result = rollDice(formula, {
+    tags: DAMAGE_TYPES,
+    advantage: ctx.advantage,
+    bonuses,
+    rand: ctx.rand,
+  })
 
-  for (const term of terms) {
-    if (term.kind === 'flat') {
-      modifiers.push(term.value)
-      modifier += term.value
-      total += term.value
-      continue
-    }
-    if (term.advantage) advantageState = term.advantage
-    const group = rollGroup(term, critRule, rand)
-    total += group.total
-    dice.push(group)
-  }
+  const rule = normalizeCrit(ctx.crit)
+  const { dice, total } =
+    rule === 'none'
+      ? { dice: result.dice, total: 0 }
+      : applyCrit(result.dice, diceTerms(formula, bonuses), rule, ctx.rand)
 
   // A natural 20 / 1 only crits or fumbles on an attack roll — saves and checks
   // (and damage) don't.
   const { crit, fumble } = ctx.kind === 'attack' ? critFumble(dice) : { crit: false, fumble: false }
   return {
-    formula: parsed.source,
-    kind: ctx.kind ?? 'raw',
+    ...result,
     dice,
-    modifier,
-    modifiers,
-    total,
+    total: result.total + total,
+    kind: ctx.kind ?? 'raw',
     crit,
     fumble,
-    advantageState,
-    damageType: parsed.damageType,
+    ...(result.tag ? { damageType: result.tag as DamageType } : {}),
   }
 }

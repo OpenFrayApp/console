@@ -4,11 +4,11 @@
 import {
   ACTION_KINDS,
   ABILITIES,
-  DAMAGE_TYPES,
   emptyDamageDraft,
   type ActionDraft,
   type RechargeKind,
 } from './customMonster.ts'
+import { DAMAGE_TYPES } from '../schema/primitives.ts'
 
 // Width-less base, so explicit sizes (`${FIELD_W} w-16`) win cleanly in flex rows.
 export const FIELD_W =

@@ -76,6 +76,22 @@ export type DamageType =
   | 'slashing'
   | 'thunder'
 
+export const DAMAGE_TYPES: DamageType[] = [
+  'acid',
+  'bludgeoning',
+  'cold',
+  'fire',
+  'force',
+  'lightning',
+  'necrotic',
+  'piercing',
+  'poison',
+  'psychic',
+  'radiant',
+  'slashing',
+  'thunder',
+]
+
 /** Movement speeds in feet. `hover` flags a flying speed that can hover. */
 export interface Speeds {
   walk?: number

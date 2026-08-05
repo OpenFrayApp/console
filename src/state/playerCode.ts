@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-import { rollDie } from '../dice/rng.ts'
+import { rollDie } from '@openfray/dice'
 
 /**
  * The share code in a player-view link. A signed-in GM chooses one and keeps it; an

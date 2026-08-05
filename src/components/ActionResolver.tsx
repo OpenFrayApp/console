@@ -5,7 +5,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
-import type { Ability, DamageType } from '../schema/primitives.ts'
+import { DAMAGE_TYPES, type Ability, type DamageType } from '../schema/primitives.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction, NewLogEntry } from '../state/encounter.ts'
 import type { CritRule, DieGroup, RollResult } from '../dice/roll.ts'
@@ -29,7 +29,6 @@ import {
   saveDamageFor,
   type SaveResult,
 } from '../combat/masssave.ts'
-import { DAMAGE_TYPES } from './customMonster.ts'
 import { condition } from '../combat/effects.ts'
 import { EXHAUSTION_MAX, exhaustionLevel } from '../combat/exhaustion.ts'
 import { delayedDamageEffect, spellEffectFor } from '../combat/spellEffects.ts'

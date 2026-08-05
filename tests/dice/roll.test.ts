@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { d20Group, keptFlags, roll } from '../../src/dice/roll.ts'
-import type { RandomSource } from '../../src/dice/rng.ts'
+import type { RandomSource } from '@openfray/dice'
 
 /** Deterministic source: yields the given die faces in order (face f -> f-1 raw). */
 function faceSeq(...faces: number[]): RandomSource {
@@ -135,6 +135,67 @@ describe('roll', () => {
   it('folds in negative numeric bonuses', () => {
     const r = roll('1d20+5', { bonuses: [-2], rand: faceSeq(10) })
     expect(r.total).toBe(13) // 10 + 5 - 2
+  })
+
+  it('leaves an exploding group alone, having no fixed count to double', () => {
+    const r = roll('2d6!', { crit: 'double-dice', rand: faceSeq(3, 4) })
+    expect(r.dice[0].results).toEqual([3, 4])
+    expect(r.total).toBe(7)
+  })
+
+  it('crits a multiplied group through its multiplier, not around it', () => {
+    const r = roll('2d6x3', { crit: 'max-plus-roll', rand: faceSeq(2, 4) })
+    expect(r.dice[0].multiplier).toBe(3)
+    expect(r.total).toBe(54) // (2+4)x3 rolled, plus a maximised (2*6)x3
+  })
+})
+
+// A stat block that reads "1 piercing damage" states the number outright. There is
+// nothing to roll, so nothing is rolled — the console just has to report it.
+describe('roll, on a damage entry with no dice in it', () => {
+  it('totals the number', () => {
+    const r = roll('1', { kind: 'damage' })
+    expect(r.total).toBe(1)
+    expect(r.dice).toEqual([])
+    expect(r.kind).toBe('damage')
+  })
+
+  it('adds the parts of a bare sum', () => {
+    expect(roll('1+1').total).toBe(2)
+    expect(roll('20').total).toBe(20)
+  })
+
+  it('keeps the damage type', () => {
+    const r = roll('1 piercing', { kind: 'damage' })
+    expect(r.damageType).toBe('piercing')
+    expect(r.total).toBe(1)
+  })
+
+  it('never draws from the random source', () => {
+    const forbidden = () => {
+      throw new Error('a formula with no dice must not draw')
+    }
+    expect(roll('1', { rand: forbidden, crit: 'double-dice' }).total).toBe(1)
+  })
+
+  it('still rejects a formula that is neither dice nor a number', () => {
+    expect(() => roll('two')).toThrow()
+    expect(() => roll('2d6 + x')).toThrow()
+  })
+})
+
+// The randomness is the package's now, but it is reached through this function, and a
+// mis-wiring here would pass every test above — all of which supply their own source.
+describe('the dice behind roll()', () => {
+  it('stays in range and covers every face over many real draws', () => {
+    const seen = new Set<number>()
+    for (let i = 0; i < 500; i++) {
+      const value = roll('1d6').total
+      expect(value).toBeGreaterThanOrEqual(1)
+      expect(value).toBeLessThanOrEqual(6)
+      seen.add(value)
+    }
+    expect(seen).toEqual(new Set([1, 2, 3, 4, 5, 6]))
   })
 })
 

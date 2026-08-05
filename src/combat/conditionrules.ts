@@ -3,7 +3,7 @@
 
 import type { ConditionName } from '../schema/effect.ts'
 import type { Combatant } from '../schema/combatant.ts'
-import type { AdvantageState } from '../dice/formula.ts'
+import type { AdvantageState } from '@openfray/dice'
 
 export type AttackRange = 'melee' | 'ranged'
 

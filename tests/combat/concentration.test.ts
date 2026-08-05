@@ -8,7 +8,7 @@ import type {
   MonsterCombatant,
   PlayerCharacter,
 } from '../../src/schema/combatant.ts'
-import type { RandomSource } from '../../src/dice/rng.ts'
+import type { RandomSource } from '@openfray/dice'
 import { applyDamage } from '../../src/combat/resources.ts'
 import {
   applyConcentrationResult,
