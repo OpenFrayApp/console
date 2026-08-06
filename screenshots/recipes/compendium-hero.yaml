@@ -19,10 +19,14 @@ setup:
       - check: { role: checkbox, name: $book }
       - wait: 150
   - click: { role: button, name: Done }
-  # The libraries just ticked are fetched on demand.
-  - wait: 700
   - click: { role: button, name: Show the compendium }
-  - wait: 800
+  # The libraries just ticked are fetched on demand, and each one that lands re-renders
+  # the list and drops whatever was selected. Waiting a fixed second is a coin toss: it
+  # cost this shot its stat block once already. The count is the signal that they have
+  # all arrived — and if a library changes size, this fails loudly rather than quietly
+  # taking the wrong picture.
+  - wait: { text: 859 creatures }
+  - wait: 300
   - fill: { placeholder: Search creatures… }
     value: Aboleth
   - wait: 500

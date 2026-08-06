@@ -29,3 +29,7 @@ callouts:
   - { mark: stat, n: 3, place: corner, badge: bc, box: false, dy: -140 }
   - { mark: controls, n: 4, place: corner, badge: bc, box: false, dy: -140 }
   - { mark: dice, n: 5, place: corner, badge: mr, box: false, inside: false, dx: 60 }
+
+# The game log is in frame, and a creature's initiative line carries the roll the console
+# made for it — pinning the number in the modal fixes the order, not the dice behind it.
+check: false

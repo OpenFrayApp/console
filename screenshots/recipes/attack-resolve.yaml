@@ -24,3 +24,6 @@ callouts:
   - { mark: target, text: Who it hits, place: right }
   - { mark: apply, text: Take the damage off, place: right }
   - { mark: roll, text: The roll and the result, place: left }
+
+# The panel is as tall as the result it is showing, and the result is a real roll.
+check: false
