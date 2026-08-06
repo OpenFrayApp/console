@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-// Draws the handbook's red callouts onto a PNG captured by hand. Most screenshots come
-// from the Python harness in scripts/screenshots/, which drives the live app — use this
-// only for screens it can't reach: anything behind a sign-in, and the browser extension.
+// Draws the handbook's red callouts onto a PNG captured by hand. Most screenshots are
+// recipes under screenshots/, which drive the live app — use this only for screens they
+// can't reach: anything behind a sign-in, and the browser extension.
 //
 //   node scripts/annotate-screenshot.mjs
 //
