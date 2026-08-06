@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The whole console mid-fight, for the site's home page. No callouts — the section around
+# it does the labelling. Shot at 1800 like the handbook's layout capture, so no top-bar
+# button wraps its label onto two lines.
+name: console-hero
+install: site
+viewport: { width: 1800, height: 1000 }
+
+setup:
+  - use: hero-board
+
+clip: viewport
+
+# The bar counts the real seconds the fight has been open, and setup never takes the
+# same time twice.
+check: false

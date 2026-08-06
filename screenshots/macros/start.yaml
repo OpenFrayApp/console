@@ -2,10 +2,12 @@
 #
 # Each fill is optional because one list covers every recipe, and a recipe's fight holds
 # only some of these combatants.
+defaults:
+  rolls: $initiative
 steps:
   - click: { role: button, name: Begin }
   - wait: { text: Roll initiative }
-  - each: $initiative
+  - each: $rolls
     as: row
     steps:
       - optional:

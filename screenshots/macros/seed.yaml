@@ -1,8 +1,14 @@
-# The board every handbook capture starts from: the sample party, then the foes.
+# Put a board together: a party, then the foes.
+#
+# The handbook's own cast by default; the site's shots pass theirs, because those are read
+# as a picture of somebody's game rather than as a figure to follow.
+defaults:
+  pcs: $party
+  monsters: $foes
 steps:
-  - each: $party
+  - each: $pcs
     as: pc
     steps: [{ use: add-pc }]
-  - each: $foes
+  - each: $monsters
     as: foe
     steps: [{ use: add-creature }]

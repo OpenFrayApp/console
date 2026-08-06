@@ -1,0 +1,19 @@
+# The board every site shot shares: a fight already fought in — two wounded, one bloodied,
+# and the conditions that make it worth looking at. One setup, so the pictures on the home
+# page are recognisably the same encounter.
+steps:
+  - use: seed
+    with: { pcs: $hero.party, monsters: $hero.foes }
+  - use: start
+    with: { rolls: $hero.initiative }
+  - use: set-hp
+    with: { who: Elowen Vale, hp: 12 }
+  - use: set-hp
+    with: { who: Goblin Warrior, hp: 6 }
+  - use: set-hp
+    with: { who: Ogre, hp: 49 }
+  - use: condition
+    with: { who: Goblin Warrior, conditions: [Prone] }
+  - use: condition
+    with: { who: Ogre, conditions: [Prone, Frightened] }
+  - wait: 400
