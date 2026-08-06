@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+name: drag-handle
+install: docs
+
+setup:
+  - use: seed
+  # A fifth combatant, so the row being dragged has somewhere to go.
+  - use: add-creature
+    with: { foe: { name: Mage, times: [1] } }
+  - use: start
+
+clip:
+  trackerRow: Ren
+  grow: { left: 8, right: 8, top: 130, bottom: 130 }
+
+marks:
+  handle: { css: 'span[aria-label="Drag to reorder Ren"]', pad: 6 }
+
+callouts:
+  # Over the shot rather than in a margin: the row is empty to the right of the handle,
+  # and a margin would add a band of dead canvas to hold two words.
+  - mark: handle
+    text: [Drag to move, a combatant]
+    place: right
+    inside: true
+    gap: 300

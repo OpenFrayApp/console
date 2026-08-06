@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# An attack rolled and waiting to be applied (fight/attacks.md).
+name: attack-resolve
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - use: open-attack
+  - click: { role: button, name: Roll attack }
+  - wait: 600
+
+clip: { panel: Ogre · Greatclub, pad: 14 }
+
+marks:
+  target: { role: button, name: Zara, exact: true, within: clip }
+  roll: { role: button, name: Reroll, within: clip }
+  apply: { role: button, name: Apply to Zara, within: clip }
+
+# The chips and the damage field sit left of two of these, so those labels come in from
+# the right — a label must never cover something the reader needs.
+callouts:
+  - { mark: target, text: Who it hits, place: right }
+  - { mark: apply, text: Take the damage off, place: right }
+  - { mark: roll, text: The roll and the result, place: left }

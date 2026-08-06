@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The seven parts of a stat block, numbered to match reference/stat-block.md. 1120 is
+# tall enough that the block's source line is on screen, and short enough that mt-auto
+# leaves no gap above it.
+name: stat-block-full
+install: docs
+viewport: { width: 1500, height: 1120 }
+
+setup:
+  - click: { role: button, name: Show the compendium }
+  - wait: 700
+  - fill: { placeholder: Search creatures… }
+    value: Ancient Black Dragon
+  - wait: 500
+  - click: { text: Ancient Black Dragon }
+  - wait: 900
+
+# The innermost element holding both the name and the last section is the block itself.
+clip:
+  css: div
+  containingAll: [Ancient Black Dragon, Legendary Actions]
+  pick: smallest
+  pad: 16
+
+marks:
+  header: { within: clip, text: Ancient Black Dragon }
+  abilities:
+    { css: div, containingAll: [Ancient Black Dragon, Legendary Actions], pick: smallest, child: 1 }
+  defenses:
+    { css: div, containingAll: [Ancient Black Dragon, Legendary Actions], pick: smallest, child: 2 }
+  traits: { within: clip, text: Traits }
+  spellcasting: { within: clip, text: Spellcasting }
+  actions: { within: clip, text: Actions }
+  # The heading carries its own count — "Legendary Actions (3/round, or 4 in lair)" —
+  # so this matches the start of a leaf rather than the whole of it.
+  legendary: { within: clip, contains: Legendary Actions, maxChildren: 0, pick: smallest }
+
+# Discs in the margin beside each section, with no outlines: seven boxes down a stat
+# block reads as a grid drawn over it rather than as seven things being pointed at.
+numbered:
+  marks: [header, abilities, defenses, traits, spellcasting, actions, legendary]
+  box: false
+  badge: ml
+  inside: false

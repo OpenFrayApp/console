@@ -1,0 +1,8 @@
+# The board every handbook capture starts from: the sample party, then the foes.
+steps:
+  - each: $party
+    as: pc
+    steps: [{ use: add-pc }]
+  - each: $foes
+    as: foe
+    steps: [{ use: add-creature }]

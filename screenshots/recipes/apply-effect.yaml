@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The seven staged parts of an effect, numbered to match the steps on fight/effects.md.
+name: apply-effect
+install: docs
+
+setup:
+  # The Presets row only appears once a library ships presets, and Brood & Bloom does.
+  - use: open-settings
+  - check: { role: checkbox, name: Brood & Bloom }
+  - click: { role: button, name: Done }
+  - wait: 300
+  - use: seed
+  - use: start
+  - click: { text: Ogre }
+  - wait: 250
+  - click: { role: button, name: Apply effect }
+  - wait: 400
+
+clip: { panel: Apply effect to Ogre, pad: 14 }
+
+marks:
+  presets: { role: button, name: Presets, within: clip }
+  duration: { label: Duration, within: clip }
+  reminder: { placeholder: 'e.g. Hex: +1d6 necrotic', within: clip }
+  # The condition chips wrap over several rows, so the region is the box around them all.
+  # These are matched by text rather than by role: inside a `span`, a role query has no
+  # way to be resolved and shotlist refuses it.
+  condition:
+    span:
+      - { css: button, text: Prone, within: clip }
+      - { css: button, text: Invisible, within: clip }
+      - { css: button, text: Unconscious, within: clip }
+  # Exhaustion carries a level, so it is its own row of chips: None through 6.
+  exhaustion:
+    span:
+      - { css: 'button[aria-label="No Exhaustion"]', within: clip }
+      - { css: 'button[aria-label="Exhaustion 6"]', within: clip }
+  counter: { role: button, name: Add counter, within: clip }
+  modifier: { role: button, name: Add a bonus or penalty, within: clip }
+
+numbered:
+  marks: [presets, duration, reminder, condition, exhaustion, counter, modifier]
+  # On the corner of each box, as the handbook's capture has them.
+  badge: tl
+  inside: true

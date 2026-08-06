@@ -1,0 +1,5 @@
+# `times` is a list because `repeat:` takes a literal number — a `$ref` cannot reach a
+# numeric field, so the count is expressed as something `each` can walk.
+- { name: Ogre, times: [1] }
+- { name: Goblin Boss, times: [1] }
+- { name: Goblin Minion, times: [1, 2] }

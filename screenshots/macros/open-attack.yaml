@@ -1,0 +1,16 @@
+# Select the Ogre, open its Greatclub, and aim it at Zara.
+#
+# The target is chosen from inside the dialog: a combatant's name is a button in the
+# tracker row as well, and which one exists depends on who won initiative.
+steps:
+  - click: { text: Ogre }
+  - wait: 300
+  - click: { startsWith: 'Greatclub.', maxChildren: 0, pick: smallest }
+  - wait: { css: '[role=dialog]' }
+  - wait: 400
+  - click:
+      role: button
+      name: Zara
+      exact: true
+      within: { css: '[role=dialog]', pick: last }
+  - wait: 200

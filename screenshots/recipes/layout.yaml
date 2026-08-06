@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The five areas getting-started.md numbers. Shot wide: at 1440 every top-bar button
+# wraps its label onto two lines and the console reads as a squeezed tablet rather than
+# the desktop layout it is designed for.
+name: layout
+install: docs
+viewport: { width: 1800, height: 1000 }
+
+setup:
+  - use: seed
+  - use: start
+  - click: { text: Ogre }
+  - wait: 400
+
+clip: viewport
+
+marks:
+  bar: { role: button, name: Short rest }
+  tracker: { css: div.grid.h-full, children: true, nth: 0 }
+  stat: { css: div.grid.h-full, children: true, nth: 1 }
+  controls: { css: div.grid.h-full, children: true, nth: 2 }
+  dice: { role: button, name: d4, exact: true }
+
+# No outlines: the areas are the whole screen, and boxing them would draw a grid over it.
+callouts:
+  - { mark: bar, n: 1, place: corner, badge: ml, box: false, inside: false }
+  - { mark: tracker, n: 2, place: corner, badge: bc, box: false, dy: -140 }
+  - { mark: stat, n: 3, place: corner, badge: bc, box: false, dy: -140 }
+  - { mark: controls, n: 4, place: corner, badge: bc, box: false, dy: -140 }
+  - { mark: dice, n: 5, place: corner, badge: mr, box: false, inside: false, dx: 60 }

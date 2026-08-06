@@ -1,0 +1,5 @@
+# The handbook's sample party. Sample data only — never a real name (STYLE.md).
+- { name: Zara, ac: 15, hp: 33, init: 2, roll: 21 }
+- { name: Mira, ac: 13, hp: 28, init: 2, roll: 20 }
+- { name: Tav, ac: 16, hp: 38, init: 1, roll: 13 }
+- { name: Ren, ac: 18, hp: 44, init: 0, roll: 10 }

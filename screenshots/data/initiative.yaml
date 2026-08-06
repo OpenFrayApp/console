@@ -1,0 +1,17 @@
+# Every combatant's initiative, so a re-shoot produces the same board.
+#
+# The console rolls a monster's initiative when the fight begins, which reorders the
+# tracker between runs and makes two identical shots differ. The modal offers a field per
+# combatant; filling all of them is what makes a capture reproducible — and reproducible
+# is what lets `--check` mean anything.
+#
+# A name that is not in a given recipe's fight is skipped, so one list serves them all.
+- { who: Goblin Boss, roll: 22 }
+- { who: Zara, roll: 21 }
+- { who: Mira, roll: 20 }
+- { who: Tav, roll: 13 }
+- { who: Mage, roll: 12 }
+- { who: Goblin Minion, roll: 11 }
+- { who: Ren, roll: 10 }
+- { who: Ogre, roll: 7 }
+- { who: Goblin Minion 2, roll: 4 }
