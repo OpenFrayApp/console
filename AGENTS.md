@@ -285,6 +285,28 @@ cadence and consumers: [openfray-compendium](https://github.com/SirDarcanos/open
 [openfray-importer](https://github.com/SirDarcanos/openfray-importer) (the browser
 extension). Split a part out only when it earns that — these three do not.
 
+Two more are npm packages, general enough that nothing about them is OpenFray's:
+[opendice](https://github.com/SirDarcanos/opendice) rolls the dice, and
+[shotlist](https://github.com/SirDarcanos/shotlist) takes the screenshots.
+
+**Every capture in the handbook and on the site is a recipe.** They live in
+`screenshots/` — one YAML file per picture, with the shared setup in `macros/` and the
+sample party and foes in `data/`. Run the console (`npm run dev`), then:
+
+| Command                          | What it does                                |
+| -------------------------------- | ------------------------------------------- |
+| `npx shotlist`                    | list the recipes                            |
+| `npx shotlist <name> --install`   | re-shoot one and copy it where it belongs   |
+| `npx shotlist --all --install`    | re-shoot everything                         |
+| `npx shotlist --check`            | report the captures the app has moved on from |
+
+A capture is data, so re-shooting a stale one is a command rather than an afternoon. If a
+picture needs something the recipe vocabulary cannot say, that is a missing primitive in
+shotlist — add it there rather than an escape hatch here. Two rules the recipes rely on:
+fill an initiative for **every** combatant, creatures included, or the console rolls
+theirs and the board reorders between runs; and a shot framing live dice or the fight
+clock takes `check: false`, because it can never match itself.
+
 ## Tech stack
 
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
