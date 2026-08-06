@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The death-save controls: record what the player rolled, or let the app roll (fight/death.md).
+name: death-saves
+install: docs
+
+setup:
+  - use: zara-down
+
+# Down to the log line that says how she got there — the controls alone do not say that
+# anyone is down.
+clip:
+  span:
+    - { text: Controls, parent: true }
+    - { css: li, contains: Zara takes, pick: first }
+  # Four at the foot, not sixteen: the log entries are eight apart, so more than that
+  # brings the top edge of the next one into the picture.
+  grow: { left: 22, right: 22, top: 16, bottom: 4 }
+
+marks:
+  cluster:
+    span:
+      - { css: button, text: Save, within: clip }
+      - { css: button, startsWith: Roll death save, within: clip }
+
+# From the right, where the column is empty at that row: below the cluster is Edit
+# character and then the log, and an arrow up from there crosses both.
+callouts:
+  - mark: cluster
+    text: [Record the player's roll, or let OpenFray roll]
+    place: right

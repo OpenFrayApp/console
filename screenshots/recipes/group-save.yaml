@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The Group save box with its six working parts boxed (fight/saves.md).
+name: group-save
+install: docs
+viewport: { width: 1440, height: 1000 }
+
+setup:
+  - use: seed
+  - use: start
+  - click: { role: button, name: Group save }
+  - wait: 400
+  # Chosen from inside the dialog: a creature's tracker row is a button with the same
+  # name, and which of the two comes first depends on who won initiative.
+  - each: [Goblin Boss, Goblin Minion, Goblin Minion 2]
+    as: who
+    steps:
+      - click:
+          css: button
+          text: $who
+          within: { panel: Group save }
+      - wait: 120
+  - fill: { label: Damage, exact: true }
+    value: 3d8
+  - select: { label: Damage type }
+    option: fire
+  - wait: 200
+
+clip: { panel: Group save, pad: 14 }
+
+marks:
+  dc: { label: Save DC }
+  onsave: { label: On save }
+  damage: { label: Damage, exact: true }
+  type: { label: Damage type }
+  targets:
+    span:
+      - { text: Allies, within: clip }
+      - { css: button, text: Zara, within: clip }
+      - { css: button, text: Goblin Minion 2, within: clip }
+  roll: { role: button, name: Roll saves }
+
+# Six outlines, no labels: the page walks the parts in order underneath, and six labels
+# on a box this crowded would leave no room for the box.
+callouts:
+  - { mark: dc }
+  - { mark: onsave }
+  - { mark: damage }
+  - { mark: type }
+  - { mark: targets }
+  - { mark: roll }

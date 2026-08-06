@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The play button over a filled board, before the fight (getting-started.md). The fight is
+# started and stopped rather than left unstarted, so every combatant carries the initiative
+# the recipe gave it and the order is the same on every run.
+name: begin
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - click: { role: button, name: Stop }
+  - wait: 500
+
+# From the corner of the page down to the second row: the button means nothing without a
+# board under it waiting to be started.
+clip:
+  span:
+    - { rect: [0, 0, 1, 1] }
+    - { css: 'button[aria-label="Begin"]' }
+    - { trackerRow: Mira }
+  grow: { right: 30, bottom: 16 }
+
+marks:
+  play: { css: 'button[aria-label="Begin"]' }
+
+# From above, into the empty right end of the header: the button is the last thing on its
+# row, so a label beside it would send its arrow back across the two cleanup buttons.
+callouts:
+  - { mark: play, text: Begin, place: top }

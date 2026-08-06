@@ -1,0 +1,14 @@
+# Zara at nothing, with two saves and a fail recorded — the board both death captures need.
+steps:
+  - use: seed
+  - use: start
+  - use: set-hp
+    with: { who: Zara, hp: 0 }
+  - click: { text: Zara }
+  - wait: 300
+  - click: { role: button, name: Save, exact: true }
+  - wait: 150
+  - click: { role: button, name: Save, exact: true }
+  - wait: 150
+  - click: { role: button, name: Fail, exact: true }
+  - wait: 300

@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The worked reminder example: free text, until removed (fight/effects.md). A plain crop.
+name: example-reminder
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - click: { text: Zara }
+  - wait: 250
+  - click: { role: button, name: Apply effect }
+  - wait: 400
+  - select: { label: Duration }
+    optionLabel: Until removed
+  - fill: { placeholder: 'e.g. Hex: +1d6 necrotic' }
+    value: Covered in oil - Beware of fire damage
+  # The note is longer than its field, so typing it leaves the field scrolled to the tail.
+  # Home rewinds it, and losing focus stops the caret being in the picture.
+  - press: Home
+  - blur: { placeholder: 'e.g. Hex: +1d6 necrotic' }
+  - wait: 200
+
+clip: { panel: Apply effect to Zara, pad: 12 }

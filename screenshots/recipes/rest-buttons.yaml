@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The rest cluster above a selected character (fight/rests.md).
+name: rest-buttons
+install: docs
+
+setup:
+  - use: seed
+  - click: { text: Ren }
+  - wait: 300
+
+# Grown right far enough to show what the cluster sits among, and barely at all downward:
+# the labels go in a margin of their own, so height here would only be dead console.
+clip:
+  css: 'nav[aria-label="Rest"]'
+  grow: { left: 26, right: 334, top: 20, bottom: 26 }
+
+marks:
+  cluster: { css: 'nav[aria-label="Rest"]' }
+  short: { css: 'button[aria-label="Short rest"]' }
+  long: { css: 'button[aria-label="Long rest"]' }
+
+# One a side. Both underneath, the two labels are longer than the buttons they name and
+# end up shoulder to shoulder, reading as one line of writing.
+callouts:
+  - { mark: cluster }
+  - { mark: short, text: Short rest, place: left, box: false }
+  - { mark: long, text: Long rest, place: bottom, box: false }

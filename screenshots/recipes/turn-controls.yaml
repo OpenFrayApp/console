@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The round bar: the turn buttons and the pause/stop pair (fight/encounters.md).
+name: turn-controls
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+
+# The bar from the round number to the stop button, with enough below it that the first
+# tracker row shows and the bar reads as the top of a list rather than a strip on its own.
+clip:
+  span:
+    - { css: 'button[aria-label="Previous turn"]' }
+    - { css: 'button[aria-label="Stop"]' }
+    - { heading: Round 1 }
+  grow: { left: 26, right: 26, top: 14, bottom: 90 }
+
+marks:
+  turns:
+    span:
+      - { css: 'button[aria-label="Previous turn"]' }
+      - { css: 'button[aria-label="Next turn"]' }
+  ps:
+    span:
+      - { css: 'button[aria-label="Pause"]' }
+      - { css: 'button[aria-label="Stop"]' }
+
+callouts:
+  - { mark: turns, text: Move through turns, place: top }
+  - { mark: ps, text: Pause or end fight, place: top }

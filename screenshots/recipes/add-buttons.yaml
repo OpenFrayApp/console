@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The three ways onto the board, each boxed and named (getting-started.md).
+name: add-buttons
+install: docs
+viewport: { width: 1200, height: 420 }
+
+clip:
+  span:
+    - { css: button, text: Quick add }
+    - { css: button, text: Add PC }
+    - { css: button, text: Add creature }
+  pad: 26
+
+marks:
+  quick: { css: button, text: Quick add }
+  pc: { css: button, text: Add PC }
+  add: { css: button, text: Add creature }
+
+# One label a side, not three under the row: the three of them together are wider than
+# the buttons they name, and side by side in one margin they would be shuffled along it
+# until each pointed at somebody else's button.
+callouts:
+  - { mark: quick, text: A throwaway combatant, place: left }
+  - { mark: pc, text: A player character, place: bottom }
+  - { mark: add, text: One from the compendium, place: right }

@@ -1,0 +1,17 @@
+# Type a new hit-point total into a tracker row. 0 drops the combatant.
+#
+# The total is a button until it is clicked. The row carries no hook for it, so it is
+# found as what it is: the only button in the row without an accessible name of its own.
+defaults:
+  who: Zara
+  hp: 0
+steps:
+  - click:
+      css: 'button:not([aria-label])'
+      within: { trackerRow: $who }
+      pick: first
+  - wait: 200
+  - press: ControlOrMeta+a
+  - type: $hp
+  - press: Enter
+  - wait: 280

@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# A downed player's row, with the save and fail pips boxed (fight/death.md).
+name: death-save-row
+install: docs
+
+setup:
+  - use: zara-down
+
+clip:
+  trackerRow: Zara
+  grow: { left: 8, right: 8, top: 120, bottom: 130 }
+
+marks:
+  pips:
+    span:
+      - { text: Saves, parent: true }
+      - { text: Fails, parent: true }
+
+# Outlined and unlabelled: the page's sentence beside it names the pips.
+callouts:
+  - { mark: pips }
