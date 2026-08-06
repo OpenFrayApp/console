@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The recap after a won fight (fight/recap.md). A plain crop — the tiles label themselves.
+name: recap
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - use: open-attack
+  - click: { role: button, name: Roll attack }
+  - wait: 500
+  - click: { role: button, name: Apply to Zara }
+  - wait: 500
+  - optional:
+      - click: { role: button, name: Close }
+  # Two of the party hurt and every foe down, so the recap has a victory to report and
+  # damage on both sides to count.
+  - use: set-hp
+    with: { who: Mira, hp: 9 }
+  - use: set-hp
+    with: { who: Ren, hp: 15 }
+  - each: [Goblin Minion 2, Goblin Minion, Goblin Boss, Ogre]
+    as: foe
+    steps:
+      - use: set-hp
+        with: { who: $foe, hp: 0 }
+  - wait: 700
+  - click: { role: button, name: End combat }
+  - wait: 700
+
+clip: { panel: Combat recap, pad: 16 }
+
+# The damage tiles count an attack that was really rolled, so no two runs agree.
+check: false

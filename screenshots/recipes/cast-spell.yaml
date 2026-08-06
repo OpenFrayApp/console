@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# A caster's Spellcasting section: what is left, and what casting one costs
+# (fight/spells.md).
+name: cast-spell
+install: docs
+viewport: { width: 1500, height: 1120 }
+
+setup:
+  - use: add-creature
+    with: { foe: { name: Archmage, times: [1] } }
+  - click: { text: Archmage }
+  - wait: 600
+
+# The group headings are set in small caps by the stylesheet, so they are matched by the
+# words in the markup — "2/Day Each", not what the screen reads.
+clip:
+  span:
+    - { heading: Spellcasting }
+    - { css: span, text: 2/Day Each }
+    - { css: span, text: 1/Day Each }
+    - { css: button, text: Mind Blank (1) }
+  pad: 20
+
+marks:
+  perday: { css: span, text: 2/Day Each }
+  spell: { css: button, text: Mind Blank (1) }
+
+# Both reach in from outside the section rather than across it: the spells are what the
+# reader is being shown, and an arrow over them is an arrow over the subject.
+callouts:
+  - { mark: perday, text: Total usages available per day, place: left }
+  - { mark: spell, text: Click to cast the spell and consume a usage, place: bottom }

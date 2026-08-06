@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# A slice of the creature list with two rows' badges boxed (library/compendium.md).
+name: library-badges
+install: docs
+viewport: { width: 1500, height: 1120 }
+
+setup:
+  - click: { role: button, name: Show the compendium }
+  - wait: 700
+
+# The rows are anchored by the start of their text: a row reads "AllosaurusCore5.5eCR 2",
+# with the badges running straight onto the name and no word boundary to match.
+clip:
+  span:
+    - { css: button, startsWith: Air Elemental }
+    - { css: button, startsWith: Ancient Black Dragon }
+  # Four above and below, which is the gap between two rows: any more and the shot opens
+  # with half of somebody else's row.
+  grow: { left: 10, right: 10, top: 4, bottom: 4 }
+
+marks:
+  badges:
+    span:
+      - { css: span, text: Core, within: { css: button, startsWith: Allosaurus } }
+      - { css: span, text: '5.5e', within: { css: button, startsWith: Ancient Black Dragon } }
+
+callouts:
+  - { mark: badges }

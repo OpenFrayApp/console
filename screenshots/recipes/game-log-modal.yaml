@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The full log, opened from View all (reference/game-log.md). A fight is fought into it
+# first — an empty log has nothing to filter and nothing to clear.
+name: game-log-modal
+install: docs
+viewport: { width: 1440, height: 1000 }
+
+setup:
+  - use: seed
+  - use: start
+  - use: open-attack
+  - click: { role: button, name: Roll attack }
+  - wait: 500
+  - click: { role: button, name: Apply to Zara }
+  - wait: 500
+  # The attack box closes itself when the damage lands, and stays open when it does not.
+  - optional:
+      - click: { role: button, name: Close }
+  - click: { role: button, name: Next turn }
+  - wait: 400
+  - click: { role: button, name: View all }
+  - wait: 600
+
+clip: { dialogWith: Clear log, pad: 14 }
+
+marks:
+  chips: { role: button, name: All, exact: true }
+  clear: { role: button, name: Clear log }
+
+# One a side: the chips run along the left of the box and Clear log sits at its right, so
+# each label reaches in from the edge it is already nearest.
+callouts:
+  - { mark: chips, text: Filter by kind, place: left }
+  - { mark: clear, text: Empty the history, place: right }
+
+# The log holds an attack that was really rolled, so no two runs agree.
+check: false

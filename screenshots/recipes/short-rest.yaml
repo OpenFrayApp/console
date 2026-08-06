@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The short rest box, with the first character's field called out (fight/rests.md).
+name: short-rest
+install: docs
+
+setup:
+  - use: seed
+  # The party as a fight leaves them. The totals are typed rather than fought for: what
+  # the box is showing is the list and its fields, and a rolled attack would only make
+  # the same picture different on every run.
+  - use: set-hp
+    with: { who: Zara, hp: 19 }
+  - use: set-hp
+    with: { who: Mira, hp: 9 }
+  - use: set-hp
+    with: { who: Ren, hp: 15 }
+  - click: { role: button, name: Short rest }
+  - wait: 500
+
+clip: { panel: Short rest, pad: 14 }
+
+marks:
+  field: { css: input, within: clip, pick: first }
+
+callouts:
+  - { mark: field, text: Type the new hit points, place: right }

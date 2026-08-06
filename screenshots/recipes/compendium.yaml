@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The whole compendium, open on a creature, with the toggle that opens it boxed
+# (library/compendium.md).
+name: compendium
+install: docs
+
+setup:
+  - click: { role: button, name: Show the compendium }
+  - wait: 700
+  - fill: { placeholder: Search creatures… }
+    value: Ancient Black Dragon
+  - wait: 500
+  - click: { text: Ancient Black Dragon }
+  - wait: 900
+  # Cleared again so the list is its full length: the count over it is part of what the
+  # page is claiming.
+  - fill: { placeholder: Search creatures… }
+    value: ''
+  - wait: 500
+
+clip: viewport
+
+marks:
+  toggle: { role: button, name: Show the compendium }
+
+callouts:
+  - { mark: toggle }
