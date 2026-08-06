@@ -670,7 +670,10 @@ function App() {
     disadvantage = false,
     sourceId?: string,
   ): { total: number; entry: NewLogEntry } => {
-    const dice = `1d20${disadvantage ? 'dis' : ''}${mod >= 0 ? `+${mod}` : `${mod}`}`
+    // `dis` keeps one die out of the several rolled, so it needs a count of two to have
+    // anything to choose between — `1d20dis` is a die deciding against itself.
+    const d20 = disadvantage ? '2d20dis' : '1d20'
+    const dice = `${d20}${mod >= 0 ? `+${mod}` : `${mod}`}`
     const result = roll(dice)
     return {
       total: result.total,

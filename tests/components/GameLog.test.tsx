@@ -167,7 +167,7 @@ describe('GameLog feed', () => {
   })
 
   it('names an adv/disadv cause without repeating the state word', () => {
-    const result = roll('1d20adv+5', { rand: faceSeq(10, 18) })
+    const result = roll('2d20adv+5', { rand: faceSeq(10, 18) })
     render(
       <GameLog
         entries={[

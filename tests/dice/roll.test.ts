@@ -38,7 +38,7 @@ describe('roll', () => {
   })
 
   it('keeps the highest on advantage', () => {
-    const r = roll('1d20adv+5', { rand: faceSeq(4, 18) })
+    const r = roll('2d20adv+5', { rand: faceSeq(4, 18) })
     expect(r.dice[0].results).toEqual([4, 18])
     expect(r.dice[0].kept).toEqual([18])
     expect(r.total).toBe(23)
@@ -46,7 +46,7 @@ describe('roll', () => {
   })
 
   it('keeps the lowest on disadvantage', () => {
-    const r = roll('1d20dis+5', { rand: faceSeq(4, 18) })
+    const r = roll('2d20dis+5', { rand: faceSeq(4, 18) })
     expect(r.dice[0].kept).toEqual([4])
     expect(r.total).toBe(9)
     expect(r.advantageState).toBe('disadvantage')
@@ -78,7 +78,7 @@ describe('roll', () => {
   })
 
   it('does not apply crit rules to attack/keep dice', () => {
-    const r = roll('1d20adv', { crit: 'double-dice', rand: faceSeq(4, 18) })
+    const r = roll('2d20adv', { crit: 'double-dice', rand: faceSeq(4, 18) })
     expect(r.dice[0].results).toHaveLength(2) // advantage's two dice, not doubled
     expect(r.total).toBe(18)
   })
