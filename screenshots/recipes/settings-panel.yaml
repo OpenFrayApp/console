@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The same panel as rule-sets, with the tab strip and the library list called out
+# (reference/settings.md).
+name: settings-panel
+install: docs
+viewport: { width: 1200, height: 1200 }
+
+setup:
+  - use: open-settings
+  - wait: { css: '[role=tabpanel]', contains: Sort by }
+
+clip:
+  span:
+    - { heading: Settings }
+    - { css: '[role=tabpanel]', contains: Sort by, pick: first }
+  pad: 22
+
+marks:
+  tabs: { css: '[role=tablist]' }
+  libs: { css: '[role=tabpanel]', contains: Sort by, pick: first }
+
+# Both from the left: the panel runs to the right edge of the crop, so a label on that
+# side would have to sit over the settings it is describing.
+callouts:
+  - { mark: tabs, text: One tab per area, place: left }
+  - { mark: libs, text: The libraries you play with, place: left }

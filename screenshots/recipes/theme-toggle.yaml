@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The gear menu open, since light and dark live in it alongside the handbook link
+# (reference/settings.md).
+name: theme-toggle
+install: docs
+viewport: { width: 1200, height: 1200 }
+
+setup:
+  - click: { role: button, name: Settings and more }
+  - wait: { css: '[role=menu]' }
+
+# The right end of the top bar, from Sign in across to the open menu. Matched by CSS
+# rather than by role: a role query cannot be resolved inside a span.
+clip:
+  span:
+    - { css: button, text: Sign in }
+    - { css: 'button[aria-label="Settings and more"]' }
+    - { css: '[role=menu]' }
+  pad: 22
+
+marks:
+  theme: { role: menuitem, name: Switch to light mode }
+
+# From the right, into the menu's own edge: the menu hangs below the gear, so a label
+# above it would send its arrow down through the Settings row on the way.
+callouts:
+  - { mark: theme, text: Light or dark, place: right }

@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The controls column with the effects list under it (fight/effects.md).
+name: applied-effects
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - use: frighten
+
+# Both headings are set in small caps by the stylesheet, so they are matched by the words
+# in the markup rather than by the ones on screen.
+clip:
+  span:
+    - { text: Controls, parent: true }
+    - { text: Applied effects, parent: true }
+  pad: 16
+
+marks:
+  list: { text: Applied effects, parent: true }
+
+# Outlined and unlabelled: the heading over the box already names it.
+callouts:
+  - { mark: list }

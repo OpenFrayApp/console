@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The initiative modal, part-filled (running-a-fight.md). Zara's box is left empty on
+# purpose: it is the one the callout points at.
+name: roll-initiative
+install: docs
+
+setup:
+  - use: seed
+  - click: { role: button, name: Begin }
+  - wait: { text: Roll initiative }
+  - fill: { label: Initiative for Mira }
+    value: 14
+  - fill: { label: Initiative for Ren }
+    value: 3
+  - wait: 200
+
+clip: { css: form, contains: Roll initiative, pick: last, pad: 10 }
+
+marks:
+  zara: { label: Initiative for Zara }
+  surprise: { label: Mark Goblin Minion surprised }
+
+# Zara's box is mid-modal, so its label goes above; the surprise column is the last thing
+# before the modal's edge, so its label comes in from the side rather than down through
+# the row above it.
+callouts:
+  - { mark: zara, text: Type what the player rolled, place: top }
+  - { mark: surprise, text: Mark them surprised, place: right }
+
+# The console has already rolled the creatures' initiative by the time this modal opens,
+# and this is the one shot that frames those numbers, so no two runs agree.
+check: false

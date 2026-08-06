@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# A counter on an effect, and the four things you can do to it (fight/effects.md).
+name: effect-counter
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - click: { text: Ogre }
+  - wait: 250
+  - click: { role: button, name: Apply effect }
+  - wait: 400
+  - click: { role: button, name: Add counter }
+  - wait: 200
+  - fill: { label: Counter 1 name }
+    value: Depth
+  - click: { role: button, name: Apply, exact: true }
+  - wait: 400
+  # Raised off zero, or Lower and Reset are greyed out in the shot.
+  - repeat: 3
+    steps:
+      - click: { role: button, name: Raise Depth }
+      - wait: 120
+
+clip: { text: Applied effects, parent: true, pad: 8 }
+
+marks:
+  buttons:
+    span:
+      - { css: 'button[aria-label="Lower Depth"]', within: clip }
+      - { css: button, text: Clear, within: clip }
+
+callouts:
+  - { mark: buttons, text: 'Raise, lower, reset or clear it', place: top }

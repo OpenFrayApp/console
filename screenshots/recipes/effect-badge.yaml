@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# What an effect looks like from the tracker: a badge on the row (fight/effects.md).
+name: effect-badge
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - use: frighten
+
+clip:
+  trackerRow: Ogre
+  pad: 18
+
+marks:
+  badge: { within: clip, text: Frightened }
+
+# Nudged left so the arrow comes in at a slant: the badge sits under the creature's name,
+# and straight down from a centred label the shaft runs through it.
+callouts:
+  - { mark: badge, text: An effect on this creature, place: top, dx: -200 }

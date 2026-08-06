@@ -1,0 +1,12 @@
+# Frighten the Ogre until it saves — the effect the two effect captures are pictures of.
+steps:
+  - click: { text: Ogre }
+  - wait: 250
+  - click: { role: button, name: Apply effect }
+  - wait: 400
+  - select: { label: Duration }
+    option: save
+  - wait: 200
+  - click: { role: button, name: Frightened, exact: true }
+  - click: { role: button, name: Apply, exact: true }
+  - wait: 500

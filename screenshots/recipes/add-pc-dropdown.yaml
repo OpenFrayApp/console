@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The Add PC popover open under its button (adding-combatants.md). Signed out, so the
+# button opens the form rather than the roster picker.
+name: add-pc-dropdown
+install: docs
+viewport: { width: 1200, height: 1200 }
+
+setup:
+  - click: { role: button, name: Add PC, exact: true }
+  - wait: { css: form, contains: Defenses }
+
+# The button and the form it opened. The form is matched by the one line of writing in
+# it: every other field is an input, and an input carries no text to match on.
+clip:
+  span:
+    - { css: button, text: Add PC }
+    - { css: form, contains: Defenses, pick: smallest }
+  pad: 18
+
+marks:
+  btn: { css: button, text: Add PC }
+
+# Outlined and unlabelled: the page's sentence names the button, so a label here would
+# repeat it.
+callouts:
+  - { mark: btn }

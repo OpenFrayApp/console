@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# One combatant's row, with the numbers on it named (reference/tracker.md).
+name: tracker-row
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - click: { text: Ogre }
+  - wait: 300
+
+clip:
+  trackerRow: Zara
+  pad: 20
+
+# Matched by the text they carry: the row renders no hooks, and the hit points and the
+# armor class share one box, so its text runs together.
+marks:
+  init: { within: clip, text: '21' }
+  hpac: { within: clip, text: 33/33AC 15 }
+
+callouts:
+  - { mark: init, text: Initiative, place: top }
+  - { mark: hpac, text: Hit points and armor class, place: top }

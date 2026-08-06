@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# Settings on Libraries, uncropped and unannotated — the page around it names the parts.
+# 1200 square is tall enough for the whole panel without the console showing around it.
+name: rule-sets
+install: docs
+viewport: { width: 1200, height: 1200 }
+
+setup:
+  - use: open-settings
+  - wait: { css: '[role=tabpanel]', contains: Sort by }
+
+# The heading and the tab's panel, with the panel's own bottom padding made up for.
+clip:
+  span:
+    - { heading: Settings }
+    - { css: '[role=tabpanel]', contains: Sort by, pick: first }
+  grow: { top: 22, right: 22, bottom: 14, left: 22 }

@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The dice bar and the log entry it just wrote (reference/dice.md). Shot short: a 560-tall
+# viewport keeps the newest entry beside the bar, so the crop is a band rather than a page.
+name: dice-log
+install: docs
+viewport: { width: 1440, height: 560 }
+
+setup:
+  - use: seed
+  - use: start
+  - fill: { label: Dice formula }
+    value: 1d20+2
+  - click: { role: button, name: Roll, exact: true }
+  - wait: 600
+
+clip:
+  span:
+    - { css: 'input[aria-label="Dice formula"]' }
+    - { css: button, text: d4 }
+    - { css: li, contains: 1d20+2, pick: last }
+  pad: 16
+
+marks:
+  bar:
+    span:
+      - { css: 'input[aria-label="Dice formula"]' }
+      - { css: button, text: d4 }
+  entry: { css: li, contains: 1d20+2, pick: last }
+
+# The bar sits along the foot of the console and the log runs down its right — so the
+# bar's label comes in from the side, where a label above it would send its arrow the
+# whole height of the shot, across the stat block on the way.
+callouts:
+  - { mark: bar, text: Roll anything by hand, place: left }
+  - { mark: entry, text: 'Every roll, with its dice', place: top }
+
+# The entry holds a die that was actually rolled, so no two runs agree.
+check: false

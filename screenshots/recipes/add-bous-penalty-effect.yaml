@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The modifier builder filled in for a Wisdom-checks penalty (fight/effects.md). No
+# callouts: the sentence the builder derives at the foot of the card is the point.
+#
+# The filename's typo is the committed one — keep them matching.
+name: add-bous-penalty-effect
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - click: { text: Ogre }
+  - wait: 250
+  - click: { role: button, name: Apply effect }
+  - wait: 400
+  - click: { role: button, name: Add a bonus or penalty }
+  - wait: 200
+  - select: { label: Modifier effect }
+    optionLabel: Disadvantage
+  - select: { label: Applies to }
+    optionLabel: Ability checks
+  - check: { role: radio, name: Rolls it makes }
+  - click: { role: button, name: WIS, exact: true }
+  - fill: { label: Modifier label }
+    value: Drunk
+  - wait: 200
+
+# The card is the smallest thing holding every part of the builder — it renders no hook,
+# and the modal around it repeats none of these words.
+#
+# Scoped to the modal, and that is not belt and braces: the modal is rendered inside the
+# controls column rather than through a portal, so the column also *contains* this text
+# while being drawn a fraction of the size. Unscoped, `smallest` picks the column.
+clip:
+  css: div
+  containingAll: [Modifier, Applies to, Rolls it makes]
+  within: { panel: Apply effect to Ogre }
+  pick: smallest
+  pad: 12

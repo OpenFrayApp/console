@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The advantage row on an attack, before it is rolled (fight/attacks.md).
+name: attack-advantage
+install: docs
+
+setup:
+  - use: seed
+  - use: start
+  - use: open-attack
+
+clip: { panel: Ogre · Greatclub, pad: 14 }
+
+marks:
+  roll:
+    span:
+      - { css: button, text: Normal, within: clip }
+      - { css: button, text: Disadvantage, within: clip }
+
+callouts:
+  - { mark: roll, text: Set this before you roll, place: right }

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../node_modules/shotlist/dist/recipe.schema.json
+#
+# The Player view tab: everything the shared screen gives away, in one list. No callouts —
+# the switches label themselves.
+name: player-view-settings
+install: docs
+viewport: { width: 1200, height: 1200 }
+
+setup:
+  - use: open-settings
+  - click: { role: tab, name: Player view }
+  - wait: { css: '[role=tabpanel]', contains: Creature hit points }
+
+clip:
+  span:
+    - { heading: Settings }
+    - { css: '[role=tabpanel]', contains: Creature hit points, pick: first }
+  pad: 22
