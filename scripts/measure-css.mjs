@@ -1,126 +1,115 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 OpenFray contributors
 
-// Snapshots computed styles so a CSS change can be verified by measurement — every
-// regression worth catching on the site has been invisible to the eye and obvious in
-// the numbers (see AGENTS.md, "How the site is styled").
+// Snapshots the browser's used values so a CSS change can be verified by measurement —
+// every regression worth catching on the site has been invisible to the eye and obvious
+// in the numbers (see AGENTS.md, "How the site is styled"). qain captures and diffs; this
+// wraps it in the two things its CLI cannot do here: force the site's localStorage theme,
+// and wait for the page to settle.
 //
-//   node scripts/measure-css.mjs snapshot <url> <out.json> [--theme light|dark]
-//   node scripts/measure-css.mjs diff <before.json> <after.json>
+//   node scripts/measure-css.mjs snapshot <url> <out.json> [options]
+//     --theme light|dark          force the theme before any page script runs
+//     --states hover,focus        also capture these pseudo-states
+//     --wait-for <css>            wait for this selector before capturing
+//     --wait <ms>                 extra settle time after fonts load
+//     --replay                    record text rectangles, for `diff --replay`
+//     --no-rules                  skip rule capture (faster, no file:line causes)
 //
-// Snapshot before the change, snapshot after, diff. An empty diff means the refactor
-// held; anything listed is a real computed-style change to justify or fix.
+// A page is captured after `load`, `--wait-for`, `document.fonts.ready` and `--wait`, in
+// that order — what `qain snap` waits for. Anything that streams in later needs one of
+// the two flags; neither this nor qain guesses.
+//
+//   node scripts/measure-css.mjs diff <before.json> <after.json> [options]
+//     --omit-derived              only the causes, not what merely moved
+//     --html <file>               also write a standalone report
+//     --replay <file>             also write a before/after fade, if both carry --replay
+//
+// Snapshot before the change, snapshot after, diff. `diff` exits non-zero when anything
+// moved, so it chains with &&. The files are plain qain snapshots — `npx @qain/cli diff`
+// reads them too.
 import { readFileSync, writeFileSync } from 'node:fs'
+import {
+  capture,
+  diff as diffSnapshots,
+  formatHtml,
+  formatText,
+  renderReplayDiff,
+} from '@qain/core'
 import { loadPlaywright } from './lib/playwright.mjs'
 
-// The properties that have actually regressed here: box, type, and color. Sizes that
-// follow content (width/height) are left out — they churn without meaning.
-const PROPS = [
-  'display',
-  'position',
-  'margin-top',
-  'margin-right',
-  'margin-bottom',
-  'margin-left',
-  'padding-top',
-  'padding-right',
-  'padding-bottom',
-  'padding-left',
-  'font-family',
-  'font-size',
-  'font-weight',
-  'font-style',
-  'line-height',
-  'letter-spacing',
-  'text-transform',
-  'text-decoration-line',
-  'color',
-  'background-color',
-  'border-top-width',
-  'border-bottom-width',
-  'border-color',
-  'border-radius',
-  'gap',
-  'column-count',
-  'text-align',
-  'opacity',
-]
+const VIEWPORT = { width: 1280, height: 900 }
 
-/** Load a page and record PROPS for every element, keyed by its tag.class ancestry path. */
-async function snapshot(url, outFile, theme) {
+/** Read `--flag value` and bare `--flag` pairs out of an argument list. */
+function parseFlags(argv) {
+  const flags = {}
+  for (let i = 0; i < argv.length; i++) {
+    if (!argv[i].startsWith('--')) continue
+    const next = argv[i + 1]
+    flags[argv[i].slice(2)] = next && !next.startsWith('--') ? next : true
+  }
+  return flags
+}
+
+/** Capture a settled page as a qain snapshot, with the site's theme forced if asked. */
+async function snapshot(url, outFile, flags) {
   const { chromium } = loadPlaywright()
   const browser = await chromium.launch({ channel: 'chrome' })
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-  if (theme) {
-    await page.addInitScript((t) => localStorage.setItem('openfray-theme', t), theme)
+  const page = await browser.newPage({ viewport: VIEWPORT })
+  if (typeof flags.theme === 'string') {
+    await page.addInitScript((theme) => localStorage.setItem('openfray-theme', theme), flags.theme)
   }
-  await page.goto(url, { waitUntil: 'networkidle' })
+  await page.goto(url, { waitUntil: 'load' })
+  if (typeof flags['wait-for'] === 'string') await page.waitForSelector(flags['wait-for'])
   await page.evaluate(() => document.fonts.ready)
+  if (typeof flags.wait === 'string') await page.waitForTimeout(Number(flags.wait))
 
-  const styles = await page.evaluate((props) => {
-    /** A stable, readable key: the tag.class chain from body, with sibling indexes. */
-    const keyOf = (el) => {
-      const parts = []
-      for (let node = el; node && node !== document.body; node = node.parentElement) {
-        const cls = [...node.classList].sort().join('.')
-        const siblings = node.parentElement ? [...node.parentElement.children] : [node]
-        const nth = siblings.indexOf(node)
-        parts.unshift(`${node.tagName.toLowerCase()}${cls ? '.' + cls : ''}[${nth}]`)
-      }
-      return parts.join(' > ')
-    }
-    const out = {}
-    for (const el of document.body.querySelectorAll('*')) {
-      if (el.closest('script, style, noscript')) continue
-      const computed = getComputedStyle(el)
-      const entry = {}
-      for (const p of props) entry[p] = computed.getPropertyValue(p)
-      out[keyOf(el)] = entry
-    }
-    return out
-  }, PROPS)
-
+  const session = await page.context().newCDPSession(page)
+  const snap = await capture(session, {
+    rules: flags['no-rules'] !== true,
+    replay: flags.replay === true,
+    states: typeof flags.states === 'string' ? flags.states.split(',') : [],
+  })
   await browser.close()
-  writeFileSync(outFile, JSON.stringify({ url, theme: theme ?? null, styles }, null, 1))
-  console.log(`Measured ${Object.keys(styles).length} elements on ${url} → ${outFile}`)
+
+  writeFileSync(outFile, JSON.stringify(snap))
+  for (const warning of snap.warnings) console.warn(`qain: ${warning}`)
+  const nodes = snap.states[0]?.nodes.length ?? 0
+  const states = snap.states.map((state) => state.state).join(', ')
+  console.log(`Measured ${nodes} elements on ${url} (${states}) → ${outFile}`)
 }
 
-/** Compare two snapshots and print every per-element property change. */
-function diff(beforeFile, afterFile) {
-  const before = JSON.parse(readFileSync(beforeFile, 'utf8')).styles
-  const after = JSON.parse(readFileSync(afterFile, 'utf8')).styles
-  const keys = new Set([...Object.keys(before), ...Object.keys(after)])
-  let changes = 0
-  for (const key of keys) {
-    const a = before[key]
-    const b = after[key]
-    if (!a || !b) {
-      console.log(`${!a ? 'ADDED' : 'REMOVED'}  ${key}`)
-      changes++
-      continue
-    }
-    for (const p of PROPS) {
-      if (a[p] !== b[p]) {
-        console.log(`${key}\n    ${p}: ${a[p]} → ${b[p]}`)
-        changes++
-      }
-    }
+/** Compare two snapshots, print the report, and exit non-zero when anything changed. */
+function diff(beforeFile, afterFile, flags) {
+  const before = JSON.parse(readFileSync(beforeFile, 'utf8'))
+  const after = JSON.parse(readFileSync(afterFile, 'utf8'))
+  const result = diffSnapshots(before, after, { omitDerived: flags['omit-derived'] === true })
+
+  if (typeof flags.html === 'string') writeFileSync(flags.html, formatHtml(result))
+  if (typeof flags.replay === 'string') {
+    writeFileSync(flags.replay, renderReplayDiff(before, after, result))
   }
-  if (changes === 0) {
+
+  if (result.changes.length === 0) {
     console.log('No computed-style changes.')
-  } else {
-    console.log(`\n${changes} change(s).`)
-    process.exitCode = 1
+    return
   }
+  console.log(formatText(result, { color: Boolean(process.stdout.isTTY) }))
+  process.exitCode = 1
 }
 
-const [mode, a, b, themeFlag, themeValue] = process.argv.slice(2)
+const [mode, a, b] = process.argv.slice(2)
+const flags = parseFlags(process.argv.slice(5))
 if (mode === 'snapshot' && a && b) {
-  await snapshot(a, b, themeFlag === '--theme' ? themeValue : undefined)
+  await snapshot(a, b, flags)
 } else if (mode === 'diff' && a && b) {
-  diff(a, b)
+  diff(a, b, flags)
 } else {
   console.error('Usage: measure-css.mjs snapshot <url> <out.json> [--theme light|dark]')
-  console.error('       measure-css.mjs diff <before.json> <after.json>')
+  console.error('                                                 [--states hover,focus]')
+  console.error('                                                 [--wait-for <css>] [--wait <ms>]')
+  console.error('                                                 [--replay] [--no-rules]')
+  console.error('       measure-css.mjs diff <before.json> <after.json> [--omit-derived]')
+  console.error('                                                       [--html <file>]')
+  console.error('                                                       [--replay <file>]')
   process.exit(1)
 }

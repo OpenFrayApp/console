@@ -251,7 +251,11 @@ computed style stays identical, so measurement cannot catch it.
 
 Before changing shared CSS or a layout, snapshot computed styles and diff after; every
 regression worth catching in `site/` has been invisible to the eye and obvious in the
-numbers.
+numbers. `scripts/measure-css.mjs snapshot <url> <out.json>` captures a page and
+`… diff <before> <after> --omit-derived` reports what changed, naming the declaration
+behind each change and folding away the nodes that merely moved with it. It wraps
+[qain](https://github.com/Shinyaigeek/qain) — the script's own job is forcing the
+`localStorage` theme (`--theme light`) and settling the page.
 
 ### Workspaces & dev servers
 
