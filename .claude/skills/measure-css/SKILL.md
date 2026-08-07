@@ -7,8 +7,8 @@ description: Verify a site/ CSS or layout change by measuring computed styles be
 
 The rule (AGENTS.md → "How the site is styled"): before changing shared CSS or a
 layout in `site/`, snapshot computed styles; after the change, diff. The regressions
-this workflow exists for — preflight eating list markers, utility-order flips, a
-`text-*` silently changing `line-height`, a dropped script-hook class — all render
+this workflow exists for (preflight eating list markers, utility-order flips, a
+`text-*` silently changing `line-height`, a dropped script-hook class) all render
 "looking fine" and measure differently.
 
 `scripts/measure-css.mjs` wraps [qain](https://github.com/Shinyaigeek/qain), which
@@ -43,7 +43,7 @@ them too.
 
 ## Reading the diff
 
-Every change carries the declaration behind it — selector, the value that moved, and
+Every change carries the declaration behind it: selector, the value that moved, and
 where the browser loaded the rule from:
 
 ```
@@ -57,7 +57,7 @@ html > body > header#top > nav#topnav > a
   grew is derived, not a cause; the terse view drops them. Read the full list when the
   causes don't account for what you're seeing.
 - **Contrast is recomputed** for every color change, and flagged when a pair crosses a
-  WCAG threshold — worth a look on any theme-variable edit.
+  WCAG threshold. Check it on any theme-variable edit.
 - **A theme flip reports `no CSS declaration on this node changed`.** That is correct,
   not a miss: the declaration says `var(--…)` in both snapshots and only `:root` moved.
 - **A Tailwind utility attributes to the generated stylesheet**, so the useful half of
@@ -69,7 +69,7 @@ html > body > header#top > nav#topnav > a
 ## What the diff can't see
 
 - **Script-hook classes** (`.lightbox-next`, `.nav-toggle`, `.shot-thumb`): removing
-  one breaks behavior while every computed style stays identical — qain ignores the
+  one breaks behavior while every computed style stays identical. qain ignores the
   `class` attribute for that exact reason. Grep for the class name in `site/src` before
   deleting any class.
 - **The print edition** shares these stylesheets. After a `waking-garden.css` or
@@ -81,12 +81,12 @@ html > body > header#top > nav#topnav > a
 ## Gotchas
 
 - A page is captured after `load`, `--wait-for`, `document.fonts.ready` and `--wait`,
-  in that order. Anything that streams in later needs one of those two flags — neither
+  in that order. Anything that streams in later needs one of those two flags. Neither
   the script nor qain guesses.
 - Snapshotting **openfray.app** instead of localhost costs one phantom change per run:
   the Fathom beacon `<img>` carries a fresh cache-buster. It is PROD-only, so localhost
   stays clean.
-- `--no-rules` skips rule capture — one CDP round-trip per node — when all you need to
+- `--no-rules` skips rule capture (one CDP round-trip per node) when all you need to
   know is _whether_ something moved.
 
 Playwright resolves from the npx cache; if the script says it's missing, seed it once

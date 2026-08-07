@@ -18,7 +18,7 @@ surface are collected at the end, under [The handbook](#the-handbook-docs),
 
 This is technical documentation. It is not a book, an essay, or a story about the app. Every
 sentence exists to get a reader from "I don't know how to do this" to "done". If a sentence
-does something else — sets a mood, admires the design, makes a joke — cut it.
+does something else (sets a mood, admires the design, makes a joke), cut it.
 
 Two working tests:
 
@@ -29,7 +29,9 @@ Two working tests:
 
 ## Voice
 
-- **Plain and direct.** Middle-school reading level. Short words over long ones.
+- **Plain and direct.** High-school reading level is the ceiling for anything this repo
+  ships; the handbook aims lower still, at middle school. Short words over long ones, one
+  idea per sentence, and about 25 words at most.
 - **Second person.** "You" is the reader; "OpenFray" is the app. Never "we" for the app.
 - **Present tense.** "OpenFray rolls the save," not "OpenFray will roll the save."
 - **Active voice.** "Click **Begin** to start the fight," not "The fight is started by
@@ -49,8 +51,8 @@ Before and after:
 | "This is the column you watch."                                              | "The tracker shows everyone in the fight, in initiative order."                              |
 | "OpenFray helps you _run_ a spell without playing the rulebook at you."      | "Casting a spell rolls its dice, shows its card, and offers to add its effect to the board." |
 
-Contractions are fine ("don't", "you'll") — they read naturally. Rhetorical questions,
-asides, and em-dash flourishes usually are not; prefer a second sentence.
+Contractions are fine ("don't", "you'll"). They read naturally. Rhetorical questions and
+mid-sentence asides are not. Write a second sentence instead.
 
 ## What we document, and what we don't
 
@@ -60,8 +62,8 @@ asides, and em-dash flourishes usually are not; prefer a second sentence.
   turn). Never restate rules text, and never reproduce SRD content in the docs or on the site.
 - **Don't document what doesn't exist.** If a feature is planned, either leave it out or mark
   it clearly with a `:::note[Coming later]` aside.
-- **Keep it current.** OpenFray is in alpha. A UI change and its doc change belong in the same
-  commit. A stale screenshot or a renamed button is a bug, not a cosmetic issue.
+- **Keep it current.** OpenFray still changes often. A UI change and its doc change belong in
+  the same commit. A stale screenshot or a renamed button is a bug, not a cosmetic issue.
 
 ---
 
@@ -86,7 +88,7 @@ search, so every page must stand on its own.
    and when you'd need it. Never open with a heading.
 4. **`##` sections** — one topic each, in the order a reader does the work.
 5. **A "Where to next" list** at the end of tutorial-style handbook pages, linking the
-   natural follow-ons. **Not on a book chapter** — those carry previous/next pagination,
+   natural follow-ons. **Not on a book chapter.** Those carry previous/next pagination,
    and a hand-written list of the same links goes stale the moment a chapter moves.
 
 ### Headings
@@ -127,7 +129,7 @@ second paragraph.
 ## Referring to the interface
 
 - **Bold the exact label**: **Add creature**, **Roll saves**, **Apply effect**. Copy the
-  capitalization from the app — don't "fix" it here.
+  capitalization from the app. Don't "fix" it here.
 - Bold is only for UI labels. Use italics for emphasis, sparingly.
 - **Say where it is** the first time: "**Apply effect**, in the controls beside the stat
   block". A reader who can't find the button can't follow the step.
@@ -146,14 +148,14 @@ Capitalization and naming are part of correctness. Get these right.
 | ----------------------------------- | ------------------------------------------------------------ |
 | Game Master, GM                     | Dungeon Master, DM, DMG                                      |
 | creature                            | monster, mob, enemy (as a noun for a stat block)             |
-| player, player character            | NPC, PC (in prose — **Add PC** is a button label)            |
-| hit points, armor class             | HP, AC (in prose — fine in a screenshot or table header)     |
+| player, player character            | NPC, PC (in prose; **Add PC** is a button label)             |
+| hit points, armor class             | HP, AC (in prose; fine in a screenshot or table header)      |
 | the console                         | the app, the tool, the tracker (for the whole thing)         |
 | the tracker                         | the initiative list, the left column                         |
 | the compendium                      | the library, the database                                    |
 | the log                             | the roll log, the feed                                       |
 | effect, condition, reminder         | buff, debuff, status                                         |
-| fight                               | combat (in prose — "combat" is fine in **Start combat**)     |
+| fight                               | combat (in prose; "combat" is fine in **Start combat**)      |
 | encounter                           | — the app's own noun; in prose, say "fight"                  |
 | sign in, signed in, sign out        | log in, login, log out, register                             |
 | DnD 5e (house short form)           | dnd (lowercase), a bare "5E" as a label                      |
@@ -165,25 +167,25 @@ Capitalization and naming are part of correctness. Get these right.
 More:
 
 - **The ampersand marks are Wizards of the Coast's, not ours.** Never write "D&D" or
-  "Dungeons & Dragons" as our own term — spell it "DnD" or "Dungeons and Dragons". The
+  "Dungeons & Dragons" as our own term. Spell it "DnD" or "Dungeons and Dragons". The
   ampersand form appears in only two places: the **D&D Beyond** product name (we're naming
   their product), and a copyright or legal statement that has to quote the trademark.
-  Nowhere else — not in titles, prose, metadata, or keywords.
+  Nowhere else: not in titles, prose, metadata, or keywords.
 - **Name 5.5e before 5e, always.** A compatibility line reads "compatible with 5.5e and
   5e", never the other way round: the app is 2024-first, and the order says so before the
-  sentence does. Same for any pair — Basic Rules 2024 before Basic Rules 2014, 5.5 before
+  sentence does. The same goes for any pair: Basic Rules 2024 before Basic Rules 2014, 5.5 before
   5.0. The exception is legal copy, which keeps whatever wording it was written with; see
   the legal-pages rule under [The website](#the-website-site).
-- **Edition names — write the ones readers search.** "DnD 5e" is the house short form,
+- **Edition names: write the ones readers search.** "DnD 5e" is the house short form,
   but "Dungeons and Dragons 5e", "5th edition", and the year forms ("DnD 2024", "Core
-  Rules 2024", "2014 edition") are all correct and welcome — in page titles, descriptions,
+  Rules 2024", "2014 edition") are all correct and welcome, especially in page titles, descriptions,
   and metadata especially, and in prose wherever they read naturally. These are the words
   people type into a search box; match them. Don't lowercase to "dnd" or drop in a bare
   "5E" as a label.
 - **The product is the combat console; "combat tracker" and "initiative tracker" are search
   synonyms.** "Combat console" is what the app and the site call OpenFray, so lead with it in
   titles and prominent copy. "Combat tracker" and "initiative tracker" are the phrases readers
-  type into a search box — use them as synonyms in descriptions, metadata, and page
+  type into a search box. Use them as synonyms in descriptions, metadata, and page
   introductions, not as the main label. Inside the console's own workings the precise nouns
   still hold: **the tracker** is the initiative list, and **the console** is the whole thing.
 - **OpenFray** — one word, capital O and F. Never "Openfray", never "the OpenFray app".
@@ -209,15 +211,18 @@ House style follows the Chicago Manual of Style and Merriam-Webster. The rules t
 - **Numbers.** Spell out zero through nine in ordinary prose ("three buttons", "nine
   comments"). Always use numerals for game and interface values: round 1, 8 hours, DC 15,
   `2d6+3`, +5, 0 hit points, step 3. Spell out any number that starts a sentence.
-- **Em dash** — spaced on both sides, not closed up against the words. At most one pair per
-  paragraph, and prefer a period or a colon where one works.
+- **No em-dash aside.** A spaced em dash in the middle of a sentence is banned in every
+  document this repo ships. Use a period, a colon, or parentheses. The one allowed form is
+  a definition list item: `- **AC** — armor class.` See AGENTS.md, "Writing style", which
+  `scripts/check-prose.mjs` enforces on every build. The books are the exception, under
+  [Game content](#game-content-libraries-and-books).
 - **Curly quotes** (“ ”) and apostrophes (‘ ’). Straight quotes only inside code.
 - **Commas and periods go inside quotation marks**; colons and semicolons outside.
 - **Parentheses**: the period goes outside, unless the whole sentence is inside them.
 - **Phrasal verbs**: "sign in" (verb), "the sign-in screen" (modifier). "Set up" a campaign;
   the "setup" is the result.
 - **Code formatting** for anything typed literally: `2d6+3`, `+5`, `-8`, `4d6kh3`, file names,
-  JSON. Not for UI labels — those are bold.
+  JSON. Not for UI labels, which are bold.
 - **Ampersands** are allowed in page titles and sidebar labels ("Effects & conditions") for
   width. Use "and" in prose.
 
@@ -225,7 +230,7 @@ House style follows the Chicago Manual of Style and Merriam-Webster. The rules t
 
 ## Screenshots and images
 
-A screenshot in the right place saves paragraphs. A screenshot doing the explaining is a bug.
+A screenshot supports the text. It never carries information the text leaves out.
 
 **Rules:**
 
@@ -258,7 +263,7 @@ A screenshot in the right place saves paragraphs. A screenshot doing the explain
   reminder sections outlined in red and numbered one to four."
 - Don't start with "Image of" or "Screenshot showing".
 - Don't restate the paragraph above it.
-- Decorative images don't belong in the docs at all — if it's decorative, delete it.
+- Decorative images don't belong in the docs at all. If it's decorative, delete it.
 
 ---
 
@@ -280,7 +285,7 @@ A screenshot in the right place saves paragraphs. A screenshot doing the explain
 
 ## Callouts
 
-Starlight asides, in the handbook — use them for information that would otherwise interrupt
+Starlight asides, in the handbook. Use them for information that would otherwise interrupt
 the flow. Always give a title in brackets. At most one per section, and never two in a row.
 
 | Aside           | Use it for                                                            |
@@ -288,7 +293,7 @@ the flow. Always give a title in brackets. At most one per section, and never tw
 | `:::note[…]`    | A fact worth stepping out of the flow for: a requirement, a limit.    |
 | `:::tip[…]`     | A faster route the reader would otherwise miss.                       |
 | `:::caution[…]` | Something that behaves differently than expected, or can't be undone. |
-| `:::danger[…]`  | Data loss. Rare — deletion only.                                      |
+| `:::danger[…]`  | Data loss. Rare, and for deletion only.                               |
 
 Recurring ones to keep worded identically wherever they appear:
 
@@ -328,12 +333,11 @@ is the only check that proves the links between them resolve.
 ## The website (`site/`)
 
 The marketing site may persuade; the handbook may not. Everything else in this guide still
-applies — same terminology, same sentence case, same plain language.
+applies: same terminology, same sentence case, same plain language.
 
 - One `<h1>` per page. A clear description in the layout's meta.
 - Every screenshot needs alt text that describes the scene, not the feature name.
-- No stacked superlatives, no fake urgency, no claims the app doesn't deliver today. The app
-  is in alpha and the copy says so.
+- No stacked superlatives, no fake urgency, no claims the app doesn't deliver today.
 - Buttons and links say what happens: "Open the console", not "Get started".
 - **Legal pages:** any edit to `site/src/pages/privacy.astro` or `terms.astro` must bump the
   `Last updated:` date in the same edit. Never change legal copy without it.
@@ -342,14 +346,14 @@ applies — same terminology, same sentence case, same plain language.
 
 ## Game content (libraries and books)
 
-The creature libraries we write — _The Waking Garden_, _Brood & Bloom_ — and their print
-editions are game text, not documentation. They follow the game's own house style rather
-than the plain-instruction rules above.
+The creature libraries we write (_The Waking Garden_, _Brood & Bloom_) and their print
+editions are game text, not documentation. They follow the game's own house style, not
+the plain-instruction rules above.
 
-**Lore is exempt** from the plain-instruction rules above, not from restraint — see
+**Lore is exempt** from the plain-instruction rules above, but not from restraint. See
 [Register](#register). A creature's `description`, and the flavor passages that open a
-chapter, keep their authored voice. Everything else — chapter and section prose, encounter
-write-ups, tables, and stat blocks — follows the rules below.
+chapter, keep their authored voice. Everything else follows the rules below: chapter and
+section prose, encounter write-ups, tables, and stat blocks.
 
 ### Register
 
@@ -357,8 +361,8 @@ Game text has two registers, and the line between them is strict:
 
 - **Rules text is neutral.** State what a thing is, what it does, and the numbers, in
   declarative sentences. No drama, no wit, no build-up.
-- **State intent, not instruction.** Describe how a creature or rule is meant to behave —
-  "the clutch exists to place latchlings, not to deal damage" — never how the Game Master
+- **State intent, not instruction.** Describe how a creature or rule is meant to behave, as in
+  "the clutch exists to place latchlings, not to deal damage". Never say how the Game Master
   must run it. No "the correct play is", "should be played as", "worth conveying". The
   Game Master runs everything as they wish.
 - **End on information.** Don't close a section or a paragraph on an aphorism or a
@@ -390,7 +394,7 @@ behavior and its rule interactions, in the neutral register, and nothing else.
 - **Use the real characters**: a true minus sign (−, U+2212) rather than a hyphen, × rather
   than the letter x, and ½ ¼ ⅓ ⅔ ¾ for fractions set against a numeral.
 - **Say "half"**, not "one-half". Write "10 fire damage", not "10 points of fire damage".
-- **Avoid weeks and months** for durations — the length of a week varies by world. Use days.
+- **Avoid weeks and months** for durations. The length of a week varies by world. Use days.
 
 ### Formatting game terms
 
@@ -410,12 +414,12 @@ Advantage/Disadvantage are capitalized there without a single exception.
 - Lowercase stays for the ordinary words: ability, attack roll, damage roll, round,
   saving throw in running prose, spell, cantrip, spell slot.
 - This applies to game content only. The handbook, the marketing site, and the app keep
-  the lowercase house forms in the [words table](#words-we-use) — "armor class" there.
+  the lowercase house forms in the [words table](#words-we-use), so "armor class" there.
 - **Capitalize spell and magic item names**, with no italics, the way the SRD 5.2.1 text
   writes them: Lesser Restoration, Flame Tongue. The capitals mark the title, so a Wall of
   Fire spell produces a wall of fire. (The 2014 italic-lowercase style is retired.)
 - **Inline subheads take a period, not a colon**, and are set in bold: **Terrain.** not
-  **Terrain:**. A stat-block data field is different — that's a bold label and a value.
+  **Terrain:**. A stat-block data field is different: a bold label and a value.
   In chapter prose they belong only to list items and Running it notes: a freestanding
   rule gets its own heading or a Note aside, never a bold-led paragraph.
 - **Introduce every vertical list with a complete sentence ending in a colon.** Capitalize
@@ -423,7 +427,7 @@ Advantage/Disadvantage are capitalized there without a single exception.
 
 ### Wording
 
-- You _make_ a saving throw — never "roll" one, which is redundant. Prefer "the target must
+- You _make_ a saving throw. Never "roll" one, which is redundant. Prefer "the target must
   make a saving throw" over "the target makes a saving throw".
 - Don't confuse making a roll with succeeding on one: "succeed on a DC 15 Strength check".
 - An attack _roll_ has advantage or disadvantage, not the attack.
@@ -474,7 +478,7 @@ copy, and it is the copy the handbook quotes. Get it right here and the docs fol
 - [ ] It reads the same with every image removed.
 - [ ] Screenshots are current, cropped, annotated in red, and have alt text.
 - [ ] Links are descriptive, absolute, and resolve after `npm run build`.
-- [ ] Terminology matches the table above — especially **Game Master**, never DM.
+- [ ] Terminology matches the table above, especially **Game Master**, never DM.
 - [ ] Nothing describes a feature that doesn't exist yet.
 - [ ] A changed app label is reflected in the handbook and its screenshots.
 - [ ] `npm run format` is clean, and prose wraps at 90 columns.

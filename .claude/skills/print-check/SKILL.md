@@ -14,7 +14,7 @@ verification loop.
 ## Workflow
 
 1. Start the site dev server: `npm run dev -w site`.
-2. Run the headless check — it opens the page in real Chrome, waits for
+2. Run the headless check. It opens the page in real Chrome, waits for
    pagination, and exits non-zero on any failure, timeout, or warning:
 
    ```bash
@@ -36,7 +36,7 @@ PDF from there, with backgrounds on. **The page is blank for ~40–60s while Pag
 paginates**; it is done when `document.body.dataset.pages` is set. A healthy run's
 console shows exactly the `Paged.js:` line above and none of these:
 
-- A `Print: replaced …` warning — the library→book word map's occurrence count
+- A `Print: replaced …` warning means the library→book word map's occurrence count
   drifted; if the copy edit was intentional, update `EXPECTED_LIBRARY_TERMS` in
   `print.astro` in the same change.
 - A `Print: … reference(s) found no target.` warning.
@@ -47,12 +47,12 @@ console shows exactly the `Paged.js:` line above and none of these:
 
 ## Traps (each cost a debugging session)
 
-- `break-after: avoid` is discarded by Paged.js — groups with `break-inside: avoid`
+- `break-after: avoid` is discarded by Paged.js. Groups with `break-inside: avoid`
   are built in `print.astro`; don't move that into CSS.
 - Pagination is non-deterministic unless it awaits `document.fonts.ready` — do not
   remove that await, and don't trust a page count measured before fonts load.
 - Cross-references resolve after pagination against the rendered clones; Paged.js
-  keeps source markup in a `<template>`, so every creature id exists twice — query
+  keeps source markup in a `<template>`, so every creature id exists twice. Query
   inside `.pagedjs_pages` only.
 - The route is local-only: `scripts/assemble-site.mjs` deletes it from `dist/` and
   the sitemap filter hides it. If it ever appears on the live site, that stripping

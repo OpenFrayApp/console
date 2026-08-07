@@ -2,7 +2,7 @@
 
 **A free, open-source DnD 5e combat tracker for Game Masters.**
 
-5.5e/2024-first, with 5.0 support. Built for the table — fast, glanceable, and
+5.5e/2024-first, with 5.0 support. Built for the table: fast, glanceable, and
 focused on the one job other trackers do badly: keeping hold of what's actually
 happening in a fight.
 
@@ -15,7 +15,7 @@ happening in a fight.
 OpenFray is a combat console for running DnD 5e encounters: initiative order,
 monster resources (spell slots, legendary & lair actions, recharge abilities),
 concentration, conditions, the relational state between combatants (who has
-advantage on whom, who's debuffed), mass saves, and dice — with a built-in SRD
+advantage on whom, who's debuffed), mass saves, and dice, with a built-in SRD
 compendium and an easy custom-creature form.
 
 It exists because the tools that came before it track _each creature_ well but
@@ -28,8 +28,8 @@ those as first-class.
 
 **OpenFray is a fast scratchpad, not a system of record.**
 
-It tracks what's _happening in the fight_ and the reference a GM keeps on hand —
-never the _rules engine_ behind a character. The player's sheet / D&D Beyond owns
+It tracks what's _happening in the fight_ and the reference a GM keeps on hand. It
+never models the _rules engine_ behind a character. The player's sheet / D&D Beyond owns
 what a character _can do_ and works out the numbers; OpenFray owns what
 _just happened_, what must be _remembered_ this round, and the notes a GM jots to
 run the table. This line is deliberate, and it's the reason the app stays fast and
@@ -40,23 +40,23 @@ The test for any feature, contribution, or idea:
 > **Does it require knowing a player character's build? If yes, it's out of scope.**
 
 "Knowing the build" means the app having to _model, derive from, or run_ class,
-level, features, or spells — not the descriptive facts a GM chooses to type in.
-This isn't a limitation to work around — it's the design. A few of its
+level, features, or spells. It does not mean the descriptive facts a GM types in.
+This isn't a limitation to work around. It is the design. A few of its
 consequences, so the spirit is clear:
 
 - **A PC holds what the GM wants to remember, not a rules engine.** Beyond AC, HP,
-  and conditions, a PC can carry the reference a GM finds handy at the table —
-  ability scores, senses, speed, defenses, an initiative modifier — plus character
+  and conditions, a PC can carry the reference a GM finds handy at the table:
+  ability scores, senses, speed, defenses, an initiative modifier, plus character
   context like race, alignment, faith, personality traits, ideals, bonds, flaws, a
   backstory, and private GM notes. It's all the GM's call what to jot. A **Quick add**
-  is the bare minimum — name, HP, AC — for a throwaway NPC or a creature dropped in
+  is the bare minimum (name, HP, AC) for a throwaway NPC or a creature dropped in
   mid-fight. What OpenFray won't do is _run_ the character: no class, level, spell
   slots, or feature logic, and it never derives or auto-applies what a PC can do.
   The GM transcribes; the sheet still owns the mechanics.
 - **Effects model the _result_, not the cause.** There are only ~6 shapes of
   consequence in all of 5e (a condition, advantage, disadvantage, a flat modifier,
   a reminder, a save-ends effect). We model those six. We never model the hundreds
-  of class features that produce them — the GM transcribes the outcome, the app
+  of class features that produce them. The GM transcribes the outcome, the app
   reminds.
 - **Combat is local-first.** State lives in the browser and feels instant;
   persistence happens quietly in the background. The app never makes you wait on
@@ -65,20 +65,20 @@ consequences, so the spirit is clear:
   library never mutates a fight in progress.
 
 If you're contributing and a change starts to feel like the app needs to _model or
-run_ a character's build — class features, spell mechanics, leveling — that's the
+run_ a character's build (class features, spell mechanics, leveling), that's the
 signal to stop and rethink, not to add the field. Storing a fact the GM types is
 fine; computing what a character can do is not.
 
 ## Status
 
-🧪 **Beta — running tables at [openfray.app/console](https://openfray.app/console).**
+🎲 **1.0, running tables at [openfray.app/console](https://openfray.app/console).**
 
 The single-GM combat console is up and running: initiative, monster resources,
 conditions/effects, concentration, group saves, and honest dice with a clear roll log,
 plus an **encounter difficulty estimate** before you begin and an **end-of-combat recap**
 (XP, timing, and standout hits), the built-in SRD compendium (**Basic Rules 2024 and opt-in 2014 + Tome of Beasts libraries**), custom
 creatures and spells, JSON creature import, a durable **Characters** roster, and
-**campaigns** with house rules — plus a **shared read-only player view** your table follows
+**campaigns** with house rules, plus a **shared read-only player view** your table follows
 on their own phones, showing the turn order and the game log with as much of a creature as
 you choose to give away. It runs fully anonymous in the browser, or sign in (free, with
 **Discord or Google**) to save your fights and custom content to the cloud across devices.
@@ -109,8 +109,8 @@ How the repo is organized, the architectural rules, and the code style live in
   5.1 (Basic Rules 2014) via [dnd5eapi.co](https://www.dnd5eapi.co), both under
   **CC-BY-4.0** — attribution to Wizards of the Coast is provided in-app and in
   [`CREDITS.md`](./CREDITS.md). Each source is honored under its own license, preferring
-  CC-BY > ORC > OGL; third-party content — **Tome of Beasts 1–3 (Kobold Press)**, opt-in
-  libraries — is used under its actual license (OGL 1.0a), never assumed CC-BY. Anyone
+  CC-BY > ORC > OGL. Third-party content (**Tome of Beasts 1–3 (Kobold Press)**, opt-in
+  libraries) is used under its actual license (OGL 1.0a), never assumed CC-BY. Anyone
   picks which libraries appear (the **Settings** panel; 5.2 by default). Some iconic
   monsters (Beholder, Mind Flayer, etc.) are excluded from the SRD by WotC and cannot be
   included; the custom-creature form, JSON import, and third-party content fill that gap.
@@ -119,14 +119,14 @@ How the repo is organized, the architectural rules, and the code style live in
 
 ## Contributing
 
-Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) and our
+Contributions welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) and our
 [Code of Conduct](./CODE_OF_CONDUCT.md). The most important contribution guideline
 is the principle above: keep OpenFray a scratchpad, not a character sheet.
-[`AGENTS.md`](./AGENTS.md) is the source of truth for how we build — humans and AI
+[`AGENTS.md`](./AGENTS.md) is the source of truth for how we build, for humans and AI
 agents alike.
 
 ## Supporting
 
 OpenFray is free and ad-free. If it saves you time at the table and you'd like to
-help cover hosting, donations are welcome (link TBD) — but the app stays fully
+help cover hosting, donations are welcome (link TBD), but the app stays fully
 free regardless.

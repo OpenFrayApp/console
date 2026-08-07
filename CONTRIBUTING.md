@@ -1,15 +1,15 @@
 # Contributing to OpenFray
 
-Thanks for wanting to help. OpenFray is a community project, and contributions —
-code, bug reports, ideas, docs — are genuinely welcome.
+Thanks for wanting to help. OpenFray is a community project, and contributions are
+genuinely welcome: code, bug reports, ideas, docs.
 
 Before anything else, please read the one rule that matters most.
 
 ## The scope rule (read this first)
 
 **OpenFray is a fast scratchpad for combat, not a system of record.**
-It tracks what happens at the table — plus the reference a GM jots (a player
-character's stats, defenses, and character notes) — never the _rules engine_ behind a
+It tracks what happens at the table, plus the reference a GM jots (a player
+character's stats, defenses, and character notes). It never models the _rules engine_ behind a
 character.
 
 Every contribution is measured against one question:
@@ -17,7 +17,7 @@ Every contribution is measured against one question:
 > **Does it require knowing a player character's build? If yes, it's out of scope.**
 
 This keeps the app fast, simple, and maintainable by a small community. It is not
-a temporary limitation — it's the core design. Things that are **out of scope**
+a temporary limitation. It is the core design. Things that are **out of scope**
 because they cross this line:
 
 - Knowing a PC's class, level, subclass, or feature list
@@ -27,7 +27,7 @@ because they cross this line:
 - Anything that turns OpenFray into a character manager or a VTT
 
 If a feature you want seems to need any of the above, open an issue to discuss
-_before_ building — there's almost always a scratchpad-shaped version of the idea
+_before_ building. There's almost always a scratchpad-shaped version of the idea
 that fits (model the consequence, not the cause). We'd rather talk it through than
 have you build something we can't merge.
 
@@ -36,7 +36,7 @@ have you build something we can't merge.
 These come from the same spirit; please keep them intact:
 
 - **Effects model results, not causes.** Conditions, advantage, disadvantage, flat
-  modifiers, reminders, save-ends — those ~6 shapes cover all of 5e. Don't add
+  modifiers, reminders, save-ends. Those ~6 shapes cover all of 5e. Don't add
   per-class-feature logic; add to the general Effect system if needed.
 - **Local-first.** The UI mutates in-memory state and feels instant; persistence is
   a background effect, never a gatekeeper the UI reads through. Don't put a network
@@ -44,7 +44,7 @@ These come from the same spirit; please keep them intact:
 - **Snapshot, don't reference.** Creatures entering combat are copied; editing a
   library template must never mutate a fight in progress.
 - **Dice are honestly random.** CSPRNG + modulo-bias rejection. Never add
-  "anti-streak" or "feels-fair" tampering — uniform and transparent, always.
+  "anti-streak" or "feels-fair" tampering. Uniform and transparent, always.
 - **Don't become a character sheet.** (Yes, it's worth saying twice.)
 
 ## Getting the project running
@@ -56,7 +56,7 @@ at the root covers the app and both workspaces:
 npm install
 ```
 
-The repo builds three parts that ship as one site — the console, the marketing
+The repo builds three parts that ship as one site: the console, the marketing
 site, and the handbook. Each has its own dev server; most work needs only one:
 
 | Command               | What it starts             | URL                     |
@@ -80,7 +80,7 @@ that proves the links _between_ the parts resolve.
 
 ## How to contribute
 
-1. **Open an issue first** for anything beyond a small fix — especially features, so
+1. **Open an issue first** for anything beyond a small fix, especially features, so
    we can sanity-check scope together before you spend time.
 2. **Fork, branch, build.** Branch names like `feat/mass-save` or `fix/turn-order`.
 3. **Keep PRs focused.** One concern per PR; easier to review, faster to merge.
@@ -89,16 +89,16 @@ that proves the links _between_ the parts resolve.
    one-line header comment on every named function, no other comments unless the
    code can't say it), and where tests live. Styling is Tailwind in both the app
    and the marketing site, but the two use opposite light/dark conventions and the
-   site has a few rules worth reading first — see "How the site is styled" there
+   site has a few rules worth reading first. See "How the site is styled" there
    before touching CSS.
 5. **Bring tests.** Everything testable ships with tests, in `tests/` (mirroring
-   `src/`) or `site/tests/` for the site — see "Tests" in `AGENTS.md`. A behavior
+   `src/`) or `site/tests/` for the site. See "Tests" in `AGENTS.md`. A behavior
    change updates its tests in the same commit.
 6. **Follow the style guide for any words a user will read.** [`STYLE.md`](./STYLE.md)
    covers the handbook, the marketing site, and the app's own labels and messages.
 7. **Sign your commits (DCO).** Use `git commit -s`, which adds a `Signed-off-by:`
    line certifying you have the right to submit the code under the project's
-   license. Commits are authored by you, a person — don't add AI co-author
+   license. Commits are authored by you, a person. Don't add AI co-author
    trailers (`Co-Authored-By: Claude …`) or "Generated with …" lines, whatever
    tools you used along the way.
 
@@ -121,5 +121,5 @@ commits is how you certify this.
 
 ## Questions
 
-Open an issue or a discussion. Be kind, assume good faith — see the
+Open an issue or a discussion. Be kind and assume good faith. See the
 [Code of Conduct](./CODE_OF_CONDUCT.md).

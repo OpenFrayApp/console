@@ -1,16 +1,16 @@
 Guidance for AI agents (and humans) working in the OpenFray codebase. Read this
 before writing code. It is the source of truth for _how_ to build here. The full
-reasoning lives in the maintainer's working notes — `local/docs/PROJECT-PLAN.md`
-and `local/docs/specs/` — which are **not committed**; everything a contributor
-needs to follow the rules is in this file.
+reasoning lives in the maintainer's working notes (`local/docs/PROJECT-PLAN.md` and
+`local/docs/specs/`), which are **not committed**. Everything a contributor needs to
+follow the rules is in this file.
 
-Its counterpart for words is [`STYLE.md`](./STYLE.md) — the writing style guide for
+Its counterpart for words is [`STYLE.md`](./STYLE.md), the writing style guide for
 every word we publish: the handbook, the marketing site, and the app's own labels
 and messages. **Read it before writing or changing any user-facing copy.**
 
 In here:
 
-- [The one principle](#the-one-principle--apply-it-to-every-change) — the scope test
+- [The one principle](#the-one-principle-apply-it-to-every-change) — the scope test
 - [Architectural rules](#architectural-rules-do-not-violate-without-explicit-discussion)
 - [Repo layout](#repo-layout) — the three parts, the print edition, how the site is styled
 - [Code style](#code-style) · [Tests](#tests) · [Committing](#committing)
@@ -23,55 +23,55 @@ In here:
 A fast, browser-based **combat console** for Game Masters running DnD 5e
 (5.5e/2024-first, with 5.0 support). It tracks what's happening in a fight:
 initiative order, monster resources, conditions, and the relational state between
-combatants — plus dice and an SRD reference.
+combatants, plus dice and an SRD reference.
 
-## The one principle — apply it to every change
+## The one principle: apply it to every change
 
 > **OpenFray is a fast scratchpad, not a system of record.**
-> We track what happens at the table — plus the reference a GM jots — never the
-> _rules engine_ behind a character.
+> We track what happens at the table, plus the reference a GM jots. We never model
+> the _rules engine_ behind a character.
 
 **The test for any feature, before building it:**
 
 > **Does it require knowing a player character's build? If yes, it is out of scope.**
 
 "Knowing the build" means the app having to _model, derive from, or run_ class,
-level, features, or spells — not the descriptive facts a GM chooses to type in.
+level, features, or spells. It does not mean the descriptive facts a GM types in.
 
 Out of scope (belongs on a character sheet / D&D Beyond, never here): modeling
 class features or what an ability _does_; tracking PC spell slots, resources, or
 level; importing/syncing character sheets; auto-converting content between
 editions; auto-matching or deduplicating user-created creatures.
 
-In scope (board state — what is happening now): conditions, advantage/disadvantage,
+In scope (board state, meaning what is happening now): conditions, advantage/disadvantage,
 flat modifiers, reminders; monster resources (spell slots, legendary/lair actions,
 recharge); concentration, initiative, HP, turn/round tracking; dice and group
 saves.
 
 **Two flavours of lightweight combatant** (neither is a character sheet): a **PC**
-holds the board facts plus the reference the GM chooses to jot — AC, HP, conditions;
-optionally ability scores, senses, speed, an initiative modifier, and damage
+holds the board facts plus the reference the GM chooses to jot. That is AC, HP and
+conditions; optionally ability scores, senses, speed, an initiative modifier, and damage
 resistances/immunities/vulnerabilities (these feed damage like a monster's); and
 character context like race, alignment, faith, personality traits/ideals/bonds/flaws,
 a backstory, and private GM notes. A **Quick add** is just name/HP/AC for a throwaway
 NPC. The test still holds: the GM _transcribes_ these facts and the app displays them;
 it never models class/level/spells, derives a build, or runs what a character can do.
-GM-entered defenses are "what damage this takes" — a board consequence — not a sheet
+GM-entered defenses are a board consequence, "what damage this takes", not a sheet
 we read.
 
 **One deliberate carve-out (issues #5/#6, maintainer-decided 2026-08-03):** a
 signed-in roster character may also carry a **class, level, and the armor worn**, and
-exactly two numbers derive from them — **armor class** (the SRD armor table, shield,
-magic enhancements, and the Barbarian/Monk unarmored formulas) and the **initiative
-modifier** (DEX, plus Jack of All Trades) — each behind an opt-in, with the GM's
-typed number always available instead. `src/schema/pcStats.ts` is the whole of it.
+exactly two numbers derive from them. Those are **armor class** (the SRD armor table,
+shield, magic enhancements, and the Barbarian/Monk unarmored formulas) and the
+**initiative modifier** (DEX, plus Jack of All Trades). Each sits behind an opt-in, with
+the GM's typed number always available instead. `src/schema/pcStats.ts` is the whole of it.
 This is still transcription plus a lookup, not a rules engine: nothing else may read
 class or level without the maintainer widening this carve-out explicitly, and the
 anonymous forms never gain these fields.
 
 If a feature is useful but fails the test, it is still a no. When a request tempts
-you toward "it should really _know_ X about the player," stop — that temptation is
-the signal, not a reason to proceed. Flag it rather than building it.
+you toward "it should really _know_ X about the player," stop. That temptation is the
+signal to flag the request, not a reason to build it.
 
 ---
 
@@ -100,14 +100,14 @@ independent, more local-first option.
    where randomness, effect-awareness, and the roll log live.
 7. **Randomness: CSPRNG + modulo-bias rejection.** Use `crypto.getRandomValues()`,
    reject the biased top slice and redraw. **Never** add "anti-streak" or
-   "feels-fair" logic — uniform and transparent only. Trust comes from the
+   "feels-fair" logic. Uniform and transparent only. Trust comes from the
    transparent roll log, not from tampering.
 8. **Local-first, never server-read-through.** Mutate in-memory state, render
    immediately, persist to the backend in the **background** (debounced autosave).
    The UI must never wait on a network round-trip to reflect the GM's own action.
 9. **Multi-tenant isolation via `owner_id` + Row-Level Security**, from the first
    line of backend code. Every user-owned row carries `owner_id`; the database
-   enforces isolation. This is security-critical — treat changes here with extra
+   enforces isolation. This is security-critical. Treat changes here with extra
    caution and never weaken the boundary to make something "work."
 10. **Encounter state is one autosaved JSONB blob.** Combatants live inside it, not
     as separately-queried rows.
@@ -119,7 +119,7 @@ intra-source identity key. Edition is a **campaign-level setting**, not a per-bl
 toggle. Grouping "same creature, two editions" happens **only within one source**,
 over import-controlled content, never across sources and **never on user content**
 (every custom creature is an independent entity). Duplicate detection on custom
-content is advisory only — "warn, then forget"; it must never link, merge, or
+content is advisory only: "warn, then forget". It must never link, merge, or
 dedup.
 
 ---
@@ -135,7 +135,7 @@ their builds into `dist/` for Cloudflare Pages.
 | `site/`              | Astro marketing site, plus the published libraries  | `/`        |
 | `docs/`              | Starlight handbook for players and GMs              | `/docs`    |
 | `public/compendium/` | generated SRD / Tome of Beasts JSON the app fetches | —          |
-| `local/`             | maintainer working notes — **not committed**        | —          |
+| `local/`             | maintainer working notes, **not committed**         | —          |
 
 `STYLE.md` at the root governs the copy in all three of them.
 
@@ -169,17 +169,17 @@ page is blank while it runs.
 
 It is a **local tool, not a page of the site**: `scripts/assemble-site.mjs` removes the
 route from `dist/` and the sitemap filter keeps it unadvertised. It lives under
-`src/pages` anyway so it renders through the site's own components and stylesheet — an
+`src/pages` anyway so it renders through the site's own components and stylesheet. An
 earlier Typst edition restated that CSS in another language, and nearly all the work went
 into the restating rather than the book.
 
 **Layout is authored, not inferred.** Three controls in the MDX, and nothing else decides:
 
-|                        |                                                           |
-| ---------------------- | --------------------------------------------------------- |
-| `<div class="wide">`   | span the page — wrap the **whole section**, not the table |
-| `<PageBreak />`        | start a new page                                          |
-| `<div class="run-in">` | set a lookup table as a run-in list                       |
+|                        |                                                          |
+| ---------------------- | -------------------------------------------------------- |
+| `<div class="wide">`   | span the page: wrap the **whole section**, not the table |
+| `<PageBreak />`        | start a new page                                         |
+| `<div class="run-in">` | set a lookup table as a run-in list                      |
 
 Wrapping only a table is the mistake to avoid: a spanning element splits the column flow,
 and the short run left above it balances into two stubby columns.
@@ -205,7 +205,7 @@ Things that will bite whoever changes this next:
   pages already laid out and so misses every forward reference. A placeholder reserves the
   space during layout; the digits are filled in against the rendered clones, not the source
   markup Paged.js keeps in a `<template>`.
-- **The site's `--faint` is 2.6:1 on white.** Print overrides it — with `!important`, since
+- **The site's `--faint` is 2.6:1 on white.** Print overrides it with `!important`, since
   `global.css` sets it on `:root.light`.
 - **Stat blocks are `<details>` on the site**, collapsed to name, type line and lore. Print
   flattens them before paginating, so the markup serves both.
@@ -221,14 +221,14 @@ utilities, and the two stylesheets hold only what a utility can't reach.
 
 - The theme lives in CSS custom properties mapped into `@theme`, so `bg-panel` resolves
   through the variable and flips with the light/dark toggle. There is **no `dark:` variant
-  here** — the app (`src/`) uses the opposite convention (`.dark` + `dark:`). Don't unify
+  here.** The app (`src/`) uses the opposite convention (`.dark` + `dark:`). Don't unify
   them without changing the pre-paint script in both places.
 - **All of the site's own CSS is wrapped in `@layer components`.** That is load-bearing:
   layer order beats specificity, so utilities always win over the stylesheet and the
   stylesheet always wins over preflight. Don't unwrap it.
-- **What stays CSS, deliberately:** the prose defaults for `.doc` and `.book-body` — they
+- **What stays CSS, deliberately:** the prose defaults for `.doc` and `.book-body`. They
   style bare `h2`/`p`/`li`/`td` in long-form copy, which has nothing to hang a utility on
-  short of classing every paragraph — plus the rendered markdown inside components,
+  short of classing every paragraph. The same goes for the rendered markdown inside components,
   element-level rules, and the few things no utility can express (`.lightbox::backdrop`,
   the theme toggle's icon swap, `color-mix()`).
 - `scripts/check-css-specificity.mjs` fails the build on a prose rule written as a plain
@@ -237,7 +237,7 @@ utilities, and the two stylesheets hold only what a utility can't reach.
 Three Tailwind behaviors have each caused a silent bug here. All three are invisible until
 measured:
 
-1. **Preflight removes browser defaults the stylesheet never declared** — bold headings,
+1. **Preflight removes browser defaults the stylesheet never declared**: bold headings,
    list markers, paragraph margins. They are declared explicitly now.
 2. **Two utilities for the same property in one class list resolve by Tailwind's output
    order, not the order written.** Keep a shared class constant free of any property a
@@ -246,7 +246,7 @@ measured:
    when the element had been inheriting the body's `1.6`.
 
 **A class name may also be a script hook** (`.lightbox-next`, `.nav-toggle`, `.shot-thumb`).
-Keep the semantic name alongside the utilities — dropping one breaks behavior while every
+Keep the semantic name alongside the utilities. Dropping one breaks behavior while every
 computed style stays identical, so measurement cannot catch it.
 
 Before changing shared CSS or a layout, snapshot computed styles and diff after; every
@@ -263,7 +263,7 @@ behind each change and folding away the nodes that merely moved with it. It wrap
 three, and each still declares its own dependencies in its own `package.json`. There is
 one lockfile, at the root.
 
-Each part runs its own dev server, on a port pinned in its own config — not passed on
+Each part runs its own dev server, on a port pinned in its own config, not passed on
 the command line, so `npm run dev` and the editor's launch configs agree:
 
 | Command               | What it starts             | URL                     |
@@ -278,16 +278,16 @@ Most work needs only one of them. `npm run build` builds all three and assembles
 dev they're on different origins.
 
 > **Don't try to serve all three from one dev origin.** Proxying `/console` and `/docs`
-> through the site's dev server was tried and abandoned: each Vite dev server emits
-> root-relative asset URLs (`/node_modules/…`, `/@vite/client`) with no path prefix, so
-> the proxied server's assets get requested from the proxying server, which fails with a
-> confusing overlay. Setting `vite.base` fixes the assets and breaks routing instead.
+> through the site's dev server does not work. Each Vite dev server emits root-relative
+> asset URLs (`/node_modules/…`, `/@vite/client`) with no path prefix, so the proxied
+> server's assets get requested from the proxying server, which fails with a confusing
+> overlay. Setting `vite.base` fixes the assets and breaks routing instead.
 
 Two companion projects live in **their own repos**, because they have their own release
 cadence and consumers: [openfray-compendium](https://github.com/SirDarcanos/openfray-compendium)
 (the ingest tooling that generates `public/compendium/*.json`) and
 [openfray-importer](https://github.com/SirDarcanos/openfray-importer) (the browser
-extension). Split a part out only when it earns that — these three do not.
+extension). Split a part out only when it earns that. These three do not.
 
 Two more are npm packages, general enough that nothing about them is OpenFray's:
 [opendice](https://github.com/SirDarcanos/opendice) rolls the dice, and
@@ -297,16 +297,16 @@ Two more are npm packages, general enough that nothing about them is OpenFray's:
 `screenshots/` — one YAML file per picture, with the shared setup in `macros/` and the
 sample party and foes in `data/`. Run the console (`npm run dev`), then:
 
-| Command                          | What it does                                |
-| -------------------------------- | ------------------------------------------- |
-| `npx shotlist`                    | list the recipes                            |
-| `npx shotlist <name> --install`   | re-shoot one and copy it where it belongs   |
-| `npx shotlist --all --install`    | re-shoot everything                         |
-| `npx shotlist --check`            | report the captures the app has moved on from |
+| Command                         | What it does                                  |
+| ------------------------------- | --------------------------------------------- |
+| `npx shotlist`                  | list the recipes                              |
+| `npx shotlist <name> --install` | re-shoot one and copy it where it belongs     |
+| `npx shotlist --all --install`  | re-shoot everything                           |
+| `npx shotlist --check`          | report the captures the app has moved on from |
 
 A capture is data, so re-shooting a stale one is a command rather than an afternoon. If a
 picture needs something the recipe vocabulary cannot say, that is a missing primitive in
-shotlist — add it there rather than an escape hatch here. Two rules the recipes rely on:
+shotlist. Add it there instead of an escape hatch here. Two rules the recipes rely on:
 fill an initiative for **every** combatant, creatures included, or the console rolls
 theirs and the board reorders between runs; and a shot framing live dice or the fight
 clock takes `check: false`, because it can never match itself.
@@ -314,16 +314,16 @@ clock takes `check: false`, because it can never match itself.
 ## Tech stack
 
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
-  Effect, Encounter) are the backbone — define once, use everywhere.
+  Effect, Encounter) are the backbone. Define once, use everywhere.
 - **Frontend:** React + Vite + Tailwind. Design **tablet/desktop-first** (the combat
   console is a dense landscape layout); phone is a reduced reference companion, not
   the primary surface. Not mobile-first.
 - **Backend:** Supabase (hosted Postgres + auth + RLS + realtime). Phase 1 may need
   little or no custom server code. **Prefer Supabase's built-in auth and RLS over
-  hand-written auth/permission code** — let battle-tested infrastructure own the
+  hand-written auth/permission code.** Let battle-tested infrastructure own the
   security-critical machinery.
 - **No browser storage in artifacts/components beyond `sessionStorage`** for
-  ephemeral anonymous state (never `localStorage` for that — it would reintroduce
+  ephemeral anonymous state (never `localStorage` for that, because it would reintroduce
   durability we deliberately avoid).
 
 ## Phases
@@ -331,7 +331,7 @@ clock takes `check: false`, because it can never match itself.
 - **Phase 1 (now):** single-GM, single-device tracker + differentiators
   (resource tracking, effects, mass save, dice, SRD compendium, custom-creature
   form, identity). No multiplayer.
-- **Phase 2 (in progress):** the read-only **shared player view** is built —
+- **Phase 2 (in progress):** the read-only **shared player view** is built.
   `combat/playerView.ts` filters the encounter into the only shape that leaves the GM's
   browser, and `state/playerChannel.ts` relays it over a Supabase realtime **broadcast**
   channel that stores nothing (which is what lets an anonymous GM share without a row
@@ -344,13 +344,13 @@ clock takes `check: false`, because it can never match itself.
 
 ## Build order (phase 1)
 
-1. Creature + Action + Effect schema (shared types) — first, everything reads from
+1. Creature + Action + Effect schema (shared types). First, because everything reads from
    it.
 2. Encounter + Combatant + initiative loop (turn/round ticks).
 3. Resource tracking (HP, slots, legendary, lair, limited-use/recharge).
 4. Conditions + Effects as one system; reminder badges on rows.
 5. Dice engine (presets + manual; CSPRNG + bias rejection; roll log).
-6. Effect-aware rolling (auto adv/disadv) — upgrade of #5.
+6. Effect-aware rolling (auto adv/disadv), an upgrade of #5.
 7. Mass save flow.
 8. SRD compendium + custom-creature/spell form. The compendium ships as static
    JSON in `public/compendium/`; **the ingest tooling lives in the separate
@@ -362,7 +362,7 @@ clock takes `check: false`, because it can never match itself.
    where the tooling now lives. **Adding a library with spells means triaging
    each one**: give it an entry in `src/combat/spells/*` or list it, with a reason, in
    `tests/combat/spellCoverage.data.ts`. `spellCoverage.test.ts` fails until every
-   spell has a verdict — a missing entry is otherwise invisible (the spell just
+   spell has a verdict. A missing entry is otherwise invisible (the spell just
    silently offers no targets and applies nothing when cast).
 9. Concentration auto-checks.
 10. Identity: anonymous (ephemeral, `sessionStorage`) + sign-up (persist, RLS on).
@@ -385,7 +385,7 @@ what a name can't.
 - **No other comments unless the code can't say it.** A non-obvious _why_, a gotcha,
   a workaround, or a 5e-rules citation earns a comment; narration of what the next
   line does, restating a well-named symbol, banner/section dividers, and
-  self-congratulation do not. Keep comments factual and current — delete stale ones
+  self-congratulation do not. Keep comments factual and current. Delete stale ones
   rather than let them mislead.
 - **One definition per concept.** A helper needed by two files moves to a shared
   module; never paste a second copy. Canonical homes: combatant accessors in
@@ -399,8 +399,38 @@ what a name can't.
 - **Prettier and ESLint decide formatting** — run `npm run format` before
   committing; never hand-align or fight the formatter. `npm run lint` and
   `npm run typecheck` stay clean.
-- **All user-facing copy follows [`STYLE.md`](./STYLE.md)** — UI labels, buttons,
+- **All user-facing copy follows [`STYLE.md`](./STYLE.md)**: UI labels, buttons,
   errors and empty states as much as the handbook and the marketing site.
+
+## Writing style (documentation)
+
+Every Markdown file in this repo is technical documentation written for a developer or
+a user who needs to get something done. That includes `AGENTS.md`, `README.md`,
+`CONTRIBUTING.md`, `STYLE.md`, `CHANGELOG.md`, the handbook in `docs/`, the news posts
+in `site/src/content/news/`, and the skill files in `.claude/skills/`. Write all of it
+plain, short, and direct. Nothing in this repo is an essay.
+
+The books are the only exception. `site/src/content/waking-garden/`,
+`brood-and-bloom/` and `strong-waters/` are game text in an author's voice, and
+[`STYLE.md`](./STYLE.md) governs them under "Game content". Do not borrow that voice
+anywhere else, including commit messages and code comments.
+
+Five rules. `node scripts/check-prose.mjs` runs on every build and fails on the first.
+
+- **No em-dash aside.** A spaced em dash in the middle of a sentence is this repo's
+  worst habit and it is banned outright. Use a period, a colon, or parentheses. One
+  form is allowed: a definition list item such as `- **AC** — armor class.`
+- **No rhetorical contrast.** State what is true. Cut "not a X but a Y", "X beats Y",
+  and any "rather than" clause that exists to sound clever instead of to inform.
+- **End on a fact.** No maxims, no summarizing flourish, no last line that reaches for
+  a point. The final sentence of a section carries information like every other one.
+- **Do not narrate the project.** A doc says what is true now. What was tried, what was
+  abandoned, and what someone learned belong in the commit message or the pull request.
+- **One idea per sentence**, about 25 words at most, at a high-school reading level.
+  Lead with the instruction and put the reason after it, if the reason is needed at all.
+
+Run `node scripts/check-prose.mjs` before committing a doc change. It also reports the
+softer patterns without failing, so the count stays visible.
 
 ## Tests
 
@@ -416,15 +446,15 @@ the same commit.
 - **What "testable" means here:** pure logic always (combat math, formatters,
   parsers, transforms); components render-tested for the states that carry logic;
   network and Supabase access behind mocks. The dice RNG and the `owner_id`/RLS
-  boundary are the two places a change can pass tests and still be wrong — test
+  boundary are the two places a change can pass tests and still be wrong. Test
   them anyway, then reason about them explicitly in the PR.
-- **Spells are gated:** every spell in a shipped library needs a verdict — an
+- **Spells are gated:** every spell in a shipped library needs a verdict, either an
   implementation in `src/combat/spells/*` or a reasoned entry in
   `tests/combat/spellCoverage.data.ts` — or `spellCoverage.test.ts` fails.
 
 ## Committing
 
-- **One concern per commit**, committed as the work lands — small and often beats
+- **One concern per commit**, committed as the work lands. Keep them small and frequent, not
   one big drop.
 - **Subject:** `Area: what changed`, imperative, sentence case after the prefix.
   The areas in use: `App`, `Site`, `Docs`, `Print`, `Style`, `Build`, `Scripts`,
@@ -452,7 +482,7 @@ the same commit.
   date, in the same edit. Never alter the legal copy without updating that date.
 - **Renaming a label in the app is a documentation change** — update the handbook
   page and its screenshots in the same change.
-- **When unsure whether something is in scope, ask / flag — don't quietly build it.**
+- **When unsure whether something is in scope, ask or flag it. Don't quietly build it.**
 
 ## Licensing of content
 
@@ -460,9 +490,9 @@ the same commit.
 SRD is **CC-BY-4.0** (5.2 CC-BY-only; 5.1 dual-licensed → we elect CC-BY; never OGL for
 WotC). CC-BY's obligations: credit WotC with their exact attribution string, link the
 license, state that changes were made, don't imply endorsement. Third-party content
-(e.g. Kobold Press / Tome of Beasts) is honored under its **actual** license — ORC where
-offered, else **OGL 1.0a** — **never assumed CC-BY**. Using a source under the OGL means
-shipping **only its declared Open Game Content** (no Product Identity — art, fiction, PI
+(e.g. Kobold Press / Tome of Beasts) is honored under its **actual** license: ORC where
+offered, else **OGL 1.0a**, and **never assumed CC-BY**. Using a source under the OGL means
+shipping **only its declared Open Game Content** (no Product Identity: art, fiction, PI
 names, sidebars), reproducing the **full OGL text + verbatim Section 15 chain**, and
 designating our OGC. **Never ingest SRD-excluded WotC IP** (Beholder, Mind Flayer, …).
 All of this is satisfied via an in-app About/Credits screen + `CREDITS.md`, which is the
