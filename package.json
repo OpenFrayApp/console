@@ -1,14 +1,14 @@
 {
   "name": "openfray",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "A fast, browser-based combat console for Game Masters running D&D 5e.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "vite",
     "dev:all": "npm run dev & npm run dev -w site & npm run dev -w docs & wait",
-    "build": "node scripts/clean-dist.mjs && node scripts/check-news-slugs.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs && node scripts/check-css-specificity.mjs",
+    "build": "node scripts/clean-dist.mjs && node scripts/check-news-slugs.mjs && node scripts/check-prose.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs && node scripts/check-css-specificity.mjs",
     "build:site": "npm run build -w site",
     "build:docs": "npm run build -w docs",
     "preview": "vite preview",
