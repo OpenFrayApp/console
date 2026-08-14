@@ -404,7 +404,7 @@ export function EncounterConsole({
     <div
       ref={panesRef}
       onScroll={onPanesScroll}
-      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:snap-none sm:grid-cols-2 sm:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-6 sm:gap-y-3 sm:overflow-visible sm:px-6 sm:py-4 lg:grid-cols-[28rem_1fr_24rem] lg:grid-rows-none lg:gap-0"
+      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:snap-none sm:grid-cols-2 sm:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-6 sm:gap-y-3 sm:overflow-visible sm:px-6 sm:py-4 lg:grid-cols-[22rem_1fr_20rem] lg:grid-rows-none lg:gap-0 xl:grid-cols-[28rem_1fr_24rem]"
     >
       <section
         className={`${PANE} flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800`}

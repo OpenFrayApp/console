@@ -969,7 +969,7 @@ function App() {
             <a
               href="/"
               title="OpenFray home"
-              className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
+              className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[22rem] lg:shrink-0 lg:pr-4 xl:w-[28rem]"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1152,7 +1152,7 @@ function App() {
           {/* On a phone the footer carries only the fight's numbers (the legal links move
           into the gear menu), so it disappears when there is nothing to show. */}
           <footer
-            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[28rem_1fr_24rem] lg:gap-0 lg:px-6 lg:py-3 ${
+            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[22rem_1fr_20rem] lg:gap-0 lg:px-6 lg:py-3 xl:grid-cols-[28rem_1fr_24rem] ${
               view !== 'encounter' || (encounter.combatants.length === 0 && !user)
                 ? 'max-sm:hidden'
                 : ''
