@@ -623,7 +623,7 @@ export function PcFormModal({
           </Section>
 
           <Section title="Abilities" open>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {ABILITIES.map((a) => (
                 <div key={a} className="space-y-1">
                   <p className={`${LABEL} text-center`}>{ABILITY_LABEL[a]}</p>
