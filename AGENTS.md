@@ -2,8 +2,8 @@ Guidance for AI agents (and humans) working on the OpenFray console.
 
 This repo is one of three parts of OpenFray, tied together by the
 [openfray.app](https://github.com/OpenFrayApp/openfray.app) parent repo. The full
-working agreements — the scope principle, the architectural rules, the tech stack,
-and the agreements for making changes — live in
+working agreements (the scope principle, the architectural rules, the tech stack,
+and the agreements for making changes) live in
 [that repo's AGENTS.md](https://github.com/OpenFrayApp/openfray.app/blob/main/AGENTS.md).
 **Read it before working here.** Its writing counterpart, STYLE.md, sits beside it
 and governs every published word, including this app's labels and messages.
