@@ -122,12 +122,16 @@ export function StatHeader({
               </span>
             )}
           </div>
-          <p className="truncate text-sm italic text-slate-500 dark:text-slate-400">{subtitle}</p>
+          <p className="text-sm italic text-slate-500 @3xl:truncate dark:text-slate-400">
+            {subtitle}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5">
           <div className="flex items-center gap-5">{stats}</div>
           {speeds && speeds.length > 0 && (
-            <div className="flex flex-col items-end text-xs leading-tight text-slate-500 dark:text-slate-400">
+            // Narrow: one wrapping line under the stats. Wide: the stacked
+            // right-aligned column beside them.
+            <div className="flex w-full flex-wrap gap-x-3 gap-y-0.5 text-xs leading-tight text-slate-500 @3xl:w-auto @3xl:flex-col @3xl:items-end @3xl:gap-x-0 dark:text-slate-400">
               {speeds.map((s) => (
                 <span key={s}>{s}</span>
               ))}
