@@ -7,8 +7,8 @@ without an account.
 
 This repo is one part of OpenFray. The website and the handbook live in their own
 repos, and [openfray.app](https://github.com/OpenFrayApp/openfray.app) ties the three
-together into the single deploy that serves the domain. Day-to-day work happens from
-a checkout of that parent repo, where all three parts sit side by side.
+together into the single deploy that serves the domain. This repo works on its
+own: clone it, install, and run.
 
 ## Running it
 
