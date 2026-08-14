@@ -161,7 +161,9 @@ describe('Encounter flow', () => {
   it('logs a quick roll', () => {
     render(<App />)
     expect(screen.getByText('Nothing logged yet.')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('d20'))
+    // The dice bar renders twice (the footer, and the phone layout's Controls
+    // screen); either instance logs the same roll.
+    fireEvent.click(screen.getAllByText('d20')[0])
     expect(screen.getByText('1d20')).toBeInTheDocument()
     expect(screen.queryByText('Nothing logged yet.')).toBeNull()
   })
@@ -301,6 +303,8 @@ describe('Stat-block quick rolls', () => {
         onBegin={vi.fn()}
         onNextTurn={vi.fn()}
         onOpenLog={vi.fn()}
+        pane={0}
+        onPaneChange={vi.fn()}
       />,
     )
     return onRoll
