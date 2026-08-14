@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import type { Action, ActionKind, DamageRoll, Recharge, SaveOutcome } from '../schema/action.ts'
 import type {

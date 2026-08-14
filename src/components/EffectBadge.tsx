@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import type { Effect } from '../schema/effect.ts'
 import { badgeLabel, describeDuration, type EffectGroup } from '../combat/effects.ts'

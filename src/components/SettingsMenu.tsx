@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import type { Theme } from '../state/persistence.ts'
@@ -199,7 +199,7 @@ export function SettingsMenu({
           </a>
 
           <a
-            href="https://github.com/SirDarcanos/openfray/issues/new"
+            href="https://github.com/OpenFrayApp/console/issues/new"
             target="_blank"
             rel="noreferrer"
             role="menuitem"
@@ -224,7 +224,7 @@ export function SettingsMenu({
             </a>
             <span aria-hidden>·</span>
             <a
-              href="https://github.com/SirDarcanos/openfray"
+              href="https://github.com/OpenFrayApp/console"
               target="_blank"
               rel="noreferrer"
               className="hover:underline"

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import { DEFAULT_CAMPAIGN_RULES, type Campaign } from '../schema/campaign.ts'
 import {

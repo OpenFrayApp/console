@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import { createContext, useContext } from 'react'
 import { DEFAULT_CAMPAIGN_RULES, type CampaignRules } from '../schema/campaign.ts'

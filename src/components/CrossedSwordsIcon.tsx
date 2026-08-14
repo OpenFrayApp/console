@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 export function CrossedSwordsIcon({ className = 'h-7 w-7' }: { className?: string }) {
   return (
