@@ -960,7 +960,10 @@ function App() {
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
         <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-          <header className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 dark:border-slate-800 lg:flex-nowrap lg:px-6 lg:py-4">
+          {/* The header wraps at every width and its buttons never break their labels:
+          a cluster that no longer fits drops to its own line whole, so every button
+          keeps one size instead of squeezing onto two lines of text. */}
+          <header className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 dark:border-slate-800 lg:px-6 lg:py-4">
             {/* Logo links back to the marketing site; spans the initiative column so
             Group/Cast line up with the stat block. */}
             <a
@@ -979,26 +982,20 @@ function App() {
             of them stay on screen. From lg up the rail dissolves (contents) and its two
             clusters sit in the desktop header's own spots. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 max-lg:order-last lg:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 whitespace-nowrap max-lg:order-last lg:contents">
                 {fightControls && (
                   <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:pl-4">
                     {fightControls}
                   </div>
                 )}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
+                  <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:pl-2">
                     {addControls}
                   </div>
                 )}
               </div>
             )}
-            {/* One auto margin does the right-aligning at lg: the add cluster's when it
-            is rendered, this cluster's own otherwise. Two would split the space. */}
-            <div
-              className={`ml-auto flex items-center gap-2 lg:gap-3 ${
-                addControls ? 'lg:ml-0 lg:pl-3' : ''
-              }`}
-            >
+            <div className="ml-auto flex items-center gap-2 whitespace-nowrap lg:gap-3 lg:pl-3">
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
               <div className="hidden sm:block">
