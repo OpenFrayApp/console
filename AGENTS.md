@@ -284,9 +284,9 @@ dev they're on different origins.
 > overlay. Setting `vite.base` fixes the assets and breaks routing instead.
 
 Two companion projects live in **their own repos**, because they have their own release
-cadence and consumers: [openfray-compendium](https://github.com/SirDarcanos/openfray-compendium)
+cadence and consumers: [compendium](https://github.com/OpenFrayApp/compendium)
 (the ingest tooling that generates `public/compendium/*.json`) and
-[openfray-importer](https://github.com/SirDarcanos/openfray-importer) (the browser
+[importer](https://github.com/OpenFrayApp/importer) (the browser
 extension). Split a part out only when it earns that. These three do not.
 
 Two more are npm packages, general enough that nothing about them is OpenFray's:
@@ -354,7 +354,7 @@ clock takes `check: false`, because it can never match itself.
 7. Mass save flow.
 8. SRD compendium + custom-creature/spell form. The compendium ships as static
    JSON in `public/compendium/`; **the ingest tooling lives in the separate
-   [openfray-compendium](https://github.com/SirDarcanos/openfray-compendium) repo**,
+   [compendium](https://github.com/OpenFrayApp/compendium) repo**,
    not here (SRD 5.2.1 creatures, spells, and conditions are parsed from WotC's
    official 5.2.1 PDF; SRD 5.1 comes from dnd5eapi). The app only consumes the JSON.
    **Before touching the compendium data or the stat-block UI, read
