@@ -1,12 +1,6 @@
-This project keeps a single source of truth for agent guidance in **`AGENTS.md`**.
+This repo keeps a single source of truth for agent guidance in **`AGENTS.md`**.
 
-👉 **Read [`AGENTS.md`](./AGENTS.md) before working in this codebase.** It contains
-the scope principle, the architectural rules, the tech stack, the build order, and
-the working agreements for making changes here.
+👉 **Read [`AGENTS.md`](./AGENTS.md) before working in this codebase.** It points to
+the full working agreements in the `openfray.app` parent repo.
 
-For the full reasoning behind those decisions, see `local/docs/PROJECT-PLAN.md`. Those
-are the maintainer's working notes, and they are not committed.
-
-Everything that would otherwise be duplicated here lives in `AGENTS.md` instead, so
-the two never drift apart. Do not add separate guidance in this file. Update
-`AGENTS.md`.
+Do not add separate guidance in this file. Update `AGENTS.md` (or the parent's).

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 /**
  * Every compendium spell we deliberately do *not* model, with why. Kept as test data

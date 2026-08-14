@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 // Parsing for free-text form fields. Forms bind inputs as strings and convert on
 // submit; these are the conversions, shared by every add/edit form.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import type { Combatant, CombatantStatus, DeathSaves } from '../schema/combatant.ts'
 import type { CombatClock, Encounter, GameLogEntry } from '../schema/encounter.ts'

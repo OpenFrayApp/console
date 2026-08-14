@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { Creature } from './schema/creature.ts'
@@ -97,7 +97,7 @@ import { SignUpPage } from './components/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
 
-const REPO_URL = 'https://github.com/SirDarcanos/openfray'
+const REPO_URL = 'https://github.com/OpenFrayApp/console'
 
 /** A player rolls their own initiative; monsters and quick adds are auto-rolled. */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'

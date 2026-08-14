@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Copyright (C) 2026 OpenFray contributors
+# Copyright (C) 2026 Nicola Mustone
 #
 # Daily backup of the Supabase database to S3-compatible object storage (Cloudflare
 # R2). The free tier takes no automatic backups, and a signed-in Game Master's

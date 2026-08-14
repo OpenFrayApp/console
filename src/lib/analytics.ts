@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 // A null-safe wrapper over Fathom's trackEvent. Fathom is loaded from index.html and may
 // be absent (blocked, not yet loaded, or ignored on localhost), so every call is guarded.

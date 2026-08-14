@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -70,7 +70,7 @@ describe('SettingsMenu', () => {
   it('sends a bug report to a fresh GitHub issue, in its own tab', () => {
     menu()
     const link = screen.getByText('Report a bug').closest('a')
-    expect(link).toHaveAttribute('href', 'https://github.com/SirDarcanos/openfray/issues/new')
+    expect(link).toHaveAttribute('href', 'https://github.com/OpenFrayApp/console/issues/new')
     expect(link).toHaveAttribute('target', '_blank')
   })
 

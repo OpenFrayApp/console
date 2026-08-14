@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
