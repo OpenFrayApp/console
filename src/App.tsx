@@ -975,18 +975,18 @@ function App() {
                 <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
               </h1>
             </a>
-            {/* On a phone every board action is one rail on its own line, scrolled
-            sideways so nothing collides. From lg up the rail dissolves (contents) and
-            its two clusters sit in the desktop header's own spots. */}
+            {/* Below lg every board action sits on the rail's own line, wrapping so all
+            of them stay on screen. From lg up the rail dissolves (contents) and its two
+            clusters sit in the desktop header's own spots. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full items-center gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-lg:order-last max-lg:whitespace-nowrap lg:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 max-lg:order-last lg:contents">
                 {fightControls && (
-                  <div className="flex items-center gap-2 max-lg:shrink-0 lg:pl-4">
+                  <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:pl-4">
                     {fightControls}
                   </div>
                 )}
                 {addControls && (
-                  <div className="flex items-center gap-2 max-lg:shrink-0 lg:ml-auto">
+                  <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap">
                     {addControls}
                   </div>
                 )}
@@ -1001,7 +1001,7 @@ function App() {
             >
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
-              <div className="hidden lg:block">
+              <div className="hidden sm:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
               <AccountControl onSignIn={() => setAuthOpen(true)} />
@@ -1152,7 +1152,15 @@ function App() {
               onCancel={() => setInitPrompt(null)}
             />
           )}
-          <footer className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[28rem_1fr_24rem] lg:gap-0 lg:px-6 lg:py-3">
+          {/* On a phone the footer carries only the fight's numbers (the legal links move
+          into the gear menu), so it disappears when there is nothing to show. */}
+          <footer
+            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[28rem_1fr_24rem] lg:gap-0 lg:px-6 lg:py-3 ${
+              view !== 'encounter' || (encounter.combatants.length === 0 && !user)
+                ? 'max-sm:hidden'
+                : ''
+            }`}
+          >
             {view === 'encounter' && started && encounter.combatStats ? (
               <CombatTimers
                 stats={encounter.combatStats}
@@ -1167,7 +1175,7 @@ function App() {
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
               {/* On a phone the dice sit in the Controls screen instead of down here. */}
               {view === 'encounter' && (
-                <div className="hidden lg:block">
+                <div className="hidden sm:block">
                   <QuickRoll onRoll={pushRoll} />
                 </div>
               )}
@@ -1179,7 +1187,7 @@ function App() {
                 />
               )}
             </div>
-            <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
+            <div className="hidden items-center gap-2 sm:flex lg:justify-end lg:pl-4">
               <a href="/privacy">Privacy</a>
               <span>·</span>
               <a href="/terms">Terms</a>

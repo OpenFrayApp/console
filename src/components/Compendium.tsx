@@ -536,11 +536,7 @@ export function Compendium({
       className="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-[26rem_minmax(0,1fr)] md:gap-4 md:overflow-visible"
     >
       <div className="flex min-h-0 min-w-0 flex-col max-md:w-full max-md:shrink-0 max-md:snap-center">
-        <div
-          role="tablist"
-          aria-label="Compendium"
-          className="mb-2 flex gap-0.5 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0"
-        >
+        <div role="tablist" aria-label="Compendium" className="mb-2 flex flex-wrap gap-0.5">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
           </TabButton>
