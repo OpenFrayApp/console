@@ -59,7 +59,7 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
           <UserIcon />
         </button>
         {menuOpen && (
-          <div role="menu" className={`${popoverClass('lg:w-44')} py-1 lg:overflow-hidden`}>
+          <div role="menu" className={`${popoverClass('sm:w-44')} py-1 sm:overflow-hidden`}>
             <button
               type="button"
               role="menuitem"

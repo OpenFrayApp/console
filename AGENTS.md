@@ -316,10 +316,11 @@ clock takes `check: false`, because it can never match itself.
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
   Effect, Encounter) are the backbone. Define once, use everywhere.
 - **Frontend:** React + Vite + Tailwind. Design **tablet/desktop-first** (the combat
-  console is a dense landscape layout). Below `lg` the same console renders as three
+  console is a dense landscape layout). Below `sm` the same console renders as three
   swipeable screens with a bottom tab bar (`useSwipePanes` + `MobileNav`), and every
-  header popover becomes a fixed sheet (`popoverClass`). A change to the console
-  shell must keep both layouts working.
+  header popover becomes a fixed sheet (`popoverClass`). From `sm` to `lg` (tablet
+  portrait) it is a two-column grid with the controls and log below. A change to the
+  console shell must keep all three layouts working.
 - **Backend:** Supabase (hosted Postgres + auth + RLS + realtime). Phase 1 may need
   little or no custom server code. **Prefer Supabase's built-in auth and RLS over
   hand-written auth/permission code.** Let battle-tested infrastructure own the

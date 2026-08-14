@@ -138,7 +138,7 @@ export function LibraryPicker<T extends LibraryEntry>({
         {label}
       </Button>
       {open && (
-        <div className={`${popoverClass('lg:w-72', align)} p-2`}>
+        <div className={`${popoverClass('sm:w-72', align)} p-2`}>
           {children}
           <input
             autoFocus
@@ -152,7 +152,7 @@ export function LibraryPicker<T extends LibraryEntry>({
           {entries === null ? (
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading…</p>
           ) : (
-            <ul className="mt-1 max-h-[55vh] overflow-auto lg:max-h-64">
+            <ul className="mt-1 max-h-[55vh] overflow-auto sm:max-h-64">
               {matches.map((e) => (
                 <li key={e.id}>
                   <button

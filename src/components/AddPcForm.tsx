@@ -96,7 +96,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
         <form
           onSubmit={submit}
           {...NO_AUTOFILL}
-          className={`${popoverClass('lg:w-72')} space-y-2 p-2 lg:max-h-[70vh] lg:overflow-auto`}
+          className={`${popoverClass('sm:w-72')} space-y-2 p-2 sm:max-h-[70vh] sm:overflow-auto`}
         >
           <input
             autoFocus

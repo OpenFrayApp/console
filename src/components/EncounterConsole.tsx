@@ -395,14 +395,16 @@ export function EncounterConsole({
   const living = view.filter((c) => c.status !== 'dead')
   const dead = view.filter((c) => c.status === 'dead')
 
-  // Below lg the grid becomes a scroll-snap strip: each column is a full-width screen,
+  // Below sm the grid becomes a scroll-snap strip: each column is a full-width screen,
   // swiped between like the D&D Beyond app's sheets, with the bottom bar to jump.
-  const PANE = 'max-lg:w-full max-lg:shrink-0 max-lg:snap-center max-lg:px-4 max-lg:py-3'
+  // From sm to lg (tablet portrait) the same three regions are a two-column grid:
+  // tracker beside stat block, controls and log in a strip below.
+  const PANE = 'max-sm:w-full max-sm:shrink-0 max-sm:snap-center max-sm:px-4 max-sm:py-3'
   return (
     <div
       ref={panesRef}
       onScroll={onPanesScroll}
-      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-[28rem_1fr_24rem] lg:overflow-visible lg:px-6 lg:py-4"
+      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:snap-none sm:grid-cols-2 sm:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-6 sm:gap-y-3 sm:overflow-visible sm:px-6 sm:py-4 lg:grid-cols-[28rem_1fr_24rem] lg:grid-rows-none lg:gap-0"
     >
       <section
         className={`${PANE} flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800`}
@@ -593,9 +595,11 @@ export function EncounterConsole({
         )}
       </section>
 
-      <aside className={`${PANE} flex min-h-0 flex-col gap-4 overflow-y-auto lg:pl-4`}>
+      <aside
+        className={`${PANE} flex min-h-0 flex-col gap-4 overflow-y-auto sm:max-lg:col-span-2 sm:max-lg:flex-row sm:max-lg:gap-6 sm:max-lg:border-t sm:max-lg:border-slate-200 sm:max-lg:pt-3 sm:max-lg:dark:border-slate-800 lg:pl-4`}
+      >
         {selected && (
-          <div className="shrink-0">
+          <div className="shrink-0 sm:max-lg:w-72">
             <h3 className={COLUMN_HEADING}>Controls</h3>
             <div className="mt-2 space-y-2">
               {concPrompt && concPrompt.id === selected.combatantId && (
@@ -652,14 +656,14 @@ export function EncounterConsole({
         )}
 
         {/* The footer's dice live here on a phone, where there is no room for a footer bar. */}
-        <div className="shrink-0 lg:hidden">
+        <div className="shrink-0 sm:hidden">
           <h3 className={COLUMN_HEADING}>Quick roll</h3>
           <div className="mt-2">
             <QuickRoll onRoll={onRoll} />
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 sm:max-lg:border-t-0 sm:max-lg:pt-0">
           <div className="mb-1 flex items-center justify-between">
             <h3 className={COLUMN_HEADING}>Game log</h3>
             {encounter.log.length > 0 && (

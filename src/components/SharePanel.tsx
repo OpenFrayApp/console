@@ -152,7 +152,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
       </button>
 
       {open && (
-        <div className={`${popoverClass('lg:w-80')} p-3 lg:mt-2`}>
+        <div className={`${popoverClass('sm:w-80')} p-3 sm:mt-2`}>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Player view</h2>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
             A read-only screen with the turn order and the game log. Anyone with the link can watch,
