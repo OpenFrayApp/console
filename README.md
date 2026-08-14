@@ -6,7 +6,7 @@ monster resources, conditions, concentration, group saves, and dice, and it work
 without an account.
 
 This repo is one part of OpenFray. The website and the handbook live in their own
-repos, and [openfray.app](https://github.com/OpenFrayApp/openfray.app) ties the three
+repos, and [openfray](https://github.com/OpenFrayApp/openfray) ties the three
 together into the single deploy that serves the domain. This repo works on its
 own: clone it, install, and run.
 
