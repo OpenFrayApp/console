@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
+import { popoverClass } from './popover.ts'
 
 /** User-silhouette icon (the account menu button). */
 function UserIcon() {
@@ -58,10 +59,7 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
           <UserIcon />
         </button>
         {menuOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
-          >
+          <div role="menu" className={`${popoverClass('lg:w-44')} py-1 lg:overflow-hidden`}>
             <button
               type="button"
               role="menuitem"

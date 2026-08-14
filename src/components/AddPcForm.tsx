@@ -6,6 +6,7 @@ import type { PlayerCharacter } from '../schema/combatant.ts'
 import { parseSpeedInput } from '../combat/speed.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../lib/form.ts'
+import { popoverClass } from './popover.ts'
 
 const FIELD =
   'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -95,7 +96,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
         <form
           onSubmit={submit}
           {...NO_AUTOFILL}
-          className="absolute right-0 z-30 mt-1 max-h-[70vh] w-72 space-y-2 overflow-auto rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          className={`${popoverClass('lg:w-72')} space-y-2 p-2 lg:max-h-[70vh] lg:overflow-auto`}
         >
           <input
             autoFocus

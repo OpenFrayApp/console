@@ -13,6 +13,7 @@ import {
   libraryTag,
 } from '../compendium/libraries.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
+import { popoverClass } from './popover.ts'
 import { Button, EntryBadges as Badges, type ButtonVariant } from './ui.tsx'
 
 /** The least a picker needs of a creature or spell: a label and its badges. */
@@ -137,9 +138,7 @@ export function LibraryPicker<T extends LibraryEntry>({
         {label}
       </Button>
       {open && (
-        <div
-          className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} z-30 mt-1 w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900`}
-        >
+        <div className={`${popoverClass('lg:w-72', align)} p-2`}>
           {children}
           <input
             autoFocus
@@ -153,7 +152,7 @@ export function LibraryPicker<T extends LibraryEntry>({
           {entries === null ? (
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading…</p>
           ) : (
-            <ul className="mt-1 max-h-64 overflow-auto">
+            <ul className="mt-1 max-h-[55vh] overflow-auto lg:max-h-64">
               {matches.map((e) => (
                 <li key={e.id}>
                   <button

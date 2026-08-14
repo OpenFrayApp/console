@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import type { ClaimResult } from '../state/cloudEncounter.ts'
 import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../state/playerCode.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
+import { popoverClass } from './popover.ts'
 import { Button, LinkButton } from './ui.tsx'
 import { cx } from '../lib/cx.ts'
 
@@ -151,7 +152,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div className={`${popoverClass('lg:w-80')} p-3 lg:mt-2`}>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Player view</h2>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
             A read-only screen with the turn order and the game log. Anyone with the link can watch,

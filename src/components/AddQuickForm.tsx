@@ -5,6 +5,7 @@ import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { parseNonNegativeInt as num } from '../lib/form.ts'
+import { popoverClass } from './popover.ts'
 
 const FIELD_BASE =
   'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -60,10 +61,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
         Quick add
       </button>
       {open && (
-        <form
-          onSubmit={submit}
-          className="absolute right-0 z-30 mt-1 w-72 space-y-2 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
-        >
+        <form onSubmit={submit} className={`${popoverClass('lg:w-72')} space-y-2 p-2`}>
           <div className="flex gap-2">
             <input
               autoFocus

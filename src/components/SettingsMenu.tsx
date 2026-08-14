@@ -6,6 +6,7 @@ import type { Theme } from '../state/persistence.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { MoonIcon, SunIcon } from './ThemeToggle.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
+import { popoverClass } from './popover.ts'
 
 /** Gear icon — the menu's own button. */
 function GearIcon() {
@@ -159,10 +160,7 @@ export function SettingsMenu({
       </button>
 
       {open && (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-800 dark:bg-slate-900"
-        >
+        <div role="menu" className={`${popoverClass('lg:w-52')} p-1 lg:mt-2`}>
           <Item
             icon={<SlidersIcon />}
             onClick={() => {

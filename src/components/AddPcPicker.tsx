@@ -6,6 +6,7 @@ import type { RosterPc } from '../schema/roster.ts'
 import type { Campaign } from '../schema/campaign.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { campaignAcronym } from './campaignLabels.ts'
+import { popoverClass } from './popover.ts'
 
 /**
  * The signed-in "Add PC" control: a popover to drop one of the user's saved roster
@@ -56,7 +57,7 @@ export function AddPcPicker({
         Add PC
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <div className={`${popoverClass('lg:w-64')} p-2`}>
           <input
             autoFocus
             type="search"
