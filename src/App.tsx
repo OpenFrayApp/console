@@ -1033,14 +1033,16 @@ function App() {
           rows there, and at desktop spacing those rows read as one crowded block. */}
           <header
             ref={headerRef}
-            className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 compact:gap-y-3 compact:py-3.5 dark:border-slate-800 lg:px-6 lg:py-4"
+            className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 narrow:gap-y-3 narrow:py-3.5 dark:border-slate-800 lg:px-6 lg:py-4"
           >
             {/* Logo links back to the marketing site; spans the initiative column so
             Group/Cast line up with the stat block. */}
             <a
               href="/"
               title="OpenFray home"
-              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 2xl:w-[28rem] 2xl:shrink-0 2xl:pr-4"
+              // pr-4 from the width where the rail comes up alongside it: on one line the
+              // wordmark otherwise runs straight into the first button.
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 short:pr-4 min-[1100px]:pr-4 2xl:w-[28rem] 2xl:shrink-0"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1052,22 +1054,25 @@ function App() {
                 <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
               </h1>
             </a>
-            {/* Below lg the rail owns a line under the brand and account. From lg it
-            shares their line and shrinks rather than wrapping whole, so its buttons take
-            a second line inside it instead of stranding the account controls on one of
-            their own. At 2xl it dissolves (contents) into the aligned header. */}
+            {/* Two arrangements, and only two. Wide enough for everything on one line
+            (measured: about 1000px of content signed in, once the rest counter drops
+            out below 2xl) and the rail sits between the brand and the account controls.
+            Narrower, it takes a full-width line under them both. Letting it shrink and
+            wrap inside itself instead made a third look, which is what made the header
+            read differently on every tablet. At 2xl it dissolves into the aligned
+            header. The 1100px line is where the one-line form fits with room to spare. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 max-lg:order-last lg:w-auto lg:flex-1 lg:basis-0 2xl:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 max-[1099px]:order-last short:order-none short:w-auto min-[1100px]:w-auto 2xl:contents">
                 {/* Each cluster owns a full row on a compact screen, and the controls that
                 carry a word share out what the icons leave. Nothing here changes at lg,
                 where the two clusters dissolve into the desktop header's own spots. */}
                 {fightControls && (
-                  <div className="flex flex-wrap items-center gap-2 compact:w-full 2xl:flex-nowrap 2xl:pl-4">
+                  <div className="flex flex-wrap items-center gap-2 narrow:w-full 2xl:flex-nowrap 2xl:pl-4">
                     {fightControls}
                   </div>
                 )}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 compact:w-full 2xl:flex-nowrap 2xl:pl-2">
+                  <div className="flex flex-wrap items-center gap-2 narrow:w-full 2xl:flex-nowrap 2xl:pl-2">
                     {addControls}
                   </div>
                 )}
@@ -1233,7 +1238,7 @@ function App() {
           count: a board of players with no foes has no difficulty to estimate, and the
           bar was left empty above the tab bar, reading as a second border. */}
           <footer
-            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 compact:grid compact:grid-cols-2 compact:items-center compact:gap-x-3 dark:border-slate-800 dark:text-slate-400 2xl:grid 2xl:grid-cols-[28rem_1fr_24rem] 2xl:gap-0 2xl:px-6 2xl:py-3 ${
+            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 narrow:grid narrow:grid-cols-2 narrow:items-center narrow:gap-x-3 dark:border-slate-800 dark:text-slate-400 2xl:grid 2xl:grid-cols-[28rem_1fr_24rem] 2xl:gap-0 2xl:px-6 2xl:py-3 ${
               compactFooterHasContent ? '' : 'compact:hidden'
             }`}
           >
@@ -1248,7 +1253,7 @@ function App() {
             ) : (
               <div className="hidden 2xl:block" aria-hidden="true" />
             )}
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 compact:justify-end 2xl:pl-4">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 narrow:justify-end 2xl:pl-4">
               {/* On a phone the dice sit in the Controls screen instead of down here. */}
               {view === 'encounter' && (
                 <div className="hidden roomy:block">

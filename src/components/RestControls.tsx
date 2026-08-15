@@ -235,7 +235,9 @@ export function RestControls({
       {showCounter && (
         <span
           title="Short rests taken since the last long rest"
-          className="text-xs tabular-nums text-slate-500 dark:text-slate-400"
+          // The only text in a row of controls, and the ~110px that decides whether the
+          // header fits on one line. It stays on the widths that have the room for it.
+          className="hidden text-xs tabular-nums text-slate-500 2xl:inline dark:text-slate-400"
         >
           {shortRests} short {shortRests === 1 ? 'rest' : 'rests'}
         </span>

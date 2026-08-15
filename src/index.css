@@ -46,6 +46,26 @@
 }
 
 /*
+ * `compact` is the shell: swipeable panes, sheets, the bottom bar. It is not the right
+ * test for how a control is sized, because it takes in a phone held in landscape, which
+ * is 900px wide with room to spare. These two split that apart, and cannot both match:
+ *
+ * - `narrow` — actually narrow. Stacked full-width rows, controls that share out a line.
+ * - `short` — short but wide, which is a phone in landscape. It runs the phone shell
+ *   with a tablet's worth of width, so it wants the roomy sizing, not the stacked one.
+ */
+@custom-variant narrow {
+  @media (max-width: 39.99rem) {
+    @slot;
+  }
+}
+@custom-variant short {
+  @media (max-height: 31.99rem) and (min-width: 40rem) {
+    @slot;
+  }
+}
+
+/*
  * The two-column tablet band, capped just under `lg` so it cannot overlap the
  * three-column desktop rules. A custom variant sorts after the built-in breakpoints,
  * so an overlapping `roomy:grid-cols-2` would win at every width and flatten the

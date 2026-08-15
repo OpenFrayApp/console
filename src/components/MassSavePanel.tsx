@@ -25,11 +25,11 @@ export function MassSavePanel({
 
   // The button stays while the modal is up. Returning the modal in its place took the
   // button out of the header, and the row it shares closed over the gap.
-  // `compact:flex-1` shares that row's leftover width with Cast spell.
+  // `narrow:flex-1` shares that row's leftover width with Cast spell.
   return (
     <>
       <Button
-        className="compact:flex-1"
+        className="narrow:flex-1"
         onClick={() => setOpen(true)}
         disabled={combatants.length === 0}
       >

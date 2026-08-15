@@ -43,14 +43,14 @@ export function CombatDifficulty({ combatants }: { combatants: Combatant[] }) {
 
   return (
     <div
-      className="flex min-w-0 items-center gap-2.5 text-sm text-slate-500 compact:gap-2 dark:text-slate-400"
+      className="flex min-w-0 items-center gap-2.5 text-sm text-slate-500 narrow:gap-2 dark:text-slate-400"
       title={`Estimated for a party of about level ${partyLevel}`}
     >
       <ScalesIcon />
       {/* The word goes when the footer splits into two columns on a phone: the scales
       and the tier read as an estimate on their own, and the tier is the part a GM
       glances at. The full label is still on the element's title. */}
-      <span className="compact:hidden">Difficulty</span>
+      <span className="narrow:hidden">Difficulty</span>
       <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${TONE[tier]}`}>
         {DIFFICULTY_LABEL[tier]}
       </span>

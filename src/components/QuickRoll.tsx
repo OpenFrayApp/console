@@ -30,7 +30,7 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
     // One row that wraps only when it must. On a compact screen the six dice do not fit
     // beside the formula once they are finger-sized, so they take the next line — and
     // fill it, sharing it evenly, rather than trailing off half way across.
-    <div className="flex flex-wrap items-center gap-4 compact:gap-2">
+    <div className="flex flex-wrap items-center gap-4 narrow:gap-2">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -52,13 +52,13 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
           Roll
         </button>
       </form>
-      <div className="flex gap-1 compact:flex-1 compact:gap-1.5">
+      <div className="flex gap-1 narrow:flex-1 narrow:gap-1.5">
         {DICE.map((die) => (
           <button
             key={die}
             type="button"
             onClick={() => submit(`1${die}`)}
-            className="tap rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 compact:flex-1 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="tap rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 narrow:flex-1 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             {die}
           </button>

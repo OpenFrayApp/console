@@ -151,10 +151,10 @@ export function LibraryPicker<T extends LibraryEntry>({
     )
 
   return (
-    <div className={cx('relative', grow && 'compact:flex-1')} ref={ref}>
+    <div className={cx('relative', grow && 'narrow:flex-1')} ref={ref}>
       <Button
         variant={variant}
-        className={cx(grow && 'compact:w-full', hideTrigger && 'hidden')}
+        className={cx(grow && 'narrow:w-full', hideTrigger && 'hidden')}
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
       >
