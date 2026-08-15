@@ -17,42 +17,49 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * The console ships two shells: a swipeable strip of full-screen panes, and the
- * tablet/desktop grid. `compact` selects the strip and `roomy` the grid; they are
- * exact complements, so every shell rule has one and only one match.
+ * THE SHELL — one decision, three modes, exhaustive and non-overlapping. The console's
+ * body, header, and footer all switch on the same three variants, so no width can mix
+ * one mode's body with another mode's chrome:
  *
- * The test is width OR height, not width alone. A phone held in landscape is wider
- * than the `sm` breakpoint but around 400px tall, and the grid's stacked rows leave
- * it a single visible combatant under a clipped stat block. Short screens get the
- * strip, where a pane is the whole screen at any orientation.
+ * - `swipe`  — phones (either orientation) and every tablet held portrait, iPad Pro's
+ *              1024px included: the scroll-snap panes, the bottom tab bar, the stacked
+ *              header. Also any screen too short for stacked rows (a landscape phone).
+ * - `split`  — the small tablets held landscape (iPad mini 1133, Air 1180, 11" 1194):
+ *              tracker beside stat block, controls and log in a band below.
+ * - `wide`   — from 1280 up (laptops, iPad Pro and Surface Pro landscape): the aligned
+ *              three-column desktop. Column widths step up again at 2xl.
  *
  * Written in the classic min/max syntax rather than media range syntax, which iOS
- * Safari only understands from 16.4. `compact` needs the block form: the shorthand
- * splits a comma-separated query list into separate variants, so the OR has to be two
- * blocks instead. A utility matching both is emitted twice, which is harmless.
+ * Safari only understands from 16.4. `swipe` needs the block form: the shorthand
+ * splits a comma-separated query list into separate variants, so the OR is two blocks.
+ * A utility matching both is emitted twice, which is harmless.
  */
-@custom-variant compact {
-  @media (max-width: 39.99rem) {
+@custom-variant swipe {
+  @media (max-width: 64rem) {
     @slot;
   }
   @media (max-height: 31.99rem) {
     @slot;
   }
 }
-@custom-variant roomy {
-  @media (min-width: 40rem) and (min-height: 32rem) {
+@custom-variant split {
+  @media (min-width: 64.01rem) and (max-width: 79.99rem) and (min-height: 32rem) {
+    @slot;
+  }
+}
+@custom-variant wide {
+  @media (min-width: 80rem) and (min-height: 32rem) {
     @slot;
   }
 }
 
 /*
- * `compact` is the shell: swipeable panes, sheets, the bottom bar. It is not the right
- * test for how a control is sized, because it takes in a phone held in landscape, which
- * is 900px wide with room to spare. These two split that apart, and cannot both match:
+ * CONTROL SIZING — orthogonal to the shell, because the shell takes in screens with a
+ * tablet's worth of width (a landscape phone, a portrait iPad) that must not inherit a
+ * 375px screen's stacked, full-width controls:
  *
  * - `narrow` — actually narrow. Stacked full-width rows, controls that share out a line.
- * - `short` — short but wide, which is a phone in landscape. It runs the phone shell
- *   with a tablet's worth of width, so it wants the roomy sizing, not the stacked one.
+ * - `short`  — short but wide: a phone in landscape. The swipe shell with roomy sizing.
  */
 @custom-variant narrow {
   @media (max-width: 39.99rem) {
@@ -66,13 +73,23 @@
 }
 
 /*
- * The two-column tablet band, capped just under `lg` so it cannot overlap the
- * three-column desktop rules. A custom variant sorts after the built-in breakpoints,
- * so an overlapping `roomy:grid-cols-2` would win at every width and flatten the
- * desktop back to two columns. Non-overlapping queries make the cascade order moot.
+ * POPOVER SURFACE — also orthogonal to the shell: `compact` renders a header control's
+ * card as a fixed sheet, `roomy` anchors it to its trigger like a dropdown. Exact
+ * complements. A portrait iPad runs the swipe shell but keeps anchored dropdowns — a
+ * 1024px-wide screen has no business with a full-width sheet. The same pair also picks
+ * one Add button vs the three, which is the same "is there room beside the trigger"
+ * question.
  */
-@custom-variant tablet {
-  @media (min-width: 40rem) and (min-height: 32rem) and (max-width: 63.99rem) {
+@custom-variant compact {
+  @media (max-width: 39.99rem) {
+    @slot;
+  }
+  @media (max-height: 31.99rem) {
+    @slot;
+  }
+}
+@custom-variant roomy {
+  @media (min-width: 40rem) and (min-height: 32rem) {
     @slot;
   }
 }
@@ -119,6 +136,24 @@
       translate: 0 -50%;
       height: 44px;
     }
+  }
+}
+
+/*
+ * The wide shell's side-column widths — the tracker/logo column and the controls
+ * column, which the header, body, and footer all share so the three stay aligned.
+ * One variable pair rather than a `wide:` value with a `2xl:` override, because a
+ * custom variant sorts after the built-in breakpoints: `wide:w-[22rem]` would beat
+ * `2xl:w-[28rem]` at every width and the step-up would never land.
+ */
+:root {
+  --wide-col-l: 22rem;
+  --wide-col-r: 20rem;
+}
+@media (min-width: 96rem) {
+  :root {
+    --wide-col-l: 28rem;
+    --wide-col-r: 24rem;
   }
 }
 

@@ -395,21 +395,20 @@ export function EncounterConsole({
   const living = view.filter((c) => c.status !== 'dead')
   const dead = view.filter((c) => c.status === 'dead')
 
-  // On a compact screen (narrow, or short enough that the grid would squeeze) the grid
-  // becomes a scroll-snap strip: each column is a full-width screen, swiped between like
-  // the D&D Beyond app's sheets, with the bottom bar to jump. From there to lg (tablet
-  // portrait) the same three regions are a two-column grid: tracker beside stat block,
-  // controls and log in a strip below.
-  const PANE =
-    'compact:w-full compact:shrink-0 compact:snap-center compact:px-4 compact:pt-4 compact:pb-3'
+  // The three shell modes (see index.css). In `swipe` the grid becomes a scroll-snap
+  // strip: each region is a full-width screen, swiped between like the D&D Beyond
+  // app's sheets, with the bottom bar to jump. In `split` (small tablets, landscape)
+  // the same three regions are a two-column grid: tracker beside stat block, controls
+  // and log in a band below. In `wide` they are the three aligned desktop columns.
+  const PANE = 'swipe:w-full swipe:shrink-0 swipe:snap-center swipe:px-4 swipe:pt-4 swipe:pb-3'
   return (
     <div
       ref={panesRef}
       onScroll={onPanesScroll}
-      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden roomy:grid roomy:snap-none roomy:overflow-visible roomy:px-6 roomy:py-4 tablet:grid-cols-2 tablet:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] tablet:gap-x-6 tablet:gap-y-3 lg:grid-cols-[22rem_1fr_20rem] lg:gap-0 xl:grid-cols-[28rem_1fr_24rem]"
+      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:snap-none split:grid-cols-2 split:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] split:gap-x-6 split:gap-y-3 split:overflow-visible split:px-6 split:py-4 wide:grid wide:snap-none wide:grid-cols-[var(--wide-col-l)_1fr_var(--wide-col-r)] wide:overflow-visible wide:px-6 wide:py-4"
     >
       <section
-        className={`${PANE} flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800`}
+        className={`${PANE} flex min-h-0 flex-col wide:border-r wide:border-slate-200 wide:pr-4 wide:dark:border-slate-800`}
       >
         <div className="flex items-center justify-between gap-2">
           {started ? (
@@ -473,7 +472,7 @@ export function EncounterConsole({
       </section>
 
       <section
-        className={`${PANE} flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800`}
+        className={`${PANE} flex min-h-0 flex-col wide:border-r wide:border-slate-200 wide:px-4 wide:dark:border-slate-800`}
       >
         {selected ? (
           <div className="min-h-0 flex-1 overflow-auto pr-4">
@@ -598,10 +597,10 @@ export function EncounterConsole({
       </section>
 
       <aside
-        className={`${PANE} flex min-h-0 flex-col gap-4 overflow-y-auto sm:max-lg:col-span-2 sm:max-lg:flex-row sm:max-lg:gap-6 sm:max-lg:border-t sm:max-lg:border-slate-200 sm:max-lg:pt-3 sm:max-lg:dark:border-slate-800 lg:pl-4`}
+        className={`${PANE} flex min-h-0 flex-col gap-4 overflow-y-auto split:col-span-2 split:flex-row split:gap-6 split:border-t split:border-slate-200 split:pt-3 split:dark:border-slate-800 wide:pl-4`}
       >
         {selected && (
-          <div className="shrink-0 sm:max-lg:w-72">
+          <div className="shrink-0 split:w-72">
             <h3 className={COLUMN_HEADING}>Controls</h3>
             <div className="mt-2 space-y-2">
               {concPrompt && concPrompt.id === selected.combatantId && (
@@ -657,15 +656,16 @@ export function EncounterConsole({
           </div>
         )}
 
-        {/* The footer's dice live here on a phone, where there is no room for a footer bar. */}
-        <div className="shrink-0 sm:hidden">
+        {/* The footer's dice live here in the swipe shell, where the footer carries only
+        the fight's numbers. */}
+        <div className="hidden shrink-0 swipe:block">
           <h3 className={COLUMN_HEADING}>Quick roll</h3>
           <div className="mt-2">
             <QuickRoll onRoll={onRoll} />
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 sm:max-lg:border-t-0 sm:max-lg:pt-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 split:border-t-0 split:pt-0">
           <div className="mb-1 flex items-center justify-between">
             <h3 className={COLUMN_HEADING}>Game log</h3>
             {encounter.log.length > 0 && (

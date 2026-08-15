@@ -127,21 +127,33 @@ dedup.
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
   Effect, Encounter) are the backbone. Define once, use everywhere.
 - **Frontend:** React + Vite + Tailwind. Design **tablet/desktop-first** (the combat
-  console is a dense landscape layout). The shell has three tiers, and a change to it
-  must keep all three working. They are chosen by the custom variants in `index.css`,
-  never by `sm:` directly:
-  - `compact:` — narrow **or short**, so a phone in landscape counts. Three swipeable
-    screens with a bottom tab bar (`useSwipePanes` + `MobileNav`), every header
-    popover a fixed sheet (`popoverClass`), and the three add controls behind one
-    button (`AddMenu`).
-  - `tablet:` — roomy, capped below `lg`. Two-column grid, controls and log beneath.
-  - `lg:`/`xl:` — the three-column desktop grid.
+  console is a dense landscape layout). The console's shell is **one decision with
+  three modes**, defined as custom variants in `index.css`; the body, the header, and
+  the footer all switch on the same three, so no width mixes one mode's body with
+  another's chrome. Never reach for `sm:`/`lg:` for anything shell-shaped.
+  - `swipe:` — phones (either orientation) and tablets held portrait (≤1024px wide,
+    iPad Pro's portrait width included; also anything ≤512px tall). Scroll-snap
+    screens with a bottom tab bar (`useSwipePanes` + `MobileNav`), dice in the
+    Controls screen, footer only when it has content.
+  - `split:` — the small tablets held landscape (1025–1279px): tracker beside stat
+    block, controls and log in a band below, one-line header.
+  - `wide:` — 1280px up (laptops, iPad Pro / Surface Pro landscape): the aligned
+    three-column desktop. Columns are 22rem/20rem and step up to 28rem/24rem at
+    `2xl`, together with the rest counter — the aligned header only carries the
+    extras from 1536.
 
-  `roomy:` is the complement of `compact:`, for the plain "not the phone shell" cases.
-  Keep the tiers' queries non-overlapping: a custom variant sorts after the built-in
-  breakpoints, so an overlapping one wins at every width.
+  Two axes are deliberately **orthogonal to the shell**:
+  - Control sizing: `narrow:` (<640px) stacks controls full-width; `short:` handles
+    the landscape phone, which runs the swipe shell at a tablet's width.
+  - Popover surface: `compact:` renders a header control's card as a fixed sheet
+    (under the measured `--header-h`), `roomy:` anchors it as a dropdown; the same
+    pair collapses the three add buttons into one. A portrait iPad is swipe-shelled
+    but roomy — anchored dropdowns, three add buttons.
 
-  Touch sizing is separate from tier, and gated on `pointer: coarse` so a mouse keeps
+  Keep every set's queries exact complements: a custom variant sorts after the
+  built-in breakpoints, so an overlapping one wins at every width.
+
+  Touch sizing is separate from all of it, gated on `pointer: coarse` so a mouse keeps
   the density: `tap`/`tap-y` set the 44px floor (Button and LinkButton carry it for
   every button in the app), `tap-area` lays an invisible 44px strip over a control
   that has to stay small, and the `coarse:` variant handles one-offs. Form text lifts

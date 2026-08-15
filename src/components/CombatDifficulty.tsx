@@ -38,7 +38,7 @@ function ScalesIcon() {
  */
 export function CombatDifficulty({ combatants }: { combatants: Combatant[] }) {
   const assessment = assessEncounter(combatants)
-  if (!assessment) return <div className="hidden lg:block" aria-hidden="true" />
+  if (!assessment) return <div className="hidden wide:block" aria-hidden="true" />
   const { tier, adjustedXp, partyLevel } = assessment
 
   return (

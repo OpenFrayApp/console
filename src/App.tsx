@@ -1042,7 +1042,7 @@ function App() {
               title="OpenFray home"
               // pr-4 from the width where the rail comes up alongside it: on one line the
               // wordmark otherwise runs straight into the first button.
-              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 short:pr-4 min-[1100px]:pr-4 2xl:w-[28rem] 2xl:shrink-0"
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 short:pr-4 min-[1100px]:pr-4 wide:w-[var(--wide-col-l)] wide:shrink-0 wide:pr-4"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1062,26 +1062,26 @@ function App() {
             read differently on every tablet. At 2xl it dissolves into the aligned
             header. The 1100px line is where the one-line form fits with room to spare. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 max-[1099px]:order-last short:order-none short:w-auto min-[1100px]:w-auto 2xl:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 max-[1099px]:order-last short:order-none short:w-auto min-[1100px]:w-auto wide:contents">
                 {/* Each cluster owns a full row on a compact screen, and the controls that
                 carry a word share out what the icons leave. Nothing here changes at lg,
                 where the two clusters dissolve into the desktop header's own spots. */}
                 {fightControls && (
-                  <div className="flex flex-wrap items-center gap-2 narrow:w-full 2xl:flex-nowrap 2xl:pl-4">
+                  <div className="flex flex-wrap items-center gap-2 narrow:w-full wide:flex-nowrap 2xl:pl-4">
                     {fightControls}
                   </div>
                 )}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 narrow:w-full 2xl:flex-nowrap 2xl:pl-2">
+                  <div className="flex flex-wrap items-center gap-2 narrow:w-full wide:flex-nowrap 2xl:pl-2">
                     {addControls}
                   </div>
                 )}
               </div>
             )}
-            <div className="ml-auto flex items-center gap-2 2xl:gap-3 2xl:pl-3">
+            <div className="ml-auto flex items-center gap-2 wide:gap-3 wide:pl-3">
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
-              <div className="hidden roomy:block">
+              <div className="hidden split:block wide:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
               <AccountControl onSignIn={() => setAuthOpen(true)} />
@@ -1238,8 +1238,8 @@ function App() {
           count: a board of players with no foes has no difficulty to estimate, and the
           bar was left empty above the tab bar, reading as a second border. */}
           <footer
-            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 narrow:grid narrow:grid-cols-2 narrow:items-center narrow:gap-x-3 dark:border-slate-800 dark:text-slate-400 2xl:grid 2xl:grid-cols-[28rem_1fr_24rem] 2xl:gap-0 2xl:px-6 2xl:py-3 ${
-              compactFooterHasContent ? '' : 'compact:hidden'
+            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 narrow:grid narrow:grid-cols-2 narrow:items-center narrow:gap-x-3 dark:border-slate-800 dark:text-slate-400 wide:grid wide:grid-cols-[var(--wide-col-l)_1fr_var(--wide-col-r)] wide:gap-0 wide:px-6 wide:py-3 ${
+              compactFooterHasContent ? '' : 'swipe:hidden'
             }`}
           >
             {view === 'encounter' && started && encounter.combatStats ? (
@@ -1251,12 +1251,12 @@ function App() {
             ) : view === 'encounter' ? (
               <CombatDifficulty combatants={encounter.combatants} />
             ) : (
-              <div className="hidden 2xl:block" aria-hidden="true" />
+              <div className="hidden wide:block" aria-hidden="true" />
             )}
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 narrow:justify-end 2xl:pl-4">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 narrow:justify-end wide:pl-4">
               {/* On a phone the dice sit in the Controls screen instead of down here. */}
               {view === 'encounter' && (
-                <div className="hidden roomy:block">
+                <div className="hidden split:block wide:block">
                   <QuickRoll onRoll={pushRoll} />
                 </div>
               )}
@@ -1268,7 +1268,7 @@ function App() {
                 />
               )}
             </div>
-            <div className="hidden items-center gap-2 roomy:flex 2xl:justify-end 2xl:pl-4">
+            <div className="hidden items-center gap-2 roomy:flex wide:justify-end wide:pl-4">
               <a href="/privacy">Privacy</a>
               <span>·</span>
               <a href="/terms">Terms</a>
