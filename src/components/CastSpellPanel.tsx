@@ -107,6 +107,7 @@ export function CastSpellPanel({
       <LibraryPicker
         label="Cast spell"
         disabled={combatants.length === 0}
+        grow
         align="left"
         placeholder="Search spells…"
         searchLabel="Search spells"

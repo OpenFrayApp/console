@@ -1046,17 +1046,16 @@ function App() {
             clusters sit in the desktop header's own spots. */}
             {(fightControls || addControls) && (
               <div className="flex w-full flex-wrap items-center gap-2 max-lg:order-last lg:contents">
+                {/* Each cluster owns a full row on a compact screen, and the controls that
+                carry a word share out what the icons leave. Nothing here changes at lg,
+                where the two clusters dissolve into the desktop header's own spots. */}
                 {fightControls && (
-                  <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:pl-4">
+                  <div className="flex flex-wrap items-center gap-2 compact:w-full lg:flex-nowrap lg:pl-4">
                     {fightControls}
                   </div>
                 )}
-                {/* On a compact screen Add takes whatever the fight controls leave on
-                their line. `flex-1` off a zero basis means it never forces a wrap; the
-                min-width is what drops it to a line of its own, full width, when the
-                space beside them is too tight to be worth having. */}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 compact:min-w-24 compact:flex-1 lg:flex-nowrap lg:pl-2">
+                  <div className="flex flex-wrap items-center gap-2 compact:w-full lg:flex-nowrap lg:pl-2">
                     {addControls}
                   </div>
                 )}

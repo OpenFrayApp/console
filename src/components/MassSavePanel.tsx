@@ -24,8 +24,13 @@ export function MassSavePanel({
   const [open, setOpen] = useState(false)
 
   if (!open) {
+    // `compact:flex-1` shares the row's leftover width with Cast spell.
     return (
-      <Button onClick={() => setOpen(true)} disabled={combatants.length === 0}>
+      <Button
+        className="compact:flex-1"
+        onClick={() => setOpen(true)}
+        disabled={combatants.length === 0}
+      >
         Group save
       </Button>
     )

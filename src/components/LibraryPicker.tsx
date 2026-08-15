@@ -12,6 +12,7 @@ import {
   librarySourceBadgeClass,
   libraryTag,
 } from '../compendium/libraries.ts'
+import { cx } from '../lib/cx.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { popoverClass } from './popover.ts'
 import { Button, EntryBadges as Badges, type ButtonVariant } from './ui.tsx'
@@ -77,6 +78,7 @@ export function LibraryPicker<T extends LibraryEntry>({
   children,
   autoOpen = false,
   onClosed,
+  grow = false,
 }: {
   label: string
   variant?: ButtonVariant
@@ -110,6 +112,8 @@ export function LibraryPicker<T extends LibraryEntry>({
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
   onClosed?: () => void
+  /** Take a share of the row's leftover width on a compact screen. */
+  grow?: boolean
 }) {
   const [open, setOpen] = useState(autoOpen)
   const [query, setQuery] = useState('')
@@ -139,8 +143,13 @@ export function LibraryPicker<T extends LibraryEntry>({
     )
 
   return (
-    <div className="relative" ref={ref}>
-      <Button variant={variant} onClick={() => setOpen((o) => !o)} disabled={disabled}>
+    <div className={cx('relative', grow && 'compact:flex-1')} ref={ref}>
+      <Button
+        variant={variant}
+        className={grow ? 'compact:w-full' : undefined}
+        onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
+      >
         {label}
       </Button>
       {open && (
