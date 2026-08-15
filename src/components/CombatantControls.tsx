@@ -45,7 +45,7 @@ import type { OnGmRoll, OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
 
 const BTN =
-  'rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+  'tap-y rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
 
 /**
  * Per-combatant controls: remove, apply effects/conditions, concentration, and
@@ -210,7 +210,7 @@ export function CombatantControls({
           <button
             type="button"
             onClick={() => dispatch({ type: 'endConcentration', id: combatant.combatantId })}
-            className="rounded border border-violet-400 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+            className="tap-y rounded border border-violet-400 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
           >
             End concentration
           </button>
@@ -260,7 +260,7 @@ export function CombatantControls({
           title="One reaction per round (opportunity attack, readied action, Shield, …). Refreshes at the start of this combatant's turn."
           className={
             combatant.reactionUsed
-              ? 'rounded border px-2 py-1 text-xs font-medium border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+              ? 'tap-y rounded border px-2 py-1 text-xs font-medium border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
               : BTN
           }
         >
@@ -277,7 +277,7 @@ export function CombatantControls({
             title="Whether the shared player screen shows this creature. Foes appear there when the fight begins; hide one to keep an ambush off the table's board, or show it early."
             className={
               heldBack(combatant)
-                ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
                 : BTN
             }
           >
@@ -317,7 +317,7 @@ export function CombatantControls({
               title="Whether the shield is in hand — AC follows"
               className={
                 combatant.shield
-                  ? 'rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                  ? 'tap-y rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
                   : BTN
               }
             >
@@ -335,7 +335,7 @@ export function CombatantControls({
             className={
               isFoe(combatant)
                 ? BTN
-                : 'rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                : 'tap-y rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
             }
           >
             {isFoe(combatant) ? 'Make ally' : 'Ally'}
@@ -352,16 +352,19 @@ export function CombatantControls({
               }}
               disabled={legendaryResistanceLeft(combatant) <= 0}
               title="Turn a failed save into a success; spends one use"
-              className="rounded border border-amber-400 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
+              className="tap-y rounded border border-amber-400 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
             >
               Use Legendary Resistance
             </button>
+            {/* The label carries the hit area: a bare checkbox draws at 13px, which a
+            finger cannot reliably hit. */}
             {combatant.creature.legendaryResistanceLair != null && (
-              <label className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+              <label className="tap-y flex items-center gap-1 text-xs text-slate-600 coarse:gap-2 coarse:pr-2 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={!!combatant.inLair}
                   onChange={(e) => apply((c) => (c.isPC ? c : setInLair(c, e.target.checked)))}
+                  className="coarse:h-5 coarse:w-5"
                 />
                 In lair
               </label>
@@ -457,7 +460,7 @@ export function CombatantControls({
                         }
                         className={
                           hidden
-                            ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                            ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
                             : BTN
                         }
                       >
@@ -609,7 +612,7 @@ export function CombatantControls({
               }
               className={
                 e.gmOnly
-                  ? 'rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
                   : BTN
               }
             >

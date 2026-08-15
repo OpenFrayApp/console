@@ -51,7 +51,7 @@ export function EffectBadge({ effect, onRemove }: { effect: Effect; onRemove?: (
         type="button"
         onClick={onRemove}
         title={`Remove ${effect.name}`}
-        className={`${className} hover:opacity-80`}
+        className={`${className} tap-area hover:opacity-80`}
       >
         <EffectLabel effect={effect} />
         <span aria-hidden>×</span>

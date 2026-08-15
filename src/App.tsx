@@ -969,7 +969,7 @@ function App() {
             <a
               href="/"
               title="OpenFray home"
-              className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[22rem] lg:shrink-0 lg:pr-4 xl:w-[28rem]"
+              className="tap-y flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[22rem] lg:shrink-0 lg:pr-4 xl:w-[28rem]"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />

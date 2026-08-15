@@ -5,7 +5,7 @@ import type { EncounterAction } from '../state/encounter.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 
 const ICON_BTN =
-  'inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm disabled:cursor-not-allowed disabled:opacity-40'
+  'tap inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm disabled:cursor-not-allowed disabled:opacity-40'
 
 /** Play icon (begin or resume the fight). */
 const PlayIcon = () => (

@@ -40,11 +40,11 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
           onChange={(e) => setFormula(e.target.value)}
           placeholder="2d6+3"
           aria-label="Dice formula"
-          className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+          className="tap-y w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <button
           type="submit"
-          className="rounded border border-slate-300 px-2 py-1 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          className="tap rounded border border-slate-300 px-2 py-1 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
         >
           Roll
         </button>
@@ -55,7 +55,7 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
             key={die}
             type="button"
             onClick={() => submit(`1${die}`)}
-            className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="tap rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             {die}
           </button>

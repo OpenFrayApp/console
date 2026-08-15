@@ -57,6 +57,51 @@
   }
 }
 
+/*
+ * Touch hit areas. A finger needs about 44px to hit reliably (Apple HIG 44pt,
+ * Material Design 48dp), and the console draws its controls at desktop density —
+ * a 32px icon button, a two-character hit-point field. These grow a control only
+ * where the pointer is coarse, so a mouse keeps the dense layout the console is
+ * designed around and a finger gets the target the platform asks for.
+ *
+ * `tap` sets both axes. `tap-y` sets only the height, for a control whose width is
+ * the layout's business — a number in a row, a badge in a wrapped list. The `coarse`
+ * variant is the same test, for the one-off cases: a touch-only padding bump.
+ */
+@custom-variant coarse (@media (pointer: coarse));
+@utility tap {
+  @media (pointer: coarse) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@utility tap-y {
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
+}
+
+/*
+ * The same 44px, as an invisible strip over the control instead of a bigger control.
+ * For a badge in a combatant row: growing it to 44px costs two visible combatants on
+ * a phone screen and draws a slab around a one-word label, while the strip leaves the
+ * row as dense as it reads on a desktop. The strip spans the control's own width, so
+ * it never reaches a neighbour sitting beside it.
+ */
+@utility tap-area {
+  position: relative;
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline: 0;
+      top: 50%;
+      translate: 0 -50%;
+      height: 44px;
+    }
+  }
+}
+
 /* Keep native UI (scrollbars, form controls, caret) in sync with the theme. */
 html.dark {
   color-scheme: dark;
@@ -69,4 +114,19 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+/*
+ * iOS Safari zooms the page in when a focused field's text is under 16px, and it
+ * does not zoom back out — the GM is left scrolling a magnified board mid-fight.
+ * Lifting form text to 16px on a coarse pointer is the fix that keeps pinch-zoom
+ * working; the other one, `maximum-scale=1` in the viewport tag, takes zoom away
+ * from everyone, including the people who need it.
+ */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }

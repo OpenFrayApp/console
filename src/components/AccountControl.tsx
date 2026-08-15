@@ -54,7 +54,7 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           title={user.email}
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          className="tap flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           <UserIcon />
         </button>
@@ -93,7 +93,7 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
     <button
       type="button"
       onClick={onSignIn}
-      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+      className="tap-y rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
     >
       Sign in
     </button>

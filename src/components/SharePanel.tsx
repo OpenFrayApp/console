@@ -136,7 +136,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
         title={sharing ? 'Sharing with players' : 'Share with players'}
         aria-expanded={open}
         className={cx(
-          'relative flex h-9 w-9 items-center justify-center rounded-md border',
+          'tap relative flex h-9 w-9 items-center justify-center rounded-md border',
           sharing
             ? 'border-emerald-400 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300'
             : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',

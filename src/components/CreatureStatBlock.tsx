@@ -184,7 +184,9 @@ function RollableValue({
       type="button"
       onClick={() => onCheck(label, modifier, kind, ability)}
       title={`Roll ${label}`}
-      className="text-indigo-600 hover:underline dark:text-indigo-400"
+      // A stat-block number is a roll button, drawn as text at 17x20. The width is the
+      // table's to give, so only the height opens up on a coarse pointer.
+      className="tap-y inline-flex items-center justify-end text-indigo-600 hover:underline coarse:px-1 dark:text-indigo-400"
     >
       {children}
     </button>
