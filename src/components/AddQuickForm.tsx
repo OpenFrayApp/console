@@ -68,7 +68,7 @@ export function AddQuickForm({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="tap-y rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         Quick add
       </button>

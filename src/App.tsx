@@ -891,6 +891,22 @@ function App() {
     setMobilePane({ tracker: 0, 'stat-block': 1, controls: 2 }[tab])
   }
 
+  // The phone's popover sheets hang under the header (see popoverClass), which is two
+  // or three rows there and changes height as its clusters wrap. Publishing what it
+  // measures keeps a sheet from opening over the button that asked for it.
+  const headerRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+    const publish = () =>
+      document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`)
+    publish()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(publish)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const started = encounter.round > 0
   const paused = encounter.paused === true
   // What the compact footer would actually draw: the fight's clock, the difficulty
@@ -1004,13 +1020,16 @@ function App() {
           keeps one size instead of squeezing onto two lines of text. */}
           {/* gap-y and py open up on a compact screen: the clusters wrap onto two or three
           rows there, and at desktop spacing those rows read as one crowded block. */}
-          <header className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 compact:gap-y-3 compact:py-3.5 dark:border-slate-800 lg:px-6 lg:py-4">
+          <header
+            ref={headerRef}
+            className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 compact:gap-y-3 compact:py-3.5 dark:border-slate-800 lg:px-6 lg:py-4"
+          >
             {/* Logo links back to the marketing site; spans the initiative column so
             Group/Cast line up with the stat block. */}
             <a
               href="/"
               title="OpenFray home"
-              className="tap-y flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[22rem] lg:shrink-0 lg:pr-4 xl:w-[28rem]"
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 lg:w-[22rem] lg:shrink-0 lg:pr-4 xl:w-[28rem]"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1026,7 +1045,7 @@ function App() {
             of them stay on screen. From lg up the rail dissolves (contents) and its two
             clusters sit in the desktop header's own spots. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 whitespace-nowrap max-lg:order-last lg:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 max-lg:order-last lg:contents">
                 {fightControls && (
                   <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:pl-4">
                     {fightControls}
@@ -1043,7 +1062,7 @@ function App() {
                 )}
               </div>
             )}
-            <div className="ml-auto flex items-center gap-2 whitespace-nowrap lg:gap-3 lg:pl-3">
+            <div className="ml-auto flex items-center gap-2 lg:gap-3 lg:pl-3">
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
               <div className="hidden roomy:block">

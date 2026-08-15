@@ -17,7 +17,11 @@ import { cx } from '../lib/cx.ts'
 export function popoverClass(width: string, align: 'left' | 'right' = 'right') {
   return cx(
     'fixed z-30 rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900',
-    'compact:inset-x-3 compact:top-14 compact:max-h-[75dvh] compact:overflow-y-auto',
+    // Hangs below the header, whose height App publishes as `--header-h`: it is two or
+    // three rows on a phone and changes as its clusters wrap, and a fixed offset put the
+    // sheet over the button that opened it. The fallback is one row's worth.
+    'compact:inset-x-3 compact:top-[calc(var(--header-h,3.5rem)+0.5rem)]',
+    'compact:max-h-[calc(100dvh-var(--header-h,3.5rem)-1.5rem)] compact:overflow-y-auto',
     'roomy:absolute roomy:mt-1',
     align === 'left' ? 'roomy:left-0' : 'roomy:right-0',
     width,

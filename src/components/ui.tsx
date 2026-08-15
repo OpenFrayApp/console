@@ -48,7 +48,9 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
  */
 function buttonClass(variant: ButtonVariant, size: ButtonSize) {
   const base = variant === 'quiet' ? 'text-sm' : `${BUTTON_SIZE[size]} disabled:opacity-50`
-  return cx('tap-y', base, BUTTON_VARIANT[variant])
+  // A label belongs on one line, and this is where that is said. Setting it on a
+  // container instead leaks into every popover and modal rendered from inside it.
+  return cx('tap-y whitespace-nowrap', base, BUTTON_VARIANT[variant])
 }
 
 /** A button. Pick the variant by what pressing it does, the size by how dense the row is. */
