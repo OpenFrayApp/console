@@ -1045,7 +1045,7 @@ function App() {
               title="OpenFray home"
               // pr-4 from the width where the rail comes up alongside it: on one line the
               // wordmark otherwise runs straight into the first button.
-              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 short:pr-4 min-[1100px]:pr-4 wide:w-[var(--wide-col-l)] wide:shrink-0 wide:pr-4"
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 short:pr-4 min-[1000px]:pr-4 wide:w-[var(--wide-col-l)] wide:shrink-0 wide:pr-4"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1065,7 +1065,7 @@ function App() {
             read differently on every tablet. At 2xl it dissolves into the aligned
             header. The 1100px line is where the one-line form fits with room to spare. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 max-[1099px]:order-last short:order-none short:w-auto min-[1100px]:w-auto wide:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 max-[999px]:order-last short:order-none short:w-auto min-[1000px]:w-auto wide:contents">
                 {/* Each cluster owns a full row on a compact screen, and the controls that
                 carry a word share out what the icons leave. Nothing here changes at lg,
                 where the two clusters dissolve into the desktop header's own spots. */}
