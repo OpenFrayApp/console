@@ -61,7 +61,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
         Quick add
       </button>
       {open && (
-        <form onSubmit={submit} className={`${popoverClass('sm:w-72')} space-y-2 p-2`}>
+        <form onSubmit={submit} className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}>
           <div className="flex gap-2">
             <input
               autoFocus

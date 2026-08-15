@@ -97,8 +97,8 @@ function Tab({
 
 /**
  * The phone layout's bottom bar: the console's three swipeable screens and the
- * compendium, as tabs. Hidden from `sm` up, where the screens are grid columns and
- * the header's view toggle covers the compendium.
+ * compendium, as tabs. Hidden on a roomy screen, where the screens are grid columns
+ * and the header's view toggle covers the compendium.
  */
 export function MobileNav({
   active,
@@ -110,7 +110,7 @@ export function MobileNav({
   return (
     <nav
       aria-label="Console screens"
-      className="grid shrink-0 grid-cols-4 border-t border-slate-200 pb-[env(safe-area-inset-bottom)] dark:border-slate-800 sm:hidden"
+      className="grid shrink-0 grid-cols-4 border-t border-slate-200 pb-[env(safe-area-inset-bottom)] dark:border-slate-800 roomy:hidden"
     >
       <Tab
         icon={<RowsIcon />}

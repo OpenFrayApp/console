@@ -16,6 +16,47 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * The console ships two shells: a swipeable strip of full-screen panes, and the
+ * tablet/desktop grid. `compact` selects the strip and `roomy` the grid; they are
+ * exact complements, so every shell rule has one and only one match.
+ *
+ * The test is width OR height, not width alone. A phone held in landscape is wider
+ * than the `sm` breakpoint but around 400px tall, and the grid's stacked rows leave
+ * it a single visible combatant under a clipped stat block. Short screens get the
+ * strip, where a pane is the whole screen at any orientation.
+ *
+ * Written in the classic min/max syntax rather than media range syntax, which iOS
+ * Safari only understands from 16.4. `compact` needs the block form: the shorthand
+ * splits a comma-separated query list into separate variants, so the OR has to be two
+ * blocks instead. A utility matching both is emitted twice, which is harmless.
+ */
+@custom-variant compact {
+  @media (max-width: 39.99rem) {
+    @slot;
+  }
+  @media (max-height: 31.99rem) {
+    @slot;
+  }
+}
+@custom-variant roomy {
+  @media (min-width: 40rem) and (min-height: 32rem) {
+    @slot;
+  }
+}
+
+/*
+ * The two-column tablet band, capped just under `lg` so it cannot overlap the
+ * three-column desktop rules. A custom variant sorts after the built-in breakpoints,
+ * so an overlapping `roomy:grid-cols-2` would win at every width and flatten the
+ * desktop back to two columns. Non-overlapping queries make the cascade order moot.
+ */
+@custom-variant tablet {
+  @media (min-width: 40rem) and (min-height: 32rem) and (max-width: 63.99rem) {
+    @slot;
+  }
+}
+
 /* Keep native UI (scrollbars, form controls, caret) in sync with the theme. */
 html.dark {
   color-scheme: dark;

@@ -57,7 +57,7 @@ export function AddPcPicker({
         Add PC
       </button>
       {open && (
-        <div className={`${popoverClass('sm:w-64')} p-2`}>
+        <div className={`${popoverClass('roomy:w-64')} p-2`}>
           <input
             autoFocus
             type="search"

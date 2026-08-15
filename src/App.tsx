@@ -998,7 +998,7 @@ function App() {
             <div className="ml-auto flex items-center gap-2 whitespace-nowrap lg:gap-3 lg:pl-3">
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
-              <div className="hidden sm:block">
+              <div className="hidden roomy:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
               <AccountControl onSignIn={() => setAuthOpen(true)} />
@@ -1154,7 +1154,7 @@ function App() {
           <footer
             className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[22rem_1fr_20rem] lg:gap-0 lg:px-6 lg:py-3 xl:grid-cols-[28rem_1fr_24rem] ${
               view !== 'encounter' || (encounter.combatants.length === 0 && !user)
-                ? 'max-sm:hidden'
+                ? 'compact:hidden'
                 : ''
             }`}
           >
@@ -1172,7 +1172,7 @@ function App() {
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
               {/* On a phone the dice sit in the Controls screen instead of down here. */}
               {view === 'encounter' && (
-                <div className="hidden sm:block">
+                <div className="hidden roomy:block">
                   <QuickRoll onRoll={pushRoll} />
                 </div>
               )}
@@ -1184,7 +1184,7 @@ function App() {
                 />
               )}
             </div>
-            <div className="hidden items-center gap-2 sm:flex lg:justify-end lg:pl-4">
+            <div className="hidden items-center gap-2 roomy:flex lg:justify-end lg:pl-4">
               <a href="/privacy">Privacy</a>
               <span>·</span>
               <a href="/terms">Terms</a>

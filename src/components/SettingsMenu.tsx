@@ -160,7 +160,7 @@ export function SettingsMenu({
       </button>
 
       {open && (
-        <div role="menu" className={`${popoverClass('sm:w-52')} p-1 sm:mt-2`}>
+        <div role="menu" className={`${popoverClass('roomy:w-52')} p-1 roomy:mt-2`}>
           <Item
             icon={<SlidersIcon />}
             onClick={() => {

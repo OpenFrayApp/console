@@ -138,7 +138,7 @@ export function LibraryPicker<T extends LibraryEntry>({
         {label}
       </Button>
       {open && (
-        <div className={`${popoverClass('sm:w-72', align)} p-2`}>
+        <div className={`${popoverClass('roomy:w-72', align)} p-2`}>
           {children}
           <input
             autoFocus

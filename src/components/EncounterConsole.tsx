@@ -395,16 +395,17 @@ export function EncounterConsole({
   const living = view.filter((c) => c.status !== 'dead')
   const dead = view.filter((c) => c.status === 'dead')
 
-  // Below sm the grid becomes a scroll-snap strip: each column is a full-width screen,
-  // swiped between like the D&D Beyond app's sheets, with the bottom bar to jump.
-  // From sm to lg (tablet portrait) the same three regions are a two-column grid:
-  // tracker beside stat block, controls and log in a strip below.
-  const PANE = 'max-sm:w-full max-sm:shrink-0 max-sm:snap-center max-sm:px-4 max-sm:py-3'
+  // On a compact screen (narrow, or short enough that the grid would squeeze) the grid
+  // becomes a scroll-snap strip: each column is a full-width screen, swiped between like
+  // the D&D Beyond app's sheets, with the bottom bar to jump. From there to lg (tablet
+  // portrait) the same three regions are a two-column grid: tracker beside stat block,
+  // controls and log in a strip below.
+  const PANE = 'compact:w-full compact:shrink-0 compact:snap-center compact:px-4 compact:py-3'
   return (
     <div
       ref={panesRef}
       onScroll={onPanesScroll}
-      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:snap-none sm:grid-cols-2 sm:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-6 sm:gap-y-3 sm:overflow-visible sm:px-6 sm:py-4 lg:grid-cols-[22rem_1fr_20rem] lg:grid-rows-none lg:gap-0 xl:grid-cols-[28rem_1fr_24rem]"
+      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden roomy:grid roomy:snap-none roomy:overflow-visible roomy:px-6 roomy:py-4 tablet:grid-cols-2 tablet:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] tablet:gap-x-6 tablet:gap-y-3 lg:grid-cols-[22rem_1fr_20rem] lg:gap-0 xl:grid-cols-[28rem_1fr_24rem]"
     >
       <section
         className={`${PANE} flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800`}
