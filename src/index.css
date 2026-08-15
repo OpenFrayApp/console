@@ -16,6 +16,140 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * THE SHELL — one decision, three modes, exhaustive and non-overlapping. The console's
+ * body, header, and footer all switch on the same three variants, so no width can mix
+ * one mode's body with another mode's chrome:
+ *
+ * - `swipe`  — phones (either orientation) and every tablet held portrait, iPad Pro's
+ *              1024px included: the scroll-snap panes, the bottom tab bar, the stacked
+ *              header. Also any screen too short for stacked rows (a landscape phone).
+ * - `split`  — the small tablets held landscape (iPad mini 1133, Air 1180, 11" 1194):
+ *              tracker beside stat block, controls and log in a band below.
+ * - `wide`   — from 1280 up (laptops, iPad Pro and Surface Pro landscape): the aligned
+ *              three-column desktop. Column widths step up again at 2xl.
+ *
+ * Written in the classic min/max syntax rather than media range syntax, which iOS
+ * Safari only understands from 16.4. `swipe` needs the block form: the shorthand
+ * splits a comma-separated query list into separate variants, so the OR is two blocks.
+ * A utility matching both is emitted twice, which is harmless.
+ */
+@custom-variant swipe {
+  @media (max-width: 64rem) {
+    @slot;
+  }
+  @media (max-height: 31.99rem) {
+    @slot;
+  }
+}
+@custom-variant split {
+  @media (min-width: 64.01rem) and (max-width: 79.99rem) and (min-height: 32rem) {
+    @slot;
+  }
+}
+@custom-variant wide {
+  @media (min-width: 80rem) and (min-height: 32rem) {
+    @slot;
+  }
+}
+
+/*
+ * WITHIN THE SWIPE SHELL, one sizing split (maintainer-decided: a tablet held
+ * portrait gets the whole phone layout, not just the phone body):
+ *
+ * - `narrow` — every swipe screen except the landscape phone: phones portrait and
+ *   tablets portrait alike. The stacked mobile header rows, full-width controls,
+ *   the two-column footer.
+ * - `short`  — the landscape phone: the swipe shell, but with a tablet's worth of
+ *   width and almost no height, so controls keep their natural size and the header
+ *   stays on one line.
+ *
+ * `roomy` is the complement of the swipe shell itself (wider than 1024 AND taller
+ * than 512): anchored dropdown popovers, the three add buttons, the footer's legal
+ * links. Inside swipe those are sheets, one Add button, and the gear menu.
+ */
+@custom-variant narrow {
+  @media (max-width: 39.99rem) {
+    @slot;
+  }
+  @media (max-width: 64rem) and (min-height: 32rem) {
+    @slot;
+  }
+}
+@custom-variant short {
+  @media (max-height: 31.99rem) and (min-width: 40rem) {
+    @slot;
+  }
+}
+@custom-variant roomy {
+  @media (min-width: 64.01rem) and (min-height: 32rem) {
+    @slot;
+  }
+}
+
+/*
+ * Touch hit areas. A finger needs about 44px to hit reliably (Apple HIG 44pt,
+ * Material Design 48dp), and the console draws its controls at desktop density —
+ * a 32px icon button, a two-character hit-point field. These grow a control only
+ * where the pointer is coarse, so a mouse keeps the dense layout the console is
+ * designed around and a finger gets the target the platform asks for.
+ *
+ * `tap` sets both axes. `tap-y` sets only the height, for a control whose width is
+ * the layout's business — a number in a row, a badge in a wrapped list. The `coarse`
+ * variant is the same test, for the one-off cases: a touch-only padding bump.
+ */
+@custom-variant coarse (@media (pointer: coarse));
+@utility tap {
+  @media (pointer: coarse) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@utility tap-y {
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
+}
+
+/*
+ * The same 44px, as an invisible strip over the control instead of a bigger control.
+ * For a badge in a combatant row: growing it to 44px costs two visible combatants on
+ * a phone screen and draws a slab around a one-word label, while the strip leaves the
+ * row as dense as it reads on a desktop. The strip spans the control's own width, so
+ * it never reaches a neighbour sitting beside it.
+ */
+@utility tap-area {
+  position: relative;
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline: 0;
+      top: 50%;
+      translate: 0 -50%;
+      height: 44px;
+    }
+  }
+}
+
+/*
+ * The wide shell's side-column widths — the tracker/logo column and the controls
+ * column, which the header, body, and footer all share so the three stay aligned.
+ * One variable pair rather than a `wide:` value with a `2xl:` override, because a
+ * custom variant sorts after the built-in breakpoints: `wide:w-[22rem]` would beat
+ * `2xl:w-[28rem]` at every width and the step-up would never land.
+ */
+:root {
+  --wide-col-l: 22rem;
+  --wide-col-r: 20rem;
+}
+@media (min-width: 96rem) {
+  :root {
+    --wide-col-l: 28rem;
+    --wide-col-r: 24rem;
+  }
+}
+
 /* Keep native UI (scrollbars, form controls, caret) in sync with the theme. */
 html.dark {
   color-scheme: dark;
@@ -28,4 +162,19 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+/*
+ * iOS Safari zooms the page in when a focused field's text is under 16px, and it
+ * does not zoom back out — the GM is left scrolling a magnified board mid-fight.
+ * Lifting form text to 16px on a coarse pointer is the fix that keeps pinch-zoom
+ * working; the other one, `maximum-scale=1` in the viewport tag, takes zoom away
+ * from everyone, including the people who need it.
+ */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }

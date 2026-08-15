@@ -27,7 +27,10 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4">
+    // One row that wraps only when it must. On a compact screen the six dice do not fit
+    // beside the formula once they are finger-sized, so they take the next line — and
+    // fill it, sharing it evenly, rather than trailing off half way across.
+    <div className="flex flex-wrap items-center gap-4 narrow:gap-2">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -40,22 +43,22 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
           onChange={(e) => setFormula(e.target.value)}
           placeholder="2d6+3"
           aria-label="Dice formula"
-          className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+          className="tap-y w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
         <button
           type="submit"
-          className="rounded border border-slate-300 px-2 py-1 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          className="tap rounded border border-slate-300 px-2 py-1 text-sm font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
         >
           Roll
         </button>
       </form>
-      <div className="flex gap-1">
+      <div className="flex gap-1 narrow:flex-1 narrow:gap-1.5">
         {DICE.map((die) => (
           <button
             key={die}
             type="button"
             onClick={() => submit(`1${die}`)}
-            className="rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="tap rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 narrow:flex-1 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             {die}
           </button>

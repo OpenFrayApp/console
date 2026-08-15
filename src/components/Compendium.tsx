@@ -39,6 +39,7 @@ import { emptySpellDraft, spellToDraft, type SpellDraft } from './customSpell.ts
 import { track, EVENTS } from '../lib/analytics.ts'
 import { cx } from '../lib/cx.ts'
 import { EntryBadges, TabButton } from './ui.tsx'
+import { useSwipePanes } from '../hooks/useSwipePanes.ts'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters' | 'effects'
 
@@ -309,6 +310,15 @@ export function Compendium({
   } | null>(null)
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
   const [pcForm, setPcForm] = useState<{ pc: RosterPc | null } | null>(null)
+  // In the swipe shell the list and the entry are two screens swiped between; picking
+  // an entry slides over to it, like tapping into a monster in the D&D Beyond app.
+  const [pane, setPane] = useState(0)
+  const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
+  /** Select an entry and, on a phone, slide over to show it. */
+  const showEntry = (id: string) => {
+    setSelectedId(id)
+    setPane(1)
+  }
 
   useEffect(() => {
     loadSrdCreatures().then(setCreatures, () => setCreatures([]))
@@ -520,9 +530,13 @@ export function Compendium({
   const isCustomSpell = (s: Spell) => s.id.startsWith('custom:')
 
   return (
-    <div className="grid h-full min-h-0 gap-4 md:grid-cols-[26rem_minmax(0,1fr)]">
-      <div className="flex min-h-0 min-w-0 flex-col">
-        <div role="tablist" aria-label="Compendium" className="mb-2 flex gap-0.5">
+    <div
+      ref={panesRef}
+      onScroll={onPanesScroll}
+      className="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:grid-cols-[26rem_minmax(0,1fr)] split:gap-4 split:overflow-visible wide:grid wide:grid-cols-[26rem_minmax(0,1fr)] wide:gap-4 wide:overflow-visible"
+    >
+      <div className="flex min-h-0 min-w-0 flex-col swipe:w-full swipe:shrink-0 swipe:snap-center">
+        <div role="tablist" aria-label="Compendium" className="mb-2 flex flex-wrap gap-0.5">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
           </TabButton>
@@ -553,7 +567,7 @@ export function Compendium({
           <PresetList
             presets={filteredPresets}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={showEntry}
             emptyLabel={
               searching
                 ? 'No presets match that search.'
@@ -565,7 +579,7 @@ export function Compendium({
             campaigns={filteredCampaigns}
             gated={createGated}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={showEntry}
             emptyLabel={searching ? 'No campaigns match that search.' : 'No campaigns yet.'}
           />
         ) : tab === 'characters' ? (
@@ -574,7 +588,7 @@ export function Compendium({
             campaigns={campaigns}
             gated={createGated}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={showEntry}
             emptyLabel={searching ? 'No characters match that search.' : 'No characters yet.'}
           />
         ) : loading ? (
@@ -589,7 +603,7 @@ export function Compendium({
                 <li key={e.id}>
                   <button
                     type="button"
-                    onClick={() => setSelectedId(e.id)}
+                    onClick={() => showEntry(e.id)}
                     className={cx(
                       'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
                       e.id === selectedId
@@ -626,7 +640,26 @@ export function Compendium({
         )}
       </div>
 
-      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800">
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800 swipe:w-full swipe:shrink-0 swipe:snap-center">
+        <button
+          type="button"
+          onClick={() => setPane(0)}
+          className="mt-2 flex items-center gap-1 self-start text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 split:hidden wide:hidden"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Back
+        </button>
         {(tab === 'campaigns' || tab === 'characters') && createGated ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import type { ClaimResult } from '../state/cloudEncounter.ts'
 import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../state/playerCode.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
+import { popoverClass } from './popover.ts'
 import { Button, LinkButton } from './ui.tsx'
 import { cx } from '../lib/cx.ts'
 
@@ -135,7 +136,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
         title={sharing ? 'Sharing with players' : 'Share with players'}
         aria-expanded={open}
         className={cx(
-          'relative flex h-9 w-9 items-center justify-center rounded-md border',
+          'tap relative flex h-9 w-9 items-center justify-center rounded-md border',
           sharing
             ? 'border-emerald-400 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300'
             : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
@@ -151,7 +152,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div className={`${popoverClass('roomy:w-80')} p-3 roomy:mt-2`}>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Player view</h2>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
             A read-only screen with the turn order and the game log. Anyone with the link can watch,
@@ -178,7 +179,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                   readOnly
                   value={url}
                   onFocus={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                 />
                 <Button
                   size="sm"
@@ -221,7 +222,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                     setDraft(e.target.value)
                     setMessage(null)
                   }}
-                  className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 />
                 <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
                   Save

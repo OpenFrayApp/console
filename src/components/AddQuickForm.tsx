@@ -5,6 +5,7 @@ import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../schema/combatant.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { parseNonNegativeInt as num } from '../lib/form.ts'
+import { popoverClass } from './popover.ts'
 
 const FIELD_BASE =
   'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -14,15 +15,30 @@ const FIELD = `w-full ${FIELD_BASE}`
  * Quick add — a generic combatant (an NPC, or a creature dropped in mid-fight)
  * that just needs a name, HP, and AC. Shown as "Quick add", not a full PC.
  */
-export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void }) {
-  const [open, setOpen] = useState(false)
+export function AddQuickForm({
+  onAdd,
+  autoOpen = false,
+  onClosed,
+  hideTrigger = false,
+}: {
+  onAdd: (c: PlayerCharacter) => void
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
+  /** Hide this control's own trigger — the Add menu keeps its button in the header. */
+  hideTrigger?: boolean
+}) {
+  const [open, setOpen] = useState(autoOpen)
   const [name, setName] = useState('')
   const [ac, setAc] = useState('')
   const [hp, setHp] = useState('')
   // Quick adds are most often an enemy dropped in mid-fight, so default to foe.
   const [side, setSide] = useState<'friend' | 'foe'>('foe')
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   /** Add the quick combatant on the chosen side, then reset and close; blank name is a no-op. */
@@ -47,7 +63,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
     setAc('')
     setHp('')
     setSide('foe')
-    setOpen(false)
+    close()
   }
 
   return (
@@ -55,15 +71,12 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
       >
         Quick add
       </button>
       {open && (
-        <form
-          onSubmit={submit}
-          className="absolute right-0 z-30 mt-1 w-72 space-y-2 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
-        >
+        <form onSubmit={submit} className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}>
           <div className="flex gap-2">
             <input
               autoFocus

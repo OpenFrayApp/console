@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
+import { popoverClass } from './popover.ts'
 
 /** User-silhouette icon (the account menu button). */
 function UserIcon() {
@@ -53,15 +54,12 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           title={user.email}
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          className="tap flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           <UserIcon />
         </button>
         {menuOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
-          >
+          <div role="menu" className={`${popoverClass('roomy:w-44')} py-1 roomy:overflow-hidden`}>
             <button
               type="button"
               role="menuitem"
@@ -95,7 +93,7 @@ export function AccountControl({ onSignIn }: { onSignIn: () => void }) {
     <button
       type="button"
       onClick={onSignIn}
-      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+      className="tap-y whitespace-nowrap rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
     >
       Sign in
     </button>

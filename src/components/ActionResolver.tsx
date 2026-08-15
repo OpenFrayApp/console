@@ -4,7 +4,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import type { Action, SaveOutcome } from '../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
-import type { ConditionName, EffectDuration } from '../schema/effect.ts'
+import type { ConditionName, Effect, EffectDuration } from '../schema/effect.ts'
 import { DAMAGE_TYPES, type Ability, type DamageType } from '../schema/primitives.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction, NewLogEntry } from '../state/encounter.ts'
@@ -303,6 +303,22 @@ export function DamageTypeSelect({
   )
 }
 
+/** Whether an effect is the named condition — the same test EffectModal clears by. */
+const isCondition = (e: Effect, name: ConditionName): boolean =>
+  e.icon === 'condition' && e.name === name
+
+/** The conditions a combatant carries, by name. */
+const conditionsOn = (c: Combatant): ConditionName[] =>
+  c.effects.filter((e) => e.icon === 'condition').map((e) => e.name as ConditionName)
+
+/** The conditions every one of these combatants carries — what a chip can show as its state. */
+const conditionsOnAll = (targets: Combatant[]): ConditionName[] =>
+  targets.length === 0
+    ? []
+    : conditionsOn(targets[0]).filter((name) =>
+        targets.every((t) => conditionsOn(t).includes(name)),
+      )
+
 const QUICK_CONDITIONS: ConditionName[] = [
   'Prone',
   'Grappled',
@@ -342,10 +358,16 @@ function toDuration(choice: DurationChoice): EffectDuration {
  * by one. It takes no duration — a level lasts until the Game Master lowers it.
  */
 export function ConditionChips({
+  applied = [],
+  onRemove,
   onApply,
   onExhaustion,
   sourceName,
 }: {
+  /** The conditions every affected target already carries, so a chip reads as a state. */
+  applied?: ConditionName[]
+  /** Clear a condition the chips show as applied. Absent leaves the chips apply-only. */
+  onRemove?: (name: ConditionName) => void
   onApply: (name: ConditionName, duration: EffectDuration) => void
   /** Raise the affected targets' Exhaustion by one. Absent where there is none to raise. */
   onExhaustion?: () => void
@@ -370,11 +392,25 @@ export function ConditionChips({
         </Select>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {QUICK_CONDITIONS.map((c) => (
-          <Chip key={c} onClick={() => onApply(c, toDuration(choice))}>
-            {c}
-          </Chip>
-        ))}
+        {QUICK_CONDITIONS.map((c) => {
+          // A creature is Frightened or it is not — a second identical badge says nothing
+          // the first did not. So the chip is the state, not an action: lit when the
+          // target has the condition, and tapping a lit one clears it.
+          const has = applied.includes(c)
+          return (
+            <Chip
+              key={c}
+              active={has}
+              aria-pressed={onRemove ? has : undefined}
+              title={has ? `Clear ${c}` : undefined}
+              onClick={() =>
+                has && onRemove ? onRemove(c) : !has && onApply(c, toDuration(choice))
+              }
+            >
+              {c}
+            </Chip>
+          )
+        })}
         {onExhaustion && (
           <Chip onClick={onExhaustion} title="Raises the level it already has; no duration">
             +1 Exhaustion
@@ -552,6 +588,18 @@ function AttackResolver({
       }),
     })
     setNote(`${name} → ${nameOf(attack.target)}`)
+  }
+
+  /** Clear a condition off the target, so a lit chip is a toggle rather than a second copy. */
+  const clearCondition = (name: ConditionName) => {
+    if (!attack) return
+    flush()
+    dispatch({
+      type: 'update',
+      id: attack.target.combatantId,
+      update: (c) => ({ ...c, effects: c.effects.filter((e) => !isCondition(e, name)) }),
+    })
+    setNote(`${name} cleared → ${nameOf(attack.target)}`)
   }
 
   /** Raise the target's Exhaustion by one — the rider a great many attacks carry. */
@@ -746,6 +794,8 @@ function AttackResolver({
       {attack && (
         <>
           <ConditionChips
+            applied={conditionsOn(attack.target)}
+            onRemove={clearCondition}
             onApply={applyCondition}
             onExhaustion={applyExhaustion}
             sourceName={attacker ? nameOf(attacker) : undefined}
@@ -1034,6 +1084,21 @@ export function SaveResolver({
       })
     }
     setNote(`${name} → ${affected.map(nameOf).join(', ')}`)
+  }
+
+  /** Clear a condition off every affected target — the other half of a lit chip. */
+  const clearCondition = (name: ConditionName) => {
+    const affected = affectedTargets()
+    if (affected.length === 0) return
+    flush()
+    for (const c of affected) {
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) => ({ ...cc, effects: cc.effects.filter((e) => !isCondition(e, name)) }),
+      })
+    }
+    setNote(`${name} cleared → ${affected.map(nameOf).join(', ')}`)
   }
 
   /** Raise every affected target's Exhaustion by one — each from its own level. */
@@ -1327,7 +1392,11 @@ export function SaveResolver({
             </div>
           )}
 
+          {/* Lit only where every affected target has it: with several targets a chip
+          cannot be half on, and applying to the rest is the more useful default. */}
           <ConditionChips
+            applied={conditionsOnAll(affectedTargets())}
+            onRemove={clearCondition}
             onApply={applyCondition}
             onExhaustion={applyExhaustion}
             sourceName={attacker ? nameOf(attacker) : undefined}

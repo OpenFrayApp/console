@@ -66,6 +66,7 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { RecapScreen, EndCombatPrompt } from './components/Recap.tsx'
 import { allFoesDefeated, allPlayersDown, buildRecap, type Recap } from './combat/recap.ts'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
+import { AddMenu } from './components/AddMenu.tsx'
 import {
   loadSettings,
   saveSettings,
@@ -89,9 +90,11 @@ import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
 import { CombatTimers } from './components/CombatTimers.tsx'
 import { CombatDifficulty } from './components/CombatDifficulty.tsx'
+import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SettingsMenu } from './components/SettingsMenu.tsx'
+import { MobileNav, type MobileTab } from './components/MobileNav.tsx'
 import { SharePanel } from './components/SharePanel.tsx'
 import { SignUpPage } from './components/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/GameLog.tsx'
@@ -142,16 +145,19 @@ function BookIcon() {
 
 /** Encounter / Compendium as an icon segmented control. */
 function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
-  /** Class list for one toggle segment, filled when active. */
+  /** Class list for one toggle segment, filled when active. The nav owns the height
+   *  (its border counts toward it, border-box); the cells just fill it. */
   const cell = (active: boolean) =>
-    `flex items-center justify-center px-3 py-1.5 ${
+    `flex h-full items-center justify-center px-3 ${
       active
         ? 'bg-indigo-600 text-white'
         : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
     }`
   return (
     <nav
-      className="flex overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
+      // h-9 (and 44px on touch) so the pair stands exactly as tall as the icon
+      // buttons beside it — they size their boxes the same way.
+      className="flex h-9 overflow-hidden rounded-md border border-slate-300 coarse:h-11 dark:border-slate-700"
       aria-label="View"
     >
       <button
@@ -248,6 +254,9 @@ function App() {
     () => restored?.encounter ?? emptyEncounter(),
   )
   const [logOpen, setLogOpen] = useState(false)
+  // Which of the console's three screens is up on a phone (0 tracker, 1 stat block,
+  // 2 controls). Meaningless from lg up, where all three are columns.
+  const [mobilePane, setMobilePane] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
   const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
   // The initiative the app pre-rolled into that box, held until the fight it starts has
@@ -562,6 +571,7 @@ function App() {
     track(EVENTS.pcAdded)
     addCombatant(rosterPcToCombatant(pc))
     setView('encounter')
+    setMobilePane(0)
   }
 
   // Header "Add PC → create": send a signed-in user to the compendium's Characters tab.
@@ -868,96 +878,213 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [encounter])
 
+  // The bottom bar's active tab, and what tapping one does. The compendium is a view
+  // of its own; the other three are the console's phone screens.
+  const mobileTab: MobileTab =
+    view === 'compendium'
+      ? 'compendium'
+      : ((['tracker', 'stat-block', 'controls'] as const)[mobilePane] ?? 'tracker')
+  /** Show the tapped tab: switch view when needed, then slide to the screen. */
+  const showMobileTab = (tab: MobileTab) => {
+    if (tab === 'compendium') {
+      handleViewChange('compendium')
+      return
+    }
+    setView('encounter')
+    setMobilePane({ tracker: 0, 'stat-block': 1, controls: 2 }[tab])
+  }
+
+  // The phone's popover sheets hang under the header (see popoverClass), which is two
+  // or three rows there and changes height as its clusters wrap. Publishing what it
+  // measures keeps a sheet from opening over the button that asked for it.
+  const headerRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+    const publish = () =>
+      document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`)
+    publish()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(publish)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const started = encounter.round > 0
   const paused = encounter.paused === true
+  // What the compact footer would actually draw: the fight's clock, the difficulty
+  // estimate, or the campaign picker. None of the three, and the bar is just a border.
+  const compactFooterHasContent =
+    view === 'encounter' &&
+    ((started && encounter.combatStats != null) ||
+      assessEncounter(encounter.combatants) != null ||
+      campaigns.length > 0)
   // Cast spell opens on whoever the GM is looking at — the selected combatant, or the
   // one whose turn it is — so the common case needs no pick at all.
   const defaultCasterId =
     selectedId ?? (started ? encounter.combatants[encounter.activeIndex]?.combatantId : undefined)
 
+  // The header's two button clusters, built once and rendered twice: in the desktop
+  // header's own spots, and again in the phone header's single swipeable rail (only
+  // one of the two is ever displayed, so the copies never fight over a popover).
+  const fightControls = view === 'encounter' && encounter.combatants.length > 0 && (
+    <>
+      <RestControls
+        combatants={encounter.combatants}
+        dispatch={dispatch}
+        disabled={started}
+        shortRests={encounter.shortRests ?? 0}
+        showCounter={!!user}
+      />
+      <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+      <CastSpellPanel
+        combatants={encounter.combatants}
+        dispatch={dispatch}
+        onRoll={pushRoll}
+        onNote={pushNote}
+        round={encounter.round}
+        defaultCasterId={defaultCasterId}
+        customSpells={customSpells}
+        enabledLibraries={enabledLibraries}
+        showHomebrew={showHomebrew}
+        librarySort={librarySort}
+      />
+    </>
+  )
+  // Each add control, buildable already open. A roomy header shows all three; a phone
+  // shows one Add button that opens whichever the GM picks, because side by side the
+  // three wrap onto a line of their own and eat a third of a narrow screen.
+  /** Options for building an add control: the Add menu opens one already open, with
+   *  its own trigger hidden, because the menu keeps the header button. */
+  type AddOpts = { autoOpen?: boolean; hideTrigger?: boolean; onClosed?: () => void }
+  const addQuick = (o: AddOpts = {}) => (
+    <AddQuickForm
+      {...o}
+      onAdd={(c) => {
+        track(EVENTS.quickAdded)
+        addCombatant(c)
+      }}
+    />
+  )
+  const addPc = (o: AddOpts = {}) =>
+    user ? (
+      <AddPcPicker
+        {...o}
+        rosterPcs={rosterPcs}
+        campaigns={campaigns}
+        onPick={handleAddPcToEncounter}
+        onCreate={openRosterCreate}
+      />
+    ) : (
+      <AddPcForm
+        {...o}
+        onAdd={(c) => {
+          track(EVENTS.pcAdded)
+          addCombatant(c)
+        }}
+      />
+    )
+  const addCreature = (o: AddOpts = {}) => (
+    <AddCreaturePicker
+      {...o}
+      onPick={handlePick}
+      customCreatures={customCreatures}
+      enabledLibraries={enabledLibraries}
+      showHomebrew={showHomebrew}
+      librarySort={librarySort}
+    />
+  )
+  const addControls = view === 'encounter' && (
+    <>
+      <div className="w-full roomy:hidden">
+        <AddMenu
+          items={[
+            {
+              key: 'quick',
+              label: 'Quick add',
+              render: (done) => addQuick({ autoOpen: true, hideTrigger: true, onClosed: done }),
+            },
+            {
+              key: 'pc',
+              label: 'Add PC',
+              render: (done) => addPc({ autoOpen: true, hideTrigger: true, onClosed: done }),
+            },
+            {
+              key: 'creature',
+              label: 'Add creature',
+              render: (done) => addCreature({ autoOpen: true, hideTrigger: true, onClosed: done }),
+            },
+          ]}
+        />
+      </div>
+      <div className="hidden roomy:contents">
+        {addQuick()}
+        {addPc()}
+        {addCreature()}
+      </div>
+    </>
+  )
+
   return (
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
         <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-          <header className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-            <div className="flex items-center gap-4 lg:gap-0">
-              {/* Logo links back to the marketing site; spans the initiative column so
-              Group/Cast line up with the stat block. */}
-              <a
-                href="/"
-                title="OpenFray home"
-                className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
-              >
-                <span className="text-indigo-500 dark:text-indigo-400">
-                  <CrossedSwordsIcon />
-                </span>
-                <h1 className="text-xl font-semibold tracking-tight">
-                  <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
-                </h1>
-              </a>
-              {view === 'encounter' && encounter.combatants.length > 0 && (
-                <div className="flex items-center gap-2 lg:pl-4">
-                  <RestControls
-                    combatants={encounter.combatants}
-                    dispatch={dispatch}
-                    disabled={started}
-                    shortRests={encounter.shortRests ?? 0}
-                    showCounter={!!user}
-                  />
-                  <MassSavePanel
-                    combatants={encounter.combatants}
-                    dispatch={dispatch}
-                    onRoll={pushRoll}
-                  />
-                  <CastSpellPanel
-                    combatants={encounter.combatants}
-                    dispatch={dispatch}
-                    onRoll={pushRoll}
-                    onNote={pushNote}
-                    round={encounter.round}
-                    defaultCasterId={defaultCasterId}
-                    customSpells={customSpells}
-                    enabledLibraries={enabledLibraries}
-                    showHomebrew={showHomebrew}
-                    librarySort={librarySort}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {view === 'encounter' && (
-                <div className="flex items-center gap-2">
-                  <AddQuickForm
-                    onAdd={(c) => {
-                      track(EVENTS.quickAdded)
-                      addCombatant(c)
-                    }}
-                  />
-                  {user ? (
-                    <AddPcPicker
-                      rosterPcs={rosterPcs}
-                      campaigns={campaigns}
-                      onPick={handleAddPcToEncounter}
-                      onCreate={openRosterCreate}
-                    />
-                  ) : (
-                    <AddPcForm
-                      onAdd={(c) => {
-                        track(EVENTS.pcAdded)
-                        addCombatant(c)
-                      }}
-                    />
-                  )}
-                  <AddCreaturePicker
-                    onPick={handlePick}
-                    customCreatures={customCreatures}
-                    enabledLibraries={enabledLibraries}
-                    showHomebrew={showHomebrew}
-                    librarySort={librarySort}
-                  />
-                </div>
-              )}
-              <ViewToggle view={view} onChange={handleViewChange} />
+          {/* The header wraps at every width and its buttons never break their labels:
+          a cluster that no longer fits drops to its own line whole, so every button
+          keeps one size instead of squeezing onto two lines of text. */}
+          {/* gap-y and py open up on a compact screen: the clusters wrap onto two or three
+          rows there, and at desktop spacing those rows read as one crowded block. */}
+          <header
+            ref={headerRef}
+            className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 narrow:gap-y-3 narrow:py-3.5 dark:border-slate-800 lg:px-6 lg:py-4"
+          >
+            {/* Logo links back to the marketing site; spans the initiative column so
+            Group/Cast line up with the stat block. */}
+            <a
+              href="/"
+              title="OpenFray home"
+              // pr-4 so the wordmark never runs into a button sharing its line; on the
+              // stacked layouts nothing follows it, so the padding costs nothing.
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap pr-4 transition-opacity hover:opacity-80 wide:w-[var(--wide-col-l)] wide:shrink-0"
+            >
+              <span className="text-indigo-500 dark:text-indigo-400">
+                <CrossedSwordsIcon />
+              </span>
+              {/* The wordmark goes to screen readers only under 360px, where those 130px
+              are what wrap the account cluster onto a fourth header row. Every phone
+              wider than that has the room, and the icon alone carries the narrowest. */}
+              <h1 className="text-xl font-semibold tracking-tight max-[359px]:sr-only">
+                <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
+              </h1>
+            </a>
+            {/* The rail follows the sizing axis, not a width gate. On a narrow screen —
+            phones and portrait tablets alike — it stacks: full-width lines under the
+            brand-and-account row, the phone header whole. On a short one (landscape
+            phone) and in split it shares the line at its natural size. At wide it
+            dissolves (contents) into the aligned header. */}
+            {(fightControls || addControls) && (
+              <div className="flex flex-wrap items-center gap-2 narrow:order-last narrow:w-full wide:contents">
+                {/* Each cluster owns a full row on a compact screen, and the controls that
+                carry a word share out what the icons leave. Nothing here changes at lg,
+                where the two clusters dissolve into the desktop header's own spots. */}
+                {fightControls && (
+                  <div className="flex flex-wrap items-center gap-2 narrow:w-full wide:flex-nowrap 2xl:pl-4">
+                    {fightControls}
+                  </div>
+                )}
+                {addControls && (
+                  <div className="flex flex-wrap items-center gap-2 narrow:w-full wide:flex-nowrap 2xl:pl-2">
+                    {addControls}
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="ml-auto flex items-center gap-2 wide:gap-3 wide:pl-3">
+              {/* The view toggle sits out the phone layout — the bottom bar owns the
+              switch to the compendium there. */}
+              <div className="hidden split:block wide:block">
+                <ViewToggle view={view} onChange={handleViewChange} />
+              </div>
               <AccountControl onSignIn={() => setAuthOpen(true)} />
               <SharePanel
                 code={playerCode}
@@ -996,7 +1123,7 @@ function App() {
 
           <main className="min-h-0 flex-1 overflow-hidden">
             {view === 'compendium' ? (
-              <div className="h-full w-full overflow-hidden px-6 py-6">
+              <div className="h-full w-full overflow-hidden px-4 py-3 md:px-6 md:py-6">
                 <Compendium
                   customCreatures={customCreatures}
                   onCreateCreature={handleCreateCreature}
@@ -1048,6 +1175,8 @@ function App() {
                 presets={presets}
                 enabledLibraries={enabledLibraries}
                 onSavePreset={userId ? handleCreatePreset : undefined}
+                pane={mobilePane}
+                onPaneChange={setMobilePane}
               />
             )}
           </main>
@@ -1104,7 +1233,16 @@ function App() {
               onCancel={() => setInitPrompt(null)}
             />
           )}
-          <footer className="grid grid-cols-1 items-center gap-2 border-t border-slate-200 px-6 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
+          {/* On a phone the footer carries only the fight's numbers (the dice and the legal
+          links live elsewhere there), so it disappears when there is nothing to show.
+          Asking each part what it would render, rather than guessing from the combatant
+          count: a board of players with no foes has no difficulty to estimate, and the
+          bar was left empty above the tab bar, reading as a second border. */}
+          <footer
+            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 narrow:grid narrow:grid-cols-2 narrow:items-center narrow:gap-x-3 dark:border-slate-800 dark:text-slate-400 wide:grid wide:grid-cols-[var(--wide-col-l)_1fr_var(--wide-col-r)] wide:gap-0 wide:px-6 wide:py-3 ${
+              compactFooterHasContent ? '' : 'swipe:hidden'
+            }`}
+          >
             {view === 'encounter' && started && encounter.combatStats ? (
               <CombatTimers
                 stats={encounter.combatStats}
@@ -1114,10 +1252,15 @@ function App() {
             ) : view === 'encounter' ? (
               <CombatDifficulty combatants={encounter.combatants} />
             ) : (
-              <div className="hidden lg:block" aria-hidden="true" />
+              <div className="hidden wide:block" aria-hidden="true" />
             )}
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
-              {view === 'encounter' && <QuickRoll onRoll={pushRoll} />}
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 narrow:justify-end wide:pl-4">
+              {/* On a phone the dice sit in the Controls screen instead of down here. */}
+              {view === 'encounter' && (
+                <div className="hidden split:block wide:block">
+                  <QuickRoll onRoll={pushRoll} />
+                </div>
+              )}
               {view === 'encounter' && user && (
                 <CampaignPicker
                   campaigns={campaigns}
@@ -1126,7 +1269,7 @@ function App() {
                 />
               )}
             </div>
-            <div className="flex items-center gap-2 lg:justify-end lg:pl-4">
+            <div className="hidden items-center gap-2 roomy:flex wide:justify-end wide:pl-4">
               <a href="/privacy">Privacy</a>
               <span>·</span>
               <a href="/terms">Terms</a>
@@ -1155,6 +1298,8 @@ function App() {
               </span>
             </div>
           </footer>
+
+          <MobileNav active={mobileTab} onSelect={showMobileTab} />
         </div>
       </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>

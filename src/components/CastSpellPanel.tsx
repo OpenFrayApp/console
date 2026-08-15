@@ -7,7 +7,7 @@ import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { landsOnCast, spellAction, spellConcentration } from '../combat/casting.ts'
 import { startConcentration } from '../combat/concentration.ts'
-import { nameOf } from '../combat/combatant.ts'
+import { isFoe, nameOf } from '../combat/combatant.ts'
 import { loadSrdSpells } from '../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import type { LibrarySort } from '../state/settings.ts'
@@ -22,6 +22,12 @@ import type { OnNote, OnRoll } from './GameLog.tsx'
 
 /** "Cantrip" for level 0, otherwise "Lvl N". */
 const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
+
+/** The caster list's two groups, named and split as the tracker's own groups are. */
+const CASTER_GROUPS: { heading: string; members: (c: Combatant) => boolean }[] = [
+  { heading: 'Players and allies', members: (c) => !isFoe(c) },
+  { heading: 'Creatures', members: isFoe },
+]
 
 /**
  * Cast a spell from the compendium: roll its damage (scaled by the chosen level)
@@ -107,6 +113,7 @@ export function CastSpellPanel({
       <LibraryPicker
         label="Cast spell"
         disabled={combatants.length === 0}
+        grow
         align="left"
         placeholder="Search spells…"
         searchLabel="Search spells"
@@ -129,11 +136,25 @@ export function CastSpellPanel({
           className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
         >
           <option value="">No caster (GM rolls)</option>
-          {combatants.map((c) => (
-            <option key={c.combatantId} value={c.combatantId}>
-              {c.isPC ? c.name : c.label}
-            </option>
-          ))}
+          {/* Grouped and alphabetical, like the tracker beside it: initiative order is
+              what the board is for, and this is a list to find a name in. The two
+              groups split by disposition, not isPC, so a foe quick add sits with the
+              creatures — the same rule the tracker groups by. */}
+          {CASTER_GROUPS.map(({ heading, members }) => {
+            const inGroup = combatants
+              .filter(members)
+              .sort((a, b) => nameOf(a).localeCompare(nameOf(b)))
+            if (inGroup.length === 0) return null
+            return (
+              <optgroup key={heading} label={heading}>
+                {inGroup.map((c) => (
+                  <option key={c.combatantId} value={c.combatantId}>
+                    {nameOf(c)}
+                  </option>
+                ))}
+              </optgroup>
+            )
+          })}
         </select>
       </LibraryPicker>
     )

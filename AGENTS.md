@@ -127,10 +127,43 @@ dedup.
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
   Effect, Encounter) are the backbone. Define once, use everywhere.
 - **Frontend:** React + Vite + Tailwind. Design **tablet/desktop-first** (the combat
-  console is a dense landscape layout); phone is a reduced reference companion, not
-  the primary surface. Not mobile-first. The app's theming is `.dark` + `dark:`
-  (the site uses the opposite convention; never unify them without changing the
-  pre-paint script in both places).
+  console is a dense landscape layout). The console's shell is **one decision with
+  three modes**, defined as custom variants in `index.css`; the body, the header, and
+  the footer all switch on the same three, so no width mixes one mode's body with
+  another's chrome. Never reach for `sm:`/`lg:` for anything shell-shaped.
+  - `swipe:` — phones (either orientation) and tablets held portrait (≤1024px wide,
+    iPad Pro's portrait width included; also anything ≤512px tall). Scroll-snap
+    screens with a bottom tab bar (`useSwipePanes` + `MobileNav`), dice in the
+    Controls screen, footer only when it has content.
+  - `split:` — the small tablets held landscape (1025–1279px): tracker beside stat
+    block, controls and log in a band below, one-line header.
+  - `wide:` — 1280px up (laptops, iPad Pro / Surface Pro landscape): the aligned
+    three-column desktop. Columns are 22rem/20rem and step up to 28rem/24rem at
+    `2xl`, together with the rest counter — the aligned header only carries the
+    extras from 1536.
+
+  The swipe shell carries the phone layout **whole** — a tablet held portrait gets
+  the phone's stacked header, single Add button, and popover sheets, not just the
+  phone's body (maintainer-decided 2026-08-15). Two variants split its one
+  exception: `narrow:` is every swipe screen except the landscape phone (stacked
+  full-width rows, two-column footer), `short:` is the landscape phone, which keeps
+  natural control sizes and a one-line header. `roomy:` is the complement of the
+  swipe shell itself: anchored dropdowns, the three add buttons, the footer's legal
+  links.
+
+  Keep every set's queries exact complements: a custom variant sorts after the
+  built-in breakpoints, so an overlapping one wins at every width.
+
+  Touch sizing is separate from all of it, gated on `pointer: coarse` so a mouse keeps
+  the density: `tap`/`tap-y` set the 44px floor (Button and LinkButton carry it for
+  every button in the app), `tap-area` lays an invisible 44px strip over a control
+  that has to stay small, and the `coarse:` variant handles one-offs. Form text lifts
+  to 16px there, because iOS Safari zooms the page on a smaller focused field and
+  never zooms back.
+
+  The app's theming is `.dark` + `dark:` (the site uses the opposite convention; never
+  unify them without changing the pre-paint script in both places).
+
 - **Backend:** Supabase (hosted Postgres + auth + RLS + realtime). Phase 1 may need
   little or no custom server code. **Prefer Supabase's built-in auth and RLS over
   hand-written auth/permission code.** Let battle-tested infrastructure own the

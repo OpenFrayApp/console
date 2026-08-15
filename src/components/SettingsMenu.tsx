@@ -6,6 +6,7 @@ import type { Theme } from '../state/persistence.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { MoonIcon, SunIcon } from './ThemeToggle.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
+import { popoverClass } from './popover.ts'
 
 /** Gear icon — the menu's own button. */
 function GearIcon() {
@@ -153,16 +154,13 @@ export function SettingsMenu({
         title="Settings and more"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className="tap flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <GearIcon />
       </button>
 
       {open && (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-2 w-52 rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-800 dark:bg-slate-900"
-        >
+        <div role="menu" className={`${popoverClass('roomy:w-52')} p-1 roomy:mt-2`}>
           <Item
             icon={<SlidersIcon />}
             onClick={() => {
@@ -213,6 +211,36 @@ export function SettingsMenu({
             </span>
             Report a bug
           </a>
+
+          {/* The footer's legal links, which the phone footer has no room for. The
+          Source link is the AGPL §13 offer, so it must stay reachable here. */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-200 px-2 pb-1 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:hidden">
+            <a href="/privacy" className="hover:underline">
+              Privacy
+            </a>
+            <span aria-hidden>·</span>
+            <a href="/terms" className="hover:underline">
+              Terms
+            </a>
+            <span aria-hidden>·</span>
+            <a
+              href="https://github.com/OpenFrayApp/console"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:underline"
+            >
+              Source
+            </a>
+            <span aria-hidden>·</span>
+            <a
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:underline"
+            >
+              AGPL-3.0
+            </a>
+          </div>
         </div>
       )}
     </div>

@@ -46,8 +46,10 @@ import { PcStatBlock } from './PcStatBlock.tsx'
 import { SpellCastModal } from './SpellCastModal.tsx'
 import { EncounterPlayback, EncounterCleanup, TurnControls } from './EncounterPlayback.tsx'
 import { GameLog, type OnGmRoll, type OnNote, type OnRoll } from './GameLog.tsx'
+import { QuickRoll } from './QuickRoll.tsx'
 import { titleCase } from '../compendium/format.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
+import { useSwipePanes } from '../hooks/useSwipePanes.ts'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
@@ -69,7 +71,11 @@ function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
   return out
 }
 
-/** The three-column combat screen: combatant list, selected stat block, controls and game log. */
+/**
+ * The combat screen: combatant list, selected stat block, controls and game log. Three
+ * columns from `lg` up; below that, the same three as full-width screens swiped between
+ * (or jumped to from the bottom bar, which `pane`/`onPaneChange` keep in step).
+ */
 export function EncounterConsole({
   encounter,
   dispatch,
@@ -91,6 +97,8 @@ export function EncounterConsole({
   presets,
   enabledLibraries,
   onSavePreset,
+  pane,
+  onPaneChange,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
@@ -121,6 +129,10 @@ export function EncounterConsole({
   enabledLibraries?: string[]
   /** Save what's staged as a preset; absent for an anonymous GM, who can't keep one. */
   onSavePreset?: (preset: EffectPreset) => void
+  /** Which phone screen is up (0 tracker, 1 stat block, 2 controls). */
+  pane: number
+  /** A swipe settled on another screen. */
+  onPaneChange: (pane: number) => void
 }) {
   const { combatants, activeIndex } = encounter
   const running = started && !paused
@@ -135,6 +147,12 @@ export function EncounterConsole({
   const [concPrompt, setConcPrompt] = useState<{ id: string; dc: number; damage: number } | null>(
     null,
   )
+
+  const { ref: panesRef, onScroll: onPanesScroll, isPaging } = useSwipePanes(pane, onPaneChange)
+  /** Tapping a tracker row on a phone slides over to the stat block it selected. */
+  const showStatBlock = () => {
+    if (isPaging()) onPaneChange(1)
+  }
 
   const [actionFor, setActionFor] = useState<Action | null>(null)
   // Manual reorder drag (combat only): the dragged combatant and the row it's over,
@@ -328,7 +346,10 @@ export function EncounterConsole({
       combatant={c}
       active={running && c.combatantId === activeId}
       selected={c.combatantId === selected?.combatantId}
-      onSelect={() => onSelect(c.combatantId)}
+      onSelect={() => {
+        onSelect(c.combatantId)
+        showStatBlock()
+      }}
       hiddenFromPlayers={heldBack(c)}
       onRemoveEffect={(effectIds) =>
         dispatch({
@@ -374,9 +395,21 @@ export function EncounterConsole({
   const living = view.filter((c) => c.status !== 'dead')
   const dead = view.filter((c) => c.status === 'dead')
 
+  // The three shell modes (see index.css). In `swipe` the grid becomes a scroll-snap
+  // strip: each region is a full-width screen, swiped between like the D&D Beyond
+  // app's sheets, with the bottom bar to jump. In `split` (small tablets, landscape)
+  // the same three regions are a two-column grid: tracker beside stat block, controls
+  // and log in a band below. In `wide` they are the three aligned desktop columns.
+  const PANE = 'swipe:w-full swipe:shrink-0 swipe:snap-center swipe:px-4 swipe:pt-4 swipe:pb-3'
   return (
-    <div className="grid h-full grid-cols-1 gap-4 px-6 py-4 lg:grid-cols-[28rem_1fr_24rem] lg:gap-0">
-      <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:pr-4 lg:dark:border-slate-800">
+    <div
+      ref={panesRef}
+      onScroll={onPanesScroll}
+      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:snap-none split:grid-cols-2 split:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] split:gap-x-6 split:gap-y-3 split:overflow-visible split:px-6 split:py-4 wide:grid wide:snap-none wide:grid-cols-[var(--wide-col-l)_1fr_var(--wide-col-r)] wide:overflow-visible wide:px-6 wide:py-4"
+    >
+      <section
+        className={`${PANE} flex min-h-0 flex-col wide:border-r wide:border-slate-200 wide:pr-4 wide:dark:border-slate-800`}
+      >
         <div className="flex items-center justify-between gap-2">
           {started ? (
             // The turn stepper lives with the round it moves through.
@@ -438,7 +471,9 @@ export function EncounterConsole({
         </div>
       </section>
 
-      <section className="flex min-h-0 flex-col lg:border-r lg:border-slate-200 lg:px-4 lg:dark:border-slate-800">
+      <section
+        className={`${PANE} flex min-h-0 flex-col wide:border-r wide:border-slate-200 wide:px-4 wide:dark:border-slate-800`}
+      >
         {selected ? (
           <div className="min-h-0 flex-1 overflow-auto pr-4">
             {selected.isPC ? (
@@ -561,9 +596,11 @@ export function EncounterConsole({
         )}
       </section>
 
-      <aside className="flex min-h-0 flex-col gap-4 overflow-auto lg:pl-4">
+      <aside
+        className={`${PANE} flex min-h-0 flex-col gap-4 overflow-y-auto split:col-span-2 split:flex-row split:gap-6 split:border-t split:border-slate-200 split:pt-3 split:dark:border-slate-800 wide:pl-4`}
+      >
         {selected && (
-          <div className="shrink-0">
+          <div className="shrink-0 split:w-72">
             <h3 className={COLUMN_HEADING}>Controls</h3>
             <div className="mt-2 space-y-2">
               {concPrompt && concPrompt.id === selected.combatantId && (
@@ -619,7 +656,16 @@ export function EncounterConsole({
           </div>
         )}
 
-        <div className="flex min-h-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800">
+        {/* The footer's dice live here in the swipe shell, where the footer carries only
+        the fight's numbers. */}
+        <div className="hidden shrink-0 swipe:block">
+          <h3 className={COLUMN_HEADING}>Quick roll</h3>
+          <div className="mt-2">
+            <QuickRoll onRoll={onRoll} />
+          </div>
+        </div>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 split:border-t-0 split:pt-0">
           <div className="mb-1 flex items-center justify-between">
             <h3 className={COLUMN_HEADING}>Game log</h3>
             {encounter.log.length > 0 && (

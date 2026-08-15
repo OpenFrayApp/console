@@ -6,6 +6,7 @@ import type { PlayerCharacter } from '../schema/combatant.ts'
 import { parseSpeedInput } from '../combat/speed.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../lib/form.ts'
+import { popoverClass } from './popover.ts'
 
 const FIELD =
   'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -20,8 +21,20 @@ const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
  * unless the GM types a flat value into the initiative prompt. Players roll their
  * own dice, so nothing here is auto-rolled.
  */
-export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
-  const [open, setOpen] = useState(false)
+export function AddPcForm({
+  onAdd,
+  autoOpen = false,
+  onClosed,
+  hideTrigger = false,
+}: {
+  onAdd: (pc: PlayerCharacter) => void
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
+  /** Hide this control's own trigger — the Add menu keeps its button in the header. */
+  hideTrigger?: boolean
+}) {
+  const [open, setOpen] = useState(autoOpen)
   const [f, setF] = useState({
     name: '',
     ac: '',
@@ -35,7 +48,10 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
     vulnerabilities: '',
   })
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   /** Make an onChange handler that writes the input's value into the named draft field. */
@@ -79,7 +95,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       immunities: '',
       vulnerabilities: '',
     })
-    setOpen(false)
+    close()
   }
 
   return (
@@ -87,7 +103,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
       >
         Add PC
       </button>
@@ -95,7 +111,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
         <form
           onSubmit={submit}
           {...NO_AUTOFILL}
-          className="absolute right-0 z-30 mt-1 max-h-[70vh] w-72 space-y-2 overflow-auto rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          className={`${popoverClass('roomy:w-72')} space-y-2 p-2 roomy:max-h-[70dvh] roomy:overflow-auto`}
         >
           <input
             autoFocus

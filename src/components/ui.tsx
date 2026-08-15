@@ -40,10 +40,17 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   quiet: 'text-slate-500 hover:underline dark:text-slate-400',
 }
 
-/** The look both Button and LinkButton wear, so the two can never drift apart. */
+/**
+ * The look both Button and LinkButton wear, so the two can never drift apart. Every
+ * one of them clears the 44px touch floor on a coarse pointer: the sizes above are
+ * drawn for a mouse (`sm` is 26px tall), and this is the single place that holds for
+ * the whole app.
+ */
 function buttonClass(variant: ButtonVariant, size: ButtonSize) {
   const base = variant === 'quiet' ? 'text-sm' : `${BUTTON_SIZE[size]} disabled:opacity-50`
-  return cx(base, BUTTON_VARIANT[variant])
+  // A label belongs on one line, and this is where that is said. Setting it on a
+  // container instead leaks into every popover and modal rendered from inside it.
+  return cx('tap-y whitespace-nowrap', base, BUTTON_VARIANT[variant])
 }
 
 /** A button. Pick the variant by what pressing it does, the size by how dense the row is. */

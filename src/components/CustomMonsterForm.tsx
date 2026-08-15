@@ -356,7 +356,8 @@ export function CustomMonsterForm({
               </Section>
 
               <Section title="Abilities & saves" open>
-                <div className="grid grid-cols-6 gap-2">
+                {/* Three columns on a phone: six squeeze the Proficient labels to clipping. */}
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                   {ABILITIES.map((a) => (
                     <div key={a} className="space-y-1">
                       <p className={`${LABEL} text-center`}>{a}</p>

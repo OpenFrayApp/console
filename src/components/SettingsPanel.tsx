@@ -163,8 +163,8 @@ export function SettingsPanel({
                             onSetShowHomebrew(!showHomebrew)
                           }}
                         />
-                        <span>Homebrew creations</span>
-                        <span className="flex items-center gap-1.5">
+                        <span className="min-w-0 flex-1">Homebrew creations</span>
+                        <span className="flex shrink-0 items-center gap-1.5">
                           <Badge tone={CUSTOM_TONE}>Custom</Badge>
                         </span>
                       </label>
@@ -189,14 +189,14 @@ export function SettingsPanel({
                               e.stopPropagation()
                               track(EVENTS.bookOpened)
                             }}
-                            className="underline decoration-dotted underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            className="min-w-0 flex-1 underline decoration-dotted underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-400"
                           >
                             {lib.label}
                           </a>
                         ) : (
-                          <span>{lib.label}</span>
+                          <span className="min-w-0 flex-1">{lib.label}</span>
                         )}
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex shrink-0 items-center gap-1.5">
                           <Badge tone={librarySourceBadgeClass(lib.id)}>{lib.shortLabel}</Badge>
                           <Badge tone={editionBadgeClass(lib.edition)}>
                             {editionLabel(lib.edition)}

@@ -6,6 +6,7 @@ import type { RosterPc } from '../schema/roster.ts'
 import type { Campaign } from '../schema/campaign.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { campaignAcronym } from './campaignLabels.ts'
+import { popoverClass } from './popover.ts'
 
 /**
  * The signed-in "Add PC" control: a popover to drop one of the user's saved roster
@@ -17,6 +18,9 @@ export function AddPcPicker({
   campaigns = [],
   onPick,
   onCreate,
+  autoOpen = false,
+  onClosed,
+  hideTrigger = false,
 }: {
   rosterPcs: RosterPc[]
   /** The user's campaigns, to show each PC's campaign acronym. */
@@ -25,11 +29,19 @@ export function AddPcPicker({
   onPick: (pc: RosterPc) => void
   /** Open the compendium's Characters tab to create a character. */
   onCreate: () => void
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
+  /** Hide this control's own trigger — the Add menu keeps its button in the header. */
+  hideTrigger?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   const q = query.trim().toLowerCase()
@@ -42,7 +54,7 @@ export function AddPcPicker({
   // whole party in is several picks in a row. Escape or a click outside closes it.
   /** Close the popover, then open the compendium's Characters tab via onCreate. */
   const create = () => {
-    setOpen(false)
+    close()
     onCreate()
   }
 
@@ -51,12 +63,12 @@ export function AddPcPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
       >
         Add PC
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <div className={`${popoverClass('roomy:w-64')} p-2`}>
           <input
             autoFocus
             type="search"

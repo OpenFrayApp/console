@@ -380,7 +380,9 @@ export function EffectModal({
       <button
         type="button"
         onClick={openModal}
-        className="rounded border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        // Matches the controls it sits among, the 44px touch floor included: this trigger
+        // is the one button in that row that carries its own class list.
+        className="tap-y rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         Apply effect
       </button>

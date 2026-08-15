@@ -38,16 +38,19 @@ function ScalesIcon() {
  */
 export function CombatDifficulty({ combatants }: { combatants: Combatant[] }) {
   const assessment = assessEncounter(combatants)
-  if (!assessment) return <div className="hidden lg:block" aria-hidden="true" />
+  if (!assessment) return <div className="hidden wide:block" aria-hidden="true" />
   const { tier, adjustedXp, partyLevel } = assessment
 
   return (
     <div
-      className="flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400"
+      className="flex min-w-0 items-center gap-2.5 text-sm text-slate-500 narrow:gap-2 dark:text-slate-400"
       title={`Estimated for a party of about level ${partyLevel}`}
     >
       <ScalesIcon />
-      <span>Difficulty</span>
+      {/* The word goes when the footer splits into two columns on a phone: the scales
+      and the tier read as an estimate on their own, and the tier is the part a GM
+      glances at. The full label is still on the element's title. */}
+      <span className="narrow:hidden">Difficulty</span>
       <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${TONE[tier]}`}>
         {DIFFICULTY_LABEL[tier]}
       </span>
