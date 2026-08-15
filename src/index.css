@@ -54,15 +54,25 @@
 }
 
 /*
- * CONTROL SIZING — orthogonal to the shell, because the shell takes in screens with a
- * tablet's worth of width (a landscape phone, a portrait iPad) that must not inherit a
- * 375px screen's stacked, full-width controls:
+ * WITHIN THE SWIPE SHELL, one sizing split (maintainer-decided: a tablet held
+ * portrait gets the whole phone layout, not just the phone body):
  *
- * - `narrow` — actually narrow. Stacked full-width rows, controls that share out a line.
- * - `short`  — short but wide: a phone in landscape. The swipe shell with roomy sizing.
+ * - `narrow` — every swipe screen except the landscape phone: phones portrait and
+ *   tablets portrait alike. The stacked mobile header rows, full-width controls,
+ *   the two-column footer.
+ * - `short`  — the landscape phone: the swipe shell, but with a tablet's worth of
+ *   width and almost no height, so controls keep their natural size and the header
+ *   stays on one line.
+ *
+ * `roomy` is the complement of the swipe shell itself (wider than 1024 AND taller
+ * than 512): anchored dropdown popovers, the three add buttons, the footer's legal
+ * links. Inside swipe those are sheets, one Add button, and the gear menu.
  */
 @custom-variant narrow {
   @media (max-width: 39.99rem) {
+    @slot;
+  }
+  @media (max-width: 64rem) and (min-height: 32rem) {
     @slot;
   }
 }
@@ -71,25 +81,8 @@
     @slot;
   }
 }
-
-/*
- * POPOVER SURFACE — also orthogonal to the shell: `compact` renders a header control's
- * card as a fixed sheet, `roomy` anchors it to its trigger like a dropdown. Exact
- * complements. A portrait iPad runs the swipe shell but keeps anchored dropdowns — a
- * 1024px-wide screen has no business with a full-width sheet. The same pair also picks
- * one Add button vs the three, which is the same "is there room beside the trigger"
- * question.
- */
-@custom-variant compact {
-  @media (max-width: 39.99rem) {
-    @slot;
-  }
-  @media (max-height: 31.99rem) {
-    @slot;
-  }
-}
 @custom-variant roomy {
-  @media (min-width: 40rem) and (min-height: 32rem) {
+  @media (min-width: 64.01rem) and (min-height: 32rem) {
     @slot;
   }
 }

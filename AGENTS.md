@@ -142,13 +142,14 @@ dedup.
     `2xl`, together with the rest counter — the aligned header only carries the
     extras from 1536.
 
-  Two axes are deliberately **orthogonal to the shell**:
-  - Control sizing: `narrow:` (<640px) stacks controls full-width; `short:` handles
-    the landscape phone, which runs the swipe shell at a tablet's width.
-  - Popover surface: `compact:` renders a header control's card as a fixed sheet
-    (under the measured `--header-h`), `roomy:` anchors it as a dropdown; the same
-    pair collapses the three add buttons into one. A portrait iPad is swipe-shelled
-    but roomy — anchored dropdowns, three add buttons.
+  The swipe shell carries the phone layout **whole** — a tablet held portrait gets
+  the phone's stacked header, single Add button, and popover sheets, not just the
+  phone's body (maintainer-decided 2026-08-15). Two variants split its one
+  exception: `narrow:` is every swipe screen except the landscape phone (stacked
+  full-width rows, two-column footer), `short:` is the landscape phone, which keeps
+  natural control sizes and a one-line header. `roomy:` is the complement of the
+  swipe shell itself: anchored dropdowns, the three add buttons, the footer's legal
+  links.
 
   Keep every set's queries exact complements: a custom variant sorts after the
   built-in breakpoints, so an overlapping one wins at every width.

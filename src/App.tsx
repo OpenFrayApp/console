@@ -1043,9 +1043,9 @@ function App() {
             <a
               href="/"
               title="OpenFray home"
-              // pr-4 from the width where the rail comes up alongside it: on one line the
-              // wordmark otherwise runs straight into the first button.
-              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 short:pr-4 min-[1000px]:pr-4 wide:w-[var(--wide-col-l)] wide:shrink-0 wide:pr-4"
+              // pr-4 so the wordmark never runs into a button sharing its line; on the
+              // stacked layouts nothing follows it, so the padding costs nothing.
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap pr-4 transition-opacity hover:opacity-80 wide:w-[var(--wide-col-l)] wide:shrink-0"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1057,15 +1057,13 @@ function App() {
                 <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
               </h1>
             </a>
-            {/* Two arrangements, and only two. Wide enough for everything on one line
-            (measured: about 1000px of content signed in, once the rest counter drops
-            out below 2xl) and the rail sits between the brand and the account controls.
-            Narrower, it takes a full-width line under them both. Letting it shrink and
-            wrap inside itself instead made a third look, which is what made the header
-            read differently on every tablet. At 2xl it dissolves into the aligned
-            header. The 1100px line is where the one-line form fits with room to spare. */}
+            {/* The rail follows the sizing axis, not a width gate. On a narrow screen —
+            phones and portrait tablets alike — it stacks: full-width lines under the
+            brand-and-account row, the phone header whole. On a short one (landscape
+            phone) and in split it shares the line at its natural size. At wide it
+            dissolves (contents) into the aligned header. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 max-[999px]:order-last short:order-none short:w-auto min-[1000px]:w-auto wide:contents">
+              <div className="flex flex-wrap items-center gap-2 narrow:order-last narrow:w-full wide:contents">
                 {/* Each cluster owns a full row on a compact screen, and the controls that
                 carry a word share out what the icons leave. Nothing here changes at lg,
                 where the two clusters dissolve into the desktop header's own spots. */}
