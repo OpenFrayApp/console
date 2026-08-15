@@ -179,7 +179,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                   readOnly
                   value={url}
                   onFocus={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                 />
                 <Button
                   size="sm"
@@ -222,7 +222,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                     setDraft(e.target.value)
                     setMessage(null)
                   }}
-                  className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 />
                 <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
                   Save

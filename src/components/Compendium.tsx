@@ -310,8 +310,8 @@ export function Compendium({
   } | null>(null)
   const [campaignForm, setCampaignForm] = useState<{ campaign: Campaign | null } | null>(null)
   const [pcForm, setPcForm] = useState<{ pc: RosterPc | null } | null>(null)
-  // Below md the list and the entry are two screens swiped between; picking an entry
-  // slides over to it, like tapping into a monster in the D&D Beyond app.
+  // In the swipe shell the list and the entry are two screens swiped between; picking
+  // an entry slides over to it, like tapping into a monster in the D&D Beyond app.
   const [pane, setPane] = useState(0)
   const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
   /** Select an entry and, on a phone, slide over to show it. */
@@ -533,9 +533,9 @@ export function Compendium({
     <div
       ref={panesRef}
       onScroll={onPanesScroll}
-      className="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-[26rem_minmax(0,1fr)] md:gap-4 md:overflow-visible"
+      className="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:grid-cols-[26rem_minmax(0,1fr)] split:gap-4 split:overflow-visible wide:grid wide:grid-cols-[26rem_minmax(0,1fr)] wide:gap-4 wide:overflow-visible"
     >
-      <div className="flex min-h-0 min-w-0 flex-col max-md:w-full max-md:shrink-0 max-md:snap-center">
+      <div className="flex min-h-0 min-w-0 flex-col swipe:w-full swipe:shrink-0 swipe:snap-center">
         <div role="tablist" aria-label="Compendium" className="mb-2 flex flex-wrap gap-0.5">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
@@ -640,11 +640,11 @@ export function Compendium({
         )}
       </div>
 
-      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800 max-md:w-full max-md:shrink-0 max-md:snap-center">
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border border-slate-200 px-4 pb-4 dark:border-slate-800 swipe:w-full swipe:shrink-0 swipe:snap-center">
         <button
           type="button"
           onClick={() => setPane(0)}
-          className="mt-2 flex items-center gap-1 self-start text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 md:hidden"
+          className="mt-2 flex items-center gap-1 self-start text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 split:hidden wide:hidden"
         >
           <svg
             viewBox="0 0 24 24"

@@ -145,16 +145,19 @@ function BookIcon() {
 
 /** Encounter / Compendium as an icon segmented control. */
 function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
-  /** Class list for one toggle segment, filled when active. */
+  /** Class list for one toggle segment, filled when active. The nav owns the height
+   *  (its border counts toward it, border-box); the cells just fill it. */
   const cell = (active: boolean) =>
-    `flex items-center justify-center px-3 py-1.5 ${
+    `flex h-full items-center justify-center px-3 ${
       active
         ? 'bg-indigo-600 text-white'
         : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
     }`
   return (
     <nav
-      className="flex overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
+      // h-9 (and 44px on touch) so the pair stands exactly as tall as the icon
+      // buttons beside it — they size their boxes the same way.
+      className="flex h-9 overflow-hidden rounded-md border border-slate-300 coarse:h-11 dark:border-slate-700"
       aria-label="View"
     >
       <button
