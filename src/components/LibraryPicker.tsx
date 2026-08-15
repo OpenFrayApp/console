@@ -79,6 +79,7 @@ export function LibraryPicker<T extends LibraryEntry>({
   autoOpen = false,
   onClosed,
   grow = false,
+  hideTrigger = false,
 }: {
   label: string
   variant?: ButtonVariant
@@ -114,13 +115,20 @@ export function LibraryPicker<T extends LibraryEntry>({
   onClosed?: () => void
   /** Take a share of the row's leftover width on a compact screen. */
   grow?: boolean
+  /** Hide this control's own trigger — the Add menu keeps its button in the header. */
+  hideTrigger?: boolean
 }) {
   const [open, setOpen] = useState(autoOpen)
   const [query, setQuery] = useState('')
+  // What this run of the picker has added, for the pickers that stay open on a pick.
+  // Nothing else moves when they do: the list keeps its place, and on a phone the sheet
+  // covers the board the creature just landed on, so the tap reads as having done nothing.
+  const [picked, setPicked] = useState<{ name: string; n: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => {
     setOpen(false)
     setQuery('')
+    setPicked(null)
     onClosed?.()
   }, [onClosed])
   useDismiss(ref, open, close)
@@ -146,7 +154,7 @@ export function LibraryPicker<T extends LibraryEntry>({
     <div className={cx('relative', grow && 'compact:flex-1')} ref={ref}>
       <Button
         variant={variant}
-        className={grow ? 'compact:w-full' : undefined}
+        className={cx(grow && 'compact:w-full', hideTrigger && 'hidden')}
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
       >
@@ -164,6 +172,12 @@ export function LibraryPicker<T extends LibraryEntry>({
             aria-label={searchLabel}
             className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
           />
+          {picked && (
+            <p role="status" className="mt-1 px-2 text-xs text-emerald-600 dark:text-emerald-400">
+              Added {picked.name}
+              {picked.n > 1 ? ` ×${picked.n}` : ''}
+            </p>
+          )}
           {entries === null ? (
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading…</p>
           ) : (
@@ -174,6 +188,10 @@ export function LibraryPicker<T extends LibraryEntry>({
                     type="button"
                     onClick={() => {
                       if (closeOnPick) close()
+                      else
+                        setPicked((p) =>
+                          p?.name === e.name ? { ...p, n: p.n + 1 } : { name: e.name, n: 1 },
+                        )
                       onPick(e)
                     }}
                     className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
