@@ -1052,11 +1052,12 @@ function App() {
                 <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
               </h1>
             </a>
-            {/* Below lg every board action sits on the rail's own line, wrapping so all
-            of them stay on screen. From lg up the rail dissolves (contents) and its two
-            clusters sit in the desktop header's own spots. */}
+            {/* Below lg the rail owns a line under the brand and account. From lg it
+            shares their line and shrinks rather than wrapping whole, so its buttons take
+            a second line inside it instead of stranding the account controls on one of
+            their own. At 2xl it dissolves (contents) into the aligned header. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 max-2xl:order-last 2xl:contents">
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-2 max-lg:order-last lg:w-auto lg:flex-1 lg:basis-0 2xl:contents">
                 {/* Each cluster owns a full row on a compact screen, and the controls that
                 carry a word share out what the icons leave. Nothing here changes at lg,
                 where the two clusters dissolve into the desktop header's own spots. */}
