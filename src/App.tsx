@@ -951,21 +951,22 @@ function App() {
   // Each add control, buildable already open. A roomy header shows all three; a phone
   // shows one Add button that opens whichever the GM picks, because side by side the
   // three wrap onto a line of their own and eat a third of a narrow screen.
-  const addQuick = (autoOpen = false, onClosed?: () => void) => (
+  /** Options for building an add control: the Add menu opens one already open, with
+   *  its own trigger hidden, because the menu keeps the header button. */
+  type AddOpts = { autoOpen?: boolean; hideTrigger?: boolean; onClosed?: () => void }
+  const addQuick = (o: AddOpts = {}) => (
     <AddQuickForm
-      autoOpen={autoOpen}
-      onClosed={onClosed}
+      {...o}
       onAdd={(c) => {
         track(EVENTS.quickAdded)
         addCombatant(c)
       }}
     />
   )
-  const addPc = (autoOpen = false, onClosed?: () => void) =>
+  const addPc = (o: AddOpts = {}) =>
     user ? (
       <AddPcPicker
-        autoOpen={autoOpen}
-        onClosed={onClosed}
+        {...o}
         rosterPcs={rosterPcs}
         campaigns={campaigns}
         onPick={handleAddPcToEncounter}
@@ -973,18 +974,16 @@ function App() {
       />
     ) : (
       <AddPcForm
-        autoOpen={autoOpen}
-        onClosed={onClosed}
+        {...o}
         onAdd={(c) => {
           track(EVENTS.pcAdded)
           addCombatant(c)
         }}
       />
     )
-  const addCreature = (autoOpen = false, onClosed?: () => void) => (
+  const addCreature = (o: AddOpts = {}) => (
     <AddCreaturePicker
-      autoOpen={autoOpen}
-      onClosed={onClosed}
+      {...o}
       onPick={handlePick}
       customCreatures={customCreatures}
       enabledLibraries={enabledLibraries}
@@ -997,9 +996,21 @@ function App() {
       <div className="w-full roomy:hidden">
         <AddMenu
           items={[
-            { key: 'quick', label: 'Quick add', render: (done) => addQuick(true, done) },
-            { key: 'pc', label: 'Add PC', render: (done) => addPc(true, done) },
-            { key: 'creature', label: 'Add creature', render: (done) => addCreature(true, done) },
+            {
+              key: 'quick',
+              label: 'Quick add',
+              render: (done) => addQuick({ autoOpen: true, hideTrigger: true, onClosed: done }),
+            },
+            {
+              key: 'pc',
+              label: 'Add PC',
+              render: (done) => addPc({ autoOpen: true, hideTrigger: true, onClosed: done }),
+            },
+            {
+              key: 'creature',
+              label: 'Add creature',
+              render: (done) => addCreature({ autoOpen: true, hideTrigger: true, onClosed: done }),
+            },
           ]}
         />
       </div>
@@ -1029,7 +1040,7 @@ function App() {
             <a
               href="/"
               title="OpenFray home"
-              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 lg:w-[22rem] lg:shrink-0 lg:pr-4 xl:w-[28rem]"
+              className="tap-y flex items-center gap-2.5 whitespace-nowrap transition-opacity hover:opacity-80 2xl:w-[28rem] 2xl:shrink-0 2xl:pr-4"
             >
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
@@ -1045,23 +1056,23 @@ function App() {
             of them stay on screen. From lg up the rail dissolves (contents) and its two
             clusters sit in the desktop header's own spots. */}
             {(fightControls || addControls) && (
-              <div className="flex w-full flex-wrap items-center gap-2 max-lg:order-last lg:contents">
+              <div className="flex w-full flex-wrap items-center gap-2 max-2xl:order-last 2xl:contents">
                 {/* Each cluster owns a full row on a compact screen, and the controls that
                 carry a word share out what the icons leave. Nothing here changes at lg,
                 where the two clusters dissolve into the desktop header's own spots. */}
                 {fightControls && (
-                  <div className="flex flex-wrap items-center gap-2 compact:w-full lg:flex-nowrap lg:pl-4">
+                  <div className="flex flex-wrap items-center gap-2 compact:w-full 2xl:flex-nowrap 2xl:pl-4">
                     {fightControls}
                   </div>
                 )}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 compact:w-full lg:flex-nowrap lg:pl-2">
+                  <div className="flex flex-wrap items-center gap-2 compact:w-full 2xl:flex-nowrap 2xl:pl-2">
                     {addControls}
                   </div>
                 )}
               </div>
             )}
-            <div className="ml-auto flex items-center gap-2 lg:gap-3 lg:pl-3">
+            <div className="ml-auto flex items-center gap-2 2xl:gap-3 2xl:pl-3">
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
               <div className="hidden roomy:block">
@@ -1221,7 +1232,7 @@ function App() {
           count: a board of players with no foes has no difficulty to estimate, and the
           bar was left empty above the tab bar, reading as a second border. */}
           <footer
-            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[22rem_1fr_20rem] lg:gap-0 lg:px-6 lg:py-3 xl:grid-cols-[28rem_1fr_24rem] ${
+            className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 compact:grid compact:grid-cols-2 compact:items-center compact:gap-x-3 dark:border-slate-800 dark:text-slate-400 2xl:grid 2xl:grid-cols-[28rem_1fr_24rem] 2xl:gap-0 2xl:px-6 2xl:py-3 ${
               compactFooterHasContent ? '' : 'compact:hidden'
             }`}
           >
@@ -1234,9 +1245,9 @@ function App() {
             ) : view === 'encounter' ? (
               <CombatDifficulty combatants={encounter.combatants} />
             ) : (
-              <div className="hidden lg:block" aria-hidden="true" />
+              <div className="hidden 2xl:block" aria-hidden="true" />
             )}
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 lg:pl-4">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 compact:justify-end 2xl:pl-4">
               {/* On a phone the dice sit in the Controls screen instead of down here. */}
               {view === 'encounter' && (
                 <div className="hidden roomy:block">
@@ -1251,7 +1262,7 @@ function App() {
                 />
               )}
             </div>
-            <div className="hidden items-center gap-2 roomy:flex lg:justify-end lg:pl-4">
+            <div className="hidden items-center gap-2 roomy:flex 2xl:justify-end 2xl:pl-4">
               <a href="/privacy">Privacy</a>
               <span>·</span>
               <a href="/terms">Terms</a>

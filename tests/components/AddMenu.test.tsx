@@ -41,14 +41,25 @@ describe('AddMenu', () => {
     expect(screen.getByRole('menuitem', { name: 'Add creature' })).toBeInTheDocument()
   })
 
-  // The picked control replaces the trigger rather than opening on top of it, so a
-  // phone never stacks one fixed sheet over another.
-  it('swaps itself for the picked control, opened', () => {
+  // The menu closes and the picked control opens in its place, with the Add button
+  // still there: swapping it for that control's own trigger read as the header
+  // changing under the tap. The items render with their triggers hidden, so Add is
+  // the only button of its own here at any point.
+  it('opens the picked control and keeps its own button', () => {
     render(<AddMenu items={items} />)
     fireEvent.click(trigger())
     fireEvent.click(screen.getByRole('menuitem', { name: 'Add creature' }))
     expect(screen.getByText('Add creature is open')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Add to the encounter' })).not.toBeInTheDocument()
+    expect(trigger()).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
+  })
+
+  it('closes the picked control when its button is pressed again', () => {
+    render(<AddMenu items={items} />)
+    fireEvent.click(trigger())
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Quick add' }))
+    fireEvent.click(trigger())
+    expect(screen.queryByText('Quick add is open')).not.toBeInTheDocument()
     expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
   })
 

@@ -23,9 +23,11 @@ export function MassSavePanel({
 }) {
   const [open, setOpen] = useState(false)
 
-  if (!open) {
-    // `compact:flex-1` shares the row's leftover width with Cast spell.
-    return (
+  // The button stays while the modal is up. Returning the modal in its place took the
+  // button out of the header, and the row it shares closed over the gap.
+  // `compact:flex-1` shares that row's leftover width with Cast spell.
+  return (
+    <>
       <Button
         className="compact:flex-1"
         onClick={() => setOpen(true)}
@@ -33,15 +35,14 @@ export function MassSavePanel({
       >
         Group save
       </Button>
-    )
-  }
-
-  return (
-    <GroupSaveModal
-      combatants={combatants}
-      dispatch={dispatch}
-      onClose={() => setOpen(false)}
-      onRoll={onRoll}
-    />
+      {open && (
+        <GroupSaveModal
+          combatants={combatants}
+          dispatch={dispatch}
+          onClose={() => setOpen(false)}
+          onRoll={onRoll}
+        />
+      )}
+    </>
   )
 }

@@ -25,11 +25,14 @@ export function AddPcForm({
   onAdd,
   autoOpen = false,
   onClosed,
+  hideTrigger = false,
 }: {
   onAdd: (pc: PlayerCharacter) => void
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
   onClosed?: () => void
+  /** Hide this control's own trigger — the Add menu keeps its button in the header. */
+  hideTrigger?: boolean
 }) {
   const [open, setOpen] = useState(autoOpen)
   const [f, setF] = useState({
@@ -100,7 +103,7 @@ export function AddPcForm({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
       >
         Add PC
       </button>

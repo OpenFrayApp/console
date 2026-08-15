@@ -38,43 +38,42 @@ export function AddMenu({ items }: { items: AddMenuItem[] }) {
   // the right is doing nothing; the roomy header never renders it at all.
   return (
     <div className="relative w-full" ref={ref}>
-      {active ? (
-        active.render(() => setActiveKey(null))
-      ) : (
-        <>
-          {/* Named in full for the accessible name: the forms this opens each end in
-          their own "Add" submit, and two buttons called "Add" are one button as far as
-          a screen reader is concerned. */}
-          <Button
-            variant="primary"
-            className="w-full"
-            onClick={() => setOpen((o) => !o)}
-            aria-label="Add to the encounter"
-            aria-haspopup="menu"
-            aria-expanded={open}
-          >
-            Add
-          </Button>
-          {open && (
-            <div role="menu" className={`${popoverClass('roomy:w-56')} p-1`}>
-              {items.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setOpen(false)
-                    setActiveKey(item.key)
-                  }}
-                  className="tap-y block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </>
+      {/* The button stays put while a picked control is open. Swapping it for that
+      control's own trigger read as the header changing under the tap — Add became
+      "Add creature" the moment the creature sheet opened. The items render with their
+      triggers hidden, so this is the only button here at any point.
+
+      Named in full for the accessible name: the forms this opens each end in their own
+      "Add" submit, and two buttons called "Add" are one button to a screen reader. */}
+      <Button
+        variant="primary"
+        className="w-full"
+        onClick={() => (active ? setActiveKey(null) : setOpen((o) => !o))}
+        aria-label="Add to the encounter"
+        aria-haspopup="menu"
+        aria-expanded={open || active != null}
+      >
+        Add
+      </Button>
+      {open && !active && (
+        <div role="menu" className={`${popoverClass('roomy:w-56')} p-1`}>
+          {items.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                setActiveKey(item.key)
+              }}
+              className="tap-y block w-full rounded px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       )}
+      {active?.render(() => setActiveKey(null))}
     </div>
   )
 }

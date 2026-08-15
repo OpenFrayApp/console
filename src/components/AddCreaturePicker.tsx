@@ -23,6 +23,7 @@ export function AddCreaturePicker({
   align = 'right',
   autoOpen = false,
   onClosed,
+  hideTrigger = false,
 }: {
   onPick: (c: Creature) => void
   customCreatures?: Creature[]
@@ -40,6 +41,8 @@ export function AddCreaturePicker({
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
   onClosed?: () => void
+  /** Hide this control's own trigger — the Add menu keeps its button in the header. */
+  hideTrigger?: boolean
 }) {
   const [creatures, setCreatures] = useState<Creature[] | null>(null)
   const load = useCallback(() => {
@@ -64,6 +67,7 @@ export function AddCreaturePicker({
       closeOnPick={closeOnPick}
       autoOpen={autoOpen}
       onClosed={onClosed}
+      hideTrigger={hideTrigger}
     />
   )
 }
