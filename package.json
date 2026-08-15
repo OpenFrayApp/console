@@ -1,22 +1,23 @@
 {
-  "name": "openfray",
+  "name": "openfray-console",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "description": "A fast, browser-based combat console for Game Masters running D&D 5e.",
   "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenFrayApp/console.git"
+  },
   "scripts": {
     "dev": "vite",
-    "dev:all": "npm run dev & npm run dev -w site & npm run dev -w docs & wait",
-    "build": "node scripts/clean-dist.mjs && node scripts/check-news-slugs.mjs && node scripts/check-prose.mjs && tsc -b && vite build && npm run build:site && npm run build:docs && node scripts/assemble-site.mjs && node scripts/check-spacing.mjs && node scripts/check-css-specificity.mjs",
-    "build:site": "npm run build -w site",
-    "build:docs": "npm run build -w docs",
+    "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run && npm run test -w site",
+    "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -29,7 +30,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
-    "@qain/core": "^0.0.5",
     "@tailwindcss/vite": "^4.0.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.0",
@@ -44,16 +44,10 @@
     "globals": "^15.14.0",
     "jsdom": "^26.0.0",
     "prettier": "^3.9.5",
-    "prettier-plugin-astro": "^0.14.1",
-    "shotlist": "^0.2.3",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.18.0",
     "vite": "^6.0.0",
     "vitest": "^3.0.0"
-  },
-  "workspaces": [
-    "site",
-    "docs"
-  ]
+  }
 }

@@ -4,7 +4,7 @@
 import { useState, type ReactNode } from 'react'
 import { useAuth, type OAuthProvider } from '../auth/useAuth.ts'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
-import { track, EVENTS } from '../lib/analytics.ts'
+import { track, EVENTS, type EventName } from '../lib/analytics.ts'
 
 /** Discord wordmark glyph. */
 function DiscordIcon() {
@@ -37,6 +37,15 @@ function GoogleIcon() {
       />
     </svg>
   )
+}
+
+/**
+ * The event each provider records. Typed as a full Record, so adding a provider to
+ * OAuthProvider fails the build until it has an event and the split stays complete.
+ */
+const SIGN_IN_EVENT: Record<OAuthProvider, EventName> = {
+  discord: EVENTS.signInDiscord,
+  google: EVENTS.signInGoogle,
 }
 
 const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className: string }[] = [
@@ -96,7 +105,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
   /** Begin the provider's OAuth redirect; a failed handoff shows the error and re-enables. */
   const start = async (provider: OAuthProvider) => {
     if (busy) return
-    track(EVENTS.signInStarted)
+    track(SIGN_IN_EVENT[provider])
     setError(null)
     setBusy(provider)
     const { error } = await signInWithProvider(provider)

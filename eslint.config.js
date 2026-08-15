@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 OpenFray contributors
+// Copyright (C) 2026 Nicola Mustone
 
 import js from '@eslint/js'
 import globals from 'globals'
@@ -8,8 +8,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  // `site` and `docs` are self-contained Astro projects with their own tooling.
-  { ignores: ['dist', 'scripts', 'site', 'docs'] },
+  { ignores: ['dist'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

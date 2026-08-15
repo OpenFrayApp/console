@@ -1,11 +1,5 @@
 {
   "semi": false,
   "singleQuote": true,
-  "printWidth": 100,
-  "plugins": ["prettier-plugin-astro"],
-  "overrides": [
-    { "files": "*.astro", "options": { "parser": "astro" } },
-    { "files": "site/**", "options": { "semi": true } },
-    { "files": "docs/**", "options": { "semi": true } }
-  ]
+  "printWidth": 100
 }
