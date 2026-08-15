@@ -20,9 +20,10 @@ edited here) and the scheduled Actions that keep Supabase awake and back it up.
 
 ```bash
 npm install
-npm run dev        # localhost:5199/console/
-npm test           # Vitest suite in tests/
-npm run build      # tsc -b + vite build → dist/console
+cp .env.example .env  # optional Supabase keys; without them auth stays off
+npm run dev           # localhost:5199/console/
+npm test              # Vitest suite in tests/
+npm run build         # tsc -b + vite build → dist/console
 npm run typecheck && npm run lint && npm run format
 ```
 
