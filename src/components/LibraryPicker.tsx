@@ -75,6 +75,8 @@ export function LibraryPicker<T extends LibraryEntry>({
   onPick,
   closeOnPick = true,
   children,
+  autoOpen = false,
+  onClosed,
 }: {
   label: string
   variant?: ButtonVariant
@@ -105,14 +107,18 @@ export function LibraryPicker<T extends LibraryEntry>({
   closeOnPick?: boolean
   /** Extra controls above the search box, e.g. the cast panel's caster select. */
   children?: ReactNode
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => {
     setOpen(false)
     setQuery('')
-  }, [])
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   useEffect(() => {

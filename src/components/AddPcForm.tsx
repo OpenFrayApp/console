@@ -21,8 +21,17 @@ const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
  * unless the GM types a flat value into the initiative prompt. Players roll their
  * own dice, so nothing here is auto-rolled.
  */
-export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
-  const [open, setOpen] = useState(false)
+export function AddPcForm({
+  onAdd,
+  autoOpen = false,
+  onClosed,
+}: {
+  onAdd: (pc: PlayerCharacter) => void
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
+}) {
+  const [open, setOpen] = useState(autoOpen)
   const [f, setF] = useState({
     name: '',
     ac: '',
@@ -36,7 +45,10 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
     vulnerabilities: '',
   })
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   /** Make an onChange handler that writes the input's value into the named draft field. */
@@ -80,7 +92,7 @@ export function AddPcForm({ onAdd }: { onAdd: (pc: PlayerCharacter) => void }) {
       immunities: '',
       vulnerabilities: '',
     })
-    setOpen(false)
+    close()
   }
 
   return (

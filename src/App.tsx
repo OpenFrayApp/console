@@ -66,6 +66,7 @@ import { EncounterConsole } from './components/EncounterConsole.tsx'
 import { RecapScreen, EndCombatPrompt } from './components/Recap.tsx'
 import { allFoesDefeated, allPlayersDown, buildRecap, type Recap } from './combat/recap.ts'
 import { AddCreaturePicker } from './components/AddCreaturePicker.tsx'
+import { AddMenu } from './components/AddMenu.tsx'
 import {
   loadSettings,
   saveSettings,
@@ -923,36 +924,66 @@ function App() {
       />
     </>
   )
-  const addControls = view === 'encounter' && (
-    <>
-      <AddQuickForm
+  // Each add control, buildable already open. A roomy header shows all three; a phone
+  // shows one Add button that opens whichever the GM picks, because side by side the
+  // three wrap onto a line of their own and eat a third of a narrow screen.
+  const addQuick = (autoOpen = false, onClosed?: () => void) => (
+    <AddQuickForm
+      autoOpen={autoOpen}
+      onClosed={onClosed}
+      onAdd={(c) => {
+        track(EVENTS.quickAdded)
+        addCombatant(c)
+      }}
+    />
+  )
+  const addPc = (autoOpen = false, onClosed?: () => void) =>
+    user ? (
+      <AddPcPicker
+        autoOpen={autoOpen}
+        onClosed={onClosed}
+        rosterPcs={rosterPcs}
+        campaigns={campaigns}
+        onPick={handleAddPcToEncounter}
+        onCreate={openRosterCreate}
+      />
+    ) : (
+      <AddPcForm
+        autoOpen={autoOpen}
+        onClosed={onClosed}
         onAdd={(c) => {
-          track(EVENTS.quickAdded)
+          track(EVENTS.pcAdded)
           addCombatant(c)
         }}
       />
-      {user ? (
-        <AddPcPicker
-          rosterPcs={rosterPcs}
-          campaigns={campaigns}
-          onPick={handleAddPcToEncounter}
-          onCreate={openRosterCreate}
+    )
+  const addCreature = (autoOpen = false, onClosed?: () => void) => (
+    <AddCreaturePicker
+      autoOpen={autoOpen}
+      onClosed={onClosed}
+      onPick={handlePick}
+      customCreatures={customCreatures}
+      enabledLibraries={enabledLibraries}
+      showHomebrew={showHomebrew}
+      librarySort={librarySort}
+    />
+  )
+  const addControls = view === 'encounter' && (
+    <>
+      <div className="roomy:hidden">
+        <AddMenu
+          items={[
+            { key: 'quick', label: 'Quick add', render: (done) => addQuick(true, done) },
+            { key: 'pc', label: 'Add PC', render: (done) => addPc(true, done) },
+            { key: 'creature', label: 'Add creature', render: (done) => addCreature(true, done) },
+          ]}
         />
-      ) : (
-        <AddPcForm
-          onAdd={(c) => {
-            track(EVENTS.pcAdded)
-            addCombatant(c)
-          }}
-        />
-      )}
-      <AddCreaturePicker
-        onPick={handlePick}
-        customCreatures={customCreatures}
-        enabledLibraries={enabledLibraries}
-        showHomebrew={showHomebrew}
-        librarySort={librarySort}
-      />
+      </div>
+      <div className="hidden roomy:contents">
+        {addQuick()}
+        {addPc()}
+        {addCreature()}
+      </div>
     </>
   )
 

@@ -18,6 +18,8 @@ export function AddPcPicker({
   campaigns = [],
   onPick,
   onCreate,
+  autoOpen = false,
+  onClosed,
 }: {
   rosterPcs: RosterPc[]
   /** The user's campaigns, to show each PC's campaign acronym. */
@@ -26,11 +28,17 @@ export function AddPcPicker({
   onPick: (pc: RosterPc) => void
   /** Open the compendium's Characters tab to create a character. */
   onCreate: () => void
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   const q = query.trim().toLowerCase()
@@ -43,7 +51,7 @@ export function AddPcPicker({
   // whole party in is several picks in a row. Escape or a click outside closes it.
   /** Close the popover, then open the compendium's Characters tab via onCreate. */
   const create = () => {
-    setOpen(false)
+    close()
     onCreate()
   }
 

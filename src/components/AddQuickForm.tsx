@@ -15,15 +15,27 @@ const FIELD = `w-full ${FIELD_BASE}`
  * Quick add — a generic combatant (an NPC, or a creature dropped in mid-fight)
  * that just needs a name, HP, and AC. Shown as "Quick add", not a full PC.
  */
-export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void }) {
-  const [open, setOpen] = useState(false)
+export function AddQuickForm({
+  onAdd,
+  autoOpen = false,
+  onClosed,
+}: {
+  onAdd: (c: PlayerCharacter) => void
+  /** Start open, and report closing — the phone Add menu opens this one directly. */
+  autoOpen?: boolean
+  onClosed?: () => void
+}) {
+  const [open, setOpen] = useState(autoOpen)
   const [name, setName] = useState('')
   const [ac, setAc] = useState('')
   const [hp, setHp] = useState('')
   // Quick adds are most often an enemy dropped in mid-fight, so default to foe.
   const [side, setSide] = useState<'friend' | 'foe'>('foe')
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    onClosed?.()
+  }, [onClosed])
   useDismiss(ref, open, close)
 
   /** Add the quick combatant on the chosen side, then reset and close; blank name is a no-op. */
@@ -48,7 +60,7 @@ export function AddQuickForm({ onAdd }: { onAdd: (c: PlayerCharacter) => void })
     setAc('')
     setHp('')
     setSide('foe')
-    setOpen(false)
+    close()
   }
 
   return (
