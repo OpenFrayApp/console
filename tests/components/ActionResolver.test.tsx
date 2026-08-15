@@ -135,6 +135,66 @@ describe('ActionResolver — attacks', () => {
     ])
   })
 
+  // A creature is Frightened or it is not, so the chip is the target's state and not a
+  // button that stacks — tapping it twice used to leave two identical badges on the row.
+  it('lights the chip for a condition the target already has, and clears it on a second tap', () => {
+    const dispatch = vi.fn()
+    const frightened = monster({
+      combatantId: 't',
+      label: 'Ogre',
+      effects: [
+        {
+          id: 'e1',
+          name: 'Frightened',
+          icon: 'condition',
+          modifier: null,
+          duration: { type: 'manual' },
+        },
+      ],
+    })
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), frightened]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Roll attack'))
+    const chip = screen.getByRole('button', { name: 'Frightened' })
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(chip)
+    const updates = dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'update')
+    expect(updates).toHaveLength(1)
+    expect(updates[0].update(frightened).effects).toEqual([])
+  })
+
+  it('applies a condition the target does not have, without a second copy', () => {
+    const dispatch = vi.fn()
+    const target = monster({ combatantId: 't', label: 'Ogre' })
+    render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), target]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        onClose={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByText('Roll attack'))
+    const chip = screen.getByRole('button', { name: 'Prone' })
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(chip)
+    const updates = dispatch.mock.calls.map((c) => c[0]).filter((a) => a.type === 'update')
+    expect(updates).toHaveLength(1)
+    const after = updates[0].update(target)
+    expect(after.effects.map((e: { name: string }) => e.name)).toEqual(['Prone'])
+  })
+
   // A Game Master fishing for a hit used to leave every attempt in the log, and the
   // shared player view showed the table all of them.
   it('records nothing until it closes, then one entry however often it was rerolled', () => {
