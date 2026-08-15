@@ -1005,7 +1005,9 @@ function App() {
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
               </span>
-              <h1 className="text-xl font-semibold tracking-tight">
+              {/* The wordmark goes to screen readers only on a compact screen: it is
+              130px the header cannot spare, and the icon beside it says the same. */}
+              <h1 className="text-xl font-semibold tracking-tight compact:sr-only">
                 <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
               </h1>
             </a>

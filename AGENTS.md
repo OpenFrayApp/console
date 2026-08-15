@@ -127,13 +127,30 @@ dedup.
 - **TypeScript end to end.** Shared types for the core shapes (Creature, Combatant,
   Effect, Encounter) are the backbone. Define once, use everywhere.
 - **Frontend:** React + Vite + Tailwind. Design **tablet/desktop-first** (the combat
-  console is a dense landscape layout). Below `sm` the same console renders as three
-  swipeable screens with a bottom tab bar (`useSwipePanes` + `MobileNav`), and every
-  header popover becomes a fixed sheet (`popoverClass`). From `sm` to `lg` (tablet
-  portrait) it is a two-column grid with the controls and log below. A change to the
-  console shell must keep all three layouts working. The app's theming is `.dark` +
-  `dark:` (the site uses the opposite convention; never unify them without changing
-  the pre-paint script in both places).
+  console is a dense landscape layout). The shell has three tiers, and a change to it
+  must keep all three working. They are chosen by the custom variants in `index.css`,
+  never by `sm:` directly:
+  - `compact:` — narrow **or short**, so a phone in landscape counts. Three swipeable
+    screens with a bottom tab bar (`useSwipePanes` + `MobileNav`), every header
+    popover a fixed sheet (`popoverClass`), and the three add controls behind one
+    button (`AddMenu`).
+  - `tablet:` — roomy, capped below `lg`. Two-column grid, controls and log beneath.
+  - `lg:`/`xl:` — the three-column desktop grid.
+
+  `roomy:` is the complement of `compact:`, for the plain "not the phone shell" cases.
+  Keep the tiers' queries non-overlapping: a custom variant sorts after the built-in
+  breakpoints, so an overlapping one wins at every width.
+
+  Touch sizing is separate from tier, and gated on `pointer: coarse` so a mouse keeps
+  the density: `tap`/`tap-y` set the 44px floor (Button and LinkButton carry it for
+  every button in the app), `tap-area` lays an invisible 44px strip over a control
+  that has to stay small, and the `coarse:` variant handles one-offs. Form text lifts
+  to 16px there, because iOS Safari zooms the page on a smaller focused field and
+  never zooms back.
+
+  The app's theming is `.dark` + `dark:` (the site uses the opposite convention; never
+  unify them without changing the pre-paint script in both places).
+
 - **Backend:** Supabase (hosted Postgres + auth + RLS + realtime). Phase 1 may need
   little or no custom server code. **Prefer Supabase's built-in auth and RLS over
   hand-written auth/permission code.** Let battle-tested infrastructure own the
