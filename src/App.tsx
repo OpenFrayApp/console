@@ -90,6 +90,7 @@ import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
 import { CombatTimers } from './components/CombatTimers.tsx'
 import { CombatDifficulty } from './components/CombatDifficulty.tsx'
+import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { CrossedSwordsIcon } from './components/CrossedSwordsIcon.tsx'
 import { SettingsMenu } from './components/SettingsMenu.tsx'
@@ -892,6 +893,13 @@ function App() {
 
   const started = encounter.round > 0
   const paused = encounter.paused === true
+  // What the compact footer would actually draw: the fight's clock, the difficulty
+  // estimate, or the campaign picker. None of the three, and the bar is just a border.
+  const compactFooterHasContent =
+    view === 'encounter' &&
+    ((started && encounter.combatStats != null) ||
+      assessEncounter(encounter.combatants) != null ||
+      campaigns.length > 0)
   // Cast spell opens on whoever the GM is looking at — the selected combatant, or the
   // one whose turn it is — so the common case needs no pick at all.
   const defaultCasterId =
@@ -1024,8 +1032,12 @@ function App() {
                     {fightControls}
                   </div>
                 )}
+                {/* On a compact screen Add takes whatever the fight controls leave on
+                their line. `flex-1` off a zero basis means it never forces a wrap; the
+                min-width is what drops it to a line of its own, full width, when the
+                space beside them is too tight to be worth having. */}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 compact:w-full lg:flex-nowrap lg:pl-2">
+                  <div className="flex flex-wrap items-center gap-2 compact:min-w-24 compact:flex-1 lg:flex-nowrap lg:pl-2">
                     {addControls}
                   </div>
                 )}
@@ -1185,13 +1197,14 @@ function App() {
               onCancel={() => setInitPrompt(null)}
             />
           )}
-          {/* On a phone the footer carries only the fight's numbers (the legal links move
-          into the gear menu), so it disappears when there is nothing to show. */}
+          {/* On a phone the footer carries only the fight's numbers (the dice and the legal
+          links live elsewhere there), so it disappears when there is nothing to show.
+          Asking each part what it would render, rather than guessing from the combatant
+          count: a board of players with no foes has no difficulty to estimate, and the
+          bar was left empty above the tab bar, reading as a second border. */}
           <footer
             className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-slate-200 px-4 py-2 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid lg:grid-cols-[22rem_1fr_20rem] lg:gap-0 lg:px-6 lg:py-3 xl:grid-cols-[28rem_1fr_24rem] ${
-              view !== 'encounter' || (encounter.combatants.length === 0 && !user)
-                ? 'compact:hidden'
-                : ''
+              compactFooterHasContent ? '' : 'compact:hidden'
             }`}
           >
             {view === 'encounter' && started && encounter.combatStats ? (
