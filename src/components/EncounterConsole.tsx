@@ -400,7 +400,8 @@ export function EncounterConsole({
   // the D&D Beyond app's sheets, with the bottom bar to jump. From there to lg (tablet
   // portrait) the same three regions are a two-column grid: tracker beside stat block,
   // controls and log in a strip below.
-  const PANE = 'compact:w-full compact:shrink-0 compact:snap-center compact:px-4 compact:py-3'
+  const PANE =
+    'compact:w-full compact:shrink-0 compact:snap-center compact:px-4 compact:pt-4 compact:pb-3'
   return (
     <div
       ref={panesRef}

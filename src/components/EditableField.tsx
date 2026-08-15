@@ -53,7 +53,9 @@ export function EditableField({
         setDraft(initial)
         setEditing(true)
       }}
-      className="tap-y cursor-text rounded px-0.5 hover:bg-slate-100 coarse:px-2 dark:hover:bg-slate-800"
+      // The strip, not the floor: this sits in a combatant row, and a 44px-tall button
+      // pads every row on the board to match it.
+      className="tap-area cursor-text rounded px-0.5 hover:bg-slate-100 coarse:px-1.5 dark:hover:bg-slate-800"
     >
       {children}
     </button>

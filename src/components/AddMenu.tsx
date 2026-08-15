@@ -34,8 +34,10 @@ export function AddMenu({ items }: { items: AddMenuItem[] }) {
 
   const active = items.find((i) => i.key === activeKey)
 
+  // Full width on the compact header, where it has a row to itself and the space to
+  // the right is doing nothing; the roomy header never renders it at all.
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative w-full" ref={ref}>
       {active ? (
         active.render(() => setActiveKey(null))
       ) : (
@@ -45,6 +47,7 @@ export function AddMenu({ items }: { items: AddMenuItem[] }) {
           a screen reader is concerned. */}
           <Button
             variant="primary"
+            className="w-full"
             onClick={() => setOpen((o) => !o)}
             aria-label="Add to the encounter"
             aria-haspopup="menu"

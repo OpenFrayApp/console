@@ -156,10 +156,11 @@ export function CombatantRow({
               title="Remove from the encounter"
               // A finger never hovers, so the hover-reveal left this invisible and still
               // tappable — a destructive control the GM could hit without seeing it. On a
-              // coarse pointer it is simply shown. It stays under the 44px floor on
-              // purpose: it sits inside the row's own tap target, and the cost of a
-              // mis-aimed row tap here is a combatant off the board.
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-rose-600 focus:opacity-100 coarse:h-9 coarse:w-9 coarse:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-rose-400"
+              // coarse pointer it is simply shown. It stays well under the 44px floor on
+              // purpose, twice over: it sits inside the row's own tap target, where the
+              // cost of a mis-aimed tap is a combatant off the board, and a target that
+              // size would set the height of every row on the console.
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-rose-600 focus:opacity-100 coarse:h-6 coarse:w-6 coarse:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-rose-400"
             >
               <svg
                 viewBox="0 0 24 24"

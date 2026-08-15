@@ -970,7 +970,7 @@ function App() {
   )
   const addControls = view === 'encounter' && (
     <>
-      <div className="roomy:hidden">
+      <div className="w-full roomy:hidden">
         <AddMenu
           items={[
             { key: 'quick', label: 'Quick add', render: (done) => addQuick(true, done) },
@@ -994,7 +994,9 @@ function App() {
           {/* The header wraps at every width and its buttons never break their labels:
           a cluster that no longer fits drops to its own line whole, so every button
           keeps one size instead of squeezing onto two lines of text. */}
-          <header className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 dark:border-slate-800 lg:px-6 lg:py-4">
+          {/* gap-y and py open up on a compact screen: the clusters wrap onto two or three
+          rows there, and at desktop spacing those rows read as one crowded block. */}
+          <header className="flex flex-wrap items-center gap-y-2 border-b border-slate-200 px-4 py-2.5 compact:gap-y-3 compact:py-3.5 dark:border-slate-800 lg:px-6 lg:py-4">
             {/* Logo links back to the marketing site; spans the initiative column so
             Group/Cast line up with the stat block. */}
             <a
@@ -1005,9 +1007,10 @@ function App() {
               <span className="text-indigo-500 dark:text-indigo-400">
                 <CrossedSwordsIcon />
               </span>
-              {/* The wordmark goes to screen readers only on a compact screen: it is
-              130px the header cannot spare, and the icon beside it says the same. */}
-              <h1 className="text-xl font-semibold tracking-tight compact:sr-only">
+              {/* The wordmark goes to screen readers only under 360px, where those 130px
+              are what wrap the account cluster onto a fourth header row. Every phone
+              wider than that has the room, and the icon alone carries the narrowest. */}
+              <h1 className="text-xl font-semibold tracking-tight max-[359px]:sr-only">
                 <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
               </h1>
             </a>
@@ -1022,7 +1025,7 @@ function App() {
                   </div>
                 )}
                 {addControls && (
-                  <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:pl-2">
+                  <div className="flex flex-wrap items-center gap-2 compact:w-full lg:flex-nowrap lg:pl-2">
                     {addControls}
                   </div>
                 )}
