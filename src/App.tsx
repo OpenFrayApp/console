@@ -35,10 +35,19 @@ import { KeyboardHelp } from './components/KeyboardHelp.tsx'
 import { onSharedBoard } from './combat/playerView.ts'
 import {
   claimPlayerCode,
+  deleteSavedFight,
+  listSavedFights,
   loadCloudEncounter,
+  loadSavedFight,
   saveCloudEncounter,
+  saveFight,
   type ClaimResult,
+  type SavedFights,
+  type WriteResult,
 } from './state/cloudEncounter.ts'
+import { templateEntries, templateToCombatants } from './combat/encounterTemplate.ts'
+import { loadSrdCreatures } from './compendium/srd.ts'
+import { EncountersMenu } from './components/EncountersMenu.tsx'
 import {
   deleteCustomCreature,
   loadCustomCreatures,
@@ -310,6 +319,10 @@ function App() {
   const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [rosterPcs, setRosterPcs] = useState<RosterPc[]>([])
+  // The fights this Game Master has saved to come back to. Held here rather than in the menu
+  // because the compendium's Encounters tab reads the same list, and two loaders would drift
+  // apart the moment one of them saved something.
+  const [savedFights, setSavedFights] = useState<SavedFights>({ status: 'ok', fights: [] })
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
     () => restored?.activeCampaignId ?? null,
   )
@@ -342,6 +355,7 @@ function App() {
       setOwnPresets([])
       setCampaigns([])
       setRosterPcs([])
+      setSavedFights({ status: 'ok', fights: [] })
       setActiveCampaignId(null)
       return
     }
@@ -360,6 +374,9 @@ function App() {
     })
     loadRosterPcs().then((list) => {
       if (active) setRosterPcs(list)
+    })
+    listSavedFights().then((res) => {
+      if (active) setSavedFights(res)
     })
     return () => {
       active = false
@@ -614,6 +631,84 @@ function App() {
   const openRosterCreate = () => {
     setCompendiumTab('characters')
     setView('compendium')
+  }
+
+  // Saved encounters. The list is re-read rather than patched in memory: the row's
+  // `updated_at` is what orders it, and the database is the only thing that knows it.
+  const refreshSavedFights = () => {
+    if (!userId) return
+    void listSavedFights().then(setSavedFights)
+  }
+
+  /** Save the board as it stands, under whichever campaign is active. */
+  const handleSaveFight = async (name: string): Promise<WriteResult> => {
+    const result = await saveFight(name, encounter, activeCampaignId)
+    if (result === 'ok') {
+      track(EVENTS.encounterSaved)
+      refreshSavedFights()
+    }
+    return result
+  }
+
+  /**
+   * Put a saved fight back on the board, whole. The autosave then carries it into the live
+   * row, so the restored board *is* the session from here on — which is the point, and also
+   * why the menu confirms before calling this.
+   */
+  const handleRestoreFight = async (id: string): Promise<boolean> => {
+    const saved = await loadSavedFight(id)
+    if (!saved) return false
+    dispatch({ type: 'load', encounter: saved })
+    setSelectedId(null)
+    // The campaign travels with it, so a fight comes back under the house rules it was
+    // fought under rather than whichever campaign happens to be active tonight.
+    const summary =
+      savedFights.status === 'ok' ? savedFights.fights.find((f) => f.id === id) : undefined
+    if (summary?.campaignId && campaigns.some((c) => c.id === summary.campaignId)) {
+      setActiveCampaignId(summary.campaignId)
+    }
+    setView('encounter')
+    setMobilePane(0)
+    track(EVENTS.encounterRestored)
+    return true
+  }
+
+  /**
+   * Add just the cast of a saved fight to the board in hand — the same ambush, fresh, against
+   * tonight's party. Hit points roll again under the campaign's method and nothing of the old
+   * fight comes with them, so this is the reusable half of a save.
+   */
+  const handleAddCast = async (
+    id: string,
+  ): Promise<{ added: number; missing: string[] } | null> => {
+    const saved = await loadSavedFight(id)
+    if (!saved) return null
+    const library = await loadSrdCreatures()
+    const { combatants, missing } = templateToCombatants(
+      { v: 1, name: '', entries: templateEntries(saved.combatants) },
+      {
+        creatures: [...library, ...customCreatures],
+        hpMethod: activeRules.hp,
+        existing: encounter.combatants,
+      },
+    )
+    for (const c of combatants) addCombatant(c)
+    if (combatants.length) {
+      track(EVENTS.encounterCastAdded)
+      setView('encounter')
+      setMobilePane(0)
+    }
+    return { added: combatants.length, missing }
+  }
+
+  /** Delete a saved fight, dropping it from the list at once. */
+  const handleDeleteFight = (id: string) => {
+    setSavedFights((prev) =>
+      prev.status === 'ok'
+        ? { status: 'ok', fights: prev.fights.filter((f) => f.id !== id) }
+        : prev,
+    )
+    void deleteSavedFight(id)
   }
 
   // Edit a roster-backed PC from the encounter: open the editor seeded from its saved
@@ -1267,6 +1362,18 @@ function App() {
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
               <AccountControl onSignIn={() => setAuthOpen(true)} />
+              <EncountersMenu
+                fights={savedFights}
+                campaigns={campaigns}
+                canSave={encounter.combatants.length > 0}
+                signedIn={!!user}
+                onOpen={refreshSavedFights}
+                onSave={handleSaveFight}
+                onRestore={handleRestoreFight}
+                onAddCast={handleAddCast}
+                onDelete={handleDeleteFight}
+                onSignIn={() => setAuthOpen(true)}
+              />
               <SharePanel
                 code={playerCode}
                 sharing={sharing}

@@ -64,6 +64,10 @@ export const EVENTS = {
   themeToggled: 'Theme toggled',
   keyboardShortcutUsed: 'Keyboard shortcut used',
   keybindingChanged: 'Keybinding changed',
+  // Saved encounters
+  encounterSaved: 'Encounter saved',
+  encounterRestored: 'Encounter restored',
+  encounterCastAdded: 'Encounter creatures added',
   // Sharing the board with the table
   playerViewShared: 'Player view shared',
   playerViewStopped: 'Player view stopped',
