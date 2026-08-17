@@ -7,13 +7,14 @@ import type { ConditionName, Effect, EffectApplies, EffectModifier } from '../sc
 import type { AdvantageState, RandomSource } from 'opendice'
 import { roll, type CritRule, type RollKind, type RollResult } from '../dice/roll.ts'
 import { conditionAttackAdvantage, type AttackRange } from './conditionrules.ts'
+import { endsOnRoll } from './effects.ts'
 
 /**
  * Effect-aware rolling. A roll consults the roller's `outgoing` effects and the
  * target's `incoming` effects, nets advantage and disadvantage (one of each cancels
- * to a straight roll), folds in flat bonuses (Bless), and consumes `consumeOnRoll`
- * effects. The dice module stays generic; this layer translates effects into its
- * `advantage` / `bonuses` context.
+ * to a straight roll), folds in flat bonuses (Bless), and spends the effects that end
+ * on the roll they change. The dice module stays generic; this layer translates effects
+ * into its `advantage` / `bonuses` context.
  */
 
 export interface AppliedEffect {
@@ -214,10 +215,8 @@ export function rollWithEffects(formula: string, opts: EffectRollOptions): Effec
     bonuses,
   })
 
-  // Consume consumeOnRoll effects that fired, from whichever combatant owns them.
-  const consumed = new Set(
-    applicable.filter((a) => a.effect.duration.type === 'consumeOnRoll').map((a) => a.effect.id),
-  )
+  // Spend the effects that fired and end on a roll, from whichever combatant owns them.
+  const consumed = new Set(applicable.filter((a) => endsOnRoll(a.effect)).map((a) => a.effect.id))
   /** Drop consumed effects from a combatant; same reference when it owned none of them. */
   const strip = (c: Combatant | undefined): Combatant | undefined => {
     if (!c || !c.effects.some((e) => consumed.has(e.id))) return c

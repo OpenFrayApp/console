@@ -62,10 +62,31 @@ describe('spellEffectFor', () => {
     expect(effect.duration).toEqual({ type: 'manual' }) // hours don't convert to rounds
   })
 
-  it('gives Guidance a consume-on-roll ability-check bonus', () => {
+  it('gives Guidance an ability-check bonus its next check ends — or the minute does', () => {
+    // The console never rolls a player's check, so the spell's own minute is what
+    // actually clears it there; the roll is the early out when a creature holds it.
     const [effect] = spellEffectFor(spell('Guidance'))!.build({ spell: spell('Guidance') })
     expect(effect.modifier).toMatchObject({ applies: 'abilityChecks', mode: 'flatBonus' })
-    expect(effect.duration).toEqual({ type: 'consumeOnRoll' })
+    expect(effect.duration).toEqual({ type: 'rounds', rounds: 10, endsOnRoll: true })
+  })
+
+  it('gives Resistance the same shape, scoped to saves', () => {
+    const [effect] = spellEffectFor(spell('Resistance'))!.build({ spell: spell('Resistance') })
+    expect(effect.modifier).toMatchObject({ applies: 'savingThrows', mode: 'flatBonus' })
+    expect(effect.duration).toEqual({ type: 'rounds', rounds: 10, endsOnRoll: true })
+  })
+
+  it('ends Guiding Bolt on the attack it grants, or the caster’s turn', () => {
+    const gb = spell('Guiding Bolt', { duration: '1 round', concentration: false })
+    const [effect] = spellEffectFor(gb)!.build({ source: 'cleric', spell: gb })
+    expect(effect.modifier).toMatchObject({ mode: 'advantage', direction: 'incoming' })
+    // "…before the end of your next turn" — the caster's, so it stays keyed to them.
+    expect(effect.duration).toEqual({
+      type: 'untilSourceTurn',
+      when: 'endOfTurn',
+      endsOnRoll: true,
+    })
+    expect(effect.source).toBe('cleric')
   })
 
   it('builds a fresh effect (unique id) on each call', () => {
@@ -93,12 +114,30 @@ describe('spellEffectFor', () => {
   it('maps Vicious Mockery to disadvantage on the target’s next attack', () => {
     const vm = spellEffectFor(spell('Vicious Mockery', { level: 0 }))!
     expect(vm.targeting).toBe('enemy')
-    const [effect] = vm.build({ source: 'bard', spell: spell('Vicious Mockery', { level: 0 }) })
+    const target = monster(10)
+    const [effect] = vm.build({
+      source: 'bard',
+      target,
+      spell: spell('Vicious Mockery', { level: 0 }),
+    })
     expect(effect.modifier).toMatchObject({
       applies: 'attackRolls',
       mode: 'disadvantage',
       direction: 'outgoing',
     })
+    // "…before the end of its next turn" in both editions: the *target's* turn, so the
+    // effect is keyed to the creature carrying it rather than to the bard.
+    expect(effect.duration).toEqual({
+      type: 'untilSourceTurn',
+      when: 'endOfTurn',
+      endsOnRoll: true,
+    })
+    expect(effect.source).toBe(target.combatantId)
+  })
+
+  it('falls back to the bare roll when there is no target to key the turn to', () => {
+    const vm = spellEffectFor(spell('Vicious Mockery', { level: 0 }))!
+    const [effect] = vm.build({ source: 'bard', spell: spell('Vicious Mockery', { level: 0 }) })
     expect(effect.duration).toEqual({ type: 'consumeOnRoll' })
     expect(effect.source).toBe('bard')
   })

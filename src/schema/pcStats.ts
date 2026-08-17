@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { abilityMod, type AbilityScores } from './primitives.ts'
+import { abilityMod, type Ability, type AbilityScores } from './primitives.ts'
 import type { ArmorName, PcClass } from './combatant.ts'
 
 /**
- * Derivations for a player character's armor class and initiative modifier, from the
- * facts the GM transcribes: class, level, ability scores, and the armor worn. This is
- * the deliberate carve-out from the "never derive a build" line (issues #5 and #6):
- * the GM still types what the sheet says; these turn those facts into the two numbers
- * the board needs, and nothing here models what a class can *do*.
+ * Derivations for a player character's armor class, initiative modifier, spell attack
+ * bonus and spell save DC, from the facts the GM transcribes: class, level, ability
+ * scores, and the armor worn. This is the deliberate carve-out from the "never derive a
+ * build" line (issues #5 and #6, widened by the maintainer on 2026-08-17 to cover the
+ * two spellcasting numbers): the GM still types what the sheet says; these turn those
+ * facts into the four numbers the board needs, and nothing here models what a class can
+ * *do*. Every one of them returns null rather than guess, and the GM's typed number is
+ * always available instead.
  *
  * Verified against the SRD before building: no class AC formula scales with level —
  * the unarmored defenses are ability-only. Level matters to initiative, where Jack of
- * All Trades adds half the proficiency bonus, and PB is a function of level.
+ * All Trades adds half the proficiency bonus, and PB is a function of level; and to the
+ * spellcasting numbers, which are proficiency plus the casting ability's modifier.
  */
 
 /** The twelve SRD classes. Multiclassing stays a sheet concern — one class, the main one. */
@@ -122,4 +126,43 @@ export function deriveInitiativeMod(pc: PcDeriveInput): number | null {
     return dex + Math.floor(pcProficiencyBonus(pc.level ?? 1) / 2)
   }
   return dex
+}
+
+/**
+ * The ability each class casts with. The four martial classes have none at class
+ * level: a Fighter or Rogue who casts does it through a subclass, which the board
+ * doesn't record — so they derive nothing and keep the Game Master's typed number,
+ * exactly as a multiclass caster does.
+ */
+export const CASTING_ABILITY: Partial<Record<PcClass, Ability>> = {
+  Bard: 'cha',
+  Cleric: 'wis',
+  Druid: 'wis',
+  Paladin: 'cha',
+  Ranger: 'wis',
+  Sorcerer: 'cha',
+  Warlock: 'cha',
+  Wizard: 'int',
+}
+
+/**
+ * Proficiency plus the casting ability's modifier — the term both spellcasting numbers
+ * are built from. Null unless the sheet gave us all three facts it needs: a class that
+ * casts, the level its proficiency comes from, and the ability scores.
+ */
+function castingBonus(pc: PcDeriveInput): number | null {
+  const ability = pc.class ? CASTING_ABILITY[pc.class] : undefined
+  if (!ability || !pc.abilities || pc.level == null) return null
+  return pcProficiencyBonus(pc.level) + abilityMod(pc.abilities[ability])
+}
+
+/** A character's spell attack bonus, or null when the sheet doesn't say enough. */
+export function deriveSpellAttack(pc: PcDeriveInput): number | null {
+  return castingBonus(pc)
+}
+
+/** A character's spell save DC — 8 + the same bonus — or null, on the same terms. */
+export function deriveSaveDc(pc: PcDeriveInput): number | null {
+  const bonus = castingBonus(pc)
+  return bonus === null ? null : 8 + bonus
 }

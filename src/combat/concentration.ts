@@ -81,8 +81,11 @@ export function rollConcentrationCheck(
   const dc = concentrationDC(damage)
   const save = rollSave(c, { ability: 'con', dc, onSave: 'negates' }, ctx)
   const maintained = save.result === 'save'
+  // Built from the roller the save handed back, so an effect this check spent (a
+  // saves-scoped buff, say) is carried in `combatant.effects` for the caller to persist.
+  const rolled = save.roller
   return {
-    combatant: maintained ? c : breakConcentration(c),
+    combatant: maintained ? rolled : breakConcentration(rolled),
     maintained,
     dc,
     roll: save.roll,

@@ -2,11 +2,8 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Combatant } from '../schema/combatant.ts'
-import { isFoe, nameOf } from '../combat/combatant.ts'
+import { bySide, nameOf } from '../combat/combatant.ts'
 import { Chip } from './ui.tsx'
-
-/** Sort comparator: display names, locale-aware. */
-const byName = (a: Combatant, b: Combatant): number => nameOf(a).localeCompare(nameOf(b))
 
 /**
  * The shared target picker used by the action resolver and the apply-effect panel.
@@ -27,8 +24,7 @@ export function TargetChips({
   if (targets.length === 0) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">{emptyText}</p>
   }
-  const allies = targets.filter((t) => !isFoe(t)).sort(byName)
-  const foes = targets.filter((t) => isFoe(t)).sort(byName)
+  const { allies, foes } = bySide(targets)
   const both = allies.length > 0 && foes.length > 0
 
   /** One chip group; the heading only shows when both allies and foes are present. */

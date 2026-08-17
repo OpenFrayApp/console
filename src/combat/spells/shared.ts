@@ -54,7 +54,29 @@ export function saveOrTimed(ctx: SpellEffectContext): EffectDuration {
 }
 
 export const MANUAL: EffectDuration = { type: 'manual' }
-export const CONSUME: EffectDuration = { type: 'consumeOnRoll' }
+
+/**
+ * The spell's own timer, ended early by the first roll the effect changes — Guidance
+ * and Resistance, spent on the check or save they were cast for but gone in a minute
+ * either way. The timer is the half that always fires: the console only spends an
+ * effect on a roll it makes itself, and it never rolls for a player.
+ */
+export function timedOrRoll(spell: Spell): EffectDuration {
+  return { ...timedDuration(spell), endsOnRoll: true }
+}
+
+/**
+ * "…on the next attack roll it makes before the end of its next turn" — Vicious
+ * Mockery's shape, and the commonest wording for a one-roll debuff. The turn belongs to
+ * the creature carrying it, so the effect is anchored to itself rather than to the
+ * caster; neither spell of this shape concentrates, which is the other thing `source`
+ * speaks for. Without a known target the timer can't be keyed, so the roll stands alone
+ * as it did before.
+ */
+export function untilItsTurnEndsOrRoll(ctx: SpellEffectContext): EffectDuration {
+  if (!ctx.target) return { type: 'consumeOnRoll' }
+  return { type: 'untilSourceTurn', when: 'endOfTurn', endsOnRoll: true }
+}
 
 /** True for the 2024 rules (edition `5.5`); spells whose two versions differ branch on this. */
 export const is2024 = (spell: Spell): boolean => spell.edition !== '5.0'

@@ -11,6 +11,8 @@ import {
   TIEBREAK_OPTIONS,
   labelOf,
 } from './campaignLabels.ts'
+import { SECTION_HEADING } from './CreatureStatBlock.tsx'
+import { GmNotes } from './GmNotes.tsx'
 
 /** One label/value line (dt/dd pair) in the rules list. */
 function Row({ label, value }: { label: string; value: string }) {
@@ -30,10 +32,13 @@ function Row({ label, value }: { label: string; value: string }) {
 export function CampaignCard({
   campaign,
   onEdit,
+  onEditNotes,
   onDelete,
 }: {
   campaign: Campaign
   onEdit: () => void
+  /** Commit the campaign notes edited here, without opening the form. */
+  onEditNotes?: (text: string) => void
   onDelete: () => void
 }) {
   const rules = campaign.rules ?? DEFAULT_CAMPAIGN_RULES
@@ -53,6 +58,19 @@ export function CampaignCard({
         <Row label="Initiative ties" value={labelOf(TIEBREAK_OPTIONS, rules.initiativeTiebreak)} />
         <Row label="Level up" value={labelOf(LEVELING_OPTIONS, rules.leveling ?? 'xp')} />
       </dl>
+
+      {(onEditNotes || campaign.notes?.trim()) && (
+        <div>
+          <h4 className={SECTION_HEADING}>Campaign notes</h4>
+          <GmNotes
+            value={campaign.notes}
+            onCommit={onEditNotes}
+            label="Campaign notes"
+            prompt="campaign notes"
+            savedTo="this campaign"
+          />
+        </div>
+      )}
 
       <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-200 pt-2 dark:border-slate-800">
         <button

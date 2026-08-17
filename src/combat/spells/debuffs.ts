@@ -11,11 +11,11 @@ import {
   reminder,
 } from '../effects.ts'
 import {
-  CONSUME,
   MANUAL,
   is2024,
   saveOrTimed,
   timedDuration,
+  untilItsTurnEndsOrRoll,
   type SpellEffectTable,
 } from './shared.ts'
 
@@ -187,9 +187,14 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
   'vicious mockery': {
     summary: 'Disadvantage on its next attack roll',
     targeting: 'enemy',
-    // The disadvantage clears on the target's next attack (consumeOnRoll default).
-    build: ({ source }) => [
-      disadvantageOn('Vicious Mockery', { source, note: 'Disadv. next attack' }),
+    // "…before the end of its next turn" in both editions, so the turn that ends it is
+    // the target's own — which is what the effect is sourced to here.
+    build: (ctx) => [
+      disadvantageOn('Vicious Mockery', {
+        source: ctx.target?.combatantId ?? ctx.source,
+        duration: untilItsTurnEndsOrRoll(ctx),
+        note: 'Disadv. next attack',
+      }),
     ],
   },
   'animal friendship': {
@@ -484,10 +489,12 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
   'guiding bolt': {
     summary: 'The next attack against it has advantage',
     targeting: 'enemy',
+    // "…before the end of your next turn": the caster's turn, unlike the mockery
+    // shape, so this one stays keyed to whoever cast it.
     build: ({ source }) => [
       advantageAgainst('Guiding Bolt', {
         source,
-        duration: CONSUME,
+        duration: { type: 'untilSourceTurn', when: 'endOfTurn', endsOnRoll: true },
         note: 'Next attack: advantage',
       }),
     ],
@@ -638,10 +645,11 @@ export const DEBUFF_SPELLS: SpellEffectTable = {
   latchwork: {
     summary: 'Disadvantage on its next attack roll',
     targeting: 'enemy',
-    build: ({ source }) => [
+    // Vicious Mockery's wording exactly: the end of the target's own next turn.
+    build: (ctx) => [
       disadvantageOn('Latchwork', {
-        source,
-        duration: CONSUME,
+        source: ctx.target?.combatantId ?? ctx.source,
+        duration: untilItsTurnEndsOrRoll(ctx),
         note: 'Disadv. on its next attack',
       }),
     ],

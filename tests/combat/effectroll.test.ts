@@ -131,6 +131,42 @@ describe('rollWithEffects', () => {
     expect(out.target?.effects).toHaveLength(1)
   })
 
+  it('spends an endsOnRoll effect that has a lifetime of its own', () => {
+    // The shape the Apply effect box builds now: a real duration, ended early by the
+    // first roll it changes.
+    const roller = combatant('r', [
+      disadvantageOn('Vicious Mockery', {
+        duration: { type: 'untilSourceTurn', when: 'endOfTurn', endsOnRoll: true },
+      }),
+    ])
+    // Disadvantage rolls two d20s, so the sequence feeds both.
+    const out = rollWithEffects('1d20', { roller, kind: 'attack', rand: faceSeq(10, 7) })
+    expect(out.roller?.effects).toHaveLength(0)
+  })
+
+  it('leaves an effect with the same lifetime and no early-out alone', () => {
+    const roller = combatant('r', [
+      disadvantageOn('Bane', { duration: { type: 'untilSourceTurn', when: 'endOfTurn' } }),
+    ])
+    const out = rollWithEffects('1d20', { roller, kind: 'attack', rand: faceSeq(10, 7) })
+    expect(out.roller?.effects).toHaveLength(1)
+  })
+
+  it('spends it only on a roll it actually changes', () => {
+    // A check-scoped Guidance is untouched by an attack roll — the roll it waits for
+    // is the next check, not the next d20 of any kind.
+    const roller = combatant('r', [
+      flatBonus('Guidance', '1d4', {
+        applies: 'abilityChecks',
+        duration: { type: 'rounds', rounds: 100, endsOnRoll: true },
+      }),
+    ])
+    const attack = rollWithEffects('1d20', { roller, kind: 'attack', rand: faceSeq(10) })
+    expect(attack.roller?.effects).toHaveLength(1)
+    const check = rollWithEffects('1d20', { roller, kind: 'check', rand: faceSeq(10, 3) })
+    expect(check.roller?.effects).toHaveLength(0)
+  })
+
   it('does not apply attack/save effects to damage rolls', () => {
     const roller = combatant('r', [flatBonus('Bless', '1d4')])
     const { result, applied } = rollWithEffects('2d6+3', {

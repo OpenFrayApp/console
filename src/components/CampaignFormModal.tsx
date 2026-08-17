@@ -71,6 +71,7 @@ export function CampaignFormModal({
   const [name, setName] = useState('')
   const [edition, setEdition] = useState<Edition>('5.5')
   const [rules, setRules] = useState<CampaignRules>(DEFAULT_CAMPAIGN_RULES)
+  const [notes, setNotes] = useState('')
 
   // Seed the form each time it opens (create → defaults, edit → the campaign's values).
   useEffect(() => {
@@ -78,6 +79,7 @@ export function CampaignFormModal({
     setName(campaign?.name ?? '')
     setEdition(campaign?.edition ?? '5.5')
     setRules(campaign?.rules ?? DEFAULT_CAMPAIGN_RULES)
+    setNotes(campaign?.notes ?? '')
   }, [open, campaign])
 
   useEffect(() => {
@@ -100,7 +102,14 @@ export function CampaignFormModal({
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
-    onSubmit({ id: campaign?.id ?? crypto.randomUUID(), name: trimmed, edition, rules })
+    onSubmit({
+      id: campaign?.id ?? crypto.randomUUID(),
+      name: trimmed,
+      edition,
+      rules,
+      // Emptied notes leave the field off the campaign rather than storing a blank.
+      notes: notes.trim() || undefined,
+    })
     onClose()
   }
 
@@ -184,6 +193,22 @@ export function CampaignFormModal({
               options={LEVELING_OPTIONS}
             />
           </div>
+
+          <label className="block space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <span className={LABEL}>Campaign notes</span>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+              placeholder="Private notes on the game — hooks, threads, what the party owes whom…"
+              aria-label="Campaign notes"
+              autoComplete="off"
+              className={FIELD}
+            />
+            <span className="block text-xs text-slate-500 dark:text-slate-400">
+              Markdown, only ever yours. Editable from the campaign card too.
+            </span>
+          </label>
         </div>
 
         <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">

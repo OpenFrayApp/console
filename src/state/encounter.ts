@@ -7,7 +7,7 @@ import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import type { Edition } from '../schema/primitives.ts'
 import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
-import { counterOf, survivesLongRest } from '../combat/effects.ts'
+import { counterOf, endsOnRoll, survivesLongRest } from '../combat/effects.ts'
 import { clampLevel, exhaustionLevel, withExhaustion } from '../combat/exhaustion.ts'
 import { effectiveMaxHp, setCurrentHp } from '../combat/resources.ts'
 import { addDealt, addTaken, pauseStats, resumeStats, startStats } from '../combat/recap.ts'
@@ -85,8 +85,9 @@ function withLogs(state: Encounter, entries: NewLogEntry[], round = state.round)
  * Turn one combatant mutation into the board events worth logging: HP change,
  * effects (conditions) applied/removed, concentration start/end, and death/down/
  * revive. Almost every combatant change flows through the `update` action, so
- * centralizing the diff here keeps call sites clean. Transient `consumeOnRoll`
- * effects are skipped on removal — they clear on every roll and aren't news.
+ * centralizing the diff here keeps call sites clean. An effect spent by the roll it
+ * changed is skipped on removal — the roll it rode is already in the log, and the
+ * ending isn't news of its own.
  */
 function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
   const out: NewLogEntry[] = []
@@ -126,7 +127,7 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
   }
   const bundlesEnded = new Set<string>()
   for (const e of before.effects) {
-    if (afterEffectIds.has(e.id) || e.duration.type === 'consumeOnRoll') continue
+    if (afterEffectIds.has(e.id) || endsOnRoll(e)) continue
     // A bundle cleared whole ends as one line; losing a single part names the part.
     if (e.bundle && !after.effects.some((a) => a.bundle?.id === e.bundle?.id)) {
       if (bundlesEnded.has(e.bundle.id)) continue
@@ -183,6 +184,27 @@ function diffCombatantLogs(before: Combatant, after: Combatant): NewLogEntry[] {
   }
 
   return out
+}
+
+/**
+ * Write back the effects a roll spent.
+ *
+ * `rollWithEffects` nets the effects into the roll and hands back the roller and target
+ * with any that end on it removed — the *same* reference when it removed none, so an
+ * untouched combatant costs nothing here. It is pure, so the removal only reaches the
+ * board if the caller persists it: **every place that rolls through the chokepoint and
+ * owns board state has to call this**, or an effect meant to be spent fires for ever.
+ * Only `effects` is copied across, so a caller settling something else about the same
+ * creature (a broken concentration) stays in charge of that.
+ */
+export function spendEffects(
+  dispatch: (action: EncounterAction) => void,
+  before: Combatant | undefined,
+  after: Combatant | undefined,
+): void {
+  if (!before || !after || after === before) return
+  const effects = after.effects
+  dispatch({ type: 'update', id: before.combatantId, update: (c) => ({ ...c, effects }) })
 }
 
 /**

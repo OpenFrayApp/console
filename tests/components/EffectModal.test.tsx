@@ -75,6 +75,166 @@ function openModifier() {
 const clickApply = (dialog: HTMLElement) =>
   fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
+describe('the roll early-out', () => {
+  const renderPlain = (onApply: ReturnType<typeof vi.fn>) =>
+    render(
+      <EffectModal
+        name="Goblin"
+        combatantId="gob"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
+
+  // Reads as a clause continuing the duration above it, and matches the applied-effects
+  // row word for word: "until Goblin's turn ends, or its next roll".
+  const BOX = 'or its next roll'
+
+  it('rides on the chosen duration rather than replacing it', () => {
+    const onApply = vi.fn()
+    renderPlain(onApply)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: '1m' } })
+    fireEvent.click(within(dialog).getByLabelText(BOX))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
+    clickApply(dialog)
+    expect(applied(onApply)[0].duration).toEqual({
+      type: 'rounds',
+      rounds: 10,
+      endsOnRoll: true,
+    })
+  })
+
+  it('is off by default, so a duration means what it says', () => {
+    const onApply = vi.fn()
+    renderPlain(onApply)
+    const dialog = open()
+    expect((within(dialog).getByLabelText(BOX) as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Frightened' }))
+    clickApply(dialog)
+    expect(applied(onApply)[0].duration.endsOnRoll).toBeUndefined()
+  })
+
+  it('is not offered for Save ends, where a roll ending it is the point', () => {
+    renderPlain(vi.fn())
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'save' } })
+    expect(within(dialog).queryByLabelText(BOX)).toBeNull()
+  })
+
+  it('no longer offers the old consume-only duration', () => {
+    renderPlain(vi.fn())
+    const dialog = open()
+    const options = [...within(dialog).getByLabelText('Duration').querySelectorAll('option')]
+    expect(options.map((o) => o.textContent)).not.toContain('This turn / next attack')
+  })
+})
+
+describe('the turn picker', () => {
+  /** The board the picker offers: the Goblin the box is open on, a PC, and an ally. */
+  const board = [
+    { isPC: false, combatantId: 'gob', label: 'Goblin', side: 'foe' },
+    { isPC: false, combatantId: 'imago', label: 'Reliquary Imago', side: 'foe' },
+    { isPC: true, combatantId: 'amb', name: 'Ambrose' },
+  ] as unknown as Parameters<typeof EffectModal>[0]['combatants']
+
+  /** The modal on that board, applying to the Goblin. */
+  const renderOn = (onApply: ReturnType<typeof vi.fn>) =>
+    render(
+      <EffectModal
+        name="Goblin"
+        combatantId="gob"
+        combatants={board}
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
+
+  it('stays hidden until a turn-keyed duration is chosen', () => {
+    renderOn(vi.fn())
+    const dialog = open()
+    expect(within(dialog).queryByLabelText('Whose turn')).toBeNull()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), {
+      target: { value: 'startOfTurn' },
+    })
+    expect(within(dialog).getByLabelText('Whose turn')).toBeTruthy()
+  })
+
+  it('defaults to the creature being applied to — "until the start of its next turn"', () => {
+    const onApply = vi.fn()
+    renderOn(onApply)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), {
+      target: { value: 'startOfTurn' },
+    })
+    expect((within(dialog).getByLabelText('Whose turn') as HTMLSelectElement).value).toBe('gob')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Charmed' }))
+    clickApply(dialog)
+    expect(applied(onApply)[0]).toMatchObject({
+      name: 'Charmed',
+      source: 'gob',
+      duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+    })
+  })
+
+  it('keys the effect to another creature`s turn when one is picked', () => {
+    const onApply = vi.fn()
+    renderOn(onApply)
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), { target: { value: 'endOfTurn' } })
+    fireEvent.change(within(dialog).getByLabelText('Whose turn'), { target: { value: 'imago' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Charmed' }))
+    clickApply(dialog)
+    expect(applied(onApply)[0]).toMatchObject({
+      source: 'imago',
+      duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+    })
+  })
+
+  it('groups the board into allies and foes, each alphabetical', () => {
+    renderOn(vi.fn())
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), {
+      target: { value: 'startOfTurn' },
+    })
+    const picker = within(dialog).getByLabelText('Whose turn')
+    const groups = [...picker.querySelectorAll('optgroup')]
+    expect(groups.map((g) => g.label)).toEqual(['Allies', 'Foes'])
+    expect([...groups[0].querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Ambrose'])
+    expect([...groups[1].querySelectorAll('option')].map((o) => o.textContent)).toEqual([
+      'Goblin',
+      'Reliquary Imago',
+    ])
+  })
+
+  it('applies without a picker when there is no board to name a turn on', () => {
+    const onApply = vi.fn()
+    render(
+      <EffectModal
+        name="Goblin"
+        combatantId="gob"
+        effects={[]}
+        onApply={onApply}
+        onRemove={() => {}}
+        onSetExhaustion={() => {}}
+      />,
+    )
+    const dialog = open()
+    fireEvent.change(within(dialog).getByLabelText('Duration'), {
+      target: { value: 'startOfTurn' },
+    })
+    expect(within(dialog).queryByLabelText('Whose turn')).toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Charmed' }))
+    clickApply(dialog)
+    // Still keyed to the creature it was applied to, which is the useful default.
+    expect(applied(onApply)[0].source).toBe('gob')
+  })
+})
+
 describe('EffectModal', () => {
   it('applies a staged condition with the chosen duration on Apply', () => {
     const onApply = vi.fn()

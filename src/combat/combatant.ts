@@ -27,6 +27,24 @@ export function nameOf(c: Combatant): string {
   return c.isPC ? c.name : c.label
 }
 
+/** Sort comparator: display names, locale-aware. */
+const byName = (a: Combatant, b: Combatant): number => nameOf(a).localeCompare(nameOf(b))
+
+/**
+ * The board split into its two sides, each sorted alphabetically — the order every
+ * picker offers combatants in. One definition, so the target chips and the Apply
+ * effect box's turn picker read the same way.
+ */
+export function bySide(combatants: readonly Combatant[]): {
+  allies: Combatant[]
+  foes: Combatant[]
+} {
+  return {
+    allies: combatants.filter((c) => !isFoe(c)).sort(byName),
+    foes: combatants.filter((c) => isFoe(c)).sort(byName),
+  }
+}
+
 /**
  * The tracker's rendered order, which is also what "next" and "previous" mean to a
  * selection moved from the keyboard: in combat the living in initiative order with

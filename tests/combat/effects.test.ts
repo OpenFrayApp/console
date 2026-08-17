@@ -186,6 +186,18 @@ describe('survivesLongRest', () => {
     expect(survivesLongRest(saveEnds('Web', { ability: 'str', dc: 12 }))).toBe(false)
   })
 
+  it('clears anything still waiting on a roll, whatever its lifetime says', () => {
+    // Eight hours on, the attack it was watching for either happened or never will.
+    expect(
+      survivesLongRest(condition('Prone', { duration: { type: 'manual', endsOnRoll: true } })),
+    ).toBe(false)
+    expect(
+      survivesLongRest(
+        condition('Prone', { duration: { type: 'rounds', rounds: 14400, endsOnRoll: true } }),
+      ),
+    ).toBe(false)
+  })
+
   it('keeps a counter — a rest doesn’t settle a tally, the GM does', () => {
     expect(survivesLongRest(setCount(counter('Depth'), 4))).toBe(true)
     expect(survivesLongRest(counter('Spore Load'))).toBe(true)
@@ -252,9 +264,42 @@ describe('helpers', () => {
     expect(describeDuration(condition('Prone', { duration: { type: 'consumeOnRoll' } }))).toBe(
       'until its next roll',
     )
+    // With a lifetime behind it, the row says both halves — the clock and the early out.
+    expect(
+      describeDuration(
+        condition('Prone', { duration: { type: 'rounds', rounds: 10, endsOnRoll: true } }),
+      ),
+    ).toBe('10 rounds left, or its next roll')
+    expect(
+      describeDuration(
+        condition('Prone', {
+          duration: { type: 'untilSourceTurn', when: 'endOfTurn', endsOnRoll: true },
+        }),
+        'Bard',
+      ),
+    ).toBe('until Bard’s turn ends, or its next roll')
+    // Until-removed plus the early out is the legacy shape, and reads identically.
+    expect(
+      describeDuration(condition('Prone', { duration: { type: 'manual', endsOnRoll: true } })),
+    ).toBe('until its next roll')
     expect(
       describeDuration(condition('Prone', { duration: { type: 'untilSourceTurn' } }), 'Archmage'),
     ).toBe('until Archmage’s next turn')
+    expect(
+      describeDuration(
+        condition('Prone', { duration: { type: 'untilSourceTurn', when: 'endOfTurn' } }),
+        'Archmage',
+      ),
+    ).toBe('until Archmage’s turn ends')
+    // With nobody to name — a spell's effect read off a badge — it still says which end.
+    expect(describeDuration(condition('Prone', { duration: { type: 'untilSourceTurn' } }))).toBe(
+      'until its source’s next turn',
+    )
+    expect(
+      describeDuration(
+        condition('Prone', { duration: { type: 'untilSourceTurn', when: 'endOfTurn' } }),
+      ),
+    ).toBe('until its source’s turn ends')
     // Hours don't convert to rounds, so the source's own wording is kept for them.
     expect(
       describeDuration({ ...reminder('Disguise Self', 'Disguised'), durationNote: '1 hour' }),

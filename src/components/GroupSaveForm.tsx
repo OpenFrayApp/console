@@ -6,7 +6,7 @@ import type { Ability, DamageType } from '../schema/primitives.ts'
 import type { SaveOutcome } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../schema/effect.ts'
-import type { EncounterAction } from '../state/encounter.ts'
+import { spendEffects, type EncounterAction } from '../state/encounter.ts'
 import { d20Group, type DieGroup } from '../dice/roll.ts'
 import { condition } from '../combat/effects.ts'
 import { exhaustionLevel } from '../combat/exhaustion.ts'
@@ -103,6 +103,7 @@ export function GroupSaveForm({
   /** Roll one creature's save against the current DC. Never called for a PC. */
   const rollOne = (c: Combatant): Row => {
     const saveRoll = rollSave(c, { ability, dc: num(dc) || 10, onSave })
+    spendEffects(dispatch, c, saveRoll.roller)
     return { result: saveRoll.result, total: saveRoll.total, d20: d20Group(saveRoll.roll) }
   }
 
@@ -171,6 +172,7 @@ export function GroupSaveForm({
   /** Roll a monster's concentration check, log it, and resolve the prompt by the outcome. */
   const rollConcentration = (p: ConcPrompt) => {
     const check = rollConcentrationCheck(p.combatant, p.damage)
+    spendEffects(dispatch, p.combatant, check.combatant)
     onRoll?.(`${nameOf(p.combatant)}: concentration`, check.roll, {
       applied: check.applied,
       sourceId: p.combatant.combatantId,

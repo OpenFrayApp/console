@@ -455,3 +455,101 @@ describe('ActionResolver — save actions', () => {
     expect(bless.modifier).toMatchObject({ mode: 'flatBonus', value: '-1d4' })
   })
 })
+
+describe('an attack-roll spell', () => {
+  const guidingBolt: Spell = {
+    id: 'srd-5.2:guiding-bolt',
+    source: 'srd-5.2',
+    name: 'Guiding Bolt',
+    level: 1,
+    school: 'Evocation',
+    castingTime: 'action',
+    range: '120 feet',
+    components: { verbal: true, somatic: true, material: false },
+    duration: '1 round',
+    concentration: false,
+    ritual: false,
+    text: '',
+    mechanics: { attackRoll: true, damage: [{ formula: '4d6', type: 'radiant' }] },
+  }
+
+  const action: Action = {
+    id: 'spell:guiding-bolt',
+    name: 'Guiding Bolt',
+    kind: 'ranged',
+    toHit: 5,
+    damage: [{ formula: '4d6', type: 'radiant' }],
+    text: '',
+  }
+
+  /** A player casting: they roll nothing, so they are the caster and never the attacker. */
+  const pcCaster = {
+    isPC: true,
+    combatantId: 'cleric',
+    name: 'Hexena',
+  } as unknown as MonsterCombatant
+
+  const renderCast = (dispatch = vi.fn()) => {
+    const target = monster({ combatantId: 't', label: 'Ogre' })
+    render(
+      <ActionResolver
+        action={action}
+        combatants={[pcCaster, target]}
+        dispatch={dispatch}
+        onRoll={vi.fn()}
+        spell={guidingBolt}
+        casterId="cleric"
+        onClose={() => {}}
+      />,
+    )
+    return { dispatch, target }
+  }
+
+  it('names the caster in the title, player or creature', () => {
+    renderCast()
+    expect(screen.getByText('Hexena · Guiding Bolt')).toBeTruthy()
+  })
+
+  it("offers the spell's board effect once the attack is rolled, and applies it to the target", () => {
+    const { dispatch, target } = renderCast()
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Guiding Bolt to Ogre' }))
+
+    const update = dispatch.mock.calls
+      .map((c) => c[0])
+      .find((a) => a.type === 'update' && a.id === 't')
+    const [effect] = update.update(target).effects
+    expect(effect.name).toBe('Guiding Bolt')
+    expect(effect.modifier).toMatchObject({ mode: 'advantage', direction: 'incoming' })
+    // Sourced to the player who cast it, which is also the turn that ends it.
+    expect(effect.source).toBe('cleric')
+    expect(effect.duration).toEqual({
+      type: 'untilSourceTurn',
+      when: 'endOfTurn',
+      endsOnRoll: true,
+    })
+  })
+
+  it('offers nothing before the attack is rolled', () => {
+    renderCast()
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    expect(screen.queryByRole('button', { name: /Apply Guiding Bolt/ })).toBeNull()
+  })
+
+  it("keys a condition to the caster's turn, which a player caster used to lose", () => {
+    const { dispatch, target } = renderCast()
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    fireEvent.change(screen.getByLabelText('Condition duration'), {
+      target: { value: 'untilSource' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Prone' }))
+    const updates = dispatch.mock.calls
+      .map((c) => c[0])
+      .filter((a) => a.type === 'update' && a.id === 't')
+    const effect = updates[updates.length - 1].update(target).effects.at(-1)
+    expect(effect.name).toBe('Prone')
+    expect(effect.source).toBe('cleric')
+  })
+})

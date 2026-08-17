@@ -127,7 +127,17 @@ describe('buildPreset / presetToDraft', () => {
   })
 
   it('round-trips every duration the modal offers', () => {
-    const choices: DurChoice[] = ['manual', 'consume', 'save', '1r', '1m', '10m', '1h', '8h', '24h']
+    const choices: DurChoice[] = [
+      'manual',
+      'save',
+      'startOfTurn',
+      'endOfTurn',
+      '1m',
+      '10m',
+      '1h',
+      '8h',
+      '24h',
+    ]
     for (const duration of choices) {
       const draft: EffectDraft = { ...emptyDraft(), duration, saveDc: '15', notes: ['x'] }
       const back = presetToDraft(buildPreset(draft, 'n'))
@@ -161,7 +171,139 @@ describe('buildPreset / presetToDraft', () => {
   })
 })
 
+describe('the roll early-out', () => {
+  /** A draft with one condition, so there is an effect to read the duration off. */
+  const draft = (over: Partial<EffectDraft> = {}): EffectDraft => ({
+    ...emptyDraft(),
+    conditions: ['Frightened'],
+    ...over,
+  })
+
+  it('rides on top of a lifetime instead of replacing it', () => {
+    const [e] = draftEffects(draft({ duration: '1m', endsOnRoll: true }))
+    expect(e.duration).toEqual({ type: 'rounds', rounds: 10, endsOnRoll: true })
+  })
+
+  it('rides a turn-keyed duration too — Vicious Mockery, in full', () => {
+    const [e] = draftEffects(
+      draft({
+        duration: 'endOfTurn',
+        turnOf: 'bard',
+        endsOnRoll: true,
+        conditions: [],
+        notes: ['Disadvantage on its next attack'],
+      }),
+    )
+    expect(e.duration).toEqual({ type: 'untilSourceTurn', when: 'endOfTurn', endsOnRoll: true })
+    expect(e.source).toBe('bard')
+  })
+
+  it('leaves the duration untouched when it is off', () => {
+    const [e] = draftEffects(draft({ duration: '1m' }))
+    expect(e.duration).toEqual({ type: 'rounds', rounds: 10 })
+  })
+
+  it('is never added to a save-ends effect, whose roll is already the point', () => {
+    const [e] = draftEffects(draft({ duration: 'save', saveDc: '15', endsOnRoll: true }))
+    expect(e.duration.endsOnRoll).toBeUndefined()
+  })
+
+  it('round-trips through a preset', () => {
+    const saved = buildPreset(draft({ duration: '10m', endsOnRoll: true }), 'Bardic Inspiration')
+    expect(presetToDraft(saved).endsOnRoll).toBe(true)
+    expect(presetToDraft(saved).duration).toBe('10m')
+  })
+
+  it('reads a legacy consume-only preset back as until-removed with the box ticked', () => {
+    // The old "This turn / next attack" was a roll with no lifetime behind it.
+    const back = presetToDraft({
+      id: 'custom:x',
+      name: 'Vicious Mockery',
+      duration: { type: 'consumeOnRoll' },
+      parts: [{ kind: 'reminder', note: 'Disadvantage on its next attack' }],
+    })
+    expect(back.duration).toBe('manual')
+    expect(back.endsOnRoll).toBe(true)
+    // And applying it still behaves as it always did.
+    expect(draftEffects(back)[0].duration).toEqual({ type: 'manual', endsOnRoll: true })
+  })
+})
+
+describe('a turn-keyed duration', () => {
+  /** A draft that ends on `turnOf`'s turn, with one condition to carry it. */
+  const draft = (duration: 'startOfTurn' | 'endOfTurn', turnOf: string): EffectDraft => ({
+    ...emptyDraft(),
+    duration,
+    turnOf,
+    conditions: ['Charmed'],
+  })
+
+  it('keys the effect to the moment, and the creature to its source', () => {
+    const [charmed] = draftEffects(draft('startOfTurn', 'imago'))
+    expect(charmed.duration).toEqual({ type: 'untilSourceTurn', when: 'startOfTurn' })
+    expect(charmed.source).toBe('imago')
+  })
+
+  it('carries the end of a turn just as well', () => {
+    const [charmed] = draftEffects(draft('endOfTurn', 'imago'))
+    expect(charmed.duration).toEqual({ type: 'untilSourceTurn', when: 'endOfTurn' })
+    expect(charmed.source).toBe('imago')
+  })
+
+  it('keys every part of a bundle to the same turn', () => {
+    const effects = draftEffects({
+      ...draft('startOfTurn', 'ambrose'),
+      bundleName: 'Reliquary Light',
+      notes: ['Must move toward the imago'],
+    })
+    expect(effects).toHaveLength(2)
+    for (const e of effects) expect(e.source).toBe('ambrose')
+  })
+
+  it('leaves the source off when no creature was picked', () => {
+    expect(draftEffects(draft('startOfTurn', ''))[0].source).toBeUndefined()
+  })
+
+  it('sources nothing on a duration that names no turn', () => {
+    // A Game Master applying an effect by hand is not a caster; only a turn-keyed
+    // duration has a reason to name a creature.
+    const timed: EffectDraft = { ...emptyDraft(), duration: '1m', turnOf: 'imago', notes: ['x'] }
+    expect(draftEffects(timed)[0].source).toBeUndefined()
+  })
+
+  it('saves the moment in a preset but never the combatant', () => {
+    const preset = buildPreset(draft('endOfTurn', 'imago'), 'Reliquary Light')
+    expect(preset.duration).toEqual({ type: 'untilSourceTurn', when: 'endOfTurn' })
+    // The combatant belonged to that fight; staging it again picks a turn afresh.
+    expect(JSON.stringify(preset)).not.toContain('imago')
+    expect(presetToDraft(preset).turnOf).toBe('')
+  })
+
+  it('reads a sourceless untilSourceTurn back as the start of a turn', () => {
+    // What a spell applies, and what every effect stored before the picker meant.
+    const back = presetToDraft({
+      id: 'custom:x',
+      name: 'n',
+      duration: { type: 'untilSourceTurn' },
+      parts: [{ kind: 'condition', condition: 'Blinded' }],
+    })
+    expect(back.duration).toBe('startOfTurn')
+  })
+})
+
 describe('the Custom duration', () => {
+  it('reads a one-round preset back as a Custom amount, now that the chip is gone', () => {
+    const back = presetToDraft({
+      id: 'custom:x',
+      name: 'n',
+      duration: { type: 'rounds', rounds: 1 },
+      parts: [{ kind: 'condition', condition: 'Prone' }],
+    })
+    expect(back.duration).toBe('custom')
+    expect(back.customAmount).toBe('1')
+    expect(back.customUnit).toBe('rounds')
+  })
+
   it('turns an amount and unit into rounds — 3 hours is 1800', () => {
     const draft: EffectDraft = {
       ...emptyDraft(),

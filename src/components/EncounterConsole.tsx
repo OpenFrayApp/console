@@ -9,7 +9,7 @@ import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/com
 import type { SpellLevel, SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
-import { moveById, type EncounterAction } from '../state/encounter.ts'
+import { moveById, spendEffects, type EncounterAction } from '../state/encounter.ts'
 import {
   actionUsesRemaining,
   applyDamage,
@@ -263,7 +263,8 @@ export function EncounterConsole({
     ability?: Ability,
   ) => {
     const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
-    const { result, applied } = rollWithEffects(formula, { roller: c, kind, ability })
+    const { result, applied, roller } = rollWithEffects(formula, { roller: c, kind, ability })
+    spendEffects(dispatch, c, roller)
     // A foe's ad-hoc save or check from its stat block is the GM's bookkeeping, like
     // its recharge and escape saves — there is no DC here, so there is no Saved/Failed
     // for the table; a save the table should watch goes through the group-save flow.
@@ -637,6 +638,7 @@ export function EncounterConsole({
                       ? undefined
                       : () => {
                           const check = rollConcentrationCheck(selected, concPrompt.damage)
+                          spendEffects(dispatch, selected, check.combatant)
                           onRoll(`${selected.label}: concentration`, check.roll, {
                             applied: check.applied,
                             sourceId: selected.combatantId,

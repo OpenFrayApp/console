@@ -106,6 +106,15 @@ const untilSourceEffect = (id: string, source: string): Effect => ({
   duration: { type: 'untilSourceTurn' },
 })
 
+/** An effect the Apply effect box keyed to the *end* of `source`'s turn. */
+const untilEndOfTurnEffect = (id: string, source: string): Effect => ({
+  id,
+  name: 'Charmed',
+  source,
+  modifier: null,
+  duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+})
+
 const skipEffect = (id: string): Effect => ({
   id,
   name: 'Surprised',
@@ -262,6 +271,41 @@ describe('nextTurn', () => {
     const b = monster('b', 10)
     const e = nextTurn(encounter([a, b], 1, 0))
     expect(byId(e, 'a').effects.map((x) => x.id)).toEqual(['other'])
+  })
+
+  it("clears an end-of-turn effect when its named creature's turn ends", () => {
+    // b is Charmed until a's turn ends — the effect sits on b, keyed to a.
+    const a = monster('a', 20)
+    const b = monster('b', 10, { effects: [untilEndOfTurnEffect('charm', 'a')] })
+    const e = nextTurn(encounter([a, b], 1, 0))
+    expect(byId(e, 'b').effects).toHaveLength(0)
+  })
+
+  it('holds an end-of-turn effect through the start of that creature`s turn', () => {
+    // Keyed to b's turn ending, it must survive b's turn beginning — the moment the
+    // same effect would clear at without a `when`.
+    const a = monster('a', 20)
+    const b = monster('b', 10, { effects: [untilEndOfTurnEffect('charm', 'b')] })
+    const started = nextTurn(encounter([a, b], 1, 0))
+    expect(activeCombatant(started)?.combatantId).toBe('b')
+    expect(byId(started, 'b').effects.map((x) => x.id)).toEqual(['charm'])
+    // And it goes when that turn ends.
+    expect(byId(nextTurn(started), 'b').effects).toHaveLength(0)
+  })
+
+  it('clears a start-of-turn effect keyed to the creature carrying it', () => {
+    // "Until the start of its next turn" — the imago's charm, and the commonest
+    // wording in the rules. It lasts through everyone else's turns.
+    const a = monster('a', 20)
+    const b = monster('b', 10, { effects: [untilSourceEffect('charm', 'b')] })
+    const c = monster('c', 5)
+    let e = encounter([a, b, c], 1, 1) // b's turn, where it was applied
+    e = nextTurn(e) // c
+    expect(byId(e, 'b').effects.map((x) => x.id)).toEqual(['charm'])
+    e = nextTurn(e) // a, next round
+    expect(byId(e, 'b').effects.map((x) => x.id)).toEqual(['charm'])
+    e = nextTurn(e) // b again — it ends as the turn begins
+    expect(byId(e, 'b').effects).toHaveLength(0)
   })
 
   it("refreshes the newly-active creature's reaction, leaving others' alone", () => {

@@ -356,12 +356,29 @@ export function isReminderOnly(effect: Effect): boolean {
 }
 
 /**
+ * Whether the first roll this effect changes ends it. True for the `endsOnRoll` flag
+ * and for the legacy `consumeOnRoll` duration, which was that flag and nothing else.
+ * The one test every place that spends an effect reads.
+ */
+export function endsOnRoll(effect: Effect): boolean {
+  return effect.duration.endsOnRoll === true || effect.duration.type === 'consumeOnRoll'
+}
+
+/**
  * How this effect ends, in words — the right-hand "Applied effects" list carries
  * this so the badge on the row can stay short. A `rounds` effect reports what is
  * left (it ticks down each round); anything the clock can't tick falls back to the
  * source's own wording ("8 hours"), then to "until removed".
  */
 export function describeDuration(effect: Effect, sourceName?: string): string {
+  const lifetime = describeLifetime(effect, sourceName)
+  if (!endsOnRoll(effect)) return lifetime
+  // The legacy shape had no lifetime to name, so it reads as it always did.
+  return lifetime === 'until removed' ? 'until its next roll' : `${lifetime}, or its next roll`
+}
+
+/** How long the effect lasts if no roll spends it first — the half the clock ticks. */
+function describeLifetime(effect: Effect, sourceName?: string): string {
   const d = effect.duration
   switch (d.type) {
     case 'saveEnds': {
@@ -385,10 +402,16 @@ export function describeDuration(effect: Effect, sourceName?: string): string {
     }
     case 'counter':
       return `at ${d.count ?? 0}`
-    case 'consumeOnRoll':
-      return 'until its next roll'
-    case 'untilSourceTurn':
+    // `consumeOnRoll` names no lifetime at all — it falls to the default, and the roll
+    // half of the wording is added by describeDuration like any other early out.
+    case 'untilSourceTurn': {
+      // The turn is named in the effect's `source`; the GM may have picked any
+      // creature on the board, including the one carrying the effect.
+      if (d.when === 'endOfTurn') {
+        return sourceName ? `until ${sourceName}’s turn ends` : 'until its source’s turn ends'
+      }
       return sourceName ? `until ${sourceName}’s next turn` : 'until its source’s next turn'
+    }
     default:
       return effect.durationNote ?? 'until removed'
   }
@@ -403,9 +426,13 @@ const LONG_REST_ROUNDS = 4800
  * `manual` or `counter` effect, or an explicitly ≥8h `rounds` duration, survives.
  * A counter tracks something a rest doesn't settle — whether the night lowers it is
  * the GM's call, made with the +/− buttons.
+ *
+ * An effect waiting on a roll is combat-scoped whatever its lifetime says: eight hours
+ * later, the attack it was watching for either happened or never will.
  */
 export function survivesLongRest(effect: Effect): boolean {
   const d = effect.duration
+  if (endsOnRoll(effect)) return false
   if (d.type === 'manual' || d.type === 'counter') return true
   if (d.type === 'rounds') return (d.rounds ?? 0) >= LONG_REST_ROUNDS
   return false

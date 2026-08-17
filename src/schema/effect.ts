@@ -89,11 +89,25 @@ export interface EffectBundle {
   name: string
 }
 
+/**
+ * `consumeOnRoll` is the legacy shape of {@link EffectDuration.endsOnRoll}: a lifetime
+ * that was *only* a roll. Stored encounters and presets still hold it and it still
+ * behaves exactly as it did; nothing new builds one.
+ */
 export type EffectDurationType =
   'consumeOnRoll' | 'rounds' | 'untilSourceTurn' | 'saveEnds' | 'manual' | 'counter'
 
 export interface EffectDuration {
   type: EffectDurationType
+  /**
+   * Ends early on the first roll it changes — Vicious Mockery's next attack, Guidance's
+   * next check. An *early out*, never a lifetime: the type above is what guarantees the
+   * effect ends, because the console only sees the rolls it makes itself. Nearly every
+   * rule of this shape is written with both bounds ("the next attack roll it makes
+   * before the end of your next turn"), and the clock half is the half that always
+   * fires.
+   */
+  endsOnRoll?: boolean
   /** For `rounds`: how many rounds remain. */
   rounds?: number | null
   /**
@@ -104,8 +118,13 @@ export interface EffectDuration {
   /** For `saveEnds`: the save that clears it. */
   save?: { ability: Ability; dc: number } | null
   /**
-   * For `saveEnds`: when the escape save is made, relative to the affected
-   * creature's own turn. Defaults to `endOfTurn` (the 5e norm) when absent.
+   * Which end of a turn this resolves on. Each type reads it against its own turn,
+   * and each defaults to the 5e norm for its kind when absent:
+   * - `saveEnds` — when the escape save is made, on the affected creature's own turn.
+   *   Defaults to `endOfTurn`.
+   * - `untilSourceTurn` — when the effect ends, on `source`'s turn. Defaults to
+   *   `startOfTurn`, which is what every effect stored before the Apply effect box
+   *   could name a turn meant.
    */
   when?: 'startOfTurn' | 'endOfTurn'
 }
@@ -118,6 +137,10 @@ export interface Effect {
   /**
    * combatantId of who caused it — needed for `untilSourceTurn` timing and
    * concentration links. Optional for sourceless reminders.
+   *
+   * For an `untilSourceTurn` effect this doubles as the turn the effect is keyed to,
+   * which the GM may name outright in the Apply effect box: 5e's commonest wording,
+   * "until the start of its next turn", is the affected creature's own id here.
    */
   source?: string
   /** The mechanical effect the dice engine reads; `null` = reminder-only. */

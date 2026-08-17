@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { AbilityScores, Senses, Speeds } from '../schema/primitives.ts'
 import type { Concentration, HitPoints } from '../schema/combatant.ts'
 import { speedLines } from '../combat/speed.ts'
@@ -15,63 +15,8 @@ import {
   type OnCheck,
 } from './CreatureStatBlock.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
+import { GmNotes } from './GmNotes.tsx'
 import { Markdown } from './Markdown.tsx'
-
-/** Read-only markdown, or click-to-edit (commits on blur) when `onCommit` is supplied. */
-function DmNotes({ value, onCommit }: { value?: string; onCommit?: (text: string) => void }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value ?? '')
-
-  if (!onCommit) {
-    if (!value?.trim()) return null
-    return (
-      <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        <Markdown>{value}</Markdown>
-      </div>
-    )
-  }
-  if (editing) {
-    /** Save the trimmed draft via onCommit and leave edit mode. */
-    const commit = () => {
-      onCommit(draft.trim())
-      setEditing(false)
-    }
-    return (
-      <textarea
-        autoFocus
-        value={draft}
-        rows={4}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') setEditing(false)
-        }}
-        aria-label="GM notes"
-        placeholder="Notes only you can see. Click away to save."
-        className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-800"
-      />
-    )
-  }
-  return (
-    <button
-      type="button"
-      title="Click to edit — saved to this character"
-      onClick={() => {
-        setDraft(value ?? '')
-        setEditing(true)
-      }}
-      className="block w-full cursor-text rounded px-1 py-0.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
-    >
-      {value?.trim() ? (
-        <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-          <Markdown>{value}</Markdown>
-        </div>
-      ) : (
-        <span className="text-sm italic text-slate-400 dark:text-slate-500">Add GM notes…</span>
-      )}
-    </button>
-  )
-}
 
 /** A labelled bullet list of roleplay lines (traits / ideals / bonds / flaws). */
 function LineGroup({ label, items }: { label: string; items?: string[] }) {
@@ -248,7 +193,7 @@ export function PcStatBlock({
       {(onEditDmNotes || dmNotes?.trim()) && (
         <div>
           <h4 className={SECTION_HEADING}>GM notes</h4>
-          <DmNotes value={dmNotes} onCommit={onEditDmNotes} />
+          <GmNotes value={dmNotes} onCommit={onEditDmNotes} />
         </div>
       )}
 
