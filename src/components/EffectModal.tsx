@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import type { Ability } from '../schema/primitives.ts'
+import type { Combatant } from '../schema/combatant.ts'
 import type { ConditionName, Effect, EffectApplies, EffectMode } from '../schema/effect.ts'
 import type { EffectPreset } from '../schema/preset.ts'
 import {
@@ -14,12 +15,14 @@ import {
   draftParts,
   emptyDraft,
   emptyModifier,
+  isTurnChoice,
   presetToDraft,
   type CustomUnit,
   type DurChoice,
   type EffectDraft,
   type ModifierDraft,
 } from './effectPreset.ts'
+import { bySide, nameOf } from '../combat/combatant.ts'
 import { describeModifier, isStatApplies } from '../combat/effects.ts'
 import { describeExhaustion, exhaustionLevel } from '../combat/exhaustion.ts'
 import { useCampaignEdition } from '../state/campaignRules.ts'
@@ -242,6 +245,8 @@ function ModifierBuilder({
  */
 export function EffectModal({
   name,
+  combatantId,
+  combatants = [],
   effects,
   onApply,
   onRemove,
@@ -252,6 +257,11 @@ export function EffectModal({
   openRequest,
 }: {
   name: string
+  /** The creature being applied to — the turn picker's default, since "until the start
+   *  of its next turn" is what most of the rules that name a turn actually say. */
+  combatantId?: string
+  /** The board, so a turn-keyed duration can name whose turn ends the effect. */
+  combatants?: Combatant[]
   effects: Effect[]
   /** Commit every staged effect in one go — one board update, one log line per bundle. */
   onApply: (effects: Effect[]) => void
@@ -288,6 +298,7 @@ export function EffectModal({
       conditions: conditionNames(),
       exhaustion: currentExhaustion,
       exhaustionBase: currentExhaustion,
+      turnOf: combatantId ?? '',
     })
     setOpen(true)
   }
@@ -317,6 +328,16 @@ export function EffectModal({
         ? d.conditions.filter((x) => x !== c)
         : [...d.conditions, c],
     }))
+
+  // Whose turn a turn-keyed duration ends on, in the order every other picker offers
+  // combatants: allies first, then foes, each alphabetical. A group with nobody in it
+  // is dropped, and with nobody at all the picker doesn't render — the effect stays
+  // keyed to the creature it is being applied to.
+  const sides = bySide(combatants)
+  const turnGroups = [
+    { label: 'Allies', combatants: sides.allies },
+    { label: 'Foes', combatants: sides.foes },
+  ].filter((group) => group.combatants.length > 0)
 
   // The picker wants a source on every row; the GM's own carry a `custom:` id instead,
   // which is what earns them the Custom badge.
@@ -368,7 +389,12 @@ export function EffectModal({
     // A preset's Exhaustion is a change, so it stages against what the creature already
     // carries — a night in the cold costs a level whatever it started on.
     const staged = presetToDraft(preset, currentExhaustion)
-    setDraft({ ...staged, conditions: [...new Set([...conditionNames(), ...staged.conditions])] })
+    setDraft({
+      ...staged,
+      conditions: [...new Set([...conditionNames(), ...staged.conditions])],
+      // A preset stores no combatant, so the turn keeps whoever is already picked.
+      turnOf: draft.turnOf || (combatantId ?? ''),
+    })
   }
 
   // What would commit right now; drives Apply's confidence and the bundle-name field.
@@ -484,6 +510,24 @@ export function EffectModal({
                         </select>
                       </span>
                     )}
+                    {isTurnChoice(draft.duration) && turnGroups.length > 0 && (
+                      <select
+                        value={draft.turnOf}
+                        onChange={(e) => set('turnOf', e.target.value)}
+                        aria-label="Whose turn"
+                        className={`${FIELD_W} w-full`}
+                      >
+                        {turnGroups.map((group) => (
+                          <optgroup key={group.label} label={group.label}>
+                            {group.combatants.map((c) => (
+                              <option key={c.combatantId} value={c.combatantId}>
+                                {nameOf(c)}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    )}
                     {draft.duration === 'save' && (
                       <span className="flex flex-wrap items-center gap-1 text-sm">
                         <select
@@ -521,11 +565,29 @@ export function EffectModal({
                       </span>
                     )}
                   </div>
-                  {draft.duration === 'save' && (
+                  {draft.duration === 'save' ? (
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       OpenFray rolls this for a creature at the chosen moment. A player rolls their
                       own, and you record it.
                     </p>
+                  ) : (
+                    // Not offered for Save ends, where a roll ending it is already the point.
+                    <>
+                      <label className="flex items-center gap-1 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={draft.endsOnRoll}
+                          onChange={(e) => set('endsOnRoll', e.target.checked)}
+                        />
+                        or its next roll
+                      </label>
+                      {draft.endsOnRoll && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          OpenFray spends it on the first roll it changes. It never sees a player’s
+                          own rolls, so the duration above is what ends it there.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 

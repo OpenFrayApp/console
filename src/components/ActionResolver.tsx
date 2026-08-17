@@ -7,7 +7,7 @@ import type { Combatant, MonsterCombatant } from '../schema/combatant.ts'
 import type { ConditionName, Effect, EffectDuration } from '../schema/effect.ts'
 import { DAMAGE_TYPES, type Ability, type DamageType } from '../schema/primitives.ts'
 import type { Spell } from '../schema/spell.ts'
-import type { EncounterAction, NewLogEntry } from '../state/encounter.ts'
+import { spendEffects, type EncounterAction, type NewLogEntry } from '../state/encounter.ts'
 import type { CritRule, DieGroup, RollResult } from '../dice/roll.ts'
 import { d20Group, keptFlags, roll } from '../dice/roll.ts'
 import { describeRoll } from '../dice/describe.ts'
@@ -441,6 +441,7 @@ function AttackResolver({
   onRoll,
   onUse,
   spell,
+  casterId,
   onResolved,
   onClose,
 }: ResolverProps) {
@@ -473,7 +474,13 @@ function AttackResolver({
   const [note, setNote] = useState<string | null>(null)
 
   const target = targets.find((t) => selected.has(t.combatantId)) ?? null
-  const title = attacker ? `${nameOf(attacker)} · ${action.name}` : `Cast ${action.name}`
+  // Who is behind this: the attacker when a creature rolls its own action, and the named
+  // caster when a player casts and rolls their own dice — a player is never the
+  // `attacker` here, but the fight still has them cast it, and what they leave behind
+  // has to be sourced to them or ending their concentration would strand it.
+  const caster = attacker ?? combatants.find((c) => c.combatantId === casterId)
+  const sourceId = caster?.combatantId
+  const title = caster ? `${nameOf(caster)} · ${action.name}` : `Cast ${action.name}`
 
   // Reporting whether the attack landed, once and once only — the same deferral the
   // save branch makes, so a reroll decides the answer rather than the first swing.
@@ -505,16 +512,10 @@ function AttackResolver({
       advantage: adv,
     })
     const { result, applied } = rolled
-    // Persist any consumeOnRoll effects that fired (e.g. "disadvantage on its
-    // next attack") — rollWithEffects returns the combatant with them stripped.
-    if (attacker && rolled.roller && rolled.roller !== attacker) {
-      const effects = rolled.roller.effects
-      dispatch({ type: 'update', id: attacker.combatantId, update: (c) => ({ ...c, effects }) })
-    }
-    if (rolled.target && rolled.target !== target) {
-      const effects = rolled.target.effects
-      dispatch({ type: 'update', id: target.combatantId, update: (c) => ({ ...c, effects }) })
-    }
+    // Persist any effect this roll spent (e.g. "disadvantage on its next attack"),
+    // from either side of it.
+    spendEffects(dispatch, attacker, rolled.roller)
+    spendEffects(dispatch, target, rolled.target)
     const d20 = d20Group(result)
     const hits = attackHits(result, target)
     // A melee hit on a Paralyzed/Unconscious creature is an automatic critical hit.
@@ -576,7 +577,7 @@ function AttackResolver({
     else onClose()
   }
 
-  /** Add the chosen condition to the attack's target, keyed to the attacker as source. */
+  /** Add the chosen condition to the attack's target, keyed to whoever acted as source. */
   const applyCondition = (name: ConditionName, duration: EffectDuration) => {
     if (!attack) return
     flush()
@@ -585,10 +586,31 @@ function AttackResolver({
       id: attack.target.combatantId,
       update: (c) => ({
         ...c,
-        effects: [...c.effects, condition(name, { source: attacker?.combatantId, duration })],
+        effects: [...c.effects, condition(name, { source: sourceId, duration })],
       }),
     })
     setNote(`${name} → ${nameOf(attack.target)}`)
+  }
+
+  // A spell resolved by an attack roll leaves its modelled effect too — Guiding Bolt's
+  // advantage on the target, Flame Blade's reminder on the caster. Which of the two it
+  // lands on is the entry's own `targeting`, so a self-spell never marks the creature
+  // that was hit.
+  const spellEffect = spell ? spellEffectFor(spell) : null
+  const effectTarget =
+    spellEffect?.targeting === 'enemy' ? (attack?.target ?? null) : (caster ?? null)
+
+  /** Apply the spell's modelled effect to whoever it belongs on. */
+  const applySpellEffect = () => {
+    if (!spellEffect || !spell || !effectTarget) return
+    flush()
+    const effects = spellEffect.build({ source: sourceId, spell, target: effectTarget })
+    dispatch({
+      type: 'update',
+      id: effectTarget.combatantId,
+      update: (c) => ({ ...c, effects: [...c.effects, ...effects] }),
+    })
+    setNote(`${spell.name} → ${nameOf(effectTarget)}`)
   }
 
   /** Clear a condition off the target, so a lit chip is a toggle rather than a second copy. */
@@ -633,6 +655,7 @@ function AttackResolver({
               ? undefined
               : () => {
                   const check = rollConcentrationCheck(tgt, conc.damage)
+                  spendEffects(dispatch, tgt, check.combatant)
                   onRoll(`${nameOf(tgt)}: concentration`, check.roll, {
                     applied: check.applied,
                     sourceId: tgt.combatantId,
@@ -792,6 +815,23 @@ function AttackResolver({
         </div>
       )}
 
+      {attack && spellEffect && effectTarget && (
+        <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50/50 p-2 dark:border-indigo-900/60 dark:bg-indigo-900/10">
+          <Button
+            variant="primary"
+            onClick={applySpellEffect}
+            // A miss leaves nothing behind, but the GM decides that, exactly as they do
+            // for the damage beside it.
+            className={hit ? undefined : 'opacity-40 transition-opacity hover:opacity-100'}
+          >
+            Apply {spell!.name} to {nameOf(effectTarget)}
+          </Button>
+          <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+            {spellEffect.summary}
+          </span>
+        </div>
+      )}
+
       {attack && (
         <>
           <ConditionChips
@@ -799,7 +839,7 @@ function AttackResolver({
             onRemove={clearCondition}
             onApply={applyCondition}
             onExhaustion={applyExhaustion}
-            sourceName={attacker ? nameOf(attacker) : undefined}
+            sourceName={caster ? nameOf(caster) : undefined}
           />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
@@ -886,9 +926,12 @@ export function SaveResolver({
   const [pending, setPending] = useState<{ combatant: Combatant; dc: number; damage: number }[]>([])
   const [note, setNote] = useState<string | null>(null)
 
+  // Named for whoever acted, which for a spell a player cast is the caster rather than
+  // the attacker — they roll nothing, so the resolver never sees them as one.
+  const caster = attacker ?? combatants.find((c) => c.combatantId === casterId)
   const title = action
-    ? attacker
-      ? `${nameOf(attacker)} · ${action.name}`
+    ? caster
+      ? `${nameOf(caster)} · ${action.name}`
       : action.name
     : 'Group save'
   const selectedTargets = targets.filter((t) => selected.has(t.combatantId))
@@ -949,6 +992,7 @@ export function SaveResolver({
       { ability, dc: toNum(dc) || 10, onSave },
       { magicResistance: magical && hasMagicResistance(c) },
     )
+    spendEffects(dispatch, c, saveRoll.roller)
     // Held under this creature's id, so a reroll replaces its line. The outcome is
     // stamped by `setResult` and recorded when the modal closes — which is what keeps
     // Legendary Resistance from ever showing the table a "Failed" it then walks back.
@@ -1181,6 +1225,7 @@ export function SaveResolver({
                     ? undefined
                     : () => {
                         const check = rollConcentrationCheck(p.combatant, p.damage)
+                        spendEffects(dispatch, p.combatant, check.combatant)
                         onRoll(`${nameOf(p.combatant)}: concentration`, check.roll, {
                           applied: check.applied,
                           sourceId: p.combatant.combatantId,
@@ -1403,7 +1448,7 @@ export function SaveResolver({
             onRemove={clearCondition}
             onApply={applyCondition}
             onExhaustion={applyExhaustion}
-            sourceName={attacker ? nameOf(attacker) : undefined}
+            sourceName={caster ? nameOf(caster) : undefined}
           />
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>

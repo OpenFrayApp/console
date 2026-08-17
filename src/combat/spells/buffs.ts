@@ -4,11 +4,11 @@
 import type { Ability } from '../../schema/primitives.ts'
 import { condition, flatBonus, modifierEffect, reminder } from '../effects.ts'
 import {
-  CONSUME,
   MANUAL,
   dexModifier,
   is2024,
   timedDuration,
+  timedOrRoll,
   type SpellEffectTable,
 } from './shared.ts'
 
@@ -51,11 +51,11 @@ export const BUFF_SPELLS: SpellEffectTable = {
   resistance: {
     summary: '+1d4 to one saving throw',
     targeting: 'ally',
-    build: ({ source }) => [
+    build: ({ source, spell }) => [
       flatBonus('Resistance', '1d4', {
         source,
         applies: 'savingThrows',
-        duration: CONSUME,
+        duration: timedOrRoll(spell),
         note: '+1d4 to a saving throw',
       }),
     ],
@@ -367,11 +367,11 @@ export const BUFF_SPELLS: SpellEffectTable = {
   guidance: {
     summary: '+1d4 to one ability check',
     targeting: 'ally',
-    build: ({ source }) => [
+    build: ({ source, spell }) => [
       flatBonus('Guidance', '1d4', {
         source,
         applies: 'abilityChecks',
-        duration: CONSUME,
+        duration: timedOrRoll(spell),
         note: '+1d4 to an ability check',
       }),
     ],

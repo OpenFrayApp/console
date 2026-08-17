@@ -109,6 +109,31 @@ export function previousTurn(e: Encounter): Encounter {
   return e
 }
 
+/**
+ * Whether an effect is keyed to `id`'s turn at this moment. An `untilSourceTurn`
+ * effect names the turn in `source` and the moment in `when`; absent, the moment is
+ * the start — the 5e norm, and what every effect stored before the Apply effect box
+ * could name a turn meant.
+ */
+function endsOnTurn(e: Effect, id: string | undefined, when: 'startOfTurn' | 'endOfTurn'): boolean {
+  if (e.duration.type !== 'untilSourceTurn') return false
+  if (id === undefined || e.source !== id) return false
+  return (e.duration.when ?? 'startOfTurn') === when
+}
+
+/**
+ * Drop the effects keyed to `id`'s turn at `when`. The same combatant back when it
+ * carries none, so an untouched creature keeps its identity.
+ */
+function clearTurnEffects(
+  c: Combatant,
+  id: string | undefined,
+  when: 'startOfTurn' | 'endOfTurn',
+): Combatant {
+  if (!c.effects.some((e) => endsOnTurn(e, id, when))) return c
+  return { ...c, effects: c.effects.filter((e) => !endsOnTurn(e, id, when)) }
+}
+
 /** Tick `rounds`-duration effects down by one; drop those that reach zero. */
 function tickRoundsEffects(effects: Effect[]): Effect[] {
   return effects.flatMap((e) => {
@@ -138,12 +163,14 @@ function endTurn(c: Combatant): Combatant {
 
 /**
  * Advance to the next turn:
- *   1. end ticks for the ending creature
+ *   1. end ticks for the ending creature, and the `untilSourceTurn` effects keyed to
+ *      the *end* of its turn — those sit on whoever was affected, not on the creature
+ *      whose turn it is, so the sweep runs across every combatant
  *   2. advance past dead/down creatures (walking by index, identity-checked)
  *   3. round++ if the pointer wrapped past the end of the list
- *   4. start ticks: `untilSourceTurn` effects sourced by the newly-active
- *      creature resolve now — across every combatant, not just the active one
- *      (e.g. Reckless Attack advantage ends as the barbarian's turn begins).
+ *   4. start ticks: `untilSourceTurn` effects keyed to the newly-active creature's
+ *      turn starting resolve now — across every combatant again (e.g. Reckless Attack
+ *      advantage ends as the barbarian's turn begins).
  *
  * Deferred: lair actions on initiative count 20 and recharge rolls arrive with
  * later steps (both need resolution/randomness).
@@ -153,7 +180,10 @@ export function nextTurn(e: Encounter): Encounter {
   if (!e.combatants.some(takesTurn)) return e
 
   const endingId = e.combatants[e.activeIndex]?.combatantId
-  let combatants = e.combatants.map((c) => (c.combatantId === endingId ? endTurn(c) : c))
+  let combatants = e.combatants.map((c) => {
+    const cleared = clearTurnEffects(c, endingId, 'endOfTurn')
+    return cleared.combatantId === endingId ? endTurn(cleared) : cleared
+  })
 
   // The next taker in the remainder of this round.
   let index = -1
@@ -181,18 +211,16 @@ export function nextTurn(e: Encounter): Encounter {
   const activeId = combatants[index]?.combatantId
 
   combatants = combatants.map((c) => {
-    const effects = c.effects.filter(
-      (eff) => !(eff.duration.type === 'untilSourceTurn' && eff.source === activeId),
-    )
-    if (c.combatantId !== activeId) return { ...c, effects }
+    const cleared = clearTurnEffects(c, activeId, 'startOfTurn')
+    if (cleared.combatantId !== activeId) return cleared
     // The newly-active creature regains its reaction and ticks its concentration
     // timer at the start of its turn; concentration lapses when it reaches zero.
-    let concentration = c.concentration
+    let concentration = cleared.concentration
     if (concentration?.rounds != null) {
       const left = concentration.rounds - 1
       concentration = left <= 0 ? null : { ...concentration, rounds: left }
     }
-    return { ...c, effects, reactionUsed: false, concentration }
+    return { ...cleared, reactionUsed: false, concentration }
   })
 
   return { ...e, combatants, activeIndex: index, round }

@@ -8,7 +8,7 @@ import type { Encounter } from '../../src/schema/encounter.ts'
 import { applyDamage, effectiveMaxHp } from '../../src/combat/resources.ts'
 import { condition, counter, modifierEffect, reminder, setCount } from '../../src/combat/effects.ts'
 import { exhaustionLevel } from '../../src/combat/exhaustion.ts'
-import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
+import { emptyEncounter, encounterReducer, spendEffects } from '../../src/state/encounter.ts'
 import { onSharedBoard } from '../../src/combat/playerView.ts'
 
 function creature(): Creature {
@@ -657,5 +657,66 @@ describe('setExhaustion', () => {
     expect(encounterReducer(e, { type: 'setExhaustion', id: 'z', level: 1, edition: '5.5' })).toBe(
       e,
     )
+  })
+})
+
+describe('spendEffects', () => {
+  /** A dispatcher that folds each action into the encounter, so the board can be read back. */
+  const board = (start: Encounter) => {
+    let state = start
+    return {
+      dispatch: (action: Parameters<typeof encounterReducer>[1]) => {
+        state = encounterReducer(state, action)
+      },
+      get: () => state,
+    }
+  }
+
+  const bless = () =>
+    modifierEffect(
+      {
+        name: 'Bless',
+        mode: 'flatBonus',
+        direction: 'outgoing',
+        applies: 'savingThrows',
+        value: 1,
+      },
+      { duration: { type: 'rounds', rounds: 10, endsOnRoll: true } },
+    )
+
+  it('writes back the effects a roll spent', () => {
+    const before = { ...monster('a', 5), effects: [bless()] }
+    const { dispatch, get } = board(withCombatants(before))
+    // What rollWithEffects hands back: the same combatant, minus what the roll spent.
+    spendEffects(dispatch, before, { ...before, effects: [] })
+    expect(get().combatants[0].effects).toEqual([])
+  })
+
+  it('dispatches nothing when the roll spent nothing', () => {
+    const before = { ...monster('a', 5), effects: [bless()] }
+    const start = withCombatants(before)
+    const { dispatch, get } = board(start)
+    // The chokepoint returns the *same reference* when it removed nothing.
+    spendEffects(dispatch, before, before)
+    expect(get()).toBe(start)
+  })
+
+  it('carries nothing across but the effects, leaving the rest of the row alone', () => {
+    const before = { ...monster('a', 5), effects: [bless()] }
+    const { dispatch, get } = board(withCombatants(before))
+    // A concentration check hands back a combatant whose concentration was also broken;
+    // settling that is the caller's own job, so it must not ride along here.
+    spendEffects(dispatch, before, { ...before, effects: [], hp: { current: 1, max: 7, temp: 0 } })
+    const after = get().combatants[0]
+    expect(after.effects).toEqual([])
+    expect(after.hp.current).toBe(7)
+  })
+
+  it('does nothing without both sides', () => {
+    const start = withCombatants(monster('a', 5))
+    const { dispatch, get } = board(start)
+    spendEffects(dispatch, undefined, monster('a', 5))
+    spendEffects(dispatch, monster('a', 5), undefined)
+    expect(get()).toBe(start)
   })
 })

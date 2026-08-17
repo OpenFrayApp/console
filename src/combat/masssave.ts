@@ -34,6 +34,12 @@ export interface SaveRoll {
   result: SaveResult
   roll: RollResult
   applied: AppliedEffect[]
+  /**
+   * The roller with any effect this save spent removed — the same reference when it
+   * spent none. A caller holding board state must write this back, or an effect that
+   * ends on the roll it changes would fire for ever.
+   */
+  roller: Combatant
 }
 
 /** A creature's save bonus for an ability, or null for a PC (rolls their own). */
@@ -84,7 +90,7 @@ export function rollSave(
   if (bonus === null) {
     throw new Error(`Cannot auto-roll a save for PC "${c.combatantId}"; record the result manually`)
   }
-  const { result, applied } = rollWithEffects(`1d20${formatBonus(bonus)}`, {
+  const { result, applied, roller } = rollWithEffects(`1d20${formatBonus(bonus)}`, {
     roller: c,
     kind: 'save',
     ability: request.ability,
@@ -97,6 +103,7 @@ export function rollSave(
     result: result.total >= request.dc ? 'save' : 'fail',
     roll: result,
     applied,
+    roller: roller ?? c,
   }
 }
 

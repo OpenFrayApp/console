@@ -26,13 +26,21 @@ import { clampLevel } from '../combat/exhaustion.ts'
  * badge, cleared together. Counters always land on their own, whatever applied them.
  */
 
-/** The durations the modal offers. A preset can hold no duration the modal can't build. */
+/**
+ * The durations the modal offers. A preset can hold no duration the modal can't build.
+ * `startOfTurn` and `endOfTurn` are named for the `when` they set, so the two map
+ * across without a lookup.
+ */
 export type DurChoice =
-  'manual' | 'consume' | 'save' | 'custom' | '1r' | '1m' | '10m' | '1h' | '8h' | '24h'
+  'manual' | 'save' | 'startOfTurn' | 'endOfTurn' | 'custom' | '1m' | '10m' | '1h' | '8h' | '24h'
+
+/** The two choices keyed to a creature's turn rather than to the clock. */
+export function isTurnChoice(choice: DurChoice): choice is 'startOfTurn' | 'endOfTurn' {
+  return choice === 'startOfTurn' || choice === 'endOfTurn'
+}
 
 /** Timed durations in combat rounds (6s each), phrased the way spells are. */
 export const TIMED_ROUNDS: Partial<Record<DurChoice, number>> = {
-  '1r': 1,
   '1m': 10,
   '10m': 100,
   '1h': 600,
@@ -52,9 +60,9 @@ export const UNIT_ROUNDS: Record<CustomUnit, number> = {
 
 export const DURATION_OPTIONS: { value: DurChoice; label: string }[] = [
   { value: 'manual', label: 'Until removed' },
-  { value: 'consume', label: 'This turn / next attack' },
   { value: 'save', label: 'Save ends' },
-  { value: '1r', label: '1 round' },
+  { value: 'startOfTurn', label: 'Start of turn' },
+  { value: 'endOfTurn', label: 'End of turn' },
   { value: '1m', label: '1 minute' },
   { value: '10m', label: '10 minutes' },
   { value: '1h', label: '1 hour' },
@@ -90,6 +98,21 @@ export interface EffectDraft {
   /** Raw text so the field can be empty; `makeDuration` falls back to DC 10. */
   saveDc: string
   saveWhen: 'startOfTurn' | 'endOfTurn'
+  /**
+   * Whether the first roll the effect changes ends it early — Vicious Mockery's next
+   * attack, Guidance's next check. It rides on top of the duration above rather than
+   * replacing it, because the console never sees a player's own rolls: the duration is
+   * what guarantees the effect ends. Meaningless for `save`, where the roll that ends
+   * it is already the point, so the box isn't offered there.
+   */
+  endsOnRoll: boolean
+  /**
+   * For `startOfTurn`/`endOfTurn`: the combatantId whose turn ends the effect, which
+   * lands in the minted effect's `source`. Staged state, never saved — a preset
+   * outlives the fight whose combatants it would name, so one staged from a preset
+   * falls back to the creature being applied to.
+   */
+  turnOf: string
   /**
    * Named, the timed parts apply as one bundle: one badge reading this, cleared
    * together. Blank, each part lands as its own effect, as it always has.
@@ -135,6 +158,8 @@ export function emptyDraft(): EffectDraft {
     saveAbility: 'dex',
     saveDc: '',
     saveWhen: 'endOfTurn',
+    endsOnRoll: false,
+    turnOf: '',
     bundleName: '',
     conditions: [],
     modifiers: [],
@@ -182,9 +207,22 @@ function modifierSpec(m: ModifierDraft): {
   }
 }
 
-/** The duration the conditions, modifiers, and reminders share. */
+/**
+ * The duration the conditions, modifiers, and reminders share. A turn-keyed duration
+ * carries only the moment; the creature whose turn it is rides in the effect's
+ * `source`, so what a preset stores stays free of any one fight's combatants. The
+ * roll early-out rides on whatever lifetime comes out — it is never one on its own.
+ */
 export function draftDuration(draft: EffectDraft): EffectDuration {
-  if (draft.duration === 'consume') return { type: 'consumeOnRoll' }
+  const lifetime = draftLifetime(draft)
+  // A save-ends effect already ends on a roll; there is no second one to wait for.
+  if (!draft.endsOnRoll || lifetime.type === 'saveEnds') return lifetime
+  return { ...lifetime, endsOnRoll: true }
+}
+
+/** How long it lasts if no roll spends it first. */
+function draftLifetime(draft: EffectDraft): EffectDuration {
+  if (isTurnChoice(draft.duration)) return { type: 'untilSourceTurn', when: draft.duration }
   if (draft.duration === 'save')
     return {
       type: 'saveEnds',
@@ -235,12 +273,18 @@ export function draftEffects(draft: EffectDraft): Effect[] {
   const duration = draftDuration(draft)
   const name = draft.bundleName.trim()
   const bundle: EffectBundle | undefined = name ? { id: crypto.randomUUID(), name } : undefined
+  // Only a turn-keyed duration needs a source, and there it is the turn the effect
+  // ends on rather than a claim about who caused it. Nothing else the box builds
+  // carries one: a Game Master applying an effect by hand is not a caster.
+  const source =
+    duration.type === 'untilSourceTurn' && draft.turnOf !== '' ? draft.turnOf : undefined
   const out: Effect[] = []
   for (const part of draftParts(draft)) {
-    if (part.kind === 'condition') out.push(condition(part.condition, { duration, bundle }))
-    else if (part.kind === 'modifier') out.push(modifierEffect(part.modifier, { duration, bundle }))
+    if (part.kind === 'condition') out.push(condition(part.condition, { duration, bundle, source }))
+    else if (part.kind === 'modifier')
+      out.push(modifierEffect(part.modifier, { duration, bundle, source }))
     else if (part.kind === 'reminder')
-      out.push(reminder(part.note, part.note, { duration, bundle }))
+      out.push(reminder(part.note, part.note, { duration, bundle, source }))
     else if (part.kind === 'counter')
       out.push(counter(part.name, { count: part.start, gmOnly: part.gmOnly }))
     // An Exhaustion part mints nothing here: a level lands through its own action, which
@@ -269,8 +313,12 @@ export function bestUnit(rounds: number): { amount: number; unit: CustomUnit } {
 
 /** The duration choice that built an EffectDuration, for reading a preset back into the form. */
 function durationChoice(duration: EffectDuration): DurChoice {
-  if (duration.type === 'consumeOnRoll') return 'consume'
+  // The legacy consume-only shape was a roll with no lifetime behind it, which is what
+  // "Until removed" with the box ticked now says.
+  if (duration.type === 'consumeOnRoll') return 'manual'
   if (duration.type === 'saveEnds') return 'save'
+  if (duration.type === 'untilSourceTurn')
+    return duration.when === 'endOfTurn' ? 'endOfTurn' : 'startOfTurn'
   if (duration.type === 'rounds') {
     const match = (Object.keys(TIMED_ROUNDS) as DurChoice[]).find(
       (k) => TIMED_ROUNDS[k] === duration.rounds,
@@ -284,7 +332,9 @@ function durationChoice(duration: EffectDuration): DurChoice {
 /**
  * Stage a saved preset back into the form, ready to apply or adjust. An Exhaustion part
  * is a change, so it is staged against `exhaustionBase` — the level the creature is
- * already at — and clamped to the 0–6 the rules allow.
+ * already at — and clamped to the 0–6 the rules allow. A turn-keyed duration comes back
+ * with its moment but no `turnOf`: the combatant it named belonged to that fight, so the
+ * modal fills the anchor in from the board it is open on.
  */
 export function presetToDraft(preset: EffectPreset, exhaustionBase = 0): EffectDraft {
   const base = emptyDraft()
@@ -303,7 +353,9 @@ export function presetToDraft(preset: EffectPreset, exhaustionBase = 0): EffectD
     customUnit: custom ? custom.unit : base.customUnit,
     saveAbility: save?.ability ?? base.saveAbility,
     saveDc: save ? String(save.dc) : '',
-    saveWhen: preset.duration.when ?? base.saveWhen,
+    // `when` is read by two duration types now, so the save field only takes its own.
+    saveWhen: save ? (preset.duration.when ?? base.saveWhen) : base.saveWhen,
+    endsOnRoll: preset.duration.endsOnRoll === true || preset.duration.type === 'consumeOnRoll',
     bundleName: preset.name,
     conditions: preset.parts.flatMap((p) => (p.kind === 'condition' ? [p.condition] : [])),
     modifiers: preset.parts.flatMap((p) =>

@@ -203,6 +203,8 @@ export function CombatantControls({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <EffectModal
           name={name}
+          combatantId={id}
+          combatants={combatants}
           effects={combatant.effects}
           openRequest={openEffectRequest}
           onApply={addEffects}

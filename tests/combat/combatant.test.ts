@@ -6,8 +6,10 @@ import type { Combatant } from '../../src/schema/combatant.ts'
 import {
   acOf,
   autoLabel,
+  bySide,
   isAutoLabel,
   isFoe,
+  nameOf,
   resolveSelected,
   trackerOrder,
 } from '../../src/combat/combatant.ts'
@@ -142,6 +144,40 @@ describe('labels', () => {
   it('is not fooled by regex characters in a creature name', () => {
     expect(isAutoLabel('Bo.gle 2', 'Bo.gle')).toBe(true)
     expect(isAutoLabel('BoXgle 2', 'Bo.gle')).toBe(false)
+  })
+})
+
+describe('bySide', () => {
+  const c = (name: string, over: Partial<Combatant> = {}): Combatant =>
+    pc({ combatantId: name, name, ...over } as Partial<Extract<Combatant, { isPC: true }>>)
+
+  it('splits the board into allies and foes, each alphabetical', () => {
+    const list = [
+      c('Zara'),
+      c('Ogre', { side: 'foe' }),
+      c('Ambrose'),
+      c('Bugbear', { side: 'foe' }),
+    ]
+    const { allies, foes } = bySide(list)
+    expect(allies.map(nameOf)).toEqual(['Ambrose', 'Zara'])
+    expect(foes.map(nameOf)).toEqual(['Bugbear', 'Ogre'])
+  })
+
+  it('sorts a monster by its board label, so Goblin 2 follows Goblin 1', () => {
+    const goblin = (label: string): Combatant =>
+      ({ ...monster(), combatantId: label, label }) as unknown as Combatant
+    const { foes } = bySide([goblin('Goblin 2'), goblin('Goblin 1')])
+    expect(foes.map(nameOf)).toEqual(['Goblin 1', 'Goblin 2'])
+  })
+
+  it('leaves the list it was given alone', () => {
+    const list = [c('Zara'), c('Ambrose')]
+    bySide(list)
+    expect(list.map(nameOf)).toEqual(['Zara', 'Ambrose'])
+  })
+
+  it('gives back empty sides for an empty board', () => {
+    expect(bySide([])).toEqual({ allies: [], foes: [] })
   })
 })
 
