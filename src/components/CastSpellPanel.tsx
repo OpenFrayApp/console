@@ -3,6 +3,7 @@
 
 import { useCallback, useState } from 'react'
 import type { Combatant } from '../schema/combatant.ts'
+import { deriveSaveDc, deriveSpellAttack } from '../schema/pcStats.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterAction } from '../state/encounter.ts'
 import { landsOnCast, spellAction, spellConcentration } from '../combat/casting.ts'
@@ -28,6 +29,25 @@ const CASTER_GROUPS: { heading: string; members: (c: Combatant) => boolean }[] =
   { heading: 'Players and allies', members: (c) => !isFoe(c) },
   { heading: 'Creatures', members: isFoe },
 ]
+
+/**
+ * The spell attack bonus and save DC a caster brings to the resolver. A creature reads
+ * its own spellcasting block; a character derives both from the class, level and
+ * ability scores the Game Master transcribed (`src/schema/pcStats.ts`). Either can come
+ * back undefined — a martial class, a quick add, an anonymous character, a caster the
+ * GM hasn't named — and the resolver's field is the GM's to type in that case.
+ */
+function casterNumbers(caster: Combatant | undefined): { toHit?: number; saveDc?: number } {
+  if (!caster) return {}
+  if (!caster.isPC) {
+    const spellcasting = caster.creature.spellcasting
+    return { toHit: spellcasting?.toHit, saveDc: spellcasting?.saveDc }
+  }
+  return {
+    toHit: deriveSpellAttack(caster) ?? undefined,
+    saveDc: deriveSaveDc(caster) ?? undefined,
+  }
+}
 
 /**
  * Cast a spell from the compendium: roll its damage (scaled by the chosen level)
@@ -169,13 +189,15 @@ export function CastSpellPanel({
   }
 
   // An attack or save spell opens the same modal as a monster's action: a save
-  // spell → the mass-save modal, an attack spell → the attack modal. A chosen monster
-  // caster seeds the save DC / spell attack bonus from its spellcasting; otherwise the
-  // GM supplies them. Magical effect is pre-checked for saves.
-  const spellcasting = caster && !caster.isPC ? caster.creature.spellcasting : undefined
+  // spell → the mass-save modal, an attack spell → the attack modal. The caster seeds
+  // the save DC / spell attack bonus — a creature from its spellcasting block, a
+  // character from the class, level and ability scores the GM transcribed. Neither
+  // derives for a quick add or an anonymous character, and the field stays the GM's to
+  // type. Magical effect is pre-checked for saves.
+  const numbers = casterNumbers(caster)
   const action = isSupportSpell(spell)
     ? null
-    : spellAction(spell, { saveDc: spellcasting?.saveDc, toHit: spellcasting?.toHit })
+    : spellAction(spell, { saveDc: numbers.saveDc, toHit: numbers.toHit })
   if (action) {
     return (
       <ActionResolver

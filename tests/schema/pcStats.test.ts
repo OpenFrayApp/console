@@ -3,12 +3,17 @@
 
 import { describe, expect, it } from 'vitest'
 import type { AbilityScores } from '../../src/schema/primitives.ts'
+import type { PcClass } from '../../src/schema/combatant.ts'
 import {
   ARMOR,
   ARMOR_NAMES,
+  CASTING_ABILITY,
+  PC_CLASSES,
   classLabel,
   deriveAc,
   deriveInitiativeMod,
+  deriveSaveDc,
+  deriveSpellAttack,
   pcProficiencyBonus,
 } from '../../src/schema/pcStats.ts'
 
@@ -115,5 +120,64 @@ describe('classLabel', () => {
     expect(classLabel({ class: 'Monk' })).toBe('Monk')
     expect(classLabel({ level: 5 })).toBeNull()
     expect(classLabel({})).toBeNull()
+  })
+})
+
+describe('the spellcasting numbers', () => {
+  // The scores above give INT +0, WIS +1, CHA −1, which is what separates the classes
+  // below: a Wizard, a Cleric and a Bard of one level read three different abilities.
+  it('is proficiency plus the ability the class casts with', () => {
+    expect(deriveSpellAttack({ abilities: scores, class: 'Wizard', level: 1 })).toBe(2) // +2 INT +0
+    expect(deriveSpellAttack({ abilities: scores, class: 'Cleric', level: 1 })).toBe(3) // +2 WIS +1
+    expect(deriveSpellAttack({ abilities: scores, class: 'Bard', level: 1 })).toBe(1) // +2 CHA −1
+  })
+
+  it('puts the save DC 8 above the attack bonus', () => {
+    for (const cls of ['Wizard', 'Cleric', 'Bard', 'Warlock'] as const) {
+      const pc = { abilities: scores, class: cls, level: 7 }
+      expect(deriveSaveDc(pc)).toBe((deriveSpellAttack(pc) ?? 0) + 8)
+    }
+  })
+
+  it('climbs with the proficiency bonus, not with the class', () => {
+    const at = (level: number) => deriveSpellAttack({ abilities: scores, class: 'Cleric', level })
+    expect(at(4)).toBe(3) // +2
+    expect(at(5)).toBe(4) // +3
+    expect(at(17)).toBe(7) // +6
+  })
+
+  it('reads WIS for the three Wisdom casters and CHA for the four Charisma ones', () => {
+    const attack = (cls: PcClass) => deriveSpellAttack({ abilities: scores, class: cls, level: 1 })
+    for (const cls of ['Cleric', 'Druid', 'Ranger'] as const) expect(attack(cls), cls).toBe(3)
+    for (const cls of ['Bard', 'Paladin', 'Sorcerer', 'Warlock'] as const)
+      expect(attack(cls), cls).toBe(1)
+    expect(attack('Wizard')).toBe(2)
+  })
+
+  it('derives nothing for a class that casts through a subclass the board never sees', () => {
+    // A Fighter's Eldritch Knight or a Rogue's Arcane Trickster: one class is stored, no
+    // subclass, so the Game Master's typed number stands.
+    for (const cls of ['Barbarian', 'Fighter', 'Monk', 'Rogue'] as const) {
+      expect(deriveSpellAttack({ abilities: scores, class: cls, level: 10 }), cls).toBeNull()
+      expect(deriveSaveDc({ abilities: scores, class: cls, level: 10 }), cls).toBeNull()
+    }
+  })
+
+  it('derives nothing without every fact it needs — never a number short of proficiency', () => {
+    // The anonymous form collects none of these, which is why an anonymous character and
+    // a quick add always fall through to the typed field.
+    expect(deriveSpellAttack({ class: 'Wizard', level: 5 })).toBeNull() // no abilities
+    expect(deriveSpellAttack({ abilities: scores, level: 5 })).toBeNull() // no class
+    expect(deriveSpellAttack({ abilities: scores, class: 'Wizard' })).toBeNull() // no level
+    expect(deriveSpellAttack({})).toBeNull()
+    expect(deriveSaveDc({ abilities: scores, class: 'Wizard' })).toBeNull()
+  })
+
+  it('gives every class a verdict, so a new one can’t slip through unnoticed', () => {
+    for (const cls of PC_CLASSES) {
+      const derived = deriveSpellAttack({ abilities: scores, class: cls, level: 5 })
+      const casts = CASTING_ABILITY[cls] !== undefined
+      expect(derived === null, cls).toBe(!casts)
+    }
   })
 })

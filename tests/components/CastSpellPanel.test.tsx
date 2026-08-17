@@ -4,7 +4,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { MonsterCombatant } from '../../src/schema/combatant.ts'
+import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import type { Creature } from '../../src/schema/creature.ts'
 
@@ -288,5 +288,62 @@ describe('CastSpellPanel — who is casting', () => {
   it('falls back to no caster when the prefilled one has left the board', () => {
     openWith('gone')
     expect((screen.getByLabelText('Caster') as HTMLSelectElement).value).toBe('')
+  })
+})
+
+describe('CastSpellPanel — the caster’s numbers', () => {
+  /** A roster character with the three facts the spellcasting numbers derive from. */
+  const cleric = (over: Partial<PlayerCharacter> = {}): PlayerCharacter =>
+    ({
+      isPC: true,
+      kind: 'pc',
+      combatantId: 'p1',
+      name: 'Hexena',
+      class: 'Cleric',
+      level: 5,
+      abilities: { str: 10, dex: 12, con: 14, int: 10, wis: 18, cha: 8 },
+      ac: 18,
+      initiative: 0,
+      status: 'active',
+      hp: { current: 30, max: 30, temp: 0 },
+      concentration: null,
+      effects: [],
+      ...over,
+    }) as PlayerCharacter
+
+  /** Open the panel with this caster preselected and cast Fireball (a save spell). */
+  const castFireball = async (caster: PlayerCharacter) => {
+    render(
+      <CastSpellPanel
+        combatants={[caster, monster()]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onNote={vi.fn()}
+        defaultCasterId={caster.combatantId}
+      />,
+    )
+    fireEvent.click(screen.getByText('Cast spell'))
+    await waitFor(() => expect(screen.getByText('Fireball')).toBeTruthy())
+    fireEvent.click(screen.getByText('Fireball'))
+    return screen.getByLabelText('Save DC') as HTMLInputElement
+  }
+
+  it('seeds a character’s save DC from class, level and ability scores', async () => {
+    // Cleric 5: 8 + proficiency 3 + WIS +4 = 15.
+    expect((await castFireball(cleric())).value).toBe('15')
+  })
+
+  it('leaves the field to the GM when the sheet doesn’t say enough', async () => {
+    // No level, so no proficiency bonus — a number would be short by 2 to 6.
+    expect((await castFireball(cleric({ level: undefined }))).value).toBe('10')
+  })
+
+  it('leaves it to the GM for a class that casts through a subclass', async () => {
+    expect((await castFireball(cleric({ class: 'Rogue' }))).value).toBe('10')
+  })
+
+  it('leaves it to the GM for an anonymous character, which carries none of the facts', async () => {
+    const anon = cleric({ class: undefined, level: undefined, abilities: undefined })
+    expect((await castFireball(anon)).value).toBe('10')
   })
 })

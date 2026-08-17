@@ -61,15 +61,24 @@ it never models class/level/spells, derives a build, or runs what a character ca
 GM-entered defenses are a board consequence, "what damage this takes", not a sheet
 we read.
 
-**One deliberate carve-out (maintainer-decided 2026-08-03):** a
+**One deliberate carve-out (maintainer-decided 2026-08-03, widened 2026-08-17):** a
 signed-in roster character may also carry a **class, level, and the armor worn**, and
-exactly two numbers derive from them. Those are **armor class** (the SRD armor table,
-shield, magic enhancements, and the Barbarian/Monk unarmored formulas) and the
-**initiative modifier** (DEX, plus Jack of All Trades). Each sits behind an opt-in, with
-the GM's typed number always available instead. `src/schema/pcStats.ts` is the whole of it.
-This is still transcription plus a lookup, not a rules engine: nothing else may read
-class or level without the maintainer widening this carve-out explicitly, and the
-anonymous forms never gain these fields.
+exactly four numbers derive from them:
+
+- **armor class** — the SRD armor table, shield, magic enhancements, and the
+  Barbarian/Monk unarmored formulas;
+- the **initiative modifier** — DEX, plus Jack of All Trades;
+- the **spell attack bonus** and **spell save DC** — proficiency (from level) plus the
+  modifier of the ability the class casts with, and 8 + that. The four martial classes
+  cast through subclasses the board doesn't record, so they derive nothing, and neither
+  does a multiclass caster.
+
+Each sits behind an opt-in or falls back on its own, with the GM's typed number always
+available instead. `src/schema/pcStats.ts` is the whole of it. This is still
+transcription plus a lookup, not a rules engine: **nothing else may read class or level
+without the maintainer widening this carve-out again**, no derivation may guess (each
+returns null instead), and the anonymous forms never gain these fields — which is why an
+anonymous character or a quick add derives none of the four.
 
 If a feature is useful but fails the test, it is still a no. When a request tempts
 you toward "it should really _know_ X about the player," stop. That temptation is the
