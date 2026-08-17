@@ -69,8 +69,21 @@ describe('playerCodeError', () => {
 
 describe('playerCodeFromPath', () => {
   it('reads the code out of a player link', () => {
+    expect(playerCodeFromPath('/p/tuesday-game', '/console/')).toBe('tuesday-game')
+    expect(playerCodeFromPath('/p/tuesday-game/', '/console/')).toBe('tuesday-game')
+  })
+
+  // The form the existing /console/* fallback serves, which is what makes the link
+  // testable on the dev server and in a preview before the routing rule ships.
+  it('reads the same code under the app’s own base path', () => {
+    expect(playerCodeFromPath('/console/p/tuesday-game', '/console/')).toBe('tuesday-game')
+  })
+
+  // Anonymous codes live in localStorage and never reach the database, so a signed-out
+  // Game Master still holds the code they pasted somewhere durable before the move. This
+  // is what keeps that link working, without a redirect rule to carry.
+  it('still reads a link shared before the move to /p/', () => {
     expect(playerCodeFromPath('/console/play/tuesday-game', '/console/')).toBe('tuesday-game')
-    expect(playerCodeFromPath('/console/play/tuesday-game/', '/console/')).toBe('tuesday-game')
   })
 
   it('normalizes what it finds, so a shared link survives being retyped', () => {
@@ -81,7 +94,10 @@ describe('playerCodeFromPath', () => {
   it('is null for the console itself and for anything else', () => {
     expect(playerCodeFromPath('/console/', '/console/')).toBeNull()
     expect(playerCodeFromPath('/console/play/', '/console/')).toBeNull()
+    expect(playerCodeFromPath('/p/', '/console/')).toBeNull()
     expect(playerCodeFromPath('/', '/console/')).toBeNull()
     expect(playerCodeFromPath('/play/x', '/console/')).toBeNull()
+    // The other short namespace belongs to shared encounters, not to the table's board.
+    expect(playerCodeFromPath('/s/k7mqx3rt9p', '/console/')).toBeNull()
   })
 })
