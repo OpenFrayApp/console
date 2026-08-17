@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { roll } from '../dice/roll.ts'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
@@ -9,8 +9,25 @@ import { track, EVENTS } from '../lib/analytics.ts'
 const DICE = ['d20', 'd12', 'd10', 'd8', 'd6', 'd4']
 
 /** The manual / quick-roll bar — type a formula or tap a die. */
-export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
+export function QuickRoll({
+  onRoll,
+  focusRequest,
+  keyHint,
+}: {
+  onRoll: OnRoll
+  /** Bump to put the caret in the formula box — the keyboard's command. */
+  focusRequest?: number
+  /** The keyboard chord that focuses the box, shown in its tooltip. */
+  keyHint?: string
+}) {
   const [formula, setFormula] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  // A fresh mount starts at the current counter, so only a later bump focuses.
+  const [lastRequest, setLastRequest] = useState(focusRequest)
+  if (focusRequest !== lastRequest) {
+    setLastRequest(focusRequest)
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
 
   /** Roll the formula and log it; malformed input does nothing. Either way the box clears. */
   const submit = (input: string) => {
@@ -39,9 +56,11 @@ export function QuickRoll({ onRoll }: { onRoll: OnRoll }) {
         className="flex gap-1"
       >
         <input
+          ref={inputRef}
           value={formula}
           onChange={(e) => setFormula(e.target.value)}
           placeholder="2d6+3"
+          title={keyHint ? `Dice formula (${keyHint})` : undefined}
           aria-label="Dice formula"
           className="tap-y w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900"
         />

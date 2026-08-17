@@ -46,6 +46,8 @@ export function CastSpellPanel({
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
   librarySort = 'name',
+  openRequest,
+  keyHint,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
@@ -63,6 +65,10 @@ export function CastSpellPanel({
   showHomebrew?: boolean
   /** The compendium's sort setting — 'cr' lists by spell level. */
   librarySort?: LibrarySort
+  /** Bump to open the spell picker from outside — the keyboard's command. */
+  openRequest?: number
+  /** The keyboard chord, shown in the trigger's tooltip. */
+  keyHint?: string
 }) {
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
@@ -113,6 +119,8 @@ export function CastSpellPanel({
       <LibraryPicker
         label="Cast spell"
         disabled={combatants.length === 0}
+        openRequest={openRequest}
+        triggerTitle={keyHint ? `Cast spell (${keyHint})` : undefined}
         grow
         align="left"
         placeholder="Search spells…"

@@ -661,6 +661,7 @@ export function CreatureStatBlock({
   onRename,
   onHpInput,
   onTempInput,
+  hpEditRequest,
   onAction,
   rechargeState,
   onRecharge,
@@ -694,6 +695,8 @@ export function CreatureStatBlock({
   onRename?: (label: string) => void
   /** Edit current HP from a raw input ("12", "+5", "-3"). */
   onHpInput?: (raw: string) => void
+  /** Bump to begin editing the hit points from the keyboard. */
+  hpEditRequest?: number
   /** Edit temp HP from a raw input. */
   onTempInput?: (raw: string) => void
   /** Resolve an action (roll to-hit / save and apply damage). Combat only. */
@@ -794,7 +797,12 @@ export function CreatureStatBlock({
               value={hpValue}
               edit={
                 onHpInput
-                  ? { initial: '', onCommit: onHpInput, title: 'Set hit points, or type +5 or -8' }
+                  ? {
+                      initial: '',
+                      onCommit: onHpInput,
+                      title: 'Set hit points, or type +5 or -8',
+                      editRequest: hpEditRequest,
+                    }
                   : undefined
               }
             />

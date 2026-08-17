@@ -12,6 +12,14 @@ import { track, EVENTS } from '../lib/analytics.ts'
 import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
 import { Badge, CUSTOM_TONE, TabButton } from './ui.tsx'
+import { HotkeyField } from './HotkeyField.tsx'
+import {
+  COMMANDS,
+  commandForChord,
+  isReservedChord,
+  resolveHotkeys,
+  type HotkeyCommandId,
+} from '../state/hotkeys.ts'
 
 const SELECT =
   'rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
@@ -60,8 +68,11 @@ function ImporterLink({ href, children }: { href: string; children: string }) {
 const TABS = [
   { key: 'libraries', label: 'Libraries' },
   { key: 'player-view', label: 'Player view' },
+  { key: 'keyboard', label: 'Keyboard' },
   { key: 'importer', label: 'Importer' },
 ] as const
+
+const HOTKEY_CATEGORIES = [...new Set(COMMANDS.map((c) => c.category))]
 
 type SettingsTab = (typeof TABS)[number]['key']
 
@@ -81,6 +92,8 @@ export function SettingsPanel({
   onSetLibrarySort,
   playerView,
   onSetPlayerView,
+  hotkeys,
+  onSetHotkeys,
 }: {
   onClose: () => void
   enabledLibraries: string[]
@@ -91,8 +104,23 @@ export function SettingsPanel({
   onSetLibrarySort: (value: LibrarySort) => void
   playerView: PlayerViewSettings
   onSetPlayerView: (value: PlayerViewSettings) => void
+  /** Keyboard chord overrides, laid over the defaults; null unbinds a command. */
+  hotkeys: Partial<Record<HotkeyCommandId, string | null>>
+  onSetHotkeys: (value: Partial<Record<HotkeyCommandId, string | null>>) => void
 }) {
   const [tab, setTab] = useState<SettingsTab>('libraries')
+  const keymap = resolveHotkeys(hotkeys)
+
+  /** The refusal note for binding `chord` to `id`, or null when it's free to take. */
+  const refuseChord = (id: HotkeyCommandId, chord: string): string | null => {
+    if (isReservedChord(chord)) return 'The browser uses that one. Pick another key.'
+    const holder = commandForChord(keymap, chord)
+    if (holder && holder !== id) {
+      const label = COMMANDS.find((c) => c.id === holder)?.label ?? holder
+      return `Already used by ${label}. Pick another key.`
+    }
+    return null
+  }
 
   // Toggle a library; never drop the last one (an empty compendium is never useful).
   const toggleLibrary = (id: string) => {
@@ -106,7 +134,12 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+      className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950"
+    >
       <div className="mx-auto flex min-h-full max-w-lg flex-col px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
@@ -426,6 +459,48 @@ export function SettingsPanel({
                 </p>
               </div>
             </div>
+          </section>
+
+          <section
+            role="tabpanel"
+            aria-labelledby="settings-tab-keyboard"
+            hidden={tab !== 'keyboard'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
+            <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              Every command the keyboard can run, with the key it answers to. Change captures your
+              next keypress; keys the browser needs stay off limits.
+            </p>
+            <div className="space-y-4">
+              {HOTKEY_CATEGORIES.map((category) => (
+                <div key={category}>
+                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {category}
+                  </h4>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {COMMANDS.filter((c) => c.category === category).map((c) => (
+                      <HotkeyField
+                        key={c.id}
+                        label={c.label}
+                        value={keymap[c.id]}
+                        validate={(chord) => refuseChord(c.id, chord)}
+                        onChange={(chord) => onSetHotkeys({ ...hotkeys, [c.id]: chord })}
+                        onClear={() => onSetHotkeys({ ...hotkeys, [c.id]: null })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Put every shortcut back to its default?')) onSetHotkeys({})
+              }}
+              className="mt-4 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Restore defaults
+            </button>
           </section>
 
           <section

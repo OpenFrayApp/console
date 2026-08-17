@@ -13,6 +13,8 @@ interface StatEdit {
   initial: string
   onCommit: (value: string) => void
   title: string
+  /** Bump to begin editing from outside — the keyboard's damage command. */
+  editRequest?: number
 }
 
 /** A compact header stat: big value over a small uppercase label, optionally editable. */
@@ -33,6 +35,7 @@ export function HeaderStat({
             initial={edit.initial}
             onCommit={edit.onCommit}
             title={edit.title}
+            editRequest={edit.editRequest}
             inputMode="numeric"
             inputClassName="w-14 rounded border border-slate-300 bg-white px-1 text-center text-lg font-bold tabular-nums dark:border-slate-600 dark:bg-slate-800"
           >

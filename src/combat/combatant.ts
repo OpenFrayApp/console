@@ -28,6 +28,34 @@ export function nameOf(c: Combatant): string {
 }
 
 /**
+ * The tracker's rendered order, which is also what "next" and "previous" mean to a
+ * selection moved from the keyboard: in combat the living in initiative order with
+ * the dead grouped below; before combat players and allies, then creatures.
+ */
+export function trackerOrder(combatants: Combatant[], started: boolean): Combatant[] {
+  if (started) {
+    return [
+      ...combatants.filter((c) => c.status !== 'dead'),
+      ...combatants.filter((c) => c.status === 'dead'),
+    ]
+  }
+  return [...combatants.filter((c) => !isFoe(c)), ...combatants.filter((c) => isFoe(c))]
+}
+
+/** The combatant the console shows: the selection, else whoever's turn it is, else the first. */
+export function resolveSelected(
+  combatants: Combatant[],
+  selectedId: string | null,
+  activeId: string | undefined,
+): Combatant | undefined {
+  return (
+    combatants.find((c) => c.combatantId === selectedId) ??
+    combatants.find((c) => c.combatantId === activeId) ??
+    combatants[0]
+  )
+}
+
+/**
  * A combatant's armor class, effects included. A monster reads its stat block; a PC
  * reads the GM's number — or, for a roster character set to derive it, the live
  * derivation from class, abilities, and the armor currently worn, so donning and

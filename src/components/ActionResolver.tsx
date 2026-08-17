@@ -44,6 +44,7 @@ import { TargetChips } from './TargetChips.tsx'
 import { Button, Chip, Field, Select } from './ui.tsx'
 import type { OnRoll } from './GameLog.tsx'
 import { track, EVENTS } from '../lib/analytics.ts'
+import { useEnterCommit } from '../hooks/useEnterCommit.ts'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
@@ -1061,6 +1062,9 @@ export function SaveResolver({
     if (prompts.length > 0) setPending(prompts)
     else onClose()
   }
+
+  // Enter is the dialog's Save/Apply key; buttons and textareas keep their own.
+  useEnterCommit(true, apply)
 
   // Targets the effect lands on: those that failed (post-roll) or all selected (pre-roll).
   const affectedTargets = (): Combatant[] =>

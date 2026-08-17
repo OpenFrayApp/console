@@ -6,7 +6,14 @@ import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
-import { autoLabel, instantiate, isFoe, nameOf } from './combat/combatant.ts'
+import {
+  autoLabel,
+  instantiate,
+  isFoe,
+  nameOf,
+  resolveSelected,
+  trackerOrder,
+} from './combat/combatant.ts'
 import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
@@ -22,6 +29,10 @@ import { CampaignEditionContext, CampaignRulesContext } from './state/campaignRu
 import { emptyEncounter, encounterReducer, type NewLogEntry } from './state/encounter.ts'
 import { loadSession, saveSession, type View } from './state/persistence.ts'
 import { useTheme } from './hooks/useTheme.ts'
+import { useHotkeys } from './hooks/useHotkeys.ts'
+import { formatChord, resolveHotkeys, type HotkeyCommandId } from './state/hotkeys.ts'
+import { KeyboardHelp } from './components/KeyboardHelp.tsx'
+import { onSharedBoard } from './combat/playerView.ts'
 import {
   claimPlayerCode,
   loadCloudEncounter,
@@ -231,6 +242,31 @@ function App() {
     setPlayerViewState(value)
     saveSettings({ playerView: value })
   }
+  // Keyboard chord overrides, device-local like the theme. The resolved keymap
+  // drives the document listener, the cheat sheet, and every key hint.
+  const [hotkeys, setHotkeysState] = useState<Partial<Record<HotkeyCommandId, string | null>>>(
+    () => loadSettings().hotkeys,
+  )
+  /** Set the chord overrides and persist the choice to device-local settings. */
+  const setHotkeys = (value: Partial<Record<HotkeyCommandId, string | null>>) => {
+    setHotkeysState(value)
+    saveSettings({ hotkeys: value })
+  }
+  const keymap = useMemo(() => resolveHotkeys(hotkeys), [hotkeys])
+  const [helpOpen, setHelpOpen] = useState(false)
+  // Bump counters that open an already-mounted control from the keyboard; each
+  // consumer latches the value it mounted with, so only a later bump acts.
+  const [groupSaveRequest, setGroupSaveRequest] = useState(0)
+  const [castSpellRequest, setCastSpellRequest] = useState(0)
+  const [effectRequest, setEffectRequest] = useState(0)
+  const [hpEditRequest, setHpEditRequest] = useState(0)
+  const [quickAddRequest, setQuickAddRequest] = useState(0)
+  const [addPcRequest, setAddPcRequest] = useState(0)
+  const [addCreatureRequest, setAddCreatureRequest] = useState(0)
+  const [shortRestRequest, setShortRestRequest] = useState(0)
+  const [longRestRequest, setLongRestRequest] = useState(0)
+  const [concentrateRequest, setConcentrateRequest] = useState(0)
+  const [diceFocusRequest, setDiceFocusRequest] = useState(0)
   const [playerCode, setPlayerCode] = useState<string | null>(() => loadSettings().playerViewCode)
   // Sharing resumes after a reload and ends with the tab, which is what the session
   // snapshot already means — a refresh mid-fight shouldn't drop the table's screens.
@@ -924,6 +960,131 @@ function App() {
   const defaultCasterId =
     selectedId ?? (started ? encounter.combatants[encounter.activeIndex]?.combatantId : undefined)
 
+  // The combatant the console shows, which is what every selected-creature
+  // command acts on — the same resolution EncounterConsole renders.
+  const selectedCombatant = resolveSelected(
+    encounter.combatants,
+    selectedId,
+    started && !paused ? encounter.combatants[encounter.activeIndex]?.combatantId : undefined,
+  )
+
+  /** Move the tracker selection by one row, wrapping, in the order the GM sees. */
+  const selectRelative = (delta: 1 | -1) => {
+    const ordered = trackerOrder(encounter.combatants, started)
+    if (ordered.length === 0 || !selectedCombatant) return
+    const i = ordered.findIndex((c) => c.combatantId === selectedCombatant.combatantId)
+    const next = ordered[(i + delta + ordered.length) % ordered.length]
+    setSelectedId(next.combatantId)
+  }
+
+  // What each keyboard command does. Preconditions no-op silently; the turn and
+  // fight commands go through the same closures the buttons use, so recharges and
+  // save-ends automation ride along. The pane switches make the acted-on panel
+  // visible on the swipe shell and are inert everywhere else.
+  const hotkeyHandlers: Partial<Record<HotkeyCommandId, () => void>> = {
+    nextTurn: () => {
+      if (started) handleNextTurn()
+    },
+    prevTurn: () => {
+      if (started) dispatch({ type: 'prevTurn' })
+    },
+    startCombat: () => {
+      if (!started && view === 'encounter') handleBegin()
+    },
+    endFight: () => {
+      if (started) endCombat()
+    },
+    pauseResume: () => {
+      if (started) dispatch({ type: paused ? 'resume' : 'pause' })
+    },
+    selectNext: () => selectRelative(1),
+    selectPrev: () => selectRelative(-1),
+    damageSelected: () => {
+      if (view !== 'encounter' || !selectedCombatant) return
+      setMobilePane(1)
+      setHpEditRequest((n) => n + 1)
+    },
+    applyEffect: () => {
+      if (view !== 'encounter' || !selectedCombatant) return
+      setMobilePane(2)
+      setEffectRequest((n) => n + 1)
+    },
+    concentrate: () => {
+      if (view !== 'encounter' || !selectedCombatant) return
+      setMobilePane(2)
+      setConcentrateRequest((n) => n + 1)
+    },
+    toggleReaction: () => {
+      if (!selectedCombatant) return
+      dispatch({
+        type: 'update',
+        id: selectedCombatant.combatantId,
+        update: (c) => ({ ...c, reactionUsed: !c.reactionUsed }),
+      })
+    },
+    toggleHidden: () => {
+      if (!selectedCombatant) return
+      dispatch({
+        type: 'update',
+        id: selectedCombatant.combatantId,
+        update: (c) => ({ ...c, shared: onSharedBoard(c, started) ? 'hidden' : 'shown' }),
+      })
+    },
+    toggleAlly: () => {
+      if (!selectedCombatant) return
+      dispatch({
+        type: 'update',
+        id: selectedCombatant.combatantId,
+        update: (c) => ({ ...c, side: isFoe(c) ? 'friend' : 'foe' }),
+      })
+    },
+    removeSelected: () => {
+      if (selectedCombatant) dispatch({ type: 'remove', id: selectedCombatant.combatantId })
+    },
+    addCreature: () => {
+      if (view === 'encounter') setAddCreatureRequest((n) => n + 1)
+    },
+    addPc: () => {
+      if (view === 'encounter') setAddPcRequest((n) => n + 1)
+    },
+    quickAdd: () => {
+      if (view === 'encounter') setQuickAddRequest((n) => n + 1)
+    },
+    castSpell: () => {
+      if (view === 'encounter' && encounter.combatants.length > 0) setCastSpellRequest((n) => n + 1)
+    },
+    groupSave: () => {
+      if (view === 'encounter' && encounter.combatants.length > 0) setGroupSaveRequest((n) => n + 1)
+    },
+    shortRest: () => {
+      if (view === 'encounter' && !started) setShortRestRequest((n) => n + 1)
+    },
+    longRest: () => {
+      if (view === 'encounter' && !started) setLongRestRequest((n) => n + 1)
+    },
+    openLog: () => {
+      if (view === 'encounter') setLogOpen(true)
+    },
+    toggleCompendium: () => handleViewChange(view === 'compendium' ? 'encounter' : 'compendium'),
+    focusDice: () => {
+      if (view !== 'encounter') return
+      setMobilePane(2)
+      setDiceFocusRequest((n) => n + 1)
+    },
+    openSettings: () => {
+      track(EVENTS.settingsOpened)
+      setSettingsOpen(true)
+    },
+    showHotkeys: () => setHelpOpen(true),
+  }
+  useHotkeys(keymap, hotkeyHandlers)
+
+  /** The chord a command answers to, for its control's tooltip; undefined when unbound. */
+  const hint = (id: HotkeyCommandId): string | undefined => {
+    const chord = keymap[id]
+    return chord ? formatChord(chord) : undefined
+  }
+
   // The header's two button clusters, built once and rendered twice: in the desktop
   // header's own spots, and again in the phone header's single swipeable rail (only
   // one of the two is ever displayed, so the copies never fight over a popover).
@@ -933,10 +1094,20 @@ function App() {
         combatants={encounter.combatants}
         dispatch={dispatch}
         disabled={started}
+        shortRestRequest={shortRestRequest}
+        longRestRequest={longRestRequest}
+        shortHint={hint('shortRest')}
+        longHint={hint('longRest')}
         shortRests={encounter.shortRests ?? 0}
         showCounter={!!user}
       />
-      <MassSavePanel combatants={encounter.combatants} dispatch={dispatch} onRoll={pushRoll} />
+      <MassSavePanel
+        combatants={encounter.combatants}
+        dispatch={dispatch}
+        onRoll={pushRoll}
+        openRequest={groupSaveRequest}
+        keyHint={hint('groupSave')}
+      />
       <CastSpellPanel
         combatants={encounter.combatants}
         dispatch={dispatch}
@@ -944,6 +1115,8 @@ function App() {
         onNote={pushNote}
         round={encounter.round}
         defaultCasterId={defaultCasterId}
+        openRequest={castSpellRequest}
+        keyHint={hint('castSpell')}
         customSpells={customSpells}
         enabledLibraries={enabledLibraries}
         showHomebrew={showHomebrew}
@@ -960,6 +1133,8 @@ function App() {
   const addQuick = (o: AddOpts = {}) => (
     <AddQuickForm
       {...o}
+      openRequest={quickAddRequest}
+      keyHint={hint('quickAdd')}
       onAdd={(c) => {
         track(EVENTS.quickAdded)
         addCombatant(c)
@@ -970,6 +1145,8 @@ function App() {
     user ? (
       <AddPcPicker
         {...o}
+        openRequest={addPcRequest}
+        keyHint={hint('addPc')}
         rosterPcs={rosterPcs}
         campaigns={campaigns}
         onPick={handleAddPcToEncounter}
@@ -978,6 +1155,8 @@ function App() {
     ) : (
       <AddPcForm
         {...o}
+        openRequest={addPcRequest}
+        keyHint={hint('addPc')}
         onAdd={(c) => {
           track(EVENTS.pcAdded)
           addCombatant(c)
@@ -987,6 +1166,8 @@ function App() {
   const addCreature = (o: AddOpts = {}) => (
     <AddCreaturePicker
       {...o}
+      openRequest={addCreatureRequest}
+      keyHint={hint('addCreature')}
       onPick={handlePick}
       customCreatures={customCreatures}
       enabledLibraries={enabledLibraries}
@@ -1099,6 +1280,7 @@ function App() {
                   track(EVENTS.themeToggled)
                   toggleTheme()
                 }}
+                onShowHotkeys={() => setHelpOpen(true)}
                 onOpenSettings={() => {
                   track(EVENTS.settingsOpened)
                   setSettingsOpen(true)
@@ -1118,6 +1300,11 @@ function App() {
               onSetLibrarySort={setLibrarySort}
               playerView={playerView}
               onSetPlayerView={setPlayerView}
+              hotkeys={hotkeys}
+              onSetHotkeys={(value) => {
+                track(EVENTS.keybindingChanged)
+                setHotkeys(value)
+              }}
             />
           )}
 
@@ -1177,9 +1364,21 @@ function App() {
                 onSavePreset={userId ? handleCreatePreset : undefined}
                 pane={mobilePane}
                 onPaneChange={setMobilePane}
+                effectRequest={effectRequest}
+                hpEditRequest={hpEditRequest}
+                concentrateRequest={concentrateRequest}
+                keyHints={{
+                  next: hint('nextTurn'),
+                  prev: hint('prevTurn'),
+                  begin: hint('startCombat'),
+                  pause: hint('pauseResume'),
+                  stop: hint('endFight'),
+                }}
               />
             )}
           </main>
+
+          {helpOpen && <KeyboardHelp bindings={keymap} onClose={() => setHelpOpen(false)} />}
 
           {logOpen && (
             <GameLogModal
@@ -1258,7 +1457,11 @@ function App() {
               {/* On a phone the dice sit in the Controls screen instead of down here. */}
               {view === 'encounter' && (
                 <div className="hidden split:block wide:block">
-                  <QuickRoll onRoll={pushRoll} />
+                  <QuickRoll
+                    onRoll={pushRoll}
+                    focusRequest={diceFocusRequest}
+                    keyHint={hint('focusDice')}
+                  />
                 </div>
               )}
               {view === 'encounter' && user && (

@@ -22,6 +22,8 @@ export function AddCreaturePicker({
   closeOnPick = false,
   align = 'right',
   autoOpen = false,
+  openRequest,
+  keyHint,
   onClosed,
   hideTrigger = false,
 }: {
@@ -40,6 +42,10 @@ export function AddCreaturePicker({
   align?: 'left' | 'right'
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
+  /** Bump to open the already-mounted picker from outside — the keyboard's command. */
+  openRequest?: number
+  /** The keyboard chord, shown in the trigger's tooltip. */
+  keyHint?: string
   onClosed?: () => void
   /** Hide this control's own trigger — the Add menu keeps its button in the header. */
   hideTrigger?: boolean
@@ -66,6 +72,8 @@ export function AddCreaturePicker({
       onPick={onPick}
       closeOnPick={closeOnPick}
       autoOpen={autoOpen}
+      openRequest={openRequest}
+      triggerTitle={keyHint ? `Add creature (${keyHint})` : undefined}
       onClosed={onClosed}
       hideTrigger={hideTrigger}
     />

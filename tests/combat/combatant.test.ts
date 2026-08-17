@@ -3,7 +3,14 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Combatant } from '../../src/schema/combatant.ts'
-import { acOf, autoLabel, isAutoLabel, isFoe } from '../../src/combat/combatant.ts'
+import {
+  acOf,
+  autoLabel,
+  isAutoLabel,
+  isFoe,
+  resolveSelected,
+  trackerOrder,
+} from '../../src/combat/combatant.ts'
 import { modifierEffect } from '../../src/combat/effects.ts'
 
 const pc = (over: Partial<Extract<Combatant, { isPC: true }>> = {}): Combatant =>
@@ -135,5 +142,28 @@ describe('labels', () => {
   it('is not fooled by regex characters in a creature name', () => {
     expect(isAutoLabel('Bo.gle 2', 'Bo.gle')).toBe(true)
     expect(isAutoLabel('BoXgle 2', 'Bo.gle')).toBe(false)
+  })
+})
+
+describe('trackerOrder and resolveSelected', () => {
+  const c = (id: string, over: Partial<Combatant> = {}): Combatant =>
+    pc({ combatantId: id, name: id, ...over } as Partial<Extract<Combatant, { isPC: true }>>)
+
+  it('groups players before creatures until combat starts', () => {
+    const list = [c('foe1', { side: 'foe' }), c('ally'), c('foe2', { side: 'foe' })]
+    expect(trackerOrder(list, false).map((x) => x.combatantId)).toEqual(['ally', 'foe1', 'foe2'])
+  })
+
+  it('keeps the living in order and groups the dead below once started', () => {
+    const list = [c('a'), c('b', { status: 'dead' }), c('d')]
+    expect(trackerOrder(list, true).map((x) => x.combatantId)).toEqual(['a', 'd', 'b'])
+  })
+
+  it('resolves the selection, else the active, else the first', () => {
+    const list = [c('a'), c('b'), c('d')]
+    expect(resolveSelected(list, 'b', 'd')?.combatantId).toBe('b')
+    expect(resolveSelected(list, null, 'd')?.combatantId).toBe('d')
+    expect(resolveSelected(list, 'gone', undefined)?.combatantId).toBe('a')
+    expect(resolveSelected([], null, undefined)).toBeUndefined()
   })
 })

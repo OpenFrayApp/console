@@ -45,9 +45,14 @@ const NextTurnIcon = () => (
 export function TurnControls({
   dispatch,
   onNextTurn,
+  nextHint,
+  prevHint,
 }: {
   dispatch: (action: EncounterAction) => void
   onNextTurn?: () => void
+  /** The keyboard chords for the two steppers, shown in their tooltips. */
+  nextHint?: string
+  prevHint?: string
 }) {
   const grey =
     'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -56,7 +61,7 @@ export function TurnControls({
       <button
         type="button"
         aria-label="Previous turn"
-        title="Previous turn — steps the marker back; it doesn’t undo the turn’s effects"
+        title={`Previous turn${prevHint ? ` (${prevHint})` : ''} — steps the marker back; it doesn’t undo the turn’s effects`}
         onClick={() => dispatch({ type: 'prevTurn' })}
         className={`${ICON_BTN} ${grey}`}
       >
@@ -65,7 +70,7 @@ export function TurnControls({
       <button
         type="button"
         aria-label="Next turn"
-        title="Next turn"
+        title={nextHint ? `Next turn (${nextHint})` : 'Next turn'}
         onClick={onNextTurn ?? (() => dispatch({ type: 'nextTurn' }))}
         className={`${ICON_BTN} ${grey}`}
       >
@@ -189,6 +194,9 @@ export function EncounterPlayback({
   dispatch,
   onBegin,
   onStop,
+  beginHint,
+  pauseHint,
+  stopHint,
 }: {
   started: boolean
   paused: boolean
@@ -198,6 +206,10 @@ export function EncounterPlayback({
   onBegin?: () => void
   /** Override for stop so the caller can show the end-of-combat recap. */
   onStop?: () => void
+  /** The keyboard chords for begin, pause/resume, and stop, shown in the tooltips. */
+  beginHint?: string
+  pauseHint?: string
+  stopHint?: string
 }) {
   const begin = onBegin ?? (() => dispatch({ type: 'begin' }))
   const stop = onStop ?? (() => dispatch({ type: 'stop' }))
@@ -213,7 +225,7 @@ export function EncounterPlayback({
       <button
         type="button"
         aria-label="Begin"
-        title="Begin"
+        title={beginHint ? `Begin (${beginHint})` : 'Begin'}
         disabled={!canBegin}
         onClick={begin}
         className={`${ICON_BTN} ${green}`}
@@ -229,7 +241,7 @@ export function EncounterPlayback({
         <button
           type="button"
           aria-label="Resume"
-          title="Resume"
+          title={pauseHint ? `Resume (${pauseHint})` : 'Resume'}
           onClick={() => dispatch({ type: 'resume' })}
           className={`${ICON_BTN} ${green}`}
         >
@@ -239,7 +251,7 @@ export function EncounterPlayback({
         <button
           type="button"
           aria-label="Pause"
-          title="Pause"
+          title={pauseHint ? `Pause (${pauseHint})` : 'Pause'}
           onClick={() => dispatch({ type: 'pause' })}
           className={`${ICON_BTN} ${grey}`}
         >
@@ -249,7 +261,7 @@ export function EncounterPlayback({
       <button
         type="button"
         aria-label="Stop"
-        title="Stop"
+        title={stopHint ? `Stop (${stopHint})` : 'Stop'}
         onClick={stop}
         className={`${ICON_BTN} ${red}`}
       >

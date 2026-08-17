@@ -62,6 +62,8 @@ export function CombatantControls({
   presets,
   enabledLibraries,
   onSavePreset,
+  openEffectRequest,
+  concentrateRequest,
 }: {
   combatant: Combatant
   /** The rest of the board, to name whoever caused a source-relative effect. */
@@ -78,9 +80,24 @@ export function CombatantControls({
   enabledLibraries?: string[]
   /** Save what's staged as a preset; absent for an anonymous GM, who can't keep one. */
   onSavePreset?: (preset: EffectPreset) => void
+  /** Bump to open the Apply effect box — the keyboard's command, passed to the modal. */
+  openEffectRequest?: number
+  /** Bump to open the concentration form, or end concentration when it's running. */
+  concentrateRequest?: number
 }) {
   const [concInput, setConcInput] = useState<string | null>(null)
   const [concDur, setConcDur] = useState<number | null>(null)
+  // A fresh mount starts at the current counter, so only a later bump acts: the
+  // keyboard's Concentrate ends a running concentration, otherwise opens the form.
+  const [lastConcRequest, setLastConcRequest] = useState(concentrateRequest)
+  if (concentrateRequest !== lastConcRequest) {
+    setLastConcRequest(concentrateRequest)
+    if (combatant.concentration) {
+      setTimeout(() => dispatch({ type: 'endConcentration', id: combatant.combatantId }), 0)
+    } else if (concInput === null) {
+      setConcInput('')
+    }
+  }
   const id = combatant.combatantId
   const name = nameOf(combatant)
   const started = round > 0
@@ -187,6 +204,7 @@ export function CombatantControls({
         <EffectModal
           name={name}
           effects={combatant.effects}
+          openRequest={openEffectRequest}
           onApply={addEffects}
           onRemove={removeEffect}
           onSetExhaustion={setExhaustion}

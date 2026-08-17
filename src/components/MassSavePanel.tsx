@@ -16,12 +16,24 @@ export function MassSavePanel({
   combatants,
   dispatch,
   onRoll,
+  openRequest,
+  keyHint,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
+  /** Bump to open the group save from outside — the keyboard's command. */
+  openRequest?: number
+  /** The keyboard chord, shown in the button's tooltip. */
+  keyHint?: string
 }) {
   const [open, setOpen] = useState(false)
+  // A fresh mount starts at the current counter, so only a later bump opens it.
+  const [lastRequest, setLastRequest] = useState(openRequest)
+  if (openRequest !== lastRequest) {
+    setLastRequest(openRequest)
+    if (combatants.length > 0) setOpen(true)
+  }
 
   // The button stays while the modal is up. Returning the modal in its place took the
   // button out of the header, and the row it shares closed over the gap.
@@ -32,6 +44,7 @@ export function MassSavePanel({
         className="narrow:flex-1"
         onClick={() => setOpen(true)}
         disabled={combatants.length === 0}
+        title={keyHint ? `Group save (${keyHint})` : undefined}
       >
         Group save
       </Button>

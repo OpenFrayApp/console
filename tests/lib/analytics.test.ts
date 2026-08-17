@@ -79,6 +79,8 @@ describe('EVENTS', () => {
       librarySortChanged: 'Library sort changed',
       playerViewChanged: 'Player view setting changed',
       themeToggled: 'Theme toggled',
+      keyboardShortcutUsed: 'Keyboard shortcut used',
+      keybindingChanged: 'Keybinding changed',
       playerViewShared: 'Player view shared',
       playerViewStopped: 'Player view stopped',
       playerViewNamed: 'Player view named',

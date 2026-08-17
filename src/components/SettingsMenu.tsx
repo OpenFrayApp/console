@@ -53,6 +53,29 @@ function SlidersIcon() {
   )
 }
 
+/** A keyboard — the shortcut cheat sheet. */
+function KeyboardIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M6 10h.01" />
+      <path d="M10 10h.01" />
+      <path d="M14 10h.01" />
+      <path d="M18 10h.01" />
+      <path d="M7 14h10" />
+    </svg>
+  )
+}
+
 /** Question mark in a circle — the handbook. */
 function HelpIcon() {
   return (
@@ -133,10 +156,13 @@ export function SettingsMenu({
   theme,
   onToggleTheme,
   onOpenSettings,
+  onShowHotkeys,
 }: {
   theme: Theme
   onToggleTheme: () => void
   onOpenSettings: () => void
+  /** Open the keyboard cheat sheet — the same overlay Shift+/ shows. */
+  onShowHotkeys: () => void
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -169,6 +195,16 @@ export function SettingsMenu({
             }}
           >
             Settings
+          </Item>
+
+          <Item
+            icon={<KeyboardIcon />}
+            onClick={() => {
+              close()
+              onShowHotkeys()
+            }}
+          >
+            Keyboard shortcuts
           </Item>
 
           {/* The menu stays open: the whole app changes colour, and leaving the row

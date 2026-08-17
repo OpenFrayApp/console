@@ -176,6 +176,10 @@ export function RestControls({
   disabled,
   shortRests,
   showCounter,
+  shortRestRequest,
+  longRestRequest,
+  shortHint,
+  longHint,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
@@ -183,8 +187,21 @@ export function RestControls({
   disabled: boolean
   shortRests: number
   showCounter: boolean
+  /** Bump to open the short-rest box from outside — the keyboard's command. */
+  shortRestRequest?: number
+  /** Bump to offer the long rest (with its confirm) from outside — the keyboard's command. */
+  longRestRequest?: number
+  /** The keyboard chords for the two rests, shown in their tooltips. */
+  shortHint?: string
+  longHint?: string
 }) {
   const [open, setOpen] = useState(false)
+  // Fresh mounts start at the current counters, so only a later bump acts.
+  const [lastShortRequest, setLastShortRequest] = useState(shortRestRequest)
+  if (shortRestRequest !== lastShortRequest) {
+    setLastShortRequest(shortRestRequest)
+    if (!disabled) setOpen(true)
+  }
   const friendly = combatants.filter((c) => !isFoe(c))
   /** Confirm, then dispatch the long rest: friendlies to full HP, short-lived effects cleared. */
   const longRest = () => {
@@ -197,6 +214,12 @@ export function RestControls({
       track(EVENTS.longRest)
       dispatch({ type: 'longRest' })
     }
+  }
+
+  const [lastLongRequest, setLastLongRequest] = useState(longRestRequest)
+  if (longRestRequest !== lastLongRequest) {
+    setLastLongRequest(longRestRequest)
+    if (!disabled) setTimeout(longRest, 0)
   }
 
   /** Class string for one rest button cell; disabled swaps the hover styles for dimming. */
@@ -216,7 +239,7 @@ export function RestControls({
           onClick={() => setOpen(true)}
           disabled={disabled}
           aria-label="Short rest"
-          title="Short rest"
+          title={shortHint ? `Short rest (${shortHint})` : 'Short rest'}
           className={cell()}
         >
           <BonfireIcon />
@@ -226,7 +249,7 @@ export function RestControls({
           onClick={longRest}
           disabled={disabled}
           aria-label="Long rest"
-          title="Long rest"
+          title={longHint ? `Long rest (${longHint})` : 'Long rest'}
           className={cell('border-l border-slate-300 dark:border-slate-700')}
         >
           <TentIcon />

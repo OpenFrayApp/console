@@ -26,6 +26,7 @@ import { useCampaignEdition } from '../state/campaignRules.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { track as recordEvent, EVENTS } from '../lib/analytics.ts'
+import { useEnterCommit } from '../hooks/useEnterCommit.ts'
 
 // Ordered roughly by table frequency. Exhaustion isn't here — it carries a level, so
 // it gets its own control below rather than a toggle.
@@ -248,6 +249,7 @@ export function EffectModal({
   presets = [],
   enabledLibraries,
   onSavePreset,
+  openRequest,
 }: {
   name: string
   effects: Effect[]
@@ -262,6 +264,8 @@ export function EffectModal({
   enabledLibraries?: string[]
   /** Save what is staged as a new preset. Absent for anonymous GMs, who can't keep one. */
   onSavePreset?: (preset: EffectPreset) => void
+  /** Bump to open the box from outside, pre-seeded exactly as a click — the keyboard's command. */
+  openRequest?: number
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<EffectDraft>(emptyDraft)
@@ -286,6 +290,13 @@ export function EffectModal({
       exhaustionBase: currentExhaustion,
     })
     setOpen(true)
+  }
+
+  // A fresh mount starts at the current counter, so only a later bump opens it.
+  const [lastRequest, setLastRequest] = useState(openRequest)
+  if (openRequest !== lastRequest) {
+    setLastRequest(openRequest)
+    if (!open) openModal()
   }
 
   useEffect(() => {
@@ -344,6 +355,9 @@ export function EffectModal({
     if (draft.exhaustion !== currentExhaustion) onSetExhaustion(draft.exhaustion)
     setOpen(false)
   }
+
+  // Enter is the dialog's Save/Apply key; buttons and textareas keep their own.
+  useEnterCommit(open, apply)
 
   // Picking a preset replaces whatever was staged — the form reads as the preset,
   // not as a pile of them. The conditions the creature already has are kept, though:

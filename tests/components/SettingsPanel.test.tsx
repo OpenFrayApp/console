@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { SettingsPanel } from '../../src/components/SettingsPanel.tsx'
 import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../src/state/settings.ts'
+import type { HotkeyCommandId } from '../../src/state/hotkeys.ts'
 
 afterEach(cleanup)
 
@@ -15,12 +16,14 @@ function renderPanel(
     showHomebrew?: boolean
     librarySort?: 'name' | 'cr'
     playerView?: PlayerViewSettings
+    hotkeys?: Partial<Record<HotkeyCommandId, string | null>>
   } = {},
 ) {
   const onSetEnabledLibraries = vi.fn()
   const onSetShowHomebrew = vi.fn()
   const onSetLibrarySort = vi.fn()
   const onSetPlayerView = vi.fn()
+  const onSetHotkeys = vi.fn()
   render(
     <SettingsPanel
       onClose={() => {}}
@@ -32,9 +35,17 @@ function renderPanel(
       onSetLibrarySort={onSetLibrarySort}
       playerView={over.playerView ?? DEFAULT_PLAYER_VIEW}
       onSetPlayerView={onSetPlayerView}
+      hotkeys={over.hotkeys ?? {}}
+      onSetHotkeys={onSetHotkeys}
     />,
   )
-  return { onSetEnabledLibraries, onSetShowHomebrew, onSetLibrarySort, onSetPlayerView }
+  return {
+    onSetEnabledLibraries,
+    onSetShowHomebrew,
+    onSetLibrarySort,
+    onSetPlayerView,
+    onSetHotkeys,
+  }
 }
 
 /** Open one of the settings tabs by its label. */
@@ -161,5 +172,64 @@ describe('SettingsPanel', () => {
     expect(screen.getByLabelText('Creature hit points')).toBeVisible()
     expect(screen.getByLabelText('Sort by')).not.toBeVisible()
     expect(screen.getByRole('tab', { name: 'Libraries' })).toHaveAttribute('aria-selected', 'false')
+  })
+})
+
+describe('SettingsPanel — the keyboard', () => {
+  it('lists every command with its current key', () => {
+    renderPanel()
+    openTab('Keyboard')
+    expect(screen.getByText('Next turn')).toBeInTheDocument()
+    expect(screen.getByText('N')).toBeInTheDocument()
+    expect(screen.getByText('Ctrl+A')).toBeInTheDocument()
+    expect(screen.getByText('Shift+/')).toBeInTheDocument()
+  })
+
+  it('captures a keypress into a rebind', () => {
+    const { onSetHotkeys } = renderPanel()
+    openTab('Keyboard')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Change' })[0])
+    fireEvent.keyDown(window, { key: 't' })
+    expect(onSetHotkeys).toHaveBeenCalledWith({ nextTurn: 't' })
+  })
+
+  it('refuses a taken key, names the holder, and stays armed', () => {
+    const { onSetHotkeys } = renderPanel()
+    openTab('Keyboard')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Change' })[0])
+    fireEvent.keyDown(window, { key: 'p' })
+    expect(screen.getByText('Already used by Pause or resume. Pick another key.')).toBeVisible()
+    expect(onSetHotkeys).not.toHaveBeenCalled()
+    fireEvent.keyDown(window, { key: 't' })
+    expect(onSetHotkeys).toHaveBeenCalledWith({ nextTurn: 't' })
+  })
+
+  it('refuses a browser key and says so', () => {
+    const { onSetHotkeys } = renderPanel()
+    openTab('Keyboard')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Change' })[0])
+    fireEvent.keyDown(window, { key: 't', ctrlKey: true })
+    expect(screen.getByText('The browser uses that one. Pick another key.')).toBeVisible()
+    expect(onSetHotkeys).not.toHaveBeenCalled()
+  })
+
+  it('cancels the capture on Escape without committing', () => {
+    const { onSetHotkeys } = renderPanel()
+    openTab('Keyboard')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Change' })[0])
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onSetHotkeys).not.toHaveBeenCalled()
+    expect(screen.getAllByRole('button', { name: 'Change' }).length).toBeGreaterThan(0)
+  })
+
+  it('clears a binding and restores the defaults behind a confirm', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const { onSetHotkeys } = renderPanel({ hotkeys: { nextTurn: 't' } })
+    openTab('Keyboard')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear' })[0])
+    expect(onSetHotkeys).toHaveBeenCalledWith({ nextTurn: null })
+    fireEvent.click(screen.getByRole('button', { name: 'Restore defaults' }))
+    expect(onSetHotkeys).toHaveBeenCalledWith({})
+    confirm.mockRestore()
   })
 })

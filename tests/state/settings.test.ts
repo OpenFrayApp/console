@@ -111,3 +111,19 @@ describe('player-view settings', () => {
     expect(loadSettings().playerViewCode).toBe('abc123')
   })
 })
+
+describe('keyboard settings', () => {
+  it('starts with no overrides and round-trips a rebind and an unbind', () => {
+    expect(loadSettings().hotkeys).toEqual({})
+    saveSettings({ hotkeys: { nextTurn: 't', openLog: null } })
+    expect(loadSettings().hotkeys).toEqual({ nextTurn: 't', openLog: null })
+  })
+
+  it('drops what the grammar or the browser refuses from a stored blob', () => {
+    localStorage.setItem(
+      'openfray-settings',
+      JSON.stringify({ hotkeys: { nextTurn: 'ctrl+w', bogus: 'x', prevTurn: 'shift+q' } }),
+    )
+    expect(loadSettings().hotkeys).toEqual({ prevTurn: 'shift+q' })
+  })
+})

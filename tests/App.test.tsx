@@ -85,3 +85,51 @@ describe('App — when initiative reaches the log', () => {
     expect(logLines().some((t) => t?.includes('Thalia: initiative 17'))).toBe(true)
   })
 })
+
+describe('App — keyboard control', () => {
+  afterEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  it('opens Quick add on its chord and stays quiet while typing', () => {
+    render(<App />)
+    fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true })
+    const name = screen.getByLabelText('Quick add name')
+    expect(name).toBeInTheDocument()
+    // A letter typed into the popover's field is typing, not a command.
+    fireEvent.keyDown(name, { key: 'a', ctrlKey: true })
+    expect(screen.getAllByLabelText('Quick add name')).toHaveLength(1)
+  })
+
+  it('opens the cheat sheet on Shift+/ and closes it on Escape', () => {
+    render(<App />)
+    fireEvent.keyDown(document.body, { key: '?', shiftKey: true })
+    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).toBeNull()
+  })
+
+  it('advances the turn on n once the fight is running', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+    fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: 'Bandit' } })
+    fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+    expect(screen.getByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
+    fireEvent.keyDown(document.body, { key: 'n' })
+    // One combatant: next turn wraps back to it and the round advances.
+    expect(screen.getByRole('heading', { name: /Round 2/ })).toBeInTheDocument()
+  })
+
+  it('honors a rebound chord from the stored settings', () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { quickAdd: 'x' } }))
+    render(<App />)
+    fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true })
+    expect(screen.queryByLabelText('Quick add name')).toBeNull()
+    fireEvent.keyDown(document.body, { key: 'x' })
+    expect(screen.getByLabelText('Quick add name')).toBeInTheDocument()
+  })
+})

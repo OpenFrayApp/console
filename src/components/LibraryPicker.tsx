@@ -77,9 +77,11 @@ export function LibraryPicker<T extends LibraryEntry>({
   closeOnPick = true,
   children,
   autoOpen = false,
+  openRequest,
   onClosed,
   grow = false,
   hideTrigger = false,
+  triggerTitle,
 }: {
   label: string
   variant?: ButtonVariant
@@ -112,13 +114,23 @@ export function LibraryPicker<T extends LibraryEntry>({
   children?: ReactNode
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
+  /** Bump to open the already-mounted picker from outside — the keyboard's command. */
+  openRequest?: number
   onClosed?: () => void
   /** Take a share of the row's leftover width on a compact screen. */
   grow?: boolean
   /** Hide this control's own trigger — the Add menu keeps its button in the header. */
   hideTrigger?: boolean
+  /** Tooltip for the trigger button, e.g. the keyboard chord that opens it. */
+  triggerTitle?: string
 }) {
   const [open, setOpen] = useState(autoOpen)
+  // A fresh mount starts at the current counter, so only a later bump opens it.
+  const [lastRequest, setLastRequest] = useState(openRequest)
+  if (openRequest !== lastRequest) {
+    setLastRequest(openRequest)
+    if (!disabled) setOpen(true)
+  }
   const [query, setQuery] = useState('')
   // What this run of the picker has added, for the pickers that stay open on a pick.
   // Nothing else moves when they do: the list keeps its place, and on a phone the sheet
@@ -157,6 +169,7 @@ export function LibraryPicker<T extends LibraryEntry>({
         className={cx(grow && 'narrow:w-full', hideTrigger && 'hidden')}
         onClick={() => setOpen((o) => !o)}
         disabled={disabled}
+        title={triggerTitle}
       >
         {label}
       </Button>

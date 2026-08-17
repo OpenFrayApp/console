@@ -120,6 +120,7 @@ export function PcStatBlock({
   onRename,
   onHpInput,
   onTempInput,
+  hpEditRequest,
   onCheck,
   onEditDmNotes,
   footer,
@@ -150,6 +151,8 @@ export function PcStatBlock({
   onRename?: (name: string) => void
   onHpInput?: (raw: string) => void
   onTempInput?: (raw: string) => void
+  /** Bump to begin editing the hit points from the keyboard. */
+  hpEditRequest?: number
   /** Roll an ability check when a modifier is clicked. Combat only. */
   onCheck?: OnCheck
   onEditDmNotes?: (text: string) => void
@@ -192,7 +195,12 @@ export function PcStatBlock({
               value={hpValue}
               edit={
                 onHpInput
-                  ? { initial: '', onCommit: onHpInput, title: 'Set hit points, or type +5 or -8' }
+                  ? {
+                      initial: '',
+                      onCommit: onHpInput,
+                      title: 'Set hit points, or type +5 or -8',
+                      editRequest: hpEditRequest,
+                    }
                   : undefined
               }
             />

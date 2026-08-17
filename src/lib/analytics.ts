@@ -62,6 +62,8 @@ export const EVENTS = {
   librarySortChanged: 'Library sort changed',
   playerViewChanged: 'Player view setting changed',
   themeToggled: 'Theme toggled',
+  keyboardShortcutUsed: 'Keyboard shortcut used',
+  keybindingChanged: 'Keybinding changed',
   // Sharing the board with the table
   playerViewShared: 'Player view shared',
   playerViewStopped: 'Player view stopped',

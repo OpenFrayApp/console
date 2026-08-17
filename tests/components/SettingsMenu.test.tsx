@@ -13,11 +13,17 @@ afterEach(cleanup)
 function menu({ theme = 'dark' as Theme, open = true } = {}) {
   const onToggleTheme = vi.fn()
   const onOpenSettings = vi.fn()
+  const onShowHotkeys = vi.fn()
   render(
-    <SettingsMenu theme={theme} onToggleTheme={onToggleTheme} onOpenSettings={onOpenSettings} />,
+    <SettingsMenu
+      theme={theme}
+      onToggleTheme={onToggleTheme}
+      onOpenSettings={onOpenSettings}
+      onShowHotkeys={onShowHotkeys}
+    />,
   )
   if (open) fireEvent.click(screen.getByRole('button', { name: 'Settings and more' }))
-  return { onToggleTheme, onOpenSettings }
+  return { onToggleTheme, onOpenSettings, onShowHotkeys }
 }
 
 describe('SettingsMenu', () => {
@@ -77,6 +83,15 @@ describe('SettingsMenu', () => {
   it('closes on Escape', () => {
     menu()
     fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+})
+
+describe('SettingsMenu — keyboard shortcuts', () => {
+  it('opens the cheat sheet and closes the menu', () => {
+    const { onShowHotkeys } = menu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Keyboard shortcuts' }))
+    expect(onShowHotkeys).toHaveBeenCalledOnce()
     expect(screen.queryByRole('menu')).toBeNull()
   })
 })

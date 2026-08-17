@@ -19,7 +19,9 @@ export function AddPcPicker({
   onPick,
   onCreate,
   autoOpen = false,
+  openRequest,
   onClosed,
+  keyHint,
   hideTrigger = false,
 }: {
   rosterPcs: RosterPc[]
@@ -31,11 +33,21 @@ export function AddPcPicker({
   onCreate: () => void
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
+  /** Bump to open the already-mounted control from outside — the keyboard's command. */
+  openRequest?: number
   onClosed?: () => void
   /** Hide this control's own trigger — the Add menu keeps its button in the header. */
   hideTrigger?: boolean
+  /** The keyboard chord, shown in the trigger's tooltip. */
+  keyHint?: string
 }) {
   const [open, setOpen] = useState(autoOpen)
+  // A fresh mount starts at the current counter, so only a later bump opens it.
+  const [lastRequest, setLastRequest] = useState(openRequest)
+  if (openRequest !== lastRequest) {
+    setLastRequest(openRequest)
+    setOpen(true)
+  }
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => {
@@ -63,6 +75,7 @@ export function AddPcPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        title={keyHint ? `Add PC (${keyHint})` : undefined}
         className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
       >
         Add PC

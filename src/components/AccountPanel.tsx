@@ -63,7 +63,12 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Account"
+      className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950"
+    >
       <div className="mx-auto flex min-h-full max-w-lg flex-col px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <div>

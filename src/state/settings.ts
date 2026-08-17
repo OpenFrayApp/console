@@ -2,6 +2,8 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
+import { sanitizeHotkeys } from './hotkeys.ts'
+import type { HotkeyCommandId } from './hotkeys.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
 
 /**
@@ -83,6 +85,12 @@ export interface AppSettings {
    * theme rather than session state, so anonymous fights still never reach the database.
    */
   playerViewCode: string | null
+  /**
+   * Keyboard chord overrides, laid over the defaults in state/hotkeys.ts; `null`
+   * unbinds a command. A keyboard is a device property, so like the theme these
+   * never sync to the account.
+   */
+  hotkeys: Partial<Record<HotkeyCommandId, string | null>>
 }
 
 const KEY = 'openfray-settings'
@@ -135,6 +143,7 @@ export function loadSettings(): AppSettings {
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
+    hotkeys: sanitizeHotkeys(data.hotkeys),
   }
 }
 

@@ -13,6 +13,7 @@ export function EditableField({
   title,
   inputClassName,
   inputMode = 'text',
+  editRequest,
   children,
 }: {
   initial: string
@@ -20,10 +21,21 @@ export function EditableField({
   title: string
   inputClassName: string
   inputMode?: 'numeric' | 'text'
+  /** Bump to begin editing from outside, as if the field were clicked. */
+  editRequest?: number
   children: ReactNode
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initial)
+  // A fresh mount starts at the current counter, so only a later bump opens it.
+  const [lastRequest, setLastRequest] = useState(editRequest)
+  if (editRequest !== lastRequest) {
+    setLastRequest(editRequest)
+    if (!editing) {
+      setDraft(initial)
+      setEditing(true)
+    }
+  }
   if (editing) {
     /** Push the draft to `onCommit` and leave editing mode. */
     const commit = () => {

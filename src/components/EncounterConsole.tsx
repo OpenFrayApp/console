@@ -33,7 +33,7 @@ import { loadSrdSpells } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
 import { isRechargeable, rollRecharge } from '../combat/recharge.ts'
-import { acOf, isFoe } from '../combat/combatant.ts'
+import { acOf, isFoe, resolveSelected, trackerOrder } from '../combat/combatant.ts'
 import { heldBack } from '../combat/playerView.ts'
 import { rollWithEffects } from '../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../combat/concentration.ts'
@@ -99,6 +99,10 @@ export function EncounterConsole({
   onSavePreset,
   pane,
   onPaneChange,
+  effectRequest,
+  hpEditRequest,
+  concentrateRequest,
+  keyHints,
 }: {
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
@@ -133,15 +137,19 @@ export function EncounterConsole({
   pane: number
   /** A swipe settled on another screen. */
   onPaneChange: (pane: number) => void
+  /** Bump to open the Apply effect box for the selected combatant — the keyboard's e. */
+  effectRequest?: number
+  /** Bump to begin editing the selected combatant's hit points — the keyboard's d. */
+  hpEditRequest?: number
+  /** Bump to open (or end) concentration for the selected — the keyboard's command. */
+  concentrateRequest?: number
+  /** The keyboard chords for the turn and playback controls, shown in their tooltips. */
+  keyHints?: { next?: string; prev?: string; begin?: string; pause?: string; stop?: string }
 }) {
   const { combatants, activeIndex } = encounter
   const running = started && !paused
   const activeId = running ? combatants[activeIndex]?.combatantId : undefined
-  // Explicitly-selected combatant, else whoever's turn it is, else the first.
-  const selected =
-    combatants.find((c) => c.combatantId === selectedId) ??
-    combatants.find((c) => c.combatantId === activeId) ??
-    combatants[0]
+  const selected = resolveSelected(combatants, selectedId, activeId)
 
   // A concentration save owed after the selected combatant takes HP damage.
   const [concPrompt, setConcPrompt] = useState<{ id: string; dc: number; damage: number } | null>(
@@ -390,10 +398,13 @@ export function EncounterConsole({
     setDrag(null)
   }
   // Group by disposition, not isPC: a foe quick add belongs with the Creatures.
-  const players = view.filter((c) => !isFoe(c))
-  const creatures = view.filter((c) => isFoe(c))
-  const living = view.filter((c) => c.status !== 'dead')
-  const dead = view.filter((c) => c.status === 'dead')
+  // The groups partition trackerOrder, so the rows render in the same order a
+  // keyboard selection walks.
+  const ordered = trackerOrder(view, started)
+  const players = ordered.filter((c) => !isFoe(c))
+  const creatures = ordered.filter((c) => isFoe(c))
+  const living = ordered.filter((c) => c.status !== 'dead')
+  const dead = ordered.filter((c) => c.status === 'dead')
 
   // The three shell modes (see index.css). In `swipe` the grid becomes a scroll-snap
   // strip: each region is a full-width screen, swiped between like the D&D Beyond
@@ -417,7 +428,14 @@ export function EncounterConsole({
               <h2 className={COLUMN_HEADING}>
                 {`Round ${encounter.round}${paused ? ' · paused' : ''}`}
               </h2>
-              {!paused && <TurnControls dispatch={dispatch} onNextTurn={onNextTurn} />}
+              {!paused && (
+                <TurnControls
+                  dispatch={dispatch}
+                  onNextTurn={onNextTurn}
+                  nextHint={keyHints?.next}
+                  prevHint={keyHints?.prev}
+                />
+              )}
             </div>
           ) : (
             <EncounterCleanup
@@ -433,6 +451,9 @@ export function EncounterConsole({
             dispatch={dispatch}
             onBegin={onBegin}
             onStop={onStop}
+            beginHint={keyHints?.begin}
+            pauseHint={keyHints?.pause}
+            stopHint={keyHints?.stop}
           />
         </div>
         <div
@@ -520,6 +541,7 @@ export function EncounterConsole({
                 }}
                 onHpInput={(raw) => applyHpInput(selected, raw, false)}
                 onTempInput={(raw) => applyHpInput(selected, raw, true)}
+                hpEditRequest={hpEditRequest}
                 onEditDmNotes={
                   selected.rosterId && onEditPcDmNotes
                     ? (text) => onEditPcDmNotes(selected, text)
@@ -534,6 +556,7 @@ export function EncounterConsole({
                 <CreatureStatBlock
                   creature={selected.creature}
                   hp={{ ...selected.hp, max: effectiveMaxHp(selected) }}
+                  hpEditRequest={hpEditRequest}
                   liveAc={acOf(selected)}
                   liveSpeed={effectiveSpeeds(selected.creature.speed, selected.effects)}
                   concentration={selected.concentration}
@@ -633,6 +656,8 @@ export function EncounterConsole({
                 presets={presets}
                 enabledLibraries={enabledLibraries}
                 onSavePreset={onSavePreset}
+                openEffectRequest={effectRequest}
+                concentrateRequest={concentrateRequest}
               />
               {selected.isPC && selected.rosterId && onEditPc && (
                 <button

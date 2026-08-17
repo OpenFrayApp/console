@@ -118,7 +118,12 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Sign in"
+      className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950"
+    >
       <div className="mx-auto flex min-h-full max-w-5xl flex-col px-6 py-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
