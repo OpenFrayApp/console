@@ -14,6 +14,10 @@ import { Markdown } from './Markdown.tsx'
  * (its own prop because the label's capitals don't survive mid-sentence — "GM notes"
  * stays as it is, "Campaign notes" reads lowercase there), and `savedTo` is what the
  * tooltip says the note is kept on.
+ *
+ * These render with `links` on, which almost nothing else does: this is the Game Master's
+ * own prose on their own screen, and a note pointing at the map they drew should open it.
+ * Nothing here ever arrives from someone else — a shared encounter carries no notes.
  */
 export function GmNotes({
   value,
@@ -36,7 +40,7 @@ export function GmNotes({
     if (!value?.trim()) return null
     return (
       <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        <Markdown>{value}</Markdown>
+        <Markdown links>{value}</Markdown>
       </div>
     )
   }
@@ -74,7 +78,7 @@ export function GmNotes({
     >
       {value?.trim() ? (
         <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-          <Markdown>{value}</Markdown>
+          <Markdown links>{value}</Markdown>
         </div>
       ) : (
         <span className="text-sm italic text-slate-400 dark:text-slate-500">{`Add ${prompt}…`}</span>

@@ -426,24 +426,27 @@ describe('parseTemplate', () => {
     expect(Object.prototype.hasOwnProperty.call(kept, 'polluted')).toBe(false)
     expect(({} as Record<string, unknown>).polluted).toBeUndefined()
 
-    // Nested inside a field we do keep, it is refused rather than reached into: a stat block
-    // has no business carrying one, so there is nothing to salvage.
-    expect(
-      parseTemplate(
-        payload({
-          entries: [
-            {
-              creature: {
-                ...creature(),
-                speed: JSON.parse('{"walk":30,"__proto__":{"polluted":true}}'),
-              },
-              count: 1,
-              side: 'foe',
+    // Nested inside a field we do keep, it is dropped along with everything else the schema
+    // doesn't name — the whole structure is read key by known key, so there is nowhere for it
+    // to ride along. The encounter still opens, which is the better failure: an inner key
+    // nobody reads is no reason to withhold a cast.
+    const nested = parseTemplate(
+      payload({
+        entries: [
+          {
+            creature: {
+              ...creature(),
+              speed: JSON.parse('{"walk":30,"__proto__":{"polluted":true}}'),
             },
-          ],
-        }),
-      ).error,
-    ).toBeTruthy()
+            count: 1,
+            side: 'foe',
+          },
+        ],
+      }),
+    )
+    expect(nested.error).toBeUndefined()
+    expect(nested.template?.entries[0].creature?.speed).toEqual({ walk: 30 })
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
   })
 
   it('drops a formula the dice engine would refuse', () => {

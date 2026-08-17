@@ -13,6 +13,8 @@ import type { FetchedShare } from '../../src/state/shares.ts'
  */
 
 const share = vi.hoisted(() => ({ result: null as FetchedShare | null }))
+/** Which libraries the page decided its cast needs — see the spell-refs case at the foot. */
+const asked = vi.hoisted(() => ({ sources: [] as string[] }))
 
 vi.mock('../../src/state/shares.ts', () => ({
   fetchShare: () => Promise.resolve(share.result),
@@ -34,7 +36,10 @@ const GOBLIN = {
 }
 
 vi.mock('../../src/compendium/srd.ts', () => ({
-  loadLibraries: () => Promise.resolve({ creatures: [GOBLIN], spells: [] }),
+  loadLibraries: (sources: string[]) => {
+    asked.sources = [...sources]
+    return Promise.resolve({ creatures: [GOBLIN], spells: [] })
+  },
   sourceOfId: (id: string) => id.slice(0, id.indexOf(':')),
   loadSrdCreatures: () => Promise.resolve([GOBLIN]),
   loadSrdSpells: () => Promise.resolve([]),
@@ -45,6 +50,7 @@ const { SharedEncounterPage } = await import('../../src/components/SharedEncount
 afterEach(() => {
   cleanup()
   share.result = null
+  asked.sources = []
 })
 
 const encounter = (over: Record<string, unknown> = {}) => ({
@@ -144,5 +150,93 @@ describe('SharedEncounterPage', () => {
     expect(buttons.filter((b) => b.textContent === 'Add to my board')).toHaveLength(1)
     // The stat block renders read-only: no hit points to edit, no action to resolve.
     expect(screen.queryByLabelText(/hit points/i)).toBeNull()
+  })
+})
+
+/**
+ * The spell-coverage gate, read backwards.
+ *
+ * Forwards it says every spell the app *ships* has a verdict, because a missing one is
+ * otherwise invisible (`tests/combat/spellCoverage.test.ts`). Backwards the question is a
+ * different one: an embedded creature names spell refs, and the recipient may have no entry
+ * for them. That is deliberately still silent — nothing on this page casts anything, and on
+ * the board the cast modal already says "No compendium entry for this spell" rather than
+ * failing quietly.
+ *
+ * What was *not* deliberate is this: the page fetched only the libraries its `ref` entries
+ * named, and an embedded creature contributes none. A homebrew boss casting Fireball would
+ * therefore resolve nothing at all — not because the reader lacked the spell, but because
+ * the page never asked for the file it lives in.
+ */
+describe('SharedEncounterPage — the libraries a cast needs', () => {
+  const homebrew = (over: Record<string, unknown> = {}) => ({
+    id: 'custom:boss',
+    source: 'custom',
+    name: 'Ash Warden',
+    size: 'Large',
+    type: 'elemental',
+    ac: 16,
+    maxHp: 90,
+    speed: { walk: 30 },
+    abilities: { str: 18, dex: 12, con: 16, int: 10, wis: 14, cha: 10 },
+    senses: { passivePerception: 12 },
+    ...over,
+  })
+
+  it('asks for the library an embedded creature’s spells live in', async () => {
+    share.result = encounter({
+      entries: [
+        {
+          creature: homebrew({
+            spellcasting: {
+              groups: [
+                {
+                  usage: { type: 'perDay', per: 2 },
+                  spells: [{ name: 'Fireball', ref: 'srd-5.2:fireball' }],
+                },
+              ],
+            },
+          }),
+          count: 1,
+          side: 'foe',
+        },
+      ],
+    })
+    render(<SharedEncounterPage code="abc" onAdd={vi.fn()} />)
+    await screen.findAllByText('Ash Warden')
+    // Without this the cast is all homebrew, so nothing would be fetched and a spell the
+    // reader plainly has would show no card.
+    await waitFor(() => expect(asked.sources).toEqual(['srd-5.2']))
+  })
+
+  it('still asks for nothing when a homebrew cast names no spells at all', async () => {
+    share.result = encounter({ entries: [{ creature: homebrew(), count: 1, side: 'foe' }] })
+    render(<SharedEncounterPage code="abc" onAdd={vi.fn()} />)
+    await screen.findAllByText('Ash Warden')
+    // The whole point of the targeted loader: a public page doesn't pull five megabytes of
+    // compendium to draw one stat block it already carries.
+    await waitFor(() => expect(asked.sources).toEqual([]))
+  })
+
+  it('asks once for a library both a ref and an embedded spell name', async () => {
+    share.result = encounter({
+      entries: [
+        { ref: 'srd-5.2:goblin', count: 2, side: 'foe' },
+        {
+          creature: homebrew({
+            spellcasting: {
+              groups: [
+                { usage: { type: 'atWill' }, spells: [{ name: 'Light', ref: 'srd-5.2:light' }] },
+              ],
+            },
+          }),
+          count: 1,
+          side: 'foe',
+        },
+      ],
+    })
+    render(<SharedEncounterPage code="abc" onAdd={vi.fn()} />)
+    await screen.findAllByText('Ash Warden')
+    await waitFor(() => expect(asked.sources).toEqual(['srd-5.2']))
   })
 })

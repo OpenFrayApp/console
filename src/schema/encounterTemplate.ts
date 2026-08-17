@@ -77,10 +77,49 @@ export const TEMPLATE_LIMITS = {
    */
   publishBytes: 32 * 1024,
   /**
-   * How deep and how wide the structures inside an embedded creature may be. A stat block
-   * is a shallow thing; anything past this is either broken or trying something.
+   * What we're willing to *read*, in bytes of JSON, which is a separate question and the
+   * one that matters more.
+   *
+   * The column check bounds the row **as stored**, and jsonb is stored compressed: a
+   * payload of forty near-identical stat blocks compresses by three orders of magnitude, so
+   * a row that satisfies `pg_column_size(data) <= 65536` can be tens of megabytes once it is
+   * read back. Per-field caps don't bound that either — they bound each field, and the
+   * damage is in the total. This does, and it is set to the column's own number so anything
+   * our client published (32KB) has room to spare.
    */
-  depth: 12,
+  readBytes: 64 * 1024,
+  /**
+   * One embedded stat block, in bytes of JSON. The largest creature the app ships is under
+   * 8KB, so this is twice the worst real one — and it is the cap that stops a single entry,
+   * copied up to thirty times onto a board, from writing megabytes into the recipient's
+   * autosaved encounter.
+   */
+  creatureBytes: 16 * 1024,
+  /** Items in any list inside a stat block; the longest the app ships is fifteen. */
   arrayItems: 60,
-  textChars: 20_000,
+  /**
+   * A name, an id, or one line of a list inside a stat block — an action's name, a damage
+   * type, an entry in `languages`. Roomier than it looks like it needs to be because real
+   * stat blocks are: an immunity reads "Bludgeoning, piercing, and slashing from nonmagical
+   * weapons that aren't adamantine" at 82 characters, and an action's name carries its
+   * recharge clause. `creatureInput.test.ts` runs the whole shipped compendium through the
+   * door to keep this honest.
+   */
+  entryChars: 160,
+  /** One entry's prose. The longest shipped is about 2,200 characters. */
+  proseChars: 4000,
+  /** A dice formula. The longest shipped is eight characters; opendice's own cap is 1000. */
+  formulaChars: 100,
+  /**
+   * The ranges a stat-block number has to sit in to be one. These exist because these
+   * numbers are pasted into dice formulas and counted down in the UI, not because the app
+   * has an opinion about how strong a monster may be — see `projectCreature`.
+   */
+  bonus: 99,
+  dc: 99,
+  ac: 99,
+  hp: 9999,
+  uses: 99,
+  score: 99,
+  feet: 9999,
 } as const

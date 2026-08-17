@@ -97,8 +97,20 @@ export function SharedEncounterPage({
       setStatus({ state: 'ok', template })
       setReading(template.note ? { kind: 'note' } : { kind: 'creature', index: 0 })
 
+      // Which libraries this cast actually needs — the sources its refs name, plus the ones
+      // an embedded creature's spells name. That second half is easy to forget and reads as
+      // a coverage gap when it bites: a homebrew boss that casts Fireball contributes no
+      // source of its own, so an all-homebrew cast used to fetch nothing at all and show no
+      // spell cards for spells the reader plainly has.
       const sources = [
-        ...new Set(template.entries.flatMap((e) => (e.ref ? [sourceOfId(e.ref)] : []))),
+        ...new Set(
+          template.entries.flatMap((e) => [
+            ...(e.ref ? [sourceOfId(e.ref)] : []),
+            ...(e.creature?.spellcasting?.groups ?? []).flatMap((g) =>
+              g.spells.flatMap((s) => (s.ref ? [sourceOfId(s.ref)] : [])),
+            ),
+          ]),
+        ),
       ]
       const library = await loadLibraries(sources)
       if (!active) return
