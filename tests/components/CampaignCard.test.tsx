@@ -53,3 +53,80 @@ describe('CampaignCard', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('the campaign notes', () => {
+  /** The card with notes editable — what a signed-in Game Master sees. */
+  const editable = (over: Partial<Campaign> = {}, onEditNotes = vi.fn()) => {
+    render(
+      <CampaignCard
+        campaign={{ ...campaign, ...over }}
+        onEdit={() => {}}
+        onEditNotes={onEditNotes}
+        onDelete={() => {}}
+      />,
+    )
+    return onEditNotes
+  }
+
+  it('edits inline and commits on blur, without opening the form', () => {
+    const onEdit = vi.fn()
+    const onEditNotes = vi.fn()
+    render(
+      <CampaignCard
+        campaign={{ ...campaign, notes: 'Old note' }}
+        onEdit={onEdit}
+        onEditNotes={onEditNotes}
+        onDelete={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByTitle(/Click to edit/))
+    const textarea = screen.getByLabelText('Campaign notes')
+    fireEvent.change(textarea, { target: { value: 'The burgomaster is lying' } })
+    fireEvent.blur(textarea)
+    expect(onEditNotes).toHaveBeenCalledWith('The burgomaster is lying')
+    // The form never opened — the whole point of editing it here.
+    expect(onEdit).not.toHaveBeenCalled()
+  })
+
+  it('prompts when empty, in the middle of a sentence', () => {
+    editable()
+    expect(screen.getByText('Add campaign notes…')).toBeInTheDocument()
+  })
+
+  it('says the note is kept on the campaign', () => {
+    editable({ notes: 'A note' })
+    expect(screen.getByTitle('Click to edit — saved to this campaign')).toBeInTheDocument()
+  })
+
+  it('renders the notes as markdown', () => {
+    editable({ notes: 'Beware **Strahd**' })
+    expect(screen.getByText('Strahd').tagName).toBe('STRONG')
+  })
+
+  it('reads the notes back without offering to edit them for a viewer who cannot', () => {
+    render(
+      <CampaignCard
+        campaign={{ ...campaign, notes: 'Read only' }}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />,
+    )
+    expect(screen.getByText('Read only')).toBeInTheDocument()
+    expect(screen.queryByTitle(/Click to edit/)).toBeNull()
+  })
+
+  it('leaves the section out entirely when there is nothing to show or edit', () => {
+    render(<CampaignCard campaign={campaign} onEdit={() => {}} onDelete={() => {}} />)
+    expect(screen.queryByText('Campaign notes')).toBeNull()
+  })
+
+  it('keeps an escaped edit from committing', () => {
+    const onEditNotes = editable({ notes: 'Keep me' })
+    fireEvent.click(screen.getByTitle(/Click to edit/))
+    const textarea = screen.getByLabelText('Campaign notes')
+    fireEvent.change(textarea, { target: { value: 'discard this' } })
+    fireEvent.keyDown(textarea, { key: 'Escape' })
+    expect(onEditNotes).not.toHaveBeenCalled()
+    expect(screen.getByText('Keep me')).toBeInTheDocument()
+  })
+})

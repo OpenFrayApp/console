@@ -718,6 +718,10 @@ export function Compendium({
           <CampaignCard
             campaign={selectedCampaign}
             onEdit={() => setCampaignForm({ campaign: selectedCampaign })}
+            onEditNotes={
+              onUpdateCampaign &&
+              ((text) => onUpdateCampaign({ ...selectedCampaign, notes: text || undefined }))
+            }
             onDelete={() => removeCampaign(selectedCampaign)}
           />
         ) : selectedPc ? (

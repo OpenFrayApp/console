@@ -65,6 +65,13 @@ The console runs on a phone, answers to the keyboard, and knows when an effect e
   class, level and ability scores you transcribed. A class that casts through a subclass,
   a multiclass caster, and an anonymous character all leave the field to you, as before.
 
+### Campaigns
+
+- A campaign carries **notes** — markdown, private to you, for the threads and hooks that
+  aren't house rules. They sit in the campaign form and on the campaign card, where you
+  can write them without opening the form: click, type, click away. The same notes a
+  character has had, on the game itself.
+
 ### Smaller things
 
 - A condition chip in a resolver reads as a state: lit when the target has it, and

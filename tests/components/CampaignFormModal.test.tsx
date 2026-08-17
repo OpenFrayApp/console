@@ -69,4 +69,41 @@ describe('CampaignFormModal', () => {
     fireEvent.submit(screen.getByRole('dialog'))
     expect(onSubmit).not.toHaveBeenCalled()
   })
+
+  it('saves the campaign notes typed into the form', () => {
+    const onSubmit = vi.fn()
+    render(<CampaignFormModal open onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('Campaign name'), { target: { value: 'Barovia' } })
+    fireEvent.change(screen.getByLabelText('Campaign notes'), {
+      target: { value: 'The **burgomaster** is lying' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }))
+    expect((onSubmit.mock.calls[0][0] as Campaign).notes).toBe('The **burgomaster** is lying')
+  })
+
+  it('seeds the notes from the campaign being edited, and keeps them on save', () => {
+    const campaign: Campaign = { id: 'c1', name: 'Barovia', edition: '5.5', notes: 'Old note' }
+    const onSubmit = vi.fn()
+    render(<CampaignFormModal open campaign={campaign} onClose={() => {}} onSubmit={onSubmit} />)
+    expect((screen.getByLabelText('Campaign notes') as HTMLTextAreaElement).value).toBe('Old note')
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect((onSubmit.mock.calls[0][0] as Campaign).notes).toBe('Old note')
+  })
+
+  it('drops emptied notes rather than storing a blank', () => {
+    const campaign: Campaign = { id: 'c1', name: 'Barovia', edition: '5.5', notes: 'Old note' }
+    const onSubmit = vi.fn()
+    render(<CampaignFormModal open campaign={campaign} onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('Campaign notes'), { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect((onSubmit.mock.calls[0][0] as Campaign).notes).toBeUndefined()
+  })
+
+  it('leaves the notes off a campaign that never had any', () => {
+    const onSubmit = vi.fn()
+    render(<CampaignFormModal open onClose={() => {}} onSubmit={onSubmit} />)
+    fireEvent.change(screen.getByLabelText('Campaign name'), { target: { value: 'Barovia' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }))
+    expect((onSubmit.mock.calls[0][0] as Campaign).notes).toBeUndefined()
+  })
 })

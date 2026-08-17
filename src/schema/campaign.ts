@@ -71,4 +71,10 @@ export interface Campaign {
   edition: Edition
   /** House rules; optional for back-compat (fall back to DEFAULT_CAMPAIGN_RULES). */
   rules?: CampaignRules
+  /**
+   * The Game Master's private notes on the game — the campaign's counterpart to a
+   * character's `dmNotes`, written in markdown and never shown to the table. Nothing
+   * derives from it; it is a scratchpad the console keeps beside the house rules.
+   */
+  notes?: string
 }
