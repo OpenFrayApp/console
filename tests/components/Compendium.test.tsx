@@ -359,4 +359,155 @@ describe('Compendium', () => {
     expect(onGated).toHaveBeenCalled()
     expect(onCreateCampaign).not.toHaveBeenCalled()
   })
+
+  describe('the encounters tab', () => {
+    const FIGHTS = {
+      status: 'ok' as const,
+      fights: [
+        {
+          id: 'row-1',
+          name: 'Goblin ambush',
+          campaignId: 'camp-1',
+          savedAt: '2026-08-11T20:00:00.000Z',
+        },
+      ],
+    }
+
+    /** A saved board: two goblins, a named one, an ally and a player character. */
+    const savedBoard = {
+      encounterId: 'e',
+      ownerId: 'u',
+      round: 3,
+      activeIndex: 0,
+      log: [],
+      combatants: [
+        {
+          isPC: false,
+          combatantId: 'a',
+          creatureId: 'c1',
+          creature: { id: 'c1', name: 'Goblin' },
+          label: 'Goblin',
+          initiative: 0,
+          status: 'active',
+          hp: { current: 4, max: 10, temp: 0 },
+          effects: [],
+          concentration: null,
+        },
+        {
+          isPC: false,
+          combatantId: 'b',
+          creatureId: 'c1',
+          creature: { id: 'c1', name: 'Goblin' },
+          label: 'Goblin 2',
+          initiative: 0,
+          status: 'active',
+          hp: { current: 10, max: 10, temp: 0 },
+          effects: [],
+          concentration: null,
+        },
+        {
+          isPC: false,
+          combatantId: 'c',
+          creatureId: 'c1',
+          creature: { id: 'c1', name: 'Goblin' },
+          label: 'Snik',
+          side: 'friend',
+          initiative: 0,
+          status: 'active',
+          hp: { current: 10, max: 10, temp: 0 },
+          effects: [],
+          concentration: null,
+        },
+        {
+          isPC: true,
+          kind: 'pc',
+          combatantId: 'd',
+          name: 'Astra',
+          ac: 16,
+          initiative: 0,
+          status: 'active',
+          hp: { current: 20, max: 20, temp: 0 },
+          effects: [],
+          concentration: null,
+        },
+      ],
+    }
+
+    const renderTab = (props: Record<string, unknown> = {}) =>
+      render(
+        <Compendium
+          onCreateCreature={() => {}}
+          campaigns={[{ id: 'camp-1', name: 'The Waking Garden', edition: '5.5' }]}
+          savedFights={FIGHTS}
+          onLoadFight={vi.fn().mockResolvedValue(savedBoard)}
+          {...props}
+        />,
+      )
+
+    it('lists saved encounters and reads the board only when one is opened', async () => {
+      const onLoadFight = vi.fn().mockResolvedValue(savedBoard)
+      renderTab({ onLoadFight })
+      await waitFor(() => screen.getByText('Goblin'))
+      fireEvent.click(screen.getByText('Encounters'))
+
+      // The list draws from the summary alone — no blob fetched yet.
+      expect(screen.getByText('Goblin ambush')).toBeInTheDocument()
+      expect(onLoadFight).not.toHaveBeenCalled()
+
+      fireEvent.click(screen.getByText('Goblin ambush'))
+      await waitFor(() => expect(onLoadFight).toHaveBeenCalledWith('row-1'))
+    })
+
+    it('reads the cast back grouped, with the party kept separate', async () => {
+      renderTab()
+      await waitFor(() => screen.getByText('Goblin'))
+      fireEvent.click(screen.getByText('Encounters'))
+      fireEvent.click(screen.getByText('Goblin ambush'))
+
+      // Two plain goblins are one line with a count; the renamed one is its own.
+      await waitFor(() => expect(screen.getByText(/×2/)).toBeInTheDocument())
+      expect(screen.getByText('Snik')).toBeInTheDocument()
+      expect(screen.getByText('Astra')).toBeInTheDocument()
+      // One line: campaign, date, and where the fight had got to.
+      expect(screen.getByText(/The Waking Garden · .* · saved on round 3/)).toBeInTheDocument()
+    })
+
+    it('confirms before restoring, and before deleting', async () => {
+      const onRestoreFight = vi.fn().mockResolvedValue(true)
+      const onDeleteFight = vi.fn()
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      renderTab({ onRestoreFight, onDeleteFight })
+      await waitFor(() => screen.getByText('Goblin'))
+      fireEvent.click(screen.getByText('Encounters'))
+      fireEvent.click(screen.getByText('Goblin ambush'))
+      await waitFor(() => screen.getByRole('button', { name: 'Restore' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
+      expect(onRestoreFight).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+      expect(onDeleteFight).not.toHaveBeenCalled()
+
+      confirm.mockReturnValue(true)
+      fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
+      expect(onRestoreFight).toHaveBeenCalledWith('row-1')
+      vi.restoreAllMocks()
+    })
+
+    it('prompts sign-in when gated, rather than showing an empty shelf', async () => {
+      const onGated = vi.fn()
+      render(<Compendium onCreateCreature={() => {}} createGated onGated={onGated} />)
+      await waitFor(() => screen.getByText('Goblin'))
+      fireEvent.click(screen.getByText('Encounters'))
+      expect(screen.getByText(/Sign in to save a fight/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+      expect(onGated).toHaveBeenCalled()
+    })
+
+    it('says the columns are missing rather than pretending the shelf is empty', async () => {
+      renderTab({ savedFights: { status: 'unavailable' } })
+      await waitFor(() => screen.getByText('Goblin'))
+      fireEvent.click(screen.getByText('Encounters'))
+      expect(screen.getByText(/aren’t set up on this server yet/)).toBeInTheDocument()
+    })
+  })
 })

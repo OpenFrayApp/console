@@ -7,6 +7,7 @@ import type { Creature } from '../../src/schema/creature.ts'
 import type { EncounterTemplate } from '../../src/schema/encounterTemplate.ts'
 import {
   castSize,
+  castSummary,
   parseTemplate,
   templateEntries,
   templateFromBoard,
@@ -142,6 +143,26 @@ describe('templateEntries', () => {
     expect(json).not.toContain('Poisoned')
     expect(json).not.toContain('"current"')
     expect(json).not.toContain('17')
+  })
+})
+
+describe('castSummary', () => {
+  it('reads a board as a list, grouping the copies and keeping the party apart', () => {
+    const lines = castSummary([
+      monster(),
+      monster({ label: 'Goblin 2' }),
+      monster({ label: 'Snik', side: 'friend' }),
+      quick(),
+      pc(),
+    ])
+    expect(lines).toEqual([
+      // "Goblin, Goblin 2" is one line of prep and two lines of noise.
+      { name: 'Goblin', count: 2, side: 'foe', kind: 'creature' },
+      // A renamed creature is its own line: Snik is a different thing to read.
+      { name: 'Snik', count: 1, side: 'friend', kind: 'creature' },
+      { name: 'Cart driver', count: 1, side: 'friend', kind: 'quick' },
+      { name: 'Astra', count: 1, side: 'friend', kind: 'party' },
+    ])
   })
 })
 

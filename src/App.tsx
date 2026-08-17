@@ -39,6 +39,7 @@ import {
   listSavedFights,
   loadCloudEncounter,
   loadSavedFight,
+  renameSavedFight,
   saveCloudEncounter,
   saveFight,
   type ClaimResult,
@@ -699,6 +700,16 @@ function App() {
       setMobilePane(0)
     }
     return { added: combatants.length, missing }
+  }
+
+  /** Rename a saved fight, showing the new name at once. */
+  const handleRenameFight = (id: string, name: string) => {
+    setSavedFights((prev) =>
+      prev.status === 'ok'
+        ? { status: 'ok', fights: prev.fights.map((f) => (f.id === id ? { ...f, name } : f)) }
+        : prev,
+    )
+    void renameSavedFight(id, name)
   }
 
   /** Delete a saved fight, dropping it from the list at once. */
@@ -1436,6 +1447,12 @@ function App() {
                   onUpdatePc={handleUpdatePc}
                   onDeletePc={handleDeletePc}
                   onAddPcToEncounter={handleAddPcToEncounter}
+                  savedFights={savedFights}
+                  onLoadFight={loadSavedFight}
+                  onRestoreFight={handleRestoreFight}
+                  onAddCast={handleAddCast}
+                  onRenameFight={handleRenameFight}
+                  onDeleteFight={handleDeleteFight}
                   presets={presets}
                   onRenamePreset={handleUpdatePreset}
                   onDeletePreset={handleDeletePreset}

@@ -115,6 +115,37 @@ export function castSize(template: EncounterTemplate): number {
   return template.entries.reduce((n, e) => n + Math.max(1, Math.floor(e.count) || 1), 0)
 }
 
+/** One line of a cast read out: what it is, how many, and which side it stands on. */
+export interface CastLine {
+  name: string
+  count: number
+  side: 'friend' | 'foe'
+  /** `party` is a player character — listed, never bundled into a template. */
+  kind: 'creature' | 'quick' | 'party'
+}
+
+/**
+ * A board read as a list — "Goblin ×4, Goblin Boss, Astra" — for a saved fight's card and a
+ * shared encounter's page.
+ *
+ * Grouped by the **creature's** name rather than the board label, because "Goblin, Goblin 2,
+ * Goblin 3" is one line of prep and three lines of noise. A renamed creature keeps its own
+ * line: "Snik" is a different thing to read than another goblin.
+ */
+export function castSummary(combatants: readonly Combatant[]): CastLine[] {
+  const lines = new Map<string, CastLine>()
+  for (const c of combatants) {
+    const side = sideOf(c)
+    const kind: CastLine['kind'] = !c.isPC ? 'creature' : c.kind === 'quick' ? 'quick' : 'party'
+    const name = c.isPC ? c.name : isAutoLabel(c.label, c.creature.name) ? c.creature.name : c.label
+    const key = `${kind}|${name}|${side}`
+    const found = lines.get(key)
+    if (found) found.count += 1
+    else lines.set(key, { name, count: 1, side, kind })
+  }
+  return [...lines.values()]
+}
+
 /** A quick add rebuilt from a template entry — the shape `AddQuickForm` produces. */
 function quickCombatant(
   quick: { name: string; maxHp: number; ac: number },
