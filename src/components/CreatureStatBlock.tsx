@@ -919,8 +919,11 @@ export function CreatureStatBlock({
         resolveSpell={resolveSpell}
       />
 
+      {/* Open by default: a creature's own words often answer what the table asks mid-fight
+          — how a person-sized husk opens as something Huge — and collapsed at the foot of a
+          long stat block, nobody finds them. Still a details, so it can be folded away. */}
       {creature.description && (
-        <details>
+        <details open>
           <summary className="mb-2 cursor-pointer select-none border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
             Description
           </summary>
