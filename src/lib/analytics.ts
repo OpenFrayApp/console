@@ -68,6 +68,9 @@ export const EVENTS = {
   encounterSaved: 'Encounter saved',
   encounterRestored: 'Encounter restored',
   encounterCastAdded: 'Encounter creatures added',
+  encounterShared: 'Encounter shared',
+  encounterLinkOpened: 'Shared encounter opened',
+  encounterLinkAdded: 'Shared encounter added',
   // Sharing the board with the table
   playerViewShared: 'Player view shared',
   playerViewStopped: 'Player view stopped',

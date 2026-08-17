@@ -66,8 +66,16 @@ export async function loadCloudEncounter(): Promise<LoadedEncounter> {
  */
 export type ClaimResult = 'ok' | 'taken' | 'unavailable' | 'failed'
 
-/** Postgres: no such column, or no such table. The schema change hasn't been applied. */
-const MISSING_SCHEMA = ['42703', '42P01']
+/**
+ * No such column, or no such table: the schema change hasn't been applied.
+ *
+ * Both dialects, because two things answer. Postgres raises `42703`/`42P01` when a statement
+ * reaches it; PostgREST answers `PGRST204`/`PGRST205` out of its own schema cache without
+ * asking the database at all, and in practice the cache answers first. Only the Postgres
+ * codes were listed here, which is fine for a claim that fails but not for the `kind` filter
+ * below — a project mid-deploy would have been told its live fight was simply gone.
+ */
+const MISSING_SCHEMA = ['42703', '42P01', 'PGRST204', 'PGRST205']
 
 /**
  * Claim a share code for this GM's encounter row. Uniqueness is a database index, and

@@ -73,7 +73,9 @@ describe('publishShare', () => {
   })
 
   it('keeps a pending deploy step apart from a real failure', async () => {
-    for (const code of ['42P01', '42883']) {
+    // PGRST205 is the one that actually happens: PostgREST answers from its schema cache
+    // before Postgres ever sees the statement.
+    for (const code of ['42P01', '42883', 'PGRST205', 'PGRST204']) {
       const missing = makeSupabaseStub({ error: { code, message: 'missing' } })
       supa.client = missing.client
       expect(await publishShare('encounter', template)).toEqual({ status: 'unavailable' })

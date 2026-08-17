@@ -46,7 +46,19 @@ import {
   type SavedFights,
   type WriteResult,
 } from './state/cloudEncounter.ts'
-import { templateEntries, templateToCombatants } from './combat/encounterTemplate.ts'
+import {
+  templateEntries,
+  templateFromBoard,
+  templateToCombatants,
+} from './combat/encounterTemplate.ts'
+import {
+  listMyShares,
+  publishShare,
+  unpublish,
+  type MyShares,
+  type PublishResult,
+} from './state/shares.ts'
+import type { EncounterTemplate } from './schema/encounterTemplate.ts'
 import { loadSrdCreatures } from './compendium/srd.ts'
 import { EncountersMenu } from './components/EncountersMenu.tsx'
 import {
@@ -209,7 +221,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
 const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex)
 
 /** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
-function App() {
+function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [restored] = useState(loadSession)
   // Theme is shared with the marketing site (and the player view) via the
   // `openfray-theme` key; the restored session is the fallback, then dark.
@@ -315,6 +327,14 @@ function App() {
   const cloudHydrated = useRef(false)
   const cloudInserting = useRef(false)
   const [authOpen, setAuthOpen] = useState(false)
+  /**
+   * Whether the board is the one this Game Master should be looking at: for a signed-in user
+   * that means the cloud copy has landed, for an anonymous one it is true as soon as auth
+   * settles. A cast arriving from a shared link waits on this — adding into a board that is
+   * about to be replaced by the cloud load would lose it, and racing the debounced autosave
+   * would persist half a board.
+   */
+  const [boardReady, setBoardReady] = useState(false)
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
   const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
@@ -324,6 +344,10 @@ function App() {
   // because the compendium's Encounters tab reads the same list, and two loaders would drift
   // apart the moment one of them saved something.
   const [savedFights, setSavedFights] = useState<SavedFights>({ status: 'ok', fights: [] })
+  // The links this Game Master has published, and the byline they publish under — the
+  // byline is device-local like the theme, never read from the account.
+  const [myShares, setMyShares] = useState<MyShares>({ status: 'ok', shares: [] })
+  const [shareByline, setShareByline] = useState(() => loadSettings().shareByline ?? '')
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
     () => restored?.activeCampaignId ?? null,
   )
@@ -357,6 +381,7 @@ function App() {
       setCampaigns([])
       setRosterPcs([])
       setSavedFights({ status: 'ok', fights: [] })
+      setMyShares({ status: 'ok', shares: [] })
       setActiveCampaignId(null)
       return
     }
@@ -379,6 +404,9 @@ function App() {
     listSavedFights().then((res) => {
       if (active) setSavedFights(res)
     })
+    listMyShares().then((res) => {
+      if (active) setMyShares(res)
+    })
     return () => {
       active = false
     }
@@ -391,6 +419,9 @@ function App() {
     cloudInserting.current = false
     if (!userId) {
       cloudId.current = null
+      // Nothing to wait for: an anonymous board is whatever sessionStorage restored, and
+      // that happened before the first render.
+      setBoardReady(true)
       return
     }
     let active = true
@@ -408,6 +439,7 @@ function App() {
       // no row" — treating it as one is what orphaned encounters into duplicates, and
       // the fight is safe in sessionStorage meanwhile.
       cloudHydrated.current = res.status !== 'failed'
+      setBoardReady(true)
     })
     return () => {
       active = false
@@ -702,6 +734,43 @@ function App() {
     return { added: combatants.length, missing }
   }
 
+  /**
+   * Publish the board's cast under a link. The name, note and byline come from the form; the
+   * cast comes from `templateFromBoard`, which is what leaves the party and the live state
+   * behind. The byline is remembered device-locally so a series is typed once — never read
+   * from the account, because publishing a name is a choice rather than a consequence of
+   * having signed in.
+   */
+  const handleShareEncounter = async (draft: {
+    name: string
+    note: string
+    by: string
+  }): Promise<PublishResult> => {
+    const template: EncounterTemplate = {
+      ...templateFromBoard(encounter.combatants, draft.name),
+      ...(draft.note ? { note: draft.note } : {}),
+      ...(draft.by ? { by: draft.by } : {}),
+    }
+    const result = await publishShare('encounter', template)
+    if (result.status === 'ok') {
+      track(EVENTS.encounterShared)
+      setShareByline(draft.by)
+      saveSettings({ shareByline: draft.by || null })
+      void listMyShares().then(setMyShares)
+    }
+    return result
+  }
+
+  /** Take a published link down, dropping it from the list at once. */
+  const handleUnpublish = (code: string) => {
+    setMyShares((prev) =>
+      prev.status === 'ok'
+        ? { status: 'ok', shares: prev.shares.filter((s) => s.code !== code) }
+        : prev,
+    )
+    void unpublish(code)
+  }
+
   /** Rename a saved fight, showing the new name at once. */
   const handleRenameFight = (id: string, name: string) => {
     setSavedFights((prev) =>
@@ -868,6 +937,34 @@ function App() {
     dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
     setSelectedId(combatant.combatantId)
   }
+
+  /**
+   * A cast handed over from a shared link, added once — and only once the board is the one
+   * it should be added to.
+   *
+   * The wait is the whole point. A signed-in Game Master's live fight arrives from the cloud
+   * a moment after this screen mounts; adding before it lands would either be overwritten by
+   * that load or race the debounced autosave into saving a half-built board. The ref makes
+   * it a one-way door: the cast goes in on the first ready render and never again, whatever
+   * re-renders follow.
+   */
+  const pendingCast = useRef(stagedCast)
+  useEffect(() => {
+    if (!boardReady || !pendingCast.current) return
+    const template = pendingCast.current
+    pendingCast.current = undefined
+    void loadSrdCreatures().then((library) => {
+      const { combatants } = templateToCombatants(template, {
+        creatures: [...library, ...customCreatures],
+        hpMethod: activeRules.hp,
+        existing: encounter.combatants,
+      })
+      for (const c of combatants) addCombatant(c)
+      track(EVENTS.encounterLinkAdded)
+    })
+    // Deliberately keyed on readiness alone: the cast is consumed the first time through.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardReady])
 
   // One-round skip effect for the 2014 surprise rule (cleared on the round wrap).
   const surprisedEffect = (): Effect => ({
@@ -1384,6 +1481,11 @@ function App() {
                 onAddCast={handleAddCast}
                 onDelete={handleDeleteFight}
                 onSignIn={() => setAuthOpen(true)}
+                canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
+                shares={myShares}
+                defaultByline={shareByline}
+                onShare={handleShareEncounter}
+                onUnpublish={handleUnpublish}
               />
               <SharePanel
                 code={playerCode}

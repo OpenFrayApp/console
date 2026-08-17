@@ -35,6 +35,8 @@ function open(props: Partial<Parameters<typeof EncountersMenu>[0]> = {}) {
     onDelete: vi.fn(),
     onSignIn: vi.fn(),
     onOpen: vi.fn(),
+    onShare: vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' }),
+    onUnpublish: vi.fn(),
   }
   render(
     <EncountersMenu
@@ -42,6 +44,9 @@ function open(props: Partial<Parameters<typeof EncountersMenu>[0]> = {}) {
       campaigns={CAMPAIGNS}
       canSave
       signedIn
+      canShare
+      shares={{ status: 'ok', shares: [] }}
+      defaultByline=""
       {...handlers}
       {...props}
     />,
@@ -145,5 +150,70 @@ describe('EncountersMenu', () => {
     expect(
       screen.getByText('No saved encounters yet. Build a board, then save it here.'),
     ).toBeTruthy()
+  })
+
+  describe('sharing', () => {
+    it('says what travels before it asks for anything', () => {
+      open()
+      fireEvent.click(screen.getByText('Share encounter'))
+      // A Game Master should never have to guess what they just handed a stranger.
+      expect(screen.getByText(/no hit points, no effects, no players, no log/)).toBeTruthy()
+    })
+
+    it('publishes the cast and shows the link', async () => {
+      const { onShare } = open()
+      fireEvent.click(screen.getByText('Share encounter'))
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: '  Goblin ambush  ' } })
+      fireEvent.change(screen.getByLabelText('Note (optional)'), {
+        target: { value: 'They wait in the rafters.' },
+      })
+      fireEvent.click(screen.getByText('Publish'))
+
+      await waitFor(() =>
+        expect(onShare).toHaveBeenCalledWith({
+          name: 'Goblin ambush',
+          note: 'They wait in the rafters.',
+          by: '',
+        }),
+      )
+      await waitFor(() =>
+        expect((screen.getByLabelText('Share link') as HTMLInputElement).value).toContain(
+          '/s/k7mqx3rt9p',
+        ),
+      )
+    })
+
+    it('refuses a byline that breaks the rules, and says which rule', async () => {
+      const { onShare } = open({ defaultByline: 'OpenFray' })
+      fireEvent.click(screen.getByText('Share encounter'))
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ambush' } })
+      expect(screen.getByText('That name is reserved. Publish under your own.')).toBeTruthy()
+      fireEvent.click(screen.getByText('Publish'))
+      expect(onShare).not.toHaveBeenCalled()
+    })
+
+    it('warns a signed-out publisher that the link expires and can’t be taken down', async () => {
+      open({ signedIn: false })
+      fireEvent.click(screen.getByText('Share encounter'))
+      expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()
+    })
+
+    it('lists the publisher’s links and confirms before taking one down', () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const { onUnpublish } = open({
+        shares: {
+          status: 'ok',
+          shares: [{ code: 'k7mqx3rt9p', name: 'Goblin ambush', createdAt: '2026-08-11' }],
+        },
+      })
+      fireEvent.click(screen.getByText('Unpublish'))
+      expect(confirm.mock.calls[0][0]).toContain('Goblin ambush')
+      expect(onUnpublish).toHaveBeenCalledWith('k7mqx3rt9p')
+    })
+
+    it('has nothing to share from an empty board', () => {
+      open({ canShare: false })
+      expect(screen.getByText('Share encounter')).toBeDisabled()
+    })
   })
 })

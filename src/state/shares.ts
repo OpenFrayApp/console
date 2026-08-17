@@ -52,8 +52,16 @@ export interface ShareSummary {
   createdAt: string
 }
 
-/** Postgres: no such table, or no such function. The schema change hasn't been applied. */
-const MISSING_SCHEMA = ['42703', '42P01', '42883', 'PGRST202']
+/**
+ * The schema change hasn't been applied yet: no such table, column or function.
+ *
+ * Two dialects, because two things answer. Postgres raises `42P01`/`42703`/`42883` when a
+ * statement reaches it; PostgREST answers `PGRST202`/`PGRST204`/`PGRST205` from its own
+ * schema cache without ever asking the database. In practice the cache answers first — a
+ * missing table comes back as `PGRST205` and never as `42P01` — so a list with only the
+ * Postgres codes would tell a Game Master to try again forever.
+ */
+const MISSING_SCHEMA = ['42703', '42P01', '42883', 'PGRST202', 'PGRST204', 'PGRST205']
 
 const pgCode = (error: unknown): string => (error as { code?: string } | null)?.code ?? ''
 const isMissingSchema = (error: unknown): boolean => MISSING_SCHEMA.includes(pgCode(error))

@@ -89,7 +89,7 @@ describe('loadCloudEncounter', () => {
   it('reads again without the filter when the kind column isn’t there yet', async () => {
     const enc = encounter()
     const { client, queries } = makeSupabaseStub(
-      { data: null, error: { code: '42703', message: 'column "kind" does not exist' } },
+      { data: null, error: { code: 'PGRST204', message: "Could not find the 'kind' column" } },
       { data: { id: 'row-1', state: enc } },
     )
     supa.client = client
@@ -347,7 +347,9 @@ describe('claimPlayerCode', () => {
   // The column is added by hand at deploy time, so a project that hasn't had the SQL
   // run reports the whole feature missing rather than telling the GM to try again.
   it('reads a missing column or table as the feature not being set up', async () => {
-    for (const code of ['42703', '42P01']) {
+    // Both dialects: Postgres raises 42703/42P01, PostgREST answers PGRST204/PGRST205 from
+    // its schema cache — and in practice the cache answers first.
+    for (const code of ['42703', '42P01', 'PGRST204', 'PGRST205']) {
       const { client } = makeSupabaseStub({ error: { code, message: 'missing' } })
       supa.client = client
       expect(await claimPlayerCode('row-1', 'dragons')).toBe('unavailable')
