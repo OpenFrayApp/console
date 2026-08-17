@@ -12,6 +12,66 @@ Versions are `major.minor.patch`. A major bump means the way you use the console
 changed; a minor bump adds to it; a patch fixes it. Dates are the day the version was
 published.
 
+## 1.1.0 (2026-08-17)
+
+The console runs on a phone, answers to the keyboard, and knows when an effect ends.
+
+### On a phone and a tablet
+
+- The console is three screens you swipe between on a phone — the tracker, the stat
+  block, and the controls — with a bottom bar to jump straight to one. Tapping a
+  creature in the tracker slides over to its stat block.
+- Every control has a finger-sized target on a touch screen, and a mouse keeps the
+  dense layout it had. Form fields lift to a size iOS Safari won't zoom the page for.
+- A tablet held portrait gets the phone's layout whole, iPad Pro included. Held
+  landscape, a small tablet puts the tracker beside the stat block with the controls and
+  the log below; from a laptop's width up, the three-column console is unchanged.
+- The header's panels open as sheets on a phone, and a button stays where it is while
+  its panel is open. The three add buttons collapse into one.
+
+### The keyboard
+
+- The console can be run from the keyboard: turns and the fight, the selection, the
+  selected creature's damage, effects, concentration and reaction, every add and open,
+  the compendium, the dice bar, and the log.
+- Every shortcut is rebindable in Settings, and the full list is a keystroke away.
+
+### Effects
+
+- An effect can be hung on a **turn**: start of turn or end of turn, on any creature on
+  the board, not just the one you are applying to. "Charmed until the start of its next
+  turn" is now something the box can say, and it clears itself at the right moment.
+- **or its next roll** rides on top of any duration, ending the effect early on the
+  first roll it changes. It replaces "This turn / next attack", which looked like a turn
+  and wasn't, and which never cleared for a player's own rolls. The duration underneath
+  is what ends it there. An effect saved with the old option still works, and reads as
+  "Until removed" with the box ticked.
+- The 1 round chip is gone; end of turn says what it meant, and Custom still counts
+  rounds.
+- A roll made anywhere in the console now spends what it should. Group saves,
+  concentration checks and a creature's own stat-block rolls used to leave a spent
+  effect sitting on the row.
+- Vicious Mockery, Latchwork, Guiding Bolt, Guidance and Resistance carry the bound the
+  rules give them, re-read against both editions — the end of a named creature's turn,
+  or the spell's own minute — instead of waiting on a roll that might never come.
+
+### Casting
+
+- A spell resolved by an attack roll applies its effect. **Guiding Bolt** left nothing on
+  the target it hit, and Flame Blade, Spiritual Weapon, Arcane Hand, Arcane Sword and
+  Vampiric Touch left no reminder on the caster.
+- The caster's name is on the modal whether a creature or a character is casting.
+- A saved character's **spell attack bonus** and **spell save DC** are filled in from the
+  class, level and ability scores you transcribed. A class that casts through a subclass,
+  a multiclass caster, and an anonymous character all leave the field to you, as before.
+
+### Smaller things
+
+- A condition chip in a resolver reads as a state: lit when the target has it, and
+  tapping a lit one clears it instead of stacking a second copy.
+- A picker says what it just added.
+- The compendium follows the same layout switch as the fight.
+
 ## 1.0.0 (2026-08-07)
 
 Out of beta. The [beta](https://openfray.app/news/openfray-beta-release/) named one thing as still to come,
