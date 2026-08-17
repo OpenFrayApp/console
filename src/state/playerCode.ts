@@ -13,8 +13,13 @@ import { rollDie } from 'opendice'
 export const PLAYER_CODE_MIN = 3
 export const PLAYER_CODE_MAX = 32
 
-/** No 0/o, 1/l/i — a random code gets read off one screen and typed into another. */
-const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
+/**
+ * No 0/o, 1/l/i — a random code gets read off one screen and typed into another. Shared
+ * with the share codes in `shareCode.ts`, so the app has one alphabet rather than two that
+ * drift.
+ */
+export const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
+const ALPHABET = CODE_ALPHABET
 const RANDOM_LENGTH = 10
 
 /** Names that would make a confusing link, so nobody claims them. */
