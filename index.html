@@ -24,6 +24,33 @@
       name="description"
       content="A fast, browser-based combat console for Game Masters running DnD 5e."
     />
+    <!-- The link preview, for the console pasted into a Discord channel or a forum thread.
+         The tags are static and Cloudflare serves this one shell for every /console/* path
+         (see the parent repo's scripts/assemble-site.mjs), so a player-view link unfurls
+         with these too: every word here has to stay true of both screens. Absolute URLs,
+         because a crawler resolves neither a root-relative nor a relative one. The image
+         is the site's banner carrying the console's own URL line, and the declared size
+         has to match the file: a crawler lays the card out from these numbers before the
+         picture arrives. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OpenFray" />
+    <meta property="og:title" content="Combat console — OpenFray" />
+    <meta
+      property="og:description"
+      content="A fast, browser-based combat console for Game Masters running DnD 5e."
+    />
+    <meta property="og:url" content="https://openfray.app/console/" />
+    <meta property="og:image" content="https://openfray.app/console/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="OpenFray — a DnD 5e combat console for Game Masters" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Combat console — OpenFray" />
+    <meta
+      name="twitter:description"
+      content="A fast, browser-based combat console for Game Masters running DnD 5e."
+    />
+    <meta name="twitter:image" content="https://openfray.app/console/og-image.png" />
     <link
       rel="icon"
       href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23818cf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'&gt;&lt;polyline points='14.5 17.5 3 6 3 3 6 3 17.5 14.5'/&gt;&lt;line x1='13' y1='19' x2='19' y2='13'/&gt;&lt;line x1='16' y1='16' x2='20' y2='20'/&gt;&lt;line x1='19' y1='21' x2='21' y2='19'/&gt;&lt;polyline points='14.5 6.5 18 3 21 3 21 6 17.5 9.5'/&gt;&lt;line x1='5' y1='14' x2='9' y2='18'/&gt;&lt;line x1='7' y1='17' x2='4' y2='20'/&gt;&lt;line x1='3' y1='19' x2='5' y2='21'/&gt;&lt;/svg&gt;"
