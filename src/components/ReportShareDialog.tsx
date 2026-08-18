@@ -10,6 +10,7 @@ import {
   reportShare,
   type ReportReason,
 } from '../state/reports.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
 import { Modal } from './Modal.tsx'
 import { Button } from './ui.tsx'
 
@@ -43,8 +44,12 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
     setError(null)
     const result = await reportShare(code, reason, message.trim(), replyTo)
     setBusy(false)
-    if (result === 'ok') setSent(true)
-    else if (result === 'unavailable') {
+    if (result === 'ok') {
+      // Only the reports that landed. Counting attempts would fold a broken server into
+      // the number that says how often people find something worth reporting.
+      track(EVENTS.shareReported)
+      setSent(true)
+    } else if (result === 'unavailable') {
       // Nothing the reporter can do, and telling them to try again would waste their time.
       setError('Reporting isn’t set up on this server yet. Please email info@openfray.app.')
     } else {
@@ -117,12 +122,13 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
               type="email"
               value={replyTo}
               onChange={(e) => setReplyTo(e.target.value.slice(0, REPORT_EMAIL_MAX))}
-              placeholder="Only if you'd like a reply"
+              placeholder="bramironfist@example.com"
               autoComplete="email"
               className={field}
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Used to write back about this report, and nothing else.
+              Used if we need to ask anything or to inform you about the report. Leave blank to stay
+              anonymous.
             </p>
           </div>
           {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}

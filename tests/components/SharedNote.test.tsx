@@ -70,6 +70,19 @@ describe('SharedNote', () => {
     expect(container.querySelector('h6')?.textContent).toBe('Six')
   })
 
+  it('keeps a writer’s own line breaks without doubling every gap', () => {
+    // A Game Master's prep is full of single newlines that markdown folds into one
+    // paragraph, so the text renders as typed. react-markdown also leaves a newline
+    // between every block, though, and preserving those renders each as a blank line on
+    // top of the margins — which is the wide gap around a heading this pins against.
+    const container = render1('One line\nand its second\n\n## A heading')
+    const wrapper = container.firstElementChild as HTMLElement
+    const classes = wrapper.className.split(/\s+/)
+    expect(classes).not.toContain('whitespace-pre-wrap')
+    expect(classes).toContain('[&_p]:whitespace-pre-wrap')
+    expect(container.querySelector('p')?.textContent).toBe('One line\nand its second')
+  })
+
   it('flattens the rest of markdown rather than styling it', () => {
     const container = render1('`code`\n\n| a | b |\n| - | - |\n| 1 | 2 |')
     for (const tag of ['code', 'pre', 'table']) {

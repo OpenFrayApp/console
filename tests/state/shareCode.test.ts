@@ -2,7 +2,12 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { describe, expect, it } from 'vitest'
-import { isShareCode, randomShareCode, shareCodeFromPath } from '../../src/state/shareCode.ts'
+import {
+  isShareCode,
+  moderationTokenFromHash,
+  randomShareCode,
+  shareCodeFromPath,
+} from '../../src/state/shareCode.ts'
 
 /**
  * The code is the only thing standing between a stranger and a published encounter, and it
@@ -76,6 +81,29 @@ describe('shareCodeFromPath', () => {
       '/',
     ]) {
       expect(shareCodeFromPath(path, base), path).toBeNull()
+    }
+  })
+})
+
+describe('the moderation token in a report link', () => {
+  const TOKEN = '3f7a1c92-5b4e-4d81-9a63-0e2c8d5f71ab'
+
+  it('reads its own fragment and refuses anything else', () => {
+    // `m` for moderation, and a UUID because the database mints it. Everything else is
+    // read as no token, which leaves an ordinary shared encounter on screen.
+    expect(moderationTokenFromHash(`#m=${TOKEN}`)).toBe(TOKEN)
+    expect(moderationTokenFromHash(`m=${TOKEN}`)).toBe(TOKEN)
+    for (const hash of [
+      '',
+      '#',
+      '#m=',
+      '#m=nope',
+      `#t=${TOKEN}`,
+      `#m=${TOKEN}x`,
+      '#m=<script>alert(1)</script>',
+      '#token=' + TOKEN,
+    ]) {
+      expect(moderationTokenFromHash(hash), hash).toBeNull()
     }
   })
 })

@@ -23,6 +23,18 @@ describe('SharedLinksPanel', () => {
     expect(screen.getByText(/\/s\/k7mqx3rt9p$/)).toBeTruthy()
   })
 
+  it('says when each link stops working, since none of them last', () => {
+    // 60 days on from the 11th of August. Expiry is not a signed-out publisher's problem
+    // any more, so the one place a publisher sees their links has to say so. The parts are
+    // asserted rather than the sentence, because the date is written in the reader's own
+    // locale and the order of its pieces is theirs, not ours.
+    render(<SharedLinksPanel shares={LINKS} onUnpublish={vi.fn()} onClose={vi.fn()} />)
+    const line = screen.getByText(/^Expires /)
+    expect(line.textContent).toMatch(/October/)
+    expect(line.textContent).toMatch(/10\b/)
+    expect(line.textContent).toMatch(/2026/)
+  })
+
   it('confirms by name before taking a link down', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const onUnpublish = vi.fn()

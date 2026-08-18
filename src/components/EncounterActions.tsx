@@ -154,11 +154,11 @@ export function SaveFightButton({
   }
 
   return (
-    <CornerPopover label="Save this fight" icon={<SaveIcon />}>
+    <CornerPopover label="Save this encounter" icon={<SaveIcon />}>
       {() => (
         <>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Save this fight
+            Save this encounter
           </h2>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
             The board as it stands — the party, the hit points, the log — kept to come back to in a
@@ -188,7 +188,7 @@ export function SaveFightButton({
           ) : (
             <div className="mt-3">
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Saving a fight needs an account, so it can follow you to the next session.
+                Saving an encounter needs an account, so it can follow you to the next session.
               </p>
               <div className="mt-2">
                 <Button variant="primary" onClick={onSignIn}>
@@ -258,7 +258,7 @@ export function ShareEncounterButton({
   const [message, setMessage] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
 
   const problem = by.trim() ? bylineError(by, { allowReserved }) : null
 
@@ -286,8 +286,8 @@ export function ShareEncounterButton({
   const copy = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopied(url)
+      setTimeout(() => setCopied(null), 2000)
     } catch {
       setMessage('Couldn’t copy. Select the link and copy it yourself.')
     }
@@ -328,7 +328,7 @@ export function ShareEncounterButton({
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
-                  placeholder="How the fight opens, what the boss does first…"
+                  placeholder="How the encounter opens, what the boss does first…"
                   className={FIELD}
                 />
               </div>
@@ -349,8 +349,8 @@ export function ShareEncounterButton({
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Whoever opens the link reads the note, so keep your spoilers out of it.
-                {!signedIn && ' Signed out, the link stops working after 60 days.'}
+                Whoever opens the link reads the note, so keep your spoilers out of it. The link
+                stops working after 60 days.
               </p>
               <Button
                 type="submit"
@@ -377,13 +377,13 @@ export function ShareEncounterButton({
                   className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                 />
                 <Button size="sm" onClick={() => void copy(link)}>
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied === link ? 'Copied' : 'Copy'}
                 </Button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {signedIn
-                  ? 'Your links are in the account menu, under Shared encounters.'
-                  : 'Signed out, this link stops working after 60 days and can’t be taken down early. Sign in before sharing to keep it and to unpublish it.'}
+                  ? 'Your links are in the account menu, under Shared encounters. This one stops working after 60 days.'
+                  : 'Signed out, this link stops working after 60 days and isn’t listed anywhere. Sign in before sharing to keep it on your account, where you can take it down early.'}
               </p>
               <Button
                 variant="quiet"

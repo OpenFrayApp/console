@@ -87,6 +87,8 @@ describe('EVENTS', () => {
       encounterShared: 'Encounter shared',
       encounterLinkOpened: 'Shared encounter opened',
       encounterLinkAdded: 'Shared encounter added',
+      shareReportOpened: 'Report form opened',
+      shareReported: 'Encounter reported',
       playerViewShared: 'Player view shared',
       playerViewStopped: 'Player view stopped',
       playerViewNamed: 'Player view named',

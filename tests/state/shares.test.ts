@@ -7,6 +7,7 @@ import {
   listMyShares,
   mayUseReservedByline,
   publishShare,
+  resolveReport,
   unpublish,
 } from '../../src/state/shares.ts'
 import { makeSupabaseStub } from './supabaseMock.ts'
@@ -92,6 +93,42 @@ describe('publishShare', () => {
 
     supa.client = null
     expect(await publishShare('encounter', template)).toEqual({ status: 'unavailable' })
+  })
+})
+
+describe('resolveReport', () => {
+  const TOKEN = '3f7a1c92-5b4e-4d81-9a63-0e2c8d5f71ab'
+
+  it('sends the code, the token and the decision, and nothing else', async () => {
+    const { client, rpcs } = makeSupabaseStub({ data: true, error: null })
+    supa.client = client
+    expect(await resolveReport('k7mqx3rt9p', TOKEN, 'taken_down')).toBe('ok')
+    expect(rpcs[0]).toEqual({
+      fn: 'resolve_report',
+      args: { want: 'k7mqx3rt9p', secret: TOKEN, decision: 'taken_down' },
+    })
+  })
+
+  it('carries a dismissal the same way, since both are decisions', async () => {
+    // Only one of them deletes anything, but both are answers, and both are what the
+    // reply to the reporter is sent from.
+    const { client, rpcs } = makeSupabaseStub({ data: true, error: null })
+    supa.client = client
+    expect(await resolveReport('k7mqx3rt9p', TOKEN, 'dismissed')).toBe('ok')
+    expect((rpcs[0].args as { decision: string }).decision).toBe('dismissed')
+  })
+
+  it('reads a token that matched nothing as wrong, not as a failure', async () => {
+    // Stale, already answered, or simply not ours. One fact to the reader either way.
+    const { client } = makeSupabaseStub({ data: false, error: null })
+    supa.client = client
+    expect(await resolveReport('k7mqx3rt9p', 'not-a-real-token', 'taken_down')).toBe('wrong')
+  })
+
+  it('reports a project without the function as unavailable', async () => {
+    const { client } = makeSupabaseStub({ data: null, error: { code: 'PGRST202' } })
+    supa.client = client
+    expect(await resolveReport('k7mqx3rt9p', TOKEN, 'taken_down')).toBe('unavailable')
   })
 })
 

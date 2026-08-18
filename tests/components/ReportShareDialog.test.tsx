@@ -25,9 +25,32 @@ afterEach(() => {
   cleanup()
   report.result = 'ok'
   report.calls = []
+  delete (window as { fathom?: unknown }).fathom
 })
 
+/** Stand in for Fathom, which the real `track` calls through when the script has loaded. */
+function countEvents() {
+  const trackEvent = vi.fn()
+  ;(window as { fathom?: unknown }).fathom = { trackEvent }
+  return trackEvent
+}
+
 describe('ReportShareDialog', () => {
+  it('counts a report that landed, and not one that didn’t', async () => {
+    // The number says how often somebody found something worth reporting. Counting the
+    // attempt instead would fold a broken server into that.
+    report.result = 'failed'
+    const trackEvent = countEvents()
+    render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    await waitFor(() => expect(screen.getByText(/Couldn’t send/)).toBeInTheDocument())
+    expect(trackEvent).not.toHaveBeenCalled()
+
+    report.result = 'ok'
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    await waitFor(() => expect(trackEvent).toHaveBeenCalledWith('Encounter reported'))
+  })
+
   it('sends the code with the reason, so nobody has to copy a link', async () => {
     render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
     fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'impersonation' } })
@@ -45,6 +68,23 @@ describe('ReportShareDialog', () => {
       ]),
     )
     await screen.findByText(/somebody will read it/)
+  })
+
+  it('offers no way to demand a takedown, because none could be honoured', async () => {
+    // An anonymous publisher leaves no identity on the row, so a claim to one arriving
+    // through this form is unverifiable. Offering the option would promise something
+    // nobody can act on; a publisher who wants that guarantee signs in.
+    render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
+    const reasons = [...screen.getByLabelText('Reason').querySelectorAll('option')]
+    expect(reasons.map((o) => o.value)).toEqual([
+      'spam',
+      'sexual',
+      'hate',
+      'impersonation',
+      'copyright',
+      'other',
+    ])
+    expect(reasons.map((o) => o.textContent).join(' ')).not.toMatch(/take.*down/i)
   })
 
   it('takes a report with no message at all', async () => {

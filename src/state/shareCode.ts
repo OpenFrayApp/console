@@ -55,6 +55,22 @@ export function shareUrl(code: string): string {
 }
 
 /**
+ * The moderation token in the current address, or null when there isn't one.
+ *
+ * It arrives in the fragment of a link in a report mail, and the fragment is the point: a
+ * mail scanner or a client that prefetches links fetches the URL without it, so nothing can
+ * take an encounter down by merely following a link. The token reaches the database only
+ * when a person clicks the control the page then offers.
+ *
+ * The database mints these as UUIDs, so that is the shape accepted here. Anything else is
+ * read as no token at all, and the page shows an ordinary shared encounter.
+ */
+export function moderationTokenFromHash(hash: string): string | null {
+  const token = new URLSearchParams(hash.replace(/^#/, '')).get('m')
+  return token && /^[0-9a-f-]{36}$/i.test(token) ? token : null
+}
+
+/**
  * The share code in the current address, or null when this isn't one.
  *
  * Both forms are read: the short `/s/<code>` a link carries, and `${base}s/<code>`, which the

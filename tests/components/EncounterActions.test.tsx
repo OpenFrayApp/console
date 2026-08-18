@@ -15,7 +15,7 @@ afterEach(() => {
 function openSave(props: Partial<Parameters<typeof SaveFightButton>[0]> = {}) {
   const handlers = { onSave: vi.fn().mockResolvedValue('ok'), onSignIn: vi.fn() }
   render(<SaveFightButton canSave signedIn {...handlers} {...props} />)
-  fireEvent.click(screen.getByLabelText('Save this fight'))
+  fireEvent.click(screen.getByLabelText('Save this encounter'))
   return handlers
 }
 
@@ -191,8 +191,38 @@ describe('ShareEncounterButton', () => {
     expect(screen.getByText('Publish')).not.toBeDisabled()
   })
 
-  it('warns a signed-out publisher that the link expires and can’t be taken down', () => {
+  /** Publish, and wait for the panel to show the link it got back. */
+  const publish = async () => {
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ambush' } })
+    fireEvent.click(screen.getByText('Publish'))
+    await waitFor(() => expect(screen.getByLabelText('Share link')).toBeTruthy())
+  }
+
+  it('hands out one link and no secret to keep', async () => {
+    // A takedown link nobody saves is a takedown nobody has. Publishing gives out the
+    // share link and nothing else; the way back is the report form, which reaches a person.
     openShare({ signedIn: false })
+    await publish()
+    expect((screen.getByLabelText('Share link') as HTMLInputElement).value).toBe(
+      'http://localhost:3000/s/k7mqx3rt9p',
+    )
+    expect(screen.queryByLabelText('Takedown link')).toBeNull()
+    expect(Object.keys(sessionStorage).filter((k) => k.includes('revoke'))).toEqual([])
+  })
+
+  it('points a signed-in publisher at the list on their account', async () => {
+    openShare({ signedIn: true })
+    await publish()
+    expect(screen.getByText(/account menu/)).toBeTruthy()
+  })
+
+  it('tells every publisher the link expires, account or not', () => {
+    // The deadline used to be the price of publishing signed out. It is the rule now:
+    // a share is a temporary thing, and an account buys the list and the early takedown.
+    openShare({ signedIn: false })
+    expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()
+    cleanup()
+    openShare({ signedIn: true })
     expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()
   })
 

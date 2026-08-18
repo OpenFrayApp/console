@@ -6,7 +6,8 @@ import type { Creature } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterTemplate, TemplateEntry } from '../schema/encounterTemplate.ts'
 import { parseTemplate } from '../combat/encounterTemplate.ts'
-import { fetchShare } from '../state/shares.ts'
+import { fetchShare, resolveReport, type Resolution } from '../state/shares.ts'
+import { moderationTokenFromHash } from '../state/shareCode.ts'
 import { loadLibraries, sourceOfId } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { formatCr } from '../compendium/format.ts'
@@ -14,9 +15,12 @@ import { estimateXp } from '../combat/difficulty.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
+import { ThemeToggle } from './ThemeToggle.tsx'
 import { SharedNote } from './SharedNote.tsx'
 import { ReportShareDialog } from './ReportShareDialog.tsx'
 import { useSwipePanes } from '../hooks/useSwipePanes.ts'
+import { track, EVENTS } from '../lib/analytics.ts'
+import { useTheme } from '../hooks/useTheme.ts'
 import { Button } from './ui.tsx'
 import { cx } from '../lib/cx.ts'
 
@@ -39,6 +43,7 @@ type Status =
   | { state: 'loading' }
   | { state: 'ok'; template: EncounterTemplate; official: boolean }
   | { state: 'gone' }
+  | { state: 'takenDown' }
   | { state: 'unreadable'; message: string }
 
 /** The right pane reads one of these: the note, or a creature from the cast. */
@@ -92,6 +97,28 @@ export function SharedEncounterPage({
   const [reading, setReading] = useState<Reading | null>(null)
   const [pane, setPane] = useState(0)
   const [reporting, setReporting] = useState(false)
+  /**
+   * The moderation token, read from the address once and only once. It comes from the link
+   * in a report mail, and a fragment never reaches a server — so a scanner that prefetches
+   * the URL cannot take anything down, and the encounter is on screen to be looked at before
+   * the decision. A reader without one sees an ordinary shared encounter and never learns
+   * there was a control here.
+   */
+  const [token, setToken] = useState(() =>
+    typeof window === 'undefined' ? null : moderationTokenFromHash(window.location.hash),
+  )
+  // Read again on `hashchange`, because a fragment is the one part of an address a browser
+  // will change without reloading anything: pasting the link into a tab already showing this
+  // encounter fires this and nothing else, and a control that appeared only on a cold load
+  // would look broken exactly when it was needed.
+  useEffect(() => {
+    const reread = () => setToken(moderationTokenFromHash(window.location.hash))
+    window.addEventListener('hashchange', reread)
+    return () => window.removeEventListener('hashchange', reread)
+  }, [])
+  const [problem, setProblem] = useState<string | null>(null)
+  /** Set once the report has been answered without deleting anything. */
+  const [dismissed, setDismissed] = useState(false)
   const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
 
   // Read the share, then fetch only the libraries its cast actually names.
@@ -118,6 +145,10 @@ export function SharedEncounterPage({
       const { template, error } = parseTemplate(found.data)
       if (!template) return setStatus({ state: 'unreadable', message: error ?? '' })
       setStatus({ state: 'ok', template, official: found.official })
+      // Counted where the encounter actually resolved, not on arrival: a dead code and a
+      // payload this version can't read are the two outcomes worth telling apart from a
+      // reader who got what the link promised.
+      track(EVENTS.encounterLinkOpened)
       // Always the details first: they carry the encounter's name, which is nowhere else on
       // the page now, and the note that explains what the cast is for.
       setReading({ kind: 'note' })
@@ -172,6 +203,32 @@ export function SharedEncounterPage({
     setPane(1)
   }
 
+  /**
+   * Answer the report this link came from. Taking it down leaves nothing to read, so the
+   * page becomes the outcome; dismissing leaves the encounter standing, so the page stays
+   * and only the controls are replaced.
+   */
+  const decide = async (decision: Resolution) => {
+    if (!token || !template) return
+    const ask =
+      decision === 'taken_down'
+        ? `Take down “${template.name}”? Its link stops working for good.`
+        : `Leave “${template.name}” up and tell the reporter it stays?`
+    if (!window.confirm(ask)) return
+
+    const result = await resolveReport(code, token, decision)
+    if (result !== 'ok') {
+      // One sentence for every failure: a stale token, a report already answered and an
+      // encounter that expired are the same fact to whoever followed the link.
+      return setProblem('Couldn’t answer this report. It may already have been dealt with.')
+    }
+    // The decision is made; leaving the token in the address would re-offer it on reload and
+    // keep it in the tab's history.
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    if (decision === 'taken_down') return setStatus({ state: 'takenDown' })
+    setDismissed(true)
+  }
+
   const missing = cast.filter((row) => !row.creature && !row.entry.quick).length
   const total = cast.reduce((n, row) => n + row.count, 0)
 
@@ -203,8 +260,10 @@ export function SharedEncounterPage({
             {status.state === 'loading'
               ? 'Reading the encounter…'
               : status.state === 'gone'
-                ? 'This shared encounter expired or was deleted by its author. Ask them to share it again or create your own.'
-                : status.message}
+                ? 'This shared encounter no longer exists or it never did. If you received this link from someone, ask them to create the encounter again and share it.'
+                : status.state === 'takenDown'
+                  ? 'This encounter has been taken down.'
+                  : status.message}
           </p>
           {status.state !== 'loading' && (
             <Button
@@ -231,10 +290,26 @@ export function SharedEncounterPage({
             OpenFray is a free combat console for running Dungeons and Dragons 5e sessions. Adding
             this encounter puts its creatures on your board — nothing else about your game changes.
           </p>
-          <Button variant="primary" onClick={() => onAdd(template!)}>
-            Add to my board
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {token && !dismissed && (
+              <>
+                <Button variant="danger" onClick={() => void decide('taken_down')}>
+                  Take it down
+                </Button>
+                <Button onClick={() => void decide('dismissed')}>Leave it up</Button>
+              </>
+            )}
+            {dismissed && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Answered: this encounter stays up.
+              </p>
+            )}
+            <Button variant="primary" onClick={() => onAdd(template!)}>
+              Add to my board
+            </Button>
+          </div>
         </div>
+        {problem && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{problem}</p>}
       </header>
 
       <div
@@ -324,25 +399,15 @@ export function SharedEncounterPage({
 
           {reading?.kind === 'note' ? (
             <div className="flex flex-1 flex-col pt-4">
-              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h1 className="mb-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {template!.name}
               </h1>
-              {/* Provenance, not a warning about links: the allowlist already made them
-                  unclickable, and the useful thing to say is whose words these are. Which is
-                  why our own encounters don't carry it — telling a reader to be wary of a
-                  stranger's words above words that are ours reads as boilerplate, and
-                  boilerplate is what people learn to skip on the pages that need it. */}
-              {!official && (
-                <p className="mb-3 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                  Written by the author of this encounter, not by OpenFray. Treat any link and
-                  information in it with caution.
-                </p>
-              )}
               {template!.note ? (
                 <SharedNote>{template!.note}</SharedNote>
               ) : (
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Whoever shared this left no notes with it.
+                  The author of this encounter didn’t leave any additional details about it. You can
+                  still add it to your board.
                 </p>
               )}
               {/* One line at the foot of the details: who signed it, how big it is, and what
@@ -363,17 +428,31 @@ export function SharedEncounterPage({
                     </>
                   )}
                 </p>
-                {/* Opposite the byline, because that is what it is about: these words, and
-                  whoever signed them. A form rather than a mailto — the reason and the code
-                  travel with it, and it works on a phone with no mail account set up. */}
-                <button
-                  type="button"
-                  onClick={() => setReporting(true)}
-                  className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200"
-                >
-                  <ReportIcon />
-                  Report this
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Next to the report, because the two say one thing between them: these
+                    are somebody else's words, and here is what to do if they are wrong. Our
+                    own encounters drop it — telling a reader to be wary of words that are
+                    ours reads as boilerplate, and boilerplate is what people learn to skip
+                    on the pages that need it. */}
+                  {!official && (
+                    <span className="italic">
+                      Treat any link and information in these notes with caution.
+                    </span>
+                  )}
+                  {/* A form rather than a mailto: the reason and the code travel with it, and
+                    it works on a phone with no mail account set up. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      track(EVENTS.shareReportOpened)
+                      setReporting(true)
+                    }}
+                    className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200"
+                  >
+                    <ReportIcon />
+                    Report this
+                  </button>
+                </div>
               </div>
             </div>
           ) : selected?.creature ? (
@@ -406,19 +485,34 @@ export function SharedEncounterPage({
 
 /** The page's frame: the wordmark, the content, and the console's own legal links. */
 function Shell({ children }: { children: React.ReactNode }) {
+  // Lives here rather than in the page body so the switch is on the dead-link and
+  // still-loading screens too, which are the ones a stranger is most likely to land on.
+  const [theme, toggleTheme] = useTheme()
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <a
-        href="/"
-        title="OpenFray home"
-        className="flex items-center gap-2.5 px-4 py-3 text-lg font-bold tracking-tight transition-opacity hover:opacity-80 md:px-6"
-      >
-        <CrossedSwordsIcon className="h-6 w-6 text-indigo-400" />
-        <span>
-          <span className="text-indigo-500 dark:text-indigo-400">Open</span>
-          <span>Fray</span>
-        </span>
-      </a>
+      {/* Adding this encounter swaps the console in over this page, so the wordmark has to
+        land where the console's own does: 14px down. The padding is 10 rather than 14
+        because the theme switch is 36px against the wordmark's 28, and `items-center`
+        spends the other 4 centring it. */}
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6">
+        <a
+          href="/"
+          title="OpenFray home"
+          className="flex items-center gap-2.5 text-xl font-semibold tracking-tight transition-opacity hover:opacity-80"
+        >
+          {/* Colour on a wrapper, not on the icon: its `className` replaces the default
+            rather than adding to it, so passing one here would take `h-7 w-7` with it and
+            render nothing. Same shape as the console's own header. */}
+          <span className="text-indigo-500 dark:text-indigo-400">
+            <CrossedSwordsIcon />
+          </span>
+          <span>
+            <span className="text-indigo-500 dark:text-indigo-400">Open</span>
+            <span>Fray</span>
+          </span>
+        </a>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      </div>
       {children}
       <footer className="flex flex-wrap items-center gap-2 border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 md:px-6">
         <a href="/privacy">Privacy</a>

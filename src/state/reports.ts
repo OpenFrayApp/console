@@ -20,13 +20,24 @@ import { supabase } from '../lib/supabase.ts'
  * needs to insert one row and to read nothing at all, and a function is the only shape that
  * says exactly that.
  *
+ * There is deliberately no "take mine down" option here, and the reason is that it could
+ * never be honoured. An anonymous publisher leaves no identity on the shares row — that is
+ * the point of the table — so a claim of ownership arriving through this form is
+ * unverifiable, and offering the option would promise something nobody can act on. A
+ * publisher who wants that guarantee signs in, and their links are listed on their account
+ * with an Unpublish beside each. Everyone else's expire at 60 days.
+ *
+ * What a report does reach is a person, who gets a one-click takedown in the mail and uses
+ * it when the encounter itself warrants it, rather than because somebody said it was theirs.
+ *
  * A reply address is optional and stays optional. Most reports need no conversation, and
  * demanding one would silence the person most likely to be looking at something bad; but
  * some do — "which creature?", "where did you see it?" — and there is no way back without it.
  */
 
 /** Why someone is reporting an encounter. The value stored; the label is the form's. */
-export type ReportReason = 'spam' | 'sexual' | 'hate' | 'impersonation' | 'copyright' | 'other'
+export type ReportReason =
+  'spam' | 'sexual' | 'hate' | 'impersonation' | 'copyright' | 'takedown' | 'other'
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Spam or advertising' },

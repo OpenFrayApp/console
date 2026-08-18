@@ -71,6 +71,8 @@ export const EVENTS = {
   encounterShared: 'Encounter shared',
   encounterLinkOpened: 'Shared encounter opened',
   encounterLinkAdded: 'Shared encounter added',
+  shareReportOpened: 'Report form opened',
+  shareReported: 'Encounter reported',
   // Sharing the board with the table
   playerViewShared: 'Player view shared',
   playerViewStopped: 'Player view stopped',

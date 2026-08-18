@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState } from 'react'
-import type { MyShares } from '../state/shares.ts'
+import { SHARE_LIFETIME_DAYS, type MyShares } from '../state/shares.ts'
 import { shareUrl } from '../state/shareCode.ts'
 import { Modal } from './Modal.tsx'
 import { Button } from './ui.tsx'
@@ -10,11 +10,20 @@ import { Button } from './ui.tsx'
 /**
  * The encounters this Game Master has published, and the way to take one down.
  *
- * It belongs to the account rather than to the board: a link outlives the fight it came
+ * It belongs to the account rather than to the board: a link outlives the encounter it came
  * from, and "what have I put out there" is a question about the person, not about tonight's
- * game. Anonymous publishers have no list at all — their rows carry no owner, which is also
- * why those links expire on their own.
+ * game. Anonymous publishers have no list at all, because their rows carry no owner to
+ * gather one by. Every link expires at 60 days either way; unpublishing is how the ones
+ * listed here go early.
  */
+
+/** When a link published at this moment stops working, as a date somebody can read. */
+function expiryOf(createdAt: string): string | null {
+  const at = new Date(createdAt)
+  if (Number.isNaN(at.getTime())) return null
+  at.setDate(at.getDate() + SHARE_LIFETIME_DAYS)
+  return at.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+}
 export function SharedLinksPanel({
   shares,
   onUnpublish,
@@ -43,7 +52,7 @@ export function SharedLinksPanel({
   return (
     <Modal
       title="Shared encounters"
-      subtitle="Links you've published. Anyone with one can add its creatures to their own board."
+      subtitle="Links you've published. Anyone with one can add its creatures to their own board, until it expires."
       onClose={onClose}
     >
       {shares.status === 'unavailable' ? (
@@ -67,6 +76,11 @@ export function SharedLinksPanel({
                 <div className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">
                   {shareUrl(share.code)}
                 </div>
+                {expiryOf(share.createdAt) && (
+                  <div className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    Expires {expiryOf(share.createdAt)}
+                  </div>
+                )}
               </div>
               <Button size="sm" onClick={() => void copy(share.code)}>
                 {copied === share.code ? 'Copied' : 'Copy'}

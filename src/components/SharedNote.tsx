@@ -63,13 +63,18 @@ export function SharedNote({ children }: { children: string }) {
   return (
     <div
       className={
-        'max-h-72 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-700 ' +
+        'max-h-72 overflow-y-auto break-words text-sm text-slate-700 ' +
+        // Line breaks are kept inside a block, never between them. A Game Master's prep is
+        // full of single newlines that markdown would fold into one paragraph, so the text
+        // has to render as typed; but react-markdown leaves a newline between every block,
+        // and preserving those on the wrapper doubles the gap around every heading.
+        '[&_p]:whitespace-pre-wrap [&_li]:whitespace-pre-wrap ' +
         '[&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 ' +
         '[&_blockquote]:pl-3 [&_blockquote]:italic [&_em]:italic [&_li]:my-0.5 [&_p]:my-1 ' +
         '[&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1 ' +
         '[&_ol]:list-decimal [&_ol]:pl-5 dark:text-slate-200 dark:[&_blockquote]:border-slate-700 ' +
         // The four levels a note can use, each a step quieter than the last.
-        '[&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_h4]:mb-1 [&_h4]:mt-3 ' +
+        '[&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mb-1 [&_h4]:mt-3 ' +
         '[&_h4]:text-sm [&_h4]:font-medium [&_h5]:mb-0.5 [&_h5]:mt-2 [&_h5]:text-xs ' +
         '[&_h5]:font-semibold [&_h6]:mb-0.5 [&_h6]:mt-2 [&_h6]:text-xs [&_h6]:font-medium ' +
         '[&_:is(h3,h4,h5,h6)]:text-slate-800 dark:[&_:is(h3,h4,h5,h6)]:text-slate-100 ' +
