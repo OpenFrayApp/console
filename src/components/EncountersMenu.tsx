@@ -124,7 +124,7 @@ function SharePublisher({
       )}
       {!canShare && !open && !link && (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Add a creature to the board to have something to share.
+          Add a creature to the board to share.
         </p>
       )}
 
@@ -175,7 +175,7 @@ function SharePublisher({
             {problem && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{problem}</p>}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Whoever opens the link reads the note, so keep your spoilers out of it.
+            Notes are public. Do not include secrets, spoilers, or personal information.
             {!signedIn && ' Signed out, the link stops working after 60 days.'}
           </p>
           <div className="flex items-center gap-2">
@@ -213,8 +213,7 @@ function SharePublisher({
           </div>
           {!signedIn && (
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Signed out, this link stops working after 60 days and can’t be taken down early. Sign
-              in before sharing to keep it and to unpublish it.
+                This link expires after 60 days and can’t be unpublished early. Sign in before sharing to control it and make it permanent.
             </p>
           )}
           <Button
