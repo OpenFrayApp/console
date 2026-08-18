@@ -220,6 +220,14 @@ export async function saveFight(
     state: encounter,
     updated_at: new Date().toISOString(),
   })
+  // A unique violation here can only be the old one-row-per-account index still standing:
+  // a saved fight is by definition a second row for this owner. That is a deploy step, not
+  // a passing failure, so it reads as "not set up" rather than sending the Game Master
+  // round the retry loop for ever. (See the index swap in local/saved-encounters.sql.)
+  if (pgCode(error) === '23505') {
+    warn('saving a fight', error)
+    return 'unavailable'
+  }
   return wrote('saving a fight', error)
 }
 

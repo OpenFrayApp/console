@@ -258,6 +258,15 @@ describe('saved fights', () => {
     ])
   })
 
+  // The table was built one-row-per-account. A saved fight is by definition a second row,
+  // so a unique violation here is that old index still standing — a deploy step, not a
+  // passing failure, and no amount of retrying fixes it.
+  it('reads a unique violation as the one-row-per-account index still being in place', async () => {
+    const { client } = makeSupabaseStub({ error: { code: '23505', message: 'duplicate key' } })
+    supa.client = client
+    expect(await saveFight('Before the boss', encounter(), null)).toBe('unavailable')
+  })
+
   it('tells the GM a save couldn’t land, and whether trying again would help', async () => {
     const missing = makeSupabaseStub({ error: { code: '42703', message: 'missing' } })
     supa.client = missing.client
