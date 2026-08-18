@@ -243,6 +243,18 @@ export function ShareEncounterButton({
   const [name, setName] = useState('')
   const [note, setNote] = useState('')
   const [by, setBy] = useState(defaultByline)
+  /**
+   * The account's name arrives after this control has mounted — the board renders long
+   * before the session resolves — so seeding the field once at mount left it empty for
+   * every signed-in Game Master. It follows the account until the Game Master types
+   * something, and then it is theirs; the same derived-state idiom the add controls use for
+   * their open requests.
+   */
+  const [lastDefault, setLastDefault] = useState(defaultByline)
+  if (defaultByline !== lastDefault) {
+    setLastDefault(defaultByline)
+    if (by === lastDefault) setBy(defaultByline)
+  }
   const [message, setMessage] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

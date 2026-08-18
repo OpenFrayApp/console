@@ -122,6 +122,58 @@ describe('ShareEncounterButton', () => {
     expect(onShare).not.toHaveBeenCalled()
   })
 
+  it('picks up the account’s name when it arrives after the board has rendered', () => {
+    // The session resolves long after this control mounts, so a value seeded once at mount
+    // left the field empty for every signed-in Game Master.
+    const { rerender } = render(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        defaultByline=""
+        onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Share this encounter'))
+    expect((screen.getByLabelText('Your name (optional)') as HTMLInputElement).value).toBe('')
+
+    rerender(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        defaultByline="Nico Mustone"
+        onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+      />,
+    )
+    expect((screen.getByLabelText('Your name (optional)') as HTMLInputElement).value).toBe(
+      'Nico Mustone',
+    )
+  })
+
+  it('leaves a typed name alone when the account’s arrives late', () => {
+    // Once the Game Master has typed, the field is theirs.
+    const { rerender } = render(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        defaultByline=""
+        onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Share this encounter'))
+    fireEvent.change(screen.getByLabelText('Your name (optional)'), {
+      target: { value: 'Bob' },
+    })
+    rerender(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        defaultByline="Nico Mustone"
+        onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+      />,
+    )
+    expect((screen.getByLabelText('Your name (optional)') as HTMLInputElement).value).toBe('Bob')
+  })
+
   it('lets a granted publisher use a reserved name', () => {
     // The database says who holds those names; this component is only told yes or no.
     render(

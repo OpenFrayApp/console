@@ -91,8 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         // Whatever the user row says — the provider's name until the Game Master changes it
-        // in their profile or types a different one when publishing.
-        displayName: ((user?.user_metadata?.display_name as string | undefined) ?? '') || null,
+        // in their profile or types a different one when publishing. Three keys because
+        // three providers disagree: Supabase's own `display_name`, and the `full_name` /
+        // `name` that Google and Discord actually write. Reading only the first left the
+        // field empty for accounts whose name is under one of the others.
+        displayName:
+          ((user?.user_metadata?.display_name ??
+            user?.user_metadata?.full_name ??
+            user?.user_metadata?.name) as string | undefined) || null,
         loading,
         configured: Boolean(supabase),
         signInWithProvider,

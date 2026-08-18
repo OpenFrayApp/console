@@ -28,8 +28,8 @@ type AuthListener = (event: string, session: Session | null) => void
 type AuthResponse = { error: { message: string } | null }
 
 /** A fake session wrapping just the user fields the provider reads. */
-function session(email: string): Session {
-  return { user: { email } as unknown as User } as Session
+function session(email: string, metadata: Record<string, unknown> = {}): Session {
+  return { user: { email, user_metadata: metadata } as unknown as User } as Session
 }
 
 /** Build a Supabase stub covering the auth calls and the delete-account RPC. */
@@ -44,6 +44,10 @@ function makeAuthClient(initial: Session | null) {
     }),
     signOut: vi.fn(async (): Promise<AuthResponse> => ({ error: null })),
     signInWithOAuth: vi.fn(async (): Promise<AuthResponse> => ({ error: null })),
+    updateUser: vi.fn(async (patch: { data: Record<string, unknown> }) => ({
+      data: { user: { email: 'gm@openfray.app', user_metadata: patch.data } as unknown as User },
+      error: null,
+    })),
   }
   const rpc = vi.fn(async (): Promise<AuthResponse> => ({ error: null }))
   /** Fire every registered auth listener with the next session, inside act. */
@@ -68,6 +72,46 @@ function renderProvider() {
     </AuthProvider>,
   )
 }
+
+describe('AuthProvider — the name encounters publish under', () => {
+  // Three providers disagree about where they put it, and reading only one key left the
+  // byline field empty for accounts whose name sits under another.
+  it('reads the name from whichever key the provider wrote', async () => {
+    for (const [metadata, expected] of [
+      [{ display_name: 'Chosen' }, 'Chosen'],
+      [{ full_name: 'From Google' }, 'From Google'],
+      [{ name: 'From Discord' }, 'From Discord'],
+      [{ display_name: 'Chosen', full_name: 'From Google' }, 'Chosen'],
+      [{}, null],
+      [{ display_name: '' }, null],
+    ] as const) {
+      supa.client = makeAuthClient(session('gm@openfray.app', metadata)).client
+      renderProvider()
+      await screen.findByText('gm@openfray.app')
+      expect(latest.displayName, JSON.stringify(metadata)).toBe(expected)
+      cleanup()
+    }
+  })
+
+  it('writes a chosen name onto the user row, and clears it back to null', async () => {
+    const stub = makeAuthClient(session('gm@openfray.app', { full_name: 'From Google' }))
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+
+    await act(async () => {
+      await latest.setDisplayName('  Nico Verdi  ')
+    })
+    expect(stub.auth.updateUser).toHaveBeenCalledWith({ data: { display_name: 'Nico Verdi' } })
+    expect(latest.displayName).toBe('Nico Verdi')
+
+    await act(async () => {
+      await latest.setDisplayName('   ')
+    })
+    expect(stub.auth.updateUser).toHaveBeenLastCalledWith({ data: { display_name: null } })
+    expect(latest.displayName).toBeNull()
+  })
+})
 
 describe('AuthProvider without Supabase configured', () => {
   it('resolves immediately to the anonymous state', async () => {

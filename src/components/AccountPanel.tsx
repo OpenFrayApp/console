@@ -124,43 +124,6 @@ export function AccountPanel({
         <div className="space-y-4">
           <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Display name
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              The name a shared encounter is published under — "Encounter by …". It starts as the
-              name your sign-in provider gave us; change it here, or leave it empty to publish
-              unsigned. Nothing is published until you press Publish.
-            </p>
-            <form onSubmit={submitName} className="mt-3 flex flex-wrap items-end gap-2">
-              <div className="min-w-0 flex-1">
-                <label htmlFor="display-name" className={LABEL}>
-                  Name
-                </label>
-                <input
-                  id="display-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={BYLINE_MAX + 1}
-                  placeholder="Unsigned"
-                  autoComplete="off"
-                  className={`${FIELD} mt-1`}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={nameBusy}
-                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-              >
-                Save
-              </button>
-            </form>
-            <div className="mt-2">
-              <NoteLine note={nameNote} />
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
               Signed in
             </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -190,6 +153,42 @@ export function AccountPanel({
             >
               Sign out
             </button>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Display name
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              The name shown on the player view and your shared encounters. Leave blank to hide it.
+              The default value is provided by your sign in provider (Google, Discord, etc.).
+            </p>
+            <form onSubmit={submitName} className="mt-3 flex flex-wrap items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="display-name" className={LABEL}>
+                  Name
+                </label>
+                <input
+                  id="display-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={BYLINE_MAX + 1}
+                  placeholder="Anonymous"
+                  autoComplete="off"
+                  className={`${FIELD} mt-1`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={nameBusy}
+                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </form>
+            <div className="mt-2">
+              <NoteLine note={nameNote} />
+            </div>
           </section>
 
           <section className="rounded-lg border border-rose-300 p-4 dark:border-rose-900/70">
