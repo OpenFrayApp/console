@@ -2,7 +2,13 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchShare, listMyShares, publishShare, unpublish } from '../../src/state/shares.ts'
+import {
+  fetchShare,
+  listMyShares,
+  mayUseReservedByline,
+  publishShare,
+  unpublish,
+} from '../../src/state/shares.ts'
 import { makeSupabaseStub } from './supabaseMock.ts'
 
 const supa = vi.hoisted(() => ({ client: null as unknown }))
@@ -119,6 +125,38 @@ describe('fetchShare', () => {
     const broken = makeSupabaseStub({ error: { code: '40001', message: 'boom' } })
     supa.client = broken.client
     expect(await fetchShare('k7mqx3rt9p')).toEqual({ status: 'failed' })
+  })
+})
+
+describe('mayUseReservedByline', () => {
+  // The capability lives in the database so that nothing in this repository has to name the
+  // person it belongs to.
+  it('asks the database, and takes only a true for an answer', async () => {
+    const yes = makeSupabaseStub({ data: true })
+    supa.client = yes.client
+    expect(await mayUseReservedByline()).toBe(true)
+    expect(yes.rpcs).toEqual([{ fn: 'may_use_reserved_byline', args: undefined }])
+
+    for (const data of [false, null, undefined, 'yes', 1]) {
+      const stub = makeSupabaseStub({ data })
+      supa.client = stub.client
+      expect(await mayUseReservedByline(), JSON.stringify(data)).toBe(false)
+    }
+  })
+
+  it('holds the reserved list wherever the grant can’t be read', async () => {
+    // A project without the function, a failed request, no client at all: all of them mean
+    // the names stay reserved. The capability is only ever lifted deliberately.
+    const missing = makeSupabaseStub({ error: { code: 'PGRST202', message: 'no function' } })
+    supa.client = missing.client
+    expect(await mayUseReservedByline()).toBe(false)
+
+    const broken = makeSupabaseStub({ error: { code: '40001', message: 'boom' } })
+    supa.client = broken.client
+    expect(await mayUseReservedByline()).toBe(false)
+
+    supa.client = null
+    expect(await mayUseReservedByline()).toBe(false)
   })
 })
 

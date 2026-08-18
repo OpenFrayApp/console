@@ -13,7 +13,7 @@ import {
 import { projectCreature } from '../schema/creatureInput.ts'
 import { autoLabel, instantiate, isAutoLabel, isFoe } from './combatant.ts'
 import { resolveMaxHp } from './hp.ts'
-import { bylineError } from '../lib/byline.ts'
+import { bylineShapeError } from '../lib/byline.ts'
 
 /**
  * Turning a board into prep and back again.
@@ -368,8 +368,13 @@ export function parseTemplate(value: unknown): ParsedTemplate {
   // A byline that breaks the rules is dropped, not fatal. The cast is what the reader came
   // for, and refusing the whole encounter over an attribution line would hand whoever wrote
   // it the power to break the page.
+  //
+  // Shape only: whether it renders safely is ours to judge, whether the publisher was
+  // entitled to the name is not. A reader has no way to know that the person who wrote
+  // "OpenFray" was granted it, and running the claim check here would drop precisely the
+  // bylines that were.
   const by = typeof raw.by === 'string' ? cleanLine(raw.by) : ''
-  const byOk = by.length > 0 && bylineError(by) === null
+  const byOk = by.length > 0 && bylineShapeError(by) === null
 
   return {
     template: {

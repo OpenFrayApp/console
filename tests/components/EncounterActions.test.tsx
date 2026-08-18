@@ -122,6 +122,23 @@ describe('ShareEncounterButton', () => {
     expect(onShare).not.toHaveBeenCalled()
   })
 
+  it('lets a granted publisher use a reserved name', () => {
+    // The database says who holds those names; this component is only told yes or no.
+    render(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        allowReserved
+        defaultByline="OpenFray"
+        onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Share this encounter'))
+    expect(screen.queryByText('That name is reserved. Publish under your own.')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ambush' } })
+    expect(screen.getByText('Publish')).not.toBeDisabled()
+  })
+
   it('warns a signed-out publisher that the link expires and can’t be taken down', () => {
     openShare({ signedIn: false })
     expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()

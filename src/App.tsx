@@ -53,6 +53,7 @@ import {
 } from './combat/encounterTemplate.ts'
 import {
   listMyShares,
+  mayUseReservedByline,
   publishShare,
   unpublish,
   type MyShares,
@@ -348,6 +349,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // byline is device-local like the theme, never read from the account.
   const [myShares, setMyShares] = useState<MyShares>({ status: 'ok', shares: [] })
   const [shareByline, setShareByline] = useState(() => loadSettings().shareByline ?? '')
+  // Whether this account may publish under one of the reserved names. The answer comes from
+  // the database — a granted capability — so nothing here has to know whose name it is.
+  const [bylineGranted, setBylineGranted] = useState(false)
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
     () => restored?.activeCampaignId ?? null,
   )
@@ -382,6 +386,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       setRosterPcs([])
       setSavedFights({ status: 'ok', fights: [] })
       setMyShares({ status: 'ok', shares: [] })
+      setBylineGranted(false)
       setActiveCampaignId(null)
       return
     }
@@ -406,6 +411,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     })
     listMyShares().then((res) => {
       if (active) setMyShares(res)
+    })
+    mayUseReservedByline().then((granted) => {
+      if (active) setBylineGranted(granted)
     })
     return () => {
       active = false
@@ -1574,6 +1582,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
                       signedIn={!!user}
                       defaultByline={shareByline}
+                      allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
                     />
                   </>

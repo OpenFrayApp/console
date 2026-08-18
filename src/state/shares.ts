@@ -150,6 +150,28 @@ export async function listMyShares(): Promise<MyShares> {
 }
 
 /**
+ * Whether this account may publish under one of the reserved names — the app's own, and the
+ * maintainer's.
+ *
+ * The answer lives in the database, never here: a row granting the capability, looked up by
+ * `auth.uid()` inside a `security definer` function. Nothing in this repository names the
+ * person it belongs to, which is the point — the alternative was an email or a user id in
+ * public client-side code.
+ *
+ * False on any failure, including a project without the function, so the reserved list holds
+ * everywhere it hasn't been deliberately lifted.
+ */
+export async function mayUseReservedByline(): Promise<boolean> {
+  if (!supabase) return false
+  const { data, error } = await supabase.rpc('may_use_reserved_byline')
+  if (error) {
+    if (!isMissingSchema(error)) warn('checking byline permission', error)
+    return false
+  }
+  return data === true
+}
+
+/**
  * Take a link down. Only the owner's own rows can go — the delete policy compares against
  * `auth.uid()` — so an anonymous publisher can't unpublish, which is why the publish
  * confirmation says a signed-out link stands until it expires.

@@ -13,6 +13,13 @@
  * misuse, and deliberate impersonation is a takedown. What they *are* is the reason the page
  * can render the byline as plain text without thinking about it again.
  *
+ * Two checks, and the split matters. **Shape** — the characters, the length, the marks — is
+ * about what our page can safely render, so it holds everywhere, including when a reader's
+ * console reads someone else's published encounter. **Claim** — the reserved names — is about
+ * who may call themselves what, and only the publisher's own console can judge that: a reader
+ * has no idea whether the person who wrote "OpenFray" was entitled to. Running the claim check
+ * on the way in would drop exactly the bylines that were granted.
+ *
  * Lives in `lib/` because both a form and a parser need it, and it depends on nothing.
  */
 
@@ -191,11 +198,13 @@ const DENIED_WORDS = new Set([
 ])
 
 /**
- * Why this byline can't be published, in words the publisher can act on, or null when it's
- * fine. An empty byline is fine and means no byline at all — "Encounter by" simply doesn't
- * render.
+ * Whether a byline is *renderable*: the character allowlist, the length, no stack of marks,
+ * and nothing this page would be embarrassed to print. Null when it's fine.
+ *
+ * This is the half a reader's console applies to somebody else's published encounter, so it
+ * asks only about the string itself — never about who is entitled to it.
  */
-export function bylineError(raw: string): string | null {
+export function bylineShapeError(raw: string): string | null {
   const byline = raw.replace(/\s+/g, ' ').trim()
   if (byline.length === 0) return null
   if ([...byline].length > BYLINE_MAX) return `Keep the byline under ${BYLINE_MAX} characters.`
@@ -205,21 +214,40 @@ export function bylineError(raw: string): string | null {
   if (!HAS_WORD.test(byline)) return 'Use at least one letter or number.'
   if (MARK_STACK.test(byline)) return 'That byline has too many marks stacked on one letter.'
 
+  const words = bylineWords(byline)
+  if (words.some((word) => DENIED_WORDS.has(word)) || DENIED_WORDS.has(bylineKey(byline))) {
+    return 'That name can’t be published here. Use your own.'
+  }
+  return null
+}
+
+/**
+ * Why this byline can't be published, in words the publisher can act on, or null when it's
+ * fine. An empty byline is fine and means no byline at all — "Encounter by" simply doesn't
+ * render.
+ *
+ * `allowReserved` lifts the reserved-name check for a publisher the database has granted it
+ * to — the person those names actually belong to. It is a capability the app is *told about*
+ * at sign-in, never a name or an id written down here: this file stays readable by anyone
+ * without saying who anybody is.
+ */
+export function bylineError(raw: string, { allowReserved = false } = {}): string | null {
+  const shape = bylineShapeError(raw)
+  if (shape) return shape
+
+  const byline = raw.replace(/\s+/g, ' ').trim()
+  if (byline.length === 0) return null
+
   // A byline written in a script the fold doesn't touch — Japanese, Arabic, Hebrew, Thai —
   // keys to nothing, and that is not a fault: there is simply no Latin word here to compare
-  // against the lists, so there is nothing to refuse. The checks above already made sure it
+  // against the lists, so there is nothing to refuse. The shape check already made sure it
   // has a letter in it. Treating an empty key as an error would have banned every writing
   // system the reserved names aren't written in.
   const key = bylineKey(byline)
-  if (!key) return null
+  if (!key || allowReserved) return null
 
   if (RESERVED_EXACT.has(key) || RESERVED_ANYWHERE.some((name) => key.includes(name))) {
     return 'That name is reserved. Publish under your own.'
-  }
-
-  const words = bylineWords(byline)
-  if (words.some((word) => DENIED_WORDS.has(word)) || DENIED_WORDS.has(key)) {
-    return 'That name can’t be published here. Use your own.'
   }
   return null
 }

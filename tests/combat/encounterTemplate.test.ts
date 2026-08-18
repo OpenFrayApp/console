@@ -474,12 +474,19 @@ describe('parseTemplate', () => {
     expect(parseTemplate(payload({ by: 'Bob' })).template?.by).toBe('Bob')
     // Refusing the whole encounter over an attribution line would hand whoever wrote it the
     // power to break the page, so the cast survives and the byline doesn't.
-    for (const by of ['OpenFray', '<script>alert(1)</script>', 'x'.repeat(40)]) {
+    for (const by of ['<script>alert(1)</script>', 'x'.repeat(40), 'Casino Nights']) {
       const { template, error } = parseTemplate(payload({ by }))
       expect(error).toBeUndefined()
       expect(template?.by).toBeUndefined()
       expect(template?.entries).toHaveLength(1)
     }
+  })
+
+  it('keeps a reserved-looking byline, because a reader can’t know who was granted it', () => {
+    // Only the publisher's own console can judge a claim. Running that check here would
+    // drop precisely the bylines the database granted.
+    expect(parseTemplate(payload({ by: 'OpenFray' })).template?.by).toBe('OpenFray')
+    expect(parseTemplate(payload({ by: 'Nicola Mustone' })).template?.by).toBe('Nicola Mustone')
   })
 
   it('parses what it produced, so a published template can always be read back', () => {

@@ -224,6 +224,7 @@ export function ShareEncounterButton({
   canShare,
   signedIn,
   defaultByline,
+  allowReserved = false,
   onShare,
 }: {
   /** Whether the board holds any creature worth publishing. */
@@ -231,6 +232,12 @@ export function ShareEncounterButton({
   signedIn: boolean
   /** The byline they published under last time, remembered device-locally. */
   defaultByline: string
+  /**
+   * Whether this account has been granted the reserved names — the app's own and the
+   * maintainer's. Read from the database at sign-in, so the person it belongs to is named
+   * nowhere in this repository.
+   */
+  allowReserved?: boolean
   onShare: (draft: { name: string; note: string; by: string }) => Promise<PublishResult>
 }) {
   const [name, setName] = useState('')
@@ -241,7 +248,7 @@ export function ShareEncounterButton({
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const problem = by.trim() ? bylineError(by) : null
+  const problem = by.trim() ? bylineError(by, { allowReserved }) : null
 
   const publish = async (e: FormEvent) => {
     e.preventDefault()
