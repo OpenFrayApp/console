@@ -10,24 +10,67 @@ import { AccountPanel } from '../../src/components/AccountPanel.tsx'
 
 afterEach(cleanup)
 
-function renderPanel(overrides: Partial<AuthState> = {}) {
+function renderPanel(overrides: Partial<AuthState> & { allowReserved?: boolean } = {}) {
+  const { allowReserved = false, ...auth } = overrides
   const value: AuthState = {
     user: { email: 'dm@openfray.app', app_metadata: { provider: 'google' } } as unknown as User,
+    displayName: 'Nico Mustone',
     loading: false,
     configured: true,
     signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),
     deleteAccount: vi.fn(async () => ({ error: null })),
-    ...overrides,
+    setDisplayName: vi.fn(async () => ({ error: null })),
+    ...auth,
   }
   const onClose = vi.fn()
   render(
     <AuthContext.Provider value={value}>
-      <AccountPanel onClose={onClose} />
+      <AccountPanel onClose={onClose} allowReserved={allowReserved} />
     </AuthContext.Provider>,
   )
   return { value, onClose }
 }
+
+describe('AccountPanel — display name', () => {
+  it('shows the name shared encounters publish under, and saves a new one', async () => {
+    const setDisplayName = vi.fn(async () => ({ error: null }))
+    renderPanel({ setDisplayName })
+    const field = screen.getByLabelText('Name') as HTMLInputElement
+    expect(field.value).toBe('Nico Mustone')
+
+    fireEvent.change(field, { target: { value: 'Nico Verdi' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(setDisplayName).toHaveBeenCalledWith('Nico Verdi'))
+    await screen.findByText('Saved.')
+  })
+
+  it('refuses a name a byline could never carry, before it reaches the account', async () => {
+    const setDisplayName = vi.fn(async () => ({ error: null }))
+    renderPanel({ setDisplayName })
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'casino.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByText(/letters, numbers, spaces/)
+    expect(setDisplayName).not.toHaveBeenCalled()
+  })
+
+  it('lets a granted account keep a reserved name', async () => {
+    const setDisplayName = vi.fn(async () => ({ error: null }))
+    renderPanel({ setDisplayName, allowReserved: true })
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'OpenFray' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(setDisplayName).toHaveBeenCalledWith('OpenFray'))
+  })
+
+  it('clears back to unsigned', async () => {
+    const setDisplayName = vi.fn(async () => ({ error: null }))
+    renderPanel({ setDisplayName })
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: '  ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(setDisplayName).toHaveBeenCalledWith('  '))
+    await screen.findByText(/Cleared/)
+  })
+})
 
 describe('AccountPanel', () => {
   it('shows the signed-in identity, the provider, and no email/password editing', () => {

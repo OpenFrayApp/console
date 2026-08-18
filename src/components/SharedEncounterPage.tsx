@@ -155,7 +155,7 @@ export function SharedEncounterPage({
             {status.state === 'loading'
               ? 'Reading the encounter…'
               : status.state === 'gone'
-                ? 'This encounter isn’t here any more. Links shared from a signed-out console stop working after 60 days — ask whoever sent it for a new one.'
+                ? 'This shared encounter expired or was deleted by its author. Ask them to share it again or create your own.'
                 : status.message}
           </p>
           {status.state !== 'loading' && (

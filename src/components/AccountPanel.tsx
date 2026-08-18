@@ -3,6 +3,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
+import { bylineError, BYLINE_MAX } from '../lib/byline.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 
 const FIELD =
@@ -37,13 +38,45 @@ function NoteLine({ note }: { note: Note }) {
  * erasure). Shown full-screen over the app; closes on a successful delete (the
  * user is signed out) or via Done.
  */
-export function AccountPanel({ onClose }: { onClose: () => void }) {
-  const { user, signOut, deleteAccount } = useAuth()
+export function AccountPanel({
+  onClose,
+  allowReserved = false,
+}: {
+  onClose: () => void
+  /**
+   * Whether this account has been granted the reserved names. Threaded down so the name
+   * saved here is one that can actually be published — the alternative is a field that
+   * saves happily and then fails at the moment it matters.
+   */
+  allowReserved?: boolean
+}) {
+  const { user, displayName, signOut, deleteAccount, setDisplayName } = useAuth()
   const provider = providerName(user?.app_metadata?.provider)
+
+  const [name, setName] = useState(displayName ?? '')
+  const [nameNote, setNameNote] = useState<Note>(null)
+  const [nameBusy, setNameBusy] = useState(false)
 
   const [confirm, setConfirm] = useState('')
   const [delNote, setDelNote] = useState<Note>(null)
   const [delBusy, setDelBusy] = useState(false)
+
+  /** Save the publishing name, or clear it. Held to the same rules a byline is. */
+  const submitName = async (e: FormEvent) => {
+    e.preventDefault()
+    if (nameBusy) return
+    const problem = name.trim() ? bylineError(name, { allowReserved }) : null
+    if (problem) return setNameNote({ kind: 'err', text: problem })
+    setNameBusy(true)
+    setNameNote(null)
+    const { error } = await setDisplayName(name)
+    setNameBusy(false)
+    setNameNote(
+      error
+        ? { kind: 'err', text: error }
+        : { kind: 'ok', text: name.trim() ? 'Saved.' : 'Cleared — encounters publish unsigned.' },
+    )
+  }
 
   const confirmed = confirm.trim().toLowerCase() === (user?.email ?? '').toLowerCase()
   /** Delete the account once the typed email matches; on success the panel closes, signed out. */
@@ -89,6 +122,43 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-4">
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Display name
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              The name a shared encounter is published under — "Encounter by …". It starts as the
+              name your sign-in provider gave us; change it here, or leave it empty to publish
+              unsigned. Nothing is published until you press Publish.
+            </p>
+            <form onSubmit={submitName} className="mt-3 flex flex-wrap items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="display-name" className={LABEL}>
+                  Name
+                </label>
+                <input
+                  id="display-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={BYLINE_MAX + 1}
+                  placeholder="Unsigned"
+                  autoComplete="off"
+                  className={`${FIELD} mt-1`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={nameBusy}
+                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </form>
+            <div className="mt-2">
+              <NoteLine note={nameNote} />
+            </div>
+          </section>
+
           <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
               Signed in

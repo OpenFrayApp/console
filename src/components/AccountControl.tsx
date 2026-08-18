@@ -42,8 +42,11 @@ export function AccountControl({
   shares = { status: 'ok', shares: [] },
   onOpenShares,
   onUnpublish,
+  allowReserved = false,
 }: {
   onSignIn: () => void
+  /** Whether this account may publish under a reserved name; the profile field honours it. */
+  allowReserved?: boolean
   /** The links this account has published; the menu item opens them. */
   shares?: MyShares
   /** Re-read the list — opening the panel is the cheapest moment to ask. */
@@ -114,7 +117,9 @@ export function AccountControl({
             </button>
           </div>
         )}
-        {accountOpen && <AccountPanel onClose={() => setAccountOpen(false)} />}
+        {accountOpen && (
+          <AccountPanel onClose={() => setAccountOpen(false)} allowReserved={allowReserved} />
+        )}
         {sharesOpen && (
           <SharedLinksPanel
             shares={shares}

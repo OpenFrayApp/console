@@ -322,7 +322,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // somewhere to record it — and dropped if the Game Master backs out of Begin.
   const preRolled = useRef<Record<string, NewLogEntry>>({})
 
-  const { user, loading: authLoading } = useAuth()
+  const { user, displayName, setDisplayName, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const cloudId = useRef<string | null>(null)
   const cloudHydrated = useRef(false)
@@ -768,8 +768,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     const result = await publishShare('encounter', template)
     if (result.status === 'ok') {
       track(EVENTS.encounterShared)
+      // Remembered where it belongs: on the account for a signed-in Game Master, so it
+      // follows them to the next device, and device-locally for an anonymous one, who has
+      // nowhere else to keep it. Publishing under a different name changes the default —
+      // the profile is where it gets corrected.
       setShareByline(draft.by)
       saveSettings({ shareByline: draft.by || null })
+      if (user && draft.by !== (displayName ?? '')) void setDisplayName(draft.by)
       refreshShares()
     }
     return result
@@ -1485,6 +1490,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
               <AccountControl
                 onSignIn={() => setAuthOpen(true)}
+                allowReserved={bylineGranted}
                 shares={myShares}
                 onOpenShares={refreshShares}
                 onUnpublish={handleUnpublish}
@@ -1581,7 +1587,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                     <ShareEncounterButton
                       canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
                       signedIn={!!user}
-                      defaultByline={shareByline}
+                      defaultByline={displayName ?? shareByline}
                       allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
                     />

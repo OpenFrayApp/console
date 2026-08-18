@@ -54,6 +54,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase?.auth.signOut()
   }
 
+  /**
+   * Write the name this account publishes under onto the user row (`user_metadata`), or
+   * clear it. Supabase returns the updated user, so the app sees the new name at once
+   * rather than waiting for the next session refresh.
+   *
+   * This is the same `display_name` Google and Discord filled in at sign-in, so saving here
+   * replaces what they called you with what you publish as — one name, in the place the
+   * database already keeps it.
+   */
+  const setDisplayName = async (name: string): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
+    const trimmed = name.trim()
+    const { data, error } = await supabase.auth.updateUser({
+      data: { display_name: trimmed || null },
+    })
+    if (error) return { error: error.message }
+    if (data.user) setUser(data.user)
+    return { error: null }
+  }
+
   /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
@@ -70,11 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        // Whatever the user row says — the provider's name until the Game Master changes it
+        // in their profile or types a different one when publishing.
+        displayName: ((user?.user_metadata?.display_name as string | undefined) ?? '') || null,
         loading,
         configured: Boolean(supabase),
         signInWithProvider,
         signOut,
         deleteAccount,
+        setDisplayName,
       }}
     >
       {children}

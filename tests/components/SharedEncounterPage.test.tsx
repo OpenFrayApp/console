@@ -116,11 +116,13 @@ describe('SharedEncounterPage', () => {
     await waitFor(() => expect(screen.getByText(/One creature isn’t/)).toBeInTheDocument())
   })
 
-  it('says a dead link is dead, and why it might be', async () => {
+  it('says a dead link is dead, and what to do about it', async () => {
+    // The wording is the maintainer's to tune; what has to hold is that a code resolving to
+    // nothing reads as gone rather than broken, and points somewhere.
     share.result = { status: 'missing' }
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
-    await waitFor(() => expect(screen.getByText(/isn’t here any more/)).toBeInTheDocument())
-    expect(screen.getByText(/after 60 days/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(/expired|deleted/i)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Open the console' })).toBeInTheDocument()
   })
 
   it('refuses a payload that isn’t a readable encounter', async () => {

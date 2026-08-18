@@ -22,11 +22,13 @@ function stubFathom() {
 function renderPage(overrides: Partial<AuthState> = {}) {
   const value: AuthState = {
     user: null,
+    displayName: null,
     loading: false,
     configured: true,
     signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),
     deleteAccount: vi.fn(async () => ({ error: null })),
+    setDisplayName: vi.fn(async () => ({ error: null })),
     ...overrides,
   }
   render(
