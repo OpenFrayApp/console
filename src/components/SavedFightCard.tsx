@@ -69,7 +69,7 @@ export function SavedFightCard({
   const restore = () => {
     if (
       window.confirm(
-        `Replace the board with “${fight.name}”? Whatever is on it now goes, and the fight in progress isn’t saved.`,
+        `Replace the board with “${fight.name}”? Whatever is on it now goes, and the encounter in progress isn’t saved.`,
       )
     ) {
       setBusy(true)
@@ -100,7 +100,7 @@ export function SavedFightCard({
               month: 'long',
               day: 'numeric',
             }),
-            round && round > 0 ? `saved on round ${round}` : 'saved before the fight began',
+            round && round > 0 ? `saved on round ${round}` : 'saved before the encounter began',
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -145,9 +145,9 @@ export function SavedFightCard({
         </Button>
       </div>
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        <strong className="font-semibold">Restore</strong> brings the whole fight back, party and
-        hit points included. <strong className="font-semibold">Add creatures</strong> drops only its
-        creatures onto the board you have now, at full hit points.
+        <strong className="font-semibold">Restore</strong> brings the whole encounter back, party
+        and hit points included. <strong className="font-semibold">Add creatures</strong> drops only
+        its creatures onto the board you have now, at full hit points.
       </p>
     </div>
   )

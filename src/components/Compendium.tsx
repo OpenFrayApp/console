@@ -66,7 +66,7 @@ function SavedFightList({
   if (gated) {
     return (
       <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-        Sign in to save a fight and come back to it.
+        Sign in to save an encounter and come back to it.
       </p>
     )
   }
@@ -631,7 +631,7 @@ export function Compendium({
   const deleteCreature = (c: Creature) => {
     if (
       window.confirm(
-        `Delete “${c.name}” from your library? This can’t be undone. Copies already in a fight stay there.`,
+        `Delete “${c.name}” from your library? This can’t be undone. Copies already in an encounter stay there.`,
       )
     ) {
       if (selectedId === c.id) setSelectedId(null)
@@ -820,9 +820,9 @@ export function Compendium({
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'characters'
-                ? 'Sign in to save your players and drop them into any fight.'
+                ? 'Sign in to save your players and drop them into any encounter.'
                 : tab === 'encounters'
-                  ? 'Sign in to keep a fight as it stands and pick it up in a later session.'
+                  ? 'Sign in to keep an encounter as it stands and pick it up in a later session.'
                   : "Sign in to create campaigns and set your table's house rules."}
             </p>
             <button
@@ -979,11 +979,11 @@ export function Compendium({
                 : tab === 'campaigns'
                   ? 'Pick a campaign from the list to see its house rules, or create one.'
                   : tab === 'encounters'
-                    ? 'Pick a saved encounter to see what was on the board. Save a fight from the Encounters button in the header.'
+                    ? 'Pick a saved encounter to see what was on the board. Save one with the save button on the tracker.'
                     : tab === 'characters'
                       ? 'Pick a character from the list to see their details, or create one.'
                       : tab === 'effects'
-                        ? 'Pick a preset from the list to see what it applies. Build one in a fight with Apply effect, then Save as preset.'
+                        ? 'Pick a preset from the list to see what it applies. Build one in an encounter with Apply effect, then Save as preset.'
                         : createGated
                           ? 'Pick a spell from the list to read its card, or sign in to build your own.'
                           : 'Pick a spell from the list to read its card, or build your own.'}

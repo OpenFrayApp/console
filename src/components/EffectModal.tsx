@@ -401,7 +401,7 @@ export function EffectModal({
   const parts = draftParts(draft)
   const stagedAnything = parts.length > 0
 
-  /** Name and keep what's staged, so the next fight is one click. */
+  /** Name and keep what's staged, so the next encounter is one click. */
   const savePreset = () => {
     const suggested =
       draft.bundleName.trim() ||
@@ -801,7 +801,7 @@ export function EffectModal({
                   type="button"
                   onClick={savePreset}
                   disabled={!stagedAnything}
-                  title="Keep what's staged, so the next fight is one click"
+                  title="Keep what's staged, so the next encounter is one click"
                   className="mr-auto rounded-md px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 disabled:hover:bg-transparent dark:text-indigo-400 dark:hover:bg-indigo-950/40"
                 >
                   Save as preset

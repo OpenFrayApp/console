@@ -75,13 +75,15 @@ describe('SettingsPanel — the player view', () => {
     renderPanel()
     openTab('Player view')
     expect((screen.getByLabelText('Game log') as HTMLSelectElement).value).toBe('fight')
-    expect((screen.getByLabelText('End-of-fight summary') as HTMLSelectElement).value).toBe('shown')
+    expect((screen.getByLabelText('End-of-encounter summary') as HTMLSelectElement).value).toBe(
+      'shown',
+    )
   })
 
   it('hides the fight clocks when asked', () => {
     const { onSetPlayerView } = renderPanel()
     openTab('Player view')
-    fireEvent.change(screen.getByLabelText('Fight clocks'), { target: { value: 'hidden' } })
+    fireEvent.change(screen.getByLabelText('Encounter clocks'), { target: { value: 'hidden' } })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, timers: 'hidden' })
   })
 
@@ -95,10 +97,10 @@ describe('SettingsPanel — the player view', () => {
   it('holds mid-fight arrivals back when asked', () => {
     const { onSetPlayerView } = renderPanel()
     openTab('Player view')
-    expect((screen.getByLabelText('Creatures arriving mid-fight') as HTMLSelectElement).value).toBe(
-      'shown',
-    )
-    fireEvent.change(screen.getByLabelText('Creatures arriving mid-fight'), {
+    expect(
+      (screen.getByLabelText('Creatures arriving mid-encounter') as HTMLSelectElement).value,
+    ).toBe('shown')
+    fireEvent.change(screen.getByLabelText('Creatures arriving mid-encounter'), {
       target: { value: 'hidden' },
     })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, arrivals: 'hidden' })
@@ -109,7 +111,7 @@ describe('SettingsPanel — the player view', () => {
     openTab('Player view')
     fireEvent.change(screen.getByLabelText('Game log'), { target: { value: 'session' } })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, log: 'session' })
-    fireEvent.change(screen.getByLabelText('End-of-fight summary'), {
+    fireEvent.change(screen.getByLabelText('End-of-encounter summary'), {
       target: { value: 'hidden' },
     })
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, recap: 'hidden' })

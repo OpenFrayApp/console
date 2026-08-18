@@ -67,7 +67,7 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className:
 const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
   {
     title: 'Saved and synced',
-    body: 'Your fight is saved as you play and follows you to your other devices. Close the laptop mid-round, pick it up next week.',
+    body: 'Your encounter is saved as you play and follows you to your other devices. Close the laptop mid-round, pick it up next week.',
     icon: <path d="M21 12a9 9 0 1 1-6.219-8.56M21 3v6h-6" />,
   },
   {
@@ -79,14 +79,14 @@ const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
   },
   {
     title: 'Campaigns',
-    body: "Set your table's house rules once — critical hit damage, surprise, creature hit points — and they apply to every fight.",
+    body: "Set your table's house rules once — critical hit damage, surprise, creature hit points — and they apply to every encounter.",
     icon: (
       <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     ),
   },
   {
     title: 'Your characters, kept',
-    body: 'Build each player character once, then drop them into any fight. No retyping the party every week.',
+    body: 'Build each player character once, then drop them into any encounter. No retyping the party every week.',
     icon: (
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
     ),

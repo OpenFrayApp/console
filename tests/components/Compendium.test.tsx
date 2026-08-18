@@ -498,7 +498,7 @@ describe('Compendium', () => {
       render(<Compendium onCreateCreature={() => {}} createGated onGated={onGated} />)
       await waitFor(() => screen.getByText('Goblin'))
       fireEvent.click(screen.getByText('Encounters'))
-      expect(screen.getByText(/Sign in to save a fight/)).toBeInTheDocument()
+      expect(screen.getByText(/Sign in to save an encounter/)).toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
       expect(onGated).toHaveBeenCalled()
     })

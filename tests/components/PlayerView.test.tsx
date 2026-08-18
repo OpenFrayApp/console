@@ -154,7 +154,7 @@ describe('PlayerView — live', () => {
       },
     })
     render(<PlayerView code="x" />)
-    expect(screen.getByText('How the fight went')).toBeInTheDocument()
+    expect(screen.getByText('How the encounter went')).toBeInTheDocument()
     expect(screen.getByText('Victory')).toBeInTheDocument()
     expect(screen.getByText('450')).toBeInTheDocument()
     expect(screen.getByText('Biggest hit')).toBeInTheDocument()
@@ -207,7 +207,7 @@ describe('PlayerView — live', () => {
     link.status = 'live'
     link.board = board()
     render(<PlayerView code="x" />)
-    expect(screen.queryByText('How the fight went')).toBeNull()
+    expect(screen.queryByText('How the encounter went')).toBeNull()
   })
 
   it('says so when nobody is on the board yet', () => {

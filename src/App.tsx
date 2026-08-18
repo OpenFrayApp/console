@@ -198,8 +198,8 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
         type="button"
         onClick={() => onChange('encounter')}
         aria-current={view === 'encounter' ? 'page' : undefined}
-        aria-label="Show the fight"
-        title="Show the fight"
+        aria-label="Show the encounter"
+        title="Show the encounter"
         className={cell(view === 'encounter')}
       >
         <SwordIcon />

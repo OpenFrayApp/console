@@ -75,7 +75,7 @@ export function RecapSummary({ recap, showXp }: { recap: Recap; showXp: boolean 
           <Stat
             label="Difficulty"
             value={DIFFICULTY_LABEL[recap.difficulty]}
-            hint="before the fight"
+            hint="before the encounter"
           />
         )}
         <Stat label="Rounds" value={recap.rounds} />

@@ -196,7 +196,7 @@ export function AccountPanel({
               Delete account
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              Deletes your account and <strong>everything in it</strong>: your fights, your
+              Deletes your account and <strong>everything in it</strong>: your encounters, your
               creatures and spells, your campaigns, and your characters. It happens straight away
               and can't be undone.
             </p>

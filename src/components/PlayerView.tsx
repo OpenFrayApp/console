@@ -40,21 +40,21 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
     <div className="space-y-2">
       <p className="font-medium">Waiting for the Game Master.</p>
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        This page follows the fight at <span className="font-mono">{code}</span> once your Game
+        This page follows the encounter at <span className="font-mono">{code}</span> once your Game
         Master starts sharing. Leave it open — it fills in on its own.
       </p>
     </div>
   )
 }
 
-/** How the fight went, on the table's own screens, for as long as the GM leaves it up. */
+/** How the encounter went, on the table's own screens, for as long as the GM leaves it up. */
 function SharedRecap({ recap }: { recap: PlayerRecap }) {
   return (
     <section className="mb-4 shrink-0 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
       <div className="mb-3 flex items-center gap-2">
         <OutcomeBadge outcome={recap.outcome} />
         <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-          How the fight went
+          How the encounter went
         </h2>
       </div>
       <RecapSummary recap={recap} showXp={recap.showXp} />
@@ -149,7 +149,7 @@ export function PlayerView({ code }: { code: string }) {
       </main>
 
       <footer className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        A shared view of a fight running in OpenFray. Nothing here is saved.
+        A shared view of an encounter running in OpenFray. Nothing here is saved.
       </footer>
     </div>
   )
