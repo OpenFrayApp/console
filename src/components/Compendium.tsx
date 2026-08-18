@@ -672,7 +672,10 @@ export function Compendium({
       className="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:grid-cols-[26rem_minmax(0,1fr)] split:gap-4 split:overflow-visible wide:grid wide:grid-cols-[26rem_minmax(0,1fr)] wide:gap-4 wide:overflow-visible"
     >
       <div className="flex min-h-0 min-w-0 flex-col swipe:w-full swipe:shrink-0 swipe:snap-center">
-        <div role="tablist" aria-label="Compendium" className="mb-2 flex flex-wrap gap-0.5">
+        {/* Six tabs on a fixed grid rather than a wrapping row: three and three, the same
+          shape at every width, instead of a line that breaks differently as the column
+          changes and leaves one tab stranded below. */}
+        <div role="tablist" aria-label="Compendium" className="mb-2 grid grid-cols-3 gap-0.5">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
           </TabButton>

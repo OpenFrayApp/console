@@ -195,8 +195,8 @@ export function SharedEncounterPage({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          OpenFray is a free combat console for running Dungeons and Dragons 5e sessions. Adding this encounter puts its
-          creatures on your board — nothing else about your game changes.
+          OpenFray is a free combat console for running Dungeons and Dragons 5e sessions. Adding
+          this encounter puts its creatures on your board — nothing else about your game changes.
         </p>
       </header>
 
@@ -292,7 +292,8 @@ export function SharedEncounterPage({
               {/* Provenance, not a warning about links: the allowlist already made them
                   unclickable, and the useful thing to say is whose words these are. */}
               <p className="mb-2 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                Written by the author of this encounter, not by OpenFray. Treat any link and information in it with caution.
+                Written by the author of this encounter, not by OpenFray. Treat any link and
+                information in it with caution.
               </p>
               <SharedNote>{template!.note}</SharedNote>
             </div>
