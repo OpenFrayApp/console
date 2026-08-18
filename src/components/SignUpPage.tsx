@@ -161,8 +161,8 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
               the whole tracker. Signing in saves what you build so it's still there next session.
             </p>
             <p className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
-              <span className="font-semibold">Free, and always will be.</span> No ads, no paywall,
-              no paid tier.
+              <span className="font-semibold">The console is free, and always will be.</span> No
+              ads, no paywall, no paid tier.
             </p>
             <ul className="mt-8 grid gap-5 sm:grid-cols-2">
               {BENEFITS.map((b) => (
