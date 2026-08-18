@@ -74,8 +74,9 @@ describe('SharedEncounterPage', () => {
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
 
     await waitFor(() => expect(screen.getByText(/They wait in the rafters/)).toBeInTheDocument())
-    // Provenance, not a warning about links — the allowlist already made them unclickable.
-    expect(screen.getByText(/Written by whoever shared this link, not by OpenFray/)).toBeTruthy()
+    // Provenance is the point, whatever the wording: the reader must be told these are a
+    // stranger's words and not the app's.
+    expect(screen.getByText(/not by OpenFray/)).toBeTruthy()
   })
 
   it('opens on the first creature when there is no note', async () => {
