@@ -51,11 +51,30 @@ describe('SharedNote', () => {
     expect(container.innerHTML).not.toContain('onerror')
   })
 
+  it('lands every heading at h3 or below, so the page keeps its outline', () => {
+    // The page owns its h1 (the encounter's name) and its h2 (Notes). A `#` in somebody's
+    // prep can't be either without breaking the outline for a screen reader.
+    const container = render1(
+      '# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n###### Six',
+    )
+    expect(container.querySelector('h1')).toBeNull()
+    expect(container.querySelector('h2')).toBeNull()
+    expect([...container.querySelectorAll('h3')].map((h) => h.textContent)).toEqual([
+      'One',
+      'Two',
+      'Three',
+    ])
+    // Below h3 the writer is structuring their own section, so those stand as typed.
+    expect(container.querySelector('h4')?.textContent).toBe('Four')
+    expect(container.querySelector('h5')?.textContent).toBe('Five')
+    expect(container.querySelector('h6')?.textContent).toBe('Six')
+  })
+
   it('flattens the rest of markdown rather than styling it', () => {
-    const container = render1('# Heading\n\n`code`\n\n| a | b |\n| - | - |\n| 1 | 2 |')
-    for (const tag of ['h1', 'h2', 'code', 'pre', 'table']) {
+    const container = render1('`code`\n\n| a | b |\n| - | - |\n| 1 | 2 |')
+    for (const tag of ['code', 'pre', 'table']) {
       expect(container.querySelector(tag), tag).toBeNull()
     }
-    expect(container.textContent).toContain('Heading')
+    expect(container.textContent).toContain('code')
   })
 })

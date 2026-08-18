@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import ReactMarkdown from 'react-markdown'
+import type { ReactNode } from 'react'
 
 /**
  * The note on a shared encounter — the one place a stranger's prose renders inside our own
@@ -18,9 +19,10 @@ import ReactMarkdown from 'react-markdown'
  *   handing over an IP and a User-Agent and giving whoever posted the link a read receipt on
  *   everyone who opened it. The console loads no third-party resources anywhere else.
  *
- * So bold, italic, quotes and lists render, and everything else — links, images, headings,
+ * So bold, italic, quotes, lists and headings render, and everything else — links, images,
  * code, tables, HTML — comes through as its own plain text (`unwrapDisallowed`), which keeps
- * what the writer said while dropping what it would have done.
+ * what the writer said while dropping what it would have done. Headings are safe company for
+ * that list: unlike a link or an image, a heading neither navigates nor fetches.
  *
  * **This is deliberately its own component rather than a flag on `Markdown`.** That one
  * carries the compendium's trusted prose and its `spell:`/`condition:` hover links, and the
@@ -28,8 +30,34 @@ import ReactMarkdown from 'react-markdown'
  * `tests/components/SharedNote.test.tsx` is what fails first if the two ever converge.
  */
 
-/** Bold, italic, quotes, lists, paragraphs, breaks. Nothing that navigates or fetches. */
-const ALLOWED = ['p', 'strong', 'em', 'blockquote', 'br', 'ul', 'ol', 'li']
+/** Bold, italic, quotes, lists, paragraphs, breaks, headings. Nothing that navigates or fetches. */
+const ALLOWED = [
+  'p',
+  'strong',
+  'em',
+  'blockquote',
+  'br',
+  'ul',
+  'ol',
+  'li',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+]
+
+/**
+ * A note's top-level heading, whatever number the writer reached for.
+ *
+ * The page already owns its `h1` (the encounter's name) and its `h2` (Notes), so a `#` in
+ * somebody's prep cannot be either without breaking the document's outline for anyone
+ * reading with a screen reader. Anything above `h3` lands on `h3`; `h4` and below are
+ * respected as typed, because by then the writer is describing structure inside their own
+ * section rather than competing with the page's.
+ */
+const Heading = ({ children }: { children?: ReactNode }) => <h3>{children}</h3>
 
 export function SharedNote({ children }: { children: string }) {
   return (
@@ -39,10 +67,21 @@ export function SharedNote({ children }: { children: string }) {
         '[&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 ' +
         '[&_blockquote]:pl-3 [&_blockquote]:italic [&_em]:italic [&_li]:my-0.5 [&_p]:my-1 ' +
         '[&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1 ' +
-        '[&_ol]:list-decimal [&_ol]:pl-5 dark:text-slate-200 dark:[&_blockquote]:border-slate-700'
+        '[&_ol]:list-decimal [&_ol]:pl-5 dark:text-slate-200 dark:[&_blockquote]:border-slate-700 ' +
+        // The four levels a note can use, each a step quieter than the last.
+        '[&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_h4]:mb-1 [&_h4]:mt-3 ' +
+        '[&_h4]:text-sm [&_h4]:font-medium [&_h5]:mb-0.5 [&_h5]:mt-2 [&_h5]:text-xs ' +
+        '[&_h5]:font-semibold [&_h6]:mb-0.5 [&_h6]:mt-2 [&_h6]:text-xs [&_h6]:font-medium ' +
+        '[&_:is(h3,h4,h5,h6)]:text-slate-800 dark:[&_:is(h3,h4,h5,h6)]:text-slate-100 ' +
+        '[&_:is(h3,h4,h5,h6):first-child]:mt-0'
       }
     >
-      <ReactMarkdown allowedElements={ALLOWED} unwrapDisallowed skipHtml>
+      <ReactMarkdown
+        allowedElements={ALLOWED}
+        unwrapDisallowed
+        skipHtml
+        components={{ h1: Heading, h2: Heading, h3: Heading }}
+      >
         {children}
       </ReactMarkdown>
     </div>

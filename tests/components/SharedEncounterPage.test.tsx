@@ -47,9 +47,10 @@ afterEach(() => {
   share.result = null
 })
 
-const encounter = (over: Record<string, unknown> = {}) => ({
+const encounter = (over: Record<string, unknown> = {}, official = false) => ({
   status: 'ok' as const,
   kind: 'encounter',
+  official,
   data: {
     v: 1,
     name: 'Goblin ambush',
@@ -79,6 +80,21 @@ describe('SharedEncounterPage', () => {
     expect(screen.getByText(/not by OpenFray/)).toBeTruthy()
   })
 
+  it('drops the stranger’s-words line from our own encounters', async () => {
+    // The flag comes from the database, which knows whose account the row came from — a
+    // byline reading "OpenFray" proves nothing, so the page never asks it.
+    share.result = encounter({ by: 'OpenFray', note: 'They wait in the rafters.' }, true)
+    render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText(/They wait in the rafters/)).toBeInTheDocument())
+    expect(screen.queryByText(/not by OpenFray/)).toBeNull()
+  })
+
+  it('keeps it on anyone else’s, however they signed the byline', async () => {
+    share.result = encounter({ by: 'OpenFray', note: 'They wait in the rafters.' }, false)
+    render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText(/not by OpenFray/)).toBeInTheDocument())
+  })
+
   it('opens on the first creature when there is no note', async () => {
     share.result = encounter()
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
@@ -103,6 +119,7 @@ describe('SharedEncounterPage', () => {
     share.result = {
       status: 'ok',
       kind: 'encounter',
+      official: false,
       data: {
         v: 1,
         name: 'Ambush',
@@ -126,7 +143,12 @@ describe('SharedEncounterPage', () => {
   })
 
   it('refuses a payload that isn’t a readable encounter', async () => {
-    share.result = { status: 'ok', kind: 'encounter', data: { v: 1, name: '', entries: [] } }
+    share.result = {
+      status: 'ok',
+      kind: 'encounter',
+      official: false,
+      data: { v: 1, name: '', entries: [] },
+    }
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
     await waitFor(() => expect(screen.getByText(/can’t be read/)).toBeInTheDocument())
   })

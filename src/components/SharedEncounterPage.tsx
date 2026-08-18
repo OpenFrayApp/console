@@ -14,6 +14,7 @@ import { SpellLinkContext } from './spellLinkContext.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 import { SharedNote } from './SharedNote.tsx'
+import { ReportShareDialog } from './ReportShareDialog.tsx'
 import { useSwipePanes } from '../hooks/useSwipePanes.ts'
 import { Button } from './ui.tsx'
 import { cx } from '../lib/cx.ts'
@@ -35,7 +36,7 @@ import { cx } from '../lib/cx.ts'
 /** What the page is doing, or why it can't. */
 type Status =
   | { state: 'loading' }
-  | { state: 'ok'; template: EncounterTemplate }
+  | { state: 'ok'; template: EncounterTemplate; official: boolean }
   | { state: 'gone' }
   | { state: 'unreadable'; message: string }
 
@@ -94,7 +95,7 @@ export function SharedEncounterPage({
       }
       const { template, error } = parseTemplate(found.data)
       if (!template) return setStatus({ state: 'unreadable', message: error ?? '' })
-      setStatus({ state: 'ok', template })
+      setStatus({ state: 'ok', template, official: found.official })
       setReading(template.note ? { kind: 'note' } : { kind: 'creature', index: 0 })
 
       const sources = [
@@ -111,6 +112,9 @@ export function SharedEncounterPage({
   }, [code])
 
   const template = status.state === 'ok' ? status.template : null
+  // Ours, according to the database — the publisher holds a byline grant. Never according to
+  // the byline, which is a claim anyone can type into a form.
+  const official = status.state === 'ok' && status.official
 
   /** The cast, with each entry resolved to the stat block it names. */
   const cast = useMemo((): CastRow[] => {
@@ -149,7 +153,7 @@ export function SharedEncounterPage({
 
   if (status.state !== 'ok') {
     return (
-      <Shell>
+      <Shell code={code}>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="max-w-md text-slate-600 dark:text-slate-300">
             {status.state === 'loading'
@@ -174,7 +178,7 @@ export function SharedEncounterPage({
   const selected = reading?.kind === 'creature' ? cast[reading.index] : undefined
 
   return (
-    <Shell>
+    <Shell code={code}>
       <header className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -207,22 +211,20 @@ export function SharedEncounterPage({
       >
         <div className="flex min-h-0 min-w-0 flex-col gap-2 p-4 swipe:w-full swipe:shrink-0 swipe:snap-center split:p-0 wide:p-0">
           <ul className="min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-            {template!.note && (
-              <li>
-                <button
-                  type="button"
-                  onClick={() => read({ kind: 'note' })}
-                  className={cx(
-                    'w-full px-3 py-2 text-left text-sm font-medium',
-                    reading?.kind === 'note'
-                      ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-900',
-                  )}
-                >
-                  Notes
-                </button>
-              </li>
-            )}
+            <li>
+              <button
+                type="button"
+                onClick={() => read({ kind: 'note' })}
+                className={cx(
+                  'w-full px-3 py-2 text-left text-sm font-medium',
+                  reading?.kind === 'note'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-900',
+                )}
+              >
+                Encounter Details
+              </button>
+            </li>
             {cast.map((row, index) => (
               <li key={`${row.name}-${index}`}>
                 <button
@@ -290,11 +292,16 @@ export function SharedEncounterPage({
             <div className="pt-4">
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Notes</h2>
               {/* Provenance, not a warning about links: the allowlist already made them
-                  unclickable, and the useful thing to say is whose words these are. */}
-              <p className="mb-2 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                Written by the author of this encounter, not by OpenFray. Treat any link and
-                information in it with caution.
-              </p>
+                  unclickable, and the useful thing to say is whose words these are. Which is
+                  why our own encounters don't carry it — telling a reader to be wary of a
+                  stranger's words above words that are ours reads as boilerplate, and
+                  boilerplate is what people learn to skip on the pages that need it. */}
+              {!official && (
+                <p className="mb-2 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
+                  Written by the author of this encounter, not by OpenFray. Treat any link and
+                  information in it with caution.
+                </p>
+              )}
               <SharedNote>{template!.note}</SharedNote>
             </div>
           ) : selected?.creature ? (
@@ -325,7 +332,8 @@ export function SharedEncounterPage({
 }
 
 /** The page's frame: the wordmark, the content, and the console's own legal links. */
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ code, children }: { code: string; children: React.ReactNode }) {
+  const [reporting, setReporting] = useState(false)
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <a
@@ -353,9 +361,14 @@ function Shell({ children }: { children: React.ReactNode }) {
           AGPL-3.0
         </a>
         <span className="ml-auto">
-          <a href={`mailto:hello@openfray.app?subject=Reported%20encounter`}>Report this</a>
+          {/* A form rather than a mailto: the reason and the code travel with it, and it
+            works on a phone with no mail account set up. */}
+          <button type="button" onClick={() => setReporting(true)} className="hover:underline">
+            Report this
+          </button>
         </span>
       </footer>
+      {reporting && <ReportShareDialog code={code} onClose={() => setReporting(false)} />}
     </div>
   )
 }

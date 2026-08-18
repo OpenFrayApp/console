@@ -40,7 +40,17 @@ export type PublishResult =
 
 /** What a code resolved to. `missing` is a code that never existed, or has expired. */
 export type FetchedShare =
-  | { status: 'ok'; kind: string; data: unknown }
+  | {
+      status: 'ok'
+      kind: string
+      data: unknown
+      /**
+       * Whether the publisher holds a byline grant — one of ours. The database works it out
+       * from the row's owner, never from the byline: a byline is a claim anyone can type,
+       * and the page uses this to decide whether it is looking at a stranger's words.
+       */
+      official: boolean
+    }
   | { status: 'missing' }
   | { status: 'unavailable' }
   | { status: 'failed' }
@@ -116,9 +126,11 @@ export async function fetchShare(code: string): Promise<FetchedShare> {
     return { status: 'failed' }
   }
   if (!data || typeof data !== 'object') return { status: 'missing' }
-  const row = data as { kind?: unknown; data?: unknown }
+  const row = data as { kind?: unknown; data?: unknown; official?: unknown }
   if (typeof row.kind !== 'string' || row.data === undefined) return { status: 'missing' }
-  return { status: 'ok', kind: row.kind, data: row.data }
+  // Absent on a project whose `share()` predates the flag: unknown means treat it as a
+  // stranger's, which is the safe direction to be wrong in.
+  return { status: 'ok', kind: row.kind, data: row.data, official: row.official === true }
 }
 
 /** What the publisher's own list found; anonymous publishers have no list to find. */

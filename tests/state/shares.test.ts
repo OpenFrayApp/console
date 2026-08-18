@@ -99,14 +99,28 @@ describe('fetchShare', () => {
   // Through a function, not a select: a policy that lets a stranger read one row by code
   // would let them list every row, and these are Game-Master-authored.
   it('asks the database function for exactly one share', async () => {
-    const { client, rpcs } = makeSupabaseStub({ data: { kind: 'encounter', data: template } })
+    const { client, rpcs } = makeSupabaseStub({
+      data: { kind: 'encounter', data: template, official: true },
+    })
     supa.client = client
     expect(await fetchShare('k7mqx3rt9p')).toEqual({
       status: 'ok',
       kind: 'encounter',
       data: template,
+      official: true,
     })
     expect(rpcs).toEqual([{ fn: 'share', args: { want: 'k7mqx3rt9p' } }])
+  })
+
+  // Whose encounter it is comes from the database, which knows whose account the row came
+  // from. A byline is a claim anyone can type, so anything short of a true means a stranger's.
+  it('treats an unknown publisher as a stranger', async () => {
+    for (const official of [undefined, false, null, 'true', 1]) {
+      const { client } = makeSupabaseStub({ data: { kind: 'encounter', data: template, official } })
+      supa.client = client
+      const found = await fetchShare('k7mqx3rt9p')
+      expect(found.status === 'ok' && found.official, JSON.stringify(official)).toBe(false)
+    }
   })
 
   it('reads a code that resolves to nothing as missing, not as a failure', async () => {
