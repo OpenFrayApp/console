@@ -292,8 +292,8 @@ export function SharedEncounterPage({
               {/* Provenance, not a warning about links: the allowlist already made them
                   unclickable, and the useful thing to say is whose words these are. */}
               <p className="mb-2 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
-                Written by whoever shared this link, not by OpenFray. Treat any address in it the
-                way you’d treat one from a stranger.
+                Written by the author of this encounter, not by OpenFray. Treat any link and
+                information in it with caution.
               </p>
               <SharedNote>{template!.note}</SharedNote>
             </div>

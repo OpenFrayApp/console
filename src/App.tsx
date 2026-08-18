@@ -60,7 +60,7 @@ import {
 } from './state/shares.ts'
 import type { EncounterTemplate } from './schema/encounterTemplate.ts'
 import { loadSrdCreatures } from './compendium/srd.ts'
-import { EncountersMenu } from './components/EncountersMenu.tsx'
+import { SaveFightButton, ShareEncounterButton } from './components/EncounterActions.tsx'
 import {
   deleteCustomCreature,
   loadCustomCreatures,
@@ -734,6 +734,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return { added: combatants.length, missing }
   }
 
+  /** Re-read the published links; opening the panel is the cheapest moment to ask. */
+  const refreshShares = () => {
+    if (!userId) return
+    void listMyShares().then(setMyShares)
+  }
+
   /**
    * Publish the board's cast under a link. The name, note and byline come from the form; the
    * cast comes from `templateFromBoard`, which is what leaves the party and the live state
@@ -756,7 +762,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       track(EVENTS.encounterShared)
       setShareByline(draft.by)
       saveSettings({ shareByline: draft.by || null })
-      void listMyShares().then(setMyShares)
+      refreshShares()
     }
     return result
   }
@@ -1469,16 +1475,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               <div className="hidden split:block wide:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
-              <AccountControl onSignIn={() => setAuthOpen(true)} />
-              <EncountersMenu
-                canSave={encounter.combatants.length > 0}
-                signedIn={!!user}
-                onSave={handleSaveFight}
+              <AccountControl
                 onSignIn={() => setAuthOpen(true)}
-                canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
                 shares={myShares}
-                defaultByline={shareByline}
-                onShare={handleShareEncounter}
+                onOpenShares={refreshShares}
                 onUnpublish={handleUnpublish}
               />
               <SharePanel
@@ -1562,6 +1562,22 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
             ) : (
               <EncounterConsole
+                boardActions={
+                  <>
+                    <SaveFightButton
+                      canSave={encounter.combatants.length > 0}
+                      signedIn={!!user}
+                      onSave={handleSaveFight}
+                      onSignIn={() => setAuthOpen(true)}
+                    />
+                    <ShareEncounterButton
+                      canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
+                      signedIn={!!user}
+                      defaultByline={shareByline}
+                      onShare={handleShareEncounter}
+                    />
+                  </>
+                }
                 encounter={encounter}
                 dispatch={dispatch}
                 onRoll={pushRoll}

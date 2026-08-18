@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isRollable, type Action } from '../schema/action.ts'
 import type { Ability } from '../schema/primitives.ts'
 import type { EffectPreset } from '../schema/preset.ts'
@@ -77,6 +77,7 @@ function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
  * (or jumped to from the bottom bar, which `pane`/`onPaneChange` keep in step).
  */
 export function EncounterConsole({
+  boardActions,
   encounter,
   dispatch,
   onRoll,
@@ -104,6 +105,12 @@ export function EncounterConsole({
   concentrateRequest,
   keyHints,
 }: {
+  /**
+   * What the board as a whole can do — saving it, handing it out. Rendered in the tracker's
+   * bottom corner, and passed in rather than built here so this component stays about
+   * running a fight and knows nothing about accounts or links.
+   */
+  boardActions?: ReactNode
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
@@ -491,6 +498,7 @@ export function EncounterConsole({
             </>
           )}
         </div>
+        {boardActions && <div className="mt-2 flex items-center gap-1">{boardActions}</div>}
       </section>
 
       <section
