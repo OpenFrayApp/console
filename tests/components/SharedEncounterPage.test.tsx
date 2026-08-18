@@ -64,10 +64,31 @@ describe('SharedEncounterPage', () => {
     share.result = encounter({ by: 'Bob', note: 'They **wait** in the rafters.' })
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
 
+    // The name leads the details pane, where the note that explains it is; the byline and
+    // the totals close it, on one line.
     await waitFor(() => expect(screen.getByText('Goblin ambush')).toBeInTheDocument())
     expect(screen.getByText(/Encounter by Bob · 4 creatures/)).toBeInTheDocument()
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText('×4')).toBeInTheDocument()
+  })
+
+  it('offers a way to report the words, beside the name on them', async () => {
+    share.result = encounter({ by: 'Bob', note: 'They wait in the rafters.' })
+    render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+    const report = await screen.findByRole('button', { name: /Report this/ })
+    // On the line the byline is on, since that is what a report is about.
+    expect(report.closest('div')?.textContent).toContain('Encounter by Bob')
+  })
+
+  it('adds up what beating the encounter is worth', async () => {
+    // The goblin's own number, four times over — a reader sizing up a link wants the whole
+    // encounter, not a stat block each.
+    share.result = encounter()
+    render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+    // Set apart from the rest of the line, because it is the number somebody sizing up a
+    // link reads first.
+    await waitFor(() => expect(screen.getByText('200 XP').tagName).toBe('STRONG'))
+    expect(screen.getByText(/4 creatures ·/)).toBeInTheDocument()
   })
 
   it('opens on the note, with the words that say whose it is', async () => {
@@ -95,11 +116,13 @@ describe('SharedEncounterPage', () => {
     await waitFor(() => expect(screen.getByText(/not by OpenFray/)).toBeInTheDocument())
   })
 
-  it('opens on the first creature when there is no note', async () => {
+  it('keeps the details pane even when nobody wrote a note', async () => {
+    // The name and the author line live there, so the row is not the note's to own.
     share.result = encounter()
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
-    await waitFor(() => expect(screen.getAllByText('Goblin').length).toBeGreaterThan(1))
-    expect(screen.queryByText('Notes')).toBeNull()
+    await waitFor(() => expect(screen.getByText('Encounter Details')).toBeInTheDocument())
+    expect(screen.getByText('Goblin ambush')).toBeInTheDocument()
+    expect(screen.getByText(/left no notes/)).toBeInTheDocument()
   })
 
   it('adds nothing until the reader says so', async () => {

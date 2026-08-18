@@ -10,6 +10,7 @@ import { fetchShare } from '../state/shares.ts'
 import { loadLibraries, sourceOfId } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { formatCr } from '../compendium/format.ts'
+import { estimateXp } from '../combat/difficulty.ts'
 import { SpellLinkContext } from './spellLinkContext.ts'
 import { CreatureStatBlock } from './CreatureStatBlock.tsx'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
@@ -52,6 +53,26 @@ interface CastRow {
   side: 'friend' | 'foe'
 }
 
+/** An octagon with a raised hand's worth of meaning: stop, something here is wrong. */
+function ReportIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="h-3.5 w-3.5"
+    >
+      <path d="M7.9 3h8.2L21 7.9v8.2L16.1 21H7.9L3 16.1V7.9z" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+  )
+}
+
 const SIDE_TONE: Record<'friend' | 'foe', string> = {
   friend: 'text-emerald-700 dark:text-emerald-300',
   foe: 'text-rose-700 dark:text-rose-300',
@@ -70,6 +91,7 @@ export function SharedEncounterPage({
   const [spells, setSpells] = useState<Spell[]>([])
   const [reading, setReading] = useState<Reading | null>(null)
   const [pane, setPane] = useState(0)
+  const [reporting, setReporting] = useState(false)
   const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
 
   // Read the share, then fetch only the libraries its cast actually names.
@@ -96,7 +118,9 @@ export function SharedEncounterPage({
       const { template, error } = parseTemplate(found.data)
       if (!template) return setStatus({ state: 'unreadable', message: error ?? '' })
       setStatus({ state: 'ok', template, official: found.official })
-      setReading(template.note ? { kind: 'note' } : { kind: 'creature', index: 0 })
+      // Always the details first: they carry the encounter's name, which is nowhere else on
+      // the page now, and the note that explains what the cast is for.
+      setReading({ kind: 'note' })
 
       const sources = [
         ...new Set(template.entries.flatMap((e) => (e.ref ? [sourceOfId(e.ref)] : []))),
@@ -151,9 +175,29 @@ export function SharedEncounterPage({
   const missing = cast.filter((row) => !row.creature && !row.entry.quick).length
   const total = cast.reduce((n, row) => n + row.count, 0)
 
+  /**
+   * What the encounter is worth, in the experience the books award for beating it.
+   *
+   * A creature's own number when it has one, and the estimate the difficulty readout already
+   * uses when it doesn't — a homebrew stat block and a quick add both have hit points and an
+   * armor class, which is what that estimate reads. A creature this compendium can't resolve
+   * contributes nothing rather than a guess, which is why the missing line above matters.
+   */
+  const xp = cast.reduce((sum, row) => {
+    const creature = row.creature
+    const each = creature
+      ? ((row.entry.inLair ? creature.xpLair : undefined) ??
+        creature.xp ??
+        estimateXp(creature.maxHp, creature.ac))
+      : row.entry.quick
+        ? estimateXp(row.entry.quick.maxHp, row.entry.quick.ac)
+        : 0
+    return sum + each * row.count
+  }, 0)
+
   if (status.state !== 'ok') {
     return (
-      <Shell code={code}>
+      <Shell>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="max-w-md text-slate-600 dark:text-slate-300">
             {status.state === 'loading'
@@ -178,30 +222,19 @@ export function SharedEncounterPage({
   const selected = reading?.kind === 'creature' ? cast[reading.index] : undefined
 
   return (
-    <Shell code={code}>
+    <Shell>
+      {/* The header is the action and the introduction. The encounter's own name belongs with
+        its details, one pane over, where the note that explains it is. */}
       <header className="border-b border-slate-200 px-4 py-3 dark:border-slate-800 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
-              {template!.name}
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {/* A byline is the publisher's own claim, presented as one: no check mark, no
-                  link, nothing that suggests we verified it. */}
-              {template!.by ? `Encounter by ${template!.by} · ` : ''}
-              {total} {total === 1 ? 'creature' : 'creatures'}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" onClick={() => onAdd(template!)}>
-              Add to my board
-            </Button>
-          </div>
+          <p className="min-w-0 text-xs text-slate-500 dark:text-slate-400">
+            OpenFray is a free combat console for running Dungeons and Dragons 5e sessions. Adding
+            this encounter puts its creatures on your board — nothing else about your game changes.
+          </p>
+          <Button variant="primary" onClick={() => onAdd(template!)}>
+            Add to my board
+          </Button>
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          OpenFray is a free combat console for running Dungeons and Dragons 5e sessions. Adding
-          this encounter puts its creatures on your board — nothing else about your game changes.
-        </p>
       </header>
 
       <div
@@ -216,7 +249,7 @@ export function SharedEncounterPage({
                 type="button"
                 onClick={() => read({ kind: 'note' })}
                 className={cx(
-                  'w-full px-3 py-2 text-left text-sm font-medium',
+                  'w-full px-3 py-2 text-left font-medium',
                   reading?.kind === 'note'
                     ? 'bg-indigo-50 dark:bg-indigo-950/40'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-900',
@@ -262,7 +295,8 @@ export function SharedEncounterPage({
           {missing > 0 && (
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {missing === 1 ? 'One creature isn’t' : `${missing} creatures aren’t`} in this version
-              of the compendium, so {missing === 1 ? 'it' : 'they'} won’t arrive.
+              of the compendium, so {missing === 1 ? 'it' : 'they'} won’t arrive
+              {xp > 0 ? ' and the total below leaves them out' : ''}.
             </p>
           )}
         </div>
@@ -288,21 +322,59 @@ export function SharedEncounterPage({
             Back
           </button>
 
-          {reading?.kind === 'note' && template!.note ? (
-            <div className="pt-4">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Notes</h2>
+          {reading?.kind === 'note' ? (
+            <div className="flex flex-1 flex-col pt-4">
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {template!.name}
+              </h1>
               {/* Provenance, not a warning about links: the allowlist already made them
                   unclickable, and the useful thing to say is whose words these are. Which is
                   why our own encounters don't carry it — telling a reader to be wary of a
                   stranger's words above words that are ours reads as boilerplate, and
                   boilerplate is what people learn to skip on the pages that need it. */}
               {!official && (
-                <p className="mb-2 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
+                <p className="mb-3 mt-1 text-xs italic text-slate-500 dark:text-slate-400">
                   Written by the author of this encounter, not by OpenFray. Treat any link and
                   information in it with caution.
                 </p>
               )}
-              <SharedNote>{template!.note}</SharedNote>
+              {template!.note ? (
+                <SharedNote>{template!.note}</SharedNote>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Whoever shared this left no notes with it.
+                </p>
+              )}
+              {/* One line at the foot of the details: who signed it, how big it is, and what
+                beating it is worth — the number a Game Master sizing up a link reads first,
+                so it is the one thing here set in bold. The byline is the publisher's own
+                claim, presented as one: no check mark, no link, nothing that suggests we
+                checked it. */}
+              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <p>
+                  {template!.by ? `Encounter by ${template!.by} · ` : ''}
+                  {total} {total === 1 ? 'creature' : 'creatures'}
+                  {xp > 0 && (
+                    <>
+                      {' · '}
+                      <strong className="font-semibold text-slate-700 dark:text-slate-200">
+                        {xp.toLocaleString()} XP
+                      </strong>
+                    </>
+                  )}
+                </p>
+                {/* Opposite the byline, because that is what it is about: these words, and
+                  whoever signed them. A form rather than a mailto — the reason and the code
+                  travel with it, and it works on a phone with no mail account set up. */}
+                <button
+                  type="button"
+                  onClick={() => setReporting(true)}
+                  className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200"
+                >
+                  <ReportIcon />
+                  Report this
+                </button>
+              </div>
             </div>
           ) : selected?.creature ? (
             <SpellLinkContext.Provider value={linkSpells}>
@@ -327,13 +399,13 @@ export function SharedEncounterPage({
           )}
         </div>
       </div>
+      {reporting && <ReportShareDialog code={code} onClose={() => setReporting(false)} />}
     </Shell>
   )
 }
 
 /** The page's frame: the wordmark, the content, and the console's own legal links. */
-function Shell({ code, children }: { code: string; children: React.ReactNode }) {
-  const [reporting, setReporting] = useState(false)
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <a
@@ -360,15 +432,7 @@ function Shell({ code, children }: { code: string; children: React.ReactNode }) 
         <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">
           AGPL-3.0
         </a>
-        <span className="ml-auto">
-          {/* A form rather than a mailto: the reason and the code travel with it, and it
-            works on a phone with no mail account set up. */}
-          <button type="button" onClick={() => setReporting(true)} className="hover:underline">
-            Report this
-          </button>
-        </span>
       </footer>
-      {reporting && <ReportShareDialog code={code} onClose={() => setReporting(false)} />}
     </div>
   )
 }
