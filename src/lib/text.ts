@@ -2,19 +2,13 @@
 // Copyright (C) 2026 Nicola Mustone
 
 /**
- * Making a string safe to put on screen when we did not write it.
- *
- * Not escaping — React already escapes, and nothing here renders HTML. This is the other
- * half: characters that survive escaping intact and still make a line read as something
- * other than what it says. Both untrusted-input parsers share it, so a string that reaches
- * the board has been through the same door whichever way it arrived.
+ * Making a string safe to put on screen when we did not write it — not escaping (React
+ * already does that), but the characters that survive escaping intact and still make a line
+ * read as something else. Shared by both untrusted-input parsers.
  */
 
-/**
- * Characters that would let a string render as something other than what it says: the
- * control ranges, the zero-width marks, and the bidi overrides and isolates that can print
- * a name backwards. Tab and newline are deliberately absent — prose keeps its lines.
- */
+/** Control ranges, zero-width marks, and the bidi overrides that print a name backwards.
+ *  Tab and newline are deliberately absent — prose keeps its lines. */
 const UNSAFE_TEXT =
   /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g // eslint-disable-line no-control-regex
 

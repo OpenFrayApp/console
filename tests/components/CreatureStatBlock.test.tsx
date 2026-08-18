@@ -239,13 +239,9 @@ describe('CreatureStatBlock — spellcasting', () => {
 })
 
 /**
- * A stat block from a stranger, drawn by the same component the compendium uses.
- *
- * On a shared encounter this is the widest untrusted surface in the app: a `custom:` id means
- * nothing to the recipient, so homebrew travels whole — a complete stat block authored
- * elsewhere, rendered inside the console's own chrome and then autosaved into the reader's
- * account. `parseTemplate` is the door and `Markdown` is the renderer; this is the two of them
- * asked the same question together, on the thing that actually reaches the screen.
+ * A stat block from a stranger, drawn by the same component the compendium uses — the widest
+ * untrusted surface in the app, since a `custom:` id means homebrew travels whole.
+ * `parseTemplate` is the door and `Markdown` is the renderer; this asks both together.
  */
 describe('CreatureStatBlock — a creature that came from a stranger', () => {
   /** The stat block as it arrives on the board: through the share parser, nothing skipped. */

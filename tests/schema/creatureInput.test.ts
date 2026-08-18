@@ -16,12 +16,9 @@ import { legendaryPerRound } from '../../src/combat/resources.ts'
  * The door every Creature the compendium didn't ship comes through — a shared encounter's
  * embedded homebrew, or a stat block pasted out of a forum.
  *
- * The bar these tests hold it to is not "the numbers are plausible". It is the one the app
- * actually depends on: **whatever comes out of here, the console can still roll a d20 with.**
- * The console pastes `toHit`, save bonuses and a creature's initiative straight into formula
- * strings and hands them to opendice, which enforces its limits by throwing — so a field
- * that isn't a number doesn't render oddly, it breaks a button. Several of the cases below
- * are exactly that, checked by rolling the thing rather than by reading it back.
+ * The bar is not "the numbers are plausible" but the one the app depends on: whatever comes
+ * out, the console can still roll a d20 with it. Several cases check that by rolling the
+ * thing rather than by reading it back.
  */
 
 /** The minimum a stat block needs to render, which is also the check's own bar. */
@@ -342,14 +339,12 @@ describe('projectCreature', () => {
   })
 
   it('lets every creature the app ships through with nothing lost', () => {
-    // The strongest statement available about the caps: 2,300-odd real stat blocks, written
-    // by other people over four books, survive a door they were never sent through. A cap
-    // set one notch too tight shows up here as a trimmed immunity line or a dropped action,
-    // which is exactly how the first draft of this module was found to be wrong.
+    // 2,300-odd real stat blocks over four books, through a door they were never sent
+    // through. A cap one notch too tight shows up here as a trimmed immunity or a dropped
+    // action — which is how the first draft of this module was found to be wrong.
     //
-    // Compared with the ends of every string trimmed, because that is the one thing the door
-    // does change: some SRD 5.1 prose carries a leading space from its ingest, and losing it
-    // is a normalization rather than a loss. Everything else must come back identical.
+    // String ends are trimmed on both sides, because that is the one thing the door changes:
+    // some SRD 5.1 prose carries a leading space from its ingest.
     const trimmed = (v: unknown): unknown => {
       if (typeof v === 'string') return v.trim()
       if (Array.isArray(v)) return v.map(trimmed)
@@ -370,8 +365,7 @@ describe('projectCreature', () => {
         const kept = new Set(Object.keys(projected!))
         const lost = Object.keys(shipped).filter((key) => !kept.has(key))
         for (const key of lost) lostFields.push(`${shipped.name}.${key}`)
-        // The one known divergence is asserted on its own below, so it is set aside here
-        // rather than left to fail every creature that follows it.
+        // The one known divergence is asserted on its own below.
         const same = (c: Creature) => trimmed({ ...c, hpFormula: '' })
         expect(same(projected!), `${file}: ${shipped.name} came back changed`).toEqual(
           same(shipped),
@@ -381,11 +375,9 @@ describe('projectCreature', () => {
     }
     expect(checked).toBeGreaterThan(2000)
 
-    // Exactly one, and it is a defect in the shipped data rather than a cap set too tight:
-    // the Ravenfolk Scout's hit dice read "6d8‒6" with a figure dash instead of a hyphen, so
-    // opendice has never been able to roll it and `resolveMaxHp` has always fallen back to
-    // the printed average. The door drops it for the same reason, which changes nothing —
-    // but this list must not grow, and if it does, one of the caps above is wrong.
+    // A defect in the shipped data, not a cap set too tight: the Ravenfolk Scout's hit dice
+    // read "6d8‒6" with a figure dash, so opendice has never rolled it and `resolveMaxHp`
+    // has always used the printed average. This list must not grow.
     expect(lostFields).toEqual(['Ravenfolk Scout.hpFormula'])
   })
 })

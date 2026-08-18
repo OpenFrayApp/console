@@ -154,19 +154,12 @@ describe('SharedEncounterPage', () => {
 })
 
 /**
- * The spell-coverage gate, read backwards.
+ * The spell-coverage gate read backwards: an embedded creature names spell refs the recipient
+ * may have no entry for. That stays silent deliberately — nothing here casts, and on the board
+ * the cast modal already says "No compendium entry for this spell".
  *
- * Forwards it says every spell the app *ships* has a verdict, because a missing one is
- * otherwise invisible (`tests/combat/spellCoverage.test.ts`). Backwards the question is a
- * different one: an embedded creature names spell refs, and the recipient may have no entry
- * for them. That is deliberately still silent — nothing on this page casts anything, and on
- * the board the cast modal already says "No compendium entry for this spell" rather than
- * failing quietly.
- *
- * What was *not* deliberate is this: the page fetched only the libraries its `ref` entries
- * named, and an embedded creature contributes none. A homebrew boss casting Fireball would
- * therefore resolve nothing at all — not because the reader lacked the spell, but because
- * the page never asked for the file it lives in.
+ * What wasn't deliberate: the page fetched only the libraries its `ref` entries named, and an
+ * embedded creature contributes none, so a homebrew boss casting Fireball resolved nothing.
  */
 describe('SharedEncounterPage — the libraries a cast needs', () => {
   const homebrew = (over: Record<string, unknown> = {}) => ({

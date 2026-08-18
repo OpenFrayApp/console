@@ -58,13 +58,9 @@ interface RolledDamage {
 /**
  * Roll each of the action's damage formulas (crit-aware); a negative total clamps to 0.
  *
- * A formula the dice engine won't take is left out rather than allowed to throw. opendice is
- * strict on purpose — nonsense grammar, a thousand dice, a total past the exact-integer
- * range — and it says so by throwing, which here would land inside a click handler and break
- * the attack rather than report a bad number. A stat block reaching this with an unrollable
- * formula is a bug upstream (`projectCreature` refuses one, and the custom-creature form
- * shouldn't produce one), so the honest behaviour is the one that leaves the Game Master a
- * working resolver and a damage field they can type into.
+ * A formula the dice engine won't take is left out rather than allowed to throw — the throw
+ * would land in this click handler and break the attack. Reaching here with one is a bug
+ * upstream (`projectCreature` refuses them), so this leaves a working resolver behind.
  */
 function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledDamage[] {
   return (action.damage ?? []).flatMap((d) => {
@@ -1047,10 +1043,9 @@ export function SaveResolver({
         }
       }
     } else {
-      // Standalone group save: roll the damage formula (or take a bare number flat). The
-      // formula is typed here and now, so half-finished input ("2d") reaches the dice engine
-      // the moment the button is pressed — and it answers by throwing. Same as the manual
-      // roll box: a formula that won't parse simply rolls nothing.
+      // Standalone group save: roll the damage formula (or take a bare number flat). Typed
+      // here and now, so half-finished input ("2d") reaches the dice engine on the click.
+      // Same as the manual roll box: a formula that won't parse simply rolls nothing.
       const entry = baseDamage.trim()
       let rolled: RollResult | null = null
       if (/d/i.test(entry)) {

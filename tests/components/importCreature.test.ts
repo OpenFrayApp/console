@@ -74,13 +74,9 @@ describe('parseImportedCreature', () => {
   })
 
   /**
-   * The paste used to be trusted past the required fields, on the grounds that it is the Game
-   * Master's own clipboard. That was the wrong read of where the clipboard has been — a stat
-   * block gets pasted out of a forum thread as readily as out of a converter — so it now goes
-   * through the same `projectCreature` as a creature embedded in a shared link.
-   *
-   * `tests/combat/untrustedInput.test.ts` fuzzes the two doors together; these are the two
-   * things a Game Master would actually notice about the change.
+   * A paste now goes through the same `projectCreature` as a creature embedded in a shared
+   * link. `tests/combat/untrustedInput.test.ts` fuzzes both doors; these are the things a
+   * Game Master would notice about the change.
    */
   describe('holds a paste to the same bar as a stranger’s creature', () => {
     it('no longer carries fields the schema doesn’t name', () => {

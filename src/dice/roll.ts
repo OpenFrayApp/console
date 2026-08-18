@@ -207,17 +207,12 @@ function flatResult(source: string, expr: string, bonuses: (number | string)[]):
 const isFlat = (expr: string): boolean => /^[+-]?\d+(?:[+-]\d+)*$/.test(expr.replace(/\s+/g, ''))
 
 /**
- * Whether `roll` would take this formula, asked without rolling it.
+ * Whether `roll` would take this formula, asked without rolling it — `roll`'s own two
+ * branches, so it lives here. Asking `parseFormula` instead gets a subtly different answer
+ * and drops the forty-odd stat blocks that deal a flat 1.
  *
- * This lives here rather than beside its callers because the answer is this module's to
- * give: it is `roll`'s own two branches, and only they know that a flat "1 piercing" is
- * rollable here while the dice package refuses it. Asking `parseFormula` instead gets a
- * subtly different answer and quietly drops the forty-odd stat blocks that deal a flat 1.
- *
- * The bound comes first so a pathological string is refused before the parser reads it;
- * opendice's own limits (a thousand dice, a safe-integer ceiling, its grammar) are what the
- * parse asks about, and they are enforced by throwing — which is the whole reason a caller
- * holding a stat block's formula wants to ask in advance.
+ * opendice enforces its limits by throwing, which is why a caller holding a stat block's
+ * formula wants to ask in advance. The length bound comes first, before the parser reads it.
  */
 export function canRoll(formula: string, maxLength = 200): boolean {
   if (typeof formula !== 'string') return false

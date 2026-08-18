@@ -237,19 +237,14 @@ const isRef = (v: unknown): v is string =>
 /**
  * Read a template that came from outside the app — a shared link's payload.
  *
- * Everything is rebuilt key by key onto a fresh object: nothing is spread from the input, so
- * a `__proto__` or `constructor` in hostile JSON has nothing to attach to, and a field we
- * don't know about is dropped rather than carried onto a board and autosaved into the
- * reader's own account. That last part is why this is the strict door — the stakes aren't
- * only what renders, they're what persists. An embedded creature goes through
- * `projectCreature`, which asks the same of every field of a stat block that reaches a
- * formula or a number the app computes with.
+ * Rebuilt key by key onto a fresh object: nothing is spread from the input, and an unknown
+ * field is dropped rather than carried onto a board and autosaved into the reader's own
+ * account. The stakes aren't only what renders, they're what persists. An embedded creature
+ * goes through `projectCreature`, which asks the same of every field a formula reaches.
  *
- * Size is bounded three times over, and the three are not the same question. The
- * `shares.data` column refuses more than 64KB **as stored**, which is compressed and so
- * bounds nothing about what comes back out. The per-field caps refuse anything past what
- * real prep needs, field by field, which says nothing about the total. `LIMITS.readBytes`
- * is the one that bounds the blob this turns into.
+ * Size is bounded three times, and the three aren't the same question: the column check
+ * bounds the row as stored (compressed), the per-field caps bound each field, and
+ * `LIMITS.readBytes` bounds the blob this turns into.
  */
 export function parseTemplate(value: unknown): ParsedTemplate {
   if (typeof value !== 'object' || value === null || Array.isArray(value))
@@ -325,8 +320,7 @@ export function parseTemplate(value: unknown): ParsedTemplate {
     }
 
     const creature = projectCreature(e.creature)
-    // Null means one of two things, and they deserve different sentences: a stat block
-    // missing what it takes to render, or one bigger than any stat block is.
+    // Null means a stat block missing what it takes to render, or one bigger than any is.
     if (!creature) {
       const size = JSON.stringify(e.creature)?.length ?? 0
       return { error: size > LIMITS.creatureBytes ? TOO_BIG : UNREADABLE }
@@ -355,9 +349,8 @@ export function parseTemplate(value: unknown): ParsedTemplate {
     ...(byOk ? { by } : {}),
   }
 
-  // Measured on what we built rather than on what arrived, so it bounds exactly the thing
-  // that matters: the bytes about to be copied onto a board and autosaved into the reader's
-  // own encounter row. Forty entries each within every per-field cap still add up.
+  // Measured on what we built, not what arrived: the bytes about to be copied onto a board
+  // and autosaved. Forty entries each within every per-field cap still add up.
   if (JSON.stringify(template).length > LIMITS.readBytes) return { error: TOO_BIG }
   return { template }
 }

@@ -71,23 +71,14 @@ const altOnly: Components['img'] = ({ alt }) => <>{alt}</>
  * beside a clickable action name. Pass `resolveSpell` to turn ingest-added
  * `spell:<id>` links into hover-preview spans.
  *
- * **Prose does not reach outside the app unless it says `links`.** Off by default because
- * almost none of it should: a stat block's prose is either the compendium's — which carries
- * no link, image or bare URL, so this costs it nothing — or a stranger's, embedded whole in
- * a shared encounter, where the two things that survive having no `rehype-raw` are exactly
- * a link and an image. A link reading "Sign in to load this encounter", rendered in our own
- * chrome, borrows the app's authority; an image makes the reader's browser call a stranger's
- * server, handing over an IP and a read receipt on everyone who opened the link. `SharedNote`
- * refuses both for the note, and the note is the smaller half of what a share carries.
+ * **Prose does not reach outside the app unless it says `links`.** A stat block's prose is
+ * either the compendium's (which carries none, so this costs it nothing) or a stranger's,
+ * embedded whole in a shared encounter — where a link borrows the app's authority and an
+ * image hands a stranger's server a read receipt. `SharedNote` refuses both for the note.
  *
- * A blocklist wouldn't do here, which is why this is a renderer choice rather than something
- * done to the text on the way in: `remark-gfm` autolinks a bare `https://…`, a bare `www.`
- * host and a bare email address, so there is no stripping of markdown syntax that leaves the
- * prose both intact and inert. What survives is the text — the address still reads, it just
- * isn't a destination — which is the same answer `unwrapDisallowed` gives the note.
- *
- * `links` is for prose the Game Master wrote about their own game: their notes, a character's
- * backstory. Their own words, on their own screen.
+ * It has to be a renderer choice rather than something done to the text: `remark-gfm`
+ * autolinks bare URLs, `www.` hosts and email addresses. `links` is for the Game Master's
+ * own prose — their notes, a backstory.
  */
 export function Markdown({
   children,

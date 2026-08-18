@@ -46,19 +46,12 @@ describe('Markdown spell linking via context', () => {
 })
 
 /**
- * The half of the renderer `SharedNote.test.tsx` doesn't cover.
+ * The half of the renderer `SharedNote.test.tsx` doesn't cover. That test pins the note's
+ * grammar; this pins the prose beside it — a stat block's, which on a shared encounter is a
+ * stranger's too. Little point refusing a link in the note while a trait renders one four
+ * inches away.
  *
- * That test pins the note's grammar; this one pins the prose beside it — a stat block's, which
- * on a shared encounter is a stranger's too, embedded whole because a `custom:` id means
- * nothing to the recipient. The note is the smaller half of what a share carries, and there
- * would be little point refusing a link in it while a trait rendered one four inches away.
- *
- * Raw HTML is inert here without `rehype-raw`, and this is the test that fails the day someone
- * adds it. But tags were never the interesting part: what survives having no raw-HTML plugin is
- * a link, which borrows the app's authority, and an image, which makes the reader's browser
- * call a stranger's server. Both are off unless the prose asks for `links`, and `remark-gfm`
- * autolinking bare URLs is why that is a renderer decision rather than something done to the
- * text on the way in.
+ * This is also the test that fails the day someone adds `rehype-raw` to the shared renderer.
  */
 describe('Markdown does not reach outside the app', () => {
   /** Every anchor href and image source the prose put in the document. */

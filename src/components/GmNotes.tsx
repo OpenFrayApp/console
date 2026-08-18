@@ -15,9 +15,8 @@ import { Markdown } from './Markdown.tsx'
  * stays as it is, "Campaign notes" reads lowercase there), and `savedTo` is what the
  * tooltip says the note is kept on.
  *
- * These render with `links` on, which almost nothing else does: this is the Game Master's
- * own prose on their own screen, and a note pointing at the map they drew should open it.
- * Nothing here ever arrives from someone else — a shared encounter carries no notes.
+ * Renders with `links` on, which almost nothing else does: the Game Master's own prose on
+ * their own screen, and nothing here ever arrives from someone else.
  */
 export function GmNotes({
   value,

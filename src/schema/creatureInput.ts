@@ -19,33 +19,18 @@ import { TEMPLATE_LIMITS as LIMITS } from './encounterTemplate.ts'
 
 /**
  * Reading a Creature that came from outside the app: pasted from the importer, or embedded
- * in a shared encounter. Neither is the compendium, and after this module ran there is one
- * invariant worth stating plainly:
+ * in a shared encounter. After this module runs, every Creature the compendium didn't ship
+ * has been through `projectCreature`.
  *
- * > **Every Creature in the app that the compendium did not ship has been through
- * > `projectCreature`.**
+ * That invariant is what lets the rest of the codebase treat a stat block's numbers as
+ * numbers. `toHit`, `save.dc`, `damage[].formula` and a creature's save bonuses get pasted
+ * into formula strings and handed to opendice, which enforces its limits by **throwing** — so
+ * a `toHit` that is a string doesn't render oddly, it breaks a button.
  *
- * That is what lets the rest of the codebase treat a stat block's numbers as numbers. The
- * console hands `toHit`, `save.dc`, `damage[].formula` and a creature's save bonuses
- * straight to the dice engine, usually by pasting them into a formula string — and opendice
- * is properly strict about what it will roll, which it enforces by **throwing**. A `toHit`
- * that is a string rather than a number makes `"1d20" + toHit` unparseable, and the throw
- * lands in a click handler, so the button simply breaks. A `saves.dex` of `"a lot"` breaks
- * every saving throw that creature rolls; a bad `save.ability` breaks it through
- * `abilityMod(undefined)`. None of that is exotic input — it is what a hand-edited JSON file
- * looks like — and none of it should be discovered inside the roll.
- *
- * So the rule here is narrow and worth keeping narrow: **a value that reaches a formula or a
- * computed number is checked; everything else is bounded, not policed.** OpenFray is a
- * scratchpad, not a rules engine (AGENTS.md), and it is not this module's business whether a
- * challenge rating is plausible. It is very much its business whether the console can still
- * roll a d20 afterwards.
- *
- * Prose is the other half. It is bounded and stripped of the characters that make a line
- * read as something it isn't, but it is *not* rewritten — a stat block's markdown belongs to
- * whoever wrote it. What stops a stranger's prose reaching outside the app is that stat-block
- * prose renders with links and images off (see `Markdown`), which costs the compendium
- * nothing because the compendium's prose contains neither.
+ * Hence the rule, kept narrow: a value that reaches a formula or a computed number is
+ * checked, everything else is bounded, not policed. Prose is bounded and stripped of the
+ * characters that make a line read as something else, but never rewritten; what keeps it from
+ * reaching outside the app is that stat-block prose renders with links off (see `Markdown`).
  */
 
 /** Every ability key, in stat-block order. */
@@ -96,17 +81,7 @@ export function missingCreatureFields(value: unknown): string[] {
   return missing
 }
 
-/**
- * Every key the Creature schema defines. A creature from outside is copied key by key from
- * this list, so anything else — a `__proto__`, a payload hidden in a field we don't know,
- * sixty kilobytes of nothing — is dropped rather than carried onto a board and saved to an
- * account.
- *
- * The `Missing` check below fails the build if a field is added to `Creature` and not here,
- * because a field missing from this list silently stops travelling in a shared encounter or
- * an import — the safe direction to fail, but not one to discover by accident.
- */
-// Read only as a type, by the exhaustiveness check below — which is the whole point of it.
+/** Every key the Creature schema defines, for the exhaustiveness check below. */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CREATURE_KEYS = [
   'id',
@@ -148,17 +123,10 @@ const CREATURE_KEYS = [
   'legendaryResistanceLair',
 ] as const satisfies readonly (keyof Creature)[]
 
-/**
- * Any `Creature` field the list above forgot; `never` when it is complete.
- *
- * The assignment below stops compiling when a field is added to `Creature` and not here, and
- * names the missing key in the error. It is the only use of `CREATURE_KEYS` — the readers
- * spell each field out one at a time, which is what lets each one say how it is read — so the
- * list's whole job is being this check.
- */
+/** Any `Creature` field the list above forgot; `never` when it is complete. */
 type Missing = Exclude<keyof Creature, (typeof CREATURE_KEYS)[number]>
-// Add the named key to CREATURE_KEYS *and* give it a reader in `projectCreature`. Until you
-// do, it stops travelling in shared encounters and pasted imports, silently.
+// Add the named key above *and* a reader in `projectCreature`. Until you do, it silently
+// stops travelling in shared encounters and pasted imports.
 const KEYS_ARE_COMPLETE: Missing extends never ? true : Missing = true
 void KEYS_ARE_COMPLETE
 
@@ -174,11 +142,7 @@ const int = (v: unknown, min: number, max: number): number | undefined =>
 const num = (v: unknown, min: number, max: number): number | undefined =>
   isNum(v) && v >= min && v <= max ? Math.round(v) : undefined
 
-/**
- * A finite number inside a range, kept exactly as written. Challenge rating is the one stat
- * that is legitimately a fraction — 1/8, 1/4, 1/2 — so rounding it would turn a CR 1/2
- * creature into a CR 1 one and quietly change what the difficulty meter says.
- */
+/** As `num`, unrounded — challenge rating is legitimately a fraction (1/8, 1/4, 1/2). */
 const exact = (v: unknown, min: number, max: number): number | undefined =>
   isNum(v) && v >= min && v <= max ? v : undefined
 
@@ -196,12 +160,8 @@ const prose = (v: unknown): string | undefined => {
   return text || undefined
 }
 
-/**
- * A list of one-line strings — languages, gear, damage types — capped both ways. An empty
- * list comes back empty rather than absent: the compendium ships `immunities: []`, and
- * turning that into a missing key would be this module rewriting content it was only asked
- * to read.
- */
+/** A list of one-line strings, capped both ways. Empty stays empty — the compendium ships
+ *  `immunities: []`, and dropping the key would be rewriting content we only read. */
 const lines = (v: unknown): string[] | undefined => {
   if (!Array.isArray(v)) return undefined
   return v.slice(0, LIMITS.arrayItems).flatMap((item) => {
@@ -210,13 +170,8 @@ const lines = (v: unknown): string[] | undefined => {
   })
 }
 
-/**
- * A formula the app will hand to the dice engine, or nothing.
- *
- * The question is `canRoll`'s to answer, not this module's: it is the dice chokepoint's own
- * two branches, and a stat block that deals a flat "1 piercing" is rollable here even though
- * the dice package refuses it outright.
- */
+/** A formula the dice engine will take, or nothing. `canRoll` owns the question — a flat
+ *  "1 piercing" is rollable here even though the dice package refuses it outright. */
 const formula = (v: unknown): string | undefined =>
   typeof v === 'string' && canRoll(v, LIMITS.formulaChars) ? v.trim() : undefined
 
@@ -278,21 +233,18 @@ function damageList(v: unknown): DamageRoll[] | undefined {
   for (const item of v.slice(0, LIMITS.arrayItems)) {
     if (typeof item !== 'object' || item === null) continue
     const d = item as Record<string, unknown>
+    // A component that won't roll is dropped, so the rest of the action still resolves.
     const expr = formula(d.formula)
-    // A component whose formula won't roll is dropped rather than kept as a number that
-    // breaks the attack: the rest of the action still resolves, and the Game Master can
-    // type the damage. Keeping it would move the failure into the click.
     if (!expr) continue
-    // The type is a tag, never math — it only ever matches against a creature's
-    // resistances — and the shipped compendium already carries one outside the union
-    // ("charisma", from a drain), so it is bounded rather than checked against the list.
+    // A tag, never math — and the compendium already ships one outside the union
+    // ("charisma"), so it is bounded rather than checked against the list.
     out.push({ formula: expr, type: (line(d.type) ?? 'bludgeoning') as DamageRoll['type'] })
   }
   return out.length ? out : undefined
 }
 
-/** A saving throw an action calls for. Dropped whole when its ability or DC is nonsense —
- *  a save with no ability is what puts `abilityMod(undefined)` into a d20 formula. */
+/** A saving throw. Dropped whole when its ability or DC is nonsense: a save with no ability
+ *  is what puts `abilityMod(undefined)` into a d20 formula. */
 function saveRequirement(v: unknown): SaveRequirement | undefined {
   if (typeof v !== 'object' || v === null) return undefined
   const s = v as Record<string, unknown>
@@ -345,16 +297,15 @@ function action(v: unknown): Action | undefined {
     id: line(a.id) ?? crypto.randomUUID(),
     name,
     kind,
-    // `toHit` is pasted into "1d20…", so a non-integer makes it unrollable. Null is the
-    // schema's own "this isn't an attack", which is the honest thing to say about it.
+    // Pasted into "1d20…", so a non-integer is unrollable. Null is the schema's own
+    // "this isn't an attack".
     toHit: int(a.toHit, -LIMITS.bonus, LIMITS.bonus) ?? null,
     ...(num(a.reach, 0, LIMITS.feet) !== undefined ? { reach: num(a.reach, 0, LIMITS.feet) } : {}),
     ...(range ? { range } : {}),
     ...(damageList(a.damage) ? { damage: damageList(a.damage) } : {}),
     ...(save ? { save } : {}),
     ...(rc ? { recharge: rc } : {}),
-    // Gates a button — "costs more legendary actions than are left" — so it has to be a
-    // count. Anything else means the default of one.
+    // Gates a button, so it has to be a count; anything else means the default of one.
     ...(int(a.legendaryCost, 1, LIMITS.uses) !== undefined
       ? { legendaryCost: int(a.legendaryCost, 1, LIMITS.uses) }
       : {}),
@@ -416,11 +367,8 @@ const limitedUseList = (v: unknown): LimitedUse[] | undefined => {
   })
 }
 
-/**
- * How often a group can be cast. A slot level indexes the slot pool and a per-day count is
- * decremented on screen, so both have to be counts; anything unreadable falls back to
- * at-will, which spends nothing and so can't go wrong.
- */
+/** How often a group casts. A slot level indexes the slot pool, so it has to be a count;
+ *  anything unreadable falls back to at-will, which spends nothing. */
 function readUsage(u: Record<string, unknown>): SpellUsage | undefined {
   if (u.type === 'slots') {
     const level = int(u.level, 1, 9)
@@ -449,9 +397,6 @@ function spellcasting(v: unknown): Spellcasting | undefined {
       const spell = s as Record<string, unknown>
       const name = line(spell.name)
       if (!name) continue
-      // A ref keys the uses map and resolves the card. It only ever matches a compendium
-      // id we shipped, so an unrecognizable one costs the reader a hover card and nothing
-      // more — the cast modal already says when there is no entry behind a spell.
       const ref = line(spell.ref)
       spells.push({ name, ...(ref ? { ref } : {}) })
     }
@@ -479,17 +424,12 @@ function spellcasting(v: unknown): Spellcasting | undefined {
 }
 
 /**
- * Copy a creature from outside the app onto the schema's own shape, field by field.
+ * Copy a creature from outside the app onto the schema's own shape, field by field. Built
+ * key by key rather than spread, so a `__proto__` in attacker JSON has nothing to attach to.
  *
- * Returns null only when the stat block can't be rendered at all — the required-field check
- * — or when what came back is larger than any stat block anyone ships. Everything else is
- * repaired rather than refused: an unrollable damage formula is dropped, a `toHit` that
- * isn't a number becomes "not an attack", a saving throw with no ability goes away. A cast
- * that arrives one component short is a better outcome than a link that refuses to open, and
- * the Game Master can see and edit every one of these on the board.
- *
- * The result is a fresh object built key by key — never a spread of the input — so a
- * `__proto__` in attacker JSON has nothing to attach to.
+ * Null only when the stat block can't be rendered at all, or is larger than any anyone ships.
+ * Everything else is repaired rather than refused — a cast arriving one component short beats
+ * a link that won't open, and the Game Master can edit all of it on the board.
  */
 export function projectCreature(value: unknown): Creature | null {
   if (missingCreatureFields(value).length > 0) return null
@@ -498,8 +438,8 @@ export function projectCreature(value: unknown): Creature | null {
   const abilities = numberMap(raw.abilities, ABILITY_KEYS, -LIMITS.score, LIMITS.score)
   const speed = numberMap(raw.speed, SPEED_KEYS, 0, LIMITS.feet)
   const senses = numberMap(raw.senses, SENSE_KEYS, 0, LIMITS.feet)
-  // The required-field check already said these are all there and numeric; a range check
-  // can still empty them, and a stat block without ability scores can't roll a save.
+  // The required-field check already passed, but a range check can still empty these — and
+  // a stat block without ability scores can't roll a save.
   if (!abilities || ABILITY_KEYS.some((a) => abilities[a] === undefined)) return null
   if (!senses || senses.passivePerception === undefined) return null
 
@@ -514,9 +454,8 @@ export function projectCreature(value: unknown): Creature | null {
     id: line(raw.id) ?? `custom:${crypto.randomUUID()}`,
     source: line(raw.source) ?? 'custom',
     name,
-    // Size and type are read out as words and never branched on, so they are bounded
-    // rather than matched against the union — an importer that writes "medium" lowercase
-    // should not lose a creature over it.
+    // Read out as words and never branched on, so bounded rather than matched against the
+    // union: an importer writing "medium" lowercase shouldn't lose a creature over it.
     size: size as Creature['size'],
     type,
     ac,
@@ -529,7 +468,7 @@ export function projectCreature(value: unknown): Creature | null {
     senses: senses as Creature['senses'],
   }
 
-  /** Set an optional field when the reader gave one back, and leave it absent when it didn't. */
+  /** Set an optional field, or leave it absent. */
   const set = <K extends keyof Creature>(key: K, value: Creature[K] | undefined): void => {
     if (value !== undefined) out[key] = value
   }
@@ -539,11 +478,9 @@ export function projectCreature(value: unknown): Creature | null {
   set('alignment', line(raw.alignment))
   set('description', prose(raw.description))
   set('hpFormula', formula(raw.hpFormula))
-  // Pasted into "1d20…" when initiative is rolled, so a non-integer here breaks Begin
-  // combat for the whole board, not just this creature.
+  // Pasted into "1d20…" at Begin, so a non-integer breaks the whole board's initiative.
   set('initiative', int(raw.initiative, -LIMITS.bonus, LIMITS.bonus))
-  // Save bonuses go into a d20 formula the same way, every time this creature rolls a
-  // saving throw or an effect ends on one.
+  // Same, every time this creature rolls a saving throw or an effect ends on one.
   set('saves', numberMap(raw.saves, ABILITY_KEYS, -LIMITS.bonus, LIMITS.bonus))
   set('skills', numberMap(raw.skills, SKILL_KEYS, -LIMITS.bonus, LIMITS.bonus))
   set('languages', lines(raw.languages))
@@ -566,11 +503,8 @@ export function projectCreature(value: unknown): Creature | null {
   set('legendaryResistance', int(raw.legendaryResistance, 0, LIMITS.uses))
   set('legendaryResistanceLair', int(raw.legendaryResistanceLair, 0, LIMITS.uses))
 
-  // The last bound, and the one the per-field caps can't express: a stat block within every
-  // limit on every field and still enormous across all of them. The largest creature the app
-  // ships is under 8KB, so this is generous — and it is what stops one entry, copied up to
-  // thirty times onto a board, from writing megabytes into the recipient's autosaved
-  // encounter.
+  // The bound the per-field caps can't express: within every limit on every field and still
+  // enormous across all of them. One entry is copied up to thirty times onto a board.
   if (JSON.stringify(out).length > LIMITS.creatureBytes) return null
   return out
 }
