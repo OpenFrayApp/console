@@ -2,8 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useCallback, useRef, useState, type FormEvent } from 'react'
-import type { Campaign } from '../schema/campaign.ts'
-import type { SavedFights, WriteResult } from '../state/cloudEncounter.ts'
+import type { WriteResult } from '../state/cloudEncounter.ts'
 import type { MyShares, PublishResult } from '../state/shares.ts'
 import { shareUrl } from '../state/shareCode.ts'
 import { bylineError } from '../lib/byline.ts'
@@ -13,16 +12,16 @@ import { Button } from './ui.tsx'
 import { cx } from '../lib/cx.ts'
 
 /**
- * Saved encounters: keep the fight as it stands, and bring one back.
+ * Saving the fight as it stands, and publishing its cast under a link.
  *
  * It lives in the header rather than beside the board's broom and skull because those hide
  * once combat starts, and mid-session is exactly when a fight gets saved — the party is
  * three rounds deep and Tuesday is over.
  *
- * Two ways back in, and the difference matters. **Restore** puts the whole encounter back as
- * it was, party and hit points and log included, which is what makes several campaigns
- * bearable. **Add creatures** takes only the cast, fresh, onto whatever board is already
- * there — the same ambush next week, against this week's party.
+ * Putting a fight *away* is what happens here; taking one back out happens in the
+ * compendium, under Encounters, where there is room to read a cast before restoring it.
+ * One shelf, one place to browse it — a second list in a dropdown would be the same rows
+ * with less to go on.
  */
 
 /** Bookmark — a fight kept to come back to. */
@@ -268,23 +267,10 @@ function SharePublisher({
   )
 }
 
-/** The day a fight was saved, short enough for a list row. */
-function savedWhen(iso: string): string {
-  const when = new Date(iso)
-  if (Number.isNaN(when.getTime())) return ''
-  return when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
 export function EncountersMenu({
-  fights,
-  campaigns,
   canSave,
   signedIn,
-  onOpen,
   onSave,
-  onRestore,
-  onAddCast,
-  onDelete,
   onSignIn,
   canShare,
   shares,
@@ -292,24 +278,10 @@ export function EncountersMenu({
   onShare,
   onUnpublish,
 }: {
-  /** The saved list, or why there isn't one — "none yet" and "not set up" read differently. */
-  fights: SavedFights
-  /** For the campaign tag on a row; empty when anonymous. */
-  campaigns: Campaign[]
   /** Whether there is anything on the board worth saving. */
   canSave: boolean
   signedIn: boolean
-  /** Refresh the list — the menu opening is the cheapest moment to ask. */
-  onOpen?: () => void
   onSave: (name: string) => Promise<WriteResult>
-  /** Put the whole fight back; false when the blob couldn't be read. */
-  onRestore: (id: string) => Promise<boolean>
-  /**
-   * Add just the cast to the board in hand: how many arrived, and any creature that couldn't
-   * be found — a library the app no longer ships. Null when the encounter couldn't be read.
-   */
-  onAddCast: (id: string) => Promise<{ added: number; missing: string[] } | null>
-  onDelete: (id: string) => void
   onSignIn: () => void
   /** Whether the board has anyone on it worth publishing. */
   canShare: boolean
@@ -330,10 +302,7 @@ export function EncountersMenu({
 
   const toggle = () => {
     setOpen((was) => {
-      if (!was) {
-        setMessage(null)
-        onOpen?.()
-      }
+      if (!was) setMessage(null)
       return !was
     })
   }
@@ -348,7 +317,9 @@ export function EncountersMenu({
     setBusy(false)
     if (result === 'ok') {
       setName('')
-      setMessage(`Saved “${trimmed}”.`)
+      // Where it went matters more than that it went: this is the only moment a Game
+      // Master is looking for the answer.
+      setMessage(`Saved “${trimmed}”. Find it in the compendium, under Encounters.`)
     } else if (result === 'unavailable') {
       // Nothing the Game Master can do about this one, so don't send them round again.
       setMessage('Saved encounters aren’t set up on this server yet.')
@@ -356,51 +327,6 @@ export function EncountersMenu({
       setMessage('Couldn’t save that. Try again.')
     }
   }
-
-  /** Restore a whole fight, once the Game Master has agreed to lose the board in hand. */
-  const restore = async (id: string, label: string) => {
-    if (
-      !window.confirm(
-        `Replace the board with “${label}”? Whatever is on it now goes, and the fight in progress isn’t saved.`,
-      )
-    ) {
-      return
-    }
-    setBusy(true)
-    const ok = await onRestore(id)
-    setBusy(false)
-    if (ok) close()
-    else setMessage('Couldn’t read that encounter. Try again.')
-  }
-
-  /** Add the cast of a saved fight to the board in hand, leaving the party alone. */
-  const addCast = async (id: string) => {
-    setBusy(true)
-    const result = await onAddCast(id)
-    setBusy(false)
-    if (!result) {
-      setMessage('Couldn’t read that encounter. Try again.')
-    } else if (result.added === 0 && result.missing.length === 0) {
-      setMessage('That encounter has no creatures to add.')
-    } else if (result.missing.length > 0) {
-      // Never silently short a Game Master a monster: they'd find out mid-fight.
-      const n = result.missing.length
-      setMessage(
-        `Added ${result.added}. ${n === 1 ? 'One creature' : `${n} creatures`} ${
-          n === 1 ? 'isn’t' : 'aren’t'
-        } in your compendium any more.`,
-      )
-    } else {
-      close()
-    }
-  }
-
-  /** Delete a saved fight, naming it so nobody loses the wrong one. */
-  const remove = (id: string, label: string) => {
-    if (window.confirm(`Delete “${label}”? This can’t be undone.`)) onDelete(id)
-  }
-
-  const list = fights.status === 'ok' ? fights.fights : []
 
   return (
     <div ref={ref} className="relative">
@@ -473,67 +399,6 @@ export function EncountersMenu({
             <p className="mt-2 text-xs text-slate-600 dark:text-slate-300" role="status">
               {message}
             </p>
-          )}
-
-          {signedIn && (
-            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-              {fights.status === 'unavailable' ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Saved encounters aren’t set up on this server yet.
-                </p>
-              ) : fights.status === 'failed' ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Couldn’t load your saved encounters. Reopen this menu to try again.
-                </p>
-              ) : list.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  No saved encounters yet. Build a board, then save it here.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {list.map((fight) => {
-                    const campaign = campaigns.find((c) => c.id === fight.campaignId)
-                    return (
-                      <li key={fight.id} className="text-sm">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-slate-100">
-                            {fight.name}
-                          </span>
-                          <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
-                            {savedWhen(fight.savedAt)}
-                          </span>
-                        </div>
-                        {campaign && (
-                          <div className="truncate text-xs text-slate-500 dark:text-slate-400">
-                            {campaign.name}
-                          </div>
-                        )}
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => restore(fight.id, fight.name)}
-                          >
-                            Restore
-                          </Button>
-                          <Button size="sm" disabled={busy} onClick={() => addCast(fight.id)}>
-                            Add creatures
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            disabled={busy}
-                            onClick={() => remove(fight.id, fight.name)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </div>
           )}
 
           <SharePublisher

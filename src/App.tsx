@@ -1471,15 +1471,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
               <AccountControl onSignIn={() => setAuthOpen(true)} />
               <EncountersMenu
-                fights={savedFights}
-                campaigns={campaigns}
                 canSave={encounter.combatants.length > 0}
                 signedIn={!!user}
-                onOpen={refreshSavedFights}
                 onSave={handleSaveFight}
-                onRestore={handleRestoreFight}
-                onAddCast={handleAddCast}
-                onDelete={handleDeleteFight}
                 onSignIn={() => setAuthOpen(true)}
                 canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
                 shares={myShares}
