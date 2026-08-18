@@ -66,6 +66,11 @@ const MISSING_SCHEMA = ['42703', '42P01', '42883', 'PGRST202', 'PGRST204', 'PGRS
 const pgCode = (error: unknown): string => (error as { code?: string } | null)?.code ?? ''
 const isMissingSchema = (error: unknown): boolean => MISSING_SCHEMA.includes(pgCode(error))
 
+/** Say why a write failed, since the Game Master only ever sees "couldn't". */
+function warn(action: string, error: unknown): void {
+  if (error) console.error(`[openfray] ${action} failed`, error)
+}
+
 /** The size of a payload as the database will measure it, in bytes rather than characters. */
 const byteSize = (value: string): number => new TextEncoder().encode(value).length
 
@@ -91,7 +96,9 @@ export async function publishShare(kind: ShareKind, data: unknown): Promise<Publ
     const { error } = await supabase.from('shares').insert({ code, kind, data })
     if (!error) return { status: 'ok', code }
     if (pgCode(error) === '23505') continue
-    return isMissingSchema(error) ? { status: 'unavailable' } : { status: 'failed' }
+    if (isMissingSchema(error)) return { status: 'unavailable' }
+    warn('publishing a share', error)
+    return { status: 'failed' }
   }
   return { status: 'failed' }
 }
@@ -103,7 +110,11 @@ export async function publishShare(kind: ShareKind, data: unknown): Promise<Publ
 export async function fetchShare(code: string): Promise<FetchedShare> {
   if (!supabase) return { status: 'unavailable' }
   const { data, error } = await supabase.rpc('share', { want: code })
-  if (error) return isMissingSchema(error) ? { status: 'unavailable' } : { status: 'failed' }
+  if (error) {
+    if (isMissingSchema(error)) return { status: 'unavailable' }
+    warn('reading a share', error)
+    return { status: 'failed' }
+  }
   if (!data || typeof data !== 'object') return { status: 'missing' }
   const row = data as { kind?: unknown; data?: unknown }
   if (typeof row.kind !== 'string' || row.data === undefined) return { status: 'missing' }
@@ -123,7 +134,11 @@ export async function listMyShares(): Promise<MyShares> {
     .from('shares')
     .select('code, created_at, name:data->>name')
     .order('created_at', { ascending: false })
-  if (error) return isMissingSchema(error) ? { status: 'unavailable' } : { status: 'failed' }
+  if (error) {
+    if (isMissingSchema(error)) return { status: 'unavailable' }
+    warn('listing your shares', error)
+    return { status: 'failed' }
+  }
   return {
     status: 'ok',
     shares: (data ?? []).map((row) => ({
@@ -143,5 +158,7 @@ export async function unpublish(code: string): Promise<'ok' | 'unavailable' | 'f
   if (!supabase) return 'unavailable'
   const { error } = await supabase.from('shares').delete().eq('code', code)
   if (!error) return 'ok'
-  return isMissingSchema(error) ? 'unavailable' : 'failed'
+  if (isMissingSchema(error)) return 'unavailable'
+  warn('unpublishing a share', error)
+  return 'failed'
 }

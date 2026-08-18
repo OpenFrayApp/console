@@ -157,12 +157,26 @@ export type SavedFights =
 /** Read a Postgres error code out of whatever Supabase handed back. */
 const pgCode = (error: unknown): string => (error as { code?: string } | null)?.code ?? ''
 
+/**
+ * Surface a failed write without throwing — the UI has already moved on, and the Game Master
+ * is told in words that something didn't land. The console line is what says *why*: a policy,
+ * a constraint, a column. Swallowing it means the next person to hit this has nothing to go
+ * on but "try again", which is the failure `cloudPlayers` already learned to avoid.
+ */
+function warn(action: string, error: unknown): void {
+  if (error) console.error(`[openfray] ${action} failed`, error)
+}
+
 /** Whether an error is the schema not being there yet, rather than a real failure. */
 const isMissingSchema = (error: unknown): boolean => MISSING_SCHEMA.includes(pgCode(error))
 
 /** Turn a write's error into a result the UI can say something true about. */
-const wrote = (error: unknown): WriteResult =>
-  !error ? 'ok' : isMissingSchema(error) ? 'unavailable' : 'failed'
+const wrote = (action: string, error: unknown): WriteResult => {
+  if (!error) return 'ok'
+  if (isMissingSchema(error)) return 'unavailable'
+  warn(action, error)
+  return 'failed'
+}
 
 /** Every fight this user has saved, newest first. */
 export async function listSavedFights(): Promise<SavedFights> {
@@ -172,7 +186,11 @@ export async function listSavedFights(): Promise<SavedFights> {
     .select('id, name, campaign_id, updated_at')
     .eq('kind', 'saved')
     .order('updated_at', { ascending: false })
-  if (error) return isMissingSchema(error) ? { status: 'unavailable' } : { status: 'failed' }
+  if (error) {
+    if (isMissingSchema(error)) return { status: 'unavailable' }
+    warn('listing saved fights', error)
+    return { status: 'failed' }
+  }
   return {
     status: 'ok',
     fights: (data ?? []).map((row) => ({
@@ -202,7 +220,7 @@ export async function saveFight(
     state: encounter,
     updated_at: new Date().toISOString(),
   })
-  return wrote(error)
+  return wrote('saving a fight', error)
 }
 
 /** The saved blob, to restore onto the board. Null when it's gone or unreadable. */
@@ -214,6 +232,7 @@ export async function loadSavedFight(id: string): Promise<Encounter | null> {
     .eq('id', id)
     .eq('kind', 'saved')
     .maybeSingle()
+  warn('reading a saved fight', error)
   return error || !data ? null : (data.state as Encounter)
 }
 
@@ -225,7 +244,7 @@ export async function renameSavedFight(id: string, name: string): Promise<WriteR
     .update({ name })
     .eq('id', id)
     .eq('kind', 'saved')
-  return wrote(error)
+  return wrote('renaming a saved fight', error)
 }
 
 /**
@@ -236,5 +255,5 @@ export async function renameSavedFight(id: string, name: string): Promise<WriteR
 export async function deleteSavedFight(id: string): Promise<WriteResult> {
   if (!supabase) return 'unavailable'
   const { error } = await supabase.from('encounters').delete().eq('id', id).eq('kind', 'saved')
-  return wrote(error)
+  return wrote('deleting a saved fight', error)
 }

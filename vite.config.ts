@@ -24,6 +24,10 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
     // The site workspace runs its own suite (astro-aware config): `npm run test -w site`.
-    exclude: [...configDefaults.exclude, 'site/**', 'docs/**'],
+    // `.claude/worktrees/**` is where a spawned agent checks out its own copy of this
+    // repo; without it the suite runs twice — once against this tree and once against
+    // whatever that branch happens to hold — and reports the other branch's failures
+    // as this one's.
+    exclude: [...configDefaults.exclude, 'site/**', 'docs/**', '.claude/worktrees/**'],
   },
 })
