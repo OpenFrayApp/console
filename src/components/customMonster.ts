@@ -23,6 +23,7 @@ import {
   type SkillBonuses,
   type Speeds,
 } from '../schema/primitives.ts'
+import type { ContentLicense } from '../schema/license.ts'
 import { proficiencyBonus } from '../compendium/format.ts'
 import {
   hasValue as has,
@@ -102,6 +103,15 @@ export interface MonsterDraft {
   description: string
   /** Free-text origin label (book, "Homebrew"); stored as `source`, still user content. */
   sourceName: string
+  /**
+   * The compendium id this was built from, set when Start from is used and carried
+   * unchanged through an edit. Empty on a creature written from nothing — including one
+   * whose author retyped a stat block out of a book, which nothing can detect and which
+   * the "Based on" field beside it is for.
+   */
+  derivedFrom: string
+  /** How this may be reused. `unstated` until somebody says otherwise, which is honest. */
+  license: ContentLicense
   edition: Edition
   cr: string
   xp: string
@@ -319,6 +329,8 @@ export function emptyDraft(): MonsterDraft {
     alignment: '',
     description: '',
     sourceName: '',
+    derivedFrom: '',
+    license: 'unstated',
     edition: '5.5',
     cr: '',
     xp: '',
@@ -539,8 +551,9 @@ export function buildCreature(draft: MonsterDraft): Creature {
 
   const creature: Creature = {
     id: `custom:${uid()}`,
-    // The GM's free-text origin (a book, "Homebrew") is the display source; it's
-    // still user content (the custom: id prefix marks that) and carries no license.
+    // The GM's free-text origin (a book, "Homebrew") is the display source; it's still
+    // user content, which the custom: id prefix marks. What it may be reused for is a
+    // separate question, answered by `license` below rather than by this label.
     source: draft.sourceName.trim() || 'custom',
     edition: draft.edition,
     name: draft.name.trim(),
@@ -552,6 +565,11 @@ export function buildCreature(draft: MonsterDraft): Creature {
     abilities,
     senses,
   }
+
+  // Written only when there is something to say. `unstated` is the absent state, so
+  // storing it would add a field to every creature to record that nobody spoke.
+  if (has(draft.derivedFrom)) creature.derivedFrom = draft.derivedFrom.trim()
+  if (draft.license !== 'unstated') creature.license = draft.license
 
   if (has(draft.alignment)) creature.alignment = draft.alignment
   if (has(draft.description)) creature.description = draft.description.trim()
@@ -677,6 +695,10 @@ export function creatureToDraft(c: Creature): MonsterDraft {
     alignment: c.alignment ?? '',
     description: c.description ?? '',
     sourceName: c.source === 'custom' ? '' : c.source,
+    // Carried, never re-derived: editing a creature does not make it a derivative of
+    // itself, and an unstated license stays unstated rather than being guessed at.
+    derivedFrom: c.derivedFrom ?? '',
+    license: c.license ?? 'unstated',
     edition: c.edition ?? '5.5',
     cr: c.cr == null ? '' : crToString(c.cr),
     xp: str(c.xp),

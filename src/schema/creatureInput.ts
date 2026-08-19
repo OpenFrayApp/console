@@ -15,6 +15,7 @@ import type {
   SpellUsage,
   Trait,
 } from './creature.ts'
+import { isContentLicense } from './license.ts'
 import { TEMPLATE_LIMITS as LIMITS } from './encounterTemplate.ts'
 
 /**
@@ -88,6 +89,9 @@ const CREATURE_KEYS = [
   'source',
   'edition',
   'sourcePage',
+  'derivedFrom',
+  'license',
+  'imported',
   'name',
   'size',
   'type',
@@ -475,6 +479,17 @@ export function projectCreature(value: unknown): Creature | null {
 
   if (raw.edition === '5.0' || raw.edition === '5.5') out.edition = raw.edition
   set('sourcePage', int(raw.sourcePage, 1, 99_999))
+  // Provenance travels, and is bounded like every other string a stranger sends: an id is
+  // read as words rather than matched, because a library we don't ship is still a true
+  // answer to "where did this come from". The license is matched, because it is the one
+  // field a reader might act on — an unrecognised value is no answer at all, and reading it
+  // as absent says "nobody has said", which is the honest fallback.
+  set('derivedFrom', line(raw.derivedFrom, LIMITS.name))
+  set('license', isContentLicense(raw.license) ? raw.license : undefined)
+  // Carried so it survives a paste of a creature that was itself pasted. Only `true` is
+  // read: anything else is absent, and absent is the permissive direction here, which is
+  // safe because nothing a stranger sends is published from their word for it.
+  set('imported', raw.imported === true ? true : undefined)
   set('alignment', line(raw.alignment))
   set('description', prose(raw.description))
   set('hpFormula', formula(raw.hpFormula))

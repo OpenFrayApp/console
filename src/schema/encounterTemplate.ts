@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Creature } from './creature.ts'
+import type { ContentLicense } from './license.ts'
 
 /**
  * An encounter as prep rather than as a fight: which creatures, how many, on which side.
@@ -45,10 +46,21 @@ export interface EncounterTemplate {
    */
   note?: string
   /**
-   * A byline the publisher typed for themselves, rendered as "Encounter by …". Plain text,
+   * A byline the publisher typed for themselves, rendered as "Shared by …". Not "encounter
+   * by": the cast is mostly other people's creatures, and what the byline can honestly
+   * claim is that this publisher put them together and wrote the note. Plain text,
    * never a link, and never filled in from the account — see `state/shareByline.ts`.
    */
   by?: string
+  /**
+   * How the publisher's *own* words may be reused: the note, the name, and the arrangement
+   * of the cast. It says nothing about the creatures, which carry their own — a shared
+   * encounter is a collection, and collecting a stat block does not relicense it.
+   *
+   * Absent means unstated, which is the default and an honest one. It is set in the share
+   * dialog because that is where the note is written and there is nowhere else to set it.
+   */
+  license?: ContentLicense
 }
 
 /**

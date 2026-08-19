@@ -13,6 +13,7 @@ import type {
   SkillBonuses,
   Speeds,
 } from './primitives.ts'
+import type { ContentLicense } from './license.ts'
 
 /** Spell levels 1–9 (cantrips have no slots, so they're excluded here). */
 export type SpellLevel = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
@@ -103,6 +104,30 @@ export interface Creature {
   /** Page in the source document where this entry appears, e.g. SRD 5.2 p. 255.
    *  Provenance/reference only — lets the app link back to the source. */
   sourcePage?: number
+  /**
+   * The compendium entry this was built from, when it was built from one:
+   * `srd-5.2:goblin`, `kobold-press-tob:ghast-of-leng`. Absent on a creature written from
+   * nothing, and on every creature that predates the field — which is most of them, and is
+   * never guessed at. A name that looks like an SRD monster's is not evidence, and writing
+   * a derivation that was inferred is a false claim about somebody's work.
+   */
+  derivedFrom?: string
+  /**
+   * How this stat block may be reused. Absent means nobody has said, which is different
+   * from "free to use" and from "all rights reserved": see `schema/license.ts`. Nothing in
+   * the console is gated on it.
+   */
+  license?: ContentLicense
+  /**
+   * Brought in from outside the console — the browser extension, or JSON pasted from
+   * anywhere. It marks the one thing the app knows for certain about such a stat block:
+   * that it is somebody else's, out of a book that was bought or a page that was scraped.
+   *
+   * The only thing gated on it is publishing to a link, which would put a paid book's
+   * content on a public URL. It says nothing about what a Game Master may do with it at
+   * their own table, which is their business and not the app's.
+   */
+  imported?: boolean
   name: string
   size: Size
   /** Creature type, e.g. `"dragon"`, `"humanoid"`. */

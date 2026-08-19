@@ -66,6 +66,37 @@ describe('parseImportedCreature', () => {
     expect(creature!.description).toBe('Ancient lore from the book.')
   })
 
+  it("assumes a pasted book creature is its publisher's, not ours to give away", () => {
+    // The importer reads D&D Beyond, where nearly everything is a book somebody bought.
+    // Guessing loose would put a license on their work that they never gave.
+    const { creature } = parseImportedCreature(JSON.stringify(valid))
+    expect(creature!.source).toBe('Monster Manual (2024)')
+    expect(creature!.license).toBe('reserved')
+  })
+
+  it('recognises the free rules, which Wizards publishes under CC BY', () => {
+    for (const source of ['Basic Rules (2024)', 'Free Rules', 'SRD 5.2.1']) {
+      const paste = JSON.stringify({ ...valid, source })
+      expect(parseImportedCreature(paste).creature!.license, source).toBe('cc-by-4.0')
+    }
+    // And nothing looser: half the titles on that site have "rules" in them.
+    const other = JSON.stringify({ ...valid, source: 'Rules Compendium' })
+    expect(parseImportedCreature(other).creature!.license).toBe('reserved')
+  })
+
+  it('marks anything pasted as brought in from outside, whatever it says', () => {
+    // The one thing the app knows for certain about a pasted stat block: it is somebody
+    // else's. It is what stops a paid book's creature reaching a public link.
+    expect(parseImportedCreature(JSON.stringify(valid)).creature!.imported).toBe(true)
+    const free = JSON.stringify({ ...valid, source: 'Basic Rules (2024)' })
+    expect(parseImportedCreature(free).creature!.imported).toBe(true)
+  })
+
+  it('believes a payload that states its own license rather than guessing', () => {
+    const paste = JSON.stringify({ ...valid, license: 'cc-by-sa-4.0' })
+    expect(parseImportedCreature(paste).creature!.license).toBe('cc-by-sa-4.0')
+  })
+
   it('falls back to a generic source when none is given', () => {
     const partial = { ...valid } as Record<string, unknown>
     delete partial.source

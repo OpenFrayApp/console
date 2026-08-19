@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Creature } from '../schema/creature.ts'
+import { licenseOfImportedSource } from '../schema/license.ts'
 import {
   isStr,
   listFields,
@@ -71,5 +72,14 @@ export function parseImportedCreature(text: string): ImportResult {
     source: isStr(c.source) ? c.source : 'custom',
   }
   if (creature.edition !== '5.0' && creature.edition !== '5.5') delete creature.edition
+  // A pasted stat block came out of somebody's book, so it is assumed to be theirs unless
+  // the source names the free rules. A payload that states its own license is believed
+  // rather than second-guessed; everything else gets the assumption, which the editor
+  // corrects in one dropdown.
+  if (!creature.license) creature.license = licenseOfImportedSource(creature.source)
+  // Whatever it says about itself, it came from outside: what the extension reads is a paid
+  // book, and a forum paste is the same trust level wearing a friendlier hat. This is the
+  // one flag that stops either reaching a public link.
+  creature.imported = true
   return { creature }
 }

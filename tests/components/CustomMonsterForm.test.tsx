@@ -14,6 +14,9 @@ import {
 } from '../../src/components/customMonster.ts'
 
 vi.mock('../../src/compendium/srd.ts', () => ({
+  // The form reads a derivation's library off the id to work out what the new creature may
+  // be licensed as, so the mock has to answer that as the real module does.
+  sourceOfId: (id: string) => (id.includes(':') ? id.slice(0, id.indexOf(':')) : ''),
   loadSrdCreatures: () =>
     Promise.resolve([
       {
@@ -221,6 +224,47 @@ describe('CustomMonsterForm', () => {
       toHit: 8,
     })
   })
+  it('records what a derivative came from, and refuses to let it be dedicated to CC0', async () => {
+    // CC0 waives everything the dedicator holds, and nobody can waive the attribution the
+    // underlying CC-BY source still requires. From-scratch offers it; a derivative can't.
+    await renderForm(
+      <CustomMonsterForm open initialDraft={draft()} onClose={() => {}} onSubmit={vi.fn()} />,
+    )
+    const options = () =>
+      [...(screen.getByLabelText('License') as HTMLSelectElement).options].map((o) => o.value)
+    expect(options()).toContain('cc0-1.0')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start from…' }))
+    await waitFor(() => screen.getByText('Goblin'))
+    fireEvent.click(screen.getByText('Goblin'))
+
+    expect(options()).not.toContain('cc0-1.0')
+    expect(options()).toContain('cc-by-sa-4.0')
+    expect(screen.getByLabelText('License')).not.toBeDisabled()
+  })
+
+  it('writes the license and the derivation onto the creature, and nothing when unstated', async () => {
+    const onSubmit = vi.fn()
+    await renderForm(
+      <CustomMonsterForm open initialDraft={draft()} onClose={() => {}} onSubmit={onSubmit} />,
+    )
+    fireEvent.change(screen.getByLabelText('Creature name'), { target: { value: 'Thing' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    // Unstated is the absent state, so it adds no field to record that nobody spoke.
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('license')
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('derivedFrom')
+
+    onSubmit.mockClear()
+    fireEvent.change(screen.getByLabelText('License'), { target: { value: 'cc-by-4.0' } })
+    expect(screen.getByLabelText('Based on')).not.toHaveAttribute('readonly')
+    fireEvent.change(screen.getByLabelText('Based on'), { target: { value: 'a book, by hand' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      license: 'cc-by-4.0',
+      derivedFrom: 'a book, by hand',
+    })
+  })
+
   it('starts a new creature from an existing one, keeping the name the GM typed', async () => {
     const onSubmit = vi.fn()
     await renderForm(
@@ -240,6 +284,11 @@ describe('CustomMonsterForm', () => {
     expect(screen.getByLabelText('AC')).toHaveValue('15')
     expect(screen.getByLabelText('Type')).toHaveValue('humanoid')
     expect(screen.getByLabelText('Source')).toHaveValue('')
+    // Where it came from is filled in, because this is the one moment the app knows — and
+    // it is a fact about the stat block rather than a label its author chose, so it is not
+    // theirs to retype. Free text somebody entered by hand stays editable.
+    expect(screen.getByLabelText('Based on')).toHaveValue('srd-5.2:goblin')
+    expect(screen.getByLabelText('Based on')).toHaveAttribute('readonly')
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
     const creature = onSubmit.mock.calls[0][0] as Creature
