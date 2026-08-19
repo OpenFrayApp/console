@@ -78,9 +78,12 @@ describe('SaveFightButton', () => {
 })
 
 describe('ShareEncounterButton', () => {
-  it('says what travels before it asks for anything', () => {
+  it('says what travels, and warns against putting a secret in the note', () => {
+    // The wording is the maintainer's; what has to hold is that a publisher is told the
+    // link is public and that the note goes with it, before they have written one.
     openShare()
-    expect(screen.getByText(/no hit points, no effects, no players, no log/)).toBeTruthy()
+    expect(screen.getByText(/Share a public link/)).toBeTruthy()
+    expect(screen.getByText(/Do not share passwords/)).toBeTruthy()
   })
 
   it('publishes the cast and shows the link', async () => {
@@ -96,6 +99,8 @@ describe('ShareEncounterButton', () => {
         name: 'Goblin ambush',
         note: 'They wait in the rafters.',
         by: '',
+        // Nobody chose one, and the dialog says so rather than picking on their behalf.
+        license: 'unstated',
       }),
     )
     await waitFor(() =>
@@ -198,6 +203,85 @@ describe('ShareEncounterButton', () => {
     await waitFor(() => expect(screen.getByLabelText('Share link')).toBeTruthy())
   }
 
+  it('starts on unstated when there is no account to remember anything', async () => {
+    openShare({ signedIn: false })
+    expect(screen.getByLabelText('Encounter license')).toHaveValue('unstated')
+  })
+
+  it('is seeded by the account default, and follows it when it arrives late', () => {
+    // The session resolves after the board has rendered, so a control seeded once at mount
+    // would sit on the value that existed before the account did.
+    const { rerender } = render(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        defaultByline=""
+        defaultLicense="unstated"
+        onShare={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByLabelText('Share this encounter'))
+    rerender(
+      <ShareEncounterButton
+        canShare
+        signedIn
+        defaultByline=""
+        defaultLicense="cc-by-4.0"
+        onShare={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Encounter license')).toHaveValue('cc-by-4.0')
+  })
+
+  it('lets a publisher override the default without changing it', async () => {
+    // The default fills the control; it never replaces it. Overriding here publishes the
+    // override and writes nothing back to the account.
+    const { onShare } = openShare({ signedIn: true, defaultLicense: 'cc-by-4.0' })
+    expect(screen.getByLabelText('Encounter license')).toHaveValue('cc-by-4.0')
+    fireEvent.change(screen.getByLabelText('Encounter license'), {
+      target: { value: 'reserved' },
+    })
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ambush' } })
+    fireEvent.click(screen.getByText('Publish'))
+    await waitFor(() => expect(onShare).toHaveBeenCalled())
+    expect(onShare.mock.calls[0][0]).toMatchObject({ license: 'reserved' })
+  })
+
+  it('leaves out the creatures that may not be passed on, and says which', async () => {
+    // Every import from the browser extension lands on all rights reserved, because what it
+    // reads is a paid book. An encounter carrying one would publish that stat block just as
+    // surely as sharing it alone, so it goes rather than being offered as a choice.
+    const { onShare } = openShare({ restricted: ['Ghast of Leng', 'Pale Nurse'] })
+    expect(screen.getByText(/not allowed to republish/)).toBeTruthy()
+    expect(screen.getByText('Ghast of Leng, Pale Nurse')).toBeTruthy()
+    expect(screen.queryByText(/Publish without/)).toBeNull()
+
+    fireEvent.click(screen.getByText('Publish'))
+    await waitFor(() => expect(onShare).toHaveBeenCalled())
+  })
+
+  it('refuses to publish when they are the whole cast', async () => {
+    // What is left would be an empty encounter, which is not worth a link.
+    openShare({ restricted: ['Ghast of Leng'], canDropRestricted: false })
+    expect(screen.getByText(/nothing left to share/)).toBeTruthy()
+    expect(screen.getByText('Publish')).toBeDisabled()
+  })
+
+  it('says nothing at all when every creature is the publisher’s to share', async () => {
+    openShare()
+    expect(screen.queryByText(/may not be passed on/)).toBeNull()
+  })
+
+  it('publishes a board that has no name typed for it', async () => {
+    // The board having a cast is the only thing that was ever really required. The name it
+    // is stored under is decided where the template is written, not here.
+    const { onShare } = openShare({ signedIn: false })
+    expect(screen.getByText('Publish')).not.toBeDisabled()
+    fireEvent.click(screen.getByText('Publish'))
+    await waitFor(() => expect(onShare).toHaveBeenCalled())
+    expect(onShare.mock.calls[0][0]).toMatchObject({ name: '' })
+  })
+
   it('hands out one link and no secret to keep', async () => {
     // A takedown link nobody saves is a takedown nobody has. Publishing gives out the
     // share link and nothing else; the way back is the report form, which reaches a person.
@@ -216,14 +300,22 @@ describe('ShareEncounterButton', () => {
     expect(screen.getByText(/account menu/)).toBeTruthy()
   })
 
-  it('tells every publisher the link expires, account or not', () => {
-    // The deadline used to be the price of publishing signed out. It is the rule now:
-    // a share is a temporary thing, and an account buys the list and the early takedown.
+  it('warns about the deadline only where there is one', () => {
+    // A row with no owner can be neither listed nor taken down, so ageing out is its only
+    // end and the publisher has to be told. An owned link has no deadline: it stands until
+    // its owner takes it down, because a link in a blog post has to keep working.
     openShare({ signedIn: false })
     expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()
     cleanup()
     openShare({ signedIn: true })
-    expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()
+    expect(screen.queryByText(/60 days/)).toBeNull()
+  })
+
+  it('tells a signed-in publisher their link stands until they take it down', async () => {
+    openShare({ signedIn: true })
+    await publish()
+    expect(screen.getByText(/stands until you take it down/)).toBeTruthy()
+    expect(screen.queryByText(/60 days/)).toBeNull()
   })
 
   it('has nothing to share from a board with no creatures', () => {

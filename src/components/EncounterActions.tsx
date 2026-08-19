@@ -4,10 +4,11 @@
 import { useCallback, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { WriteResult } from '../state/cloudEncounter.ts'
 import type { PublishResult } from '../state/shares.ts'
-import { shareUrl } from '../state/shareCode.ts'
-import { bylineError } from '../lib/byline.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { popoverClass } from './popover.ts'
+import type { ContentLicense } from '../schema/license.ts'
+import { ShareIcon } from './ShareIcon.tsx'
+import { ShareEncounterDialog } from './ShareEncounterDialog.tsx'
 import { Button } from './ui.tsx'
 
 /**
@@ -53,25 +54,6 @@ function SaveIcon() {
 }
 
 /** The share graph — deliberately not the screen icon, which is the player view's. */
-function ShareIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-4 w-4"
-    >
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
-    </svg>
-  )
-}
 
 /** The shell both controls wear: an icon button whose card opens upward. */
 function CornerPopover({
@@ -220,190 +202,64 @@ export function SaveFightButton({
  * log — and that is said plainly above the fields, because a Game Master should never have
  * to guess what they just handed a stranger.
  */
+/**
+ * The board's share control: an icon, and the dialog it opens.
+ *
+ * The dialog is its own component in its own file — what a Game Master is doing when they
+ * publish has nothing to do with where the button sits, and keeping the two together is how
+ * this file ended up holding a form.
+ */
 export function ShareEncounterButton({
   canShare,
   signedIn,
   defaultByline,
+  defaultLicense = 'unstated',
+  restricted = [],
+  canDropRestricted = true,
   allowReserved = false,
   onShare,
 }: {
   /** Whether the board holds any creature worth publishing. */
   canShare: boolean
   signedIn: boolean
-  /** The byline they published under last time, remembered device-locally. */
   defaultByline: string
-  /**
-   * Whether this account has been granted the reserved names — the app's own and the
-   * maintainer's. Read from the database at sign-in, so the person it belongs to is named
-   * nowhere in this repository.
-   */
+  defaultLicense?: ContentLicense
+  restricted?: string[]
+  canDropRestricted?: boolean
   allowReserved?: boolean
-  onShare: (draft: { name: string; note: string; by: string }) => Promise<PublishResult>
+  onShare: (draft: {
+    name: string
+    note: string
+    by: string
+    license: ContentLicense
+  }) => Promise<PublishResult>
 }) {
-  const [name, setName] = useState('')
-  const [note, setNote] = useState('')
-  const [by, setBy] = useState(defaultByline)
-  /**
-   * The account's name arrives after this control has mounted — the board renders long
-   * before the session resolves — so seeding the field once at mount left it empty for
-   * every signed-in Game Master. It follows the account until the Game Master types
-   * something, and then it is theirs; the same derived-state idiom the add controls use for
-   * their open requests.
-   */
-  const [lastDefault, setLastDefault] = useState(defaultByline)
-  if (defaultByline !== lastDefault) {
-    setLastDefault(defaultByline)
-    if (by === lastDefault) setBy(defaultByline)
-  }
-  const [message, setMessage] = useState<string | null>(null)
-  const [link, setLink] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [copied, setCopied] = useState<string | null>(null)
-
-  const problem = by.trim() ? bylineError(by, { allowReserved }) : null
-
-  const publish = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!name.trim() || busy || problem) return
-    setBusy(true)
-    const result = await onShare({ name: name.trim(), note: note.trim(), by: by.trim() })
-    setBusy(false)
-    if (result.status === 'ok') {
-      setLink(shareUrl(result.code))
-      setMessage(null)
-      setName('')
-      setNote('')
-    } else if (result.status === 'tooBig') {
-      setMessage('This encounter is too big to share. Try it without the homebrew creatures.')
-    } else if (result.status === 'unavailable') {
-      setMessage('Sharing isn’t set up on this server yet.')
-    } else {
-      setMessage('Couldn’t publish that. Try again.')
-    }
-  }
-
-  /** Put the link on the clipboard, and say so briefly. */
-  const copy = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(url)
-      setTimeout(() => setCopied(null), 2000)
-    } catch {
-      setMessage('Couldn’t copy. Select the link and copy it yourself.')
-    }
-  }
-
+  const [open, setOpen] = useState(false)
   return (
-    <CornerPopover label="Share this encounter" icon={<ShareIcon />} disabled={!canShare}>
-      {(close) => (
-        <>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Share this encounter
-          </h2>
-          {!link && (
-            <form onSubmit={publish} className="mt-2 space-y-2">
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                A link anyone can open to put these creatures on their own board. The creatures
-                travel and nothing else — no hit points, no effects, no players, no log.
-              </p>
-              <div>
-                <label htmlFor="share-name" className={LABEL}>
-                  Name
-                </label>
-                <input
-                  id="share-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Goblin ambush"
-                  autoComplete="off"
-                  className={FIELD}
-                />
-              </div>
-              <div>
-                <label htmlFor="share-note" className={LABEL}>
-                  Note (optional)
-                </label>
-                <textarea
-                  id="share-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={3}
-                  placeholder="How the encounter opens, what the boss does first…"
-                  className={FIELD}
-                />
-              </div>
-              <div>
-                <label htmlFor="share-by" className={LABEL}>
-                  Your name (optional)
-                </label>
-                <input
-                  id="share-by"
-                  value={by}
-                  onChange={(e) => setBy(e.target.value)}
-                  placeholder="Shown as “Encounter by …”"
-                  autoComplete="off"
-                  className={FIELD}
-                />
-                {problem && (
-                  <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{problem}</p>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Whoever opens the link reads the note, so keep your spoilers out of it. The link
-                stops working after 60 days.
-              </p>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={busy || !name.trim() || !!problem}
-              >
-                Publish
-              </Button>
-            </form>
-          )}
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Share this encounter"
+        title="Share this encounter"
+        disabled={!canShare}
+        className={ICON_BTN}
+      >
+        <ShareIcon />
+      </button>
 
-          {link && (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                Published. Anyone with this link can add it to their board.
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={link}
-                  aria-label="Share link"
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                />
-                <Button size="sm" onClick={() => void copy(link)}>
-                  {copied === link ? 'Copied' : 'Copy'}
-                </Button>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {signedIn
-                  ? 'Your links are in the account menu, under Shared encounters. This one stops working after 60 days.'
-                  : 'Signed out, this link stops working after 60 days and isn’t listed anywhere. Sign in before sharing to keep it on your account, where you can take it down early.'}
-              </p>
-              <Button
-                variant="quiet"
-                onClick={() => {
-                  setLink(null)
-                  close()
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          )}
-
-          {message && (
-            <p className="mt-2 text-xs text-slate-600 dark:text-slate-300" role="status">
-              {message}
-            </p>
-          )}
-        </>
+      {open && (
+        <ShareEncounterDialog
+          signedIn={signedIn}
+          defaultByline={defaultByline}
+          defaultLicense={defaultLicense}
+          restricted={restricted}
+          canDropRestricted={canDropRestricted}
+          allowReserved={allowReserved}
+          onShare={onShare}
+          onClose={() => setOpen(false)}
+        />
       )}
-    </CornerPopover>
+    </>
   )
 }
