@@ -55,11 +55,21 @@ interface RolledDamage {
   result: RollResult
 }
 
-/** Roll each of the action's damage formulas (crit-aware); a negative total clamps to 0. */
+/**
+ * Roll each of the action's damage formulas (crit-aware); a negative total clamps to 0.
+ *
+ * A formula the dice engine won't take is left out rather than allowed to throw — the throw
+ * would land in this click handler and break the attack. Reaching here with one is a bug
+ * upstream (`projectCreature` refuses them), so this leaves a working resolver behind.
+ */
 function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledDamage[] {
-  return (action.damage ?? []).map((d) => {
-    const result = roll(d.formula, { kind: 'damage', crit })
-    return { type: d.type, amount: Math.max(0, result.total), result }
+  return (action.damage ?? []).flatMap((d) => {
+    try {
+      const result = roll(d.formula, { kind: 'damage', crit })
+      return [{ type: d.type, amount: Math.max(0, result.total), result }]
+    } catch {
+      return []
+    }
   })
 }
 
@@ -1033,16 +1043,25 @@ export function SaveResolver({
         }
       }
     } else {
-      // Standalone group save: roll the damage formula (or take a bare number flat).
+      // Standalone group save: roll the damage formula (or take a bare number flat). Typed
+      // here and now, so half-finished input ("2d") reaches the dice engine on the click.
+      // Same as the manual roll box: a formula that won't parse simply rolls nothing.
       const entry = baseDamage.trim()
+      let rolled: RollResult | null = null
       if (/d/i.test(entry)) {
-        const r = roll(entry, { kind: 'damage' })
+        try {
+          rolled = roll(entry, { kind: 'damage' })
+        } catch {
+          rolled = null
+        }
+      }
+      if (rolled) {
         held.current.set('damage:group', {
           category: 'roll',
           message: `Group save: ${damageType ? `${damageType} ` : ''}damage`,
-          result: r,
+          result: rolled,
         })
-        setGenericBase(Math.max(0, r.total))
+        setGenericBase(Math.max(0, rolled.total))
       } else {
         setGenericBase(toNum(baseDamage))
       }

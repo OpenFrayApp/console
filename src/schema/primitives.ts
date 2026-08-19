@@ -3,6 +3,9 @@
 
 export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
 
+/** The six abilities in stat-block order — the runtime companion to the type. */
+export const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
+
 export type AbilityScores = Record<Ability, number>
 
 /** The 5e ability modifier for a score (10–11 → 0, 14 → +2, 8 → −1). */

@@ -226,7 +226,7 @@ export function PcStatBlock({
             Backstory &amp; Goals
           </summary>
           <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-            <Markdown>{backstory}</Markdown>
+            <Markdown links>{backstory}</Markdown>
           </div>
         </details>
       )}

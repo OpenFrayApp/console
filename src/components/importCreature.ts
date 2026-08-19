@@ -2,23 +2,38 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Creature } from '../schema/creature.ts'
-import { isStr, listFields, missingCreatureFields } from '../schema/creatureInput.ts'
+import {
+  isStr,
+  listFields,
+  missingCreatureFields,
+  projectCreature,
+} from '../schema/creatureInput.ts'
 
 export interface ImportResult {
   creature?: Creature
   error?: string
 }
 
+/** What we'll read before parsing it. A stat block is a few kilobytes; this is generous. */
+const MAX_PASTE = 256 * 1024
+
 /**
  * Parse pasted JSON (e.g. from the D&D Beyond importer) into a library Creature.
- * Validates only the fields the app can't render without; the rest of the shape is
- * trusted, because this is the Game Master's own clipboard. (A creature arriving from
- * someone else — embedded in a shared encounter — goes through `projectCreature` instead,
- * which copies only the schema's own keys.) The id is always regenerated in the `custom:`
- * namespace so the import is an independent, editable entity (matching the custom-creature
- * form) — never colliding with or overwriting an existing creature.
+ *
+ * This goes through the same `projectCreature` as a creature embedded in a shared link: a
+ * stat block gets pasted out of a forum as readily as out of a converter, and one invariant
+ * beats two paths. The cost is that a field the schema doesn't name no longer survives the
+ * paste — nothing read them, but they used to sit in the saved creature.
+ *
+ * The id is always regenerated in the `custom:` namespace so the import is an independent,
+ * editable entity, never colliding with or overwriting an existing creature.
  */
 export function parseImportedCreature(text: string): ImportResult {
+  // Before `JSON.parse`, so a pathological paste can't spike memory to be rejected after.
+  if (text.length > MAX_PASTE) {
+    return { error: 'That’s far larger than a stat block. Paste one creature on its own.' }
+  }
+
   let raw: unknown
   try {
     raw = JSON.parse(text)
@@ -40,8 +55,18 @@ export function parseImportedCreature(text: string): ImportResult {
     }
   }
 
+  // Past the required fields, null means a stat block bigger than any the app ships, or
+  // numbers so far out of range there is nothing left to render.
+  const projected = projectCreature(c)
+  if (!projected) {
+    return {
+      error:
+        'This creature has values the console can’t read. Check its numbers, or build it by hand instead.',
+    }
+  }
+
   const creature: Creature = {
-    ...(c as unknown as Creature),
+    ...projected,
     id: `custom:${crypto.randomUUID()}`,
     source: isStr(c.source) ? c.source : 'custom',
   }

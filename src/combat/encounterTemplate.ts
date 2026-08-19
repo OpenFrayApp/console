@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { parseFormula } from 'opendice'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
 import type { Creature } from '../schema/creature.ts'
 import type { HpMethod } from '../schema/campaign.ts'
@@ -14,6 +13,7 @@ import { projectCreature } from '../schema/creatureInput.ts'
 import { autoLabel, instantiate, isAutoLabel, isFoe } from './combatant.ts'
 import { resolveMaxHp } from './hp.ts'
 import { bylineShapeError } from '../lib/byline.ts'
+import { cleanLine, cleanProse } from '../lib/text.ts'
 
 /**
  * Turning a board into prep and back again.
@@ -23,25 +23,6 @@ import { bylineShapeError } from '../lib/byline.ts'
  * what comes back is a fresh board rather than someone else's half-fought one. Coming in
  * from a shared link it is untrusted input, and `parseTemplate` is the only door.
  */
-
-/**
- * Characters that would let a string render as something other than what it says: the
- * control ranges, the zero-width marks, and the bidi overrides and isolates that can print a
- * name backwards. Tab and newline are deliberately absent — prose keeps its lines.
- */
-const UNSAFE_TEXT =
-  /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g // eslint-disable-line no-control-regex
-
-/** A one-line string with the tricks stripped and the edges trimmed. */
-const cleanLine = (raw: string): string => raw.replace(UNSAFE_TEXT, '').replace(/\s+/g, ' ').trim()
-
-/** Prose, which keeps its newlines but loses the same tricks. */
-const cleanProse = (raw: string): string =>
-  raw
-    .replace(/\r\n?/g, '\n')
-    .replace(UNSAFE_TEXT, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
 
 /** A live combatant that belongs in a template: a creature, or a quick add. */
 const inCast = (c: Combatant): boolean => !c.isPC || c.kind === 'quick'
@@ -254,30 +235,16 @@ const isRef = (v: unknown): v is string =>
   /^[A-Za-z0-9][A-Za-z0-9:._-]*$/.test(v)
 
 /**
- * Whether a formula the app will hand to the dice engine is one it can actually roll.
- * `resolveMaxHp` falls back on its own now, so this is belt and braces — it keeps a
- * nonsense formula out of the saved encounter rather than merely surviving it.
- */
-function rollableFormula(formula: string): boolean {
-  if (formula.length > 200) return false
-  try {
-    return parseFormula(formula).terms.length > 0
-  } catch {
-    return false
-  }
-}
-
-/**
  * Read a template that came from outside the app — a shared link's payload.
  *
- * Everything is rebuilt key by key onto a fresh object: nothing is spread from the input, so
- * a `__proto__` or `constructor` in hostile JSON has nothing to attach to, and a field we
- * don't know about is dropped rather than carried onto a board and autosaved into the
- * reader's own account. That last part is why this is stricter than the importer's paste
- * path — the stakes aren't only what renders, they're what persists.
+ * Rebuilt key by key onto a fresh object: nothing is spread from the input, and an unknown
+ * field is dropped rather than carried onto a board and autosaved into the reader's own
+ * account. The stakes aren't only what renders, they're what persists. An embedded creature
+ * goes through `projectCreature`, which asks the same of every field a formula reaches.
  *
- * Sizes are bounded twice over: the `shares.data` column refuses more than 64KB on the way
- * in, and the per-field caps here refuse anything past what real prep needs on the way out.
+ * Size is bounded three times, and the three aren't the same question: the column check
+ * bounds the row as stored (compressed), the per-field caps bound each field, and
+ * `LIMITS.readBytes` bounds the blob this turns into.
  */
 export function parseTemplate(value: unknown): ParsedTemplate {
   if (typeof value !== 'object' || value === null || Array.isArray(value))
@@ -353,12 +320,15 @@ export function parseTemplate(value: unknown): ParsedTemplate {
     }
 
     const creature = projectCreature(e.creature)
-    if (!creature) return { error: UNREADABLE }
+    // Null means a stat block missing what it takes to render, or one bigger than any is.
+    if (!creature) {
+      const size = JSON.stringify(e.creature)?.length ?? 0
+      return { error: size > LIMITS.creatureBytes ? TOO_BIG : UNREADABLE }
+    }
     // A homebrew creature from someone else is a new entity here, never an edit of one of
     // ours: the id is re-minted so it can't collide with, or pass itself off as, a library
     // entry the reader already has.
     const own: Creature = { ...creature, id: `custom:${crypto.randomUUID()}`, source: 'custom' }
-    if (own.hpFormula !== undefined && !rollableFormula(own.hpFormula)) delete own.hpFormula
     entries.push({ creature: own, ...shared })
   }
 
@@ -376,13 +346,16 @@ export function parseTemplate(value: unknown): ParsedTemplate {
   const by = typeof raw.by === 'string' ? cleanLine(raw.by) : ''
   const byOk = by.length > 0 && bylineShapeError(by) === null
 
-  return {
-    template: {
-      v: 1,
-      name,
-      entries,
-      ...(note ? { note } : {}),
-      ...(byOk ? { by } : {}),
-    },
+  const template: EncounterTemplate = {
+    v: 1,
+    name,
+    entries,
+    ...(note ? { note } : {}),
+    ...(byOk ? { by } : {}),
   }
+
+  // Measured on what we built, not what arrived: the bytes about to be copied onto a board
+  // and autosaved. Forty entries each within every per-field cap still add up.
+  if (JSON.stringify(template).length > LIMITS.readBytes) return { error: TOO_BIG }
+  return { template }
 }

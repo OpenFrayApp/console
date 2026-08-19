@@ -77,10 +77,35 @@ export const TEMPLATE_LIMITS = {
    */
   publishBytes: 32 * 1024,
   /**
-   * How deep and how wide the structures inside an embedded creature may be. A stat block
-   * is a shallow thing; anything past this is either broken or trying something.
+   * What we're willing to *read*, and the separate question. The column check bounds the row
+   * **as stored**, which is compressed: forty near-identical stat blocks compress by three
+   * orders of magnitude, so a row inside `pg_column_size(data) <= 65536` can be tens of
+   * megabytes read back. Per-field caps don't bound the total either. This does.
    */
-  depth: 12,
+  readBytes: 64 * 1024,
+  /** One embedded stat block. The largest the app ships is under 8KB. */
+  creatureBytes: 16 * 1024,
+  /** Items in any list inside a stat block; the longest the app ships is fifteen. */
   arrayItems: 60,
-  textChars: 20_000,
+  /**
+   * A name, an id, or one line of a list — an action's name, a damage type, a language.
+   * Roomier than it looks like it needs to be because real stat blocks are: an immunity runs
+   * to 82 characters. `creatureInput.test.ts` runs the shipped compendium through to check.
+   */
+  entryChars: 160,
+  /** One entry's prose. The longest shipped is about 2,200 characters. */
+  proseChars: 4000,
+  /** A dice formula. The longest shipped is eight characters; opendice's own cap is 1000. */
+  formulaChars: 100,
+  /**
+   * The ranges a stat-block number sits in to be one — because they are pasted into dice
+   * formulas and counted down on screen, not because we have a view on monster strength.
+   */
+  bonus: 99,
+  dc: 99,
+  ac: 99,
+  hp: 9999,
+  uses: 99,
+  score: 99,
+  feet: 9999,
 } as const

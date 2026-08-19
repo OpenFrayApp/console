@@ -153,8 +153,18 @@ export function SharedEncounterPage({
       // the page now, and the note that explains what the cast is for.
       setReading({ kind: 'note' })
 
+      // The sources its refs name, plus the ones an embedded creature's spells name — a
+      // homebrew boss casting Fireball contributes no source of its own, so an all-homebrew
+      // cast would otherwise fetch nothing and show no card for a spell the reader has.
       const sources = [
-        ...new Set(template.entries.flatMap((e) => (e.ref ? [sourceOfId(e.ref)] : []))),
+        ...new Set(
+          template.entries.flatMap((e) => [
+            ...(e.ref ? [sourceOfId(e.ref)] : []),
+            ...(e.creature?.spellcasting?.groups ?? []).flatMap((g) =>
+              g.spells.flatMap((s) => (s.ref ? [sourceOfId(s.ref)] : [])),
+            ),
+          ]),
+        ),
       ]
       const library = await loadLibraries(sources)
       if (!active) return
