@@ -124,7 +124,7 @@ describe('ReportShareDialog', () => {
     report.result = 'unavailable'
     render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
-    await screen.findByText(/info@openfray.app/)
+    await screen.findByText(/reports@openfray.app/)
   })
 
   it('says a failure is a failure rather than thanking them for nothing', async () => {

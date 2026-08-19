@@ -51,7 +51,7 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
       setSent(true)
     } else if (result === 'unavailable') {
       // Nothing the reporter can do, and telling them to try again would waste their time.
-      setError('Reporting isn’t set up on this server yet. Please email info@openfray.app.')
+      setError('Reporting isn’t set up on this server yet. Please email reports@openfray.app.')
     } else {
       setError('Couldn’t send that. Try again in a moment.')
     }
