@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 /**
- * The byline on a shared encounter — "Encounter by …", typed by whoever published it.
+ * The byline on anything shared — "Shared by …", typed by whoever published it.
  *
  * It is the one string a stranger writes that renders on a public page under our own name,
  * so it is held to more than a length: a character allowlist, a fold that collapses the
@@ -223,7 +223,7 @@ export function bylineShapeError(raw: string): string | null {
 
 /**
  * Why this byline can't be published, in words the publisher can act on, or null when it's
- * fine. An empty byline is fine and means no byline at all — "Encounter by" simply doesn't
+ * fine. An empty byline is fine and means no byline at all — "Shared by" simply doesn't
  * render.
  *
  * `allowReserved` lifts the reserved-name check for a publisher the database has granted it

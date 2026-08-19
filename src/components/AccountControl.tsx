@@ -5,8 +5,6 @@ import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { useDismiss } from '../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
-import { SharedLinksPanel } from './SharedLinksPanel.tsx'
-import type { MyShares } from '../state/shares.ts'
 import { popoverClass } from './popover.ts'
 
 /** User-silhouette icon (the account menu button). */
@@ -34,28 +32,24 @@ function UserIcon() {
  * Anonymous: a "Sign in" button that opens the full sign-in page (OAuth providers). Renders
  * nothing until Supabase is configured, so an unconfigured build stays anon-only.
  *
- * The shared links live here rather than with the board because a published link outlives
- * the fight it came from: "what have I put out there" is a question about the account.
+ * The shared links are reached from here rather than from the board because a published link
+ * outlives the encounter it came from: "what have I put out there" is a question about the
+ * account. The screen itself belongs to the app, which owns the list.
  */
 export function AccountControl({
   onSignIn,
-  shares = { status: 'ok', shares: [] },
   onOpenShares,
-  onUnpublish,
   allowReserved = false,
 }: {
   onSignIn: () => void
   /** Whether this account may publish under a reserved name; the profile field honours it. */
   allowReserved?: boolean
-  /** The links this account has published; the menu item opens them. */
-  shares?: MyShares
-  /** Re-read the list — opening the panel is the cheapest moment to ask. */
+  /** Open the shared-links screen. It is a screen rather than a dialog because it is
+   *  somewhere a Game Master works, not somewhere they glance. */
   onOpenShares?: () => void
-  onUnpublish?: (code: string) => void
 }) {
   const { user, loading, configured, signOut } = useAuth()
   const [accountOpen, setAccountOpen] = useState(false)
-  const [sharesOpen, setSharesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -98,11 +92,10 @@ export function AccountControl({
               onClick={() => {
                 setMenuOpen(false)
                 onOpenShares?.()
-                setSharesOpen(true)
               }}
               className={item}
             >
-              Shared encounters
+              Shared links
             </button>
             <button
               type="button"
@@ -119,13 +112,6 @@ export function AccountControl({
         )}
         {accountOpen && (
           <AccountPanel onClose={() => setAccountOpen(false)} allowReserved={allowReserved} />
-        )}
-        {sharesOpen && (
-          <SharedLinksPanel
-            shares={shares}
-            onUnpublish={onUnpublish ?? (() => {})}
-            onClose={() => setSharesOpen(false)}
-          />
         )}
       </div>
     )

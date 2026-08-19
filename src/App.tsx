@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import type { ContentLicense } from './schema/license.ts'
 import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
@@ -48,9 +49,12 @@ import {
 } from './state/cloudEncounter.ts'
 import {
   templateEntries,
+  restrictedCreatures,
   templateFromBoard,
+  withoutRestricted,
   templateToCombatants,
 } from './combat/encounterTemplate.ts'
+import { creatureTemplate } from './combat/creatureTemplate.ts'
 import {
   listMyShares,
   mayUseReservedByline,
@@ -113,6 +117,7 @@ import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
 import { CustomMonsterForm } from './components/CustomMonsterForm.tsx'
+import { ShareCreatureDialog } from './components/ShareCreatureDialog.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './components/customMonster.ts'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
@@ -122,6 +127,7 @@ import { RestControls } from './components/RestControls.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
+import { SharedLinksPage } from './components/SharedLinksPage.tsx'
 import { CombatTimers } from './components/CombatTimers.tsx'
 import { CombatDifficulty } from './components/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
@@ -322,7 +328,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // somewhere to record it — and dropped if the Game Master backs out of Begin.
   const preRolled = useRef<Record<string, NewLogEntry>>({})
 
-  const { user, displayName, setDisplayName, loading: authLoading } = useAuth()
+  const { user, displayName, shareLicense, setDisplayName, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const cloudId = useRef<string | null>(null)
   const cloudHydrated = useRef(false)
@@ -755,15 +761,57 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
    * from the account, because publishing a name is a choice rather than a consequence of
    * having signed in.
    */
+  /**
+   * What the board holds that says it may not be passed on, worked out before the share
+   * dialog opens rather than after a link exists. Only creatures carried whole can be
+   * asked; a library creature travels as a reference and is never redistributed here.
+   */
+  const restricted = useMemo(() => {
+    const built = templateFromBoard(encounter.combatants, '')
+    const names = restrictedCreatures(built)
+    return { names, someRemain: withoutRestricted(built).entries.length > 0 }
+  }, [encounter.combatants])
+
+  /**
+   * Publish one creature. The template decides how it travels — a library creature as a
+   * reference, homebrew whole — so nothing here reasons about licenses: the creature
+   * carries its own, stated in the editor where the creature is.
+   */
+  /** Whether the shared-links screen has the body. Transient: an account screen, not a view. */
+  const [showShares, setShowShares] = useState(false)
+
+  /** The creature whose share dialog is open, asked for by the board or the compendium. */
+  const [sharingCreature, setSharingCreature] = useState<Creature | null>(null)
+
+  const handleShareCreature = async (
+    creature: Creature,
+    draft: { note: string; by: string },
+  ): Promise<PublishResult> => {
+    const result = await publishShare('creature', creatureTemplate(creature, draft))
+    if (result.status === 'ok') {
+      track(EVENTS.creatureShared)
+      setShareByline(draft.by)
+      saveSettings({ shareByline: draft.by || null })
+      refreshShares()
+    }
+    return result
+  }
+
   const handleShareEncounter = async (draft: {
     name: string
     note: string
     by: string
+    license: ContentLicense
   }): Promise<PublishResult> => {
+    // Always without them. A creature marked all rights reserved is not ours to put on a
+    // public URL, and an encounter is no different from sharing the stat block alone.
     const template: EncounterTemplate = {
-      ...templateFromBoard(encounter.combatants, draft.name),
+      ...withoutRestricted(templateFromBoard(encounter.combatants, draft.name)),
       ...(draft.note ? { note: draft.note } : {}),
       ...(draft.by ? { by: draft.by } : {}),
+      // Unstated is the absent state, so it writes no field: a published template records
+      // that somebody chose a license, never that they declined to.
+      ...(draft.license !== 'unstated' ? { license: draft.license } : {}),
     }
     const result = await publishShare('encounter', template)
     if (result.status === 'ok') {
@@ -837,6 +885,22 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     const creature = customCreatures.find((cr) => cr.id === c.creatureId)
     if (creature)
       setEncounterCreatureEdit({ draft: creatureToDraft(creature), editId: creature.id })
+  }
+
+  /**
+   * Keep a creature that arrived from a shared link.
+   *
+   * Saved under the id the board already uses, so the combatant on screen and the library
+   * entry are the same creature and the control becomes Edit from here on.
+   *
+   * `source` becomes Homebrew rather than the `custom` that renders as "Custom (you)":
+   * somebody else wrote this, and a copy landing in a library does not make it the reader's
+   * work. What it says about reuse is carried untouched — that was its author's to state,
+   * not this reader's to restate.
+   */
+  const handleSaveEncounterCreature = (c: MonsterCombatant) => {
+    if (customCreatures.some((cr) => cr.id === c.creatureId)) return
+    handleCreateCreature({ ...c.creature, id: c.creatureId, source: 'Homebrew' })
   }
 
   // The view toggle opens the compendium on its default (creatures) tab; only the
@@ -1491,9 +1555,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               <AccountControl
                 onSignIn={() => setAuthOpen(true)}
                 allowReserved={bylineGranted}
-                shares={myShares}
-                onOpenShares={refreshShares}
-                onUnpublish={handleUnpublish}
+                onOpenShares={() => {
+                  refreshShares()
+                  setShowShares(true)
+                }}
               />
               <SharePanel
                 code={playerCode}
@@ -1540,6 +1605,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             {view === 'compendium' ? (
               <div className="h-full w-full overflow-hidden px-4 py-3 md:px-6 md:py-6">
                 <Compendium
+                  onShareCreature={setSharingCreature}
                   customCreatures={customCreatures}
                   onCreateCreature={handleCreateCreature}
                   onUpdateCreature={handleUpdateCreature}
@@ -1588,6 +1654,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
                       signedIn={!!user}
                       defaultByline={displayName ?? shareByline}
+                      defaultLicense={shareLicense ?? 'unstated'}
+                      restricted={restricted.names}
+                      canDropRestricted={restricted.someRemain}
                       allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
                     />
@@ -1602,6 +1671,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onEditPc={handleEditEncounterPc}
                 onEditPcDmNotes={handleEditEncounterPcDmNotes}
                 onEditCreature={handleEditEncounterCreature}
+                onSaveCreature={handleSaveEncounterCreature}
+                savedCreatureIds={customCreatures.map((c) => c.id)}
+                onShareCreature={setSharingCreature}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 started={started}
@@ -1674,6 +1746,30 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             onClose={() => setEncounterCreatureEdit(null)}
             onSubmit={handleUpdateCreature}
           />
+
+          {/* One dialog for both surfaces: the compendium's stat block and the board's
+          selected creature open the same one, so what a Game Master sees does not depend on
+          which screen they were looking at. */}
+          {sharingCreature && (
+            <ShareCreatureDialog
+              creature={sharingCreature}
+              signedIn={!!user}
+              defaultByline={displayName ?? shareByline}
+              allowReserved={bylineGranted}
+              onShare={(draft) => handleShareCreature(sharingCreature, draft)}
+              onClose={() => setSharingCreature(null)}
+            />
+          )}
+
+          {/* Over the app, like Account and Settings: an account screen rather than a third
+          view, and deliberately not persisted — a reload returns to the board. */}
+          {showShares && (
+            <SharedLinksPage
+              shares={myShares}
+              onUnpublish={handleUnpublish}
+              onClose={() => setShowShares(false)}
+            />
+          )}
 
           {initPrompt && (
             <InitiativePrompt
