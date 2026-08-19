@@ -123,6 +123,17 @@ export function ShareCreatureDialog({
               Signed out, the link stops working after 60 days.
             </p>
           )}
+          {/* Same clause as the encounter dialog, minus the library sentence: whether a
+            reader may take a copy of this one depends on its license, which the line
+            above says when the answer is no. */}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Publishing is you saying you hold the rights to this stat block, and letting OpenFray
+            host it on a page anyone can open. The{' '}
+            <a href="/terms" target="_blank" rel="noreferrer" className="underline">
+              terms
+            </a>{' '}
+            say the rest, including how a link comes down.
+          </p>
           <Button type="submit" variant="primary" disabled={busy || !!problem}>
             Publish
           </Button>

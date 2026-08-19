@@ -185,6 +185,17 @@ export function ShareEncounterDialog({
               {!canDropRestricted && ' There is nothing left to share.'}
             </p>
           )}
+          {/* The one thing publishing commits them to that no field on this form says, so
+            it sits against the button rather than in a footer. A new tab, because a
+            publisher who reads the terms mid-draft should come back to their note. */}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Publishing is you saying you hold the rights to this, and letting anyone with the link
+            run it at their table and add its creatures to their own library. The{' '}
+            <a href="/terms" target="_blank" rel="noreferrer" className="underline">
+              terms
+            </a>{' '}
+            say the rest, including how a link comes down.
+          </p>
           <Button
             type="submit"
             variant="primary"
