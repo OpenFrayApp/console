@@ -15,12 +15,14 @@ function renderPanel(overrides: Partial<AuthState> & { allowReserved?: boolean }
   const value: AuthState = {
     user: { email: 'dm@openfray.app', app_metadata: { provider: 'google' } } as unknown as User,
     displayName: 'Nico Mustone',
+    shareLicense: null,
     loading: false,
     configured: true,
     signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),
     deleteAccount: vi.fn(async () => ({ error: null })),
     setDisplayName: vi.fn(async () => ({ error: null })),
+    setShareLicense: vi.fn(async () => ({ error: null })),
     ...auth,
   }
   const onClose = vi.fn()

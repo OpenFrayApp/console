@@ -2,6 +2,12 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState, type FormEvent } from 'react'
+import {
+  LICENSES_FROM_SCRATCH,
+  LICENSE_HINTS,
+  LICENSE_LABELS,
+  type ContentLicense,
+} from '../schema/license.ts'
 import { useAuth } from '../auth/useAuth.ts'
 import { bylineError, BYLINE_MAX } from '../lib/byline.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
@@ -50,12 +56,21 @@ export function AccountPanel({
    */
   allowReserved?: boolean
 }) {
-  const { user, displayName, signOut, deleteAccount, setDisplayName } = useAuth()
+  const {
+    user,
+    displayName,
+    shareLicense,
+    signOut,
+    deleteAccount,
+    setDisplayName,
+    setShareLicense,
+  } = useAuth()
   const provider = providerName(user?.app_metadata?.provider)
 
   const [name, setName] = useState(displayName ?? '')
   const [nameNote, setNameNote] = useState<Note>(null)
   const [nameBusy, setNameBusy] = useState(false)
+  const [licenseNote, setLicenseNote] = useState<Note>(null)
 
   const [confirm, setConfirm] = useState('')
   const [delNote, setDelNote] = useState<Note>(null)
@@ -188,6 +203,48 @@ export function AccountPanel({
             </form>
             <div className="mt-2">
               <NoteLine note={nameNote} />
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Default license for shared encounters
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              What the share dialog starts on. It covers your own words — the name, the note, and
+              which creatures you put together — and never the creatures themselves, which carry
+              their own. You can change it on any share without changing this.
+            </p>
+            <div className="mt-3">
+              <label htmlFor="share-license-default" className={LABEL}>
+                License
+              </label>
+              <select
+                id="share-license-default"
+                value={shareLicense ?? 'unstated'}
+                onChange={(e) => {
+                  const next = e.target.value as ContentLicense
+                  setLicenseNote(null)
+                  void setShareLicense(next).then(({ error }) =>
+                    setLicenseNote(
+                      error ? { kind: 'err', text: error } : { kind: 'ok', text: 'Saved.' },
+                    ),
+                  )
+                }}
+                className={`${FIELD} mt-1`}
+              >
+                {LICENSES_FROM_SCRATCH.map((l) => (
+                  <option key={l} value={l}>
+                    {LICENSE_LABELS[l]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {LICENSE_HINTS[shareLicense ?? 'unstated']}
+              </p>
+              <div className="mt-2">
+                <NoteLine note={licenseNote} />
+              </div>
             </div>
           </section>
 

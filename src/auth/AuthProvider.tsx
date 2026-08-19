@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { isContentLicense, type ContentLicense } from '../schema/license.ts'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import { AuthContext, type AuthResult, type OAuthProvider } from './useAuth.ts'
@@ -74,6 +75,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null }
   }
 
+  /**
+   * Remember what this account's shared encounters should start on. It lives beside the
+   * display name in `user_metadata` rather than in a table of its own: there is no profiles
+   * table to add a column to, and a preference the account already stores one of belongs
+   * where that one is.
+   */
+  const setShareLicense = async (license: ContentLicense): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
+    const { data, error } = await supabase.auth.updateUser({
+      // Unstated is the absent state, so choosing it clears the default rather than
+      // recording a preference for saying nothing.
+      data: { share_license: license === 'unstated' ? null : license },
+    })
+    if (error) return { error: error.message }
+    if (data.user) setUser(data.user)
+    return { error: null }
+  }
+
   /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
@@ -99,12 +118,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ((user?.user_metadata?.display_name ??
             user?.user_metadata?.full_name ??
             user?.user_metadata?.name) as string | undefined) || null,
+        // Validated rather than trusted: it is metadata, and a value the app doesn't know
+        // is no answer at all. Unknown reads as "never set", which seeds nothing.
+        shareLicense: isContentLicense(user?.user_metadata?.share_license)
+          ? user.user_metadata.share_license
+          : null,
         loading,
         configured: Boolean(supabase),
         signInWithProvider,
         signOut,
         deleteAccount,
         setDisplayName,
+        setShareLicense,
       }}
     >
       {children}
