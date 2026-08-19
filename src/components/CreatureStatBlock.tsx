@@ -37,6 +37,7 @@ import {
 import { hpToneFor } from './hpTone.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
+import { ShareIcon } from './ShareIcon.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { FloatingCard } from './FloatingCard.tsx'
 import { useHoverCard } from './spellPreview.ts'
@@ -328,7 +329,7 @@ function Section({
       <h4 className="mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
         {title}
       </h4>
-      <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+      <div className="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-400 [&_strong]:text-slate-900 dark:[&_strong]:text-slate-200">
         {items.map((entry) => (
           <Markdown key={entry.name} linkConditions resolveSpell={resolveSpell}>
             {`**${entry.name}${entry.note ? ` (${entry.note})` : ''}.** ${entry.text ?? ''}`}
@@ -392,7 +393,7 @@ function ActionSection({
           {note}
         </p>
       )}
-      <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+      <div className="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-400 [&_strong]:text-slate-900 dark:[&_strong]:text-slate-200">
         {actions.map((a) => {
           const usesLeft = actionUsesOf?.(a) ?? null
           const recharge = rechargeLabel(a.recharge)
@@ -679,6 +680,8 @@ export function CreatureStatBlock({
   inLair = false,
   onEdit,
   onDelete,
+  onShare,
+  strangers,
 }: {
   creature: Creature
   /** Live hit points when shown in combat; absent in the reference compendium. */
@@ -734,6 +737,10 @@ export function CreatureStatBlock({
   onEdit?: () => void
   /** Delete this creature from the library (custom only) — shown in the source row. */
   onDelete?: () => void
+  /** Publish this creature to a link, from wherever the stat block has its own controls. */
+  onShare?: () => void
+  /** Rendered for somebody who doesn't own it: a shared link rather than their library. */
+  strangers?: boolean
 }) {
   const displayName = label ?? creature.name
   // A milestone campaign hides XP in the combat view (and the recap). The compendium
@@ -936,9 +943,23 @@ export function CreatureStatBlock({
       <SourceLink
         source={creature.source}
         page={creature.sourcePage}
+        derivedFrom={creature.derivedFrom}
+        license={creature.license}
+        strangers={strangers}
         actions={
-          onEdit || onDelete ? (
+          onEdit || onDelete || onShare ? (
             <span className="flex shrink-0 gap-2">
+              {onShare && (
+                <button
+                  type="button"
+                  onClick={onShare}
+                  aria-label="Share this creature"
+                  title="Share this creature"
+                  className="tap-area flex items-center justify-center rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <ShareIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
               {onEdit && (
                 <button
                   type="button"

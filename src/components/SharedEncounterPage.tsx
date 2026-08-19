@@ -5,9 +5,22 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { EncounterTemplate, TemplateEntry } from '../schema/encounterTemplate.ts'
-import { parseTemplate } from '../combat/encounterTemplate.ts'
+import {
+  parseTemplate,
+  uncopyableCreatures,
+  withoutUncopyable,
+} from '../combat/encounterTemplate.ts'
+import { parseCreatureTemplate } from '../combat/creatureTemplate.ts'
+import type { CreatureTemplate } from '../schema/creatureTemplate.ts'
+import { SharedCreature } from './SharedCreature.tsx'
 import { fetchShare, resolveReport, type Resolution } from '../state/shares.ts'
 import { moderationTokenFromHash } from '../state/shareCode.ts'
+import {
+  LICENSE_LABELS,
+  effectiveLicense,
+  summarizeLicenses,
+  type ContentLicense,
+} from '../schema/license.ts'
 import { loadLibraries, sourceOfId } from '../compendium/srd.ts'
 import { makeSpellLinker } from '../compendium/spelllinker.ts'
 import { formatCr } from '../compendium/format.ts'
@@ -18,6 +31,8 @@ import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 import { ThemeToggle } from './ThemeToggle.tsx'
 import { SharedNote } from './SharedNote.tsx'
 import { ReportShareDialog } from './ReportShareDialog.tsx'
+import { Modal } from './Modal.tsx'
+import { LicenseLink } from './LicenseLink.tsx'
 import { useSwipePanes } from '../hooks/useSwipePanes.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 import { useTheme } from '../hooks/useTheme.ts'
@@ -42,6 +57,7 @@ import { cx } from '../lib/cx.ts'
 type Status =
   | { state: 'loading' }
   | { state: 'ok'; template: EncounterTemplate; official: boolean }
+  | { state: 'creature'; template: CreatureTemplate; official: boolean }
   | { state: 'gone' }
   | { state: 'takenDown' }
   | { state: 'unreadable'; message: string }
@@ -58,7 +74,7 @@ interface CastRow {
   side: 'friend' | 'foe'
 }
 
-/** An octagon with a raised hand's worth of meaning: stop, something here is wrong. */
+/** A flag: the mark this reader is putting on something for somebody else to look at. */
 function ReportIcon() {
   return (
     <svg
@@ -71,9 +87,8 @@ function ReportIcon() {
       aria-hidden
       className="h-3.5 w-3.5"
     >
-      <path d="M7.9 3h8.2L21 7.9v8.2L16.1 21H7.9L3 16.1V7.9z" />
-      <path d="M12 8v4" />
-      <path d="M12 16h.01" />
+      <path d="M4 21V4" />
+      <path d="M4 4h11l-1.5 3.5L15 11H4" />
     </svg>
   )
 }
@@ -119,6 +134,8 @@ export function SharedEncounterPage({
   const [problem, setProblem] = useState<string | null>(null)
   /** Set once the report has been answered without deleting anything. */
   const [dismissed, setDismissed] = useState(false)
+  /** Open when adding would leave creatures behind, so the reader decides knowing that. */
+  const [confirmingAdd, setConfirmingAdd] = useState(false)
   const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
 
   // Read the share, then fetch only the libraries its cast actually names.
@@ -135,6 +152,20 @@ export function SharedEncounterPage({
               ? 'Shared encounters aren’t set up on this server yet.'
               : 'Couldn’t reach the server. Try the link again in a moment.',
         })
+      }
+      // The second kind under /s/. `kind` was made a namespace for exactly this, so a
+      // creature is a branch here rather than a second URL shape or a second table.
+      if (found.kind === 'creature') {
+        const { template, error } = parseCreatureTemplate(found.data)
+        if (!template) return setStatus({ state: 'unreadable', message: error ?? '' })
+        setStatus({ state: 'creature', template, official: found.official })
+        track(EVENTS.encounterLinkOpened)
+        const sources = template.ref ? [sourceOfId(template.ref)] : []
+        const library = await loadLibraries(sources)
+        if (!active) return
+        setCreatures(library.creatures)
+        setSpells(library.spells)
+        return
       }
       if (found.kind !== 'encounter') {
         return setStatus({
@@ -239,7 +270,39 @@ export function SharedEncounterPage({
     setDismissed(true)
   }
 
+  /**
+   * What this encounter says about reuse, and what the whole of it comes to.
+   *
+   * Two separate claims, deliberately. The encounter's own license covers the publisher's
+   * expression — the name, the note, the arrangement — and says nothing about the
+   * creatures, because collecting a stat block is not adapting it. The summary is the
+   * strictest term among everything present, offered as a description of what is here
+   * rather than as a grant the encounter makes.
+   *
+   * A creature the compendium can't resolve contributes nothing, which is why it is left
+   * out below: guessing at a license for a stat block nobody can read would be worse than
+   * saying the whole is unknown, and saying the whole is unknown is what happens anyway
+   * the moment anything is unstated.
+   */
+  const ownLicense = template?.license ?? 'unstated'
+  const summary = useMemo(() => {
+    const parts: ContentLicense[] = [ownLicense]
+    for (const row of cast) {
+      if (row.creature) parts.push(effectiveLicense(row.creature))
+      else if (row.entry.quick) parts.push('unstated')
+    }
+    return summarizeLicenses(parts)
+  }, [ownLicense, cast])
+
   const missing = cast.filter((row) => !row.creature && !row.entry.quick).length
+  const uncopyable = template ? uncopyableCreatures(template) : []
+  /**
+   * Whether anything would reach the board at all. When every creature is one its author
+   * asked nobody reuse, the button has nothing to do — offering it and then explaining that
+   * it does nothing is worse than not offering it. The encounter stays here to be read,
+   * which was its publisher's choice.
+   */
+  const anythingToAdd = template ? withoutUncopyable(template).entries.length > 0 : false
   const total = cast.reduce((n, row) => n + row.count, 0)
 
   /**
@@ -261,6 +324,29 @@ export function SharedEncounterPage({
         : 0
     return sum + each * row.count
   }, 0)
+
+  if (status.state === 'creature') {
+    const shared = status.template
+    const creature =
+      shared.creature ?? (shared.ref ? (creatures.find((c) => c.id === shared.ref) ?? null) : null)
+    return (
+      <Shell>
+        <SharedCreature
+          template={shared}
+          creature={creature}
+          official={status.official}
+          resolveSpell={resolveSpell}
+          linkSpells={linkSpells}
+          onAdd={onAdd}
+          onReport={() => {
+            track(EVENTS.shareReportOpened)
+            setReporting(true)
+          }}
+        />
+        {reporting && <ReportShareDialog code={code} onClose={() => setReporting(false)} />}
+      </Shell>
+    )
+  }
 
   if (status.state !== 'ok') {
     return (
@@ -314,9 +400,18 @@ export function SharedEncounterPage({
                 Answered: this encounter stays up.
               </p>
             )}
-            <Button variant="primary" onClick={() => onAdd(template!)}>
-              Add to my board
-            </Button>
+            {anythingToAdd && (
+              <Button
+                variant="primary"
+                onClick={() =>
+                  uncopyable.length > 0
+                    ? setConfirmingAdd(true)
+                    : onAdd(withoutUncopyable(template!))
+                }
+              >
+                Use this encounter
+              </Button>
+            )}
           </div>
         </div>
         {problem && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{problem}</p>}
@@ -427,7 +522,7 @@ export function SharedEncounterPage({
                 checked it. */}
               <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 <p>
-                  {template!.by ? `Encounter by ${template!.by} · ` : ''}
+                  {template!.by ? `Shared by ${template!.by} · ` : ''}
                   {total} {total === 1 ? 'creature' : 'creatures'}
                   {xp > 0 && (
                     <>
@@ -449,6 +544,15 @@ export function SharedEncounterPage({
                       Treat any link and information in these notes with caution.
                     </span>
                   )}
+                  {/* What the publisher said about their own words. The creatures carry
+                    their own on their rows, and the summary after it describes everything
+                    present — none of the three is a grant the page makes on anyone's
+                    behalf. */}
+                  <LicenseLink license={ownLicense} />
+                  {summary.kind === 'single' && summary.license !== ownLicense && (
+                    <> · Strictest here: {LICENSE_LABELS[summary.license]}</>
+                  )}
+                  {summary.kind === 'mixed' && <> · Mixed terms, see each creature</>}
                   {/* A form rather than a mailto: the reason and the code travel with it, and
                     it works on a phone with no mail account set up. */}
                   <button
@@ -488,6 +592,45 @@ export function SharedEncounterPage({
           )}
         </div>
       </div>
+      {/* Asked at the moment of deciding rather than noted somewhere above it: a reader
+        pressing Add has decided to take this encounter, and what they are about to get is
+        less than what is on screen. Adding copies each creature into their own library,
+        which is reuse, and one whose author asked that nobody reuse it stays behind. */}
+      {confirmingAdd && (
+        <Modal
+          title="Some creatures stay behind"
+          subtitle={
+            'The creatures in the list below are not licensed for reuse: either “All rights ' +
+            'reserved”, or with no license stated at all, which reserves them the same way. ' +
+            'They can be read here but will not be copied to your board. Contact their author ' +
+            'to get access to them. If you believe this is a mistake, report this encounter by ' +
+            'closing this window and clicking the “Report this” button on the bottom right ' +
+            'corner.'
+          }
+          onClose={() => setConfirmingAdd(false)}
+        >
+          <ul className="mb-4 list-inside list-disc text-sm text-slate-700 dark:text-slate-200">
+            {uncopyable.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setConfirmingAdd(false)
+                onAdd(withoutUncopyable(template!))
+              }}
+            >
+              Use the rest
+            </Button>
+            <Button variant="quiet" onClick={() => setConfirmingAdd(false)}>
+              Cancel
+            </Button>
+          </div>
+        </Modal>
+      )}
+
       {reporting && <ReportShareDialog code={code} onClose={() => setReporting(false)} />}
     </Shell>
   )

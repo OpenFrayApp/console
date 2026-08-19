@@ -10,7 +10,9 @@ import {
   castSummary,
   parseTemplate,
   templateEntries,
+  restrictedCreatures,
   templateFromBoard,
+  withoutRestricted,
   templateToCombatants,
 } from '../../src/combat/encounterTemplate.ts'
 
@@ -171,6 +173,50 @@ describe('templateFromBoard', () => {
     const template = templateFromBoard([monster(), monster(), quick()], '  Goblin   ambush  ')
     expect(template).toMatchObject({ v: 1, name: 'Goblin ambush' })
     expect(castSize(template)).toBe(3)
+  })
+})
+
+describe('creatures brought in from outside the console', () => {
+  const own = (name: string, imported?: boolean) =>
+    monster({
+      creatureId: 'custom:1',
+      creature: { ...creature(), id: 'custom:1', name, ...(imported ? { imported } : {}) } as never,
+    })
+
+  it('names only the ones carried whole, since a reference redistributes nothing', () => {
+    // A library creature travels as an id and the recipient resolves it against their own
+    // compendium, so there is nothing of it in the payload to be asking about.
+    const board = [own('Ghast of Leng', true), monster()]
+    expect(restrictedCreatures(templateFromBoard(board, 'x'))).toEqual(['Ghast of Leng'])
+  })
+
+  it('says nothing about a Game Master’s own work, however they licensed it', () => {
+    // Reserved means nobody else may reuse it, not that its author may not show it.
+    expect(restrictedCreatures(templateFromBoard([own('Mine')], 'x'))).toEqual([])
+    expect(restrictedCreatures(templateFromBoard([own('Mine', false)], 'x'))).toEqual([])
+  })
+
+  it('can leave them out and keep the rest', () => {
+    const built = templateFromBoard([own('Ghast of Leng', true), monster()], 'x')
+    const trimmed = withoutRestricted(built)
+    expect(built.entries).toHaveLength(2)
+    expect(trimmed.entries).toHaveLength(1)
+    expect(trimmed.name).toBe(built.name)
+  })
+})
+
+describe('an encounter published without a name', () => {
+  it('is called Unnamed encounter, decided when it is written', () => {
+    // At write time, so the stored template carries a real string. A placeholder chosen at
+    // render would mean every surface that shows one has to know the same placeholder.
+    const board = [monster()]
+    expect(templateFromBoard(board, '').name).toBe('Unnamed encounter')
+    expect(templateFromBoard(board, '   ').name).toBe('Unnamed encounter')
+  })
+
+  it('leaves a name alone when there is one', () => {
+    const board = [monster()]
+    expect(templateFromBoard(board, '  Goblin ambush  ').name).toBe('Goblin ambush')
   })
 })
 

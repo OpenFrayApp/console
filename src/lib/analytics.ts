@@ -69,6 +69,7 @@ export const EVENTS = {
   encounterRestored: 'Encounter restored',
   encounterCastAdded: 'Encounter creatures added',
   encounterShared: 'Encounter shared',
+  creatureShared: 'Creature shared',
   encounterLinkOpened: 'Shared encounter opened',
   encounterLinkAdded: 'Shared encounter added',
   shareReportOpened: 'Report form opened',

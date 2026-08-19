@@ -297,6 +297,7 @@ function PcList({
 export function Compendium({
   customCreatures = [],
   onCreateCreature,
+  onShareCreature,
   onUpdateCreature,
   onDeleteCreature,
   customSpells = [],
@@ -332,6 +333,11 @@ export function Compendium({
   customCreatures?: Creature[]
   /** Save a freshly-authored creature to the library. */
   onCreateCreature: (creature: Creature) => void
+  /**
+   * Ask for this creature's share dialog. The dialog itself belongs to the app, because the
+   * board opens the same one — two owners would be two dialogs and two sets of state.
+   */
+  onShareCreature?: (creature: Creature) => void
   /** Replace an edited creature in the library. */
   onUpdateCreature?: (creature: Creature) => void
   /** Remove a creature from the library. */
@@ -876,6 +882,10 @@ export function Compendium({
               onDelete={
                 isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined
               }
+              // Any creature can be published: what travels is decided by whether the
+              // reader can resolve it, never by permission. A library creature goes as a
+              // reference, homebrew goes whole with what its author said about it.
+              onShare={onShareCreature ? () => onShareCreature(selectedCreature) : undefined}
             />
           </SpellLinkContext.Provider>
         ) : selectedSpell ? (

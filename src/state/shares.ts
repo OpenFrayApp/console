@@ -29,12 +29,14 @@ import { randomShareCode } from './shareCode.ts'
  * later is a new kind and a new branch in the page, not a second table or URL shape.
  */
 
-export type ShareKind = 'encounter'
+export type ShareKind = 'encounter' | 'creature'
 
 /**
- * How long a published link lasts, owned or not. A share is temporary by design: the
- * database sweeps past this nightly and `share()` refuses a row past it in the meantime,
- * so this number is the client's copy of a rule the database enforces.
+ * How long a link published *without an account* lasts. Nobody owns those rows, so nobody
+ * can take one down and nothing lists it; ageing out is the only end it has. The database
+ * sweeps past this nightly and `share()` refuses one past it in the meantime, so this
+ * number is the client's copy of a rule the database enforces. An owned link has no
+ * deadline at all.
  */
 export const SHARE_LIFETIME_DAYS = 60
 
@@ -67,6 +69,8 @@ export interface ShareSummary {
   code: string
   name: string
   createdAt: string
+  /** What is behind it, so a list of links can say which is which. */
+  kind: string
 }
 
 /**
@@ -149,9 +153,12 @@ export async function listMyShares(): Promise<MyShares> {
   if (!supabase) return { status: 'unavailable' }
   // `name:data->>name` reads one field out of the blob instead of dragging every published
   // encounter's cast back to draw a list of names.
+  // `name:data->>name` reads one field out of the blob rather than dragging every published
+  // payload back to draw a list. A creature has no `name` at the top of its template, so its
+  // row comes back null and the caller names it from its kind.
   const { data, error } = await supabase
     .from('shares')
-    .select('code, created_at, name:data->>name')
+    .select('code, kind, created_at, name:data->>name')
     .order('created_at', { ascending: false })
   if (error) {
     if (isMissingSchema(error)) return { status: 'unavailable' }
@@ -162,6 +169,7 @@ export async function listMyShares(): Promise<MyShares> {
     status: 'ok',
     shares: (data ?? []).map((row) => ({
       code: row.code as string,
+      kind: (row.kind as string | null) ?? 'encounter',
       name: (row.name as string | null) ?? 'Untitled',
       createdAt: row.created_at as string,
     })),
@@ -231,10 +239,10 @@ export async function resolveReport(
 }
 
 /**
- * Take a link down early. Only the owner's own rows can go through here — the delete
- * policy compares against `auth.uid()` — so this is the signed-in path, and unpublishing
- * is what a publisher does before the 60 days are up rather than what eventually removes
- * the row.
+ * Take a link down. Only the owner's own rows can go through here — the delete policy
+ * compares against `auth.uid()` — so this is the signed-in path, and it is the *only* way
+ * one of those rows ends: an owned link carries no deadline, because a link left in a blog
+ * post or a video description has to still work when somebody follows it.
  */
 export async function unpublish(code: string): Promise<'ok' | 'unavailable' | 'failed'> {
   if (!supabase) return 'unavailable'

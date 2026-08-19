@@ -92,7 +92,7 @@ describe('SharedEncounterPage', () => {
     // The name leads the details pane, where the note that explains it is; the byline and
     // the totals close it, on one line.
     await waitFor(() => expect(screen.getByText('Goblin ambush')).toBeInTheDocument())
-    expect(screen.getByText(/Encounter by Bob · 4 creatures/)).toBeInTheDocument()
+    expect(screen.getByText(/Shared by Bob · 4 creatures/)).toBeInTheDocument()
     expect(screen.getByText('Goblin')).toBeInTheDocument()
     expect(screen.getByText('×4')).toBeInTheDocument()
   })
@@ -104,7 +104,7 @@ describe('SharedEncounterPage', () => {
     // On the line the byline is on, since that is what a report is about, and next to the
     // caution: between them they say whose words these are and what to do about them.
     expect(report.closest('div')?.textContent).toContain('with caution')
-    expect(report.closest('div')?.parentElement?.textContent).toContain('Encounter by Bob')
+    expect(report.closest('div')?.parentElement?.textContent).toContain('Shared by Bob')
   })
 
   it('adds up what beating the encounter is worth', async () => {
@@ -271,6 +271,206 @@ describe('SharedEncounterPage', () => {
     })
   })
 
+  describe('what the page says about reuse', () => {
+    it('records that nobody spoke, rather than calling it free or reserved', async () => {
+      // Copyright reserves everything by default, so an absent license is neither. The
+      // line says nobody said, which is the only true thing available.
+      share.result = encounter()
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      // Read across the whole footer: the byline, the totals and the license share it,
+      // and where each sits on the line is the maintainer's to arrange.
+      const line = (await screen.findByText(/creatures? ·/)).closest('div')!
+      expect(line.textContent).toContain('No public license stated')
+    })
+
+    it('names the encounter’s own license when its author gave one', async () => {
+      share.result = encounter({ license: 'cc-by-4.0' })
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      const line = (await screen.findByText(/creatures? ·/)).closest('div')!
+      expect(line.textContent).toContain('CC BY 4.0')
+      // The cast is all unstated, so the whole is unknown and no summary is claimed for it.
+      expect(line.textContent).not.toContain('Strictest here')
+    })
+
+    it('never summarizes the whole as looser than something in it', async () => {
+      // The encounter says CC BY; a creature in it says all rights reserved. Summarizing
+      // as CC BY would tell a reader they may reuse a stat block whose author said no.
+      share.result = {
+        status: 'ok',
+        kind: 'encounter',
+        official: false,
+        data: {
+          v: 1,
+          name: 'Mixed',
+          license: 'cc-by-4.0',
+          entries: [
+            {
+              creature: { ...GOBLIN, id: 'custom:1', source: 'custom', license: 'reserved' },
+              count: 1,
+              side: 'foe',
+            },
+          ],
+        },
+      }
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      const line = (await screen.findByText(/creatures? ·/)).closest('div')!
+      expect(line.textContent).toContain('Strictest here: All rights reserved')
+      // The cast row says what the creature is, not what it may be reused for: that is the
+      // stat block's own source line to state, once, where somebody reading it will be.
+      const row = screen.getByRole('button', { name: /Goblin/ })
+      expect(row.textContent).not.toContain('All rights reserved')
+    })
+  })
+
+  describe('a shared creature, the second kind under /s/', () => {
+    const shared = (over: Record<string, unknown> = {}, official = false) => ({
+      status: 'ok' as const,
+      kind: 'creature',
+      official,
+      data: { v: 1, ref: 'srd-5.2:goblin', ...over },
+    })
+
+    it('shows the stat block and offers it, without a cast to browse', async () => {
+      share.result = shared({ note: 'Runs at half hit points.', by: 'Bob' })
+      const onAdd = vi.fn()
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={onAdd} />)
+      await waitFor(() => expect(screen.getByText('Goblin')).toBeInTheDocument())
+      expect(screen.getByText(/Runs at half hit points/)).toBeTruthy()
+      // The byline shares its line with what the creature says it may be reused for.
+      // Shared by, not "creature by": publishing a creature is not a claim to have written
+      // it, and the SRD goblin here was written by somebody else entirely. The license is
+      // the stat block's to state, and is not repeated beside the byline.
+      expect(screen.getByText('Shared by Bob').textContent).not.toContain('CC BY')
+
+      // Adding one creature is adding an encounter of one, so the staging the console
+      // already does for a cast carries it without knowing there was a difference.
+      fireEvent.click(screen.getByRole('button', { name: 'Use this creature' }))
+      expect(onAdd.mock.calls[0][0]).toMatchObject({
+        v: 1,
+        entries: [{ ref: 'srd-5.2:goblin', count: 1, side: 'foe' }],
+      })
+    })
+
+    it('names a creature this version can’t resolve rather than showing nothing', async () => {
+      // A reference resolves against the compendium the app ships, not against what the
+      // reader has switched on — so this is the library-we-don't-carry case, not a setting.
+      share.result = shared({ ref: 'some-book-we-never-shipped:wyrm' })
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      await waitFor(() =>
+        expect(screen.getByText(/isn’t in this version of the compendium/)).toBeTruthy(),
+      )
+      // Nothing to add, because there is nothing resolved to add.
+      expect(screen.queryByRole('button', { name: 'Use this creature' })).toBeNull()
+    })
+
+    it('refuses a creature payload that isn’t one', async () => {
+      share.result = { status: 'ok', kind: 'creature', official: false, data: { v: 1 } }
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      await waitFor(() => expect(screen.getByText(/can’t be read/)).toBeInTheDocument())
+    })
+  })
+
+  describe('a creature its author asked nobody reuse', () => {
+    const reserved = {
+      creature: { ...GOBLIN, id: 'custom:1', source: 'custom', license: 'reserved' },
+      count: 1,
+      side: 'foe',
+    }
+
+    /** A cast with one creature its author reserved, and one anybody may take. */
+    const mixed = () => ({
+      status: 'ok' as const,
+      kind: 'encounter',
+      official: false,
+      data: {
+        v: 1,
+        name: 'Mixed',
+        entries: [reserved, { ref: 'srd-5.2:goblin', count: 2, side: 'foe' }],
+      },
+    })
+
+    it('asks before adding, at the moment the reader is deciding', async () => {
+      // Not a notice somewhere above the button: what they are about to get is less than
+      // what is on screen, and that is worth saying where the decision is made.
+      const onAdd = vi.fn()
+      share.result = mixed()
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={onAdd} />)
+      await waitFor(() => screen.getByText('Mixed'))
+      // Nothing is said until they reach for it.
+      expect(screen.queryByText(/stay behind/)).toBeNull()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Use this encounter' }))
+      const dialog = screen.getByRole('dialog')
+      expect(dialog.textContent).toContain('Some creatures stay behind')
+      // Named in the dialog, so the reader knows which of the cast is staying put.
+      expect(dialog.querySelector('li')?.textContent).toBe('Goblin')
+      expect(onAdd).not.toHaveBeenCalled()
+    })
+
+    it('adds nothing at all when the reader cancels', async () => {
+      const onAdd = vi.fn()
+      share.result = mixed()
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={onAdd} />)
+      await waitFor(() => screen.getByText('Mixed'))
+      fireEvent.click(screen.getByRole('button', { name: 'Use this encounter' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(onAdd).not.toHaveBeenCalled()
+      expect(screen.queryByText('Some creatures stay behind')).toBeNull()
+    })
+
+    it('adds the rest, without the one that was reserved', async () => {
+      const onAdd = vi.fn()
+      share.result = mixed()
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={onAdd} />)
+      await waitFor(() => screen.getByText('Mixed'))
+      fireEvent.click(screen.getByRole('button', { name: 'Use this encounter' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Use the rest' }))
+      expect(onAdd.mock.calls[0][0].entries).toEqual([
+        { ref: 'srd-5.2:goblin', count: 2, side: 'foe' },
+      ])
+    })
+
+    it('offers nothing at all when the whole cast is reserved', async () => {
+      // The button would have nothing to do, and offering it only to explain that it does
+      // nothing is worse than not offering it. The encounter still reads.
+      share.result = {
+        status: 'ok',
+        kind: 'encounter',
+        official: false,
+        data: { v: 1, name: 'All reserved', entries: [reserved] },
+      }
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      await waitFor(() => screen.getByText('All reserved'))
+      expect(screen.queryByRole('button', { name: 'Use this encounter' })).toBeNull()
+      // Still readable: publishing it was the author's choice, and reading is not copying.
+      expect(screen.getByText('Encounter Details')).toBeTruthy()
+    })
+
+    it('asks nothing when every creature may be copied', async () => {
+      const onAdd = vi.fn()
+      share.result = encounter()
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={onAdd} />)
+      await waitFor(() => screen.getByText('Goblin ambush'))
+      fireEvent.click(screen.getByRole('button', { name: 'Use this encounter' }))
+      expect(onAdd).toHaveBeenCalledTimes(1)
+    })
+
+    it('offers no way to take a copy of a shared creature', async () => {
+      share.result = {
+        status: 'ok',
+        kind: 'creature',
+        official: false,
+        data: {
+          v: 1,
+          creature: { ...GOBLIN, id: 'custom:1', source: 'custom', license: 'reserved' },
+        },
+      }
+      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+      await waitFor(() => expect(screen.getByText('Goblin')).toBeInTheDocument())
+      expect(screen.queryByRole('button', { name: 'Use this encounter' })).toBeNull()
+    })
+  })
+
   it('adds nothing until the reader says so', async () => {
     const onAdd = vi.fn()
     share.result = encounter()
@@ -278,7 +478,7 @@ describe('SharedEncounterPage', () => {
     await waitFor(() => screen.getByText('Goblin ambush'))
     expect(onAdd).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to my board' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use this encounter' }))
     expect(onAdd).toHaveBeenCalledTimes(1)
     // The parsed template, not the raw payload: whatever reaches a board went through the door.
     expect(onAdd.mock.calls[0][0]).toMatchObject({ v: 1, name: 'Goblin ambush' })
@@ -337,7 +537,7 @@ describe('SharedEncounterPage', () => {
     for (const button of buttons) {
       expect(button.textContent ?? '', 'a control that runs a fight').not.toMatch(combat)
     }
-    expect(buttons.filter((b) => b.textContent === 'Add to my board')).toHaveLength(1)
+    expect(buttons.filter((b) => b.textContent === 'Use this encounter')).toHaveLength(1)
     // The stat block renders read-only: no hit points to edit, no action to resolve.
     expect(screen.queryByLabelText(/hit points/i)).toBeNull()
   })

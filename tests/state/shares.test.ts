@@ -214,16 +214,39 @@ describe('mayUseReservedByline', () => {
 describe('listMyShares and unpublish', () => {
   it('lists the publisher’s own links without dragging every cast back', async () => {
     const { client, queries } = makeSupabaseStub({
-      data: [{ code: 'k7mqx3rt9p', created_at: '2026-08-11T20:00:00.000Z', name: 'Goblin ambush' }],
+      data: [
+        {
+          code: 'k7mqx3rt9p',
+          kind: 'encounter',
+          created_at: '2026-08-11T20:00:00.000Z',
+          name: 'Goblin ambush',
+        },
+      ],
     })
     supa.client = client
     expect(await listMyShares()).toEqual({
       status: 'ok',
       shares: [
-        { code: 'k7mqx3rt9p', name: 'Goblin ambush', createdAt: '2026-08-11T20:00:00.000Z' },
+        {
+          code: 'k7mqx3rt9p',
+          kind: 'encounter',
+          name: 'Goblin ambush',
+          createdAt: '2026-08-11T20:00:00.000Z',
+        },
       ],
     })
-    expect(queries[0].steps[0]).toEqual(['select', 'code, created_at, name:data->>name'])
+    expect(queries[0].steps[0]).toEqual(['select', 'code, kind, created_at, name:data->>name'])
+  })
+
+  it('names a shared creature by its kind, since its template has no name field', async () => {
+    // `data->>name` comes back null for a creature template. The row still has to say what
+    // it is, or a list of links reads as a column of Untitled.
+    const { client } = makeSupabaseStub({
+      data: [{ code: 'abcdefghjk', kind: 'creature', created_at: '2026-08-11T20:00:00.000Z' }],
+    })
+    supa.client = client
+    const result = await listMyShares()
+    expect(result.status === 'ok' && result.shares[0].kind).toBe('creature')
   })
 
   it('takes a link down by its code', async () => {

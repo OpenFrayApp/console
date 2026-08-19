@@ -13,6 +13,7 @@ import { projectCreature } from '../schema/creatureInput.ts'
 import { autoLabel, instantiate, isAutoLabel, isFoe } from './combatant.ts'
 import { resolveMaxHp } from './hp.ts'
 import { bylineShapeError } from '../lib/byline.ts'
+import { isContentLicense, mayCopy } from '../schema/license.ts'
 import { cleanLine, cleanProse } from '../lib/text.ts'
 
 /**
@@ -83,12 +84,80 @@ export function templateEntries(combatants: readonly Combatant[]): TemplateEntry
   return [...entries.values()]
 }
 
+/**
+ * What a template with no name given is called.
+ *
+ * Applied here, where the template is written, rather than wherever one is drawn. A stored
+ * template then always carries a real string, so the shared page, the links panel and
+ * anything that reads one later agree on what it is called without each knowing a
+ * placeholder to substitute.
+ */
+export const UNNAMED = 'Unnamed encounter'
+
 /** A named template built from what is on the board right now. */
 export function templateFromBoard(
   combatants: readonly Combatant[],
   name: string,
 ): EncounterTemplate {
-  return { v: 1, name: cleanLine(name).slice(0, LIMITS.name), entries: templateEntries(combatants) }
+  return {
+    v: 1,
+    name: cleanLine(name).slice(0, LIMITS.name) || UNNAMED,
+    entries: templateEntries(combatants),
+  }
+}
+
+/**
+ * The creatures in a template that came from outside the console, and so cannot be
+ * published: the browser extension reads paid books, and a forum paste is the same trust
+ * level wearing a friendlier hat.
+ *
+ * Only the ones carried whole can be asked. A library creature travels as a reference and
+ * the recipient resolves it against their own compendium, so nothing of it is redistributed
+ * here whatever its book charges for.
+ *
+ * What a creature says about *reuse* is not consulted. A Game Master publishing their own
+ * work marked all rights reserved has done nothing contradictory, and it is not the app's
+ * business to stop them.
+ */
+export function restrictedCreatures(template: EncounterTemplate): string[] {
+  const names = template.entries
+    .filter((e) => e.creature?.imported === true)
+    .map((e) => e.creature!.name)
+  return [...new Set(names)]
+}
+
+/** The same template with those creatures left out, which is always how one is published. */
+export function withoutRestricted(template: EncounterTemplate): EncounterTemplate {
+  return {
+    ...template,
+    entries: template.entries.filter((e) => e.creature?.imported !== true),
+  }
+}
+
+/**
+ * The same template without the creatures nobody may copy: the ones marked all rights
+ * reserved, and the ones carrying no license at all, which copyright answers the same way.
+ *
+ * Adding a cast copies every creature in it into the reader's own library. Publishing was
+ * the author's choice and the stat block stays on the page to read; what does not follow is
+ * a button that puts it in somebody else's collection.
+ *
+ * Only carried creatures are asked. A library reference resolves against the reader's own
+ * compendium, whose book already answered this.
+ */
+export function withoutUncopyable(template: EncounterTemplate): EncounterTemplate {
+  return {
+    ...template,
+    entries: template.entries.filter((e) => !e.creature || mayCopy(e.creature)),
+  }
+}
+
+/** The names of those, so a reader is told what they are not getting rather than left to count. */
+export function uncopyableCreatures(template: EncounterTemplate): string[] {
+  const names = template.entries
+    .filter((e) => e.creature && !mayCopy(e.creature))
+    .map((e) => e.creature!.name)
+  return [...new Set(names)]
 }
 
 /** How many combatants a template would add, for a count shown before anything is added. */
@@ -352,6 +421,11 @@ export function parseTemplate(value: unknown): ParsedTemplate {
     entries,
     ...(note ? { note } : {}),
     ...(byOk ? { by } : {}),
+    // Matched rather than carried: an unrecognised value is no answer, and reading it as
+    // absent says nobody stated one, which is the truthful fallback.
+    ...(isContentLicense(raw.license) && raw.license !== 'unstated'
+      ? { license: raw.license }
+      : {}),
   }
 
   // Measured on what we built, not what arrived: the bytes about to be copied onto a board
