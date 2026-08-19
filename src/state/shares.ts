@@ -151,8 +151,6 @@ export type MyShares =
 /** Every link this signed-in publisher still has up, newest first. */
 export async function listMyShares(): Promise<MyShares> {
   if (!supabase) return { status: 'unavailable' }
-  // `name:data->>name` reads one field out of the blob instead of dragging every published
-  // encounter's cast back to draw a list of names.
   // `name:data->>name` reads one field out of the blob rather than dragging every published
   // payload back to draw a list. A creature has no `name` at the top of its template, so its
   // row comes back null and the caller names it from its kind.
