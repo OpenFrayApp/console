@@ -112,7 +112,17 @@ export function ShareCreatureDialog({
         </div>
       )}
 
-      {shareable && !signedIn && <SignInToShare what="a creature" onSignIn={onSignIn} />}
+      {shareable && !signedIn && (
+        <SignInToShare
+          what="a creature"
+          onSignIn={() => {
+            // Closed on the way out. The account screen opens over the app, and a dialog left
+            // behind it is still there when they come back from signing in.
+            onClose()
+            onSignIn()
+          }}
+        />
+      )}
 
       {shareable && signedIn && !link && (
         <form onSubmit={publish} className="space-y-3">

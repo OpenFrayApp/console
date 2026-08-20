@@ -133,7 +133,17 @@ export function ShareEncounterDialog({
       }
       onClose={onClose}
     >
-      {!signedIn && <SignInToShare what="an encounter" onSignIn={onSignIn} />}
+      {!signedIn && (
+        <SignInToShare
+          what="an encounter"
+          onSignIn={() => {
+            // Closed on the way out. The account screen opens over the app, and a dialog left
+            // behind it is still there when they come back from signing in.
+            onClose()
+            onSignIn()
+          }}
+        />
+      )}
 
       {signedIn && !link && (
         <form onSubmit={(e) => void publish(e)} className="space-y-3">

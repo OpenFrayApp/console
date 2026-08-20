@@ -219,6 +219,9 @@ describe('ShareEncounterButton', () => {
 
     fireEvent.click(screen.getByText('Sign in to share'))
     expect(onSignIn).toHaveBeenCalled()
+    // And the dialog goes with it. The account screen opens over the app, so one left behind
+    // is still sitting there when they come back from signing in.
+    expect(screen.queryByText(/Sharing an encounter needs an account/)).toBeNull()
   })
 
   it('says what the account changes about the link', () => {
