@@ -33,12 +33,43 @@ const HOVER_LINK =
 /**
  * Every link that leaves the app came out of prose somebody typed, so each one says so.
  *
- * `ugc` is the standard word for it, and the other two are what it means in practice: we
- * are not vouching for where this goes, and the page it goes to learns nothing about where
- * it was clicked from. The `spell:` and `condition:` links are ours and get none of this,
- * because they resolve inside the app and never navigate.
+ * `ugc` is the standard word for it, and the rest is what it means in practice: we are not
+ * vouching for where this goes, the page it goes to learns nothing about where it was
+ * clicked from, and it gets no handle on the tab it was opened from. `noreferrer` implies
+ * that last one, and it is written out anyway, because it is the reason a new tab is safe
+ * and a later edit dropping `noreferrer` should not quietly take it too.
+ *
+ * The `spell:` and `condition:` links get none of this. They are ours, they resolve inside
+ * the app, and they never navigate.
  */
-const UGC_REL = 'ugc nofollow noreferrer'
+const UGC_REL = 'ugc nofollow noreferrer noopener'
+
+/** Where our own pages live, so a link to one stays in the tab it was clicked in. */
+const OURS = 'openfray.app'
+
+/**
+ * Whether a destination is one of ours: this origin, `openfray.app`, or a subdomain of it.
+ *
+ * Parsed rather than matched on the text, because `https://openfray.app.evil.example/`
+ * carries our name and is somebody else's host. Anything that is not http(s) — the
+ * `mailto:` remark-gfm makes out of an address — answers true, which only means it is
+ * handed to the browser the way the browser would take it anyway.
+ */
+function ours(href: string): boolean {
+  try {
+    const url = new URL(href, window.location.href)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return true
+    return (
+      url.hostname === window.location.hostname ||
+      url.hostname === OURS ||
+      url.hostname.endsWith(`.${OURS}`)
+    )
+  } catch {
+    // Nothing that can be navigated to on purpose. react-markdown's sanitizer has already
+    // emptied the destinations that mattered.
+    return true
+  }
+}
 
 /**
  * A markdown `a` renderer: `spell:` and `condition:` links become hover previews; the rest
@@ -67,7 +98,7 @@ function hoverAnchor(resolveSpell: ResolveSpell | undefined, links: boolean): Co
     }
     if (!links) return <>{children}</>
     return (
-      <a href={href} rel={UGC_REL}>
+      <a href={href} rel={UGC_REL} target={ours(href ?? '') ? undefined : '_blank'}>
         {children}
       </a>
     )
@@ -94,8 +125,9 @@ const altOnly: Components['img'] = ({ alt }) => <>{alt}</>
  * autolinks bare URLs, `www.` hosts and email addresses. `links` is for the Game Master's
  * own prose — their notes, a backstory.
  *
- * The ones it does render carry `rel="ugc nofollow noreferrer"`, because prose is where a
- * link somebody typed becomes a link the app drew.
+ * The ones it does render say where they came from and where they go: `rel` marks them as
+ * somebody's own writing, and anything that is not one of ours opens in its own tab, so a
+ * Game Master following a link out of their notes does not lose the fight they were running.
  */
 export function Markdown({
   children,

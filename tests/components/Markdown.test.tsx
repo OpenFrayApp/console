@@ -125,7 +125,34 @@ describe('Markdown does not reach outside the app', () => {
       <Markdown links>{'[The map](https://drive.example/map.png) is here'}</Markdown>,
     )
     const rel = container.querySelector('a')?.getAttribute('rel') ?? ''
-    expect(rel.split(' ').sort()).toEqual(['nofollow', 'noreferrer', 'ugc'])
+    expect(rel.split(' ').sort()).toEqual(['nofollow', 'noopener', 'noreferrer', 'ugc'])
+  })
+
+  /** Where one prose link goes, and whether it takes the tab with it. */
+  const anchor = (md: string) => {
+    const { container } = render(<Markdown links>{md}</Markdown>)
+    return container.querySelector('a')
+  }
+
+  it('sends a link out of the app to its own tab, so the fight stays open', () => {
+    expect(anchor('[map](https://drive.example/m.png)')?.getAttribute('target')).toBe('_blank')
+  })
+
+  it('keeps one of ours in the tab it was clicked in', () => {
+    expect(anchor('[handbook](https://openfray.app/docs/)')?.getAttribute('target')).toBeNull()
+    expect(anchor('[admin](https://admin.openfray.app/)')?.getAttribute('target')).toBeNull()
+    expect(anchor('[here](/console/)')?.getAttribute('target')).toBeNull()
+  })
+
+  it('is not fooled by a host that merely contains our name', () => {
+    // Parsed, never matched on the text: this is somebody else's host and it opens away
+    // from the console like any other.
+    const out = anchor('[real, honest](https://openfray.app.evil.example/login)')
+    expect(out?.getAttribute('target')).toBe('_blank')
+  })
+
+  it('leaves an address alone, since a blank tab is not where mail is written', () => {
+    expect(anchor('Write to <gm@example.com>')?.getAttribute('target')).toBeNull()
   })
 
   it('leaves the app’s own hover links alone, because they never navigate', () => {
