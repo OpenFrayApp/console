@@ -212,46 +212,6 @@ export async function mayUseReservedByline(): Promise<boolean> {
   return data === true
 }
 
-/** What a report can be answered with. Both are decisions; only one deletes anything. */
-export type Resolution = 'taken_down' | 'dismissed'
-
-/** How answering a report went. `wrong` is a token that matched no undecided report. */
-export type ResolveResult = 'ok' | 'wrong' | 'unavailable' | 'failed'
-
-/**
- * Answer a report with the token from its mail: take the encounter down, or leave it up.
- *
- * The token is the whole authorisation, and it only ever matches the one report that
- * carried it — so nothing here needs an account, a session, or a key that could do anything
- * else. It matches only while that report is undecided, which makes it single-use: a mail
- * forwarded or opened twice cannot answer the same report twice.
- *
- * The decision is written before anything else happens, because it is what the reply to the
- * reporter is sent from. That ordering is the same one the report itself follows, and for
- * the same reason: a broken mail hop should cost a message, never the decision.
- *
- * `wrong` covers every way a token can fail to match — stale, already answered, or simply
- * not ours — because the page says one thing to its reader in all of them.
- */
-export async function resolveReport(
-  code: string,
-  secret: string,
-  decision: Resolution,
-): Promise<ResolveResult> {
-  if (!supabase) return 'unavailable'
-  const { data, error } = await supabase.rpc('resolve_report', {
-    want: code,
-    secret,
-    decision,
-  })
-  if (error) {
-    if (isMissingSchema(error)) return 'unavailable'
-    warn('answering a report', error)
-    return 'failed'
-  }
-  return data === true ? 'ok' : 'wrong'
-}
-
 /**
  * Take a link down. Only the owner's own rows can go through here — the delete policy
  * compares against `auth.uid()` — and this is one of the two ways a link ends, the other

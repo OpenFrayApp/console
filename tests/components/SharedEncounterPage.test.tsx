@@ -12,20 +12,12 @@ import type { FetchedShare } from '../../src/state/shares.ts'
  * no control on it may run a fight.
  */
 
-const share = vi.hoisted(() => ({
-  result: null as FetchedShare | null,
-  resolved: 'ok' as 'ok' | 'wrong' | 'unavailable' | 'failed',
-  resolveCalls: [] as string[][],
-}))
+const share = vi.hoisted(() => ({ result: null as FetchedShare | null }))
 /** Which libraries the page decided its cast needs — see the spell-refs case at the foot. */
 const asked = vi.hoisted(() => ({ sources: [] as string[] }))
 
 vi.mock('../../src/state/shares.ts', () => ({
   fetchShare: () => Promise.resolve(share.result),
-  resolveReport: (code: string, secret: string, decision: string) => {
-    share.resolveCalls.push([code, secret, decision])
-    return Promise.resolve(share.resolved)
-  },
 }))
 
 const GOBLIN = {
@@ -58,8 +50,6 @@ const { SharedEncounterPage } = await import('../../src/components/SharedEncount
 afterEach(() => {
   cleanup()
   share.result = null
-  share.resolved = 'ok'
-  share.resolveCalls = []
   asked.sources = []
   window.location.hash = ''
   delete (window as { fathom?: unknown }).fathom
@@ -213,91 +203,6 @@ describe('SharedEncounterPage', () => {
       expect(screen.getByText(/no longer exists|expired|deleted/i)).toBeInTheDocument(),
     )
     expect(trackEvent).not.toHaveBeenCalled()
-  })
-
-  describe('the takedown in a report’s mail', () => {
-    /** Arrive the way the maintainer does: from the report link, token in the fragment. */
-    const withToken = async (token = '3f7a1c92-5b4e-4d81-9a63-0e2c8d5f71ab') => {
-      window.location.hash = `#m=${token}`
-      share.result = encounter()
-      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
-      await waitFor(() => expect(screen.getByText('Goblin ambush')).toBeInTheDocument())
-    }
-
-    it('offers nothing to a reader arriving without one', async () => {
-      // Everyone else must not learn the control exists, let alone that a token would work.
-      share.result = encounter()
-      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
-      await waitFor(() => expect(screen.getByText('Goblin ambush')).toBeInTheDocument())
-      expect(screen.queryByRole('button', { name: /Take it down/ })).toBeNull()
-      expect(screen.queryByRole('button', { name: /Leave it up/ })).toBeNull()
-    })
-
-    it('ignores a fragment that isn’t shaped like a token', async () => {
-      await withToken('nope')
-      expect(screen.queryByRole('button', { name: /Take it down/ })).toBeNull()
-    })
-
-    it('notices a token pasted into a tab that is already open', async () => {
-      // Changing only the fragment reloads nothing, so the token has to be re-read on the
-      // event rather than once at mount. This is the shape of a real arrival: the page is
-      // up, and the link goes into the address bar of that same tab.
-      share.result = encounter()
-      render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
-      await waitFor(() => expect(screen.getByText('Goblin ambush')).toBeInTheDocument())
-      expect(screen.queryByRole('button', { name: /Take it down/ })).toBeNull()
-
-      window.location.hash = '#m=3f7a1c92-5b4e-4d81-9a63-0e2c8d5f71ab'
-      fireEvent(window, new HashChangeEvent('hashchange'))
-      expect(screen.getByRole('button', { name: /Take it down/ })).toBeTruthy()
-    })
-
-    it('confirms by name, then sends the code and the token', async () => {
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-      await withToken()
-      fireEvent.click(screen.getByRole('button', { name: /Take it down/ }))
-      expect(confirm.mock.calls[0][0]).toContain('Goblin ambush')
-      expect(share.resolveCalls).toEqual([])
-
-      confirm.mockReturnValue(true)
-      fireEvent.click(screen.getByRole('button', { name: /Take it down/ }))
-      await waitFor(() =>
-        expect(screen.getByText('This encounter has been taken down.')).toBeTruthy(),
-      )
-      expect(share.resolveCalls).toEqual([
-        ['k7mqx3rt9p', '3f7a1c92-5b4e-4d81-9a63-0e2c8d5f71ab', 'taken_down'],
-      ])
-      // Spent: a reload must not offer it again, and it must leave the tab's history.
-      expect(window.location.hash).toBe('')
-      confirm.mockRestore()
-    })
-
-    it('leaves the encounter standing when the report is dismissed', async () => {
-      // The other half of a decision, and the one that has to keep the page: nothing was
-      // deleted, so the reader stays where they are and only the controls are answered.
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-      await withToken()
-      fireEvent.click(screen.getByRole('button', { name: /Leave it up/ }))
-      await waitFor(() => expect(screen.getByText(/stays up/)).toBeTruthy())
-      expect(share.resolveCalls[0][2]).toBe('dismissed')
-      // The encounter is still readable, and the decision cannot be made twice.
-      expect(screen.getByText('Goblin ambush')).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /Take it down/ })).toBeNull()
-      expect(window.location.hash).toBe('')
-      confirm.mockRestore()
-    })
-
-    it('says a token that didn’t work didn’t work, and never why', async () => {
-      // Expired, already down, or simply wrong are one sentence to whoever holds the link.
-      // Telling them apart would tell a stranger with a guessed token what to try next.
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-      share.resolved = 'wrong'
-      await withToken()
-      fireEvent.click(screen.getByRole('button', { name: /Take it down/ }))
-      await waitFor(() => expect(screen.getByText(/Couldn’t answer this report/)).toBeTruthy())
-      expect(screen.queryByText('This encounter has been taken down.')).toBeNull()
-      confirm.mockRestore()
-    })
   })
 
   describe('what the page says about reuse', () => {

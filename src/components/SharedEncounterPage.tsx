@@ -13,8 +13,7 @@ import {
 import { parseCreatureTemplate } from '../combat/creatureTemplate.ts'
 import type { CreatureTemplate } from '../schema/creatureTemplate.ts'
 import { SharedCreature } from './SharedCreature.tsx'
-import { fetchShare, resolveReport, type Resolution } from '../state/shares.ts'
-import { moderationTokenFromHash } from '../state/shareCode.ts'
+import { fetchShare } from '../state/shares.ts'
 import {
   LICENSE_LABELS,
   effectiveLicense,
@@ -121,28 +120,6 @@ export function SharedEncounterPage({
   const [reading, setReading] = useState<Reading | null>(null)
   const [pane, setPane] = useState(0)
   const [reporting, setReporting] = useState(false)
-  /**
-   * The moderation token, read from the address once and only once. It comes from the link
-   * in a report mail, and a fragment never reaches a server — so a scanner that prefetches
-   * the URL cannot take anything down, and the encounter is on screen to be looked at before
-   * the decision. A reader without one sees an ordinary shared encounter and never learns
-   * there was a control here.
-   */
-  const [token, setToken] = useState(() =>
-    typeof window === 'undefined' ? null : moderationTokenFromHash(window.location.hash),
-  )
-  // Read again on `hashchange`, because a fragment is the one part of an address a browser
-  // will change without reloading anything: pasting the link into a tab already showing this
-  // encounter fires this and nothing else, and a control that appeared only on a cold load
-  // would look broken exactly when it was needed.
-  useEffect(() => {
-    const reread = () => setToken(moderationTokenFromHash(window.location.hash))
-    window.addEventListener('hashchange', reread)
-    return () => window.removeEventListener('hashchange', reread)
-  }, [])
-  const [problem, setProblem] = useState<string | null>(null)
-  /** Set once the report has been answered without deleting anything. */
-  const [dismissed, setDismissed] = useState(false)
   /** Open when adding would leave creatures behind, so the reader decides knowing that. */
   const [confirmingAdd, setConfirmingAdd] = useState(false)
   const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
@@ -252,32 +229,6 @@ export function SharedEncounterPage({
   const read = (next: Reading) => {
     setReading(next)
     setPane(1)
-  }
-
-  /**
-   * Answer the report this link came from. Taking it down leaves nothing to read, so the
-   * page becomes the outcome; dismissing leaves the encounter standing, so the page stays
-   * and only the controls are replaced.
-   */
-  const decide = async (decision: Resolution) => {
-    if (!token || !template) return
-    const ask =
-      decision === 'taken_down'
-        ? `Take down “${template.name}”? Its link stops working for good.`
-        : `Leave “${template.name}” up and tell the reporter it stays?`
-    if (!window.confirm(ask)) return
-
-    const result = await resolveReport(code, token, decision)
-    if (result !== 'ok') {
-      // One sentence for every failure: a stale token, a report already answered and an
-      // encounter already gone are the same fact to whoever followed the link.
-      return setProblem('Couldn’t answer this report. It may already have been dealt with.')
-    }
-    // The decision is made; leaving the token in the address would re-offer it on reload and
-    // keep it in the tab's history.
-    window.history.replaceState(null, '', window.location.pathname + window.location.search)
-    if (decision === 'taken_down') return setStatus({ state: 'takenDown' })
-    setDismissed(true)
   }
 
   /**
@@ -401,19 +352,6 @@ export function SharedEncounterPage({
             this encounter puts its creatures on your board — nothing else about your game changes.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {token && !dismissed && (
-              <>
-                <Button variant="danger" onClick={() => void decide('taken_down')}>
-                  Take it down
-                </Button>
-                <Button onClick={() => void decide('dismissed')}>Leave it up</Button>
-              </>
-            )}
-            {dismissed && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Answered: this encounter stays up.
-              </p>
-            )}
             {anythingToAdd && (
               <Button
                 variant="primary"
@@ -428,7 +366,6 @@ export function SharedEncounterPage({
             )}
           </div>
         </div>
-        {problem && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{problem}</p>}
       </header>
 
       <div
