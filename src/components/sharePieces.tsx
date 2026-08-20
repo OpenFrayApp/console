@@ -116,8 +116,7 @@ export function PublishedLink({
  *
  * The reasons are what an account actually changes about a link, and each is true: it stands
  * until they take it down, it is theirs to take down, it is listed somewhere they can find
- * it, and it can carry their name. Nothing here is a promise about the console, which works
- * signed out and stays that way.
+ * it, and it can carry their name.
  */
 export function SignInToShare({ what, onSignIn }: { what: string; onSignIn: () => void }) {
   return (
@@ -131,9 +130,6 @@ export function SignInToShare({ what, onSignIn }: { what: string; onSignIn: () =
         <li>Every link you publish is listed in one place.</li>
         <li>You can publish under a name of your choosing.</li>
       </ul>
-      <p className="text-xs text-slate-500 dark:text-slate-400">
-        The console itself needs no account, and never will.
-      </p>
       <Button variant="primary" onClick={onSignIn}>
         Sign in to share
       </Button>

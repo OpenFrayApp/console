@@ -221,13 +221,10 @@ describe('ShareEncounterButton', () => {
     expect(onSignIn).toHaveBeenCalled()
   })
 
-  it('says what the account changes about the link, and what it does not', () => {
+  it('says what the account changes about the link', () => {
     openShare({ signedIn: false })
     expect(screen.getByText(/stands until you take it down/)).toBeTruthy()
     expect(screen.getByText(/listed in one place/)).toBeTruthy()
-    // The promise the console keeps either way, said here because this is where somebody
-    // might fear it is going away.
-    expect(screen.getByText(/console itself needs no account/)).toBeTruthy()
   })
 
   it('starts on unstated when the account has nothing to remember', async () => {
