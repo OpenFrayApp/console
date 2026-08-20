@@ -218,6 +218,7 @@ export function ShareEncounterButton({
   canDropRestricted = true,
   allowReserved = false,
   onShare,
+  onSignIn,
 }: {
   /** Whether the board holds any creature worth publishing. */
   canShare: boolean
@@ -233,6 +234,8 @@ export function ShareEncounterButton({
     by: string
     license: ContentLicense
   }) => Promise<PublishResult>
+  /** Opens the account screen, for the dialog to offer when signed out. */
+  onSignIn: () => void
 }) {
   const [open, setOpen] = useState(false)
   return (
@@ -257,6 +260,7 @@ export function ShareEncounterButton({
           canDropRestricted={canDropRestricted}
           allowReserved={allowReserved}
           onShare={onShare}
+          onSignIn={onSignIn}
           onClose={() => setOpen(false)}
         />
       )}

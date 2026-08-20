@@ -1659,6 +1659,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canDropRestricted={restricted.someRemain}
                       allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
+                      onSignIn={() => setAuthOpen(true)}
                     />
                   </>
                 }
@@ -1757,6 +1758,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               defaultByline={displayName ?? shareByline}
               allowReserved={bylineGranted}
               onShare={(draft) => handleShareCreature(sharingCreature, draft)}
+              onSignIn={() => setAuthOpen(true)}
               onClose={() => setSharingCreature(null)}
             />
           )}

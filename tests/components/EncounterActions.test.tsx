@@ -23,6 +23,7 @@ function openSave(props: Partial<Parameters<typeof SaveFightButton>[0]> = {}) {
 function openShare(props: Partial<Parameters<typeof ShareEncounterButton>[0]> = {}) {
   const handlers = {
     onShare: vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' }),
+    onSignIn: vi.fn(),
   }
   render(<ShareEncounterButton canShare signedIn defaultByline="" {...handlers} {...props} />)
   fireEvent.click(screen.getByLabelText('Share this encounter'))
@@ -136,6 +137,7 @@ describe('ShareEncounterButton', () => {
         signedIn
         defaultByline=""
         onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+        onSignIn={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByLabelText('Share this encounter'))
@@ -147,6 +149,7 @@ describe('ShareEncounterButton', () => {
         signedIn
         defaultByline="Nico Mustone"
         onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+        onSignIn={vi.fn()}
       />,
     )
     expect((screen.getByLabelText('Your name (optional)') as HTMLInputElement).value).toBe(
@@ -162,6 +165,7 @@ describe('ShareEncounterButton', () => {
         signedIn
         defaultByline=""
         onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+        onSignIn={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByLabelText('Share this encounter'))
@@ -174,6 +178,7 @@ describe('ShareEncounterButton', () => {
         signedIn
         defaultByline="Nico Mustone"
         onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+        onSignIn={vi.fn()}
       />,
     )
     expect((screen.getByLabelText('Your name (optional)') as HTMLInputElement).value).toBe('Bob')
@@ -188,6 +193,7 @@ describe('ShareEncounterButton', () => {
         allowReserved
         defaultByline="OpenFray"
         onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'k7mqx3rt9p' })}
+        onSignIn={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByLabelText('Share this encounter'))
@@ -203,8 +209,29 @@ describe('ShareEncounterButton', () => {
     await waitFor(() => expect(screen.getByLabelText('Share link')).toBeTruthy())
   }
 
-  it('starts on unstated when there is no account to remember anything', async () => {
+  it('asks a signed-out Game Master to make an account, rather than refusing them', () => {
+    // The moment somebody wants to hand an encounter to a friend is the moment an account is
+    // worth the most to them, so the dialog opens as usual and makes the case.
+    const { onSignIn } = openShare({ signedIn: false })
+    expect(screen.getByText(/Sharing an encounter needs an account/)).toBeTruthy()
+    expect(screen.queryByLabelText('Name')).toBeNull()
+    expect(screen.queryByText('Publish')).toBeNull()
+
+    fireEvent.click(screen.getByText('Sign in to share'))
+    expect(onSignIn).toHaveBeenCalled()
+  })
+
+  it('says what the account changes about the link, and what it does not', () => {
     openShare({ signedIn: false })
+    expect(screen.getByText(/stands until you take it down/)).toBeTruthy()
+    expect(screen.getByText(/listed in one place/)).toBeTruthy()
+    // The promise the console keeps either way, said here because this is where somebody
+    // might fear it is going away.
+    expect(screen.getByText(/console itself needs no account/)).toBeTruthy()
+  })
+
+  it('starts on unstated when the account has nothing to remember', async () => {
+    openShare({ signedIn: true, defaultLicense: 'unstated' })
     expect(screen.getByLabelText('Encounter license')).toHaveValue('unstated')
   })
 
@@ -218,6 +245,7 @@ describe('ShareEncounterButton', () => {
         defaultByline=""
         defaultLicense="unstated"
         onShare={vi.fn()}
+        onSignIn={vi.fn()}
       />,
     )
     fireEvent.click(screen.getByLabelText('Share this encounter'))
@@ -228,6 +256,7 @@ describe('ShareEncounterButton', () => {
         defaultByline=""
         defaultLicense="cc-by-4.0"
         onShare={vi.fn()}
+        onSignIn={vi.fn()}
       />,
     )
     expect(screen.getByLabelText('Encounter license')).toHaveValue('cc-by-4.0')
@@ -275,7 +304,7 @@ describe('ShareEncounterButton', () => {
   it('publishes a board that has no name typed for it', async () => {
     // The board having a cast is the only thing that was ever really required. The name it
     // is stored under is decided where the template is written, not here.
-    const { onShare } = openShare({ signedIn: false })
+    const { onShare } = openShare({ signedIn: true })
     expect(screen.getByText('Publish')).not.toBeDisabled()
     fireEvent.click(screen.getByText('Publish'))
     await waitFor(() => expect(onShare).toHaveBeenCalled())
@@ -285,7 +314,7 @@ describe('ShareEncounterButton', () => {
   it('hands out one link and no secret to keep', async () => {
     // A takedown link nobody saves is a takedown nobody has. Publishing gives out the
     // share link and nothing else; the way back is the report form, which reaches a person.
-    openShare({ signedIn: false })
+    openShare({ signedIn: true })
     await publish()
     expect((screen.getByLabelText('Share link') as HTMLInputElement).value).toBe(
       'http://localhost:3000/s/k7mqx3rt9p',
@@ -300,14 +329,13 @@ describe('ShareEncounterButton', () => {
     expect(screen.getByText(/account menu/)).toBeTruthy()
   })
 
-  it('warns about the deadline only where there is one', () => {
-    // A row with no owner can be neither listed nor taken down, so ageing out is its only
-    // end and the publisher has to be told. An owned link has no deadline: it stands until
-    // its owner takes it down, because a link in a blog post has to keep working.
-    openShare({ signedIn: false })
-    expect(screen.getByText(/stops working after 60 days/)).toBeTruthy()
-    cleanup()
+  it('has no deadline to warn about, now that every link has an owner', () => {
+    // The sixty days belonged to rows nobody owned: unlistable, untakeable-down, so ageing
+    // out was their only end. Publishing needs an account, so no such row is made any more.
     openShare({ signedIn: true })
+    expect(screen.queryByText(/60 days/)).toBeNull()
+    cleanup()
+    openShare({ signedIn: false })
     expect(screen.queryByText(/60 days/)).toBeNull()
   })
 
@@ -325,6 +353,7 @@ describe('ShareEncounterButton', () => {
         signedIn
         defaultByline=""
         onShare={vi.fn().mockResolvedValue({ status: 'ok', code: 'x' })}
+        onSignIn={vi.fn()}
       />,
     )
     expect(screen.getByLabelText('Share this encounter')).toBeDisabled()

@@ -5,7 +5,13 @@ import { useState, type FormEvent } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import type { PublishResult } from '../state/shares.ts'
 import { shareUrl } from '../state/shareCode.ts'
-import { BylineField, PublishedLink, SHARE_FIELD, SHARE_LABEL } from './sharePieces.tsx'
+import {
+  BylineField,
+  PublishedLink,
+  SHARE_FIELD,
+  SHARE_LABEL,
+  SignInToShare,
+} from './sharePieces.tsx'
 import { useByline } from '../hooks/useByline.ts'
 import { mayCopy, mayShare } from '../schema/license.ts'
 import { Modal } from './Modal.tsx'
@@ -26,6 +32,7 @@ export function ShareCreatureDialog({
   defaultByline,
   allowReserved,
   onShare,
+  onSignIn,
   onClose,
 }: {
   creature: Creature
@@ -34,6 +41,8 @@ export function ShareCreatureDialog({
   /** Whether this account may publish under one of the reserved names. */
   allowReserved: boolean
   onShare: (draft: { note: string; by: string }) => Promise<PublishResult>
+  /** Opens the account screen. Signed out, this dialog asks rather than publishes. */
+  onSignIn: () => void
   onClose: () => void
 }) {
   const [note, setNote] = useState('')
@@ -61,6 +70,9 @@ export function ShareCreatureDialog({
       setMessage(null)
     } else if (result.status === 'tooBig') {
       setMessage('This creature is too big to share.')
+    } else if (result.status === 'signInFirst') {
+      // Reachable only if a session ends between opening the dialog and pressing Publish.
+      setMessage('Sharing needs an account. Sign in and try again.')
     } else if (result.status === 'unavailable') {
       setMessage('Sharing isn’t set up on this server yet.')
     } else {
@@ -95,7 +107,9 @@ export function ShareCreatureDialog({
         </div>
       )}
 
-      {shareable && !link && (
+      {shareable && !signedIn && <SignInToShare what="a creature" onSignIn={onSignIn} />}
+
+      {shareable && signedIn && !link && (
         <form onSubmit={publish} className="space-y-3">
           <div>
             <label htmlFor="share-creature-note" className={SHARE_LABEL}>
@@ -118,11 +132,6 @@ export function ShareCreatureDialog({
               able to use it.
             </p>
           )}
-          {!signedIn && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Signed out, the link stops working after 60 days.
-            </p>
-          )}
           {/* Same clause as the encounter dialog, minus the library sentence: whether a
             reader may take a copy of this one depends on its license, which the line
             above says when the answer is no. */}
@@ -141,7 +150,7 @@ export function ShareCreatureDialog({
       )}
 
       {link && (
-        <PublishedLink link={link} signedIn={signedIn} onDone={onClose}>
+        <PublishedLink link={link} onDone={onClose}>
           Published. Anyone with this link can add {creature.name} to their board.
         </PublishedLink>
       )}

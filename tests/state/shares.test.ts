@@ -49,6 +49,16 @@ describe('publishShare', () => {
 
   // The column defaults to auth.uid(): anonymous publishers get null, signed-in ones get
   // themselves, and a client that never sends the field can't claim to be anyone else.
+  it('refuses to publish without an account, before writing anything', async () => {
+    // The policy would refuse the row anyway. This is about which sentence a Game Master
+    // reads: one about signing in, or a row-level security check they cannot act on.
+    const stub = makeSupabaseStub()
+    stub.signedOut()
+    supa.client = stub.client
+    expect(await publishShare('encounter', { v: 1 })).toEqual({ status: 'signInFirst' })
+    expect(stub.queries).toEqual([])
+  })
+
   it('never sends an owner of its own', async () => {
     const { client, queries } = makeSupabaseStub()
     supa.client = client

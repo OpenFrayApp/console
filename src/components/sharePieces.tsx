@@ -57,12 +57,10 @@ export function BylineField({
  */
 export function PublishedLink({
   link,
-  signedIn,
   children,
   onDone,
 }: {
   link: string
-  signedIn: boolean
   /** What was published, in a sentence: "Anyone with this link can …". */
   children: React.ReactNode
   onDone: () => void
@@ -99,12 +97,45 @@ export function PublishedLink({
         </p>
       )}
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        {signedIn
-          ? 'Your links are in the account menu, under Shared encounters. This one stands until you take it down.'
-          : 'Signed out, this link stops working after 60 days and isn’t listed anywhere.'}
+        Your links are in the account menu, under Shared encounters. This one stands until you take
+        it down.
       </p>
       <Button variant="primary" onClick={onDone}>
         Done
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * What a signed-out Game Master sees where the publish form would be.
+ *
+ * Publishing needs an account, and this is the moment to say why rather than a moment to
+ * refuse. Somebody who has just built an encounter and wants to hand it to a friend is as
+ * willing to make an account as they will ever be, so the dialog opens as usual and asks.
+ *
+ * The reasons are what an account actually changes about a link, and each is true: it stands
+ * until they take it down, it is theirs to take down, it is listed somewhere they can find
+ * it, and it can carry their name. Nothing here is a promise about the console, which works
+ * signed out and stays that way.
+ */
+export function SignInToShare({ what, onSignIn }: { what: string; onSignIn: () => void }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-700 dark:text-slate-200">
+        Sharing {what} needs an account. It is free, and it takes one click.
+      </p>
+      <ul className="list-inside list-disc space-y-1 text-sm text-slate-600 dark:text-slate-400">
+        <li>Your link stands until you take it down.</li>
+        <li>You can take it down, from anywhere, whenever you like.</li>
+        <li>Every link you publish is listed in one place.</li>
+        <li>You can publish under a name of your choosing.</li>
+      </ul>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        The console itself needs no account, and never will.
+      </p>
+      <Button variant="primary" onClick={onSignIn}>
+        Sign in to share
       </Button>
     </div>
   )

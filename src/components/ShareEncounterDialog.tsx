@@ -10,7 +10,13 @@ import {
   LICENSE_LABELS,
   type ContentLicense,
 } from '../schema/license.ts'
-import { BylineField, PublishedLink, SHARE_FIELD, SHARE_LABEL } from './sharePieces.tsx'
+import {
+  BylineField,
+  PublishedLink,
+  SHARE_FIELD,
+  SHARE_LABEL,
+  SignInToShare,
+} from './sharePieces.tsx'
 import { useByline } from '../hooks/useByline.ts'
 import { Modal } from './Modal.tsx'
 import { Button } from './ui.tsx'
@@ -32,6 +38,7 @@ export function ShareEncounterDialog({
   canDropRestricted,
   allowReserved,
   onShare,
+  onSignIn,
   onClose,
 }: {
   signedIn: boolean
@@ -61,6 +68,8 @@ export function ShareEncounterDialog({
     by: string
     license: ContentLicense
   }) => Promise<PublishResult>
+  /** Opens the account screen. Signed out, this dialog asks rather than publishes. */
+  onSignIn: () => void
   onClose: () => void
 }) {
   const [name, setName] = useState('')
@@ -99,6 +108,9 @@ export function ShareEncounterDialog({
       setNote('')
     } else if (result.status === 'tooBig') {
       setMessage('This encounter is too big to share. Try it without the homebrew creatures.')
+    } else if (result.status === 'signInFirst') {
+      // Reachable only if a session ends between opening the dialog and pressing Publish.
+      setMessage('Sharing needs an account. Sign in and try again.')
     } else if (result.status === 'unavailable') {
       setMessage('Sharing isn’t set up on this server yet.')
     } else {
@@ -110,13 +122,15 @@ export function ShareEncounterDialog({
     <Modal
       title="Share this encounter"
       subtitle={
-        link
+        link || !signedIn
           ? undefined
           : 'Share a public link to this encounter’s title, notes and creatures. Anyone can visit and read it. The creatures are added as they are in the compendium, not as they are on your board right now. Do not share passwords, real names, email addresses, or any other secret in the notes.'
       }
       onClose={onClose}
     >
-      {!link && (
+      {!signedIn && <SignInToShare what="an encounter" onSignIn={onSignIn} />}
+
+      {signedIn && !link && (
         <form onSubmit={(e) => void publish(e)} className="space-y-3">
           <div>
             <label htmlFor="share-name" className={SHARE_LABEL}>
@@ -169,11 +183,6 @@ export function ShareEncounterDialog({
               own, possibly different, license. {LICENSE_HINTS[license]}
             </p>
           </div>
-          {!signedIn && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Signed out, the link stops working after 60 days.
-            </p>
-          )}
           {/* Left out rather than offered as a choice: an encounter carrying an
             imported creature would put a paid book's stat block on a public URL just as
             surely as sharing it alone would. */}
@@ -207,7 +216,7 @@ export function ShareEncounterDialog({
       )}
 
       {link && (
-        <PublishedLink link={link} signedIn={signedIn} onDone={onClose}>
+        <PublishedLink link={link} onDone={onClose}>
           Published. Anyone with this link can add it to their board.
         </PublishedLink>
       )}

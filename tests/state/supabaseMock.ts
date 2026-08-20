@@ -42,6 +42,14 @@ export function makeSupabaseStub(...results: QueryResult[]) {
   const queries: RecordedQuery[] = []
   const rpcs: RecordedRpc[] = []
   /**
+   * Signed in, unless a test says otherwise with `signedOut()`.
+   *
+   * Publishing asks who is calling before it writes, because a row with nobody's name on it
+   * is refused by the policy and "sign in first" is a better sentence than a security-check
+   * failure. Every other path here ignores it.
+   */
+  let session: unknown = { user: { id: 'stub-user' } }
+  /**
    * `rpc()` draws from the same queue as `from()`, in call order — the read-by-code path
    * goes through a database function rather than a table, and a test needs to pin what was
    * asked for as much as what came back.
@@ -69,7 +77,16 @@ export function makeSupabaseStub(...results: QueryResult[]) {
     }
     return chain
   }
-  return { client: { from, rpc }, queries, rpcs }
+  const auth = { getSession: () => Promise.resolve({ data: { session }, error: null }) }
+  return {
+    client: { from, rpc, auth },
+    queries,
+    rpcs,
+    /** Answer the next `getSession()` with nobody, as a signed-out browser would. */
+    signedOut: () => {
+      session = null
+    },
+  }
 }
 
 /** One `send()` the channel stub captured. */

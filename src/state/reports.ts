@@ -25,7 +25,7 @@ import { supabase } from '../lib/supabase.ts'
  * the point of the table — so a claim of ownership arriving through this form is
  * unverifiable, and offering the option would promise something nobody can act on. A
  * publisher who wants that guarantee signs in, and their links are listed on their account
- * with an Unpublish beside each. Everyone else's expire at 60 days.
+ * with an Unpublish beside each, which is every link there is: publishing needs an account.
  *
  * What a report does reach is a person, who gets a one-click takedown in the mail and uses
  * it when the encounter itself warrants it, rather than because somebody said it was theirs.

@@ -38,12 +38,20 @@ export type ShareKind = 'encounter' | 'creature'
  * number is the client's copy of a rule the database enforces. An owned link has no
  * deadline at all.
  */
+/**
+ * How long a link published before an account was required has left.
+ *
+ * Nothing makes one any more, and the nightly sweep is emptying the last of them. Kept while
+ * they exist, and worth deleting with them.
+ */
 export const SHARE_LIFETIME_DAYS = 60
 
 /** How a publish went. `tooBig` is the one the Game Master can act on by trimming. */
 export type PublishResult =
   | { status: 'ok'; code: string }
   | { status: 'tooBig' }
+  /** Publishing needs an account, and there is none. */
+  | { status: 'signInFirst' }
   | { status: 'unavailable' }
   | { status: 'failed' }
 
@@ -109,6 +117,13 @@ const byteSize = (value: string): number => new TextEncoder().encode(value).leng
  */
 export async function publishShare(kind: ShareKind, data: unknown): Promise<PublishResult> {
   if (!supabase) return { status: 'unavailable' }
+
+  // Publishing needs an account. The policy refuses a row with nobody's name on it, so this
+  // only decides which sentence a Game Master reads: one about signing in, or Postgres saying
+  // a row-level security check failed.
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session) return { status: 'signInFirst' }
+
   const json = JSON.stringify(data)
   // Refused here, with a sentence the Game Master can act on, rather than in Postgres as a
   // constraint violation they can't read.
