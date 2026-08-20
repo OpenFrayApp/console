@@ -59,6 +59,14 @@ describe('publishShare', () => {
     expect(stub.queries).toEqual([])
   })
 
+  it('reads a refused policy as an account that may not publish, not as a failure', async () => {
+    // What the insert policy answers when may('share.encounter') says no. The Game Master
+    // reads a sentence about the account rather than trying again all evening.
+    const stub = makeSupabaseStub({ error: { code: '42501', message: 'row-level security' } })
+    supa.client = stub.client
+    expect(await publishShare('encounter', { v: 1 })).toEqual({ status: 'notAllowed' })
+  })
+
   it('never sends an owner of its own', async () => {
     const { client, queries } = makeSupabaseStub()
     supa.client = client

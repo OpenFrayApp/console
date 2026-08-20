@@ -52,6 +52,8 @@ export type PublishResult =
   | { status: 'tooBig' }
   /** Publishing needs an account, and there is none. */
   | { status: 'signInFirst' }
+  /** The account holds no capability to publish this. Somebody took it away. */
+  | { status: 'notAllowed' }
   | { status: 'unavailable' }
   | { status: 'failed' }
 
@@ -135,6 +137,10 @@ export async function publishShare(kind: ShareKind, data: unknown): Promise<Publ
     if (!error) return { status: 'ok', code }
     if (pgCode(error) === '23505') continue
     if (isMissingSchema(error)) return { status: 'unavailable' }
+    // The insert policy asks whether this account may publish this kind of thing, and a
+    // refusal arrives as a row-level security violation. Said as itself, because the alternative
+    // is a Game Master reading "couldn't publish that" and trying again all evening.
+    if (pgCode(error) === '42501') return { status: 'notAllowed' }
     warn('publishing a share', error)
     return { status: 'failed' }
   }

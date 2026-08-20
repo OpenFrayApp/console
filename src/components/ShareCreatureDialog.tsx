@@ -73,6 +73,10 @@ export function ShareCreatureDialog({
     } else if (result.status === 'signInFirst') {
       // Reachable only if a session ends between opening the dialog and pressing Publish.
       setMessage('Sharing needs an account. Sign in and try again.')
+    } else if (result.status === 'notAllowed') {
+      setMessage(
+        'This account can’t publish creatures. If you think that’s wrong, write to reports@openfray.app.',
+      )
     } else if (result.status === 'unavailable') {
       setMessage('Sharing isn’t set up on this server yet.')
     } else {
