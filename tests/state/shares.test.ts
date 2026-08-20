@@ -61,7 +61,33 @@ describe('publishShare', () => {
   it('reads a refused policy as an account that may not publish, not as a failure', async () => {
     // What the insert policy answers when may('share.encounter') says no. The Game Master
     // reads a sentence about the account rather than trying again all evening.
-    const stub = makeSupabaseStub({ error: { code: '42501', message: 'row-level security' } })
+    const stub = makeSupabaseStub(
+      { error: { code: '42501', message: 'row-level security' } },
+      { data: true, error: null },
+    )
+    supa.client = stub.client
+    expect(await publishShare('encounter', { v: 1 })).toEqual({ status: 'notAllowed' })
+  })
+
+  it('tells the ceiling apart from the capability, since one of them can be acted on', async () => {
+    // Both refusals arrive as the same 42501, and only the database knows which it was.
+    // Asking is one call on a path that has already failed, and it buys a true sentence.
+    const stub = makeSupabaseStub(
+      { error: { code: '42501', message: 'row-level security' } },
+      { data: false, error: null },
+    )
+    supa.client = stub.client
+    expect(await publishShare('encounter', { v: 1 })).toEqual({ status: 'tooMany' })
+    expect(stub.rpcs.map((r) => r.fn)).toEqual(['may_publish_more'])
+  })
+
+  it('falls back to the older answer on a project without the ceiling', async () => {
+    // The function is not there, so nothing is known about a limit and the refusal reads as
+    // the capability answer it was before this existed.
+    const stub = makeSupabaseStub(
+      { error: { code: '42501', message: 'row-level security' } },
+      { data: null, error: { code: 'PGRST202' } },
+    )
     supa.client = stub.client
     expect(await publishShare('encounter', { v: 1 })).toEqual({ status: 'notAllowed' })
   })

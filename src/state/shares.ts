@@ -38,6 +38,8 @@ export type PublishResult =
   | { status: 'signInFirst' }
   /** The account holds no capability to publish this. Somebody took it away. */
   | { status: 'notAllowed' }
+  /** The account is at its ceiling of published pages. Unpublishing one makes room. */
+  | { status: 'tooMany' }
   | { status: 'unavailable' }
   | { status: 'failed' }
 
@@ -121,14 +123,35 @@ export async function publishShare(kind: ShareKind, data: unknown): Promise<Publ
     if (!error) return { status: 'ok', code }
     if (pgCode(error) === '23505') continue
     if (isMissingSchema(error)) return { status: 'unavailable' }
-    // The insert policy asks whether this account may publish this kind of thing, and a
-    // refusal arrives as a row-level security violation. Said as itself, because the alternative
-    // is a Game Master reading "couldn't publish that" and trying again all evening.
-    if (pgCode(error) === '42501') return { status: 'notAllowed' }
+    // The insert policy asks two questions, and a no to either arrives as the same row-level
+    // security violation. Which one it was decides what a Game Master can do about it, so the
+    // ceiling is asked about directly rather than guessed at. Said as itself, because the
+    // alternative is somebody reading "couldn't publish that" and trying again all evening.
+    if (pgCode(error) === '42501') {
+      return (await mayPublishMore()) ? { status: 'notAllowed' } : { status: 'tooMany' }
+    }
     warn('publishing a share', error)
     return { status: 'failed' }
   }
   return { status: 'failed' }
+}
+
+/**
+ * Whether this account is under its ceiling of published pages.
+ *
+ * The number lives in the database, in the same function the insert policy calls, so the
+ * limit is defined once and both sides read it. True on any failure, including a project
+ * without the function: a refusal then reads as the capability answer it used to be, which
+ * is the older behaviour rather than a wrong new one.
+ */
+async function mayPublishMore(): Promise<boolean> {
+  if (!supabase) return true
+  const { data, error } = await supabase.rpc('may_publish_more')
+  if (error) {
+    if (!isMissingSchema(error)) warn('checking the publishing ceiling', error)
+    return true
+  }
+  return data !== false
 }
 
 /**

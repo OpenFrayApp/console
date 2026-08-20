@@ -111,6 +111,9 @@ export function ShareEncounterDialog({
     } else if (result.status === 'signInFirst') {
       // Reachable only if a session ends between opening the dialog and pressing Publish.
       setMessage('Sharing needs an account. Sign in and try again.')
+    } else if (result.status === 'tooMany') {
+      // The one refusal with something to do about it, so it says what that is.
+      setMessage('You have as many published pages as an account can hold. Take one down first.')
     } else if (result.status === 'notAllowed') {
       // What happened, and nothing else. There is no next step to offer here: naming an
       // address would invite every refusal to become a message, and the answer to most of
