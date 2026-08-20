@@ -168,6 +168,34 @@ describe('fetchShare', () => {
     }
   })
 
+  it('tells a page that was taken down from a code that never existed', async () => {
+    const { client } = makeSupabaseStub({ data: { taken_down: true } })
+    supa.client = client
+    // The reader is owed the difference: one of these is worth asking the sharer about, and
+    // the other never comes back however often they are asked.
+    expect((await fetchShare('k7mqx3rt9p')).status).toBe('takenDown')
+  })
+
+  it('reads a tombstone as taken down even beside the fields of a page', async () => {
+    // Belt and braces on the order of the checks: a payload carrying both is a project
+    // mid-migration, and the removal is the fact that matters.
+    const { client } = makeSupabaseStub({
+      data: { taken_down: true, kind: 'encounter', data: template },
+    })
+    supa.client = client
+    expect((await fetchShare('k7mqx3rt9p')).status).toBe('takenDown')
+  })
+
+  it('reads anything but a true tombstone as the page it describes', async () => {
+    for (const taken of [false, 'true', 1, null, undefined]) {
+      const { client } = makeSupabaseStub({
+        data: { taken_down: taken, kind: 'encounter', data: template },
+      })
+      supa.client = client
+      expect((await fetchShare('k7mqx3rt9p')).status, JSON.stringify(taken)).toBe('ok')
+    }
+  })
+
   it('keeps a missing function apart from a broken request', async () => {
     const missing = makeSupabaseStub({ error: { code: 'PGRST202', message: 'no function' } })
     supa.client = missing.client

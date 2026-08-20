@@ -143,6 +143,7 @@ export function SharedEncounterPage({
     let active = true
     void fetchShare(code).then(async (found) => {
       if (!active) return
+      if (found.status === 'takenDown') return setStatus({ state: 'takenDown' })
       if (found.status === 'missing') return setStatus({ state: 'gone' })
       if (found.status !== 'ok') {
         return setStatus({
@@ -358,7 +359,7 @@ export function SharedEncounterPage({
               : status.state === 'gone'
                 ? 'This shared encounter no longer exists or it never did. If you received this link from someone, ask them to create the encounter again and share it.'
                 : status.state === 'takenDown'
-                  ? 'This encounter has been taken down.'
+                  ? 'This encounter was taken down. It was reported, reviewed, and found in breach of the terms, so the link no longer opens anything. Asking whoever shared it to send it again will not bring it back.'
                   : status.message}
           </p>
           {status.state !== 'loading' && (

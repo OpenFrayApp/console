@@ -61,6 +61,8 @@ export type FetchedShare =
       official: boolean
     }
   | { status: 'missing' }
+  /** The code was used, and the page was taken down. Different from never having existed. */
+  | { status: 'takenDown' }
   | { status: 'unavailable' }
   | { status: 'failed' }
 
@@ -137,7 +139,16 @@ export async function fetchShare(code: string): Promise<FetchedShare> {
     return { status: 'failed' }
   }
   if (!data || typeof data !== 'object') return { status: 'missing' }
-  const row = data as { kind?: unknown; data?: unknown; official?: unknown }
+  const row = data as {
+    kind?: unknown
+    data?: unknown
+    official?: unknown
+    taken_down?: unknown
+  }
+  // A tombstone, which is what is left of a page a moderator removed. Absent on a project
+  // whose `share()` predates them, and then a removed page reads as missing, which is what
+  // it read as before.
+  if (row.taken_down === true) return { status: 'takenDown' }
   if (typeof row.kind !== 'string' || row.data === undefined) return { status: 'missing' }
   // Absent on a project whose `share()` predates the flag: unknown means treat it as a
   // stranger's, which is the safe direction to be wrong in.

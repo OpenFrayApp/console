@@ -97,6 +97,27 @@ describe('SharedEncounterPage', () => {
     expect(screen.getByText('×4')).toBeInTheDocument()
   })
 
+  it('says a taken-down page was taken down, rather than hedging about it', async () => {
+    share.result = { status: 'takenDown' }
+    render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+
+    // The sentence a reader gets when they follow a link from a blog post to something a
+    // moderator removed. Without the tombstone behind it, this page could only offer "no
+    // longer exists or never did", which sends them to pester whoever shared it.
+    await waitFor(() =>
+      expect(screen.getByText(/This encounter was taken down\./)).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(/never did/)).not.toBeInTheDocument()
+  })
+
+  it('still hedges for a code nobody ever used, because it cannot know', async () => {
+    share.result = { status: 'missing' }
+    render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
+    await waitFor(() =>
+      expect(screen.getByText(/no longer exists or it never did/)).toBeInTheDocument(),
+    )
+  })
+
   it('offers a way to report the words, beside the name on them', async () => {
     share.result = encounter({ by: 'Bob', note: 'They wait in the rafters.' })
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
@@ -232,9 +253,7 @@ describe('SharedEncounterPage', () => {
 
       confirm.mockReturnValue(true)
       fireEvent.click(screen.getByRole('button', { name: /Take it down/ }))
-      await waitFor(() =>
-        expect(screen.getByText('This encounter has been taken down.')).toBeTruthy(),
-      )
+      await waitFor(() => expect(screen.getByText(/This encounter was taken down\./)).toBeTruthy())
       expect(share.resolveCalls).toEqual([
         ['k7mqx3rt9p', '3f7a1c92-5b4e-4d81-9a63-0e2c8d5f71ab', 'taken_down'],
       ])
@@ -266,7 +285,7 @@ describe('SharedEncounterPage', () => {
       await withToken()
       fireEvent.click(screen.getByRole('button', { name: /Take it down/ }))
       await waitFor(() => expect(screen.getByText(/Couldn’t answer this report/)).toBeTruthy())
-      expect(screen.queryByText('This encounter has been taken down.')).toBeNull()
+      expect(screen.queryByText(/This encounter was taken down\./)).toBeNull()
       confirm.mockRestore()
     })
   })
