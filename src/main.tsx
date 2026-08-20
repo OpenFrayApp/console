@@ -7,15 +7,6 @@ import './index.css'
 import { playerCodeFromPath } from './state/playerCode.ts'
 import { shareCodeFromPath } from './state/shareCode.ts'
 
-// Load Fathom Analytics in production builds only — never on the dev server (localhost).
-if (import.meta.env.PROD) {
-  const s = document.createElement('script')
-  s.src = 'https://cdn.usefathom.com/script.js'
-  s.dataset.site = 'CZDKZIAS'
-  s.defer = true
-  document.head.appendChild(s)
-}
-
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element #root not found')
 
@@ -29,6 +20,33 @@ const root = createRoot(rootElement)
 // reading `location.pathname` is all the routing there is.
 const playerCode = playerCodeFromPath(window.location.pathname, import.meta.env.BASE_URL)
 const sharedCode = shareCodeFromPath(window.location.pathname, import.meta.env.BASE_URL)
+
+// Load Fathom Analytics in production builds only — never on the dev server (localhost).
+//
+// On the two shared surfaces the path *is* the secret. A `/s/` or `/p/` address is unlisted,
+// and the whole of its privacy is the code in it; Fathom's automatic pageview would send
+// that code to a third party and leave it in a dashboard's list of pages, which is the one
+// place an unlisted link must not appear. That is the same reasoning the site's `_headers`
+// gives for refusing to index them.
+//
+// So those two count as their prefix and nothing more. `data-auto="false"` stops the
+// automatic pageview, and the one sent instead names `/s/` or `/p/`, which is the number
+// worth having: how many shared links get opened. Events are unaffected — they carry a name
+// from a fixed list and never a code.
+if (import.meta.env.PROD) {
+  const unlisted = playerCode ? 'p' : sharedCode ? 's' : null
+  const s = document.createElement('script')
+  s.src = 'https://cdn.usefathom.com/script.js'
+  s.dataset.site = 'CZDKZIAS'
+  s.defer = true
+  if (unlisted) {
+    s.dataset.auto = 'false'
+    s.addEventListener('load', () => {
+      window.fathom?.trackPageview?.({ url: `${window.location.origin}/${unlisted}/` })
+    })
+  }
+  document.head.appendChild(s)
+}
 
 // Promise chains rather than top-level await: the build targets browsers older than
 // module-level await, and Vite fails the build rather than shipping something they choke on.
