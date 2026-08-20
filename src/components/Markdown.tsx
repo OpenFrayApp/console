@@ -31,6 +31,16 @@ const HOVER_LINK =
   'cursor-help font-medium text-indigo-600 underline decoration-dotted dark:text-indigo-400'
 
 /**
+ * Every link that leaves the app came out of prose somebody typed, so each one says so.
+ *
+ * `ugc` is the standard word for it, and the other two are what it means in practice: we
+ * are not vouching for where this goes, and the page it goes to learns nothing about where
+ * it was clicked from. The `spell:` and `condition:` links are ours and get none of this,
+ * because they resolve inside the app and never navigate.
+ */
+const UGC_REL = 'ugc nofollow noreferrer'
+
+/**
  * A markdown `a` renderer: `spell:` and `condition:` links become hover previews; the rest
  * stay plain links, or — without `links` — the text they were written as.
  */
@@ -56,7 +66,11 @@ function hoverAnchor(resolveSpell: ResolveSpell | undefined, links: boolean): Co
       )
     }
     if (!links) return <>{children}</>
-    return <a href={href}>{children}</a>
+    return (
+      <a href={href} rel={UGC_REL}>
+        {children}
+      </a>
+    )
   }
 }
 
@@ -79,6 +93,9 @@ const altOnly: Components['img'] = ({ alt }) => <>{alt}</>
  * It has to be a renderer choice rather than something done to the text: `remark-gfm`
  * autolinks bare URLs, `www.` hosts and email addresses. `links` is for the Game Master's
  * own prose — their notes, a backstory.
+ *
+ * The ones it does render carry `rel="ugc nofollow noreferrer"`, because prose is where a
+ * link somebody typed becomes a link the app drew.
  */
 export function Markdown({
   children,

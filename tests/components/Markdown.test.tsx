@@ -120,6 +120,23 @@ describe('Markdown does not reach outside the app', () => {
     expect(out.anchors).toEqual(['https://drive.example/map.png'])
   })
 
+  it('says the link came out of somebody’s prose, and vouches for none of it', () => {
+    const { container } = render(
+      <Markdown links>{'[The map](https://drive.example/map.png) is here'}</Markdown>,
+    )
+    const rel = container.querySelector('a')?.getAttribute('rel') ?? ''
+    expect(rel.split(' ').sort()).toEqual(['nofollow', 'noreferrer', 'ugc'])
+  })
+
+  it('leaves the app’s own hover links alone, because they never navigate', () => {
+    const { container } = render(
+      <Markdown links resolveSpell={() => undefined}>
+        {'It casts [fireball](spell:srd-5.2:fireball).'}
+      </Markdown>,
+    )
+    expect(container.querySelectorAll('a')).toHaveLength(0)
+  })
+
   it('never renders a javascript: or data: destination even then', () => {
     // react-markdown's own URL sanitizer, pinned because `links` is the one path that
     // reaches it and a change there would be silent.
