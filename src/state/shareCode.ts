@@ -14,9 +14,9 @@ import { CODE_ALPHABET } from './playerCode.ts'
  * the alphabet.
  *
  * Ten rather than eight because a published row is a patient target: a player-view code is
- * only useful while a fight is being broadcast, and these sit readable for up to sixty days.
- * At eight characters and ten thousand rows, a thousand guesses a second finds one in about
- * a day; at ten it takes years.
+ * only useful while a fight is being broadcast, and these stay readable until their
+ * publisher takes them down. At eight characters and ten thousand rows, a thousand guesses a
+ * second finds one in about a day; at ten it takes years.
  *
  * Codes are drawn, never chosen. The player view lets a Game Master name their link because
  * it is read aloud at the table; a name on a public store is a name a stranger can guess,

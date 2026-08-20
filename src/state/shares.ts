@@ -9,15 +9,14 @@ import { randomShareCode } from './shareCode.ts'
  * Published shares: the one table behind every `/s/<code>` link.
  *
  * It is deliberately unlike everything else in `state/`. Those tables hold what a Game
- * Master owns and Row-Level Security keeps each row to its owner; this one holds what a Game
- * Master has decided to hand out, so **anyone may insert** — signed in or not — and a row
- * carries an owner only when there was one to carry.
+ * Master owns and keeps; this one holds what a Game Master has decided to hand out, at an
+ * address a stranger can open.
  *
  * That is not a hole in rule 8. What that rule protects is the fight: an anonymous session
  * still never reaches the database. A published encounter is not a fight — no hit points, no
  * effects, no log, no session — it is prep, decontextualised on purpose and published on
- * purpose. The privacy that matters is preserved: nothing about a board, and no identity
- * unless the publisher had one.
+ * purpose. The privacy that matters is preserved: nothing about a board, and nothing about
+ * the publisher beyond the byline they typed.
  *
  * Reading is by code through a `security definer` function, never a select policy: a policy
  * that lets a stranger read one row by code lets them list every row, and these are
@@ -31,21 +30,6 @@ import { randomShareCode } from './shareCode.ts'
 
 export type ShareKind = 'encounter' | 'creature'
 
-/**
- * How long a link published *without an account* lasts. Nobody owns those rows, so nobody
- * can take one down and nothing lists it; ageing out is the only end it has. The database
- * sweeps past this nightly and `share()` refuses one past it in the meantime, so this
- * number is the client's copy of a rule the database enforces. An owned link has no
- * deadline at all.
- */
-/**
- * How long a link published before an account was required has left.
- *
- * Nothing makes one any more, and the nightly sweep is emptying the last of them. Kept while
- * they exist, and worth deleting with them.
- */
-export const SHARE_LIFETIME_DAYS = 60
-
 /** How a publish went. `tooBig` is the one the Game Master can act on by trimming. */
 export type PublishResult =
   | { status: 'ok'; code: string }
@@ -57,7 +41,7 @@ export type PublishResult =
   | { status: 'unavailable' }
   | { status: 'failed' }
 
-/** What a code resolved to. `missing` is a code that never existed, or has expired. */
+/** What a code resolved to. `missing` is a code that never existed, or has been unpublished. */
 export type FetchedShare =
   | {
       status: 'ok'
@@ -111,8 +95,8 @@ const byteSize = (value: string): number => new TextEncoder().encode(value).leng
  * Publish something under a fresh code, and hand back the code.
  *
  * `owner_id` is never sent: the column defaults to `auth.uid()`, which stamps a signed-in
- * publisher and leaves an anonymous one null. Writing it here would be the one way a client
- * could claim to be someone else, so the client simply doesn't have an opinion.
+ * publisher. Writing it here would be the one way a client could claim to be someone else,
+ * so the client simply doesn't have an opinion.
  *
  * A `23505` means two publishers drew the same ten characters at the same moment. At 49 bits
  * that will realistically never happen; the retry costs a line and settles it if it does.
@@ -176,7 +160,7 @@ export async function fetchShare(code: string): Promise<FetchedShare> {
   return { status: 'ok', kind: row.kind, data: row.data, official: row.official === true }
 }
 
-/** What the publisher's own list found; anonymous publishers have no list to find. */
+/** What the publisher's own list found. */
 export type MyShares =
   { status: 'ok'; shares: ShareSummary[] } | { status: 'unavailable' } | { status: 'failed' }
 
@@ -270,9 +254,9 @@ export async function resolveReport(
 
 /**
  * Take a link down. Only the owner's own rows can go through here — the delete policy
- * compares against `auth.uid()` — so this is the signed-in path, and it is the *only* way
- * one of those rows ends: an owned link carries no deadline, because a link left in a blog
- * post or a video description has to still work when somebody follows it.
+ * compares against `auth.uid()` — and this is one of the two ways a link ends, the other
+ * being a moderator's takedown. Nothing ages one out: a link left in a blog post or a video
+ * description has to still work when somebody follows it.
  */
 export async function unpublish(code: string): Promise<'ok' | 'unavailable' | 'failed'> {
   if (!supabase) return 'unavailable'

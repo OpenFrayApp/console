@@ -331,7 +331,7 @@ describe('ShareEncounterButton', () => {
 
   it('has no deadline to warn about, now that every link has an owner', () => {
     // The sixty days belonged to rows nobody owned: unlistable, untakeable-down, so ageing
-    // out was their only end. Publishing needs an account, so no such row is made any more.
+    // out was their only end. Publishing needs an account, so no such row exists.
     openShare({ signedIn: true })
     expect(screen.queryByText(/60 days/)).toBeNull()
     cleanup()

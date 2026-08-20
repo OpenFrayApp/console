@@ -92,7 +92,7 @@ describe('SharedLinksPage', () => {
 
   it('promises no expiry, because an owned link has none', () => {
     // Everything listed here carries an owner, and an owner's link stands until they take
-    // it down. Only the rows nobody owns age out, and those were never in this list.
+    // it down or a moderator does. Nothing ages out.
     const { container } = render(
       <SharedLinksPage shares={many(1)} onUnpublish={vi.fn()} onClose={vi.fn()} />,
     )

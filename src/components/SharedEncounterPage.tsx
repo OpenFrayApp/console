@@ -270,7 +270,7 @@ export function SharedEncounterPage({
     const result = await resolveReport(code, token, decision)
     if (result !== 'ok') {
       // One sentence for every failure: a stale token, a report already answered and an
-      // encounter that expired are the same fact to whoever followed the link.
+      // encounter already gone are the same fact to whoever followed the link.
       return setProblem('Couldn’t answer this report. It may already have been dealt with.')
     }
     // The decision is made; leaving the token in the address would re-offer it on reload and

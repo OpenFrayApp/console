@@ -16,9 +16,7 @@ import { Button, LinkButton } from './ui.tsx'
  *
  * It belongs to the account rather than to the board: a link outlives the encounter it came
  * from, and "what have I put out there" is a question about the person, not about tonight's
- * game. Anonymous publishers have no list at all, because their rows carry no owner to
- * gather one by — which is also why those links age out on their own, and why none of the
- * ones here does.
+ * game. Nothing here ages out, so this screen is the only thing that says what is still up.
  */
 
 /** How many links a page holds. Enough to scan without becoming a scroll. */
