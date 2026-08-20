@@ -254,8 +254,13 @@ export function AccountPanel({
             </h3>
             <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
               Deletes your account and <strong>everything in it</strong>: your encounters, your
-              creatures and spells, your campaigns, and your characters. It happens straight away
-              and can't be undone.
+              creatures and spells, your campaigns, your characters, and every page you have
+              published. It happens straight away and can't be undone.
+            </p>
+            {/* Named on its own line because it is the half that reaches other people: a link
+              somebody else is holding stops working, and they are not the one pressing this. */}
+            <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+              Anyone holding one of your shared links will find it gone.
             </p>
             <form onSubmit={submitDelete} className="space-y-2">
               <label className="block space-y-1">

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useAuth, type OAuthProvider } from '../auth/useAuth.ts'
 import { CrossedSwordsIcon } from './CrossedSwordsIcon.tsx'
 import { track, EVENTS, type EventName } from '../lib/analytics.ts'
@@ -101,10 +101,25 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
   const { signInWithProvider } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<OAuthProvider | null>(null)
+  /**
+   * Whether the terms have been accepted. Creating an account is what accepts them, and this
+   * is where that happens, so it is asked before the handoff rather than after: past this
+   * button the next screen belongs to Google or Discord, and there is no moment left to ask.
+   */
+  const [agreed, setAgreed] = useState(false)
+  const agreeRef = useRef<HTMLInputElement>(null)
 
   /** Begin the provider's OAuth redirect; a failed handoff shows the error and re-enables. */
   const start = async (provider: OAuthProvider) => {
     if (busy) return
+    // Refused here rather than by a greyed-out button: a control that does nothing and says
+    // nothing leaves somebody hunting for what they missed. This names it and puts the cursor
+    // on it.
+    if (!agreed) {
+      setError('Accept the terms first, and this will take you to sign in.')
+      agreeRef.current?.focus()
+      return
+    }
     track(SIGN_IN_EVENT[provider])
     setError(null)
     setBusy(provider)
@@ -190,6 +205,45 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Sign in</h3>
+            {/* Above the buttons, not below them in small print: it is a condition of pressing
+              one, and it reads as one where it sits. */}
+            <label
+              htmlFor="accept-terms"
+              className="mt-4 flex cursor-pointer items-start gap-2.5 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <input
+                ref={agreeRef}
+                id="accept-terms"
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => {
+                  setAgreed(e.target.checked)
+                  if (e.target.checked) setError(null)
+                }}
+                className="tap-area mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400 accent-indigo-600 dark:border-slate-600"
+              />
+              <span>
+                I agree to the{' '}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-indigo-600 underline dark:text-indigo-400"
+                >
+                  Terms of Service
+                </a>{' '}
+                and the{' '}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-indigo-600 underline dark:text-indigo-400"
+                >
+                  Privacy Policy
+                </a>
+                . You must be 13 or older.
+              </span>
+            </label>
             <div className="mt-4 space-y-3">
               {PROVIDERS.map((p) => (
                 <button
