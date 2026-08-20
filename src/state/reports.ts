@@ -35,9 +35,13 @@ import { supabase } from '../lib/supabase.ts'
  * some do — "which creature?", "where did you see it?" — and there is no way back without it.
  */
 
-/** Why someone is reporting an encounter. The value stored; the label is the form's. */
-export type ReportReason =
-  'spam' | 'sexual' | 'hate' | 'impersonation' | 'copyright' | 'takedown' | 'other'
+/**
+ * Why someone is reporting an encounter. The value stored; the label is the form's.
+ *
+ * These six and no others: `report_reason_known` in the database refuses anything else, so a
+ * seventh added here without a matching constraint change is a form that fails on submit.
+ */
+export type ReportReason = 'spam' | 'sexual' | 'hate' | 'impersonation' | 'copyright' | 'other'
 
 export const REPORT_REASONS: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Spam or advertising' },

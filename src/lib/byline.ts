@@ -8,10 +8,11 @@
  * so it is held to more than a length: a character allowlist, a fold that collapses the
  * spellings of a name onto one key, and two small lists of names nobody may publish under.
  *
- * None of this is a security control. Publishing goes through the anonymous key, so anyone
- * determined can write a row saying whatever they like; these rules stop accidents and lazy
- * misuse, and deliberate impersonation is a takedown. What they *are* is the reason the page
- * can render the byline as plain text without thinking about it again.
+ * None of this is a security control. The form is the only thing these rules run in, and
+ * anyone determined can write the row themselves and say whatever they like; what stops that
+ * mattering is that publishing takes an account and deliberate impersonation is a takedown.
+ * These rules stop accidents and lazy misuse, and they are the reason the page can render a
+ * byline as plain text without thinking about it again.
  *
  * Two checks, and the split matters. **Shape** — the characters, the length, the marks — is
  * about what our page can safely render, so it holds everywhere, including when a reader's
