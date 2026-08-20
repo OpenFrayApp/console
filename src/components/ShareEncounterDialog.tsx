@@ -112,9 +112,10 @@ export function ShareEncounterDialog({
       // Reachable only if a session ends between opening the dialog and pressing Publish.
       setMessage('Sharing needs an account. Sign in and try again.')
     } else if (result.status === 'notAllowed') {
-      setMessage(
-        'This account can’t publish encounters. If you think that’s wrong, write to reports@openfray.app.',
-      )
+      // What happened, and nothing else. There is no next step to offer here: naming an
+      // address would invite every refusal to become a message, and the answer to most of
+      // them is the one already on screen.
+      setMessage('This account can’t publish encounters.')
     } else if (result.status === 'unavailable') {
       setMessage('Sharing isn’t set up on this server yet.')
     } else {
