@@ -9,6 +9,9 @@ import {
   legendaryPreamble,
   proficiencyBonus,
   signed,
+  spellLevelLong,
+  spellLevelOrdinal,
+  spellLevelShort,
   titleCase,
 } from '../../src/compendium/format.ts'
 
@@ -118,5 +121,25 @@ describe('capitalizeSegments', () => {
   it('passes through empty/undefined unchanged', () => {
     expect(capitalizeSegments(undefined)).toBeUndefined()
     expect(capitalizeSegments('')).toBe('')
+  })
+})
+
+describe('spell levels', () => {
+  it('names level 0 a cantrip in both lengths', () => {
+    expect(spellLevelShort(0)).toBe('Cantrip')
+    expect(spellLevelLong(0)).toBe('Cantrip')
+  })
+
+  it('renders the two lengths for a leveled spell', () => {
+    expect(spellLevelShort(3)).toBe('Lvl 3')
+    expect(spellLevelLong(3)).toBe('Level 3')
+  })
+
+  it('renders ordinals across the slot range, with a plain fallback beyond it', () => {
+    expect(spellLevelOrdinal(1)).toBe('1st')
+    expect(spellLevelOrdinal(2)).toBe('2nd')
+    expect(spellLevelOrdinal(3)).toBe('3rd')
+    expect(spellLevelOrdinal(9)).toBe('9th')
+    expect(spellLevelOrdinal(10)).toBe('10th')
   })
 })
