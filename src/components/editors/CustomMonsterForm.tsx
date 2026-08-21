@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import type { Creature } from '../../schema/creature.ts'
 import type { ActionKind } from '../../schema/action.ts'
 import type { Spell } from '../../schema/spell.ts'
-import type { AbilityScores } from '../../schema/primitives.ts'
+import { ABILITIES, type AbilityScores } from '../../schema/primitives.ts'
 import { loadSrdSpells, sourceOfId } from '../../compendium/srd.ts'
 import { ActionEditor } from './ActionEditor.tsx'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
@@ -25,7 +25,6 @@ import {
 } from '../../schema/license.ts'
 import { SpellTagInput } from './SpellTagInput.tsx'
 import {
-  ABILITIES,
   ALIGNMENTS,
   CREATURE_TYPES,
   HP_DICE,

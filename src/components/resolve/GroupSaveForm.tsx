@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState } from 'react'
-import type { Ability, DamageType } from '../../schema/primitives.ts'
+import { ABILITIES, type Ability, type DamageType } from '../../schema/primitives.ts'
 import type { SaveOutcome } from '../../schema/action.ts'
 import type { Combatant } from '../../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../../schema/effect.ts'
@@ -26,8 +26,6 @@ import { ConditionChips, DamageTypeSelect, NaturalRoll } from './rollPieces.tsx'
 import { Button, Chip, Field, Select } from '../ui/primitives.tsx'
 import type { OnRoll } from '../log/GameLog.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
-
-const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
 interface Row {
   result?: SaveResult

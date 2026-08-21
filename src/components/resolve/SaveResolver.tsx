@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Action, SaveOutcome } from '../../schema/action.ts'
 import type { Combatant, MonsterCombatant } from '../../schema/combatant.ts'
 import type { ConditionName, EffectDuration } from '../../schema/effect.ts'
-import type { Ability, DamageType } from '../../schema/primitives.ts'
+import { ABILITIES, type Ability, type DamageType } from '../../schema/primitives.ts'
 import type { Spell } from '../../schema/spell.ts'
 import { spendEffects, type EncounterAction } from '../../state/encounter.ts'
 import type { DieGroup, RollResult } from '../../dice/roll.ts'
@@ -50,8 +50,6 @@ import { Button, Chip, Field, Select } from '../ui/primitives.tsx'
 import type { OnRoll } from '../log/GameLog.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { useEnterCommit } from '../../hooks/useEnterCommit.ts'
-
-const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
 /** The conditions every one of these combatants carries — what a chip can show as its state. */
 const conditionsOnAll = (targets: Combatant[]): ConditionName[] =>

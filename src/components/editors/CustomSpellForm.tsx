@@ -11,8 +11,7 @@ import type { LibrarySort } from '../../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { FormModal } from '../ui/FormModal.tsx'
 import { Button } from '../ui/primitives.tsx'
-import { ABILITIES } from './customMonster.ts'
-import { DAMAGE_TYPES } from '../../schema/primitives.ts'
+import { ABILITIES, DAMAGE_TYPES } from '../../schema/primitives.ts'
 import {
   CASTING_TIMES,
   DURATIONS,

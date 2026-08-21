@@ -12,6 +12,8 @@ import type {
 } from '../../schema/creature.ts'
 import {
   abilityMod,
+  ABILITIES,
+  SKILL_ABILITY,
   type Ability,
   type AbilityScores,
   type DamageType,
@@ -209,7 +211,6 @@ export const ALIGNMENTS: string[] = [
   'any non-chaotic alignment',
   'any non-good alignment',
 ]
-export const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 /** Hit-die sizes, as number strings. */
 export const HP_DICE: string[] = ['4', '6', '8', '10', '12', '20']
 export const ACTION_KINDS: ActionKind[] = ['melee', 'ranged', 'save', 'utility']
@@ -254,28 +255,6 @@ export const SKILL_LABELS: Record<Skill, string> = {
   stealth: 'Stealth',
   survival: 'Survival',
 }
-/** The ability each skill is based on — used to derive a proficient skill bonus. */
-export const SKILL_ABILITY: Record<Skill, Ability> = {
-  acrobatics: 'dex',
-  animalHandling: 'wis',
-  arcana: 'int',
-  athletics: 'str',
-  deception: 'cha',
-  history: 'int',
-  insight: 'wis',
-  intimidation: 'cha',
-  investigation: 'int',
-  medicine: 'wis',
-  nature: 'int',
-  perception: 'wis',
-  performance: 'cha',
-  persuasion: 'cha',
-  religion: 'int',
-  sleightOfHand: 'dex',
-  stealth: 'dex',
-  survival: 'wis',
-}
-
 /** A fresh random UUID for draft rows and custom ids. */
 const uid = (): string => crypto.randomUUID()
 

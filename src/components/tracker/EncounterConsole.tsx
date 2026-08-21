@@ -51,9 +51,7 @@ import { titleCase } from '../../compendium/format.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { useSwipePanes } from '../../hooks/useSwipePanes.ts'
 import { Button } from '../ui/primitives.tsx'
-
-const COLUMN_HEADING =
-  'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+import { COLUMN_HEADING } from '../ui/headings.ts'
 
 /** Tiny uppercase heading over a group of tracker rows (Dead, Players and allies, Creatures). */
 function GroupHeading({ children }: { children: string }) {

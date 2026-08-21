@@ -3,12 +3,11 @@
 
 import {
   ACTION_KINDS,
-  ABILITIES,
   emptyDamageDraft,
   type ActionDraft,
   type RechargeKind,
 } from './customMonster.ts'
-import { DAMAGE_TYPES } from '../../schema/primitives.ts'
+import { ABILITIES, DAMAGE_TYPES } from '../../schema/primitives.ts'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 import { Button } from '../ui/primitives.tsx'
 

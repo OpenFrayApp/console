@@ -7,7 +7,7 @@ import type { Campaign } from '../../schema/campaign.ts'
 import type { ArmorName, PcClass } from '../../schema/combatant.ts'
 import { rosterInitiativeMod, type RosterPc } from '../../schema/roster.ts'
 import { ARMOR, ARMOR_NAMES, PC_CLASSES, deriveAc } from '../../schema/pcStats.ts'
-import { abilityMod } from '../../schema/primitives.ts'
+import { abilityMod, ABILITIES } from '../../schema/primitives.ts'
 import { ABILITY_LABEL, signed } from '../../compendium/format.ts'
 import { hasValue as has, parseList as list, parseNonNegativeInt as num } from '../../lib/form.ts'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
@@ -18,7 +18,6 @@ import { Button } from '../ui/primitives.tsx'
 // Keep password managers / browser autofill off the free-text fields.
 const OFF = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
-const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 const SPEED_KEYS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const
 const SENSE_KEYS = [
   { key: 'passivePerception', label: 'Passive Perception', placeholder: 'Passive Perception' },

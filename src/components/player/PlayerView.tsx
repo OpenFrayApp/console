@@ -10,6 +10,7 @@ import { GameLog } from '../log/GameLog.tsx'
 import { PlayerRow } from './PlayerRow.tsx'
 import { OutcomeBadge, RecapSummary } from '../tracker/Recap.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
+import { COLUMN_HEADING } from '../ui/headings.ts'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -21,8 +22,8 @@ import { ThemeToggle } from '../icons/ThemeToggle.tsx'
  * Master runs the fight on a wide screen, and everyone else is holding a phone.
  */
 
-const COLUMN_HEADING =
-  'mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+/** The console's column heading, pushed off the list below it. */
+const PANE_HEADING = `mb-2 ${COLUMN_HEADING}`
 
 /** What to say while there's no board — each state names what the reader should do next. */
 function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
@@ -123,7 +124,7 @@ export function PlayerView({ code }: { code: string }) {
               Below `sm` there isn't width for two, so they stack and the page scrolls. */}
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:overflow-hidden">
               <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
-                <h2 className={COLUMN_HEADING}>Turn order</h2>
+                <h2 className={PANE_HEADING}>Turn order</h2>
                 {board.rows.length === 0 ? (
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Nobody is on the board yet.
@@ -138,7 +139,7 @@ export function PlayerView({ code }: { code: string }) {
               </section>
 
               <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
-                <h2 className={COLUMN_HEADING}>Game log</h2>
+                <h2 className={PANE_HEADING}>Game log</h2>
                 <GameLog entries={[...board.log].reverse()} />
               </section>
             </div>

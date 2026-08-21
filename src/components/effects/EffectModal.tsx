@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useState } from 'react'
-import type { Ability } from '../../schema/primitives.ts'
+import { ABILITIES, type Ability } from '../../schema/primitives.ts'
 import type { Combatant } from '../../schema/combatant.ts'
 import type { ConditionName, Effect, EffectApplies, EffectMode } from '../../schema/effect.ts'
 import type { EffectPreset } from '../../schema/preset.ts'
@@ -55,8 +55,6 @@ const CONDITIONS: ConditionName[] = [
 
 /** The levels the Exhaustion control offers, with 0 meaning the condition is off. */
 const EXHAUSTION_LEVELS = [0, 1, 2, 3, 4, 5, 6]
-
-const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
 const REMOVE_LINK = 'text-xs text-slate-500 hover:underline dark:text-slate-400'
 
