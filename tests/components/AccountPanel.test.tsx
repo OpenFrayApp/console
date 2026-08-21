@@ -7,24 +7,17 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { User } from '@supabase/supabase-js'
 import { AuthContext, type AuthState } from '../../src/auth/useAuth.ts'
 import { AccountPanel } from '../../src/components/AccountPanel.tsx'
+import { authState } from '../fixtures.ts'
 
 afterEach(cleanup)
 
 function renderPanel(overrides: Partial<AuthState> & { allowReserved?: boolean } = {}) {
   const { allowReserved = false, ...auth } = overrides
-  const value: AuthState = {
+  const value = authState({
     user: { email: 'dm@openfray.app', app_metadata: { provider: 'google' } } as unknown as User,
     displayName: 'Nico Mustone',
-    shareLicense: null,
-    loading: false,
-    configured: true,
-    signInWithProvider: vi.fn(async () => ({ error: null })),
-    signOut: vi.fn(async () => {}),
-    deleteAccount: vi.fn(async () => ({ error: null })),
-    setDisplayName: vi.fn(async () => ({ error: null })),
-    setShareLicense: vi.fn(async () => ({ error: null })),
     ...auth,
-  }
+  })
   const onClose = vi.fn()
   render(
     <AuthContext.Provider value={value}>

@@ -5,57 +5,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { InitiativePrompt } from '../../src/components/InitiativePrompt.tsx'
-import type { Combatant, MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
+import type { Combatant } from '../../src/schema/combatant.ts'
+import { monster, pc } from '../fixtures.ts'
 
 afterEach(cleanup)
 
-function pc(id: string, name: string): PlayerCharacter {
-  return {
-    isPC: true,
-    combatantId: id,
-    name,
-    initiative: 0,
-    ac: 15,
-    passivePerception: 12,
-    status: 'active',
-    hp: { current: 20, max: 20, temp: 0 },
-    concentration: null,
-    effects: [],
-  }
-}
-
-function monster(id: string, label: string): MonsterCombatant {
-  return {
-    isPC: false,
-    combatantId: id,
-    creatureId: 'srd:goblin',
-    creature: {
-      id: 'srd:goblin',
-      source: 'srd-5.2',
-      name: 'Goblin',
-      size: 'Small',
-      type: 'humanoid',
-      ac: 15,
-      maxHp: 7,
-      speed: { walk: 30 },
-      abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-      senses: { passivePerception: 9 },
-    },
-    label,
-    initiative: 0,
-    status: 'active',
-    hp: { current: 7, max: 7, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }
-}
-
-const combatants: Combatant[] = [pc('p1', 'Thalia'), monster('m1', 'Goblin A')]
+const combatants: Combatant[] = [
+  pc({ initiative: 0, ac: 15, passivePerception: 12, hp: { current: 20, max: 20, temp: 0 } }),
+  monster({ combatantId: 'm1', label: 'Goblin A', initiative: 0 }),
+]
 const initial = { p1: '', m1: '14' }
 
 describe('InitiativePrompt', () => {

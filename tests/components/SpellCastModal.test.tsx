@@ -5,67 +5,43 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
-import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import { SpellCastModal } from '../../src/components/SpellCastModal.tsx'
+import { creature, monster, spell as baseSpell } from '../fixtures.ts'
 
-/** A caster template with a fixed save DC and spell attack bonus. */
-function creature(): Creature {
-  return {
-    id: 'srd:kobold-mage',
-    source: 'srd-5.2',
-    name: 'Kobold Mage',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 12,
-    maxHp: 27,
-    speed: { walk: 30 },
-    abilities: { str: 7, dex: 15, con: 12, int: 10, wis: 11, cha: 8 },
-    senses: { passivePerception: 10 },
-    spellcasting: { ability: 'wis', saveDc: 13, toHit: 5, groups: [] },
-  }
-}
-
-/** The casting monster, optionally overridden (e.g. already concentrating). */
+/** The casting monster — a Kobold Mage with a fixed save DC and spell attack bonus. */
 function caster(over: Partial<MonsterCombatant> = {}): MonsterCombatant {
-  return {
-    isPC: false,
+  return monster({
     combatantId: 'km',
     creatureId: 'srd:kobold-mage',
-    creature: creature(),
+    creature: creature({
+      id: 'srd:kobold-mage',
+      name: 'Kobold Mage',
+      ac: 12,
+      maxHp: 27,
+      abilities: { str: 7, dex: 15, con: 12, int: 10, wis: 11, cha: 8 },
+      senses: { passivePerception: 10 },
+      spellcasting: { ability: 'wis', saveDc: 13, toHit: 5, groups: [] },
+    }),
     label: 'Kobold Mage',
     initiative: 10,
-    status: 'active',
     hp: { current: 27, max: 27, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
     ...over,
-  }
+  })
 }
 
 /** A compendium spell fixture; overrides add mechanics or concentration. */
 function spell(name: string, over: Partial<Spell> = {}): Spell {
-  return {
+  return baseSpell({
     id: `srd-5.2:${name.toLowerCase().replace(/ /g, '-')}`,
-    source: 'srd-5.2',
     name,
     level: 1,
-    school: 'Evocation',
-    castingTime: 'action',
     range: '60 feet',
     components: { verbal: true, somatic: false, material: false },
-    duration: 'instantaneous',
-    concentration: false,
-    ritual: false,
     text: 'A test spell.',
     ...over,
-  }
+  })
 }
 
 /** A save spell (CON, half) that must hand off to the resolver after casting. */

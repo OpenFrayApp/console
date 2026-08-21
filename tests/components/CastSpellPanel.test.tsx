@@ -6,50 +6,28 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
-import type { Creature } from '../../src/schema/creature.ts'
+import { creature, monster, pc, spell } from '../fixtures.ts'
 
-const spellBase = {
-  source: 'srd-5.2',
-  school: 'Evocation',
-  castingTime: 'action',
-  range: '150 feet',
-  components: { verbal: true, somatic: true, material: false },
-  duration: 'instantaneous',
-  concentration: false,
-  ritual: false,
-  text: '',
-} as const
-
-const FIREBALL: Spell = {
-  ...spellBase,
-  id: 'srd-5.2:fireball',
-  name: 'Fireball',
-  level: 3,
+const FIREBALL: Spell = spell({
   mechanics: {
     damage: [{ formula: '8d6', type: 'fire' }],
     save: { ability: 'dex', onSave: 'half' },
     scaling: [{ level: 4, by: 'slot', damage: [{ formula: '9d6', type: 'fire' }] }],
   },
-}
+})
 
-const LIGHT: Spell = {
-  ...spellBase,
-  id: 'srd-5.2:light',
-  name: 'Light',
-  level: 0,
-  // no mechanics — a utility spell, not castable here
-}
+// No mechanics — a utility spell, not castable here.
+const LIGHT: Spell = spell({ id: 'srd-5.2:light', name: 'Light', level: 0 })
 
-const BLESS: Spell = {
-  ...spellBase,
+// No mechanics — a buff.
+const BLESS: Spell = spell({
   id: 'srd-5.2:bless',
   name: 'Bless',
   level: 1,
   school: 'Enchantment',
   duration: 'up to 1 minute',
   concentration: true,
-  // no mechanics — a buff
-}
+})
 
 vi.mock('../../src/compendium/srd.ts', () => ({
   loadSrdSpells: () => Promise.resolve([FIREBALL, LIGHT, BLESS]),
@@ -57,41 +35,6 @@ vi.mock('../../src/compendium/srd.ts', () => ({
 }))
 
 const { CastSpellPanel } = await import('../../src/components/CastSpellPanel.tsx')
-
-function creature(): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 7,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-  }
-}
-
-function monster(): MonsterCombatant {
-  return {
-    isPC: false,
-    combatantId: 'g1',
-    creatureId: 'srd:goblin',
-    creature: creature(),
-    label: 'Goblin (A)',
-    initiative: 17,
-    status: 'active',
-    hp: { current: 7, max: 7, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }
-}
 
 afterEach(cleanup)
 
@@ -294,22 +237,15 @@ describe('CastSpellPanel — who is casting', () => {
 describe('CastSpellPanel — the caster’s numbers', () => {
   /** A roster character with the three facts the spellcasting numbers derive from. */
   const cleric = (over: Partial<PlayerCharacter> = {}): PlayerCharacter =>
-    ({
-      isPC: true,
-      kind: 'pc',
-      combatantId: 'p1',
+    pc({
       name: 'Hexena',
       class: 'Cleric',
       level: 5,
       abilities: { str: 10, dex: 12, con: 14, int: 10, wis: 18, cha: 8 },
       ac: 18,
       initiative: 0,
-      status: 'active',
-      hp: { current: 30, max: 30, temp: 0 },
-      concentration: null,
-      effects: [],
       ...over,
-    }) as PlayerCharacter
+    })
 
   /** Open the panel with this caster preselected and cast Fireball (a save spell). */
   const castFireball = async (caster: PlayerCharacter) => {

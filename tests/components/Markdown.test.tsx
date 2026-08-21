@@ -8,23 +8,11 @@ import type { Spell } from '../../src/schema/spell.ts'
 import { Markdown } from '../../src/components/Markdown.tsx'
 import { SpellLinkContext } from '../../src/components/spellLinkContext.ts'
 import { makeSpellLinker } from '../../src/compendium/spelllinker.ts'
+import { spell } from '../fixtures.ts'
 
 afterEach(cleanup)
 
-const fireball: Spell = {
-  id: 'srd-5.2:fireball',
-  source: 'srd-5.2',
-  name: 'Fireball',
-  level: 3,
-  school: 'Evocation',
-  castingTime: 'action',
-  range: '150 feet',
-  components: { verbal: true, somatic: true, material: false },
-  duration: 'instantaneous',
-  concentration: false,
-  ritual: false,
-  text: 'A bright streak flashes…',
-}
+const fireball: Spell = spell({ text: 'A bright streak flashes…' })
 
 const resolveSpell = (ref: string) => (ref === 'srd-5.2:fireball' ? fireball : undefined)
 const linker = makeSpellLinker([{ name: 'Fireball', ref: 'srd-5.2:fireball' }])

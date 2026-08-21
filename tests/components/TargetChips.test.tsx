@@ -6,50 +6,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { TargetChips } from '../../src/components/TargetChips.tsx'
+import { monster, pc as basePc } from '../fixtures.ts'
 
 afterEach(cleanup)
 
-const pc = (id: string, name: string): PlayerCharacter => ({
-  isPC: true,
-  kind: 'pc',
-  combatantId: id,
-  name,
-  initiative: 0,
-  ac: 15,
-  status: 'active',
-  hp: { current: 10, max: 10, temp: 0 },
-  concentration: null,
-  effects: [],
-})
+/** An ally chip with the given id and name. */
+const pc = (id: string, name: string): PlayerCharacter =>
+  basePc({ combatantId: id, name, initiative: 0, ac: 15, hp: { current: 10, max: 10, temp: 0 } })
 
-const foe = (id: string, label: string): MonsterCombatant => ({
-  isPC: false,
-  combatantId: id,
-  creatureId: 'srd:goblin',
-  creature: {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 7,
-    speed: {},
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-  },
-  label,
-  initiative: 0,
-  status: 'active',
-  hp: { current: 7, max: 7, temp: 0 },
-  slotsUsed: {},
-  spellUsesSpent: {},
-  limitedUseState: {},
-  legendaryRemaining: 0,
-  concentration: null,
-  effects: [],
-  visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-})
+/** A foe chip with the given id and label. */
+const foe = (id: string, label: string): MonsterCombatant =>
+  monster({ combatantId: id, label, initiative: 0 })
 
 describe('TargetChips', () => {
   it('groups Allies and Foes, sorts each alphabetically, and omits AC', () => {

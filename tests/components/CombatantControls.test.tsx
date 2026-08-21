@@ -4,7 +4,6 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Effect } from '../../src/schema/effect.ts'
 import type { Edition } from '../../src/schema/primitives.ts'
@@ -12,57 +11,22 @@ import { CombatantControls } from '../../src/components/CombatantControls.tsx'
 import { condition, counter, reminder, setCount } from '../../src/combat/effects.ts'
 import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
 import { CampaignEditionContext } from '../../src/state/campaignRules.ts'
+import { monster as goblin, pc } from '../fixtures.ts'
 
-function creature(): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 7,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-  }
-}
+/** The goblin under the controls ('m', label 'Goblin'). */
+const monster = (): MonsterCombatant =>
+  goblin({ combatantId: 'm', label: 'Goblin', initiative: 12 })
 
-function monster(): MonsterCombatant {
-  return {
-    isPC: false,
-    combatantId: 'm',
-    creatureId: 'srd:goblin',
-    creature: creature(),
-    label: 'Goblin',
-    initiative: 12,
-    status: 'active',
-    hp: { current: 7, max: 7, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }
-}
-
+/** A downed PC at the top of its death saves. */
 function downedPc(over: Partial<PlayerCharacter> = {}): PlayerCharacter {
-  return {
-    isPC: true,
+  return pc({
     combatantId: 'p',
-    name: 'Thalia',
-    initiative: 18,
-    ac: 16,
     passivePerception: 14,
     status: 'unconscious',
     hp: { current: 0, max: 30, temp: 0 },
-    concentration: null,
-    effects: [],
     deathSaves: { successes: 0, failures: 0 },
     ...over,
-  }
+  })
 }
 
 afterEach(cleanup)

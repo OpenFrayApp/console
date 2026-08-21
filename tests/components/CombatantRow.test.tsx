@@ -4,61 +4,19 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import type { Creature } from '../../src/schema/creature.ts'
-import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
+import type { PlayerCharacter } from '../../src/schema/combatant.ts'
 import { CombatantRow } from '../../src/components/CombatantRow.tsx'
 import { condition } from '../../src/combat/effects.ts'
+import { monster, pc as basePc } from '../fixtures.ts'
 
-function creature(): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 7,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-  }
-}
-
-function monster(overrides: Partial<MonsterCombatant> = {}): MonsterCombatant {
-  return {
-    isPC: false,
-    combatantId: 'g1',
-    creatureId: 'srd:goblin',
-    creature: creature(),
-    label: 'Goblin (A)',
-    initiative: 17,
-    status: 'active',
-    hp: { current: 7, max: 7, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-    ...overrides,
-  }
-}
-
+/** Thalia on 38 HP, with the display fields the row renders. */
 function pc(overrides: Partial<PlayerCharacter> = {}): PlayerCharacter {
-  return {
-    isPC: true,
-    combatantId: 'p1',
-    name: 'Thalia',
+  return basePc({
     initiative: 21,
-    ac: 16,
     passivePerception: 14,
-    status: 'active',
     hp: { current: 38, max: 38, temp: 0 },
-    concentration: null,
-    effects: [],
     ...overrides,
-  }
+  })
 }
 
 afterEach(cleanup)

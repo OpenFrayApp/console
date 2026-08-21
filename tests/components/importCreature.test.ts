@@ -3,19 +3,14 @@
 
 import { describe, expect, it } from 'vitest'
 import { parseImportedCreature } from '../../src/components/importCreature.ts'
+import { creature } from '../fixtures.ts'
 
+// A creature JSON as the OpenFray Importer copies it; parsing re-ids it.
 const valid = {
+  ...creature(),
   id: 'ddb-import:goblin',
   source: 'Monster Manual (2024)',
   edition: '5.5',
-  name: 'Goblin',
-  size: 'Small',
-  type: 'humanoid',
-  ac: 15,
-  maxHp: 7,
-  speed: { walk: 30 },
-  abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-  senses: { passivePerception: 9 },
 }
 
 describe('parseImportedCreature', () => {

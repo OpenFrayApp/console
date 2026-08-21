@@ -5,43 +5,32 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import type { Combatant } from '../../src/schema/combatant.ts'
+import type { Creature } from '../../src/schema/creature.ts'
 import { CombatDifficulty } from '../../src/components/CombatDifficulty.tsx'
+import { monster as baseMonster, pc as basePc } from '../fixtures.ts'
 
 afterEach(cleanup)
 
+/** A party member the difficulty math counts. */
 const pc = (id: string): Combatant =>
-  ({
-    isPC: true,
-    kind: 'pc',
+  basePc({
     combatantId: id,
     name: 'Hero',
-    ac: 16,
     initiative: 0,
-    status: 'active',
     hp: { current: 38, max: 38, temp: 0 },
     abilities: { str: 12, dex: 14, con: 14, int: 10, wis: 16, cha: 10 },
-    concentration: null,
-    effects: [],
-  }) as unknown as Combatant
+  })
 
+/** An ogre worth the given XP — only the fields the difficulty math reads. */
 const monster = (id: string, xp: number): Combatant =>
-  ({
-    isPC: false,
+  baseMonster({
     combatantId: id,
     creatureId: 'srd:ogre',
-    creature: { id: 'srd:ogre', ac: 11, maxHp: 59, xp },
+    creature: { id: 'srd:ogre', ac: 11, maxHp: 59, xp } as unknown as Creature,
     label: 'Ogre',
     initiative: 0,
-    status: 'active',
     hp: { current: 59, max: 59, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }) as unknown as Combatant
+  })
 
 describe('CombatDifficulty', () => {
   it('rates the board and shows the adjusted experience', () => {

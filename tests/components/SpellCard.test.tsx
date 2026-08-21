@@ -6,27 +6,18 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import type { Spell } from '../../src/schema/spell.ts'
 import { SpellCard } from '../../src/components/SpellCard.tsx'
+import { spell } from '../fixtures.ts'
 
-const FIREBALL: Spell = {
-  id: 'srd-5.2:fireball',
-  source: 'srd-5.2',
-  name: 'Fireball',
-  level: 3,
-  school: 'Evocation',
-  castingTime: 'action',
-  range: '150 feet',
+const FIREBALL: Spell = spell({
   components: {
     verbal: true,
     somatic: true,
     material: true,
     materials: 'a tiny ball of bat guano',
   },
-  duration: 'instantaneous',
-  concentration: false,
-  ritual: false,
   classes: ['Wizard', 'Sorcerer'],
   text: 'A bright streak flashes...',
-}
+})
 
 const LIGHT: Spell = {
   ...FIREBALL,

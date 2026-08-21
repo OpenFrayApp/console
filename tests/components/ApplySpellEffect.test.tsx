@@ -7,36 +7,25 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Combatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import { ApplySpellEffect } from '../../src/components/ApplySpellEffect.tsx'
+import { pc as basePc, spell as baseSpell } from '../fixtures.ts'
 
 afterEach(cleanup)
 
-const spell = (name: string): Spell => ({
-  id: `srd-5.2:${name.toLowerCase()}`,
-  source: 'srd-5.2',
-  name,
-  level: 1,
-  school: 'Abjuration',
-  castingTime: 'action',
-  range: 'touch',
-  components: { verbal: true, somatic: true, material: false },
-  duration: 'up to 1 minute',
-  concentration: true,
-  ritual: false,
-  text: '',
-})
+/** A concentration buff (Bless-shaped) named after the effect under test. */
+const spell = (name: string): Spell =>
+  baseSpell({
+    id: `srd-5.2:${name.toLowerCase()}`,
+    name,
+    level: 1,
+    school: 'Abjuration',
+    range: 'touch',
+    duration: 'up to 1 minute',
+    concentration: true,
+  })
 
-const pc = (id: string, name: string): PlayerCharacter => ({
-  isPC: true,
-  kind: 'pc',
-  combatantId: id,
-  name,
-  initiative: 0,
-  ac: 15,
-  status: 'active',
-  hp: { current: 20, max: 20, temp: 0 },
-  concentration: null,
-  effects: [],
-})
+/** A lightweight PC on 20 HP with the given id and name. */
+const pc = (id: string, name: string): PlayerCharacter =>
+  basePc({ combatantId: id, name, initiative: 0, ac: 15, hp: { current: 20, max: 20, temp: 0 } })
 
 describe('ApplySpellEffect', () => {
   it('renders nothing for an unmapped spell', () => {

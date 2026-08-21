@@ -8,23 +8,10 @@ import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { GroupSaveForm } from '../../src/components/GroupSaveForm.tsx'
 import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
+import { creature as goblin, monster as baseMonster, pc as basePc } from '../fixtures.ts'
 
-/** A minimal goblin template (dex +2, con +0) for monster fixtures. */
-function creature(over: Partial<Creature> = {}): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 30,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-    ...over,
-  }
-}
+/** A minimal goblin template (dex +2, con +0) on 30 max HP for monster fixtures. */
+const creature = (over: Partial<Creature> = {}): Creature => goblin({ maxHp: 30, ...over })
 
 /** A monster combatant on 30 HP with the given id and label. */
 function monster(
@@ -32,41 +19,19 @@ function monster(
   label: string,
   over: Partial<MonsterCombatant> = {},
 ): MonsterCombatant {
-  return {
-    isPC: false,
+  return baseMonster({
     combatantId: id,
-    creatureId: 'srd:goblin',
     creature: creature(),
     label,
     initiative: 12,
-    status: 'active',
     hp: { current: 30, max: 30, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
     ...over,
-  }
+  })
 }
 
 /** A lightweight PC on 30 HP — no abilities, so the app never rolls for them. */
 function pc(id: string, name: string, over: Partial<PlayerCharacter> = {}): PlayerCharacter {
-  return {
-    isPC: true,
-    kind: 'pc',
-    combatantId: id,
-    name,
-    initiative: 18,
-    ac: 16,
-    status: 'active',
-    hp: { current: 30, max: 30, temp: 0 },
-    concentration: null,
-    effects: [],
-    ...over,
-  }
+  return basePc({ combatantId: id, name, ...over })
 }
 
 /** The form's list row containing the given combatant name. */

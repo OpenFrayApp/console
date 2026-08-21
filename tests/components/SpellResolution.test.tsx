@@ -4,65 +4,31 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import { SpellResolution } from '../../src/components/SpellResolution.tsx'
+import { creature, monster as baseMonster, spell as baseSpell } from '../fixtures.ts'
 
-/** A minimal goblin template for the group-save target. */
-function creature(): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 30,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-  }
-}
-
-/** A monster combatant the seeded group save can target. */
+/** A monster combatant on 30 HP the seeded group save can target. */
 function monster(): MonsterCombatant {
-  return {
-    isPC: false,
+  return baseMonster({
     combatantId: 'a',
-    creatureId: 'srd:goblin',
-    creature: creature(),
+    creature: creature({ maxHp: 30 }),
     label: 'Goblin A',
     initiative: 12,
-    status: 'active',
     hp: { current: 30, max: 30, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }
+  })
 }
 
 /** A spell fixture; overrides add level, school, and mechanics. */
 function spell(name: string, over: Partial<Spell> = {}): Spell {
-  return {
+  return baseSpell({
     id: `srd-5.2:${name.toLowerCase().replace(/ /g, '-')}`,
-    source: 'srd-5.2',
     name,
     level: 1,
-    school: 'Evocation',
-    castingTime: 'action',
     range: '60 feet',
-    components: { verbal: true, somatic: true, material: false },
-    duration: 'instantaneous',
-    concentration: false,
-    ritual: false,
-    text: '',
     ...over,
-  }
+  })
 }
 
 /** A cantrip resolved by a spell attack roll (1d10 fire). */

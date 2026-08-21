@@ -7,26 +7,20 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Spell } from '../../src/schema/spell.ts'
 import { HoverSpell } from '../../src/components/HoverSpell.tsx'
 import { Markdown } from '../../src/components/Markdown.tsx'
+import { spell } from '../fixtures.ts'
 
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
 })
 
-const fireBolt: Spell = {
+const fireBolt: Spell = spell({
   id: 'srd-5.2:fire-bolt',
-  source: 'srd-5.2',
   name: 'Fire Bolt',
   level: 0,
-  school: 'Evocation',
-  castingTime: 'action',
   range: '120 feet',
-  components: { verbal: true, somatic: true, material: false },
-  duration: 'instantaneous',
-  concentration: false,
-  ritual: false,
   text: 'You hurl a mote of fire.',
-}
+})
 
 describe('HoverSpell', () => {
   it('opens the spell card on hover', () => {

@@ -8,25 +8,21 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { SpellTagInput } from '../../src/components/SpellTagInput.tsx'
 import type { Spell } from '../../src/schema/spell.ts'
 import type { SpellRef } from '../../src/schema/creature.ts'
+import { spell as baseSpell } from '../fixtures.ts'
 
 afterEach(cleanup)
 
 /** A minimal compendium spell for the picker fixtures. */
 function spell(id: string, name: string, source: string, level = 3): Spell {
-  return {
+  return baseSpell({
     id,
     source,
     name,
     level,
-    school: 'Evocation',
     castingTime: '1 action',
-    range: '150 feet',
-    components: { verbal: true, somatic: true, material: false },
     duration: 'Instantaneous',
-    concentration: false,
-    ritual: false,
     text: 'Spell text.',
-  }
+  })
 }
 
 // The same name in both SRD editions, a near-match, a custom spell, and a cantrip.

@@ -6,22 +6,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ImportCreatureModal } from '../../src/components/ImportCreatureModal.tsx'
 import type { Creature } from '../../src/schema/creature.ts'
+import { creature } from '../fixtures.ts'
 
 afterEach(cleanup)
 
 // A creature JSON as the OpenFray Importer copies it; the modal re-ids it on import.
 const valid = {
+  ...creature(),
   id: 'ddb-import:goblin',
   source: 'Monster Manual (2024)',
   edition: '5.5',
-  name: 'Goblin',
-  size: 'Small',
-  type: 'humanoid',
-  ac: 15,
-  maxHp: 7,
-  speed: { walk: 30 },
-  abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-  senses: { passivePerception: 9 },
 }
 
 describe('ImportCreatureModal', () => {

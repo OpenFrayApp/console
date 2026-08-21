@@ -5,51 +5,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { RestControls } from '../../src/components/RestControls.tsx'
-import type { Combatant, PlayerCharacter, MonsterCombatant } from '../../src/schema/combatant.ts'
+import type { Combatant } from '../../src/schema/combatant.ts'
+import { monster, pc } from '../fixtures.ts'
 
 afterEach(cleanup)
 
-const hero: PlayerCharacter = {
-  isPC: true,
-  kind: 'pc',
-  combatantId: 'hero',
-  name: 'Thalia',
-  initiative: 0,
-  ac: 16,
-  status: 'active',
-  hp: { current: 4, max: 20, temp: 0 },
-  concentration: null,
-  effects: [],
-}
-
-const foe: MonsterCombatant = {
-  isPC: false,
-  combatantId: 'foe',
-  creatureId: 'srd:goblin',
-  creature: {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 7,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-  },
-  label: 'Goblin',
-  initiative: 0,
-  status: 'active',
-  hp: { current: 7, max: 7, temp: 0 },
-  slotsUsed: {},
-  spellUsesSpent: {},
-  limitedUseState: {},
-  legendaryRemaining: 0,
-  concentration: null,
-  effects: [],
-  visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-}
+const hero = pc({ combatantId: 'hero', initiative: 0, hp: { current: 4, max: 20, temp: 0 } })
+const foe = monster({ combatantId: 'foe', label: 'Goblin', initiative: 0 })
 
 const combatants: Combatant[] = [hero, foe]
 

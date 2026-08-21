@@ -5,7 +5,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
-import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
+import type { MonsterCombatant } from '../../src/schema/combatant.ts'
+import { monster as baseMonster, pc } from '../fixtures.ts'
 
 vi.mock('../../src/compendium/srd.ts', () => ({
   loadSrdCreatures: () =>
@@ -247,36 +248,21 @@ describe('Stat-block quick rolls', () => {
     senses: { passivePerception: 8 },
   }
 
-  const monster: MonsterCombatant = {
-    isPC: false,
+  const monster: MonsterCombatant = baseMonster({
     combatantId: 'm',
     creatureId: ogre.id,
     creature: ogre,
     label: 'Ogre',
     initiative: 12,
-    status: 'active',
     hp: { current: 68, max: 68, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }
+  })
 
-  const thalia: PlayerCharacter = {
-    isPC: true,
+  const thalia = pc({
     combatantId: 'p',
-    name: 'Thalia',
     initiative: 17,
-    ac: 16,
-    status: 'active',
     hp: { current: 22, max: 40, temp: 0 },
-    concentration: null,
-    effects: [],
     abilities: { str: 10, dex: 14, con: 12, int: 10, wis: 10, cha: 10 },
-  }
+  })
 
   /** Render the console around one selected combatant, with the roll sinks mocked. */
   const renderConsole = (selectedId: string, extra: Record<string, unknown> = {}) => {

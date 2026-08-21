@@ -4,48 +4,16 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant } from '../../src/schema/combatant.ts'
 import type { Action } from '../../src/schema/action.ts'
 import type { Spell } from '../../src/schema/spell.ts'
 import { ActionResolver } from '../../src/components/ActionResolver.tsx'
 import { exhaustionEffects } from '../../src/combat/exhaustion.ts'
+import { monster as goblin } from '../fixtures.ts'
 
-function creature(over: Partial<Creature> = {}): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 7,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-    ...over,
-  }
-}
-
+/** The attacking goblin ('m', label 'Goblin'); overrides shape it into targets. */
 function monster(over: Partial<MonsterCombatant> = {}): MonsterCombatant {
-  return {
-    isPC: false,
-    combatantId: 'm',
-    creatureId: 'srd:goblin',
-    creature: creature(),
-    label: 'Goblin',
-    initiative: 12,
-    status: 'active',
-    hp: { current: 7, max: 7, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-    ...over,
-  }
+  return goblin({ combatantId: 'm', label: 'Goblin', initiative: 12, ...over })
 }
 
 const scimitar: Action = {

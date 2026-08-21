@@ -7,23 +7,12 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { User } from '@supabase/supabase-js'
 import { AuthContext, type AuthState } from '../../src/auth/useAuth.ts'
 import { AccountControl } from '../../src/components/AccountControl.tsx'
+import { authState } from '../fixtures.ts'
 
 afterEach(cleanup)
 
 function renderControl(overrides: Partial<AuthState> = {}) {
-  const value: AuthState = {
-    user: null,
-    displayName: null,
-    shareLicense: null,
-    loading: false,
-    configured: true,
-    signInWithProvider: vi.fn(async () => ({ error: null })),
-    signOut: vi.fn(async () => {}),
-    deleteAccount: vi.fn(async () => ({ error: null })),
-    setDisplayName: vi.fn(async () => ({ error: null })),
-    setShareLicense: vi.fn(async () => ({ error: null })),
-    ...overrides,
-  }
+  const value = authState(overrides)
   const onSignIn = vi.fn()
   render(
     <AuthContext.Provider value={value}>

@@ -7,57 +7,25 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
 import { MassSavePanel } from '../../src/components/MassSavePanel.tsx'
+import { creature as goblin, monster as baseMonster, pc as basePc } from '../fixtures.ts'
 
-function creature(over: Partial<Creature> = {}): Creature {
-  return {
-    id: 'srd:goblin',
-    source: 'srd-5.2',
-    name: 'Goblin',
-    size: 'Small',
-    type: 'humanoid',
-    ac: 15,
-    maxHp: 30,
-    speed: { walk: 30 },
-    abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
-    senses: { passivePerception: 9 },
-    ...over,
-  }
-}
+/** The goblin template (dex +2) on 30 max HP for monster fixtures. */
+const creature = (over: Partial<Creature> = {}): Creature => goblin({ maxHp: 30, ...over })
 
+/** A monster combatant on 30 HP, labeled by its id. */
 function monster(id: string, cr?: Creature): MonsterCombatant {
-  return {
-    isPC: false,
+  return baseMonster({
     combatantId: id,
-    creatureId: 'srd:goblin',
     creature: cr ?? creature(),
     label: id,
     initiative: 12,
-    status: 'active',
     hp: { current: 30, max: 30, temp: 0 },
-    slotsUsed: {},
-    spellUsesSpent: {},
-    limitedUseState: {},
-    legendaryRemaining: 0,
-    concentration: null,
-    effects: [],
-    visibility: { name: 'shown', hp: 'bloodied', conditions: 'shown', ac: 'hidden' },
-  }
+  })
 }
 
 /** A lightweight PC — no abilities, so the app never rolls for them. */
 function pc(id: string, name: string): PlayerCharacter {
-  return {
-    isPC: true,
-    kind: 'pc',
-    combatantId: id,
-    name,
-    initiative: 18,
-    ac: 16,
-    status: 'active',
-    hp: { current: 30, max: 30, temp: 0 },
-    concentration: null,
-    effects: [],
-  }
+  return basePc({ combatantId: id, name })
 }
 
 afterEach(cleanup)
