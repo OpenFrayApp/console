@@ -3,10 +3,45 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import type { Action } from '../../schema/action.ts'
-import type { Combatant } from '../../schema/combatant.ts'
+import type { Combatant, MonsterCombatant } from '../../schema/combatant.ts'
+import type { ConditionName, Effect } from '../../schema/effect.ts'
+import type { Spell } from '../../schema/spell.ts'
 import type { EncounterAction, NewLogEntry } from '../../state/encounter.ts'
 import type { RolledDamage } from '../../combat/damage.ts'
 import { signed } from '../../compendium/format.ts'
+import type { OnRoll } from '../log/GameLog.tsx'
+
+/** The resolver's props — the dispatcher hands them whole to the branch it picks. */
+export interface ResolverProps {
+  /** The acting creature. Absent for a casterless cast (the "Cast spell" panel),
+   *  where the GM supplies the spell attack bonus / save DC instead. */
+  attacker?: MonsterCombatant
+  action: Action
+  combatants: Combatant[]
+  dispatch: (action: EncounterAction) => void
+  onRoll: OnRoll
+  /** Called when the action is actually rolled — spends a recharge ability. */
+  onUse?: () => void
+  /** Pre-check the "Magical Effect" toggle (a spell is always a magical effect). */
+  defaultMagical?: boolean
+  /** The spell being cast, when this resolver is driving a spell — lets a save spell
+   *  with a modelled board effect (Bane, Faerie Fire) offer to apply it on a failure. */
+  spell?: Spell
+  /**
+   * Who cast the spell, when that isn't who rolls. A player character casting through
+   * the Cast spell panel is never the `attacker` — the GM types the DC and the player
+   * rolls nothing — but the spell's effects still have to be sourced to them, or ending
+   * their concentration would leave the effects behind on every target.
+   */
+  casterId?: string
+  /**
+   * Whether the spell landed, once the GM has settled it: someone failed the save, or
+   * the attack hit. A concentration spell the board shrugged off has nothing to sustain,
+   * so the caller uses this to decide whether concentration begins at all.
+   */
+  onResolved?: (landed: boolean) => void
+  onClose: () => void
+}
 
 /**
  * Roll lines the resolver holds until it closes, keyed so a reroll replaces the line it
@@ -57,3 +92,11 @@ export function metaLine(action: Action): string {
   const dmg = (action.damage ?? []).map((d) => `${d.formula} ${d.type}`).join(' + ')
   return [bits.join(' · '), dmg].filter(Boolean).join(' · ')
 }
+
+/** Whether an effect is the named condition — the same test EffectModal clears by. */
+export const isCondition = (e: Effect, name: ConditionName): boolean =>
+  e.icon === 'condition' && e.name === name
+
+/** The conditions a combatant carries, by name. */
+export const conditionsOn = (c: Combatant): ConditionName[] =>
+  c.effects.filter((e) => e.icon === 'condition').map((e) => e.name as ConditionName)

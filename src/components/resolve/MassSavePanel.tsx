@@ -5,7 +5,7 @@ import { useState } from 'react'
 import type { Combatant } from '../../schema/combatant.ts'
 import type { EncounterAction } from '../../state/encounter.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
-import { GroupSaveModal } from './ActionResolver.tsx'
+import { GroupSaveModal } from './SaveResolver.tsx'
 import { Button } from '../ui/primitives.tsx'
 import type { OnRoll } from '../log/GameLog.tsx'
 
