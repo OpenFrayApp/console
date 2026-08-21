@@ -72,11 +72,14 @@ export function LibraryPicker<T extends LibraryEntry>({
   showHomebrew = true,
   sortKey,
   meta,
+  row,
   showEdition = true,
   onOpen,
   onPick,
   closeOnPick = true,
   children,
+  empty,
+  footer,
   autoOpen = false,
   openRequest,
   onClosed,
@@ -102,6 +105,8 @@ export function LibraryPicker<T extends LibraryEntry>({
   sortKey?: (entry: T) => number
   /** Trailing text for a row, e.g. "CR 5" or "Lvl 3". */
   meta?: (entry: T) => ReactNode
+  /** A row's whole content, replacing the default name + badges pair. */
+  row?: (entry: T) => ReactNode
   /** Whether rows carry an edition badge. Off for content that isn't edition-specific,
    *  like an effect preset — a condition reads the same in either edition. */
   showEdition?: boolean
@@ -113,6 +118,10 @@ export function LibraryPicker<T extends LibraryEntry>({
   closeOnPick?: boolean
   /** Extra controls above the search box, e.g. the cast panel's caster select. */
   children?: ReactNode
+  /** Shown in place of the list when there are no entries at all, as against no matches. */
+  empty?: ReactNode
+  /** A slot under the list, e.g. the character picker's "Create a character…" affordance. */
+  footer?: ReactNode
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
   /** Bump to open the already-mounted picker from outside — the keyboard's command. */
@@ -191,6 +200,8 @@ export function LibraryPicker<T extends LibraryEntry>({
           )}
           {entries === null ? (
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading…</p>
+          ) : empty && custom.length === 0 && entries.length === 0 ? (
+            empty
           ) : (
             <ul className="mt-1 max-h-[55vh] overflow-auto sm:max-h-64">
               {matches.map((e) => (
@@ -207,11 +218,17 @@ export function LibraryPicker<T extends LibraryEntry>({
                     }}
                     className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
-                    <span className="truncate">{e.name}</span>
-                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                      <EntryBadges entry={e} showEdition={showEdition} />
-                      {meta?.(e)}
-                    </span>
+                    {row ? (
+                      row(e)
+                    ) : (
+                      <>
+                        <span className="truncate">{e.name}</span>
+                        <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                          <EntryBadges entry={e} showEdition={showEdition} />
+                          {meta?.(e)}
+                        </span>
+                      </>
+                    )}
                   </button>
                 </li>
               ))}
@@ -220,6 +237,7 @@ export function LibraryPicker<T extends LibraryEntry>({
               )}
             </ul>
           )}
+          {footer}
         </div>
       )}
     </div>

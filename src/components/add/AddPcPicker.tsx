@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useCallback, useRef, useState } from 'react'
 import type { RosterPc } from '../../schema/roster.ts'
 import type { Campaign } from '../../schema/campaign.ts'
-import { useDismiss } from '../../hooks/useDismiss.ts'
-import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { campaignAcronym } from '../library/campaignLabels.ts'
-import { popoverClass } from '../ui/popover.ts'
-import { Button } from '../ui/primitives.tsx'
+import { LibraryPicker } from './LibraryPicker.tsx'
+
+// The roster dressed as a one-library shelf, so the picker's library filter keeps every PC.
+const ROSTER_SOURCE = 'roster'
 
 /**
  * The signed-in "Add PC" control: a popover to drop one of the user's saved roster
@@ -43,90 +42,53 @@ export function AddPcPicker({
   /** The keyboard chord, shown in the trigger's tooltip. */
   keyHint?: string
 }) {
-  const [open, setOpen] = useState(autoOpen)
-  useOpenRequest(openRequest, () => setOpen(true))
-  const [query, setQuery] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => {
-    setOpen(false)
-    onClosed?.()
-  }, [onClosed])
-  useDismiss(ref, open, close)
-
-  const q = query.trim().toLowerCase()
-  const matches = rosterPcs.filter((pc) => !q || pc.name.toLowerCase().includes(q))
   /** Look up a campaign's name by id; undefined when the PC has no campaign. */
   const campaignName = (id?: string | null): string | undefined =>
     campaigns.find((c) => c.id === id)?.name
-
-  // Picking deliberately keeps the popover open, like Add creature: dropping the
-  // whole party in is several picks in a row. Escape or a click outside closes it.
-  /** Close the popover, then open the compendium's Characters tab via onCreate. */
-  const create = () => {
-    close()
-    onCreate()
-  }
+  const entries = rosterPcs.map((pc) => ({ id: pc.id, name: pc.name, source: ROSTER_SOURCE, pc }))
 
   return (
-    <div className="relative" ref={ref}>
-      <Button
-        onClick={() => setOpen((o) => !o)}
-        title={keyHint ? `Add PC (${keyHint})` : undefined}
-        className={hideTrigger ? 'hidden' : undefined}
-      >
-        Add PC
-      </Button>
-      {open && (
-        <div className={`${popoverClass('roomy:w-64')} p-2`}>
-          <input
-            autoFocus
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your characters…"
-            aria-label="Search your characters"
-            className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-          />
-          {rosterPcs.length === 0 ? (
-            <p className="mt-2 px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-              No saved characters yet.
-            </p>
-          ) : (
-            <ul className="mt-1 max-h-64 overflow-auto">
-              {matches.map((pc) => (
-                <li key={pc.id}>
-                  <button
-                    type="button"
-                    onClick={() => onPick(pc)}
-                    className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <span className="truncate">{pc.name}</span>
-                    <span
-                      className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
-                      title={campaignName(pc.campaignId)}
-                    >
-                      {(() => {
-                        const name = campaignName(pc.campaignId)
-                        return name ? campaignAcronym(name) : ''
-                      })()}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {matches.length === 0 && (
-                <li className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400">No matches</li>
-              )}
-            </ul>
-          )}
-          <button
-            type="button"
-            onClick={create}
-            className="mt-1 w-full rounded border-t border-slate-200 px-2 pt-2 pb-1 text-left text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:border-slate-800 dark:text-indigo-400"
-          >
-            Create a character…
-          </button>
-        </div>
-      )}
-    </div>
+    <LibraryPicker
+      label="Add PC"
+      placeholder="Search your characters…"
+      searchLabel="Search your characters"
+      entries={entries}
+      enabledLibraries={[ROSTER_SOURCE]}
+      showEdition={false}
+      // Picking deliberately keeps the popover open, like Add creature: dropping the
+      // whole party in is several picks in a row. Escape or a click outside closes it.
+      closeOnPick={false}
+      onPick={(e) => onPick(e.pc)}
+      row={(e) => {
+        const name = campaignName(e.pc.campaignId)
+        return (
+          <>
+            <span className="truncate">{e.name}</span>
+            <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500" title={name}>
+              {name ? campaignAcronym(name) : ''}
+            </span>
+          </>
+        )
+      }}
+      empty={
+        <p className="mt-2 px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
+          No saved characters yet.
+        </p>
+      }
+      footer={
+        <button
+          type="button"
+          onClick={onCreate}
+          className="mt-1 w-full rounded border-t border-slate-200 px-2 pt-2 pb-1 text-left text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:border-slate-800 dark:text-indigo-400"
+        >
+          Create a character…
+        </button>
+      }
+      autoOpen={autoOpen}
+      openRequest={openRequest}
+      onClosed={onClosed}
+      triggerTitle={keyHint ? `Add PC (${keyHint})` : undefined}
+      hideTrigger={hideTrigger}
+    />
   )
 }
