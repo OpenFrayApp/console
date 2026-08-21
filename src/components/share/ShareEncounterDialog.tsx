@@ -18,6 +18,7 @@ import {
   SignInToShare,
 } from './sharePieces.tsx'
 import { useByline } from '../../hooks/useByline.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
 
@@ -83,11 +84,9 @@ export function ShareEncounterDialog({
    * that existed before their account did.
    */
   const [license, setLicense] = useState<ContentLicense>(defaultLicense)
-  const [lastLicense, setLastLicense] = useState(defaultLicense)
-  if (defaultLicense !== lastLicense) {
-    setLastLicense(defaultLicense)
-    if (license === lastLicense) setLicense(defaultLicense)
-  }
+  useOpenRequest(defaultLicense, (previous) => {
+    if (license === previous) setLicense(defaultLicense)
+  })
 
   const [message, setMessage] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)

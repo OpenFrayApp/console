@@ -6,6 +6,7 @@ import type { Combatant } from '../../schema/combatant.ts'
 import type { EncounterAction } from '../../state/encounter.ts'
 import { isFoe } from '../../combat/combatant.ts'
 import { hpTierOf, parseHpInput } from '../../combat/resources.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { hpToneFor } from '../ui/hpTone.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { Button } from '../ui/primitives.tsx'
@@ -196,12 +197,9 @@ export function RestControls({
   longHint?: string
 }) {
   const [open, setOpen] = useState(false)
-  // Fresh mounts start at the current counters, so only a later bump acts.
-  const [lastShortRequest, setLastShortRequest] = useState(shortRestRequest)
-  if (shortRestRequest !== lastShortRequest) {
-    setLastShortRequest(shortRestRequest)
+  useOpenRequest(shortRestRequest, () => {
     if (!disabled) setOpen(true)
-  }
+  })
   const friendly = combatants.filter((c) => !isFoe(c))
   /** Confirm, then dispatch the long rest: friendlies to full HP, short-lived effects cleared. */
   const longRest = () => {
@@ -216,11 +214,9 @@ export function RestControls({
     }
   }
 
-  const [lastLongRequest, setLastLongRequest] = useState(longRestRequest)
-  if (longRestRequest !== lastLongRequest) {
-    setLastLongRequest(longRestRequest)
+  useOpenRequest(longRestRequest, () => {
     if (!disabled) setTimeout(longRest, 0)
-  }
+  })
 
   /** Class string for one rest button cell; disabled swaps the hover styles for dimming. */
   const cell = (extra = ''): string =>

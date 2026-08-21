@@ -37,6 +37,7 @@ import {
 import { useCampaignEdition } from '../../state/campaignRules.ts'
 import { saveEndsClears, saveEndsOf, type SaveEnds } from '../../combat/saveEnds.ts'
 import { roll } from '../../dice/roll.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { Effect } from '../../schema/effect.ts'
 import type { EffectPreset } from '../../schema/preset.ts'
 import { DeathSaveControls } from './DeathSaveControls.tsx'
@@ -87,17 +88,14 @@ export function CombatantControls({
 }) {
   const [concInput, setConcInput] = useState<string | null>(null)
   const [concDur, setConcDur] = useState<number | null>(null)
-  // A fresh mount starts at the current counter, so only a later bump acts: the
-  // keyboard's Concentrate ends a running concentration, otherwise opens the form.
-  const [lastConcRequest, setLastConcRequest] = useState(concentrateRequest)
-  if (concentrateRequest !== lastConcRequest) {
-    setLastConcRequest(concentrateRequest)
+  // The keyboard's Concentrate ends a running concentration, otherwise opens the form.
+  useOpenRequest(concentrateRequest, () => {
     if (combatant.concentration) {
       setTimeout(() => dispatch({ type: 'endConcentration', id: combatant.combatantId }), 0)
     } else if (concInput === null) {
       setConcInput('')
     }
-  }
+  })
   const id = combatant.combatantId
   const name = nameOf(combatant)
   const started = round > 0

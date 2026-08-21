@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import type { RosterPc } from '../../schema/roster.ts'
 import type { Campaign } from '../../schema/campaign.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { campaignAcronym } from '../library/campaignLabels.ts'
 import { popoverClass } from '../ui/popover.ts'
 
@@ -42,12 +43,7 @@ export function AddPcPicker({
   keyHint?: string
 }) {
   const [open, setOpen] = useState(autoOpen)
-  // A fresh mount starts at the current counter, so only a later bump opens it.
-  const [lastRequest, setLastRequest] = useState(openRequest)
-  if (openRequest !== lastRequest) {
-    setLastRequest(openRequest)
-    setOpen(true)
-  }
+  useOpenRequest(openRequest, () => setOpen(true))
   const [query, setQuery] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => {

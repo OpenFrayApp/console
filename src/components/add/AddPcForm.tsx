@@ -5,6 +5,7 @@ import { useCallback, useRef, useState, type FormEvent } from 'react'
 import type { PlayerCharacter } from '../../schema/combatant.ts'
 import { parseSpeedInput } from '../../combat/speed.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
 
@@ -41,12 +42,7 @@ export function AddPcForm({
   keyHint?: string
 }) {
   const [open, setOpen] = useState(autoOpen)
-  // A fresh mount starts at the current counter, so only a later bump opens it.
-  const [lastRequest, setLastRequest] = useState(openRequest)
-  if (openRequest !== lastRequest) {
-    setLastRequest(openRequest)
-    setOpen(true)
-  }
+  useOpenRequest(openRequest, () => setOpen(true))
   const [f, setF] = useState({
     name: '',
     ac: '',

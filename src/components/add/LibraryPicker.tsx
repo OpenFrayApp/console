@@ -14,6 +14,7 @@ import {
 } from '../../compendium/libraries.ts'
 import { cx } from '../../lib/cx.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { Button, EntryBadges as Badges, type ButtonVariant } from '../ui/primitives.tsx'
 
@@ -125,12 +126,9 @@ export function LibraryPicker<T extends LibraryEntry>({
   triggerTitle?: string
 }) {
   const [open, setOpen] = useState(autoOpen)
-  // A fresh mount starts at the current counter, so only a later bump opens it.
-  const [lastRequest, setLastRequest] = useState(openRequest)
-  if (openRequest !== lastRequest) {
-    setLastRequest(openRequest)
+  useOpenRequest(openRequest, () => {
     if (!disabled) setOpen(true)
-  }
+  })
   const [query, setQuery] = useState('')
   // What this run of the picker has added, for the pickers that stay open on a pick.
   // Nothing else moves when they do: the list keeps its place, and on a phone the sheet

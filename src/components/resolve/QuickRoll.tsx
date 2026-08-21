@@ -3,6 +3,7 @@
 
 import { useRef, useState } from 'react'
 import { roll } from '../../dice/roll.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { OnRoll } from '../log/GameLog.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
 
@@ -22,12 +23,9 @@ export function QuickRoll({
 }) {
   const [formula, setFormula] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  // A fresh mount starts at the current counter, so only a later bump focuses.
-  const [lastRequest, setLastRequest] = useState(focusRequest)
-  if (focusRequest !== lastRequest) {
-    setLastRequest(focusRequest)
+  useOpenRequest(focusRequest, () => {
     setTimeout(() => inputRef.current?.focus(), 0)
-  }
+  })
 
   /** Roll the formula and log it; malformed input does nothing. Either way the box clears. */
   const submit = (input: string) => {

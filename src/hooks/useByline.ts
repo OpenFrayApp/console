@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { bylineError } from '../lib/byline.ts'
+import { useOpenRequest } from './useOpenRequest.ts'
 
 /**
  * The name a publisher signs with, and the rules it is held to.
@@ -14,10 +15,8 @@ import { bylineError } from '../lib/byline.ts'
  */
 export function useByline(defaultByline: string, allowReserved: boolean) {
   const [by, setBy] = useState(defaultByline)
-  const [last, setLast] = useState(defaultByline)
-  if (defaultByline !== last) {
-    setLast(defaultByline)
-    if (by === last) setBy(defaultByline)
-  }
+  useOpenRequest(defaultByline, (previous) => {
+    if (by === previous) setBy(defaultByline)
+  })
   return { by, setBy, problem: by.trim() ? bylineError(by, { allowReserved }) : null }
 }

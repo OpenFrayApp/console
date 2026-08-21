@@ -11,6 +11,7 @@ import { startConcentration } from '../../combat/concentration.ts'
 import { isFoe, nameOf } from '../../combat/combatant.ts'
 import { loadSrdSpells } from '../../compendium/srd.ts'
 import { DEFAULT_ENABLED_LIBRARIES } from '../../compendium/libraries.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { LibrarySort } from '../../state/settings.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { isSupportSpell } from '../../combat/spellEffects.ts'
@@ -93,11 +94,7 @@ export function CastSpellPanel({
   // The caster follows the board — whoever the GM is looking at is who they're about to
   // cast as — and a different pick from the dropdown stands until the board moves on.
   const [casterId, setCasterId] = useState<string>(defaultCasterId ?? '')
-  const [lastDefault, setLastDefault] = useState(defaultCasterId)
-  if (defaultCasterId !== lastDefault) {
-    setLastDefault(defaultCasterId)
-    setCasterId(defaultCasterId ?? '')
-  }
+  useOpenRequest(defaultCasterId, () => setCasterId(defaultCasterId ?? ''))
   const caster = casterId ? combatants.find((c) => c.combatantId === casterId) : undefined
   const load = useCallback(() => {
     if (spells === null) loadSrdSpells().then(setSpells, () => setSpells([]))

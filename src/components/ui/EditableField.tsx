@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState, type ReactNode } from 'react'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 
 /**
  * Click-to-edit text: shows `children`, swaps to an input on click, commits on
@@ -27,15 +28,12 @@ export function EditableField({
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initial)
-  // A fresh mount starts at the current counter, so only a later bump opens it.
-  const [lastRequest, setLastRequest] = useState(editRequest)
-  if (editRequest !== lastRequest) {
-    setLastRequest(editRequest)
+  useOpenRequest(editRequest, () => {
     if (!editing) {
       setDraft(initial)
       setEditing(true)
     }
-  }
+  })
   if (editing) {
     /** Push the draft to `onCommit` and leave editing mode. */
     const commit = () => {

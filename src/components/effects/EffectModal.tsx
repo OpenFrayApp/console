@@ -30,6 +30,7 @@ import { LibraryPicker } from '../add/LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from '../editors/ActionEditor.tsx'
 import { track as recordEvent, EVENTS } from '../../lib/analytics.ts'
 import { useEnterCommit } from '../../hooks/useEnterCommit.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 
 // Ordered roughly by table frequency. Exhaustion isn't here — it carries a level, so
 // it gets its own control below rather than a toggle.
@@ -303,12 +304,9 @@ export function EffectModal({
     setOpen(true)
   }
 
-  // A fresh mount starts at the current counter, so only a later bump opens it.
-  const [lastRequest, setLastRequest] = useState(openRequest)
-  if (openRequest !== lastRequest) {
-    setLastRequest(openRequest)
+  useOpenRequest(openRequest, () => {
     if (!open) openModal()
-  }
+  })
 
   useEffect(() => {
     if (!open) return
