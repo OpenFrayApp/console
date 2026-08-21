@@ -932,6 +932,17 @@ describe('campaign and Game Master identity', () => {
     expect(board.gm).toBeUndefined()
   })
 
+  it('carries a bundled backdrop id, ungated, and drops one we do not ship', () => {
+    // The campaign form's choice is the opt-in, so the name settings don't gate it.
+    const withArt = playerBoard(encounter(), DEFAULT_PLAYER_VIEW, null, {
+      background: 'mountain-fortress',
+    })
+    expect(withArt.background).toBe('mountain-fortress')
+    const unknown = playerBoard(encounter(), DEFAULT_PLAYER_VIEW, null, { background: 'nope' })
+    expect(unknown.background).toBeUndefined()
+    expect(playerBoard(encounter(), DEFAULT_PLAYER_VIEW).background).toBeUndefined()
+  })
+
   it('sends nothing without names — an anonymous GM — and drops blank ones', () => {
     const shown = view({ campaignName: 'shown', gmName: 'shown' })
     expect(playerBoard(encounter(), shown).campaign).toBeUndefined()

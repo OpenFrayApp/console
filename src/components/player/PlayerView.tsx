@@ -13,6 +13,7 @@ import { OutcomeBadge, RecapSummary } from '../tracker/Recap.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { COLUMN_HEADING } from '../ui/headings.ts'
 import { PinInput } from '../ui/PinInput.tsx'
+import { backgroundFile } from '../../lib/backgrounds.ts'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -117,9 +118,26 @@ export function PlayerView({ code }: { code: string }) {
   const [pin, setPin] = useState('')
   const { status, board, pinRejected } = usePlayerBoard(code, pin.length === 4 ? pin : null)
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
+  const backdrop = backgroundFile(board?.background)
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      {backdrop && (
+        <>
+          {/* Negative z keeps both layers above this div's own background and under
+            everything it contains; the veil is what keeps the rows readable. */}
+          <div
+            aria-hidden
+            data-backdrop={board?.background}
+            className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${backdrop})` }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 -z-10 bg-white/85 dark:bg-slate-950/60"
+          />
+        </>
+      )}
       <header className="relative flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
         <a href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
           <span className="text-indigo-500 dark:text-indigo-400">

@@ -507,6 +507,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     user ? activeCampaign?.name : undefined,
     user ? (displayName ?? undefined) : undefined,
     playerPin,
+    user ? activeCampaign?.background : undefined,
   )
 
   /**

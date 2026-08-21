@@ -10,6 +10,7 @@ import { effectiveMaxHp, hpTier, type HpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
 import { badgeLabel } from './effects.ts'
 import { acOf, isFoe, nameOf } from './combatant.ts'
+import { backgroundFile } from '../lib/backgrounds.ts'
 
 /**
  * What the shared player view is allowed to know. This module is the boundary: the
@@ -72,6 +73,8 @@ export interface PlayerBoard {
   campaign?: string
   /** The Game Master's profile name, when signed in and shared. */
   gm?: string
+  /** The campaign's bundled backdrop id — cosmetic, chosen per campaign by the GM. */
+  background?: string
 }
 
 /**
@@ -223,8 +226,8 @@ export function playerBoard(
   settings: PlayerViewSettings,
   /** The summary of the fight just ended, while the GM has it on screen. */
   recap: PlayerRecap | null = null,
-  /** The campaign and GM names, supplied only for a signed-in GM; each setting gates its own. */
-  identity: { campaign?: string; gm?: string } = {},
+  /** The campaign and GM names (each gated by its own setting) and the campaign's backdrop. */
+  identity: { campaign?: string; gm?: string; background?: string } = {},
 ): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
@@ -266,6 +269,8 @@ export function playerBoard(
       ? { campaign: identity.campaign.trim() }
       : {}),
     ...(settings.gmName === 'shown' && identity.gm?.trim() ? { gm: identity.gm.trim() } : {}),
+    // Setting a backdrop on the campaign is the opt-in; an id we don't ship never travels.
+    ...(backgroundFile(identity.background) ? { background: identity.background } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly && !(e.sourceId && offBoard.has(e.sourceId)))
       // With a creature's conditions held back, the lines announcing them go too —

@@ -14,6 +14,7 @@ import {
   type Option,
 } from '../library/campaignLabels.ts'
 import { FIELD, LABEL } from '../ui/fieldStyles.ts'
+import { CAMPAIGN_BACKGROUNDS } from '../../lib/backgrounds.ts'
 import { FormModal } from '../ui/FormModal.tsx'
 import { Button } from '../ui/primitives.tsx'
 
@@ -70,6 +71,7 @@ export function CampaignFormModal({
   const [edition, setEdition] = useState<Edition>('5.5')
   const [rules, setRules] = useState<CampaignRules>(DEFAULT_CAMPAIGN_RULES)
   const [notes, setNotes] = useState('')
+  const [background, setBackground] = useState('')
 
   // Seed the form each time it opens (create → defaults, edit → the campaign's values).
   useEffect(() => {
@@ -78,6 +80,7 @@ export function CampaignFormModal({
     setEdition(campaign?.edition ?? '5.5')
     setRules(campaign?.rules ?? DEFAULT_CAMPAIGN_RULES)
     setNotes(campaign?.notes ?? '')
+    setBackground(campaign?.background ?? '')
   }, [open, campaign])
 
   useEffect(() => {
@@ -107,6 +110,7 @@ export function CampaignFormModal({
       rules,
       // Emptied notes leave the field off the campaign rather than storing a blank.
       notes: notes.trim() || undefined,
+      background: background || undefined,
     })
     onClose()
   }
@@ -188,6 +192,49 @@ export function CampaignFormModal({
             Markdown, only ever yours. Editable from the campaign card too.
           </span>
         </label>
+
+        <div>
+          <span className={LABEL}>Player view backdrop</span>
+          <div
+            className="mt-1 flex flex-wrap items-center gap-2"
+            role="radiogroup"
+            aria-label="Player view backdrop"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={background === ''}
+              onClick={() => setBackground('')}
+              className={`flex aspect-video w-24 items-center justify-center rounded border text-xs ${
+                background === ''
+                  ? 'border-indigo-500 text-indigo-600 ring-1 ring-indigo-500 dark:text-indigo-400'
+                  : 'border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400'
+              }`}
+            >
+              None
+            </button>
+            {CAMPAIGN_BACKGROUNDS.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                role="radio"
+                aria-checked={background === b.id}
+                aria-label={b.label}
+                title={b.label}
+                onClick={() => setBackground(b.id)}
+                className={`aspect-video w-24 rounded border bg-cover bg-center ${
+                  background === b.id
+                    ? 'border-indigo-500 ring-1 ring-indigo-500'
+                    : 'border-slate-300 dark:border-slate-700'
+                }`}
+                style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
+              />
+            ))}
+          </div>
+          <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+            Sits dimmed behind the shared player view.
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">

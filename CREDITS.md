@@ -56,6 +56,12 @@ in the app, on <https://openfray.app>, and in the print edition.
 - **Game rules.** Conditions, spell names, and rules terminology come from the System
   Reference Document 5.2.1, used under CC BY 4.0 (see the SRD 5.2.1 attribution above).
 
+## Player view backdrops
+
+The images in `public/backgrounds/` were generated for OpenFray with Midjourney and
+are part of the project's original content. They ship with the app and appear only
+as backdrops the Game Master picks per campaign.
+
 ## Third-party content
 
 ### Tome of Beasts (Kobold Press)

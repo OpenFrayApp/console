@@ -122,6 +122,19 @@ describe('PlayerView — live', () => {
     expect(screen.getByText(/That PIN doesn’t match/)).toBeInTheDocument()
   })
 
+  it('paints a bundled backdrop behind a live board, and nothing for an unknown id', () => {
+    link.status = 'live'
+    link.board = { ...board(), background: 'mountain-fortress' }
+    const { container } = render(<PlayerView code="x" />)
+    expect(container.querySelector('[data-backdrop="mountain-fortress"]')).not.toBeNull()
+
+    cleanup()
+    link.status = 'live'
+    link.board = { ...board(), background: 'not-shipped' }
+    const { container: bare } = render(<PlayerView code="x" />)
+    expect(bare.querySelector('[data-backdrop]')).toBeNull()
+  })
+
   it('heads the screen with the campaign and Game Master when the board carries them', () => {
     link.status = 'live'
     link.board = { ...board(), campaign: 'Curse of Strahd', gm: 'Nico' }
