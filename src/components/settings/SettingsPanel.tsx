@@ -13,6 +13,7 @@ import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../../stat
 import type { FieldVisibility, HpVisibility } from '../../schema/combatant.ts'
 import { Badge, Button, CUSTOM_TONE, TabButton } from '../ui/primitives.tsx'
 import { HotkeyField } from './HotkeyField.tsx'
+import { SettingRow } from './SettingRow.tsx'
 import {
   COMMANDS,
   commandForChord,
@@ -21,6 +22,8 @@ import {
   type HotkeyCommandId,
 } from '../../state/hotkeys.ts'
 
+// Kept apart from ui's Select on purpose: same box, but rounded-md, explicit text
+// colors, and a dark background one step darker than the shared field's slate-800.
 const SELECT =
   'rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
 
@@ -265,13 +268,7 @@ export function SettingsPanel({
               Their own characters always show in full.
             </p>
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <label
-                  htmlFor="player-view-hp"
-                  className="text-sm text-slate-700 dark:text-slate-200"
-                >
-                  Creature hit points
-                </label>
+              <SettingRow id="player-view-hp" label="Creature hit points">
                 <select
                   id="player-view-hp"
                   value={playerView.hp}
@@ -285,14 +282,8 @@ export function SettingsPanel({
                   <option value="exact">Exact number</option>
                   <option value="hidden">Hidden</option>
                 </select>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <label
-                  htmlFor="player-view-ac"
-                  className="text-sm text-slate-700 dark:text-slate-200"
-                >
-                  Creature armor class
-                </label>
+              </SettingRow>
+              <SettingRow id="player-view-ac" label="Creature armor class">
                 <select
                   id="player-view-ac"
                   value={playerView.ac}
@@ -305,40 +296,26 @@ export function SettingsPanel({
                   <option value="hidden">Hidden</option>
                   <option value="shown">Shown</option>
                 </select>
-              </div>
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <label
-                    htmlFor="player-view-rolls"
-                    className="text-sm text-slate-700 dark:text-slate-200"
-                  >
-                    Creature rolls
-                  </label>
-                  <select
-                    id="player-view-rolls"
-                    value={playerView.rolls}
-                    onChange={(e) => {
-                      track(EVENTS.playerViewChanged)
-                      onSetPlayerView({ ...playerView, rolls: e.target.value as FieldVisibility })
-                    }}
-                    className={SELECT}
-                  >
-                    <option value="shown">Shown</option>
-                    <option value="hidden">Hidden</option>
-                  </select>
-                </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  What a creature's attacks, saves and checks came to. Hiding them keeps whether it
-                  hit or saved, and the damage it dealt.
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <label
-                  htmlFor="player-view-effects"
-                  className="text-sm text-slate-700 dark:text-slate-200"
+              </SettingRow>
+              <SettingRow
+                id="player-view-rolls"
+                label="Creature rolls"
+                hint="What a creature's attacks, saves and checks came to. Hiding them keeps whether it hit or saved, and the damage it dealt."
+              >
+                <select
+                  id="player-view-rolls"
+                  value={playerView.rolls}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, rolls: e.target.value as FieldVisibility })
+                  }}
+                  className={SELECT}
                 >
-                  Creature conditions
-                </label>
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </SettingRow>
+              <SettingRow id="player-view-effects" label="Creature conditions">
                 <select
                   id="player-view-effects"
                   value={playerView.effects}
@@ -351,70 +328,53 @@ export function SettingsPanel({
                   <option value="shown">Shown</option>
                   <option value="hidden">Hidden</option>
                 </select>
-              </div>
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <label
-                    htmlFor="player-view-arrivals"
-                    className="text-sm text-slate-700 dark:text-slate-200"
-                  >
-                    Creatures arriving mid-encounter
-                  </label>
-                  <select
-                    id="player-view-arrivals"
-                    value={playerView.arrivals}
-                    onChange={(e) => {
-                      track(EVENTS.playerViewChanged)
-                      onSetPlayerView({
-                        ...playerView,
-                        arrivals: e.target.value as FieldVisibility,
-                      })
-                    }}
-                    className={SELECT}
-                  >
-                    <option value="shown">Shown</option>
-                    <option value="hidden">Hidden until revealed</option>
-                  </select>
-                </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Where a reinforcement starts. Any creature can be hidden or revealed on its own,
-                  from its controls beside the stat block.
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <label
-                    htmlFor="player-view-log"
-                    className="text-sm text-slate-700 dark:text-slate-200"
-                  >
-                    Game log
-                  </label>
-                  <select
-                    id="player-view-log"
-                    value={playerView.log}
-                    onChange={(e) => {
-                      track(EVENTS.playerViewChanged)
-                      onSetPlayerView({ ...playerView, log: e.target.value as PlayerLogScope })
-                    }}
-                    className={SELECT}
-                  >
-                    <option value="fight">This encounter only</option>
-                    <option value="session">The whole session</option>
-                  </select>
-                </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  On <span className="font-medium">This encounter only</span>, your players' log
-                  starts fresh each time you begin an encounter and clears when it ends. Yours keeps
-                  everything.
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <label
-                  htmlFor="player-view-timers"
-                  className="text-sm text-slate-700 dark:text-slate-200"
+              </SettingRow>
+              <SettingRow
+                id="player-view-arrivals"
+                label="Creatures arriving mid-encounter"
+                hint="Where a reinforcement starts. Any creature can be hidden or revealed on its own, from its controls beside the stat block."
+              >
+                <select
+                  id="player-view-arrivals"
+                  value={playerView.arrivals}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({
+                      ...playerView,
+                      arrivals: e.target.value as FieldVisibility,
+                    })
+                  }}
+                  className={SELECT}
                 >
-                  Encounter clocks
-                </label>
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden until revealed</option>
+                </select>
+              </SettingRow>
+              <SettingRow
+                id="player-view-log"
+                label="Game log"
+                hint={
+                  <>
+                    On <span className="font-medium">This encounter only</span>, your players' log
+                    starts fresh each time you begin an encounter and clears when it ends. Yours
+                    keeps everything.
+                  </>
+                }
+              >
+                <select
+                  id="player-view-log"
+                  value={playerView.log}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, log: e.target.value as PlayerLogScope })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="fight">This encounter only</option>
+                  <option value="session">The whole session</option>
+                </select>
+              </SettingRow>
+              <SettingRow id="player-view-timers" label="Encounter clocks">
                 <select
                   id="player-view-timers"
                   value={playerView.timers}
@@ -427,32 +387,25 @@ export function SettingsPanel({
                   <option value="shown">Shown</option>
                   <option value="hidden">Hidden</option>
                 </select>
-              </div>
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <label
-                    htmlFor="player-view-recap"
-                    className="text-sm text-slate-700 dark:text-slate-200"
-                  >
-                    End-of-encounter summary
-                  </label>
-                  <select
-                    id="player-view-recap"
-                    value={playerView.recap}
-                    onChange={(e) => {
-                      track(EVENTS.playerViewChanged)
-                      onSetPlayerView({ ...playerView, recap: e.target.value as FieldVisibility })
-                    }}
-                    className={SELECT}
-                  >
-                    <option value="shown">Shown</option>
-                    <option value="hidden">Hidden</option>
-                  </select>
-                </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Your players see the summary of the encounter while you have it open.
-                </p>
-              </div>
+              </SettingRow>
+              <SettingRow
+                id="player-view-recap"
+                label="End-of-encounter summary"
+                hint="Your players see the summary of the encounter while you have it open."
+              >
+                <select
+                  id="player-view-recap"
+                  value={playerView.recap}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, recap: e.target.value as FieldVisibility })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </SettingRow>
             </div>
           </section>
 

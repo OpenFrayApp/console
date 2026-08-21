@@ -128,31 +128,55 @@ function BugIcon() {
 const ITEM =
   'flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
 
-/** One row of the menu, as a button. */
+/** One row of the menu: a button, or — given `href` — a link opening in its own tab. */
 function Item({
   icon,
   onClick,
   children,
   label,
+  href,
   className,
 }: {
   icon: ReactNode
   onClick: () => void
   children: string
   label?: string
+  /** Renders the row as a link to this address rather than a button. */
+  href?: string
   /** Extra classes, for a row that only belongs on some shells. */
   className?: string
 }) {
+  const content = (
+    <>
+      <span className="shrink-0 text-slate-500 dark:text-slate-400">{icon}</span>
+      {children}
+    </>
+  )
+  const itemClass = `${ITEM}${className ? ` ${className}` : ''}`
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        role="menuitem"
+        onClick={onClick}
+        aria-label={label}
+        className={itemClass}
+      >
+        {content}
+      </a>
+    )
+  }
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
       aria-label={label}
-      className={`${ITEM}${className ? ` ${className}` : ''}`}
+      className={itemClass}
     >
-      <span className="shrink-0 text-slate-500 dark:text-slate-400">{icon}</span>
-      {children}
+      {content}
     </button>
   )
 }
@@ -228,36 +252,24 @@ export function SettingsMenu({
             {theme === 'dark' ? 'Light mode' : 'Dark mode'}
           </Item>
 
-          <a
+          <Item
+            icon={<HelpIcon />}
             href="/docs/"
-            target="_blank"
-            rel="noreferrer"
-            role="menuitem"
             onClick={() => {
               track(EVENTS.docsOpened)
               close()
             }}
-            className={ITEM}
           >
-            <span className="shrink-0 text-slate-500 dark:text-slate-400">
-              <HelpIcon />
-            </span>
             Handbook
-          </a>
+          </Item>
 
-          <a
+          <Item
+            icon={<BugIcon />}
             href="https://github.com/OpenFrayApp/console/issues/new"
-            target="_blank"
-            rel="noreferrer"
-            role="menuitem"
             onClick={close}
-            className={ITEM}
           >
-            <span className="shrink-0 text-slate-500 dark:text-slate-400">
-              <BugIcon />
-            </span>
             Report a bug
-          </a>
+          </Item>
 
           {/* The footer's legal links, which the phone footer has no room for. The
           Source link is the AGPL §13 offer, so it must stay reachable here. */}
