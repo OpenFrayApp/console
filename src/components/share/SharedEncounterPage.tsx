@@ -27,9 +27,10 @@ import { estimateXp } from '../../combat/difficulty.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { ChevronLeftIcon } from '../icons/ChevronLeftIcon.tsx'
-import { CrossedSwordsIcon } from '../icons/CrossedSwordsIcon.tsx'
 import { ReportIcon } from '../icons/ReportIcon.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
+import { Wordmark } from '../shell/Wordmark.tsx'
+import { LegalLinks } from '../shell/LegalLinks.tsx'
 import { SharedNote } from './SharedNote.tsx'
 import { ReportShareDialog } from './ReportShareDialog.tsx'
 import { Modal } from '../ui/Modal.tsx'
@@ -571,38 +572,14 @@ function Shell({ children }: { children: React.ReactNode }) {
         because the theme switch is 36px against the wordmark's 28, and `items-center`
         spends the other 4 centring it. */}
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6">
-        <a
-          href="/"
-          title="OpenFray home"
-          className="flex items-center gap-2.5 text-xl font-semibold tracking-tight transition-opacity hover:opacity-80"
-        >
-          {/* Colour on a wrapper, not on the icon: its `className` replaces the default
-            rather than adding to it, so passing one here would take `h-7 w-7` with it and
-            render nothing. Same shape as the console's own header. */}
-          <span className="text-indigo-500 dark:text-indigo-400">
-            <CrossedSwordsIcon />
-          </span>
-          <span>
-            <span className="text-indigo-500 dark:text-indigo-400">Open</span>
-            <span>Fray</span>
-          </span>
-        </a>
+        <Wordmark className="flex items-center gap-2.5 text-xl font-semibold tracking-tight transition-opacity hover:opacity-80" />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
       {children}
-      <footer className="flex flex-wrap items-center gap-2 border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 md:px-6">
-        <a href="/privacy">Privacy</a>
-        <span>·</span>
-        <a href="/terms">Terms</a>
-        <span>·</span>
-        <a href="https://github.com/OpenFrayApp/console" target="_blank" rel="noreferrer">
-          Source
-        </a>
-        <span>·</span>
-        <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">
-          AGPL-3.0
-        </a>
-      </footer>
+      <LegalLinks
+        as="footer"
+        className="flex flex-wrap items-center gap-2 border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 md:px-6"
+      />
     </div>
   )
 }

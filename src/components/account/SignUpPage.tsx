@@ -3,7 +3,7 @@
 
 import { useRef, useState, type ReactNode } from 'react'
 import { useAuth, type OAuthProvider } from '../../auth/useAuth.ts'
-import { CrossedSwordsIcon } from '../icons/CrossedSwordsIcon.tsx'
+import { Wordmark } from '../shell/Wordmark.tsx'
 import { track, EVENTS, type EventName } from '../../lib/analytics.ts'
 import { Button } from '../ui/primitives.tsx'
 
@@ -144,18 +144,11 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <a
-                href="/"
-                title="OpenFray home"
+              <Wordmark
+                h1
                 className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
-              >
-                <span className="text-indigo-500 dark:text-indigo-400">
-                  <CrossedSwordsIcon />
-                </span>
-                <h1 className="text-xl font-semibold tracking-tight">
-                  <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
-                </h1>
-              </a>
+                wordClassName="text-xl font-semibold tracking-tight"
+              />
             </div>
           </div>
           <Button onClick={onClose}>Back to the console</Button>

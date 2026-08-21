@@ -8,6 +8,7 @@ import { MoonIcon, SunIcon } from '../icons/ThemeToggle.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { IconButton } from '../ui/primitives.tsx'
+import { LegalLinks } from '../shell/LegalLinks.tsx'
 
 /** Gear icon — the menu's own button. */
 function GearIcon() {
@@ -273,33 +274,11 @@ export function SettingsMenu({
 
           {/* The footer's legal links, which the phone footer has no room for. The
           Source link is the AGPL §13 offer, so it must stay reachable here. */}
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-200 px-2 pb-1 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:hidden">
-            <a href="/privacy" className="hover:underline">
-              Privacy
-            </a>
-            <span aria-hidden>·</span>
-            <a href="/terms" className="hover:underline">
-              Terms
-            </a>
-            <span aria-hidden>·</span>
-            <a
-              href="https://github.com/OpenFrayApp/console"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-            >
-              Source
-            </a>
-            <span aria-hidden>·</span>
-            <a
-              href="https://www.gnu.org/licenses/agpl-3.0.html"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-            >
-              AGPL-3.0
-            </a>
-          </div>
+          <LegalLinks
+            separatorsHidden
+            linkClassName="hover:underline"
+            className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-200 px-2 pb-1 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 sm:hidden"
+          />
         </div>
       )}
     </div>
