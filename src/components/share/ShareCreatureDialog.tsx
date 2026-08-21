@@ -50,6 +50,7 @@ export function ShareCreatureDialog({
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [link, setLink] = useState<string | null>(null)
+  const [publishedCode, setPublishedCode] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const { by, setBy, problem } = useByline(defaultByline, allowReserved)
@@ -69,6 +70,7 @@ export function ShareCreatureDialog({
     setBusy(false)
     if (result.status === 'ok') {
       setLink(shareUrl(result.code))
+      setPublishedCode(result.code)
       setMessage(null)
     } else {
       setMessage(
@@ -153,7 +155,17 @@ export function ShareCreatureDialog({
       )}
 
       {link && (
-        <PublishedLink link={link} onDone={onClose}>
+        <PublishedLink
+          link={link}
+          code={publishedCode ?? ''}
+          name={creature.name}
+          onDone={onClose}
+          onUnpublished={() => {
+            setLink(null)
+            setPublishedCode(null)
+            setMessage('Link taken down. Publishing again makes a new link.')
+          }}
+        >
           Published. Anyone with this link can add {creature.name} to their board.
         </PublishedLink>
       )}

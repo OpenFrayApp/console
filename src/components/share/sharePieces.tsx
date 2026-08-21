@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { useState } from 'react'
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
+import { unpublish } from '../../state/shares.ts'
+import { CopyIcon } from '../icons/CopyIcon.tsx'
+import { OpenIcon } from '../icons/OpenIcon.tsx'
+import { UnpublishIcon } from '../icons/UnpublishIcon.tsx'
 import { ReportIcon } from '../icons/ReportIcon.tsx'
-import { Button } from '../ui/primitives.tsx'
+import { Button, LinkButton } from '../ui/primitives.tsx'
 
 /**
  * The parts an encounter and a creature publish identically.
@@ -61,30 +66,76 @@ export function BylineField({
  */
 export function PublishedLink({
   link,
+  code,
+  name,
   children,
   onDone,
+  onUnpublished,
 }: {
   link: string
+  /** The link's code, for taking it straight back down. */
+  code: string
+  /** What the confirm names — the creature or the encounter as the publisher called it. */
+  name: string
   /** What was published, in a sentence: "Anyone with this link can …". */
   children: React.ReactNode
   onDone: () => void
+  /** The link was taken down; the dialog returns to its form. */
+  onUnpublished: () => void
 }) {
   const { copied, error, copy } = useCopyLink()
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState<string | null>(null)
+
+  /** The same regret path the Shared links page offers, named before it is final. */
+  const takeDown = async () => {
+    if (busy) return
+    if (!window.confirm(`Take down the link to “${name}”? It stops working.`)) return
+    setBusy(true)
+    const result = await unpublish(code)
+    setBusy(false)
+    if (result === 'ok') onUnpublished()
+    else setProblem('Couldn’t take that down. Try again, or use Shared links in the account menu.')
+  }
 
   return (
     <div className="space-y-3">
       <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{children}</p>
-      <div className="flex items-center gap-2">
-        <input
-          readOnly
-          value={link}
-          aria-label="Share link"
-          onFocus={(e) => e.currentTarget.select()}
-          className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-        />
-        <Button onClick={() => copy(link)}>{copied ? 'Copied' : 'Copy'}</Button>
+      <input
+        readOnly
+        value={link}
+        aria-label="Share link"
+        onFocus={(e) => e.currentTarget.select()}
+        className="tap-y w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" className="inline-flex items-center gap-1.5" onClick={() => copy(link)}>
+          <CopyIcon />
+          {copied ? 'Copied' : 'Copy'}
+        </Button>
+        <LinkButton
+          size="sm"
+          className="inline-flex items-center gap-1.5"
+          href={link}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <OpenIcon />
+          Open
+        </LinkButton>
+        <Button
+          size="sm"
+          variant="danger"
+          className="inline-flex items-center gap-1.5"
+          disabled={busy}
+          onClick={() => void takeDown()}
+        >
+          <UnpublishIcon />
+          Unpublish
+        </Button>
       </div>
       {error && <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>}
+      {problem && <p className="text-xs text-rose-600 dark:text-rose-400">{problem}</p>}
       <p className="text-xs text-slate-500 dark:text-slate-400">
         Your links are in the account menu, under Shared encounters. This one stands until you take
         it down.

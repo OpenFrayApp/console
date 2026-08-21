@@ -93,6 +93,7 @@ export function ShareEncounterDialog({
 
   const [message, setMessage] = useState<string | null>(null)
   const [link, setLink] = useState<string | null>(null)
+  const [publishedCode, setPublishedCode] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const publish = async (e: FormEvent) => {
@@ -105,6 +106,7 @@ export function ShareEncounterDialog({
     setBusy(false)
     if (result.status === 'ok') {
       setLink(shareUrl(result.code))
+      setPublishedCode(result.code)
       setMessage(null)
       setName('')
       setNote('')
@@ -230,7 +232,17 @@ export function ShareEncounterDialog({
       )}
 
       {link && (
-        <PublishedLink link={link} onDone={onClose}>
+        <PublishedLink
+          link={link}
+          code={publishedCode ?? ''}
+          name={name}
+          onDone={onClose}
+          onUnpublished={() => {
+            setLink(null)
+            setPublishedCode(null)
+            setMessage('Link taken down. Publishing again makes a new link.')
+          }}
+        >
           Published. Anyone with this link can add it to their board.
         </PublishedLink>
       )}

@@ -7,6 +7,7 @@ import { shareUrl } from '../../state/shareCode.ts'
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { CopyIcon } from '../icons/CopyIcon.tsx'
 import { OpenIcon } from '../icons/OpenIcon.tsx'
+import { UnpublishIcon } from '../icons/UnpublishIcon.tsx'
 import { Button, LinkButton } from '../ui/primitives.tsx'
 
 /**
@@ -24,26 +25,6 @@ import { Button, LinkButton } from '../ui/primitives.tsx'
 
 /** How many links a page holds. Enough to scan without becoming a scroll. */
 const PER_PAGE = 10
-
-function UnpublishIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-4 w-4"
-    >
-      <path d="M4 7h16" />
-      <path d="M10 11v6M14 11v6" />
-      <path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12" />
-      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  )
-}
 
 /** What a share is, in a word, so a mixed list reads at a glance. */
 const KIND_LABEL: Record<string, string> = { encounter: 'Encounter', creature: 'Creature' }
