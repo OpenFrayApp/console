@@ -4,3 +4,6 @@
 
 # Style: format the entire repo with Prettier
 c726356d23f128e71a6f2f03b549715de4bd35c4
+
+# App: move components into concern folders
+dcf6a5687806902c8c4bd81b7a27a84e5e49b051
