@@ -9,6 +9,7 @@ import type {
   SelectHTMLAttributes,
 } from 'react'
 import { cx } from '../../lib/cx.ts'
+import { FIELD_W } from './fieldStyles.ts'
 
 /**
  * The console's interface primitives. Every button, chip, field and select in the app
@@ -147,16 +148,17 @@ export function TabButton({
   )
 }
 
-const CONTROL = 'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700'
+// The shared field base; Field/Select stay in step with every form's inputs.
+const CONTROL = FIELD_W
 
 /** A text input. Width is the caller's — everything else matches every other field. */
 export function Field({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cx(CONTROL, 'dark:bg-slate-900', className)} {...rest} />
+  return <input className={cx(CONTROL, className)} {...rest} />
 }
 
 /** A select, sized and bordered like Field so a row of both lines up. */
 export function Select({ className, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cx(CONTROL, 'dark:bg-slate-900', className)} {...rest} />
+  return <select className={cx(CONTROL, className)} {...rest} />
 }
 
 /**

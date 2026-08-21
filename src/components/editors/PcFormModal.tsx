@@ -10,7 +10,7 @@ import { ARMOR, ARMOR_NAMES, PC_CLASSES, deriveAc } from '../../schema/pcStats.t
 import { abilityMod } from '../../schema/primitives.ts'
 import { signed } from '../../compendium/format.ts'
 import { hasValue as has, parseList as list, parseNonNegativeInt as num } from '../../lib/form.ts'
-import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 import { FormSection as Section } from './FormSection.tsx'
 
 // Keep password managers / browser autofill off the free-text fields.

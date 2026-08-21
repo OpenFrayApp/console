@@ -9,13 +9,7 @@ import {
   type RechargeKind,
 } from './customMonster.ts'
 import { DAMAGE_TYPES } from '../../schema/primitives.ts'
-
-// Width-less base, so explicit sizes (`${FIELD_W} w-16`) win cleanly in flex rows.
-export const FIELD_W =
-  'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
-export const FIELD = `w-full ${FIELD_W}`
-export const LABEL =
-  'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 
 const RECHARGE_KINDS: { value: RechargeKind; label: string }[] = [
   { value: 'none', label: 'No limit' },

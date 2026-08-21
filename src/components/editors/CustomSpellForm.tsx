@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import type { Spell } from '../../schema/spell.ts'
-import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
+import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 import { AddSpellPicker } from '../add/AddSpellPicker.tsx'
 import { DEFAULT_ENABLED_LIBRARIES } from '../../compendium/libraries.ts'
 import { spellLevelLong } from '../../compendium/format.ts'

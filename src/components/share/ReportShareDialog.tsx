@@ -11,6 +11,7 @@ import {
   type ReportReason,
 } from '../../state/reports.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
+import { SHARE_FIELD, SHARE_LABEL } from './sharePieces.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
 
@@ -57,10 +58,6 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
     }
   }
 
-  const field =
-    'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
-  const label = 'mb-1 block text-xs font-medium text-slate-700 dark:text-slate-200'
-
   return (
     <Modal
       title="Report this encounter"
@@ -84,14 +81,14 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
       ) : (
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label htmlFor="report-reason" className={label}>
+            <label htmlFor="report-reason" className={SHARE_LABEL}>
               Reason
             </label>
             <select
               id="report-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value as ReportReason)}
-              className={field}
+              className={SHARE_FIELD}
             >
               {REPORT_REASONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -101,7 +98,7 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
             </select>
           </div>
           <div>
-            <label htmlFor="report-message" className={label}>
+            <label htmlFor="report-message" className={SHARE_LABEL}>
               Anything to add (optional)
             </label>
             <textarea
@@ -110,11 +107,11 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
               onChange={(e) => setMessage(e.target.value.slice(0, REPORT_MAX))}
               rows={4}
               placeholder="What's wrong with it?"
-              className={field}
+              className={SHARE_FIELD}
             />
           </div>
           <div>
-            <label htmlFor="report-email" className={label}>
+            <label htmlFor="report-email" className={SHARE_LABEL}>
               Your email (optional)
             </label>
             <input
@@ -124,7 +121,7 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
               onChange={(e) => setReplyTo(e.target.value.slice(0, REPORT_EMAIL_MAX))}
               placeholder="bramironfist@example.com"
               autoComplete="email"
-              className={field}
+              className={SHARE_FIELD}
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Used if we need to ask anything or to inform you about the report. Leave blank to stay

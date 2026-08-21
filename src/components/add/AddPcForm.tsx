@@ -8,10 +8,7 @@ import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
-
-const FIELD =
-  'w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
-const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+import { FIELD, LABEL } from '../ui/fieldStyles.ts'
 
 // Not credential fields — keep password-manager and browser-autofill popups off them so they don't cover the inputs.
 const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const

@@ -11,10 +11,10 @@ import {
 import { useAuth } from '../../auth/useAuth.ts'
 import { bylineError, BYLINE_MAX } from '../../lib/byline.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
+import { LABEL } from '../ui/fieldStyles.ts'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
-const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
 
 type Note = { kind: 'ok' | 'err'; text: string } | null
 

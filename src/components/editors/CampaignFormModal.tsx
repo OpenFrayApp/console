@@ -13,11 +13,7 @@ import {
   TIEBREAK_OPTIONS,
   type Option,
 } from '../library/campaignLabels.ts'
-
-const FIELD =
-  'w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-
-const LABEL = 'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+import { FIELD, LABEL } from '../ui/fieldStyles.ts'
 
 /** A labelled dropdown over the given options, typed to the option value union. */
 function SelectField<T extends string>({

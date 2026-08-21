@@ -6,7 +6,7 @@ import type { Spell } from '../../schema/spell.ts'
 import type { SpellRef } from '../../schema/creature.ts'
 import { libraryTag } from '../../compendium/libraries.ts'
 import { spellLevelShort } from '../../compendium/format.ts'
-import { FIELD } from './ActionEditor.tsx'
+import { FIELD } from '../ui/fieldStyles.ts'
 
 /** The edition tag ("5.5" / "5.0") for a spell or a stored ref id (`srd-5.2:fireball`). */
 const editionOf = (source: string | undefined): string | undefined =>

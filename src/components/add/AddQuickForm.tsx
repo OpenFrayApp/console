@@ -7,10 +7,7 @@ import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseNonNegativeInt as num } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
-
-const FIELD_BASE =
-  'rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
-const FIELD = `w-full ${FIELD_BASE}`
+import { FIELD, FIELD_W } from '../ui/fieldStyles.ts'
 
 /**
  * Quick add — a generic combatant (an NPC, or a creature dropped in mid-fight)
@@ -96,13 +93,13 @@ export function AddQuickForm({
               autoComplete="off"
               data-1p-ignore="true"
               data-lpignore="true"
-              className={`${FIELD_BASE} min-w-0 flex-1`}
+              className={`${FIELD_W} min-w-0 flex-1`}
             />
             <select
               value={side}
               onChange={(e) => setSide(e.target.value as 'friend' | 'foe')}
               aria-label="Side"
-              className={`${FIELD_BASE} w-24 shrink-0`}
+              className={`${FIELD_W} w-24 shrink-0`}
             >
               <option value="foe">Foe</option>
               <option value="friend">Friend</option>
