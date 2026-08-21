@@ -122,22 +122,6 @@ export function PlayerView({ code }: { code: string }) {
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {backdrop && (
-        <>
-          {/* Negative z keeps both layers above this div's own background and under
-            everything it contains; the veil is what keeps the rows readable. */}
-          <div
-            aria-hidden
-            data-backdrop={board?.background}
-            className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
-            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${backdrop})` }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none fixed inset-0 -z-10 bg-white/85 dark:bg-slate-950/60"
-          />
-        </>
-      )}
       <header className="relative flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
         <a href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
           <span className="text-indigo-500 dark:text-indigo-400">
@@ -161,55 +145,73 @@ export function PlayerView({ code }: { code: string }) {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
-        {!board && status === 'locked' ? (
-          <PinGate pin={pin} onPin={setPin} rejected={pinRejected} />
-        ) : board ? (
+      <div className="isolate relative flex min-h-0 flex-1 flex-col">
+        {backdrop && (
           <>
-            <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                <Standing round={board.round} paused={board.paused} turn={turn} />
-              </p>
-              {board.timers && (
-                <CombatTimers
-                  stats={board.timers}
-                  round={board.round}
-                  running={board.round > 0 && !board.paused}
-                />
-              )}
-            </div>
+            {/* Full-bleed between the header and the footer, never over them. The veil
+              is what keeps rows readable; each theme dims to its own ground. */}
+            <div
+              aria-hidden
+              data-backdrop={board?.background}
+              className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
+              style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${backdrop})` }}
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 bg-white/70 dark:bg-slate-950/75"
+            />
+          </>
+        )}
+        <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
+          {!board && status === 'locked' ? (
+            <PinGate pin={pin} onPin={setPin} rejected={pinRejected} />
+          ) : board ? (
+            <>
+              <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  <Standing round={board.round} paused={board.paused} turn={turn} />
+                </p>
+                {board.timers && (
+                  <CombatTimers
+                    stats={board.timers}
+                    round={board.round}
+                    running={board.round > 0 && !board.paused}
+                  />
+                )}
+              </div>
 
-            {board.recap && <SharedRecap recap={board.recap} />}
+              {board.recap && <SharedRecap recap={board.recap} />}
 
-            {/* Two columns that scroll independently, so a long fight's log never pushes
+              {/* Two columns that scroll independently, so a long fight's log never pushes
               the turn order off the screen — and neither one drags the other along.
               Below `sm` there isn't width for two, so they stack and the page scrolls. */}
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:overflow-hidden">
-              <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
-                <h2 className={PANE_HEADING}>Turn order</h2>
-                {board.rows.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Nobody is on the board yet.
-                  </p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {board.rows.map((row) => (
-                      <PlayerRow key={row.id} row={row} active={row.id === board.activeId} />
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:overflow-hidden">
+                <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
+                  <h2 className={PANE_HEADING}>Turn order</h2>
+                  {board.rows.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Nobody is on the board yet.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {board.rows.map((row) => (
+                        <PlayerRow key={row.id} row={row} active={row.id === board.activeId} />
+                      ))}
+                    </ul>
+                  )}
+                </section>
 
-              <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
-                <h2 className={PANE_HEADING}>Game log</h2>
-                <GameLog entries={[...board.log].reverse()} />
-              </section>
-            </div>
-          </>
-        ) : (
-          <Standby status={status} code={code} />
-        )}
-      </main>
+                <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
+                  <h2 className={PANE_HEADING}>Game log</h2>
+                  <GameLog entries={[...board.log].reverse()} />
+                </section>
+              </div>
+            </>
+          ) : (
+            <Standby status={status} code={code} />
+          )}
+        </main>
+      </div>
 
       <footer className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
         A shared view of an encounter running in OpenFray. Nothing here is saved.
