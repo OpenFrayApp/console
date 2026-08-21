@@ -10,7 +10,7 @@ import type { SavedFights } from '../../state/cloudEncounter.ts'
 import { castSummary, type CastLine } from '../../combat/encounterTemplate.ts'
 import { SavedFightCard } from './SavedFightCard.tsx'
 import { rosterAc, rosterInitiativeMod, type RosterPc } from '../../schema/roster.ts'
-import { formatCr, titleCase } from '../../compendium/format.ts'
+import { formatCr, spellLevelShort, titleCase } from '../../compendium/format.ts'
 import { classLabel } from '../../schema/pcStats.ts'
 import type { LibrarySort } from '../../state/settings.ts'
 import { loadSrdCreatures, loadSrdSpells } from '../../compendium/srd.ts'
@@ -510,7 +510,7 @@ export function Compendium({
               id: s.id,
               name: s.name,
               sortKey: s.level,
-              meta: s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`,
+              meta: spellLevelShort(s.level),
               custom: s.id.startsWith('custom:'),
               src: s.id.startsWith('custom:') ? undefined : librarySource(s.source),
               srcClass: s.id.startsWith('custom:') ? undefined : librarySourceBadgeClass(s.source),

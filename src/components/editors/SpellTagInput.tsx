@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Spell } from '../../schema/spell.ts'
 import type { SpellRef } from '../../schema/creature.ts'
 import { libraryTag } from '../../compendium/libraries.ts'
+import { spellLevelShort } from '../../compendium/format.ts'
 import { FIELD } from './ActionEditor.tsx'
 
 /** The edition tag ("5.5" / "5.0") for a spell or a stored ref id (`srd-5.2:fireball`). */
@@ -143,7 +144,7 @@ export function SpellTagInput({
                   <span className="truncate">{s.name}</span>
                   <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                     <EditionBadge tag={editionOf(s.source)} />
-                    {s.level === 0 ? 'Cantrip' : `Lvl ${s.level}`}
+                    {spellLevelShort(s.level)}
                   </span>
                 </button>
               </li>

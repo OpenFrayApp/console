@@ -6,6 +6,7 @@ import type { Spell } from '../../schema/spell.ts'
 import { FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { AddSpellPicker } from '../add/AddSpellPicker.tsx'
 import { DEFAULT_ENABLED_LIBRARIES } from '../../compendium/libraries.ts'
+import { spellLevelLong } from '../../compendium/format.ts'
 import type { LibrarySort } from '../../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { ABILITIES } from './customMonster.ts'
@@ -274,7 +275,7 @@ export function CustomSpellForm({
               >
                 {SPELL_LEVELS.map((l) => (
                   <option key={l} value={l}>
-                    {l === '0' ? 'Cantrip' : `Level ${l}`}
+                    {spellLevelLong(Number(l))}
                   </option>
                 ))}
               </select>

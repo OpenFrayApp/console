@@ -8,9 +8,7 @@ import { DEFAULT_ENABLED_LIBRARIES } from '../../compendium/libraries.ts'
 import type { LibrarySort } from '../../state/settings.ts'
 import { LibraryPicker } from './LibraryPicker.tsx'
 import type { ButtonVariant } from '../ui/primitives.tsx'
-
-/** "Cantrip" for level 0, otherwise "Lvl N". */
-const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
+import { spellLevelShort } from '../../compendium/format.ts'
 
 /** A search popover to pick a spell from the enabled libraries plus the GM's own. */
 export function AddSpellPicker({
@@ -50,7 +48,7 @@ export function AddSpellPicker({
       enabledLibraries={enabledLibraries}
       showHomebrew={showHomebrew}
       sortKey={librarySort === 'cr' ? (s) => s.level : undefined}
-      meta={(s) => levelText(s.level)}
+      meta={(s) => spellLevelShort(s.level)}
       onOpen={load}
       onPick={onPick}
     />

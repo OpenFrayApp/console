@@ -33,6 +33,7 @@ import {
   legendaryPreamble,
   signed,
   titleCase,
+  spellLevelOrdinal,
 } from '../../compendium/format.ts'
 import { hpToneFor } from '../ui/hpTone.ts'
 import { Markdown } from './Markdown.tsx'
@@ -513,14 +514,12 @@ function ActionSection({
   )
 }
 
-const LEVEL_ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
-
 /** A spell group's usage heading: "At Will", "1st Level", "N/Day Each", or "N/Day" when the
  *  group is one pool between its spells rather than N uses of each. */
 function usageLabel(group: SpellGroup): string {
   if (group.usage.type === 'atWill') return 'At Will'
   if (group.usage.type === 'slots') {
-    return `${LEVEL_ORDINAL[group.usage.level] ?? `${group.usage.level}th`} Level`
+    return `${spellLevelOrdinal(group.usage.level)} Level`
   }
   return `${group.usage.per}/Day${group.usage.shared ? '' : ' Each'}`
 }

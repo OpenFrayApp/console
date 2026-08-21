@@ -4,13 +4,12 @@
 import type { Spell } from '../../schema/spell.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
-
-const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
+import { spellLevelOrdinal } from '../../compendium/format.ts'
 
 /** The italic type line: "evocation cantrip" or "3rd-level evocation". */
 function levelLine(spell: Spell): string {
   if (spell.level === 0) return `${spell.school} cantrip`
-  return `${ORDINALS[spell.level - 1] ?? `${spell.level}th`}-level ${spell.school}`
+  return `${spellLevelOrdinal(spell.level)}-level ${spell.school}`
 }
 
 /** The Components entry: "V, S, M (materials)", or an em dash when there are none. */

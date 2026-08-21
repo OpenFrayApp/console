@@ -10,9 +10,7 @@ import { roll } from '../../dice/roll.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
 import { Button, Chip, Select } from '../ui/primitives.tsx'
 import type { OnRoll } from '../log/GameLog.tsx'
-
-/** "Cantrip" for level 0, otherwise "Level N". */
-const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
+import { spellLevelLong } from '../../compendium/format.ts'
 
 /**
  * Resolve a spell's mechanics against the board: roll its damage (scaled by the
@@ -124,7 +122,7 @@ export function SpellResolution({
 
       {!hasDamage && !save && !mechanics.attackRoll && (
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          No automatic effect to resolve — {levelText(spell.level)} {spell.school}.
+          No automatic effect to resolve — {spellLevelLong(spell.level)} {spell.school}.
         </p>
       )}
     </div>

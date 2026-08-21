@@ -20,9 +20,7 @@ import { Modal } from '../ui/Modal.tsx'
 import { SpellCard } from '../statblock/SpellCard.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnNote, OnRoll } from '../log/GameLog.tsx'
-
-/** "Cantrip" for level 0, otherwise "Lvl N". */
-const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Lvl ${level}`)
+import { spellLevelShort } from '../../compendium/format.ts'
 
 /** The caster list's two groups, named and split as the tracker's own groups are. */
 const CASTER_GROUPS: { heading: string; members: (c: Combatant) => boolean }[] = [
@@ -152,7 +150,7 @@ export function CastSpellPanel({
         enabledLibraries={enabledLibraries}
         showHomebrew={showHomebrew}
         sortKey={librarySort === 'cr' ? (s) => s.level : undefined}
-        meta={(s) => levelText(s.level)}
+        meta={(s) => spellLevelShort(s.level)}
         onOpen={load}
         onPick={pick}
       >
@@ -223,7 +221,7 @@ export function CastSpellPanel({
   return (
     <Modal
       title={`Cast ${spell.name}`}
-      subtitle={`${levelText(spell.level)} · ${spell.school}${caster ? ` · ${caster.isPC ? caster.name : caster.label}` : ''}`}
+      subtitle={`${spellLevelShort(spell.level)} · ${spell.school}${caster ? ` · ${caster.isPC ? caster.name : caster.label}` : ''}`}
       onClose={reset}
     >
       {spell.mechanics && !isSupportSpell(spell) ? (

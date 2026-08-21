@@ -5,6 +5,7 @@ import type { DamageRoll, SaveOutcome } from '../../schema/action.ts'
 import type { Spell, SpellComponents, SpellMechanics, SpellScaling } from '../../schema/spell.ts'
 import type { Ability, DamageType, Edition } from '../../schema/primitives.ts'
 import { hasValue as has, parseList as list } from '../../lib/form.ts'
+import { spellLevelLong } from '../../compendium/format.ts'
 
 /**
  * The custom-spell editor's working state. Like the monster draft, inputs are
@@ -308,7 +309,7 @@ export function spellVariantPreview(draft: SpellDraft): { label: string; formula
   if (!base) return []
   /** Join a damage set's dice into one display string, e.g. "8d6 + 2d4". */
   const formula = (rows: DamageRoll[]): string => rows.map((r) => r.formula).join(' + ')
-  const out = [{ label: level === 0 ? 'Cantrip' : `Level ${level}`, formula: formula(base) }]
+  const out = [{ label: spellLevelLong(level), formula: formula(base) }]
   for (const s of buildScaling(draft, level, base)) {
     const label = s.by === 'slot' ? `Slot ${s.level}` : `Level ${s.level}`
     out.push({ label, formula: formula(s.damage) })

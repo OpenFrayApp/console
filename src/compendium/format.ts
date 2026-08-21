@@ -48,6 +48,23 @@ export function capitalizeSegments(value: string | undefined): string | undefine
     .join(', ')
 }
 
+/** "Cantrip" for level 0, otherwise the compact "Lvl N" a picker row wears. */
+export function spellLevelShort(level: number): string {
+  return level === 0 ? 'Cantrip' : `Lvl ${level}`
+}
+
+/** "Cantrip" for level 0, otherwise "Level N". */
+export function spellLevelLong(level: number): string {
+  return level === 0 ? 'Cantrip' : `Level ${level}`
+}
+
+const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
+
+/** A spell level as an ordinal ("3rd"), for "3rd-level evocation" and slot headings. */
+export function spellLevelOrdinal(level: number): string {
+  return ORDINALS[level - 1] ?? `${level}th`
+}
+
 /** Display a challenge rating, rendering fractional CRs as fractions. */
 export function formatCr(cr: number | undefined): string {
   if (cr == null) return '—'
