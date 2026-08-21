@@ -900,13 +900,27 @@ describe('playerBoard — hiding a creature`s rolls', () => {
 })
 
 describe('campaign and Game Master identity', () => {
-  it('travels only when the setting shares it', () => {
-    const board = playerBoard(encounter(), view({ identity: 'shown' }), null, {
+  it('travels only what its own setting shares', () => {
+    const both = playerBoard(encounter(), view({ campaignName: 'shown', gmName: 'shown' }), null, {
       campaign: 'Curse of Strahd',
       gm: 'Nico',
     })
-    expect(board.campaign).toBe('Curse of Strahd')
-    expect(board.gm).toBe('Nico')
+    expect(both.campaign).toBe('Curse of Strahd')
+    expect(both.gm).toBe('Nico')
+
+    const campaignOnly = playerBoard(encounter(), view({ campaignName: 'shown' }), null, {
+      campaign: 'Curse of Strahd',
+      gm: 'Nico',
+    })
+    expect(campaignOnly.campaign).toBe('Curse of Strahd')
+    expect(campaignOnly.gm).toBeUndefined()
+
+    const gmOnly = playerBoard(encounter(), view({ gmName: 'shown' }), null, {
+      campaign: 'Curse of Strahd',
+      gm: 'Nico',
+    })
+    expect(gmOnly.campaign).toBeUndefined()
+    expect(gmOnly.gm).toBe('Nico')
   })
 
   it('stays home by default, names supplied or not', () => {
@@ -919,8 +933,9 @@ describe('campaign and Game Master identity', () => {
   })
 
   it('sends nothing without names — an anonymous GM — and drops blank ones', () => {
-    expect(playerBoard(encounter(), view({ identity: 'shown' })).campaign).toBeUndefined()
-    const board = playerBoard(encounter(), view({ identity: 'shown' }), null, {
+    const shown = view({ campaignName: 'shown', gmName: 'shown' })
+    expect(playerBoard(encounter(), shown).campaign).toBeUndefined()
+    const board = playerBoard(encounter(), shown, null, {
       campaign: '   ',
       gm: '',
     })

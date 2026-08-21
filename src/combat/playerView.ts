@@ -223,7 +223,7 @@ export function playerBoard(
   settings: PlayerViewSettings,
   /** The summary of the fight just ended, while the GM has it on screen. */
   recap: PlayerRecap | null = null,
-  /** The campaign and GM names, supplied only for a signed-in GM; the setting gates them. */
+  /** The campaign and GM names, supplied only for a signed-in GM; each setting gates its own. */
   identity: { campaign?: string; gm?: string } = {},
 ): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
@@ -262,10 +262,10 @@ export function playerBoard(
         }
       : {}),
     ...(recap && settings.recap === 'shown' ? { recap } : {}),
-    ...(settings.identity === 'shown' && identity.campaign?.trim()
+    ...(settings.campaignName === 'shown' && identity.campaign?.trim()
       ? { campaign: identity.campaign.trim() }
       : {}),
-    ...(settings.identity === 'shown' && identity.gm?.trim() ? { gm: identity.gm.trim() } : {}),
+    ...(settings.gmName === 'shown' && identity.gm?.trim() ? { gm: identity.gm.trim() } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly && !(e.sourceId && offBoard.has(e.sourceId)))
       // With a creature's conditions held back, the lines announcing them go too —

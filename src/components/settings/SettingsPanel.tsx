@@ -407,16 +407,37 @@ export function SettingsPanel({
                 </select>
               </SettingRow>
               <SettingRow
-                id="player-view-identity"
-                label="Campaign and Game Master"
-                hint="Heads the table's screen with the campaign's name and your profile name. Signed-in only — an anonymous view never carries either."
+                id="player-view-campaign-name"
+                label="Campaign name"
+                hint="Heads the table's screen with the active campaign's name. Signed-in only."
               >
                 <select
-                  id="player-view-identity"
-                  value={playerView.identity}
+                  id="player-view-campaign-name"
+                  value={playerView.campaignName}
                   onChange={(e) => {
                     track(EVENTS.playerViewChanged)
-                    onSetPlayerView({ ...playerView, identity: e.target.value as FieldVisibility })
+                    onSetPlayerView({
+                      ...playerView,
+                      campaignName: e.target.value as FieldVisibility,
+                    })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </SettingRow>
+              <SettingRow
+                id="player-view-gm-name"
+                label="Game Master name"
+                hint="Adds a Run by line with your profile name. Signed-in only — an anonymous view never carries it."
+              >
+                <select
+                  id="player-view-gm-name"
+                  value={playerView.gmName}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, gmName: e.target.value as FieldVisibility })
                   }}
                   className={SELECT}
                 >
