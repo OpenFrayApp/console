@@ -409,7 +409,7 @@ export function SettingsPanel({
               <SettingRow
                 id="player-view-campaign-name"
                 label="Campaign name"
-                hint="Heads the table's screen with the active campaign's name. Signed-in only."
+                hint="Shows the active campaign's name on the table's screen."
               >
                 <select
                   id="player-view-campaign-name"
@@ -430,7 +430,7 @@ export function SettingsPanel({
               <SettingRow
                 id="player-view-gm-name"
                 label="Game Master name"
-                hint="Adds a Run by line with your profile name. Signed-in only — an anonymous view never carries it."
+                hint="Adds a Run by line with your profile name."
               >
                 <select
                   id="player-view-gm-name"
