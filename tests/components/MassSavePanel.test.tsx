@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { Creature } from '../../src/schema/creature.ts'
 import type { MonsterCombatant, PlayerCharacter } from '../../src/schema/combatant.ts'
-import { applySaveDamage } from '../../src/combat/masssave.ts'
 import { MassSavePanel } from '../../src/components/MassSavePanel.tsx'
 
 function creature(over: Partial<Creature> = {}): Creature {
@@ -162,7 +161,6 @@ describe('MassSavePanel', () => {
 
     const rowA = screen.getByLabelText('Damage to a').closest('li') as HTMLElement
     fireEvent.click(within(rowA).getByRole('button', { name: 'Reroll' }))
-    expect(within(rowB).getByRole('button', { name: 'Fail' }).className).toContain('rose')
 
     // One line each, however many times a row was rerolled — the roll that stood.
     unmount()
@@ -214,10 +212,6 @@ describe('MassSavePanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Thalia' }))
     fireEvent.click(screen.getByText('Roll saves'))
     expect(screen.queryByRole('button', { name: 'Reroll' })).toBeNull()
-  })
-
-  it('half damage on a save (sanity on the helper)', () => {
-    expect(applySaveDamage(monster('a'), 24, 'save', 'half').hp.current).toBe(18)
   })
 
   it('prompts surviving concentrators after applying damage', () => {

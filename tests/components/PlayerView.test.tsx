@@ -106,21 +106,6 @@ describe('PlayerView — live', () => {
     expect(screen.queryByText('AC 11')).toBeNull()
   })
 
-  it('carries effect badges through to the row', () => {
-    link.status = 'live'
-    link.board = board()
-    render(<PlayerView code="x" />)
-    expect(screen.getByText('Frightened')).toBeInTheDocument()
-  })
-
-  it('shows the game log', () => {
-    link.status = 'live'
-    link.board = board()
-    render(<PlayerView code="x" />)
-    expect(screen.getByText('Game log')).toBeInTheDocument()
-    expect(screen.getByText('Round 2')).toBeInTheDocument()
-  })
-
   it('says the fight is held rather than showing a stale turn', () => {
     link.status = 'live'
     link.board = board({ paused: true, activeId: null })

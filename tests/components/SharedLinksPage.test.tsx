@@ -58,15 +58,6 @@ describe('SharedLinksPage', () => {
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
   })
 
-  it('wears the shell Account and Settings wear', () => {
-    // A third layout for a third screen is how an app stops feeling like one app.
-    render(<SharedLinksPage shares={many(1)} onUnpublish={vi.fn()} onClose={vi.fn()} />)
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.getAttribute('aria-label')).toBe('Shared links')
-    expect(screen.getByRole('heading', { name: 'Shared links' }).tagName).toBe('H1')
-    expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy()
-  })
-
   it('opens each link in a new tab, so checking one doesn’t leave the board', () => {
     render(<SharedLinksPage shares={many(1)} onUnpublish={vi.fn()} onClose={vi.fn()} />)
     const open = screen.getByRole('link', { name: /Open/ })

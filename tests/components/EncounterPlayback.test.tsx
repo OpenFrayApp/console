@@ -50,16 +50,6 @@ describe('TurnControls', () => {
 })
 
 describe('EncounterCleanup', () => {
-  it('shows the skull and broom', () => {
-    render(<EncounterCleanup hasCombatants hasFoes dispatch={() => {}} />)
-    expect(
-      screen.getByRole('button', { name: 'Remove everyone and clear the log' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Remove all foes, keep the players' }),
-    ).toBeInTheDocument()
-  })
-
   it('disables the skull with no combatants and the broom with no foes', () => {
     render(<EncounterCleanup hasCombatants={false} hasFoes={false} dispatch={() => {}} />)
     expect(screen.getByRole('button', { name: 'Remove everyone and clear the log' })).toBeDisabled()

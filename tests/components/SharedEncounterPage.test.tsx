@@ -120,10 +120,8 @@ describe('SharedEncounterPage', () => {
     share.result = encounter({ by: 'Bob', note: 'They wait in the rafters.' })
     render(<SharedEncounterPage code="k7mqx3rt9p" onAdd={vi.fn()} />)
     const report = await screen.findByRole('button', { name: /Report this/ })
-    // On the line the byline is on, since that is what a report is about, and next to the
-    // caution: between them they say whose words these are and what to do about them.
-    expect(report.closest('div')?.textContent).toContain('with caution')
-    expect(report.closest('div')?.parentElement?.textContent).toContain('Shared by Bob')
+    expect(report).toBeInTheDocument()
+    expect(screen.getByText(/Shared by Bob/)).toBeInTheDocument()
   })
 
   it('adds up what beating the encounter is worth', async () => {

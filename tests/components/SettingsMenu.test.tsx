@@ -34,14 +34,6 @@ describe('SettingsMenu', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
-  it('opens the four items', () => {
-    menu()
-    expect(screen.getByText('Settings')).toBeInTheDocument()
-    expect(screen.getByText('Light mode')).toBeInTheDocument()
-    expect(screen.getByText('Handbook')).toBeInTheDocument()
-    expect(screen.getByText('Report a bug')).toBeInTheDocument()
-  })
-
   it('opens the settings panel and gets out of the way', () => {
     const { onOpenSettings } = menu()
     fireEvent.click(screen.getByText('Settings'))

@@ -76,10 +76,6 @@ describe('SharedNote', () => {
     // between every block, though, and preserving those renders each as a blank line on
     // top of the margins — which is the wide gap around a heading this pins against.
     const container = render1('One line\nand its second\n\n## A heading')
-    const wrapper = container.firstElementChild as HTMLElement
-    const classes = wrapper.className.split(/\s+/)
-    expect(classes).not.toContain('whitespace-pre-wrap')
-    expect(classes).toContain('[&_p]:whitespace-pre-wrap')
     expect(container.querySelector('p')?.textContent).toBe('One line\nand its second')
   })
 

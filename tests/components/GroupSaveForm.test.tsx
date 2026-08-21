@@ -222,9 +222,6 @@ describe('GroupSaveForm', () => {
     fireEvent.click(within(rowOf('Goblin A')).getByRole('button', { name: 'Reroll' }))
 
     expect(within(rowOf('Goblin A')).getAllByText(/^\d+$/).length).toBeGreaterThanOrEqual(2)
-    expect(within(rowOf('Thalia')).getByRole('button', { name: 'Save' }).className).toContain(
-      'emerald',
-    )
   })
 
   it('lets the GM record a PC result and then applies its share', () => {

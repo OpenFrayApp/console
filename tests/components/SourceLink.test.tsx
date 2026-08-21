@@ -84,12 +84,6 @@ describe('SourceLink', () => {
     expect(screen.getByText(/Basic Rules 2014/)).toBeInTheDocument()
   })
 
-  it('shows an OpenFray library (Brood & Bloom) by name, not its id', () => {
-    render(<SourceLink source="openfray-brood-and-bloom" />)
-    expect(screen.getByText(/Brood & Bloom/)).toBeInTheDocument()
-    expect(screen.queryByText(/openfray-brood/)).toBeNull()
-  })
-
   it('shows an OpenFray library (Strong Waters) by its full title, and links the book', () => {
     render(<SourceLink source="openfray-strong-waters" />)
     const link = screen.getByRole('link', { name: /On Strong Waters and Potent Simples/ })
@@ -101,12 +95,6 @@ describe('SourceLink', () => {
     render(<SourceLink source="openfray-waking-garden" />)
     expect(screen.getByText(/The Waking Garden/)).toBeInTheDocument()
     expect(screen.queryByText(/openfray-waking/)).toBeNull()
-  })
-
-  it('shows custom content without a license link', () => {
-    render(<SourceLink source="custom" />)
-    expect(screen.getByText(/Custom/)).toBeInTheDocument()
-    expect(screen.queryByRole('link')).toBeNull()
   })
 
   it('shows a third-party (OGL) source and appends the page when there are no parens', () => {

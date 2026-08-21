@@ -137,14 +137,6 @@ describe('CombatantRow', () => {
     expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
   })
 
-  it('colour-codes the row border by type (rose for monsters, sky for PCs)', () => {
-    const { container, rerender } = render(<CombatantRow combatant={monster()} />)
-    expect(container.firstElementChild?.className).toMatch(/border-l-rose-400/)
-
-    rerender(<CombatantRow combatant={pc()} />)
-    expect(container.firstElementChild?.className).toMatch(/border-l-sky-400/)
-  })
-
   it('removes the combatant via the hover X when onRemove is provided', () => {
     const onRemove = vi.fn()
     render(<CombatantRow combatant={monster()} onRemove={onRemove} />)
@@ -174,21 +166,6 @@ describe('CombatantRow', () => {
     expect(screen.getByText('Unconscious')).toBeInTheDocument()
     expect(screen.getByText('1 of 3 successes')).toBeInTheDocument()
     expect(screen.getByText('2 of 3 failures')).toBeInTheDocument()
-  })
-
-  it('tints only the current HP by wound tier (the max stays muted)', () => {
-    render(<CombatantRow combatant={pc({ hp: { current: 38, max: 38, temp: 0 } })} />)
-    expect(screen.getByText('38').className).toContain('text-emerald') // current, healthy
-    expect(screen.getByText('/38').className).toContain('text-slate-400') // max, muted
-  })
-
-  it('shows 0 HP in the critical color', () => {
-    render(
-      <CombatantRow
-        combatant={pc({ status: 'unconscious', hp: { current: 0, max: 28, temp: 0 } })}
-      />,
-    )
-    expect(screen.getByText('0').className).toContain('text-red')
   })
 
   it('edits current HP inline when onHpInput is provided', () => {

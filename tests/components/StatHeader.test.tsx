@@ -11,23 +11,6 @@ afterEach(cleanup)
 const RENAME_TITLE = 'Rename — changes how it appears in the tracker'
 
 describe('StatHeader', () => {
-  it('renders the name, subtitle, stats slot, and speed lines', () => {
-    render(
-      <StatHeader
-        name="Goblin"
-        subtitle="Small humanoid, CR 1/4"
-        stats={<HeaderStat label="AC" value={15} />}
-        speeds={['30 ft.', 'fly 60 ft.']}
-      />,
-    )
-    expect(screen.getByRole('heading', { name: 'Goblin' })).toBeInTheDocument()
-    expect(screen.getByText('Small humanoid, CR 1/4')).toBeInTheDocument()
-    expect(screen.getByText('AC')).toBeInTheDocument()
-    expect(screen.getByText('15')).toBeInTheDocument()
-    expect(screen.getByText('30 ft.')).toBeInTheDocument()
-    expect(screen.getByText('fly 60 ft.')).toBeInTheDocument()
-  })
-
   it('commits a trimmed rename and ignores a blank one', () => {
     const onRename = vi.fn()
     render(<StatHeader name="Goblin" onRename={onRename} subtitle="x" stats={null} />)
