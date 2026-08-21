@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Spell } from '../../../src/schema/spell.ts'
 import { SpellCard } from '../../../src/components/statblock/SpellCard.tsx'
 import { spell } from '../../fixtures.ts'
@@ -43,5 +43,16 @@ describe('SpellCard', () => {
   it('labels a cantrip', () => {
     render(<SpellCard spell={LIGHT} />)
     expect(screen.getByText('Evocation cantrip')).toBeInTheDocument()
+  })
+
+  it('explains a condition named in the spell text on hover, like a stat block does', () => {
+    render(
+      <SpellCard
+        spell={spell({ text: 'On a failed save the target has the Frightened condition.' })}
+      />,
+    )
+    expect(screen.queryByRole('heading', { name: 'Frightened' })).toBeNull()
+    fireEvent.mouseEnter(screen.getByText('Frightened'))
+    expect(screen.getByRole('heading', { name: 'Frightened' })).toBeInTheDocument()
   })
 })

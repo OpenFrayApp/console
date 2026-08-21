@@ -12,6 +12,7 @@ import {
   rollDeathSave,
 } from '../../combat/deathsaves.ts'
 import { startConcentration } from '../../combat/concentration.ts'
+import { EffectLabel } from './EffectBadge.tsx'
 import {
   legendaryResistanceLeft,
   setInLair,
@@ -561,7 +562,9 @@ export function CombatantControls({
     const row = (
       <div className="flex items-center justify-between gap-2 py-1 text-xs">
         <span className="min-w-0 text-slate-700 dark:text-slate-200">
-          <span className="font-medium">{label}</span>{' '}
+          <span className="font-medium">
+            <EffectLabel effect={e}>{label}</EffectLabel>
+          </span>{' '}
           <span className="text-slate-500 dark:text-slate-400">
             ·{' '}
             {save ? (

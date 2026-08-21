@@ -7,11 +7,15 @@ import { resolveCondition } from '../../compendium/conditions.ts'
 import { useCampaignEdition } from '../../state/campaignRules.ts'
 import { HoverCondition } from '../statblock/HoverCondition.tsx'
 
-/** The badge text, wrapped in a condition hover preview when the effect is a condition. */
-function EffectLabel({ effect }: { effect: Effect }) {
+/**
+ * An effect's name, wrapped in a condition hover preview when the effect is a condition.
+ * `children` overrides the text shown (the applied-effects list passes its own label);
+ * without it the badge label is used.
+ */
+export function EffectLabel({ effect, children }: { effect: Effect; children?: React.ReactNode }) {
   const edition = useCampaignEdition()
   const condition = effect.icon === 'condition' ? resolveCondition(effect.name, edition) : undefined
-  const label = badgeLabel(effect)
+  const label = children ?? badgeLabel(effect)
   if (!condition) return <>{label}</>
   return (
     <HoverCondition name={condition.name} text={condition.text} className="cursor-help">

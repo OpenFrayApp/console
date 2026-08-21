@@ -211,6 +211,21 @@ describe('CombatantControls', () => {
       ],
     })
 
+    it('explains a listed condition on hover, like the badge on the row does', () => {
+      render(
+        <CombatantControls
+          combatant={withEffects()}
+          round={1}
+          dispatch={vi.fn()}
+          onRoll={() => {}}
+          onGmRoll={() => {}}
+        />,
+      )
+      expect(screen.queryByRole('heading', { name: 'Prone' })).toBeNull()
+      fireEvent.mouseEnter(screen.getByText('Prone'))
+      expect(screen.getByRole('heading', { name: 'Prone' })).toBeInTheDocument()
+    })
+
     it('lists each effect with how it ends, alphabetically', () => {
       render(
         <CombatantControls

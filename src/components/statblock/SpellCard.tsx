@@ -98,7 +98,7 @@ export function SpellCard({
       </dl>
 
       <div className="text-sm text-slate-700 dark:text-slate-300">
-        <Markdown>{spell.text}</Markdown>
+        <Markdown linkConditions>{spell.text}</Markdown>
       </div>
 
       {spell.classes && spell.classes.length > 0 && (
