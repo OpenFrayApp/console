@@ -158,7 +158,7 @@ export function PlayerView({ code }: { code: string }) {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 bg-white/70 dark:bg-slate-950/75"
+              className="pointer-events-none absolute inset-0 -z-10 bg-white/60 dark:bg-slate-950/75"
             />
           </>
         )}
