@@ -49,6 +49,12 @@ export interface PlayerViewSettings {
    * creature's own toggle overrules it.
    */
   arrivals: FieldVisibility
+  /**
+   * Whether the campaign's name and the GM's profile name head the table's screen.
+   * Off by default: who is running the game and what it is called is the GM's to
+   * announce, not the link's. Anonymous GMs have nothing to send either way.
+   */
+  identity: FieldVisibility
 }
 
 /**
@@ -67,6 +73,7 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   timers: 'shown',
   recap: 'shown',
   arrivals: 'shown',
+  identity: 'hidden',
 }
 
 export interface AppSettings {
@@ -136,6 +143,8 @@ function readPlayerView(value: unknown): PlayerViewSettings {
     recap: data.recap === 'hidden' ? 'hidden' : 'shown',
     // A reinforcement lands on the table's screen unless the GM holds arrivals back.
     arrivals: data.arrivals === 'hidden' ? 'hidden' : 'shown',
+    // The campaign and GM names stay off the table's screen unless explicitly shared.
+    identity: data.identity === 'shown' ? 'shown' : 'hidden',
   }
 }
 

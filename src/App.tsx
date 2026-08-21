@@ -492,7 +492,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
   // Share the board while sharing is on. Broadcast only — nothing about the fight is
   // written anywhere, so an anonymous GM can share without a row reaching the database.
-  useBoardBroadcast(sharing ? playerCode : null, encounter, playerView, sharedRecap)
+  useBoardBroadcast(
+    sharing ? playerCode : null,
+    encounter,
+    playerView,
+    sharedRecap,
+    // Names travel only for a signed-in GM, and only when the setting shares them.
+    user ? activeCampaign?.name : undefined,
+    user ? (displayName ?? undefined) : undefined,
+  )
 
   /**
    * Start or stop sharing. An anonymous GM has no name to claim, so the first share

@@ -898,3 +898,33 @@ describe('playerBoard — hiding a creature`s rolls', () => {
     expect(board.log[0].result).toBeUndefined()
   })
 })
+
+describe('campaign and Game Master identity', () => {
+  it('travels only when the setting shares it', () => {
+    const board = playerBoard(encounter(), view({ identity: 'shown' }), null, {
+      campaign: 'Curse of Strahd',
+      gm: 'Nico',
+    })
+    expect(board.campaign).toBe('Curse of Strahd')
+    expect(board.gm).toBe('Nico')
+  })
+
+  it('stays home by default, names supplied or not', () => {
+    const board = playerBoard(encounter(), DEFAULT_PLAYER_VIEW, null, {
+      campaign: 'Curse of Strahd',
+      gm: 'Nico',
+    })
+    expect(board.campaign).toBeUndefined()
+    expect(board.gm).toBeUndefined()
+  })
+
+  it('sends nothing without names — an anonymous GM — and drops blank ones', () => {
+    expect(playerBoard(encounter(), view({ identity: 'shown' })).campaign).toBeUndefined()
+    const board = playerBoard(encounter(), view({ identity: 'shown' }), null, {
+      campaign: '   ',
+      gm: '',
+    })
+    expect(board.campaign).toBeUndefined()
+    expect(board.gm).toBeUndefined()
+  })
+})

@@ -47,6 +47,10 @@ export function useBoardBroadcast(
   settings: PlayerViewSettings,
   /** The summary of the fight just ended, while the GM has it on screen. */
   recap: PlayerRecap | null = null,
+  /** The campaign's name, when a signed-in GM has one selected (the setting gates it). */
+  campaign?: string,
+  /** The GM's profile name, when signed in (the setting gates it). */
+  gm?: string,
 ): void {
   const channel = useRef<RealtimeChannel | null>(null)
   const latest = useRef<PlayerBoard | null>(null)
@@ -81,13 +85,13 @@ export function useBoardBroadcast(
       latest.current = null
       return
     }
-    const board = playerBoard(encounter, settings, recap)
+    const board = playerBoard(encounter, settings, recap, { campaign, gm })
     latest.current = board
     const handle = setTimeout(() => {
       channel.current?.send({ type: 'broadcast', event: EVENT.board, payload: board })
     }, SEND_DEBOUNCE_MS)
     return () => clearTimeout(handle)
-  }, [code, encounter, settings, recap])
+  }, [code, encounter, settings, recap, campaign, gm])
 }
 
 /**

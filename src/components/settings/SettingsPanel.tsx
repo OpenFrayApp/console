@@ -406,6 +406,24 @@ export function SettingsPanel({
                   <option value="hidden">Hidden</option>
                 </select>
               </SettingRow>
+              <SettingRow
+                id="player-view-identity"
+                label="Campaign and Game Master"
+                hint="Heads the table's screen with the campaign's name and your profile name. Signed-in only — an anonymous view never carries either."
+              >
+                <select
+                  id="player-view-identity"
+                  value={playerView.identity}
+                  onChange={(e) => {
+                    track(EVENTS.playerViewChanged)
+                    onSetPlayerView({ ...playerView, identity: e.target.value as FieldVisibility })
+                  }}
+                  className={SELECT}
+                >
+                  <option value="shown">Shown</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </SettingRow>
             </div>
           </section>
 

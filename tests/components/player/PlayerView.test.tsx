@@ -106,6 +106,21 @@ describe('PlayerView — live', () => {
     expect(screen.queryByText('AC 11')).toBeNull()
   })
 
+  it('heads the screen with the campaign and Game Master when the board carries them', () => {
+    link.status = 'live'
+    link.board = { ...board(), campaign: 'Curse of Strahd', gm: 'Nico' }
+    render(<PlayerView code="x" />)
+    expect(screen.getByRole('heading', { name: 'Curse of Strahd' })).toBeInTheDocument()
+    expect(screen.getByText('Run by Nico')).toBeInTheDocument()
+  })
+
+  it('shows neither identity line when the board carries no names', () => {
+    link.status = 'live'
+    link.board = board()
+    render(<PlayerView code="x" />)
+    expect(screen.queryByText(/Run by/)).toBeNull()
+  })
+
   it('says the fight is held rather than showing a stale turn', () => {
     link.status = 'live'
     link.board = board({ paused: true, activeId: null })

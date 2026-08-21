@@ -104,6 +104,18 @@ export function PlayerView({ code }: { code: string }) {
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
         {board ? (
           <>
+            {(board.campaign || board.gm) && (
+              <div className="mb-2 shrink-0">
+                {board.campaign && (
+                  <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100">
+                    {board.campaign}
+                  </h1>
+                )}
+                {board.gm && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Run by {board.gm}</p>
+                )}
+              </div>
+            )}
             <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 <Standing round={board.round} paused={board.paused} turn={turn} />
