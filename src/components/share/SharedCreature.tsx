@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Creature } from '../../schema/creature.ts'
-import type { Spell } from '../../schema/spell.ts'
 import type { CreatureTemplate } from '../../schema/creatureTemplate.ts'
 import type { EncounterTemplate } from '../../schema/encounterTemplate.ts'
+import type { ResolveSpell } from '../statblock/Markdown.tsx'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { SharedNote } from './SharedNote.tsx'
@@ -56,7 +56,7 @@ export function SharedCreature({
   /** Resolved against the reader's own compendium, or null when they haven't got it. */
   creature: Creature | null
   official: boolean
-  resolveSpell: (ref?: string) => Spell | undefined
+  resolveSpell: ResolveSpell
   linkSpells: (text: string) => string
   /** Adding one creature is adding an encounter of one, which is already a solved path. */
   onAdd: (template: EncounterTemplate) => void

@@ -8,9 +8,8 @@ import { SpellCard } from './SpellCard.tsx'
 import { FloatingCard } from '../ui/FloatingCard.tsx'
 import { useHoverCard } from '../../hooks/useHoverCard.ts'
 import { SECTION_HEADING } from './parts.tsx'
+import type { ResolveSpell } from './Markdown.tsx'
 
-/** Resolve a spell's compendium entry (for the hover preview + cast card). */
-export type ResolveSpell = (ref?: string) => Spell | undefined
 /** Uses left for a spell on the live combatant: null when unlimited (at-will). */
 export type SpellUsesOf = (spell: SpellRef) => number | null
 
@@ -62,9 +61,12 @@ export function SpellcastingSection({
     cancelClose,
   } = useHoverCard<Spell>()
 
+  /** The compendium entry behind a spell's ref — when it has one and it resolves. */
+  const resolveRef = (ref?: string): Spell | undefined => (ref ? resolveSpell?.(ref) : undefined)
+
   /** Open the spell hover card anchored to its button — only when the ref resolves. */
   const showPreview = (spell: SpellRef, el: HTMLElement) => {
-    const found = resolveSpell?.(spell.ref)
+    const found = resolveRef(spell.ref)
     if (found) openPreview(found, el)
   }
 
@@ -102,7 +104,7 @@ export function SpellcastingSection({
                 const drained = level != null ? slotsDrained : remaining === 0
                 // Source prose can list spells lowercased (e.g. ToB3 "charm person").
                 // Prefer the resolved spell's canonical name; else title-case it.
-                const name = resolveSpell?.(spell.ref)?.name ?? titleCase(spell.name)
+                const name = resolveRef(spell.ref)?.name ?? titleCase(spell.name)
                 const label = remaining == null ? name : `${name} (${remaining})`
                 if (!onCast) {
                   return (

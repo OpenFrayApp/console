@@ -18,7 +18,7 @@ import {
   titleCase,
 } from '../../compendium/format.ts'
 import { hpToneFor } from '../ui/hpTone.ts'
-import { Markdown } from './Markdown.tsx'
+import { Markdown, type ResolveSpell } from './Markdown.tsx'
 import {
   AbilityTable,
   DefensesAndSenses,
@@ -28,7 +28,7 @@ import {
   type OnCheck,
 } from './parts.tsx'
 import { ActionSection } from './ActionSection.tsx'
-import { SpellcastingSection, type ResolveSpell, type SpellUsesOf } from './SpellcastingSection.tsx'
+import { SpellcastingSection, type SpellUsesOf } from './SpellcastingSection.tsx'
 import { SourceLink } from './SourceLink.tsx'
 import { ShareIcon } from '../icons/ShareIcon.tsx'
 import { Button } from '../ui/primitives.tsx'
