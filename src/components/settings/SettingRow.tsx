@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { ReactNode } from 'react'
+import { FieldHint } from '../ui/FieldHint.tsx'
 
-/** One settings row: a label, the control right-aligned beside it, an optional hint below. */
+/** One settings row: a label, the control right-aligned beside it, the description behind a ?. */
 export function SettingRow({
   id,
   label,
@@ -13,24 +14,20 @@ export function SettingRow({
   /** The control's element id, which the label points at. */
   id: string
   label: string
-  /** A sentence under the row saying what the choice does. */
+  /** What the choice does, shown from the ? beside the label. */
   hint?: ReactNode
   /** The control itself, usually a select carrying `id`. */
   children: ReactNode
 }) {
-  const control = (
-    <div className="flex items-center justify-between gap-3">
-      <label htmlFor={id} className="text-sm text-slate-700 dark:text-slate-200">
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-  if (!hint) return control
   return (
-    <div>
-      {control}
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>
+    <div className="flex items-center justify-between gap-3">
+      <span className="flex items-center gap-1.5">
+        <label htmlFor={id} className="text-sm text-slate-700 dark:text-slate-200">
+          {label}
+        </label>
+        {hint && <FieldHint>{hint}</FieldHint>}
+      </span>
+      {children}
     </div>
   )
 }

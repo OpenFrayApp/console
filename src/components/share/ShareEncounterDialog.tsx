@@ -19,6 +19,7 @@ import {
 } from './sharePieces.tsx'
 import { shareErrorMessage } from './shareMessages.ts'
 import { useByline } from '../../hooks/useByline.ts'
+import { FieldHint } from '../ui/FieldHint.tsx'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
@@ -169,9 +170,21 @@ export function ShareEncounterDialog({
           </div>
           <BylineField id="share-by" value={by} onChange={setBy} problem={problem} />
           <div>
-            <label htmlFor="share-license" className={SHARE_LABEL}>
-              Encounter license
-            </label>
+            <span className="mb-1 flex items-center gap-1.5">
+              <label
+                htmlFor="share-license"
+                className="text-xs font-medium text-slate-700 dark:text-slate-200"
+              >
+                Encounter license
+              </label>
+              {/* Only ever the publisher's own expression. A shared encounter is a
+                collection, and collecting a stat block does not relicense it — each
+                creature carries what its own author said. */}
+              <FieldHint>
+                It covers the encounter’s name, notes, and list of creatures. Each creature has
+                their own, possibly different, license.
+              </FieldHint>
+            </span>
             <select
               id="share-license"
               value={license}
@@ -184,12 +197,8 @@ export function ShareEncounterDialog({
                 </option>
               ))}
             </select>
-            {/* Only ever the publisher's own expression. A shared encounter is a
-              collection, and collecting a stat block does not relicense it — each
-              creature carries what its own author said. */}
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              It covers the encounter’s name, notes, and list of creatures. Each creature has their
-              own, possibly different, license. {LICENSE_HINTS[license]}
+              {LICENSE_HINTS[license]}
             </p>
           </div>
           {/* Left out rather than offered as a choice: an encounter carrying an

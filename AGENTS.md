@@ -170,6 +170,11 @@ dedup.
   to 16px there, because iOS Safari zooms the page on a smaller focused field and
   never zooms back.
 
+  A form field's description sits behind `FieldHint` (`src/components/ui/FieldHint.tsx`),
+  the ? beside its label, shown on hover or tap. Visible small print is reserved for
+  state and consequence lines: a disabled reason, a miss warning, what the current
+  selection means.
+
   The app's theming is `.dark` + `dark:` (the site uses the opposite convention; never
   unify them without changing the pre-paint script in both places).
 

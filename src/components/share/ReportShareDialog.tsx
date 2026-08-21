@@ -12,6 +12,7 @@ import {
 } from '../../state/reports.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { SHARE_FIELD, SHARE_LABEL } from './sharePieces.tsx'
+import { FieldHint } from '../ui/FieldHint.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
 
@@ -111,9 +112,18 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
             />
           </div>
           <div>
-            <label htmlFor="report-email" className={SHARE_LABEL}>
-              Your email (optional)
-            </label>
+            <span className="mb-1 flex items-center gap-1.5">
+              <label
+                htmlFor="report-email"
+                className="text-xs font-medium text-slate-700 dark:text-slate-200"
+              >
+                Your email (optional)
+              </label>
+              <FieldHint>
+                Used if we need to ask anything or to inform you about the report. Leave blank to
+                stay anonymous.
+              </FieldHint>
+            </span>
             <input
               id="report-email"
               type="email"
@@ -123,10 +133,6 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
               autoComplete="email"
               className={SHARE_FIELD}
             />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Used if we need to ask anything or to inform you about the report. Leave blank to stay
-              anonymous.
-            </p>
           </div>
           {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
           <div className="flex items-center gap-2">

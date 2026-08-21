@@ -10,6 +10,7 @@ import { CopyIcon } from '../icons/CopyIcon.tsx'
 import { ICON } from '../icons/icon.ts'
 import { OpenIcon } from '../icons/OpenIcon.tsx'
 import { popoverClass } from '../ui/popover.ts'
+import { FieldHint } from '../ui/FieldHint.tsx'
 import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
 
 /** Screen icon — the board as the table sees it. */
@@ -162,12 +163,17 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
 
           {onClaim ? (
             <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-              <label
-                htmlFor="share-link-name"
-                className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-200"
-              >
-                Name the link
-              </label>
+              <span className="mb-1 flex items-center gap-1.5">
+                <label
+                  htmlFor="share-link-name"
+                  className="text-xs font-medium text-slate-700 dark:text-slate-200"
+                >
+                  Name the link
+                </label>
+                <FieldHint>
+                  Letters, numbers and hyphens. It stays yours between sessions.
+                </FieldHint>
+              </span>
               <div className="flex items-center gap-2">
                 <input
                   id="share-link-name"
@@ -183,9 +189,6 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                   Save
                 </Button>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Letters, numbers and hyphens. It stays yours between sessions.
-              </p>
             </div>
           ) : (
             <p className="mt-3 border-t border-slate-200 pt-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">

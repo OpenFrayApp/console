@@ -65,9 +65,12 @@ describe('SettingsPanel — the player view', () => {
     expect(onSetPlayerView).toHaveBeenCalledWith({ ...DEFAULT_PLAYER_VIEW, rolls: 'hidden' })
   })
 
-  it('says what hiding them keeps', () => {
+  it('keeps the rolls description behind its ? until asked', () => {
     renderPanel()
     openTab('Player view')
+    // Nothing spelled out until the GM asks; the first hinted row is Creature rolls.
+    expect(screen.queryByText(/keeps whether it hit or saved/)).toBeNull()
+    fireEvent.mouseEnter(screen.getAllByRole('button', { name: 'What this does' })[0])
     expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
   })
 
