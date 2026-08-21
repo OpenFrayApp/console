@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/useAuth.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { AccountPanel } from './AccountPanel.tsx'
 import { popoverClass } from '../ui/popover.ts'
+import { Button } from '../ui/primitives.tsx'
 
 /** User-silhouette icon (the account menu button). */
 function UserIcon() {
@@ -118,12 +119,8 @@ export function AccountControl({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onSignIn}
-      className="tap-y whitespace-nowrap rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-    >
+    <Button variant="primary" onClick={onSignIn}>
       Sign in
-    </button>
+    </Button>
   )
 }

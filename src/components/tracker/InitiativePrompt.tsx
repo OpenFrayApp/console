@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import type { Combatant } from '../../schema/combatant.ts'
 import { isFoe, nameOf } from '../../combat/combatant.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { Button } from '../ui/primitives.tsx'
 
 /** A rostered PC — quick adds don't count (they arrive pre-rolled like monsters). */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
@@ -174,12 +175,9 @@ export function InitiativePrompt({
           {column(allies, 'Players and allies', 0)}
           {column(foes, 'Creatures', allies.length)}
         </div>
-        <button
-          type="submit"
-          className="mt-4 w-full rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-        >
+        <Button variant="primary" type="submit" className="mt-4 w-full">
           Start combat
-        </button>
+        </Button>
       </form>
     </div>
   )

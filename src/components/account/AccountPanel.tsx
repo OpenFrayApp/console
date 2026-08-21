@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/useAuth.ts'
 import { bylineError, BYLINE_MAX } from '../../lib/byline.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { LABEL } from '../ui/fieldStyles.ts'
+import { Button } from '../ui/primitives.tsx'
 
 const FIELD =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800'
@@ -127,13 +128,7 @@ export function AccountPanel({
               {user?.email}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            Done
-          </button>
+          <Button onClick={onClose}>Done</Button>
         </div>
 
         <div className="space-y-4">

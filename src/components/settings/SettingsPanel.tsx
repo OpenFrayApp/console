@@ -11,7 +11,7 @@ import {
 import { track, EVENTS } from '../../lib/analytics.ts'
 import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../../schema/combatant.ts'
-import { Badge, CUSTOM_TONE, TabButton } from '../ui/primitives.tsx'
+import { Badge, Button, CUSTOM_TONE, TabButton } from '../ui/primitives.tsx'
 import { HotkeyField } from './HotkeyField.tsx'
 import {
   COMMANDS,
@@ -145,13 +145,7 @@ export function SettingsPanel({
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
             Settings
           </h1>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            Done
-          </button>
+          <Button onClick={onClose}>Done</Button>
         </div>
 
         <div role="tablist" aria-label="Settings" className="mb-4 flex gap-1">
@@ -493,15 +487,14 @@ export function SettingsPanel({
                 </div>
               ))}
             </div>
-            <button
-              type="button"
+            <Button
+              className="mt-4"
               onClick={() => {
                 if (window.confirm('Put every shortcut back to its default?')) onSetHotkeys({})
               }}
-              className="mt-4 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Restore defaults
-            </button>
+            </Button>
           </section>
 
           <section

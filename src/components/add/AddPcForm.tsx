@@ -9,6 +9,7 @@ import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { FIELD, LABEL } from '../ui/fieldStyles.ts'
+import { Button } from '../ui/primitives.tsx'
 
 // Not credential fields — keep password-manager and browser-autofill popups off them so they don't cover the inputs.
 const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
@@ -105,14 +106,13 @@ export function AddPcForm({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
+      <Button
         onClick={() => setOpen((o) => !o)}
         title={keyHint ? `Add PC (${keyHint})` : undefined}
-        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
+        className={hideTrigger ? 'hidden' : undefined}
       >
         Add PC
-      </button>
+      </Button>
       {open && (
         <form
           onSubmit={submit}
@@ -211,12 +211,9 @@ export function AddPcForm({
               className={FIELD}
             />
           </div>
-          <button
-            type="submit"
-            className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-          >
+          <Button variant="primary" type="submit" className="w-full">
             Add
-          </button>
+          </Button>
         </form>
       )}
     </div>

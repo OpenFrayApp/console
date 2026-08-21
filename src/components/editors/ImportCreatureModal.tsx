@@ -6,6 +6,7 @@ import type { Creature } from '../../schema/creature.ts'
 import { parseImportedCreature } from '../../combat/importCreature.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { FormModal } from '../ui/FormModal.tsx'
+import { Button } from '../ui/primitives.tsx'
 
 /**
  * Paste an OpenFray Creature JSON (e.g. from the D&D Beyond importer) and save it
@@ -81,14 +82,9 @@ export function ImportCreatureModal({
       </div>
 
       <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!text.trim()}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <Button variant="primary" size="lg" onClick={submit} disabled={!text.trim()}>
           Import
-        </button>
+        </Button>
         <button
           type="button"
           onClick={onClose}

@@ -15,6 +15,7 @@ import {
 } from '../library/campaignLabels.ts'
 import { FIELD, LABEL } from '../ui/fieldStyles.ts'
 import { FormModal } from '../ui/FormModal.tsx'
+import { Button } from '../ui/primitives.tsx'
 
 /** A labelled dropdown over the given options, typed to the option value union. */
 function SelectField<T extends string>({
@@ -190,13 +191,9 @@ export function CampaignFormModal({
       </div>
 
       <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-        <button
-          type="submit"
-          disabled={!name.trim()}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <Button variant="primary" size="lg" type="submit" disabled={!name.trim()}>
           {editing ? 'Save changes' : 'Create campaign'}
-        </button>
+        </Button>
         <button
           type="button"
           onClick={onClose}

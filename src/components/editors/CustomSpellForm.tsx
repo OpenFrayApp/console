@@ -10,6 +10,7 @@ import { spellLevelLong } from '../../compendium/format.ts'
 import type { LibrarySort } from '../../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { FormModal } from '../ui/FormModal.tsx'
+import { Button } from '../ui/primitives.tsx'
 import { ABILITIES } from './customMonster.ts'
 import { DAMAGE_TYPES } from '../../schema/primitives.ts'
 import {
@@ -569,21 +570,10 @@ export function CustomSpellForm({
       </div>
 
       <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!d.name.trim()}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-        >
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="primary" onClick={submit} disabled={!d.name.trim()}>
           {editId ? 'Save' : 'Create'}
-        </button>
+        </Button>
       </div>
     </FormModal>
   )

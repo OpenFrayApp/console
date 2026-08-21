@@ -8,6 +8,7 @@ import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseNonNegativeInt as num } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { FIELD, FIELD_W } from '../ui/fieldStyles.ts'
+import { Button } from '../ui/primitives.tsx'
 
 /**
  * Quick add — a generic combatant (an NPC, or a creature dropped in mid-fight)
@@ -73,14 +74,13 @@ export function AddQuickForm({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
+      <Button
         onClick={() => setOpen((o) => !o)}
         title={keyHint ? `Quick add (${keyHint})` : undefined}
-        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
+        className={hideTrigger ? 'hidden' : undefined}
       >
         Quick add
-      </button>
+      </Button>
       {open && (
         <form onSubmit={submit} className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}>
           <div className="flex gap-2">
@@ -123,12 +123,9 @@ export function AddQuickForm({
               className={FIELD}
             />
           </div>
-          <button
-            type="submit"
-            className="w-full rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-          >
+          <Button variant="primary" type="submit" className="w-full">
             Add
-          </button>
+          </Button>
         </form>
       )}
     </div>

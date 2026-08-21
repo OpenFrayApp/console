@@ -5,6 +5,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { useAuth, type OAuthProvider } from '../../auth/useAuth.ts'
 import { CrossedSwordsIcon } from '../icons/CrossedSwordsIcon.tsx'
 import { track, EVENTS, type EventName } from '../../lib/analytics.ts'
+import { Button } from '../ui/primitives.tsx'
 
 /** Discord wordmark glyph. */
 function DiscordIcon() {
@@ -157,13 +158,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
               </a>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            Back to the console
-          </button>
+          <Button onClick={onClose}>Back to the console</Button>
         </div>
 
         <div className="mt-10 grid flex-1 items-start gap-10 lg:grid-cols-[1fr_24rem]">

@@ -8,6 +8,7 @@ import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { campaignAcronym } from '../library/campaignLabels.ts'
 import { popoverClass } from '../ui/popover.ts'
+import { Button } from '../ui/primitives.tsx'
 
 /**
  * The signed-in "Add PC" control: a popover to drop one of the user's saved roster
@@ -68,14 +69,13 @@ export function AddPcPicker({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
+      <Button
         onClick={() => setOpen((o) => !o)}
         title={keyHint ? `Add PC (${keyHint})` : undefined}
-        className={`${hideTrigger ? 'hidden ' : ''}tap-y whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
+        className={hideTrigger ? 'hidden' : undefined}
       >
         Add PC
-      </button>
+      </Button>
       {open && (
         <div className={`${popoverClass('roomy:w-64')} p-2`}>
           <input

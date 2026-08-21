@@ -29,6 +29,7 @@ import { useCampaignEdition } from '../../state/campaignRules.ts'
 import { LibraryPicker } from '../add/LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 import { FormModal } from '../ui/FormModal.tsx'
+import { Button, Chip } from '../ui/primitives.tsx'
 import { track as recordEvent, EVENTS } from '../../lib/analytics.ts'
 import { useEnterCommit } from '../../hooks/useEnterCommit.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
@@ -56,9 +57,6 @@ const CONDITIONS: ConditionName[] = [
 const EXHAUSTION_LEVELS = [0, 1, 2, 3, 4, 5, 6]
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-
-const CHIP =
-  'rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
 
 const ADD_LINK = 'text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400'
 
@@ -416,15 +414,9 @@ export function EffectModal({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openModal}
-        // Matches the controls it sits among, the 44px touch floor included: this trigger
-        // is the one button in that row that carries its own class list.
-        className="tap-y rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-      >
+      <Button size="sm" onClick={openModal}>
         Apply effect
-      </button>
+      </Button>
 
       {open && (
         <FormModal
@@ -619,20 +611,20 @@ export function EffectModal({
               <div className="flex flex-wrap gap-1.5">
                 {CONDITIONS.map((c) => {
                   const active = draft.conditions.includes(c)
-                  return (
+                  return active ? (
                     <button
                       key={c}
                       type="button"
-                      aria-pressed={active}
+                      aria-pressed
                       onClick={() => toggleCondition(c)}
-                      className={
-                        active
-                          ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
-                          : CHIP
-                      }
+                      className="rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white"
                     >
                       {c}
                     </button>
+                  ) : (
+                    <Chip key={c} aria-pressed={false} onClick={() => toggleCondition(c)}>
+                      {c}
+                    </Chip>
                   )
                 })}
               </div>
@@ -643,21 +635,26 @@ export function EffectModal({
               <div className="flex flex-wrap gap-1.5">
                 {EXHAUSTION_LEVELS.map((level) => {
                   const active = draft.exhaustion === level
-                  return (
+                  return active ? (
                     <button
                       key={level}
                       type="button"
-                      aria-pressed={active}
+                      aria-pressed
                       aria-label={level === 0 ? 'No Exhaustion' : `Exhaustion ${level}`}
                       onClick={() => set('exhaustion', level)}
-                      className={
-                        active
-                          ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
-                          : CHIP
-                      }
+                      className="rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white"
                     >
                       {level === 0 ? 'None' : level}
                     </button>
+                  ) : (
+                    <Chip
+                      key={level}
+                      aria-pressed={false}
+                      aria-label={level === 0 ? 'No Exhaustion' : `Exhaustion ${level}`}
+                      onClick={() => set('exhaustion', level)}
+                    >
+                      {level === 0 ? 'None' : level}
+                    </Chip>
                   )
                 })}
               </div>
@@ -794,13 +791,9 @@ export function EffectModal({
             >
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={apply}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-            >
+            <Button variant="primary" onClick={apply}>
               Apply
-            </button>
+            </Button>
           </div>
         </FormModal>
       )}

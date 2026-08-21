@@ -50,6 +50,7 @@ import { QuickRoll } from '../resolve/QuickRoll.tsx'
 import { titleCase } from '../../compendium/format.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { useSwipePanes } from '../../hooks/useSwipePanes.ts'
+import { Button } from '../ui/primitives.tsx'
 
 const COLUMN_HEADING =
   'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
@@ -682,13 +683,9 @@ export function EncounterConsole({
                 concentrateRequest={concentrateRequest}
               />
               {selected.isPC && selected.rosterId && onEditPc && (
-                <button
-                  type="button"
-                  onClick={() => onEditPc(selected)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
+                <Button className="w-full" onClick={() => onEditPc(selected)}>
                   Edit character
-                </button>
+                </Button>
               )}
               {/* Edit only what the library actually holds. A creature added from a shared
                 link carries a custom: id without being kept anywhere, and offering Edit for
@@ -697,22 +694,14 @@ export function EncounterConsole({
                 selected.creatureId.startsWith('custom:') &&
                 (savedCreatureIds.includes(selected.creatureId)
                   ? onEditCreature && (
-                      <button
-                        type="button"
-                        onClick={() => onEditCreature(selected)}
-                        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                      >
+                      <Button className="w-full" onClick={() => onEditCreature(selected)}>
                         Edit creature
-                      </button>
+                      </Button>
                     )
                   : onSaveCreature && (
-                      <button
-                        type="button"
-                        onClick={() => onSaveCreature(selected)}
-                        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                      >
+                      <Button className="w-full" onClick={() => onSaveCreature(selected)}>
                         Save creature
-                      </button>
+                      </Button>
                     ))}
             </div>
           </div>

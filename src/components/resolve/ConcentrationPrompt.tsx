@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { Button } from '../ui/primitives.tsx'
+
 const BTN = 'rounded border px-2 py-1 text-xs font-medium'
 
 /**
@@ -42,13 +44,9 @@ export function ConcentrationPrompt({
         Broken
       </button>
       {canRoll && onRoll && (
-        <button
-          type="button"
-          onClick={onRoll}
-          className={`${BTN} border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
-        >
+        <Button size="sm" onClick={onRoll}>
           Roll CON save
-        </button>
+        </Button>
       )}
     </div>
   )

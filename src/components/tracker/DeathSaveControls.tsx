@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { DeathSaves } from '../../schema/combatant.ts'
+import { Button } from '../ui/primitives.tsx'
 
 /** A row of three pips, the first `filled` of them in the given tone. */
 function Dots({ filled, tone }: { filled: number; tone: string }) {
@@ -67,13 +68,9 @@ export function DeathSaveControls({ onSave, onFail, onRoll }: DeathSaveControlsP
       >
         Fail
       </button>
-      <button
-        type="button"
-        onClick={onRoll}
-        className={`${BTN} border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800`}
-      >
+      <Button size="sm" onClick={onRoll}>
         Roll death save
-      </button>
+      </Button>
     </div>
   )
 }

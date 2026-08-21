@@ -131,13 +131,9 @@ export function SharedLinksPage({
               you take them down.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
+          <Button className="shrink-0" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
 
         <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">

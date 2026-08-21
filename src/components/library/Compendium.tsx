@@ -42,7 +42,7 @@ import { CustomSpellForm } from '../editors/CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from '../editors/customSpell.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { cx } from '../../lib/cx.ts'
-import { EntryBadges, TabButton } from '../ui/primitives.tsx'
+import { Button, EntryBadges, TabButton } from '../ui/primitives.tsx'
 import { useSwipePanes } from '../../hooks/useSwipePanes.ts'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters' | 'effects' | 'encounters'
@@ -831,13 +831,9 @@ export function Compendium({
                   ? 'Sign in to keep an encounter as it stands and pick it up in a later session.'
                   : "Sign in to create campaigns and set your table's house rules."}
             </p>
-            <button
-              type="button"
-              onClick={() => onGated?.()}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-            >
+            <Button variant="primary" size="lg" onClick={() => onGated?.()}>
               Sign in
-            </button>
+            </Button>
           </div>
         ) : selectedFight ? (
           <SavedFightCard
@@ -1000,13 +996,9 @@ export function Compendium({
             </p>
             {tab === 'creatures' && (
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={startCreate}
-                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-                >
+                <Button variant="primary" size="lg" onClick={startCreate}>
                   {createGated ? 'Sign in' : 'Create custom creature'}
-                </button>
+                </Button>
                 {!createGated && (
                   <button
                     type="button"
@@ -1019,31 +1011,19 @@ export function Compendium({
               </div>
             )}
             {tab === 'campaigns' && (
-              <button
-                type="button"
-                onClick={startNewCampaign}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
+              <Button variant="primary" size="lg" onClick={startNewCampaign}>
                 Create campaign
-              </button>
+              </Button>
             )}
             {tab === 'characters' && (
-              <button
-                type="button"
-                onClick={startNewPc}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
+              <Button variant="primary" size="lg" onClick={startNewPc}>
                 Create character
-              </button>
+              </Button>
             )}
             {tab === 'spells' && (
-              <button
-                type="button"
-                onClick={startCreateSpell}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
+              <Button variant="primary" size="lg" onClick={startCreateSpell}>
                 {createGated ? 'Sign in' : 'Create custom spell'}
-              </button>
+              </Button>
             )}
           </div>
         )}
