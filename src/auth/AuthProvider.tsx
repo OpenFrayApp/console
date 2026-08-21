@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { isContentLicense, type ContentLicense } from '../schema/license.ts'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import { AuthContext, type AuthResult, type OAuthProvider } from './useAuth.ts'
@@ -54,6 +55,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase?.auth.signOut()
   }
 
+  /**
+   * Write the name this account publishes under onto the user row (`user_metadata`), or
+   * clear it. Supabase returns the updated user, so the app sees the new name at once
+   * rather than waiting for the next session refresh.
+   *
+   * This is the same `display_name` Google and Discord filled in at sign-in, so saving here
+   * replaces what they called you with what you publish as — one name, in the place the
+   * database already keeps it.
+   */
+  const setDisplayName = async (name: string): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
+    const trimmed = name.trim()
+    const { data, error } = await supabase.auth.updateUser({
+      data: { display_name: trimmed || null },
+    })
+    if (error) return { error: error.message }
+    if (data.user) setUser(data.user)
+    return { error: null }
+  }
+
+  /**
+   * Remember what this account's shared encounters should start on. It lives beside the
+   * display name in `user_metadata` rather than in a table of its own: there is no profiles
+   * table to add a column to, and a preference the account already stores one of belongs
+   * where that one is.
+   */
+  const setShareLicense = async (license: ContentLicense): Promise<AuthResult> => {
+    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
+    const { data, error } = await supabase.auth.updateUser({
+      // Unstated is the absent state, so choosing it clears the default rather than
+      // recording a preference for saying nothing.
+      data: { share_license: license === 'unstated' ? null : license },
+    })
+    if (error) return { error: error.message }
+    if (data.user) setUser(data.user)
+    return { error: null }
+  }
+
   /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
@@ -70,11 +109,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        // Whatever the user row says — the provider's name until the Game Master changes it
+        // in their profile or types a different one when publishing. Three keys because
+        // three providers disagree: Supabase's own `display_name`, and the `full_name` /
+        // `name` that Google and Discord actually write. Reading only the first left the
+        // field empty for accounts whose name is under one of the others.
+        displayName:
+          ((user?.user_metadata?.display_name ??
+            user?.user_metadata?.full_name ??
+            user?.user_metadata?.name) as string | undefined) || null,
+        // Validated rather than trusted: it is metadata, and a value the app doesn't know
+        // is no answer at all. Unknown reads as "never set", which seeds nothing.
+        shareLicense: isContentLicense(user?.user_metadata?.share_license)
+          ? user.user_metadata.share_license
+          : null,
         loading,
         configured: Boolean(supabase),
         signInWithProvider,
         signOut,
         deleteAccount,
+        setDisplayName,
+        setShareLicense,
       }}
     >
       {children}

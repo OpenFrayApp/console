@@ -1,0 +1,189 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
+import { describe, expect, it } from 'vitest'
+import { BYLINE_MAX, bylineError, bylineKey, bylineShapeError } from '../../src/lib/byline.ts'
+
+/**
+ * The byline is the one string a stranger writes that renders on a public page under our own
+ * name, so both halves of this file matter: what it refuses, and what it must never refuse.
+ * The second half is the one that protects real people — a guard that quietly grows into
+ * banning other people's names, or their writing systems, is worse than no guard.
+ */
+
+const ok = (byline: string) => expect(bylineError(byline), byline).toBeNull()
+const refused = (byline: string) => expect(bylineError(byline), byline).toBeTruthy()
+
+describe('bylineKey', () => {
+  it('collapses the spellings of one name onto one key', () => {
+    for (const spelling of ['D&D', 'D and D', 'd.&.d', 'D & D', 'Ｄ＆Ｄ']) {
+      expect(bylineKey(spelling), spelling).toBe('dandd')
+    }
+    for (const spelling of ['Nico', 'N i c o', 'n_i_c_o', 'NICO', 'Nicó']) {
+      expect(bylineKey(spelling), spelling).toBe('nico')
+    }
+  })
+
+  it('folds the letters that only look Latin', () => {
+    // Cyrillic о and Greek iota, spelling a name that reads as Latin on screen.
+    expect(bylineKey('Nicо')).toBe('nico')
+    expect(bylineKey('NΙCO')).toBe('nico')
+  })
+
+  it('leaves a name in its own script keyless rather than mangling it into a match', () => {
+    expect(bylineKey('Ника')).toBe('huka')
+    expect(bylineKey('Νίκος')).toBe('vikos')
+    expect(bylineKey('山田太郎')).toBe('')
+  })
+})
+
+describe('bylineShapeError', () => {
+  // What a reader's console applies to somebody else's published encounter: whether the
+  // string renders safely, never whether the publisher was entitled to the name.
+  it('judges the string, never the claim', () => {
+    expect(bylineShapeError('OpenFray')).toBeNull()
+    expect(bylineShapeError('Nico Mustone')).toBeNull()
+    expect(bylineShapeError('<script>alert(1)</script>')).toBeTruthy()
+    expect(bylineShapeError('Casino Nights')).toBeTruthy()
+    expect(bylineShapeError('')).toBeNull()
+  })
+})
+
+describe('bylineError', () => {
+  it('treats an empty byline as no byline, not a mistake', () => {
+    ok('')
+    ok('   ')
+  })
+
+  it('refuses anything the character allowlist doesn’t cover', () => {
+    // Every one of these dies on a character that simply isn't allowed, which is why this
+    // rule doesn't have to anticipate the attack.
+    for (const attack of [
+      '<script>alert(1)</script>',
+      '"><img src=x onerror=alert(1)>',
+      'javascript:alert(1)',
+      "'; drop table shares;--",
+      "{{constructor.constructor('alert(1)')()}}",
+      '${process.env}',
+      'casino.com',
+      'www.x.io',
+      'a@b.com',
+      '../../etc/passwd',
+      'Bob\u0000',
+      'Bob‮qoB',
+      'Bo​b',
+    ]) {
+      refused(attack)
+    }
+  })
+
+  it('refuses a byline that is only separators, and one with no room to read it', () => {
+    refused('___')
+    refused('/ /')
+    refused('_/_')
+    refused('x'.repeat(BYLINE_MAX + 1))
+    ok('x'.repeat(BYLINE_MAX))
+  })
+
+  it('refuses a stack of combining marks', () => {
+    refused(`Bo${'́'.repeat(8)}b`)
+    // One accent is a name, not an attack.
+    ok('Bób')
+  })
+
+  it('refuses the reserved names, however they are spelled', () => {
+    for (const name of [
+      'OpenFray',
+      'open fray',
+      'official',
+      'Wizards',
+      'wizards official',
+      'WoTC',
+      'DnD',
+      'D&D',
+      'Nico',
+      'N i c o',
+      'Nicola',
+      'Nicо',
+    ]) {
+      refused(name)
+    }
+  })
+
+  it('refuses a reserved name wearing a suffix, where the name is distinctive', () => {
+    // Exact matching alone would wave these through; nothing innocent contains them.
+    for (const name of [
+      'Nico Mustone GM',
+      'SirDarcanos Presents',
+      'OpenFray Encounters',
+      'Wizards of the Coast',
+      'D&D Beyond builds',
+      'Dungeons and Dragons',
+    ]) {
+      refused(name)
+    }
+  })
+
+  it('refuses the words that would embarrass the page, as whole words', () => {
+    refused('Casino Nights')
+    refused('c a s i n o')
+    refused('Poker Face GM')
+  })
+
+  it('lets a granted publisher use the names that are theirs', () => {
+    // The reserved list exists so nobody publishes *as* OpenFray or as the maintainer. The
+    // people those names belong to are the exception, and the database says who they are —
+    // this file never does.
+    for (const name of ['OpenFray', 'Nico', 'Nicola Mustone', 'SirDarcanos', 'OpenFray Team']) {
+      expect(bylineError(name), name).toBeTruthy()
+      expect(bylineError(name, { allowReserved: true }), name).toBeNull()
+    }
+    // Not `D&D` though, granted or not: the ampersand isn't an allowed character, and that
+    // mark was never ours to hand out anyway.
+    expect(bylineError('D&D', { allowReserved: true })).toBeTruthy()
+  })
+
+  it('grants a name, never a free hand', () => {
+    // The capability lifts the reserved list and nothing else: shape and the words that
+    // would embarrass the page still hold.
+    for (const bad of [
+      '<script>alert(1)</script>',
+      'casino.com',
+      'x'.repeat(31),
+      'Casino Nights',
+    ]) {
+      expect(bylineError(bad, { allowReserved: true }), bad).toBeTruthy()
+    }
+  })
+
+  it('lets the ordinary names through — the half that protects real people', () => {
+    for (const name of [
+      // A blogger naming the game they play is nominative use, not impersonation.
+      'DnD with Bob',
+      'Bobs DnD Corner',
+      'The Wizards',
+      'Wizards of Waverly',
+      // Real people who share a few letters with a reserved name.
+      'Nicola Verdi',
+      'Dominico',
+      'Nicolas',
+      'Nico Verdi',
+      // This genre's own vocabulary, which a substring filter would have eaten.
+      'Cockatrice Press',
+      'Succubus Studios',
+      'Hell Hound Games',
+      'Assassin Guild',
+      // The shapes a byline actually takes.
+      'she/her',
+      'GM_Bob',
+      'Bob 3',
+      'José',
+      'Ника',
+      'Νίκος',
+      '山田太郎',
+      'يوسف',
+    ]) {
+      ok(name)
+    }
+  })
+})

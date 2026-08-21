@@ -13,8 +13,13 @@ import { rollDie } from 'opendice'
 export const PLAYER_CODE_MIN = 3
 export const PLAYER_CODE_MAX = 32
 
-/** No 0/o, 1/l/i — a random code gets read off one screen and typed into another. */
-const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
+/**
+ * No 0/o, 1/l/i — a random code gets read off one screen and typed into another. Shared
+ * with the share codes in `shareCode.ts`, so the app has one alphabet rather than two that
+ * drift.
+ */
+export const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'
+const ALPHABET = CODE_ALPHABET
 const RANDOM_LENGTH = 10
 
 /** Names that would make a confusing link, so nobody claims them. */
@@ -60,19 +65,35 @@ export function playerCodeError(raw: string): string | null {
   return null
 }
 
-/** The full link to hand to the table, built from wherever the console is served. */
+/**
+ * The full link to hand to the table: `openfray.app/p/<code>`.
+ *
+ * Rooted at the site rather than under `/console/`, because this is a link read aloud at a
+ * table and pasted into a chat, by people who are not opening the console. Cloudflare serves
+ * the app for `/p/*` (see the parent repo's `scripts/assemble-site.mjs`).
+ */
 export function playerViewUrl(code: string): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}play/${code}`
+  return `${window.location.origin}/p/${code}`
 }
 
 /**
- * The code in the current address, or null when this isn't a player-view link. The
- * console is served under a base path with a catch-all fallback, so the path is all
- * there is to read — there is no router.
+ * The code in the current address, or null when this isn't a player-view link. The console
+ * is served under a catch-all fallback, so the path is all there is to read — there is no
+ * router.
+ *
+ * Three forms, and the third is why there is no redirect rule anywhere. `/p/<code>` is what
+ * links carry now; `${base}p/<code>` is the same thing under the app's own base path, which
+ * the existing `/console/*` fallback already serves and which makes this testable on the dev
+ * server; and `${base}play/<code>` is what links carried before the move. Anonymous codes
+ * live in `localStorage` and never reach the database, so a signed-out Game Master still
+ * holds the same code they pasted somewhere durable — this line is what keeps that link
+ * alive, and it can be deleted in a release or two.
  */
 export function playerCodeFromPath(pathname: string, base: string): string | null {
-  const prefix = `${base}play/`
-  if (!pathname.startsWith(prefix)) return null
-  const code = normalizePlayerCode(pathname.slice(prefix.length).replace(/\/+$/, ''))
-  return code.length > 0 ? code : null
+  for (const prefix of ['/p/', `${base}p/`, `${base}play/`]) {
+    if (!pathname.startsWith(prefix)) continue
+    const code = normalizePlayerCode(pathname.slice(prefix.length).replace(/\/+$/, ''))
+    if (code.length > 0) return code
+  }
+  return null
 }

@@ -13,11 +13,15 @@ afterEach(cleanup)
 function renderControl(overrides: Partial<AuthState> = {}) {
   const value: AuthState = {
     user: null,
+    displayName: null,
+    shareLicense: null,
     loading: false,
     configured: true,
     signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),
     deleteAccount: vi.fn(async () => ({ error: null })),
+    setDisplayName: vi.fn(async () => ({ error: null })),
+    setShareLicense: vi.fn(async () => ({ error: null })),
     ...overrides,
   }
   const onSignIn = vi.fn()

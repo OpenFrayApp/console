@@ -279,7 +279,7 @@ describe('Stat-block quick rolls', () => {
   }
 
   /** Render the console around one selected combatant, with the roll sinks mocked. */
-  const renderConsole = (selectedId: string) => {
+  const renderConsole = (selectedId: string, extra: Record<string, unknown> = {}) => {
     const onRoll = vi.fn()
     render(
       <EncounterConsole
@@ -305,10 +305,52 @@ describe('Stat-block quick rolls', () => {
         onOpenLog={vi.fn()}
         pane={0}
         onPaneChange={vi.fn()}
+        {...extra}
       />,
     )
     return onRoll
   }
+
+  it('offers Save for a creature the library hasn’t got, and Edit for one it has', () => {
+    // A creature added from a shared link carries a custom: id without being kept anywhere,
+    // so Edit looked it up in the library, found nothing, and did nothing at all.
+    const onEditCreature = vi.fn()
+    const onSaveCreature = vi.fn()
+    const shared: MonsterCombatant = {
+      ...monster,
+      creatureId: 'custom:from-a-link',
+      creature: { ...ogre, id: 'custom:from-a-link', source: 'custom' },
+    }
+    const board = {
+      encounterId: 'local',
+      ownerId: null,
+      round: 1,
+      activeIndex: 0,
+      combatants: [thalia, shared],
+      log: [],
+    }
+    renderConsole('m', {
+      encounter: board,
+      onEditCreature,
+      onSaveCreature,
+      savedCreatureIds: [],
+    })
+    expect(screen.getByRole('button', { name: 'Save creature' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Edit creature' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save creature' }))
+    expect(onSaveCreature).toHaveBeenCalled()
+    cleanup()
+
+    renderConsole('m', {
+      encounter: board,
+      onEditCreature,
+      onSaveCreature,
+      savedCreatureIds: ['custom:from-a-link'],
+    })
+    expect(screen.getByRole('button', { name: 'Edit creature' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Save creature' })).toBeNull()
+  })
 
   it("keeps a foe's ability save out of the shared player view", () => {
     const onRoll = renderConsole('m')

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isRollable, type Action } from '../schema/action.ts'
 import type { Ability } from '../schema/primitives.ts'
 import type { EffectPreset } from '../schema/preset.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../schema/combatant.ts'
-import type { SpellLevel, SpellRef } from '../schema/creature.ts'
+import type { Creature, SpellLevel, SpellRef } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import { moveById, spendEffects, type EncounterAction } from '../state/encounter.ts'
@@ -77,6 +77,7 @@ function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
  * (or jumped to from the bottom bar, which `pane`/`onPaneChange` keep in step).
  */
 export function EncounterConsole({
+  boardActions,
   encounter,
   dispatch,
   onRoll,
@@ -94,6 +95,9 @@ export function EncounterConsole({
   onEditPc,
   onEditPcDmNotes,
   onEditCreature,
+  onSaveCreature,
+  savedCreatureIds = [],
+  onShareCreature,
   presets,
   enabledLibraries,
   onSavePreset,
@@ -104,6 +108,12 @@ export function EncounterConsole({
   concentrateRequest,
   keyHints,
 }: {
+  /**
+   * What the board as a whole can do — saving it, handing it out. Rendered in the tracker's
+   * bottom corner, and passed in rather than built here so this component stays about
+   * running a fight and knows nothing about accounts or links.
+   */
+  boardActions?: ReactNode
   encounter: Encounter
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
@@ -116,6 +126,15 @@ export function EncounterConsole({
   onEditPcDmNotes?: (pc: PlayerCharacter, text: string) => void
   /** Open the editor for a custom creature (saves to the library; the fight is untouched). */
   onEditCreature?: (creature: MonsterCombatant) => void
+  /**
+   * Keep a creature that arrived from somewhere else. A shared link puts a stat block on
+   * the board without putting it in the library, and until it is there it cannot be edited.
+   */
+  onSaveCreature?: (creature: MonsterCombatant) => void
+  /** The library's own ids, which is what tells "mine to edit" from "here but not kept". */
+  savedCreatureIds?: readonly string[]
+  /** Publish the selected creature to a link. Any creature, not only homebrew. */
+  onShareCreature?: (creature: Creature) => void
   /** Keep the roll log in sync when a combatant is renamed. */
   onRename: (oldName: string, newName: string) => void
   selectedId: string | null
@@ -491,6 +510,7 @@ export function EncounterConsole({
             </>
           )}
         </div>
+        {boardActions && <div className="mt-2 flex items-center gap-1">{boardActions}</div>}
       </section>
 
       <section
@@ -609,6 +629,14 @@ export function EncounterConsole({
                       : undefined
                   }
                   inLair={selected.inLair}
+                  // Any creature, not only homebrew: what travels is decided by whether the
+                  // reader can resolve it, and a library creature goes as a reference. The
+                  // snapshot on the board is what gets published, which is the one on screen.
+                  onShare={
+                    !selected.isPC && onShareCreature
+                      ? () => onShareCreature(selected.creature)
+                      : undefined
+                  }
                 />
               </SpellLinkContext.Provider>
             )}
@@ -670,15 +698,30 @@ export function EncounterConsole({
                   Edit character
                 </button>
               )}
-              {!selected.isPC && selected.creatureId.startsWith('custom:') && onEditCreature && (
-                <button
-                  type="button"
-                  onClick={() => onEditCreature(selected)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  Edit creature
-                </button>
-              )}
+              {/* Edit only what the library actually holds. A creature added from a shared
+                link carries a custom: id without being kept anywhere, and offering Edit for
+                it gave a button that looked up nothing and did nothing. */}
+              {!selected.isPC &&
+                selected.creatureId.startsWith('custom:') &&
+                (savedCreatureIds.includes(selected.creatureId)
+                  ? onEditCreature && (
+                      <button
+                        type="button"
+                        onClick={() => onEditCreature(selected)}
+                        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Edit creature
+                      </button>
+                    )
+                  : onSaveCreature && (
+                      <button
+                        type="button"
+                        onClick={() => onSaveCreature(selected)}
+                        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Save creature
+                      </button>
+                    ))}
             </div>
           </div>
         )}

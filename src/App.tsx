@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import type { ContentLicense } from './schema/license.ts'
 import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
@@ -35,10 +36,36 @@ import { KeyboardHelp } from './components/KeyboardHelp.tsx'
 import { onSharedBoard } from './combat/playerView.ts'
 import {
   claimPlayerCode,
+  deleteSavedFight,
+  listSavedFights,
   loadCloudEncounter,
+  loadSavedFight,
+  renameSavedFight,
   saveCloudEncounter,
+  saveFight,
   type ClaimResult,
+  type SavedFights,
+  type WriteResult,
 } from './state/cloudEncounter.ts'
+import {
+  templateEntries,
+  restrictedCreatures,
+  templateFromBoard,
+  withoutRestricted,
+  templateToCombatants,
+} from './combat/encounterTemplate.ts'
+import { creatureTemplate } from './combat/creatureTemplate.ts'
+import {
+  listMyShares,
+  mayUseReservedByline,
+  publishShare,
+  unpublish,
+  type MyShares,
+  type PublishResult,
+} from './state/shares.ts'
+import type { EncounterTemplate } from './schema/encounterTemplate.ts'
+import { loadSrdCreatures } from './compendium/srd.ts'
+import { SaveFightButton, ShareEncounterButton } from './components/EncounterActions.tsx'
 import {
   deleteCustomCreature,
   loadCustomCreatures,
@@ -90,6 +117,7 @@ import { AddPcForm } from './components/AddPcForm.tsx'
 import { AddPcPicker } from './components/AddPcPicker.tsx'
 import { PcFormModal } from './components/PcFormModal.tsx'
 import { CustomMonsterForm } from './components/CustomMonsterForm.tsx'
+import { ShareCreatureDialog } from './components/ShareCreatureDialog.tsx'
 import { creatureToDraft, emptyDraft, type MonsterDraft } from './components/customMonster.ts'
 import { AddQuickForm } from './components/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/CastSpellPanel.tsx'
@@ -99,6 +127,7 @@ import { RestControls } from './components/RestControls.tsx'
 import { QuickRoll } from './components/QuickRoll.tsx'
 import { CampaignPicker } from './components/CampaignPicker.tsx'
 import { AccountControl } from './components/AccountControl.tsx'
+import { SharedLinksPage } from './components/SharedLinksPage.tsx'
 import { CombatTimers } from './components/CombatTimers.tsx'
 import { CombatDifficulty } from './components/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
@@ -175,8 +204,8 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
         type="button"
         onClick={() => onChange('encounter')}
         aria-current={view === 'encounter' ? 'page' : undefined}
-        aria-label="Show the fight"
-        title="Show the fight"
+        aria-label="Show the encounter"
+        title="Show the encounter"
         className={cell(view === 'encounter')}
       >
         <SwordIcon />
@@ -199,7 +228,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
 const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex)
 
 /** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
-function App() {
+function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [restored] = useState(loadSession)
   // Theme is shared with the marketing site (and the player view) via the
   // `openfray-theme` key; the restored session is the fallback, then dark.
@@ -299,17 +328,36 @@ function App() {
   // somewhere to record it — and dropped if the Game Master backs out of Begin.
   const preRolled = useRef<Record<string, NewLogEntry>>({})
 
-  const { user, loading: authLoading } = useAuth()
+  const { user, displayName, shareLicense, setDisplayName, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const cloudId = useRef<string | null>(null)
   const cloudHydrated = useRef(false)
   const cloudInserting = useRef(false)
   const [authOpen, setAuthOpen] = useState(false)
+  /**
+   * Whether the board is the one this Game Master should be looking at: for a signed-in user
+   * that means the cloud copy has landed, for an anonymous one it is true as soon as auth
+   * settles. A cast arriving from a shared link waits on this — adding into a board that is
+   * about to be replaced by the cloud load would lose it, and racing the debounced autosave
+   * would persist half a board.
+   */
+  const [boardReady, setBoardReady] = useState(false)
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
   const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [rosterPcs, setRosterPcs] = useState<RosterPc[]>([])
+  // The fights this Game Master has saved to come back to. Held here rather than in the menu
+  // because the compendium's Encounters tab reads the same list, and two loaders would drift
+  // apart the moment one of them saved something.
+  const [savedFights, setSavedFights] = useState<SavedFights>({ status: 'ok', fights: [] })
+  // The links this Game Master has published, and the byline they publish under — the
+  // byline is device-local like the theme, never read from the account.
+  const [myShares, setMyShares] = useState<MyShares>({ status: 'ok', shares: [] })
+  const [shareByline, setShareByline] = useState(() => loadSettings().shareByline ?? '')
+  // Whether this account may publish under one of the reserved names. The answer comes from
+  // the database — a granted capability — so nothing here has to know whose name it is.
+  const [bylineGranted, setBylineGranted] = useState(false)
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
     () => restored?.activeCampaignId ?? null,
   )
@@ -342,6 +390,9 @@ function App() {
       setOwnPresets([])
       setCampaigns([])
       setRosterPcs([])
+      setSavedFights({ status: 'ok', fights: [] })
+      setMyShares({ status: 'ok', shares: [] })
+      setBylineGranted(false)
       setActiveCampaignId(null)
       return
     }
@@ -361,6 +412,15 @@ function App() {
     loadRosterPcs().then((list) => {
       if (active) setRosterPcs(list)
     })
+    listSavedFights().then((res) => {
+      if (active) setSavedFights(res)
+    })
+    listMyShares().then((res) => {
+      if (active) setMyShares(res)
+    })
+    mayUseReservedByline().then((granted) => {
+      if (active) setBylineGranted(granted)
+    })
     return () => {
       active = false
     }
@@ -373,6 +433,9 @@ function App() {
     cloudInserting.current = false
     if (!userId) {
       cloudId.current = null
+      // Nothing to wait for: an anonymous board is whatever sessionStorage restored, and
+      // that happened before the first render.
+      setBoardReady(true)
       return
     }
     let active = true
@@ -390,6 +453,7 @@ function App() {
       // no row" — treating it as one is what orphaned encounters into duplicates, and
       // the fight is safe in sessionStorage meanwhile.
       cloudHydrated.current = res.status !== 'failed'
+      setBoardReady(true)
     })
     return () => {
       active = false
@@ -616,6 +680,184 @@ function App() {
     setView('compendium')
   }
 
+  // Saved encounters. The list is re-read rather than patched in memory: the row's
+  // `updated_at` is what orders it, and the database is the only thing that knows it.
+  const refreshSavedFights = () => {
+    if (!userId) return
+    void listSavedFights().then(setSavedFights)
+  }
+
+  /** Save the board as it stands, under whichever campaign is active. */
+  const handleSaveFight = async (name: string): Promise<WriteResult> => {
+    const result = await saveFight(name, encounter, activeCampaignId)
+    if (result === 'ok') {
+      track(EVENTS.encounterSaved)
+      refreshSavedFights()
+    }
+    return result
+  }
+
+  /**
+   * Put a saved fight back on the board, whole. The autosave then carries it into the live
+   * row, so the restored board *is* the session from here on — which is the point, and also
+   * why the menu confirms before calling this.
+   */
+  const handleRestoreFight = async (id: string): Promise<boolean> => {
+    const saved = await loadSavedFight(id)
+    if (!saved) return false
+    dispatch({ type: 'load', encounter: saved })
+    setSelectedId(null)
+    // The campaign travels with it, so a fight comes back under the house rules it was
+    // fought under rather than whichever campaign happens to be active tonight.
+    const summary =
+      savedFights.status === 'ok' ? savedFights.fights.find((f) => f.id === id) : undefined
+    if (summary?.campaignId && campaigns.some((c) => c.id === summary.campaignId)) {
+      setActiveCampaignId(summary.campaignId)
+    }
+    setView('encounter')
+    setMobilePane(0)
+    track(EVENTS.encounterRestored)
+    return true
+  }
+
+  /**
+   * Add just the cast of a saved fight to the board in hand — the same ambush, fresh, against
+   * tonight's party. Hit points roll again under the campaign's method and nothing of the old
+   * fight comes with them, so this is the reusable half of a save.
+   */
+  const handleAddCast = async (
+    id: string,
+  ): Promise<{ added: number; missing: string[] } | null> => {
+    const saved = await loadSavedFight(id)
+    if (!saved) return null
+    const library = await loadSrdCreatures()
+    const { combatants, missing } = templateToCombatants(
+      { v: 1, name: '', entries: templateEntries(saved.combatants) },
+      {
+        creatures: [...library, ...customCreatures],
+        hpMethod: activeRules.hp,
+        existing: encounter.combatants,
+      },
+    )
+    for (const c of combatants) addCombatant(c)
+    if (combatants.length) {
+      track(EVENTS.encounterCastAdded)
+      setView('encounter')
+      setMobilePane(0)
+    }
+    return { added: combatants.length, missing }
+  }
+
+  /** Re-read the published links; opening the panel is the cheapest moment to ask. */
+  const refreshShares = () => {
+    if (!userId) return
+    void listMyShares().then(setMyShares)
+  }
+
+  /**
+   * Publish the board's cast under a link. The name, note and byline come from the form; the
+   * cast comes from `templateFromBoard`, which is what leaves the party and the live state
+   * behind. The byline is remembered device-locally so a series is typed once — never read
+   * from the account, because publishing a name is a choice rather than a consequence of
+   * having signed in.
+   */
+  /**
+   * What the board holds that says it may not be passed on, worked out before the share
+   * dialog opens rather than after a link exists. Only creatures carried whole can be
+   * asked; a library creature travels as a reference and is never redistributed here.
+   */
+  const restricted = useMemo(() => {
+    const built = templateFromBoard(encounter.combatants, '')
+    const names = restrictedCreatures(built)
+    return { names, someRemain: withoutRestricted(built).entries.length > 0 }
+  }, [encounter.combatants])
+
+  /**
+   * Publish one creature. The template decides how it travels — a library creature as a
+   * reference, homebrew whole — so nothing here reasons about licenses: the creature
+   * carries its own, stated in the editor where the creature is.
+   */
+  /** Whether the shared-links screen has the body. Transient: an account screen, not a view. */
+  const [showShares, setShowShares] = useState(false)
+
+  /** The creature whose share dialog is open, asked for by the board or the compendium. */
+  const [sharingCreature, setSharingCreature] = useState<Creature | null>(null)
+
+  const handleShareCreature = async (
+    creature: Creature,
+    draft: { note: string; by: string },
+  ): Promise<PublishResult> => {
+    const result = await publishShare('creature', creatureTemplate(creature, draft))
+    if (result.status === 'ok') {
+      track(EVENTS.creatureShared)
+      setShareByline(draft.by)
+      saveSettings({ shareByline: draft.by || null })
+      refreshShares()
+    }
+    return result
+  }
+
+  const handleShareEncounter = async (draft: {
+    name: string
+    note: string
+    by: string
+    license: ContentLicense
+  }): Promise<PublishResult> => {
+    // Always without them. A creature marked all rights reserved is not ours to put on a
+    // public URL, and an encounter is no different from sharing the stat block alone.
+    const template: EncounterTemplate = {
+      ...withoutRestricted(templateFromBoard(encounter.combatants, draft.name)),
+      ...(draft.note ? { note: draft.note } : {}),
+      ...(draft.by ? { by: draft.by } : {}),
+      // Unstated is the absent state, so it writes no field: a published template records
+      // that somebody chose a license, never that they declined to.
+      ...(draft.license !== 'unstated' ? { license: draft.license } : {}),
+    }
+    const result = await publishShare('encounter', template)
+    if (result.status === 'ok') {
+      track(EVENTS.encounterShared)
+      // Remembered where it belongs: on the account for a signed-in Game Master, so it
+      // follows them to the next device, and device-locally for an anonymous one, who has
+      // nowhere else to keep it. Publishing under a different name changes the default —
+      // the profile is where it gets corrected.
+      setShareByline(draft.by)
+      saveSettings({ shareByline: draft.by || null })
+      if (user && draft.by !== (displayName ?? '')) void setDisplayName(draft.by)
+      refreshShares()
+    }
+    return result
+  }
+
+  /** Take a published link down, dropping it from the list at once. */
+  const handleUnpublish = (code: string) => {
+    setMyShares((prev) =>
+      prev.status === 'ok'
+        ? { status: 'ok', shares: prev.shares.filter((s) => s.code !== code) }
+        : prev,
+    )
+    void unpublish(code)
+  }
+
+  /** Rename a saved fight, showing the new name at once. */
+  const handleRenameFight = (id: string, name: string) => {
+    setSavedFights((prev) =>
+      prev.status === 'ok'
+        ? { status: 'ok', fights: prev.fights.map((f) => (f.id === id ? { ...f, name } : f)) }
+        : prev,
+    )
+    void renameSavedFight(id, name)
+  }
+
+  /** Delete a saved fight, dropping it from the list at once. */
+  const handleDeleteFight = (id: string) => {
+    setSavedFights((prev) =>
+      prev.status === 'ok'
+        ? { status: 'ok', fights: prev.fights.filter((f) => f.id !== id) }
+        : prev,
+    )
+    void deleteSavedFight(id)
+  }
+
   // Edit a roster-backed PC from the encounter: open the editor seeded from its saved
   // character (a no-op if the saved character is gone, e.g. deleted from the roster).
   const handleEditEncounterPc = (c: PlayerCharacter) => {
@@ -643,6 +885,22 @@ function App() {
     const creature = customCreatures.find((cr) => cr.id === c.creatureId)
     if (creature)
       setEncounterCreatureEdit({ draft: creatureToDraft(creature), editId: creature.id })
+  }
+
+  /**
+   * Keep a creature that arrived from a shared link.
+   *
+   * Saved under the id the board already uses, so the combatant on screen and the library
+   * entry are the same creature and the control becomes Edit from here on.
+   *
+   * `source` becomes Homebrew rather than the `custom` that renders as "Custom (you)":
+   * somebody else wrote this, and a copy landing in a library does not make it the reader's
+   * work. What it says about reuse is carried untouched — that was its author's to state,
+   * not this reader's to restate.
+   */
+  const handleSaveEncounterCreature = (c: MonsterCombatant) => {
+    if (customCreatures.some((cr) => cr.id === c.creatureId)) return
+    handleCreateCreature({ ...c.creature, id: c.creatureId, source: 'Homebrew' })
   }
 
   // The view toggle opens the compendium on its default (creatures) tab; only the
@@ -762,6 +1020,34 @@ function App() {
     dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
     setSelectedId(combatant.combatantId)
   }
+
+  /**
+   * A cast handed over from a shared link, added once — and only once the board is the one
+   * it should be added to.
+   *
+   * The wait is the whole point. A signed-in Game Master's live fight arrives from the cloud
+   * a moment after this screen mounts; adding before it lands would either be overwritten by
+   * that load or race the debounced autosave into saving a half-built board. The ref makes
+   * it a one-way door: the cast goes in on the first ready render and never again, whatever
+   * re-renders follow.
+   */
+  const pendingCast = useRef(stagedCast)
+  useEffect(() => {
+    if (!boardReady || !pendingCast.current) return
+    const template = pendingCast.current
+    pendingCast.current = undefined
+    void loadSrdCreatures().then((library) => {
+      const { combatants } = templateToCombatants(template, {
+        creatures: [...library, ...customCreatures],
+        hpMethod: activeRules.hp,
+        existing: encounter.combatants,
+      })
+      for (const c of combatants) addCombatant(c)
+      track(EVENTS.encounterLinkAdded)
+    })
+    // Deliberately keyed on readiness alone: the cast is consumed the first time through.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardReady])
 
   // One-round skip effect for the 2014 surprise rule (cleared on the round wrap).
   const surprisedEffect = (): Effect => ({
@@ -1266,7 +1552,14 @@ function App() {
               <div className="hidden split:block wide:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
-              <AccountControl onSignIn={() => setAuthOpen(true)} />
+              <AccountControl
+                onSignIn={() => setAuthOpen(true)}
+                allowReserved={bylineGranted}
+                onOpenShares={() => {
+                  refreshShares()
+                  setShowShares(true)
+                }}
+              />
               <SharePanel
                 code={playerCode}
                 sharing={sharing}
@@ -1312,6 +1605,7 @@ function App() {
             {view === 'compendium' ? (
               <div className="h-full w-full overflow-hidden px-4 py-3 md:px-6 md:py-6">
                 <Compendium
+                  onShareCreature={setSharingCreature}
                   customCreatures={customCreatures}
                   onCreateCreature={handleCreateCreature}
                   onUpdateCreature={handleUpdateCreature}
@@ -1329,6 +1623,12 @@ function App() {
                   onUpdatePc={handleUpdatePc}
                   onDeletePc={handleDeletePc}
                   onAddPcToEncounter={handleAddPcToEncounter}
+                  savedFights={savedFights}
+                  onLoadFight={loadSavedFight}
+                  onRestoreFight={handleRestoreFight}
+                  onAddCast={handleAddCast}
+                  onRenameFight={handleRenameFight}
+                  onDeleteFight={handleDeleteFight}
                   presets={presets}
                   onRenamePreset={handleUpdatePreset}
                   onDeletePreset={handleDeletePreset}
@@ -1342,6 +1642,27 @@ function App() {
               </div>
             ) : (
               <EncounterConsole
+                boardActions={
+                  <>
+                    <SaveFightButton
+                      canSave={encounter.combatants.length > 0}
+                      signedIn={!!user}
+                      onSave={handleSaveFight}
+                      onSignIn={() => setAuthOpen(true)}
+                    />
+                    <ShareEncounterButton
+                      canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
+                      signedIn={!!user}
+                      defaultByline={displayName ?? shareByline}
+                      defaultLicense={shareLicense ?? 'unstated'}
+                      restricted={restricted.names}
+                      canDropRestricted={restricted.someRemain}
+                      allowReserved={bylineGranted}
+                      onShare={handleShareEncounter}
+                      onSignIn={() => setAuthOpen(true)}
+                    />
+                  </>
+                }
                 encounter={encounter}
                 dispatch={dispatch}
                 onRoll={pushRoll}
@@ -1351,6 +1672,9 @@ function App() {
                 onEditPc={handleEditEncounterPc}
                 onEditPcDmNotes={handleEditEncounterPcDmNotes}
                 onEditCreature={handleEditEncounterCreature}
+                onSaveCreature={handleSaveEncounterCreature}
+                savedCreatureIds={customCreatures.map((c) => c.id)}
+                onShareCreature={setSharingCreature}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 started={started}
@@ -1423,6 +1747,31 @@ function App() {
             onClose={() => setEncounterCreatureEdit(null)}
             onSubmit={handleUpdateCreature}
           />
+
+          {/* One dialog for both surfaces: the compendium's stat block and the board's
+          selected creature open the same one, so what a Game Master sees does not depend on
+          which screen they were looking at. */}
+          {sharingCreature && (
+            <ShareCreatureDialog
+              creature={sharingCreature}
+              signedIn={!!user}
+              defaultByline={displayName ?? shareByline}
+              allowReserved={bylineGranted}
+              onShare={(draft) => handleShareCreature(sharingCreature, draft)}
+              onSignIn={() => setAuthOpen(true)}
+              onClose={() => setSharingCreature(null)}
+            />
+          )}
+
+          {/* Over the app, like Account and Settings: an account screen rather than a third
+          view, and deliberately not persisted — a reload returns to the board. */}
+          {showShares && (
+            <SharedLinksPage
+              shares={myShares}
+              onUnpublish={handleUnpublish}
+              onClose={() => setShowShares(false)}
+            />
+          )}
 
           {initPrompt && (
             <InitiativePrompt

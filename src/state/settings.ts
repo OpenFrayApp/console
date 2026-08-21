@@ -91,6 +91,13 @@ export interface AppSettings {
    * never sync to the account.
    */
   hotkeys: Partial<Record<HotkeyCommandId, string | null>>
+  /**
+   * The byline a Game Master publishes shared encounters under, remembered so someone
+   * putting out a series types it once. Device-local like the rest of these, and never
+   * filled in from the account: publishing a name is a choice, not a side effect of
+   * having signed in.
+   */
+  shareByline: string | null
 }
 
 const KEY = 'openfray-settings'
@@ -144,6 +151,7 @@ export function loadSettings(): AppSettings {
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
     hotkeys: sanitizeHotkeys(data.hotkeys),
+    shareByline: typeof data.shareByline === 'string' ? data.shareByline : null,
   }
 }
 

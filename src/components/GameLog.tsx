@@ -278,7 +278,7 @@ export function GameLogModal({
   return (
     <Modal
       title="Game log"
-      subtitle={`${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} this fight`}
+      subtitle={`${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} this encounter`}
       onClose={onClose}
     >
       <div className="mb-3 flex items-start justify-between gap-3">

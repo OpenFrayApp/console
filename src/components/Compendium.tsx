@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Creature } from '../schema/creature.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { Campaign } from '../schema/campaign.ts'
+import type { Encounter } from '../schema/encounter.ts'
+import type { SavedFights } from '../state/cloudEncounter.ts'
+import { castSummary, type CastLine } from '../combat/encounterTemplate.ts'
+import { SavedFightCard } from './SavedFightCard.tsx'
 import { rosterAc, rosterInitiativeMod, type RosterPc } from '../schema/roster.ts'
 import { formatCr, titleCase } from '../compendium/format.ts'
 import { classLabel } from '../schema/pcStats.ts'
@@ -41,7 +45,82 @@ import { cx } from '../lib/cx.ts'
 import { EntryBadges, TabButton } from './ui.tsx'
 import { useSwipePanes } from '../hooks/useSwipePanes.ts'
 
-export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters' | 'effects'
+export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters' | 'effects' | 'encounters'
+
+/** The saved-encounter list: name, campaign, when. Signed-in only, like campaigns. */
+function SavedFightList({
+  fights,
+  campaigns,
+  gated,
+  selectedId,
+  onSelect,
+  emptyLabel,
+}: {
+  fights: SavedFights
+  campaigns: Campaign[]
+  gated: boolean
+  selectedId: string | null
+  onSelect: (id: string) => void
+  emptyLabel: string
+}) {
+  if (gated) {
+    return (
+      <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        Sign in to save an encounter and come back to it.
+      </p>
+    )
+  }
+  // "None saved" and "the database hasn't been updated" are different sentences to say.
+  if (fights.status !== 'ok') {
+    return (
+      <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+        {fights.status === 'unavailable'
+          ? 'Saved encounters aren’t set up on this server yet.'
+          : 'Couldn’t load your saved encounters. Try again in a moment.'}
+      </p>
+    )
+  }
+  const list = fights.fights
+  /** The campaign's initials, the same tag the character list wears. */
+  const tag = (campaignId: string | null): string => {
+    const name = campaigns.find((c) => c.id === campaignId)?.name
+    return name ? campaignAcronym(name) : ''
+  }
+  return (
+    <>
+      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+        {list.length} {list.length === 1 ? 'encounter' : 'encounters'}
+      </p>
+      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        {list.map((fight) => (
+          <li key={fight.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(fight.id)}
+              className={cx(
+                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
+                fight.id === selectedId
+                  ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-900',
+              )}
+            >
+              <span className="truncate">{fight.name}</span>
+              <span
+                className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
+                title={campaigns.find((c) => c.id === fight.campaignId)?.name}
+              >
+                {tag(fight.campaignId)}
+              </span>
+            </button>
+          </li>
+        ))}
+        {list.length === 0 && (
+          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
+        )}
+      </ul>
+    </>
+  )
+}
 
 /** The selectable campaign list with its count; gated (anonymous) users see a sign-in note. */
 function CampaignList({
@@ -218,6 +297,7 @@ function PcList({
 export function Compendium({
   customCreatures = [],
   onCreateCreature,
+  onShareCreature,
   onUpdateCreature,
   onDeleteCreature,
   customSpells = [],
@@ -236,6 +316,12 @@ export function Compendium({
   onUpdatePc,
   onDeletePc,
   onAddPcToEncounter,
+  savedFights = { status: 'ok', fights: [] },
+  onLoadFight,
+  onRestoreFight,
+  onAddCast,
+  onRenameFight,
+  onDeleteFight,
   initialTab = 'creatures',
   enabledLibraries = DEFAULT_ENABLED_LIBRARIES,
   showHomebrew = true,
@@ -247,6 +333,11 @@ export function Compendium({
   customCreatures?: Creature[]
   /** Save a freshly-authored creature to the library. */
   onCreateCreature: (creature: Creature) => void
+  /**
+   * Ask for this creature's share dialog. The dialog itself belongs to the app, because the
+   * board opens the same one — two owners would be two dialogs and two sets of state.
+   */
+  onShareCreature?: (creature: Creature) => void
   /** Replace an edited creature in the library. */
   onUpdateCreature?: (creature: Creature) => void
   /** Remove a creature from the library. */
@@ -277,6 +368,16 @@ export function Compendium({
   onDeletePc?: (id: string) => void
   /** Drop a roster PC into the current encounter (instantiated as a combatant). */
   onAddPcToEncounter?: (pc: RosterPc) => void
+  /** The signed-in user's saved fights (empty when anonymous). */
+  savedFights?: SavedFights
+  /** Read one saved fight's board, for the cast on its card. */
+  onLoadFight?: (id: string) => Promise<Encounter | null>
+  /** Put a saved fight back on the board, whole. */
+  onRestoreFight?: (id: string) => Promise<boolean>
+  /** Add only its creatures to the board in hand. */
+  onAddCast?: (id: string) => Promise<{ added: number; missing: string[] } | null>
+  onRenameFight?: (id: string, name: string) => void
+  onDeleteFight?: (id: string) => void
   /** Which tab to open on (the component remounts when the view re-enters). */
   initialTab?: Tab
   /** Every preset on offer — the GM's own first, then the enabled libraries'. */
@@ -360,6 +461,19 @@ export function Compendium({
     return [...list].sort((a, b) => a.name.localeCompare(b.name))
   }, [rosterPcs, query])
 
+  // Saved fights keep the order the database gave them — newest first, which is the useful
+  // one here: last week's fight is the one being picked back up.
+  const filteredFights = useMemo((): SavedFights => {
+    if (savedFights.status !== 'ok') return savedFights
+    const q = query.trim().toLowerCase()
+    return {
+      status: 'ok',
+      fights: q
+        ? savedFights.fights.filter((f) => f.name.toLowerCase().includes(q))
+        : savedFights.fights,
+    }
+  }, [savedFights, query])
+
   // Sorted the way the other tabs are. A preset has no challenge rating, so the CR
   // setting falls back to the same alphabetical order rather than leaving the list in
   // whatever order the libraries happen to ship.
@@ -422,6 +536,34 @@ export function Compendium({
     tab === 'campaigns' ? campaigns.find((c) => c.id === selectedId) : undefined
   const selectedPc = tab === 'characters' ? rosterPcs.find((p) => p.id === selectedId) : undefined
   const selectedPreset = tab === 'effects' ? presets.find((p) => p.id === selectedId) : undefined
+  const selectedFight =
+    tab === 'encounters' && savedFights.status === 'ok'
+      ? savedFights.fights.find((f) => f.id === selectedId)
+      : undefined
+
+  // A saved fight's board is read only when one is opened: the list has everything it needs
+  // without it, and a session's log can be hundreds of kilobytes.
+  const [openedFight, setOpenedFight] = useState<{
+    id: string
+    cast: CastLine[]
+    round: number
+  } | null>(null)
+  useEffect(() => {
+    if (!selectedFight || !onLoadFight) return
+    if (openedFight?.id === selectedFight.id) return
+    let active = true
+    void onLoadFight(selectedFight.id).then((encounter) => {
+      if (!active || !encounter) return
+      setOpenedFight({
+        id: selectedFight.id,
+        cast: castSummary(encounter.combatants),
+        round: encounter.round,
+      })
+    })
+    return () => {
+      active = false
+    }
+  }, [selectedFight, onLoadFight, openedFight?.id])
 
   /** Change the tab and clear both the selection and the search. */
   const switchTab = (next: Tab) => {
@@ -495,7 +637,7 @@ export function Compendium({
   const deleteCreature = (c: Creature) => {
     if (
       window.confirm(
-        `Delete “${c.name}” from your library? This can’t be undone. Copies already in a fight stay there.`,
+        `Delete “${c.name}” from your library? This can’t be undone. Copies already in an encounter stay there.`,
       )
     ) {
       if (selectedId === c.id) setSelectedId(null)
@@ -536,7 +678,10 @@ export function Compendium({
       className="flex h-full min-h-0 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:grid-cols-[26rem_minmax(0,1fr)] split:gap-4 split:overflow-visible wide:grid wide:grid-cols-[26rem_minmax(0,1fr)] wide:gap-4 wide:overflow-visible"
     >
       <div className="flex min-h-0 min-w-0 flex-col swipe:w-full swipe:shrink-0 swipe:snap-center">
-        <div role="tablist" aria-label="Compendium" className="mb-2 flex flex-wrap gap-0.5">
+        {/* Six tabs on a fixed grid rather than a wrapping row: three and three, the same
+          shape at every width, instead of a line that breaks differently as the column
+          changes and leaves one tab stranded below. */}
+        <div role="tablist" aria-label="Compendium" className="mb-2 grid grid-cols-3 gap-0.5">
           <TabButton active={tab === 'creatures'} onClick={() => switchTab('creatures')}>
             Creatures
           </TabButton>
@@ -551,6 +696,10 @@ export function Compendium({
           </TabButton>
           <TabButton active={tab === 'campaigns'} onClick={() => switchTab('campaigns')}>
             Campaigns
+          </TabButton>
+          {/* Last, so the five tabs people already know keep their places. */}
+          <TabButton active={tab === 'encounters'} onClick={() => switchTab('encounters')}>
+            Encounters
           </TabButton>
         </div>
 
@@ -590,6 +739,19 @@ export function Compendium({
             selectedId={selectedId}
             onSelect={showEntry}
             emptyLabel={searching ? 'No characters match that search.' : 'No characters yet.'}
+          />
+        ) : tab === 'encounters' ? (
+          <SavedFightList
+            fights={filteredFights}
+            campaigns={campaigns}
+            gated={createGated}
+            selectedId={selectedId}
+            onSelect={showEntry}
+            emptyLabel={
+              searching
+                ? 'No encounters match that search.'
+                : 'No saved encounters yet. Build a board, then save it from the header.'
+            }
           />
         ) : loading ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
@@ -660,12 +822,14 @@ export function Compendium({
           </svg>
           Back
         </button>
-        {(tab === 'campaigns' || tab === 'characters') && createGated ? (
+        {(tab === 'campaigns' || tab === 'characters' || tab === 'encounters') && createGated ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'characters'
-                ? 'Sign in to save your players and drop them into any fight.'
-                : "Sign in to create campaigns and set your table's house rules."}
+                ? 'Sign in to save your players and drop them into any encounter.'
+                : tab === 'encounters'
+                  ? 'Sign in to keep an encounter as it stands and pick it up in a later session.'
+                  : "Sign in to create campaigns and set your table's house rules."}
             </p>
             <button
               type="button"
@@ -675,6 +839,22 @@ export function Compendium({
               Sign in
             </button>
           </div>
+        ) : selectedFight ? (
+          <SavedFightCard
+            fight={selectedFight}
+            campaignName={campaigns.find((c) => c.id === selectedFight.campaignId)?.name}
+            cast={openedFight?.id === selectedFight.id ? openedFight.cast : null}
+            round={openedFight?.id === selectedFight.id ? openedFight.round : null}
+            onRename={(name) => onRenameFight?.(selectedFight.id, name)}
+            onRestore={() => void onRestoreFight?.(selectedFight.id)}
+            onAddCast={() => void onAddCast?.(selectedFight.id)}
+            onDelete={() => {
+              if (window.confirm(`Delete “${selectedFight.name}”? This can’t be undone.`)) {
+                setSelectedId(null)
+                onDeleteFight?.(selectedFight.id)
+              }
+            }}
+          />
         ) : selectedPreset ? (
           <PresetCard
             preset={selectedPreset}
@@ -702,6 +882,10 @@ export function Compendium({
               onDelete={
                 isCustom(selectedCreature) ? () => deleteCreature(selectedCreature) : undefined
               }
+              // Any creature can be published: what travels is decided by whether the
+              // reader can resolve it, never by permission. A library creature goes as a
+              // reference, homebrew goes whole with what its author said about it.
+              onShare={onShareCreature ? () => onShareCreature(selectedCreature) : undefined}
             />
           </SpellLinkContext.Provider>
         ) : selectedSpell ? (
@@ -804,13 +988,15 @@ export function Compendium({
                   : 'Pick a creature from the list to read its stat block, or build your own.'
                 : tab === 'campaigns'
                   ? 'Pick a campaign from the list to see its house rules, or create one.'
-                  : tab === 'characters'
-                    ? 'Pick a character from the list to see their details, or create one.'
-                    : tab === 'effects'
-                      ? 'Pick a preset from the list to see what it applies. Build one in a fight with Apply effect, then Save as preset.'
-                      : createGated
-                        ? 'Pick a spell from the list to read its card, or sign in to build your own.'
-                        : 'Pick a spell from the list to read its card, or build your own.'}
+                  : tab === 'encounters'
+                    ? 'Pick a saved encounter to see what was on the board. Save one with the save button on the tracker.'
+                    : tab === 'characters'
+                      ? 'Pick a character from the list to see their details, or create one.'
+                      : tab === 'effects'
+                        ? 'Pick a preset from the list to see what it applies. Build one in an encounter with Apply effect, then Save as preset.'
+                        : createGated
+                          ? 'Pick a spell from the list to read its card, or sign in to build your own.'
+                          : 'Pick a spell from the list to read its card, or build your own.'}
             </p>
             {tab === 'creatures' && (
               <div className="flex items-center gap-2">

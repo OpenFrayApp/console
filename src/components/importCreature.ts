@@ -2,45 +2,39 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Creature } from '../schema/creature.ts'
-import { ABILITIES } from './customMonster.ts'
+import { licenseOfImportedSource } from '../schema/license.ts'
+import {
+  isStr,
+  listFields,
+  missingCreatureFields,
+  projectCreature,
+} from '../schema/creatureInput.ts'
 
 export interface ImportResult {
   creature?: Creature
   error?: string
 }
 
-/** Whether the value is a finite number. */
-const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
-/** Whether the value is a non-blank string. */
-const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !== ''
-
-/** Field names as the GM knows them — the raw keys mean nothing to a reader. */
-const FIELD_LABELS: Record<string, string> = {
-  name: 'a name',
-  size: 'a size',
-  type: 'a type',
-  ac: 'an armor class',
-  maxHp: 'hit points',
-  speed: 'a speed',
-  abilities: 'its six ability scores',
-  passivePerception: 'a passive Perception',
-}
-
-/** Join missing-field labels into an English list ("a name, a size and hit points"). */
-const listFields = (keys: string[]): string => {
-  const named = keys.map((k) => FIELD_LABELS[k] ?? k)
-  if (named.length === 1) return named[0]
-  return `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}`
-}
+/** What we'll read before parsing it. A stat block is a few kilobytes; this is generous. */
+const MAX_PASTE = 256 * 1024
 
 /**
  * Parse pasted JSON (e.g. from the D&D Beyond importer) into a library Creature.
- * Validates only the fields the app can't render without; the rest of the shape is
- * trusted. The id is always regenerated in the `custom:` namespace so the import is
- * an independent, editable entity (matching the custom-creature form) — never
- * colliding with or overwriting an existing creature.
+ *
+ * This goes through the same `projectCreature` as a creature embedded in a shared link: a
+ * stat block gets pasted out of a forum as readily as out of a converter, and one invariant
+ * beats two paths. The cost is that a field the schema doesn't name no longer survives the
+ * paste — nothing read them, but they used to sit in the saved creature.
+ *
+ * The id is always regenerated in the `custom:` namespace so the import is an independent,
+ * editable entity, never colliding with or overwriting an existing creature.
  */
 export function parseImportedCreature(text: string): ImportResult {
+  // Before `JSON.parse`, so a pathological paste can't spike memory to be rejected after.
+  if (text.length > MAX_PASTE) {
+    return { error: 'That’s far larger than a stat block. Paste one creature on its own.' }
+  }
+
   let raw: unknown
   try {
     raw = JSON.parse(text)
@@ -55,29 +49,37 @@ export function parseImportedCreature(text: string): ImportResult {
   }
 
   const c = raw as Record<string, unknown>
-  const abilities = c.abilities as Record<string, unknown> | undefined
-  const senses = c.senses as Record<string, unknown> | undefined
-  const missing: string[] = []
-  if (!isStr(c.name)) missing.push('name')
-  if (!isStr(c.size)) missing.push('size')
-  if (!isStr(c.type)) missing.push('type')
-  if (!isNum(c.ac)) missing.push('ac')
-  if (!isNum(c.maxHp)) missing.push('maxHp')
-  if (typeof c.speed !== 'object' || c.speed === null) missing.push('speed')
-  if (!abilities || ABILITIES.some((a) => !isNum(abilities[a]))) missing.push('abilities')
-  if (!senses || !isNum(senses.passivePerception)) missing.push('passivePerception')
-
+  const missing = missingCreatureFields(c)
   if (missing.length) {
     return {
       error: `This creature is missing ${listFields(missing)}. Copy it again from the importer, or build it by hand instead.`,
     }
   }
 
+  // Past the required fields, null means a stat block bigger than any the app ships, or
+  // numbers so far out of range there is nothing left to render.
+  const projected = projectCreature(c)
+  if (!projected) {
+    return {
+      error:
+        'This creature has values the console can’t read. Check its numbers, or build it by hand instead.',
+    }
+  }
+
   const creature: Creature = {
-    ...(c as unknown as Creature),
+    ...projected,
     id: `custom:${crypto.randomUUID()}`,
     source: isStr(c.source) ? c.source : 'custom',
   }
   if (creature.edition !== '5.0' && creature.edition !== '5.5') delete creature.edition
+  // A pasted stat block came out of somebody's book, so it is assumed to be theirs unless
+  // the source names the free rules. A payload that states its own license is believed
+  // rather than second-guessed; everything else gets the assumption, which the editor
+  // corrects in one dropdown.
+  if (!creature.license) creature.license = licenseOfImportedSource(creature.source)
+  // Whatever it says about itself, it came from outside: what the extension reads is a paid
+  // book, and a forum paste is the same trust level wearing a friendlier hat. This is the
+  // one flag that stops either reaching a public link.
+  creature.imported = true
   return { creature }
 }

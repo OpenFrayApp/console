@@ -133,14 +133,23 @@ function Item({
   onClick,
   children,
   label,
+  className,
 }: {
   icon: ReactNode
   onClick: () => void
   children: string
   label?: string
+  /** Extra classes, for a row that only belongs on some shells. */
+  className?: string
 }) {
   return (
-    <button type="button" role="menuitem" onClick={onClick} aria-label={label} className={ITEM}>
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      aria-label={label}
+      className={`${ITEM}${className ? ` ${className}` : ''}`}
+    >
       <span className="shrink-0 text-slate-500 dark:text-slate-400">{icon}</span>
       {children}
     </button>
@@ -197,8 +206,11 @@ export function SettingsMenu({
             Settings
           </Item>
 
+          {/* Not on a phone: the swipe shell is a touch screen with no keyboard to press,
+            so a list of chords there is a page of things that cannot be done. */}
           <Item
             icon={<KeyboardIcon />}
+            className="swipe:hidden"
             onClick={() => {
               close()
               onShowHotkeys()

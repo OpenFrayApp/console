@@ -56,4 +56,16 @@ describe('resolveMaxHp', () => {
     const tiny = creature(1, '1d4-10')
     expect(resolveMaxHp(tiny, 'min')).toBe(1)
   })
+
+  it('falls back to the printed average on a formula the dice engine refuses', () => {
+    // This runs while a creature is being added to the board, and opendice reports a
+    // formula it won't take by throwing — so a stat block from a shared encounter or a
+    // pasted import could otherwise break the add rather than just give a dull number.
+    for (const formula of ['4000d20', 'nonsense', '9999999999999d999999999', '0d6', '']) {
+      const odd = creature(22, formula)
+      for (const method of ['min', 'max', 'roll'] as const) {
+        expect(resolveMaxHp(odd, method), `${formula} · ${method}`).toBe(22)
+      }
+    }
+  })
 })

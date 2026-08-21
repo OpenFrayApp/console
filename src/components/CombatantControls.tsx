@@ -294,7 +294,7 @@ export function CombatantControls({
               apply((c) => ({ ...c, shared: onSharedBoard(c, started) ? 'hidden' : 'shown' }))
             }
             aria-pressed={heldBack(combatant)}
-            title="Whether the shared player screen shows this creature. Foes appear there when the fight begins; hide one to keep an ambush off the table's board, or show it early."
+            title="Whether the shared player screen shows this creature. Foes appear there when the encounter begins; hide one to keep an ambush off the table's board, or show it early."
             className={
               heldBack(combatant)
                 ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'

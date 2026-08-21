@@ -5,8 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Encounter } from '../../src/schema/encounter.ts'
 import {
   claimPlayerCode,
+  deleteSavedFight,
+  listSavedFights,
   loadCloudEncounter,
+  loadSavedFight,
+  renameSavedFight,
   saveCloudEncounter,
+  saveFight,
 } from '../../src/state/cloudEncounter.ts'
 import { makeSupabaseStub } from './supabaseMock.ts'
 
@@ -52,7 +57,7 @@ describe('loadCloudEncounter', () => {
     expect(await loadCloudEncounter()).toEqual({ status: 'failed' })
   })
 
-  it('reads the single newest row from the encounters table', async () => {
+  it('reads the single newest live row from the encounters table', async () => {
     const enc = encounter()
     const { client, queries } = makeSupabaseStub({ data: { id: 'row-1', state: enc } })
     supa.client = client
@@ -62,6 +67,8 @@ describe('loadCloudEncounter', () => {
       encounter: enc,
       playerCode: null,
     })
+    // The `kind` filter is what keeps a saved fight from being mistaken for the session in
+    // progress now that both live in this table.
     expect(queries).toEqual([
       {
         table: 'encounters',
@@ -69,10 +76,36 @@ describe('loadCloudEncounter', () => {
           ['select', 'id, state, player_code'],
           ['order', 'updated_at', { ascending: false }],
           ['limit', 1],
+          ['eq', 'kind', 'live'],
           ['maybeSingle'],
         ],
       },
     ])
+  })
+
+  // The column is added by hand at deploy time. Going dark on the GM's fight because that
+  // step is pending would be the worst possible way to fail, so the filter is dropped and
+  // the read runs again — every row is a live one on such a project anyway.
+  it('reads again without the filter when the kind column isn’t there yet', async () => {
+    const enc = encounter()
+    const { client, queries } = makeSupabaseStub(
+      { data: null, error: { code: 'PGRST204', message: "Could not find the 'kind' column" } },
+      { data: { id: 'row-1', state: enc } },
+    )
+    supa.client = client
+    expect(await loadCloudEncounter()).toMatchObject({ status: 'loaded', id: 'row-1' })
+    expect(queries).toHaveLength(2)
+    expect(queries[1].steps).not.toContainEqual(['eq', 'kind', 'live'])
+  })
+
+  it('still reports a real failure as failed rather than retrying forever', async () => {
+    const { client, queries } = makeSupabaseStub({
+      data: null,
+      error: { code: '40001', message: 'serialization' },
+    })
+    supa.client = client
+    expect(await loadCloudEncounter()).toEqual({ status: 'failed' })
+    expect(queries).toHaveLength(1)
   })
 
   it('carries the chosen share code back, so the link is the same on every device', async () => {
@@ -153,6 +186,143 @@ describe('saveCloudEncounter', () => {
   })
 })
 
+describe('saved fights', () => {
+  it('lists the saved rows, newest first, without dragging their blobs along', async () => {
+    const { client, queries } = makeSupabaseStub({
+      data: [
+        { id: 'row-2', name: 'After the boss', campaign_id: 'camp-1', updated_at: NOW },
+        { id: 'row-3', name: null, campaign_id: null, updated_at: NOW },
+      ],
+    })
+    supa.client = client
+    expect(await listSavedFights()).toEqual({
+      status: 'ok',
+      fights: [
+        { id: 'row-2', name: 'After the boss', campaignId: 'camp-1', savedAt: NOW },
+        { id: 'row-3', name: 'Untitled', campaignId: null, savedAt: NOW },
+      ],
+    })
+    // The list reads four columns, not `state`: a session's log can be hundreds of
+    // kilobytes, and none of it is needed to draw a row.
+    expect(queries).toEqual([
+      {
+        table: 'encounters',
+        steps: [
+          ['select', 'id, name, campaign_id, updated_at'],
+          ['eq', 'kind', 'saved'],
+          ['order', 'updated_at', { ascending: false }],
+        ],
+      },
+    ])
+  })
+
+  // "Nothing saved yet" and "the SQL hasn't been run" are different sentences to a GM, and
+  // an empty list would tell the second one a comfortable lie.
+  it('keeps an empty account apart from a project without the columns', async () => {
+    const { client } = makeSupabaseStub({ data: [] })
+    supa.client = client
+    expect(await listSavedFights()).toEqual({ status: 'ok', fights: [] })
+
+    for (const code of ['42703', '42P01']) {
+      const missing = makeSupabaseStub({ data: null, error: { code, message: 'missing' } })
+      supa.client = missing.client
+      expect(await listSavedFights()).toEqual({ status: 'unavailable' })
+    }
+
+    const broken = makeSupabaseStub({ data: null, error: { code: '40001', message: 'boom' } })
+    supa.client = broken.client
+    expect(await listSavedFights()).toEqual({ status: 'failed' })
+  })
+
+  it('saves the whole blob as a new row, so two saves are two things to come back to', async () => {
+    const enc = encounter()
+    const { client, queries } = makeSupabaseStub()
+    supa.client = client
+    expect(await saveFight('Before the boss', enc, 'camp-1')).toBe('ok')
+    expect(queries).toEqual([
+      {
+        table: 'encounters',
+        steps: [
+          [
+            'insert',
+            {
+              kind: 'saved',
+              name: 'Before the boss',
+              campaign_id: 'camp-1',
+              state: enc,
+              updated_at: NOW,
+            },
+          ],
+        ],
+      },
+    ])
+  })
+
+  // The table was built one-row-per-account. A saved fight is by definition a second row,
+  // so a unique violation here is that old index still standing — a deploy step, not a
+  // passing failure, and no amount of retrying fixes it.
+  it('reads a unique violation as the one-row-per-account index still being in place', async () => {
+    const { client } = makeSupabaseStub({ error: { code: '23505', message: 'duplicate key' } })
+    supa.client = client
+    expect(await saveFight('Before the boss', encounter(), null)).toBe('unavailable')
+  })
+
+  it('tells the GM a save couldn’t land, and whether trying again would help', async () => {
+    const missing = makeSupabaseStub({ error: { code: '42703', message: 'missing' } })
+    supa.client = missing.client
+    expect(await saveFight('x', encounter(), null)).toBe('unavailable')
+
+    const broken = makeSupabaseStub({ error: { code: '40001', message: 'boom' } })
+    supa.client = broken.client
+    expect(await saveFight('x', encounter(), null)).toBe('failed')
+
+    supa.client = null
+    expect(await saveFight('x', encounter(), null)).toBe('unavailable')
+  })
+
+  it('reads one saved blob back by id', async () => {
+    const enc = encounter({ round: 5 })
+    const { client, queries } = makeSupabaseStub({ data: { state: enc } })
+    supa.client = client
+    expect(await loadSavedFight('row-2')).toEqual(enc)
+    expect(queries[0].steps).toEqual([
+      ['select', 'state'],
+      ['eq', 'id', 'row-2'],
+      ['eq', 'kind', 'saved'],
+      ['maybeSingle'],
+    ])
+  })
+
+  it('returns nothing for a saved fight that’s gone, rather than a half-read board', async () => {
+    const { client } = makeSupabaseStub({ data: null, error: { message: 'boom' } })
+    supa.client = client
+    expect(await loadSavedFight('row-2')).toBeNull()
+  })
+
+  // Row-Level Security scopes these to the owner, but the owner's own session is exactly
+  // who could delete or rename the wrong row — so both are pinned to `kind = 'saved'` and
+  // can never reach the live fight.
+  it('renames and deletes only saved rows, never the live one', async () => {
+    const rename = makeSupabaseStub()
+    supa.client = rename.client
+    expect(await renameSavedFight('row-2', 'Ambush, take two')).toBe('ok')
+    expect(rename.queries[0].steps).toEqual([
+      ['update', { name: 'Ambush, take two' }],
+      ['eq', 'id', 'row-2'],
+      ['eq', 'kind', 'saved'],
+    ])
+
+    const remove = makeSupabaseStub()
+    supa.client = remove.client
+    expect(await deleteSavedFight('row-2')).toBe('ok')
+    expect(remove.queries[0].steps).toEqual([
+      ['delete'],
+      ['eq', 'id', 'row-2'],
+      ['eq', 'kind', 'saved'],
+    ])
+  })
+})
+
 describe('claimPlayerCode', () => {
   it('writes the code onto the GM`s own row', async () => {
     const { client, queries } = makeSupabaseStub()
@@ -186,7 +356,9 @@ describe('claimPlayerCode', () => {
   // The column is added by hand at deploy time, so a project that hasn't had the SQL
   // run reports the whole feature missing rather than telling the GM to try again.
   it('reads a missing column or table as the feature not being set up', async () => {
-    for (const code of ['42703', '42P01']) {
+    // Both dialects: Postgres raises 42703/42P01, PostgREST answers PGRST204/PGRST205 from
+    // its schema cache — and in practice the cache answers first.
+    for (const code of ['42703', '42P01', 'PGRST204', 'PGRST205']) {
       const { client } = makeSupabaseStub({ error: { code, message: 'missing' } })
       supa.client = client
       expect(await claimPlayerCode('row-1', 'dragons')).toBe('unavailable')

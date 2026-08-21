@@ -6,12 +6,20 @@ import type { Creature } from '../schema/creature.ts'
 import type { ActionKind } from '../schema/action.ts'
 import type { Spell } from '../schema/spell.ts'
 import type { AbilityScores } from '../schema/primitives.ts'
-import { loadSrdSpells } from '../compendium/srd.ts'
+import { loadSrdSpells, sourceOfId } from '../compendium/srd.ts'
 import { ActionEditor, FIELD, FIELD_W, LABEL } from './ActionEditor.tsx'
 import { AddCreaturePicker } from './AddCreaturePicker.tsx'
 import { DEFAULT_ENABLED_LIBRARIES } from '../compendium/libraries.ts'
 import type { LibrarySort } from '../state/settings.ts'
 import { FormSection as Section } from './FormSection.tsx'
+import {
+  LICENSES_FROM_SCRATCH,
+  LICENSE_HINTS,
+  LICENSE_LABELS,
+  OGL_FIXED_REASON,
+  licensesForDerivativeOf,
+  type ContentLicense,
+} from '../schema/license.ts'
 import { SpellTagInput } from './SpellTagInput.tsx'
 import {
   ABILITIES,
@@ -136,13 +144,51 @@ export function CustomMonsterForm({
   const spellBonus = d.spellAbility ? attackBonus(d.spellAbility, ctx) : null
 
   /**
-   * Fill the form from an existing creature. The name is left to the GM — this is a
-   * new creature, not a copy — and so is the source, since what comes out is their
-   * homebrew rather than the book it started from. buildCreature mints a fresh id, so
-   * nothing links the two.
+   * Fill the form from an existing creature. The name is left to the GM — this is a new
+   * creature, not a copy — and so is the source, since what comes out is their homebrew
+   * rather than the book it started from. buildCreature mints a fresh id.
+   *
+   * What does link the two is `derivedFrom`, which is the point: every license question
+   * about sharing or exporting is really a question about where a stat block came from,
+   * and this is the one moment the app knows the answer for certain. The license is
+   * narrowed to what that source allows — Open Game Content leaves no choice at all — and
+   * an inherited term the source forbids drops back to unstated rather than being carried
+   * into a claim its author cannot make.
    */
   const startFrom = (c: Creature) =>
-    setD((prev) => ({ ...creatureToDraft(c), name: prev.name, sourceName: '' }))
+    setD((prev) => {
+      const allowed = licensesForDerivativeOf(c)
+      const inherited = c.license ?? 'unstated'
+      return {
+        ...creatureToDraft(c),
+        name: prev.name,
+        sourceName: '',
+        derivedFrom: c.id,
+        license:
+          allowed.length === 1 ? allowed[0] : allowed.includes(inherited) ? inherited : 'unstated',
+      }
+    })
+
+  /**
+   * What this draft may be licensed as, read from where it came from rather than from the
+   * base creature, which the form no longer holds once the draft is filled. The id carries
+   * its library (`kobold-press-tob:ghast-of-leng`), and a draft already sitting on OGL is
+   * one whose base was Open Game Content — a derivative of a derivative, still fixed.
+   */
+  const licenseOptions = !d.derivedFrom
+    ? LICENSES_FROM_SCRATCH
+    : licensesForDerivativeOf({
+        source: sourceOfId(d.derivedFrom),
+        license: d.license === 'ogl-1.0a' ? 'ogl-1.0a' : undefined,
+      })
+  const licenseFixed = licenseOptions.length === 1
+  /**
+   * A derivation filled in by Start from is a fact about where this stat block came from,
+   * not a label its author chose, so it is theirs to state and not to edit. A compendium id
+   * is the shape the picker writes and not one anybody types, which is what tells the two
+   * apart — free text a Game Master entered themselves stays editable.
+   */
+  const derivedByPicker = d.derivedFrom.includes(':')
 
   /** Build and submit the creature (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
@@ -274,6 +320,54 @@ export function CustomMonsterForm({
                     aria-label="Source"
                     className={FIELD}
                   />
+                </div>
+                {/* Provenance sits with the source label because they answer the same
+                  question, and every license question about sharing or exporting is really
+                  this one. Both are the Game Master's to state: the app fills them in when
+                  Start from is used and never guesses otherwise. */}
+                <div className="mt-2 flex-wrap items-start grid grid-cols-2 gap-2">
+                  <div>
+                    <select
+                      value={d.license}
+                      onChange={(e) => patch({ license: e.target.value as ContentLicense })}
+                      aria-label="License"
+                      disabled={licenseFixed}
+                      className={`${FIELD} disabled:opacity-60`}
+                    >
+                      {licenseOptions.map((l) => (
+                        <option key={l} value={l}>
+                          {LICENSE_LABELS[l]}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
+                      {licenseFixed ? OGL_FIXED_REASON : LICENSE_HINTS[d.license]}
+                    </p>
+                  </div>
+                  <div>
+                    <input
+                      value={d.derivedFrom}
+                      onChange={(e) => patch({ derivedFrom: e.target.value })}
+                      placeholder="Based on (optional)"
+                      aria-label="Based on"
+                      readOnly={derivedByPicker}
+                      className={`${FIELD} read-only:opacity-60`}
+                    />
+                    <p className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
+                      {derivedByPicker ? (
+                        <>
+                          Filled in by <strong className="font-medium">Start from</strong>. Pick a
+                          different creature to change it.
+                        </>
+                      ) : (
+                        <>
+                          If your creature is based on another one, type its name and source here.{' '}
+                          <strong className="font-medium">Start from</strong> fills it in for you.
+                          (e.g. Beholder, Monster Manual)
+                        </>
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <textarea
                   value={d.description}

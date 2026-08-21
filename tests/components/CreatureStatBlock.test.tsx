@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { Creature, SpellRef } from '../../src/schema/creature.ts'
 import { CreatureStatBlock } from '../../src/components/CreatureStatBlock.tsx'
+import { parseTemplate } from '../../src/combat/encounterTemplate.ts'
 import { CampaignRulesContext } from '../../src/state/campaignRules.ts'
 import { DEFAULT_CAMPAIGN_RULES } from '../../src/schema/campaign.ts'
 
@@ -234,5 +235,98 @@ describe('CreatureStatBlock — spellcasting', () => {
     expect(screen.getByText('Spellcasting')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Fireball/ })).not.toBeInTheDocument()
     expect(screen.getByText('Fireball')).toBeInTheDocument()
+  })
+})
+
+/**
+ * A stat block from a stranger, drawn by the same component the compendium uses — the widest
+ * untrusted surface in the app, since a `custom:` id means homebrew travels whole.
+ * `parseTemplate` is the door and `Markdown` is the renderer; this asks both together.
+ */
+describe('CreatureStatBlock — a creature that came from a stranger', () => {
+  /** The stat block as it arrives on the board: through the share parser, nothing skipped. */
+  const shared = (over: Record<string, unknown>): Creature => {
+    const { template, error } = parseTemplate({
+      v: 1,
+      name: 'Goblin ambush',
+      entries: [
+        {
+          creature: {
+            id: 'custom:theirs',
+            source: 'custom',
+            name: 'Thing',
+            size: 'Medium',
+            type: 'aberration',
+            ac: 14,
+            maxHp: 30,
+            speed: { walk: 30 },
+            abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+            senses: { passivePerception: 10 },
+            ...over,
+          },
+          count: 1,
+          side: 'foe',
+        },
+      ],
+    })
+    expect(error).toBeUndefined()
+    return template!.entries[0].creature!
+  }
+
+  it('renders no link and no image, wherever the prose sits', () => {
+    const link = '[Sign in to load this encounter](https://evil.example/login)'
+    const image = '![](https://tracker.example/pixel.gif)'
+    const { container } = render(
+      <CreatureStatBlock
+        creature={shared({
+          description: `${link} ${image}`,
+          traits: [{ name: 'Watcher', text: `${image} It sees you.` }],
+          actions: [
+            {
+              id: 'a',
+              name: 'Slam',
+              kind: 'melee',
+              toHit: 5,
+              damage: [{ formula: '1d8+3', type: 'bludgeoning' }],
+              text: `Hit: 7 damage. ${link}`,
+            },
+          ],
+          lairActions: [{ id: 'l', name: 'Gloom', kind: 'utility', toHit: null, text: image }],
+          spellcasting: {
+            groups: [{ usage: { type: 'atWill' }, spells: [{ name: 'Darkness' }] }],
+            note: `See https://evil.example for the full rules`,
+          },
+        })}
+      />,
+    )
+    expect(container.querySelectorAll('a')).toHaveLength(0)
+    expect(container.querySelectorAll('img')).toHaveLength(0)
+    // The words are all still there — nothing is hidden from the reader, it just can't be
+    // clicked and it fetches nothing.
+    expect(container.textContent).toContain('Sign in to load this encounter')
+    expect(container.textContent).toContain('evil.example')
+  })
+
+  it('draws its name as written, with the bidi tricks already gone', () => {
+    // A right-to-left override in a name prints the line backwards, which survives escaping
+    // intact — so it is stripped at the door rather than at the renderer.
+    const creature = shared({ name: 'Goblin‮ niatpaC‬​' })
+    expect(creature.name).toBe('Goblin niatpaC')
+    render(<CreatureStatBlock creature={creature} />)
+    expect(screen.getByText('Goblin niatpaC')).toBeInTheDocument()
+  })
+
+  it('draws the legendary budget the door repaired, not the one it was sent', () => {
+    render(
+      <CreatureStatBlock
+        creature={shared({
+          legendaryActions: {
+            perRound: 1e9,
+            actions: [{ id: 'x', name: 'Lash', kind: 'melee', toHit: 5 }],
+          },
+        })}
+      />,
+    )
+    expect(screen.getByText(/Legendary Actions \(3\/round\)/)).toBeInTheDocument()
   })
 })

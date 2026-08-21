@@ -364,7 +364,7 @@ export function SettingsPanel({
                     htmlFor="player-view-arrivals"
                     className="text-sm text-slate-700 dark:text-slate-200"
                   >
-                    Creatures arriving mid-fight
+                    Creatures arriving mid-encounter
                   </label>
                   <select
                     id="player-view-arrivals"
@@ -404,13 +404,14 @@ export function SettingsPanel({
                     }}
                     className={SELECT}
                   >
-                    <option value="fight">This fight only</option>
+                    <option value="fight">This encounter only</option>
                     <option value="session">The whole session</option>
                   </select>
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  On <span className="font-medium">This fight only</span>, your players' log starts
-                  fresh each time you begin a fight and clears when it ends. Yours keeps everything.
+                  On <span className="font-medium">This encounter only</span>, your players' log
+                  starts fresh each time you begin an encounter and clears when it ends. Yours keeps
+                  everything.
                 </p>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -418,7 +419,7 @@ export function SettingsPanel({
                   htmlFor="player-view-timers"
                   className="text-sm text-slate-700 dark:text-slate-200"
                 >
-                  Fight clocks
+                  Encounter clocks
                 </label>
                 <select
                   id="player-view-timers"
@@ -439,7 +440,7 @@ export function SettingsPanel({
                     htmlFor="player-view-recap"
                     className="text-sm text-slate-700 dark:text-slate-200"
                   >
-                    End-of-fight summary
+                    End-of-encounter summary
                   </label>
                   <select
                     id="player-view-recap"
@@ -455,7 +456,7 @@ export function SettingsPanel({
                   </select>
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Your players see the summary of the fight while you have it open.
+                  Your players see the summary of the encounter while you have it open.
                 </p>
               </div>
             </div>

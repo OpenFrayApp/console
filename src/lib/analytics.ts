@@ -8,7 +8,16 @@
 
 declare global {
   interface Window {
-    fathom?: { trackEvent: (name: string, opts?: { _value?: number }) => void }
+    fathom?: {
+      trackEvent: (name: string, opts?: { _value?: number }) => void
+      /**
+       * Only `main.tsx` calls this, and only for `/s/` and `/p/`, where the automatic
+       * pageview is turned off because the path carries an unlisted code. Optional for the
+       * same reason `fathom` itself is: a blocked or half-loaded script is the normal case
+       * to survive, not an error.
+       */
+      trackPageview?: (opts?: { url?: string; referrer?: string }) => void
+    }
   }
 }
 
@@ -64,6 +73,16 @@ export const EVENTS = {
   themeToggled: 'Theme toggled',
   keyboardShortcutUsed: 'Keyboard shortcut used',
   keybindingChanged: 'Keybinding changed',
+  // Saved encounters
+  encounterSaved: 'Encounter saved',
+  encounterRestored: 'Encounter restored',
+  encounterCastAdded: 'Encounter creatures added',
+  encounterShared: 'Encounter shared',
+  creatureShared: 'Creature shared',
+  encounterLinkOpened: 'Shared encounter opened',
+  encounterLinkAdded: 'Shared encounter added',
+  shareReportOpened: 'Report form opened',
+  shareReported: 'Encounter reported',
   // Sharing the board with the table
   playerViewShared: 'Player view shared',
   playerViewStopped: 'Player view stopped',

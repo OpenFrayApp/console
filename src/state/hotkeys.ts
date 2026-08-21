@@ -47,18 +47,19 @@ export type HotkeyCommandId =
 export interface HotkeyCommand {
   id: HotkeyCommandId
   label: string
-  category: 'Turn and fight' | 'Selection' | 'The selected creature' | 'Add and open' | 'Everywhere'
+  category:
+    'Turn and encounter' | 'Selection' | 'The selected creature' | 'Add and open' | 'Everywhere'
   /** Whether holding the key repeats the command (only selection movement does). */
   repeats?: boolean
 }
 
 /** Every command, in the order the Settings tab and the overlay list them. */
 export const COMMANDS: readonly HotkeyCommand[] = [
-  { id: 'nextTurn', label: 'Next turn', category: 'Turn and fight' },
-  { id: 'prevTurn', label: 'Previous turn', category: 'Turn and fight' },
-  { id: 'startCombat', label: 'Start combat', category: 'Turn and fight' },
-  { id: 'endFight', label: 'End the fight', category: 'Turn and fight' },
-  { id: 'pauseResume', label: 'Pause or resume', category: 'Turn and fight' },
+  { id: 'nextTurn', label: 'Next turn', category: 'Turn and encounter' },
+  { id: 'prevTurn', label: 'Previous turn', category: 'Turn and encounter' },
+  { id: 'startCombat', label: 'Start combat', category: 'Turn and encounter' },
+  { id: 'endFight', label: 'End the encounter', category: 'Turn and encounter' },
+  { id: 'pauseResume', label: 'Pause or resume', category: 'Turn and encounter' },
   { id: 'selectNext', label: 'Select next in the order', category: 'Selection', repeats: true },
   { id: 'selectPrev', label: 'Select previous in the order', category: 'Selection', repeats: true },
   { id: 'damageSelected', label: 'Damage or heal the selected', category: 'The selected creature' },
@@ -86,7 +87,7 @@ export const COMMANDS: readonly HotkeyCommand[] = [
   { id: 'openLog', label: 'Open the game log', category: 'Add and open' },
   {
     id: 'toggleCompendium',
-    label: 'Show the compendium / Back to the fight',
+    label: 'Show the compendium / Back to the encounter',
     category: 'Everywhere',
   },
   { id: 'focusDice', label: 'Focus the dice bar', category: 'Everywhere' },

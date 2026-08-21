@@ -13,6 +13,12 @@ export interface RecordedQuery {
   steps: [method: string, ...args: unknown[]][]
 }
 
+/** One `rpc()` call the stub captured: the function name and its arguments. */
+export interface RecordedRpc {
+  fn: string
+  args: unknown
+}
+
 const CHAIN_METHODS = [
   'select',
   'insert',
@@ -34,6 +40,25 @@ const CHAIN_METHODS = [
  */
 export function makeSupabaseStub(...results: QueryResult[]) {
   const queries: RecordedQuery[] = []
+  const rpcs: RecordedRpc[] = []
+  /**
+   * Signed in, unless a test says otherwise with `signedOut()`.
+   *
+   * Publishing asks who is calling before it writes, because a row with nobody's name on it
+   * is refused by the policy and "sign in first" is a better sentence than a security-check
+   * failure. Every other path here ignores it.
+   */
+  let session: unknown = { user: { id: 'stub-user' } }
+  /**
+   * `rpc()` draws from the same queue as `from()`, in call order — the read-by-code path
+   * goes through a database function rather than a table, and a test needs to pin what was
+   * asked for as much as what came back.
+   */
+  const rpc = (fn: string, args: unknown) => {
+    rpcs.push({ fn, args })
+    const result = results.shift() ?? { data: null, error: null }
+    return Promise.resolve(result)
+  }
   const from = (table: string) => {
     const query: RecordedQuery = { table, steps: [] }
     queries.push(query)
@@ -52,7 +77,16 @@ export function makeSupabaseStub(...results: QueryResult[]) {
     }
     return chain
   }
-  return { client: { from }, queries }
+  const auth = { getSession: () => Promise.resolve({ data: { session }, error: null }) }
+  return {
+    client: { from, rpc, auth },
+    queries,
+    rpcs,
+    /** Answer the next `getSession()` with nobody, as a signed-out browser would. */
+    signedOut: () => {
+      session = null
+    },
+  }
 }
 
 /** One `send()` the channel stub captured. */

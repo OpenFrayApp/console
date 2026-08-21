@@ -203,11 +203,35 @@ function flatResult(source: string, expr: string, bonuses: (number | string)[]):
   }
 }
 
+/** A formula that rolls nothing and just adds up: "1", "2+3", the flat-damage stat blocks. */
+const isFlat = (expr: string): boolean => /^[+-]?\d+(?:[+-]\d+)*$/.test(expr.replace(/\s+/g, ''))
+
+/**
+ * Whether `roll` would take this formula, asked without rolling it — `roll`'s own two
+ * branches, so it lives here. Asking `parseFormula` instead gets a subtly different answer
+ * and drops the forty-odd stat blocks that deal a flat 1.
+ *
+ * opendice enforces its limits by throwing, which is why a caller holding a stat block's
+ * formula wants to ask in advance. The length bound comes first, before the parser reads it.
+ */
+export function canRoll(formula: string, maxLength = 200): boolean {
+  if (typeof formula !== 'string') return false
+  const source = formula.trim()
+  if (!source || source.length > maxLength) return false
+  const { expr } = splitDamageType(source)
+  if (isFlat(expr)) return true
+  try {
+    return parseFormula(source, { tags: DAMAGE_TYPES }).terms.length > 0
+  } catch {
+    return false
+  }
+}
+
 /** The one dice chokepoint: parse, apply adv/dis and bonuses, roll, flag attack crit/fumble. */
 export function roll(formula: string, ctx: RollContext = {}): RollResult {
   const bonuses = ctx.bonuses ?? []
   const { expr, damageType } = splitDamageType(formula)
-  if (/^[+-]?\d+(?:[+-]\d+)*$/.test(expr.replace(/\s+/g, ''))) {
+  if (isFlat(expr)) {
     const flat = flatResult(formula.trim(), expr.replace(/\s+/g, ''), bonuses)
     return { ...flat, kind: ctx.kind ?? 'raw', ...(damageType ? { damageType } : {}) }
   }

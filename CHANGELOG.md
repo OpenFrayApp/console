@@ -12,6 +12,71 @@ Versions are `major.minor.patch`. A major bump means the way you use the console
 changed; a minor bump adds to it; a patch fixes it. Dates are the day the version was
 published.
 
+## 1.2.0 (2026-08-20)
+
+Keep a fight to come back to, and hand one to somebody else.
+
+### Saved encounters
+
+- A fight can be **saved** from the top bar and picked up in a later session: the board
+  as it stood, with the party, hit points, effects, initiative, the round and the log.
+  Save as many as you like, and as often as you like.
+- Saved fights live in the compendium, under **Encounters**. A card shows what was on the
+  board, grouped and counted, so you can tell one goblin ambush from another without
+  opening either.
+- Two ways back in. **Restore** brings the whole encounter back, party and hit points
+  included. **Add creatures** drops only its creatures onto the board you have now, at
+  full hit points.
+- Saving needs an account, because a fight kept in this browser would not be there on the
+  laptop you run next week's session from.
+
+### Publishing
+
+- An encounter, or a single creature, can be **published** to a link anyone can open.
+  They read it in the browser and add it to their own board with one click. Publishing
+  needs an account.
+- What travels is the cast, a name, a note you write, a byline, and a license. What does
+  not: your player characters, hit points, effects, initiative, or the log. A published
+  encounter is prep, not a fight.
+- **Two licenses, and they are separate.** The encounter's covers your own words: its
+  name, your note, and which creatures you put together. Each creature carries whatever
+  its author gave it. A creature nobody licensed for reuse can be read on the page and is
+  left behind when somebody adds it, and the app says which ones and why first.
+- A creature can say **where it came from** and **how it may be reused**, and the stat
+  block shows both.
+- Your account holds a **default byline** and a **default license** that the publish
+  dialog starts on.
+- **Shared links** is a screen of its own, under your account: everything you have up,
+  with a copy, an open and an unpublish beside each. Nothing expires on its own, and
+  unpublishing is immediate and final.
+- A creature brought in with the OpenFray Importer cannot be published. Those stat blocks
+  are Wizards of the Coast's.
+- Up to 200 published pages per account. Unpublishing makes room.
+
+### Reading somebody else's link
+
+- A shared link opens its own page, without loading the console: the cast, the note, the
+  byline, and every creature's stat block.
+- **Report this** is on every published page. Anyone can use it, nobody is asked who they
+  are, and a reply address is optional. A page that breaks the terms is removed and its
+  author is told.
+- A page that was taken down says so, rather than reading the same as a code somebody
+  mistyped.
+- A stranger's stat block is held to what the console can actually run, and a stranger's
+  note renders bold, italic, quotes, lists and headings and nothing that navigates or
+  fetches.
+
+### Smaller things
+
+- The player view moved to `openfray.app/p/`, beside published encounters at
+  `openfray.app/s/`. Both sit at the domain root, because they are pasted where somebody
+  who has never seen the console will read them.
+- Neither is counted by its code. Analytics sees `/s/` and `/p/` and nothing after them.
+- The compendium's tabs lay out three by three.
+- The app says **encounter** where it used to say fight.
+- A link in your own prose opens in its own tab, so following one does not navigate away
+  from the fight you are running.
+
 ## 1.1.0 (2026-08-17)
 
 The console runs on a phone, answers to the keyboard, and knows when an effect ends.

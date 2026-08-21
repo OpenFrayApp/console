@@ -14,7 +14,11 @@ import { cx } from '../lib/cx.ts'
  * the URL bar hidden, so a `vh` cap runs the card under the browser chrome on the very
  * screens this branch exists for.
  */
-export function popoverClass(width: string, align: 'left' | 'right' = 'right') {
+export function popoverClass(
+  width: string,
+  align: 'left' | 'right' = 'right',
+  place: 'below' | 'above' = 'below',
+) {
   return cx(
     'fixed z-30 rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900',
     // Hangs below the header, whose height App publishes as `--header-h`: it is two or
@@ -22,7 +26,10 @@ export function popoverClass(width: string, align: 'left' | 'right' = 'right') {
     // sheet over the button that opened it. The fallback is one row's worth.
     'swipe:inset-x-3 swipe:top-[calc(var(--header-h,3.5rem)+0.5rem)]',
     'swipe:max-h-[calc(100dvh-var(--header-h,3.5rem)-1.5rem)] swipe:overflow-y-auto',
-    'roomy:absolute roomy:mt-1',
+    'roomy:absolute',
+    // A trigger in the board's bottom corner has no room beneath it, so its card opens
+    // upward. The phone sheet is unaffected: it is pinned under the header either way.
+    place === 'above' ? 'roomy:bottom-full roomy:mb-1' : 'roomy:mt-1',
     align === 'left' ? 'roomy:left-0' : 'roomy:right-0',
     width,
   )

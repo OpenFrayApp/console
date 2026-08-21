@@ -38,7 +38,7 @@ describe('SharePanel', () => {
   it('shows the full link for the code it was given', () => {
     open()
     const field = screen.getByLabelText('Link') as HTMLInputElement
-    expect(field.value.endsWith('/play/tuesday-game')).toBe(true)
+    expect(field.value.endsWith('/p/tuesday-game')).toBe(true)
   })
 
   it('shows no link at all before a code exists', () => {
@@ -57,7 +57,7 @@ describe('SharePanel', () => {
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
     open()
     fireEvent.click(screen.getByRole('button', { name: 'Copy the link' }))
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/play/')))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/p/')))
     await screen.findByRole('button', { name: 'Copied' })
     vi.unstubAllGlobals()
   })
@@ -77,7 +77,7 @@ describe('SharePanel', () => {
   it('opens the player view in a new tab, as a real link', () => {
     open()
     const link = screen.getByRole('link', { name: 'Open the player view in a new tab' })
-    expect(link.getAttribute('href')?.endsWith('/play/tuesday-game')).toBe(true)
+    expect(link.getAttribute('href')?.endsWith('/p/tuesday-game')).toBe(true)
     expect(link).toHaveAttribute('target', '_blank')
   })
 })
@@ -109,7 +109,7 @@ describe('SharePanel — naming the link', () => {
     fireEvent.click(screen.getByText('Save'))
     await screen.findByText('That name is taken. Try another.')
     const link = (screen.getByLabelText('Link') as HTMLInputElement).value
-    expect(link.endsWith('/play/tuesday-game')).toBe(true)
+    expect(link.endsWith('/p/tuesday-game')).toBe(true)
   })
 
   // Retrying can't fix a column that was never added, so the GM is told what is
