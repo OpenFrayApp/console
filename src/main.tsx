@@ -55,7 +55,7 @@ if (playerCode) {
   // title — and a Game Master usually has both open.
   document.title = 'Player view — OpenFray'
   // The player view needs no session, so it renders outside AuthProvider.
-  void import('./components/PlayerView.tsx').then(({ PlayerView }) => {
+  void import('./components/player/PlayerView.tsx').then(({ PlayerView }) => {
     root.render(
       <StrictMode>
         <PlayerView code={playerCode} />

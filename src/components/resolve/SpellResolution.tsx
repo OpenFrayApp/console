@@ -1,0 +1,132 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
+import { useState } from 'react'
+import type { Combatant } from '../../schema/combatant.ts'
+import type { Spell } from '../../schema/spell.ts'
+import type { EncounterAction } from '../../state/encounter.ts'
+import { damageFormula, damageTypes, damageVariants } from '../../combat/casting.ts'
+import { roll } from '../../dice/roll.ts'
+import { GroupSaveForm } from './GroupSaveForm.tsx'
+import { Button, Chip, Select } from '../ui/primitives.tsx'
+import type { OnRoll } from '../log/GameLog.tsx'
+
+/** "Cantrip" for level 0, otherwise "Level N". */
+const levelText = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
+
+/**
+ * Resolve a spell's mechanics against the board: roll its damage (scaled by the
+ * chosen level) and, for a save spell, run the group save pre-seeded from the spell.
+ * The spell owns the dice and save ability; the caster owns the DC (`saveDc`, or
+ * left for the GM). Spells with no mechanics render nothing — the caller handles it.
+ */
+export function SpellResolution({
+  spell,
+  combatants,
+  dispatch,
+  onRoll,
+  onClose,
+  saveDc,
+}: {
+  spell: Spell
+  combatants: Combatant[]
+  dispatch: (action: EncounterAction) => void
+  onRoll: OnRoll
+  onClose: () => void
+  saveDc?: number
+}) {
+  const [variantKey, setVariantKey] = useState('base')
+  const [rolled, setRolled] = useState<{ total: number; detail: string } | null>(null)
+
+  const mechanics = spell.mechanics
+  if (!mechanics) return null
+
+  const variants = damageVariants(spell)
+  const variant = variants.find((v) => v.key === variantKey) ?? variants[0]
+  const hasDamage = variant != null
+  const save = mechanics.save
+
+  /** Roll the chosen variant's damage, log it, and show the total beside its formula. */
+  const rollDamage = () => {
+    if (!variant) return
+    const formula = damageFormula(variant.damage)
+    const types = damageTypes(variant.damage).join('/')
+    const result = roll(formula, { kind: 'damage' })
+    onRoll(`${spell.name} · ${variant.label}`, result)
+    setRolled({ total: result.total, detail: `${formula}${types ? ` ${types}` : ''}` })
+  }
+
+  return (
+    <div className="space-y-3">
+      {hasDamage && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {variants.length > 1 && (
+            <Select
+              value={variant.key}
+              onChange={(e) => {
+                setVariantKey(e.target.value)
+                setRolled(null)
+              }}
+              aria-label="Cast level"
+            >
+              {variants.map((v) => (
+                <option key={v.key} value={v.key}>
+                  {v.label}
+                </option>
+              ))}
+            </Select>
+          )}
+          {rolled ? (
+            <Chip size="sm" onClick={rollDamage}>
+              Reroll damage
+            </Chip>
+          ) : (
+            <Button variant="primary" onClick={rollDamage}>
+              Roll damage
+            </Button>
+          )}
+          {rolled && (
+            <span className="text-sm">
+              <span className="font-semibold tabular-nums">{rolled.total}</span>{' '}
+              <span className="text-slate-500 dark:text-slate-400">({rolled.detail})</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {mechanics.attackRoll && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Spell attack — roll to hit using the caster's spell attack bonus.
+        </p>
+      )}
+
+      {save && (!hasDamage || rolled) && (
+        <GroupSaveForm
+          combatants={combatants}
+          dispatch={dispatch}
+          onClose={onClose}
+          onRoll={onRoll}
+          title={`${spell.name} — save`}
+          seed={{
+            ability: save.ability,
+            onSave: save.onSave,
+            dc: saveDc != null ? String(saveDc) : undefined,
+            damage: rolled ? String(rolled.total) : undefined,
+          }}
+        />
+      )}
+
+      {save && hasDamage && !rolled && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Roll damage to resolve the {save.ability.toUpperCase()} save.
+        </p>
+      )}
+
+      {!hasDamage && !save && !mechanics.attackRoll && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          No automatic effect to resolve — {levelText(spell.level)} {spell.school}.
+        </p>
+      )}
+    </div>
+  )
+}

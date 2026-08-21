@@ -1,0 +1,987 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
+import {
+  abilityMod,
+  SKILL_ABILITY,
+  type Ability,
+  type AbilityScores as AbilityScoreMap,
+  type SaveBonuses,
+  type Skill,
+  type SkillBonuses,
+  type Speeds,
+} from '../../schema/primitives.ts'
+import { speedLines } from '../../combat/speed.ts'
+import { isRollable, type Action, type Recharge } from '../../schema/action.ts'
+import type {
+  Creature,
+  SpellGroup,
+  SpellLevel,
+  Spellcasting,
+  SpellRef,
+} from '../../schema/creature.ts'
+import type { Concentration, HitPoints } from '../../schema/combatant.ts'
+import type { Spell } from '../../schema/spell.ts'
+import { hpTierOf } from '../../combat/resources.ts'
+import { isAutoLabel } from '../../combat/combatant.ts'
+import { useCampaignRules } from '../../state/campaignRules.ts'
+import {
+  capitalizeSegments,
+  crDetail,
+  formatCr,
+  formatSenses,
+  legendaryPreamble,
+  signed,
+  titleCase,
+} from '../../compendium/format.ts'
+import { hpToneFor } from '../ui/hpTone.ts'
+import { Markdown } from './Markdown.tsx'
+import { SourceLink } from './SourceLink.tsx'
+import { ShareIcon } from '../icons/ShareIcon.tsx'
+import { SpellCard } from './SpellCard.tsx'
+import { FloatingCard } from '../ui/FloatingCard.tsx'
+import { useHoverCard } from '../ui/spellPreview.ts'
+import { HeaderStat, StatHeader } from './StatHeader.tsx'
+
+/** Resolve a spell's compendium entry (for the hover preview + cast card). */
+export type ResolveSpell = (ref?: string) => Spell | undefined
+/** Uses left for a spell on the live combatant: null when unlimited (at-will). */
+export type SpellUsesOf = (spell: SpellRef) => number | null
+
+const ABILITY_LABEL: Record<Ability, string> = {
+  str: 'Str',
+  dex: 'Dex',
+  con: 'Con',
+  int: 'Int',
+  wis: 'Wis',
+  cha: 'Cha',
+}
+
+// Heading is the heavier style, row label the lighter — swapped from the usual weight.
+const TABLE_HEADING = 'font-semibold uppercase text-slate-500 dark:text-slate-400'
+const TABLE_ROW_LABEL =
+  'text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500'
+
+/** A camelCase skill key as its label: "sleightOfHand" → "Sleight Of Hand". */
+function skillLabel(skill: string): string {
+  return skill.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())
+}
+
+/** A recharge as its stat-block tag: "Recharge 5–6", "N/Day", or "N/Round"; none → undefined. */
+function rechargeLabel(recharge: Recharge | undefined): string | undefined {
+  if (!recharge) return undefined
+  if (recharge.type === 'dice') {
+    return recharge.value >= 6 ? 'Recharge 6' : `Recharge ${recharge.value}–6`
+  }
+  if (recharge.type === 'perDay') return `${recharge.value}/Day`
+  return `${recharge.value}/Round`
+}
+
+/** A two-column "label / value" table that always renders, showing "—" if empty. */
+export function MetaTable({ rows }: { rows: [string, string | undefined][] }) {
+  return (
+    <table className="w-full text-sm">
+      <tbody>
+        {rows.map(([label, value]) => (
+          <tr key={label} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
+            <td className="w-px whitespace-nowrap rounded-l px-2 py-1 align-top text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              {label}
+            </td>
+            <td className="rounded-r px-2 py-1 align-top text-xs text-slate-600 dark:text-slate-300">
+              {value && value.length ? value : '—'}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+/**
+ * Defenses (resistances/immunities/vulnerabilities) and senses/languages, laid
+ * out the same way for every stat block — creatures and PCs alike. Only the rows
+ * we actually have are shown; an empty table (e.g. a PC with no defenses) is
+ * dropped entirely, so a lightweight combatant doesn't render a wall of "—".
+ */
+export function DefensesAndSenses({
+  resistances,
+  immunities,
+  vulnerabilities,
+  senses,
+  languages,
+  gear,
+}: {
+  resistances?: string
+  immunities?: string
+  vulnerabilities?: string
+  senses?: string
+  languages?: string
+  gear?: string
+}) {
+  /** A [label, value] row if the value is non-empty; empty values contribute no row. */
+  const present = (label: string, value?: string): [string, string][] =>
+    value && value.length ? [[label, value]] : []
+  // Capitalize defenses/languages at render so lowercased source data (e.g. ToB3)
+  // shows correctly everywhere — never fixed in the JSON. Senses/gear are already formatted.
+  const defenseRows: [string, string][] = [
+    ...present('Resistances', capitalizeSegments(resistances)),
+    ...present('Immunities', capitalizeSegments(immunities)),
+    ...present('Vulnerabilities', capitalizeSegments(vulnerabilities)),
+  ]
+  const senseRows: [string, string][] = [
+    ...present('Senses', senses),
+    ...present('Languages', capitalizeSegments(languages)),
+    ...present('Gear', gear),
+  ]
+  if (defenseRows.length === 0 && senseRows.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+      {defenseRows.length > 0 && (
+        <div className="min-w-[16rem] flex-1">
+          <MetaTable rows={defenseRows} />
+        </div>
+      )}
+      {senseRows.length > 0 && (
+        <div className="min-w-[16rem] flex-1">
+          <MetaTable rows={senseRows} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ABILITY_GROUPS: Ability[][] = [
+  ['str', 'dex', 'con'],
+  ['int', 'wis', 'cha'],
+]
+
+/** Roll a d20 + this modifier when `onCheck` is supplied (i.e. in combat). */
+export type OnCheck = (
+  label: string,
+  modifier: number,
+  kind: 'save' | 'check',
+  ability?: Ability,
+) => void
+
+/** The value as a button rolling d20 + modifier when `onCheck` is set; plain text otherwise. */
+function RollableValue({
+  label,
+  modifier,
+  kind,
+  ability,
+  onCheck,
+  children,
+}: {
+  label: string
+  modifier: number
+  kind: 'save' | 'check'
+  ability?: Ability
+  onCheck?: OnCheck
+  children: string
+}) {
+  if (!onCheck) return <>{children}</>
+  return (
+    <button
+      type="button"
+      onClick={() => onCheck(label, modifier, kind, ability)}
+      title={`Roll ${label}`}
+      // A stat-block number is a roll button, drawn as text at 17x20. The width is the
+      // table's to give, so only the height opens up on a coarse pointer.
+      className="tap-y inline-flex items-center justify-end text-indigo-600 hover:underline coarse:px-1 dark:text-indigo-400"
+    >
+      {children}
+    </button>
+  )
+}
+
+/**
+ * The ability block as two side-by-side tables that fill the available width.
+ * Shared by creatures and PCs so they look identical. Pass `saves` to show a Save
+ * column (creatures, with a fallback to the ability mod); omit it to show just the
+ * Mod column (PCs, where we only know raw scores). `onCheck` makes the values
+ * rollable (combat); without it they're plain text.
+ */
+export function AbilityTable({
+  abilities,
+  saves,
+  onCheck,
+}: {
+  abilities: AbilityScoreMap
+  saves?: SaveBonuses
+  onCheck?: OnCheck
+}) {
+  const showSaves = saves !== undefined
+  /** The save bonus for an ability, falling back to the bare ability modifier. */
+  const saveFor = (a: Ability): number => saves?.[a] ?? abilityMod(abilities[a])
+  return (
+    <div className="flex gap-3 text-sm">
+      {ABILITY_GROUPS.map((group, i) => (
+        <table key={i} className="flex-1">
+          <thead>
+            <tr className={TABLE_HEADING}>
+              <th />
+              <th />
+              <th className="px-1 text-right">Mod</th>
+              {showSaves && <th className="px-1 text-right">Save</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {group.map((a) => (
+              <tr key={a} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
+                <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{ABILITY_LABEL[a]}</td>
+                <td className="px-1 py-1 text-right tabular-nums">{abilities[a]}</td>
+                <td
+                  className={`px-1 py-1 text-right tabular-nums ${showSaves ? '' : 'rounded-r pr-2'}`}
+                >
+                  <RollableValue
+                    label={`${a.toUpperCase()} check`}
+                    modifier={abilityMod(abilities[a])}
+                    kind="check"
+                    ability={a}
+                    onCheck={onCheck}
+                  >
+                    {signed(abilityMod(abilities[a]))}
+                  </RollableValue>
+                </td>
+                {showSaves && (
+                  <td className="rounded-r px-2 py-1 text-right tabular-nums">
+                    <RollableValue
+                      label={`${a.toUpperCase()} save`}
+                      modifier={saveFor(a)}
+                      kind="save"
+                      ability={a}
+                      onCheck={onCheck}
+                    >
+                      {signed(saveFor(a))}
+                    </RollableValue>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ))}
+    </div>
+  )
+}
+
+/** The ability block for a creature (always shows the Save column). */
+function AbilityScores({ creature, onCheck }: { creature: Creature; onCheck?: OnCheck }) {
+  return (
+    <AbilityTable abilities={creature.abilities} saves={creature.saves ?? {}} onCheck={onCheck} />
+  )
+}
+
+/** The Skills table, one rollable bonus per skill; renders nothing when there are none. */
+function SkillsTable({ skills, onCheck }: { skills: SkillBonuses; onCheck?: OnCheck }) {
+  const entries = Object.entries(skills)
+  if (entries.length === 0) return null
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className={TABLE_HEADING}>
+          <th className="px-2 text-left">Skills</th>
+          <th />
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map(([skill, bonus]) => (
+          <tr key={skill} className="odd:bg-slate-100 dark:odd:bg-slate-800/40">
+            <td className={`rounded-l px-2 py-1 ${TABLE_ROW_LABEL}`}>{skillLabel(skill)}</td>
+            <td className="rounded-r px-2 py-1 text-right tabular-nums">
+              <RollableValue
+                label={skillLabel(skill)}
+                modifier={bonus as number}
+                kind="check"
+                ability={SKILL_ABILITY[skill as Skill]}
+                onCheck={onCheck}
+              >
+                {signed(bonus as number)}
+              </RollableValue>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+interface Entry {
+  name: string
+  text?: string
+  /** Suffix after the name, e.g. "Recharge 5–6". */
+  note?: string
+}
+
+/** A titled run of "**Name.** text" entries rendered as markdown; hidden when empty. */
+function Section({
+  title,
+  items,
+  resolveSpell,
+}: {
+  title: string
+  items?: Entry[]
+  resolveSpell?: ResolveSpell
+}) {
+  if (!items || items.length === 0) return null
+  return (
+    <div>
+      <h4 className="mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
+        {title}
+      </h4>
+      <div className="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-400 [&_strong]:text-slate-900 dark:[&_strong]:text-slate-200">
+        {items.map((entry) => (
+          <Markdown key={entry.name} linkConditions resolveSpell={resolveSpell}>
+            {`**${entry.name}${entry.note ? ` (${entry.note})` : ''}.** ${entry.text ?? ''}`}
+          </Markdown>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export const SECTION_HEADING =
+  'mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300'
+
+/**
+ * Renders a list of actions. When `onAction` is supplied (i.e. in combat), the
+ * name of each rollable action becomes a button that opens the resolver; the
+ * prose follows inline so the stat-block reads the same. In the reference
+ * compendium no handler is passed, so names stay plain text.
+ */
+function ActionSection({
+  title,
+  note,
+  actions,
+  onAction,
+  rechargeState,
+  onRecharge,
+  resolveSpell,
+  actionUsesOf,
+  onUseAction,
+  clickAll,
+  useHint,
+  legendaryRemaining,
+}: {
+  title: string
+  /** Optional explanatory text shown under the header (e.g. the legendary preamble). */
+  note?: string
+  actions?: Action[]
+  onAction?: (a: Action) => void
+  /** id → charged? A rechargeable action that is `false` can't be used until it recharges. */
+  rechargeState?: Record<string, boolean>
+  onRecharge?: (a: Action) => void
+  resolveSpell?: ResolveSpell
+  /** Per-day uses left for an "N/Day" action, or null if untracked. */
+  actionUsesOf?: (a: Action) => number | null
+  /** Spend one per-day use of an action. */
+  onUseAction?: (a: Action) => void
+  /** Make every action clickable (not just rollable ones) — used for legendary
+   *  actions and reactions, where clicking spends one regardless of attack/save. */
+  clickAll?: boolean
+  /** Tooltip for a `clickAll` action; defaults to the legendary wording. */
+  useHint?: string
+  /** Legendary actions left — disables actions that cost more than this. */
+  legendaryRemaining?: number
+}) {
+  if (!actions || actions.length === 0) return null
+  return (
+    <div>
+      <h4 className={SECTION_HEADING}>{title}</h4>
+      {note && (
+        <p className="mb-2 text-sm italic leading-relaxed text-slate-500 dark:text-slate-400">
+          {note}
+        </p>
+      )}
+      <div className="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-400 [&_strong]:text-slate-900 dark:[&_strong]:text-slate-200">
+        {actions.map((a) => {
+          const usesLeft = actionUsesOf?.(a) ?? null
+          const recharge = rechargeLabel(a.recharge)
+          const label =
+            usesLeft != null ? [recharge, `${usesLeft} left`].filter(Boolean).join(', ') : recharge
+          const heading = `${a.name}${label ? ` (${label})` : ''}`
+          const available = usesLeft != null ? usesLeft > 0 : rechargeState?.[a.id] !== false
+          // A per-day-limited action is clickable to spend a use (and roll it if it
+          // rolls); greyed once exhausted — tracked like a spell's "N/Day Each" uses.
+          if (onUseAction && usesLeft != null) {
+            return (
+              <p key={a.id} className={available ? undefined : 'opacity-60'}>
+                {available ? (
+                  <button
+                    type="button"
+                    onClick={() => onUseAction(a)}
+                    title={
+                      isRollable(a)
+                        ? 'Use this action (spends one, then rolls)'
+                        : 'Use this action (spends one)'
+                    }
+                    className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                  >
+                    {heading}.
+                  </button>
+                ) : (
+                  <span className="font-semibold">{heading}.</span>
+                )}{' '}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
+              </p>
+            )
+          }
+          // Legendary actions and reactions: every entry is clickable, because using one
+          // spends a resource whether or not it rolls anything.
+          if (onAction && clickAll) {
+            const cost = a.legendaryCost ?? 1
+            const cantAfford = legendaryRemaining != null && legendaryRemaining < cost
+            const clickHeading = cost > 1 ? `${a.name} (Costs ${cost})` : heading
+            return (
+              <p key={a.id} className={cantAfford ? 'opacity-50' : undefined}>
+                <button
+                  type="button"
+                  onClick={() => onAction(a)}
+                  disabled={cantAfford}
+                  title={
+                    useHint ??
+                    (cost > 1 ? `Use this action (spends ${cost})` : 'Use this action (spends one)')
+                  }
+                  className="font-semibold text-indigo-600 hover:underline disabled:no-underline disabled:hover:no-underline dark:text-indigo-400"
+                >
+                  {clickHeading}.
+                </button>{' '}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
+              </p>
+            )
+          }
+          if (onAction && isRollable(a) && available) {
+            return (
+              <p key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => onAction(a)}
+                  title="Roll this action"
+                  className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  {heading}.
+                </button>{' '}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
+              </p>
+            )
+          }
+          // Spent recharge ability — not usable until it recharges. Offer a roll.
+          if (onAction && isRollable(a) && !available) {
+            return (
+              <p key={a.id} className="opacity-60">
+                <span className="font-semibold">{heading}.</span>{' '}
+                {onRecharge && (
+                  <button
+                    type="button"
+                    onClick={() => onRecharge(a)}
+                    title="Roll the recharge die"
+                    className="rounded border border-slate-300 px-1.5 py-0.5 align-middle text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Roll recharge
+                  </button>
+                )}{' '}
+                {a.text ? (
+                  <Markdown inline linkConditions resolveSpell={resolveSpell}>
+                    {a.text}
+                  </Markdown>
+                ) : null}
+              </p>
+            )
+          }
+          return (
+            <Markdown
+              key={a.id}
+              linkConditions
+              resolveSpell={resolveSpell}
+            >{`**${heading}.** ${a.text ?? ''}`}</Markdown>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const LEVEL_ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th']
+
+/** A spell group's usage heading: "At Will", "1st Level", "N/Day Each", or "N/Day" when the
+ *  group is one pool between its spells rather than N uses of each. */
+function usageLabel(group: SpellGroup): string {
+  if (group.usage.type === 'atWill') return 'At Will'
+  if (group.usage.type === 'slots') {
+    return `${LEVEL_ORDINAL[group.usage.level] ?? `${group.usage.level}th`} Level`
+  }
+  return `${group.usage.per}/Day${group.usage.shared ? '' : ' Each'}`
+}
+
+/** The italic intro line: casting ability, save DC, and spell attack bonus, when known. */
+function spellcastingHeader(sc: Spellcasting): string {
+  const bits: string[] = []
+  if (sc.ability) bits.push(`${sc.ability.toUpperCase()} as the spellcasting ability`)
+  if (sc.saveDc != null) bits.push(`spell save DC ${sc.saveDc}`)
+  if (sc.toHit != null) bits.push(`${signed(sc.toHit)} to hit with spell attacks`)
+  return bits.length ? `Casts using ${bits.join(', ')}.` : 'Casts the following spells.'
+}
+
+/**
+ * A monster's spellcasting, grouped by usage. Each spell is a button that opens
+ * the cast modal; hovering it (desktop) previews the spell card. Per-day spells
+ * show their remaining uses and grey out when spent. In the reference compendium
+ * (no `onCast`) the spells render as plain text.
+ */
+function SpellcastingSection({
+  spellcasting,
+  onCast,
+  usesOf,
+  slotsLeftOf,
+  resolveSpell,
+}: {
+  spellcasting: Spellcasting
+  onCast?: (spell: SpellRef) => void
+  usesOf?: SpellUsesOf
+  slotsLeftOf?: (level: number) => number
+  resolveSpell?: ResolveSpell
+}) {
+  // The hover preview is anchored with a fixed, viewport-clamped position so it
+  // isn't clipped by the scrolling stat-block column. Touch devices don't fire
+  // hover, so they simply tap to open the cast modal (which shows the same card).
+  const {
+    card: preview,
+    open: openPreview,
+    close: closePreview,
+    cancelClose,
+  } = useHoverCard<Spell>()
+
+  /** Open the spell hover card anchored to its button — only when the ref resolves. */
+  const showPreview = (spell: SpellRef, el: HTMLElement) => {
+    const found = resolveSpell?.(spell.ref)
+    if (found) openPreview(found, el)
+  }
+
+  return (
+    <div>
+      <h4 className={SECTION_HEADING}>Spellcasting</h4>
+      <p className="mb-2 text-sm italic text-slate-500 dark:text-slate-400">
+        {spellcastingHeader(spellcasting)}
+      </p>
+      <div className="space-y-2">
+        {spellcasting.groups.map((group, i) => {
+          // Slot groups carry the count on the level label; all the level's spells
+          // share that pool, so they don't show per-spell counts.
+          const level = group.usage.type === 'slots' ? group.usage.level : null
+          const slotMax =
+            level != null ? (spellcasting.slots?.[String(level) as SpellLevel] ?? 0) : 0
+          const slotLeft = level != null ? (slotsLeftOf ? slotsLeftOf(level) : slotMax) : 0
+          const slotsDrained = level != null && slotLeft <= 0
+          return (
+            <div key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                {usageLabel(group)}
+                {level != null && slotMax > 0 && (
+                  <span className="ml-1 font-normal normal-case text-slate-400 dark:text-slate-500">
+                    (
+                    {slotsLeftOf
+                      ? `${slotLeft}/${slotMax} slots`
+                      : `${slotMax} ${slotMax === 1 ? 'slot' : 'slots'}`}
+                    )
+                  </span>
+                )}
+              </span>
+              {group.spells.map((spell) => {
+                const remaining = level != null ? null : (usesOf?.(spell) ?? null)
+                const drained = level != null ? slotsDrained : remaining === 0
+                // Source prose can list spells lowercased (e.g. ToB3 "charm person").
+                // Prefer the resolved spell's canonical name; else title-case it.
+                const name = resolveSpell?.(spell.ref)?.name ?? titleCase(spell.name)
+                const label = remaining == null ? name : `${name} (${remaining})`
+                if (!onCast) {
+                  return (
+                    <span
+                      key={spell.ref ?? spell.name}
+                      className="text-slate-600 dark:text-slate-300"
+                    >
+                      {label}
+                    </span>
+                  )
+                }
+                return (
+                  <button
+                    key={spell.ref ?? spell.name}
+                    type="button"
+                    onClick={() => onCast(spell)}
+                    onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
+                    onMouseLeave={closePreview}
+                    title={`Cast ${name}`}
+                    className={
+                      drained
+                        ? 'text-slate-400 line-through hover:no-underline dark:text-slate-600'
+                        : 'font-medium text-indigo-600 hover:underline dark:text-indigo-400'
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
+      {spellcasting.note && (
+        <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">
+          {spellcasting.note}
+        </p>
+      )}
+      {preview && (
+        <FloatingCard style={preview.style} onMouseEnter={cancelClose} onMouseLeave={closePreview}>
+          <SpellCard spell={preview.value} />
+        </FloatingCard>
+      )}
+    </div>
+  )
+}
+
+/** The full creature stat block; in combat the on* callbacks make HP, actions, and spells live. */
+export function CreatureStatBlock({
+  creature,
+  hp,
+  liveAc,
+  liveSpeed,
+  concentration,
+  label,
+  onRename,
+  onHpInput,
+  onTempInput,
+  hpEditRequest,
+  onAction,
+  rechargeState,
+  onRecharge,
+  onCheck,
+  onCastSpell,
+  spellUsesOf,
+  actionUsesOf,
+  onUseAction,
+  slotsLeftOf,
+  resolveSpell,
+  onReaction,
+  onLegendaryAction,
+  legendaryRemaining,
+  legendaryResistanceLeft,
+  inLair = false,
+  onEdit,
+  onDelete,
+  onShare,
+  strangers,
+}: {
+  creature: Creature
+  /** Live hit points when shown in combat; absent in the reference compendium. */
+  hp?: HitPoints
+  /** Armor class with active effects folded in (combat); the stat block's otherwise. */
+  liveAc?: number
+  /** Speeds with active effects folded in (combat); the stat block's otherwise. */
+  liveSpeed?: Speeds
+  /** Live concentration, when in combat — drives the "C" badge. */
+  concentration?: Concentration | null
+  /** The combatant's display name (shown in the tracker); defaults to the creature name. */
+  label?: string
+  /** Rename the combatant's tracker label. */
+  onRename?: (label: string) => void
+  /** Edit current HP from a raw input ("12", "+5", "-3"). */
+  onHpInput?: (raw: string) => void
+  /** Bump to begin editing the hit points from the keyboard. */
+  hpEditRequest?: number
+  /** Edit temp HP from a raw input. */
+  onTempInput?: (raw: string) => void
+  /** Resolve an action (roll to-hit / save and apply damage). Combat only. */
+  onAction?: (action: Action) => void
+  /** id → charged? Spent recharge abilities render disabled with a recharge button. */
+  rechargeState?: Record<string, boolean>
+  /** Roll the recharge die for a spent ability. */
+  onRecharge?: (action: Action) => void
+  /** Roll an ability check / save / skill (d20 + modifier). Combat only. */
+  onCheck?: OnCheck
+  /** Cast a spell from the spellcasting block. Combat only. */
+  onCastSpell?: (spell: SpellRef) => void
+  /** Per-day uses left for an action ("N/Day"), or null if untracked. Combat only. */
+  actionUsesOf?: (action: Action) => number | null
+  /** Spend one per-day use of an action (and roll it if rollable). Combat only. */
+  onUseAction?: (action: Action) => void
+  /** Uses left for a spell on the live combatant (null = unlimited). Combat only. */
+  spellUsesOf?: SpellUsesOf
+  /** Spell slots left at a given level on the live combatant. Combat only. */
+  slotsLeftOf?: (level: number) => number
+  /** Resolve a spell's compendium entry for the hover preview / cast card. */
+  resolveSpell?: ResolveSpell
+  /** Use a reaction (spends the round's reaction, then resolves it if it's rollable). Combat only. */
+  onReaction?: (action: Action) => void
+  /** Use a legendary action (spends one, then resolves it if it's rollable). Combat only. */
+  onLegendaryAction?: (action: Action) => void
+  /** Legendary actions left this round, when in combat. */
+  legendaryRemaining?: number
+  /** Legendary Resistance uses left, shown as its own section header in combat
+   *  (the Use button + In-lair toggle live in the controls). */
+  legendaryResistanceLeft?: number
+  /** Whether the creature is currently in its lair — swaps the lair XP/legendary budget. */
+  inLair?: boolean
+  /** Edit this creature (custom library only) — shown in the source row. */
+  onEdit?: () => void
+  /** Delete this creature from the library (custom only) — shown in the source row. */
+  onDelete?: () => void
+  /** Publish this creature to a link, from wherever the stat block has its own controls. */
+  onShare?: () => void
+  /** Rendered for somebody who doesn't own it: a shared link rather than their library. */
+  strangers?: boolean
+}) {
+  const displayName = label ?? creature.name
+  // A milestone campaign hides XP in the combat view (and the recap). The compendium
+  // is a reference — it always shows everything, whatever the campaign uses.
+  const inCombat = hp != null
+  const milestone = useCampaignRules().leveling === 'milestone'
+  const showXp = !inCombat || !milestone
+  // Legendary Resistance gets its own section (counter header + trait text); pull its
+  // trait out of the plain Traits list so it isn't shown twice.
+  const lrTrait = creature.traits?.find((t) => /^Legendary Resistance/i.test(t.name))
+  const showLrSection = legendaryResistanceLeft != null && lrTrait != null
+  const traits = showLrSection ? creature.traits?.filter((t) => t !== lrTrait) : creature.traits
+  const la = creature.legendaryActions
+  const perRound = la && inLair && la.perRoundLair != null ? la.perRoundLair : la?.perRound
+  const lairNote = la?.perRoundLair != null && !inLair ? `, or ${la.perRoundLair} in lair` : ''
+  const legendaryTitle = !la
+    ? 'Legendary Actions'
+    : legendaryRemaining != null
+      ? `Legendary Actions (${legendaryRemaining} of ${perRound} left)`
+      : `Legendary Actions (${perRound}/round${lairNote})`
+
+  const current = hp ? hp.current : creature.maxHp
+  const max = hp ? hp.max : creature.maxHp
+  const hpTone = hp ? hpToneFor(hpTierOf(hp.current, hp.max)) : 'text-slate-900 dark:text-slate-100'
+  const hpValue = (
+    <span>
+      <span className={hpTone}>{current}</span>
+      <span className="text-slate-400 dark:text-slate-500">/{max}</span>
+    </span>
+  )
+  const tmpValue =
+    hp && hp.temp > 0 ? (
+      <span className="text-sky-600 dark:text-sky-400">{hp.temp}</span>
+    ) : (
+      <span className="text-slate-400 dark:text-slate-500">—</span>
+    )
+  const speeds = speedLines(liveSpeed ?? creature.speed)
+
+  return (
+    <div className="@container flex flex-1 flex-col space-y-4">
+      <StatHeader
+        name={displayName}
+        onRename={onRename}
+        originalName={label && !isAutoLabel(label, creature.name) ? creature.name : undefined}
+        subtitle={
+          <>
+            {[creature.size, titleCase(creature.type)].filter(Boolean).join(' ')}
+            {creature.alignment ? `, ${titleCase(creature.alignment)}` : ''} · CR{' '}
+            {formatCr(creature.cr)}
+            {crDetail(creature, { inLair, combat: inCombat, showXp })}
+          </>
+        }
+        legendary={creature.legendaryActions != null}
+        concentration={concentration}
+        speeds={speeds}
+        stats={
+          <>
+            <HeaderStat label="AC" value={liveAc ?? creature.ac} />
+            <HeaderStat
+              label={creature.hpFormula ? `HP (${creature.hpFormula})` : 'HP'}
+              value={hpValue}
+              edit={
+                onHpInput
+                  ? {
+                      initial: '',
+                      onCommit: onHpInput,
+                      title: 'Set hit points, or type +5 or -8',
+                      editRequest: hpEditRequest,
+                    }
+                  : undefined
+              }
+            />
+            <HeaderStat
+              label="TMP"
+              value={tmpValue}
+              edit={
+                onTempInput
+                  ? {
+                      initial: '',
+                      onCommit: onTempInput,
+                      title: 'Set temporary hit points, or type +5 or -8',
+                    }
+                  : undefined
+              }
+            />
+            <HeaderStat
+              label="Init"
+              value={signed(creature.initiative ?? abilityMod(creature.abilities.dex))}
+            />
+          </>
+        }
+      />
+
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+        <div className="min-w-[20rem] flex-1">
+          <AbilityScores creature={creature} onCheck={onCheck} />
+        </div>
+        {creature.skills && (
+          <div className="min-w-[12rem] flex-1">
+            <SkillsTable skills={creature.skills} onCheck={onCheck} />
+          </div>
+        )}
+      </div>
+
+      <DefensesAndSenses
+        resistances={creature.resistances?.join(', ')}
+        immunities={[...(creature.immunities ?? []), ...(creature.conditionImmunities ?? [])].join(
+          ', ',
+        )}
+        vulnerabilities={creature.vulnerabilities?.join(', ')}
+        senses={formatSenses(creature.senses)}
+        languages={creature.languages?.join(', ')}
+        gear={creature.gear?.join(', ')}
+      />
+
+      {showLrSection && lrTrait && (
+        <div>
+          <h4 className={SECTION_HEADING}>Legendary Resistance ({legendaryResistanceLeft} left)</h4>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {lrTrait.text}
+          </p>
+        </div>
+      )}
+      <Section title="Traits" items={traits} resolveSpell={resolveSpell} />
+      {creature.spellcasting && (
+        <SpellcastingSection
+          spellcasting={creature.spellcasting}
+          onCast={onCastSpell}
+          usesOf={spellUsesOf}
+          slotsLeftOf={slotsLeftOf}
+          resolveSpell={resolveSpell}
+        />
+      )}
+      <ActionSection
+        title="Actions"
+        actions={creature.actions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+        actionUsesOf={actionUsesOf}
+        onUseAction={onUseAction}
+      />
+      <ActionSection
+        title="Bonus Actions"
+        actions={creature.bonusActions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+        actionUsesOf={actionUsesOf}
+        onUseAction={onUseAction}
+      />
+      <ActionSection
+        title="Reactions"
+        actions={creature.reactions}
+        onAction={onReaction ?? onAction}
+        clickAll={onReaction != null}
+        useHint="Use this reaction (spends this round's reaction)"
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+        actionUsesOf={actionUsesOf}
+        onUseAction={onReaction ?? onUseAction}
+      />
+      <ActionSection
+        title={legendaryTitle}
+        note={la ? legendaryPreamble(creature.edition) : undefined}
+        actions={creature.legendaryActions?.actions}
+        onAction={onLegendaryAction ?? onAction}
+        clickAll={onLegendaryAction != null}
+        legendaryRemaining={legendaryRemaining}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+      />
+      <ActionSection
+        title="Lair Actions"
+        actions={creature.lairActions}
+        onAction={onAction}
+        rechargeState={rechargeState}
+        onRecharge={onRecharge}
+        resolveSpell={resolveSpell}
+      />
+
+      {/* Open by default: a creature's own words often answer what the table asks mid-fight
+          — how a person-sized husk opens as something Huge — and collapsed at the foot of a
+          long stat block, nobody finds them. Still a details, so it can be folded away. */}
+      {creature.description && (
+        <details open>
+          <summary className="mb-2 cursor-pointer select-none border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
+            Description
+          </summary>
+          <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <Markdown resolveSpell={resolveSpell}>{creature.description}</Markdown>
+          </div>
+        </details>
+      )}
+
+      <SourceLink
+        source={creature.source}
+        page={creature.sourcePage}
+        derivedFrom={creature.derivedFrom}
+        license={creature.license}
+        strangers={strangers}
+        actions={
+          onEdit || onDelete || onShare ? (
+            <span className="flex shrink-0 gap-2">
+              {onShare && (
+                <button
+                  type="button"
+                  onClick={onShare}
+                  aria-label="Share this creature"
+                  title="Share this creature"
+                  className="tap-area flex items-center justify-center rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <ShareIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Edit
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                >
+                  Delete
+                </button>
+              )}
+            </span>
+          ) : undefined
+        }
+      />
+    </div>
+  )
+}

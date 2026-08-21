@@ -3,7 +3,7 @@
 
 import { useState, type ComponentType, type ReactNode } from 'react'
 import type { EncounterTemplate } from './schema/encounterTemplate.ts'
-import { SharedEncounterPage } from './components/SharedEncounterPage.tsx'
+import { SharedEncounterPage } from './components/share/SharedEncounterPage.tsx'
 
 /**
  * The screen behind `/s/<code>`: the shared encounter, and — only if the reader says yes —

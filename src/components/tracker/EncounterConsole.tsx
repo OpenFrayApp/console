@@ -1,0 +1,787 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { isRollable, type Action } from '../../schema/action.ts'
+import type { Ability } from '../../schema/primitives.ts'
+import type { EffectPreset } from '../../schema/preset.ts'
+import type { Combatant, MonsterCombatant, PlayerCharacter } from '../../schema/combatant.ts'
+import type { Creature, SpellLevel, SpellRef } from '../../schema/creature.ts'
+import type { Spell } from '../../schema/spell.ts'
+import type { Encounter } from '../../schema/encounter.ts'
+import { moveById, spendEffects, type EncounterAction } from '../../state/encounter.ts'
+import {
+  actionUsesRemaining,
+  applyDamage,
+  applyHealing,
+  castSpell,
+  legendaryResistanceLeft,
+  parseHpInput,
+  rechargeLimited,
+  restoreSpellUse,
+  setCurrentHp,
+  slotsRemaining,
+  spellUsesRemaining,
+  effectiveMaxHp,
+  spendActionUse,
+  spendLegendary,
+  spendLimited,
+} from '../../combat/resources.ts'
+import { effectiveSpeeds } from '../../combat/speed.ts'
+import { classLabel } from '../../schema/pcStats.ts'
+import { loadSrdSpells } from '../../compendium/srd.ts'
+import { makeSpellLinker } from '../../compendium/spelllinker.ts'
+import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
+import { isRechargeable, rollRecharge } from '../../combat/recharge.ts'
+import { acOf, isFoe, resolveSelected, trackerOrder } from '../../combat/combatant.ts'
+import { heldBack } from '../../combat/playerView.ts'
+import { rollWithEffects } from '../../combat/effectroll.ts'
+import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
+import { ActionResolver } from '../resolve/ActionResolver.tsx'
+import { CombatantControls } from './CombatantControls.tsx'
+import { CombatantRow } from './CombatantRow.tsx'
+import { ConcentrationPrompt } from '../resolve/ConcentrationPrompt.tsx'
+import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
+import { PcStatBlock } from '../statblock/PcStatBlock.tsx'
+import { SpellCastModal } from '../resolve/SpellCastModal.tsx'
+import { EncounterPlayback, EncounterCleanup, TurnControls } from './EncounterPlayback.tsx'
+import { GameLog, type OnGmRoll, type OnNote, type OnRoll } from '../log/GameLog.tsx'
+import { QuickRoll } from '../resolve/QuickRoll.tsx'
+import { titleCase } from '../../compendium/format.ts'
+import { track, EVENTS } from '../../lib/analytics.ts'
+import { useSwipePanes } from '../../hooks/useSwipePanes.ts'
+
+const COLUMN_HEADING =
+  'text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400'
+
+/** Tiny uppercase heading over a group of tracker rows (Dead, Players and allies, Creatures). */
+function GroupHeading({ children }: { children: string }) {
+  return (
+    <p className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+      {children}
+    </p>
+  )
+}
+
+/** id → charged? for a monster's tracked recharge abilities (undefined for PCs). */
+function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
+  if (c.isPC) return undefined
+  const out: Record<string, boolean> = {}
+  for (const [id, state] of Object.entries(c.limitedUseState)) out[id] = state.available
+  return out
+}
+
+/**
+ * The combat screen: combatant list, selected stat block, controls and game log. Three
+ * columns from `lg` up; below that, the same three as full-width screens swiped between
+ * (or jumped to from the bottom bar, which `pane`/`onPaneChange` keep in step).
+ */
+export function EncounterConsole({
+  boardActions,
+  encounter,
+  dispatch,
+  onRoll,
+  onGmRoll,
+  selectedId,
+  onSelect,
+  started,
+  paused,
+  onBegin,
+  onNextTurn,
+  onStop,
+  onOpenLog,
+  onNote,
+  onRename,
+  onEditPc,
+  onEditPcDmNotes,
+  onEditCreature,
+  onSaveCreature,
+  savedCreatureIds = [],
+  onShareCreature,
+  presets,
+  enabledLibraries,
+  onSavePreset,
+  pane,
+  onPaneChange,
+  effectRequest,
+  hpEditRequest,
+  concentrateRequest,
+  keyHints,
+}: {
+  /**
+   * What the board as a whole can do — saving it, handing it out. Rendered in the tracker's
+   * bottom corner, and passed in rather than built here so this component stays about
+   * running a fight and knows nothing about accounts or links.
+   */
+  boardActions?: ReactNode
+  encounter: Encounter
+  dispatch: (action: EncounterAction) => void
+  onRoll: OnRoll
+  /** Rolls the shared player view withholds — a creature's recharge and escape saves. */
+  onGmRoll: OnGmRoll
+  onNote: OnNote
+  /** Open the full character editor for a roster-backed PC (saves to the DB). */
+  onEditPc?: (pc: PlayerCharacter) => void
+  /** Commit edited GM notes for a roster-backed PC (saves to the board + the DB). */
+  onEditPcDmNotes?: (pc: PlayerCharacter, text: string) => void
+  /** Open the editor for a custom creature (saves to the library; the fight is untouched). */
+  onEditCreature?: (creature: MonsterCombatant) => void
+  /**
+   * Keep a creature that arrived from somewhere else. A shared link puts a stat block on
+   * the board without putting it in the library, and until it is there it cannot be edited.
+   */
+  onSaveCreature?: (creature: MonsterCombatant) => void
+  /** The library's own ids, which is what tells "mine to edit" from "here but not kept". */
+  savedCreatureIds?: readonly string[]
+  /** Publish the selected creature to a link. Any creature, not only homebrew. */
+  onShareCreature?: (creature: Creature) => void
+  /** Keep the roll log in sync when a combatant is renamed. */
+  onRename: (oldName: string, newName: string) => void
+  selectedId: string | null
+  onSelect: (id: string) => void
+  started: boolean
+  paused: boolean
+  onBegin: () => void
+  onNextTurn: () => void
+  onStop?: () => void
+  /** Open the full game-log review modal. */
+  onOpenLog: () => void
+  /** Effect presets offered in the Apply effect modal. */
+  presets?: EffectPreset[]
+  /** Which libraries are on, so the preset picker filters like every other one. */
+  enabledLibraries?: string[]
+  /** Save what's staged as a preset; absent for an anonymous GM, who can't keep one. */
+  onSavePreset?: (preset: EffectPreset) => void
+  /** Which phone screen is up (0 tracker, 1 stat block, 2 controls). */
+  pane: number
+  /** A swipe settled on another screen. */
+  onPaneChange: (pane: number) => void
+  /** Bump to open the Apply effect box for the selected combatant — the keyboard's e. */
+  effectRequest?: number
+  /** Bump to begin editing the selected combatant's hit points — the keyboard's d. */
+  hpEditRequest?: number
+  /** Bump to open (or end) concentration for the selected — the keyboard's command. */
+  concentrateRequest?: number
+  /** The keyboard chords for the turn and playback controls, shown in their tooltips. */
+  keyHints?: { next?: string; prev?: string; begin?: string; pause?: string; stop?: string }
+}) {
+  const { combatants, activeIndex } = encounter
+  const running = started && !paused
+  const activeId = running ? combatants[activeIndex]?.combatantId : undefined
+  const selected = resolveSelected(combatants, selectedId, activeId)
+
+  // A concentration save owed after the selected combatant takes HP damage.
+  const [concPrompt, setConcPrompt] = useState<{ id: string; dc: number; damage: number } | null>(
+    null,
+  )
+
+  const { ref: panesRef, onScroll: onPanesScroll, isPaging } = useSwipePanes(pane, onPaneChange)
+  /** Tapping a tracker row on a phone slides over to the stat block it selected. */
+  const showStatBlock = () => {
+    if (isPaging()) onPaneChange(1)
+  }
+
+  const [actionFor, setActionFor] = useState<Action | null>(null)
+  // Manual reorder drag (combat only): the dragged combatant and the row it's over,
+  // so the list shows a live preview before the drop commits.
+  const [drag, setDrag] = useState<{ id: string; overId: string | null } | null>(null)
+  const [castingSpell, setCastingSpell] = useState<SpellRef | null>(null)
+  // Switching the selected combatant closes a stale resolver / cast modal.
+  useEffect(() => {
+    setActionFor(null)
+    setCastingSpell(null)
+  }, [selected?.combatantId])
+
+  const [spellsById, setSpellsById] = useState<Map<string, Spell>>(new Map())
+  useEffect(() => {
+    loadSrdSpells().then(
+      (spells) => setSpellsById(new Map(spells.map((s) => [s.id, s]))),
+      () => {},
+    )
+  }, [])
+  /** Look up the full spell for a compendium ref; undefined until the SRD list has loaded. */
+  const resolveSpell = (ref?: string): Spell | undefined => (ref ? spellsById.get(ref) : undefined)
+  // Link bare cast-spell names in creature prose (custom creatures aren't pre-baked).
+  // Dedupe by name, preferring the 2024 (srd-5.2) entry when a spell exists in both.
+  const linkSpells = useMemo(() => {
+    const byName = new Map<string, string>()
+    for (const s of spellsById.values()) {
+      if (!byName.has(s.name) || s.id.startsWith('srd-5.2')) byName.set(s.name, s.id)
+    }
+    return makeSpellLinker([...byName].map(([name, ref]) => ({ name, ref })))
+  }, [spellsById])
+
+  // HP damage to a concentrator prompts a save.
+  const applyHpInput = (c: Combatant, raw: string, isTemp: boolean) => {
+    const parsed = parseHpInput(raw)
+    if (!parsed) return
+    if (isTemp) {
+      const next = 'delta' in parsed ? Math.max(0, c.hp.temp + parsed.delta) : parsed.set
+      if (
+        'set' in parsed &&
+        next < c.hp.temp &&
+        !window.confirm(
+          `Temporary hit points don't stack — you normally keep the higher number, which is ${c.hp.temp}. Set them to ${next} anyway?`,
+        )
+      ) {
+        return
+      }
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) => ({ ...cc, hp: { ...cc.hp, temp: Math.max(0, next) } }),
+      })
+      return
+    }
+    /** Apply the parsed HP change: a negative delta damages, positive heals, a set overrides. */
+    const op = (cc: Combatant): Combatant =>
+      'delta' in parsed
+        ? parsed.delta < 0
+          ? applyDamage(cc, -parsed.delta)
+          : applyHealing(cc, parsed.delta)
+        : setCurrentHp(cc, parsed.set)
+    dispatch({ type: 'update', id: c.combatantId, update: op })
+    const damage =
+      'delta' in parsed
+        ? parsed.delta < 0
+          ? -parsed.delta
+          : 0
+        : Math.max(0, c.hp.current - parsed.set)
+    if (damage > 0) {
+      const dc = concentrationPromptDC(c, op(c), damage)
+      if (dc != null) setConcPrompt({ id: c.combatantId, dc, damage })
+    }
+  }
+
+  /** Dismiss the concentration prompt; a failed save also ends the target's concentration. */
+  const resolveConcentration = (broke = false) => {
+    if (broke && concPrompt) dispatch({ type: 'endConcentration', id: concPrompt.id })
+    setConcPrompt(null)
+  }
+
+  /** Roll a monster action's recharge die, log it, and re-arm the ability on a success. */
+  const rollRechargeFor = (c: Combatant, action: Action) => {
+    if (c.isPC) return
+    const { recharged, roll } = rollRecharge(action)
+    onGmRoll(`${c.label}: ${action.name} recharge`, roll)
+    if (recharged) {
+      dispatch({
+        type: 'update',
+        id: c.combatantId,
+        update: (cc) => (cc.isPC ? cc : rechargeLimited(cc, action.id)),
+      })
+    }
+  }
+
+  // Effect-aware so Bless etc. fold into the d20.
+  const rollCheckFor = (
+    c: Combatant,
+    label: string,
+    modifier: number,
+    kind: 'save' | 'check',
+    ability?: Ability,
+  ) => {
+    const formula = `1d20${modifier >= 0 ? `+${modifier}` : modifier}`
+    const { result, applied, roller } = rollWithEffects(formula, { roller: c, kind, ability })
+    spendEffects(dispatch, c, roller)
+    // A foe's ad-hoc save or check from its stat block is the GM's bookkeeping, like
+    // its recharge and escape saves — there is no DC here, so there is no Saved/Failed
+    // for the table; a save the table should watch goes through the group-save flow.
+    onRoll(`${c.isPC ? c.name : c.label}: ${label}`, result, {
+      applied,
+      sourceId: c.combatantId,
+      gmOnly: isFoe(c) || undefined,
+    })
+  }
+
+  /** Mark a monster's recharge ability spent after use; no-op for PCs and ordinary actions. */
+  const consumeIfRechargeable = (c: Combatant, action: Action) => {
+    if (c.isPC || !isRechargeable(action)) return
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : spendLimited(cc, action.id)),
+    })
+  }
+
+  // Spend one per-day use of an action; if it's rollable, also open the resolver
+  // to roll it. Non-rollable per-day actions (e.g. an Archmage's Misty Step) just
+  // decrement, tracked like a spell's "N/Day Each" uses.
+  const consumeLimitedAction = (c: Combatant, action: Action) => {
+    if (c.isPC) return
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : spendActionUse(cc, action.id)),
+    })
+    if (isRollable(action)) setActionFor(action)
+  }
+
+  // Using a reaction from the stat block spends the creature's one reaction for the
+  // round — the same resource the Use reaction control toggles — then resolves like any
+  // other action: a per-day reaction also decrements, and one with a roll opens the
+  // resolver. Most reactions (Parry, Split) roll nothing, so every one is clickable.
+  const applyReaction = (c: MonsterCombatant, action: Action) => {
+    if (!c.reactionUsed) track(EVENTS.reactionUsed)
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : { ...cc, reactionUsed: true }),
+    })
+    onNote(`${c.label} uses ${action.name}`, 'action')
+    if (actionUsesRemaining(c, action) != null) consumeLimitedAction(c, action)
+    else if (isRollable(action)) setActionFor(action)
+  }
+
+  // Spends a use (per-day decrements; at-will doesn't). Damage/save resolution — and
+  // concentration, which waits until the spell lands — happen in the cast modal.
+  const castSpellFrom = (c: MonsterCombatant, spell: SpellRef) => {
+    track(EVENTS.spellCast)
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : castSpell(cc, spell)),
+    })
+    // Prefer the resolved compendium name (ToB stat blocks print spell names lowercase).
+    onNote(`${c.label} casts ${resolveSpell(spell.ref)?.name ?? titleCase(spell.name)}`, 'cast')
+  }
+
+  /** Give back one spent cast of a monster's spell — the cast modal's undo. */
+  const restoreSpellUseFor = (c: MonsterCombatant, spell: SpellRef) => {
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : restoreSpellUse(cc, spell)),
+    })
+  }
+
+  // Spends from this round's legendary budget, then resolves it like any other
+  // action when it has an attack or save.
+  const applyLegendaryAction = (c: MonsterCombatant, action: Action) => {
+    dispatch({
+      type: 'update',
+      id: c.combatantId,
+      update: (cc) => (cc.isPC ? cc : spendLegendary(cc, action.legendaryCost ?? 1)),
+    })
+    onNote(`${c.label} uses ${action.name}`, 'action')
+    if (isRollable(action)) setActionFor(action)
+  }
+
+  /** A combatant's tracker row, wired for selection, HP input, effects, and drag reordering. */
+  const renderRow = (c: Combatant) => (
+    <CombatantRow
+      key={c.combatantId}
+      combatant={c}
+      active={running && c.combatantId === activeId}
+      selected={c.combatantId === selected?.combatantId}
+      onSelect={() => {
+        onSelect(c.combatantId)
+        showStatBlock()
+      }}
+      hiddenFromPlayers={heldBack(c)}
+      onRemoveEffect={(effectIds) =>
+        dispatch({
+          type: 'update',
+          id: c.combatantId,
+          update: (cc) => ({
+            ...cc,
+            effects: cc.effects.filter((e) => !effectIds.includes(e.id)),
+          }),
+        })
+      }
+      onRemove={() => dispatch({ type: 'remove', id: c.combatantId })}
+      onHpInput={(raw) => applyHpInput(c, raw, false)}
+      reorderable={started && c.status !== 'dead'}
+      dragging={drag?.id === c.combatantId}
+      onReorderStart={() => setDrag({ id: c.combatantId, overId: null })}
+      onReorderEnd={() => setDrag(null)}
+      onReorderOver={() =>
+        setDrag((d) =>
+          d && d.id !== c.combatantId && d.overId !== c.combatantId
+            ? { ...d, overId: c.combatantId }
+            : d,
+        )
+      }
+    />
+  )
+  // While dragging, render a preview order so the list visibly makes space; the
+  // drop then commits the same move.
+  const view =
+    drag?.overId && drag.id !== drag.overId
+      ? moveById(combatants, drag.id, drag.overId)
+      : combatants
+  /** On drop, dispatch the previewed move (if any) and clear the drag state. */
+  const commitReorder = () => {
+    if (drag?.overId && drag.id !== drag.overId) {
+      dispatch({ type: 'reorder', id: drag.id, toId: drag.overId })
+    }
+    setDrag(null)
+  }
+  // Group by disposition, not isPC: a foe quick add belongs with the Creatures.
+  // The groups partition trackerOrder, so the rows render in the same order a
+  // keyboard selection walks.
+  const ordered = trackerOrder(view, started)
+  const players = ordered.filter((c) => !isFoe(c))
+  const creatures = ordered.filter((c) => isFoe(c))
+  const living = ordered.filter((c) => c.status !== 'dead')
+  const dead = ordered.filter((c) => c.status === 'dead')
+
+  // The three shell modes (see index.css). In `swipe` the grid becomes a scroll-snap
+  // strip: each region is a full-width screen, swiped between like the D&D Beyond
+  // app's sheets, with the bottom bar to jump. In `split` (small tablets, landscape)
+  // the same three regions are a two-column grid: tracker beside stat block, controls
+  // and log in a band below. In `wide` they are the three aligned desktop columns.
+  const PANE = 'swipe:w-full swipe:shrink-0 swipe:snap-center swipe:px-4 swipe:pt-4 swipe:pb-3'
+  return (
+    <div
+      ref={panesRef}
+      onScroll={onPanesScroll}
+      className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden split:grid split:snap-none split:grid-cols-2 split:grid-rows-[minmax(0,3fr)_minmax(0,2fr)] split:gap-x-6 split:gap-y-3 split:overflow-visible split:px-6 split:py-4 wide:grid wide:snap-none wide:grid-cols-[var(--wide-col-l)_1fr_var(--wide-col-r)] wide:overflow-visible wide:px-6 wide:py-4"
+    >
+      <section
+        className={`${PANE} flex min-h-0 flex-col wide:border-r wide:border-slate-200 wide:pr-4 wide:dark:border-slate-800`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          {started ? (
+            // The turn stepper lives with the round it moves through.
+            <div className="flex items-center gap-2">
+              <h2 className={COLUMN_HEADING}>
+                {`Round ${encounter.round}${paused ? ' · paused' : ''}`}
+              </h2>
+              {!paused && (
+                <TurnControls
+                  dispatch={dispatch}
+                  onNextTurn={onNextTurn}
+                  nextHint={keyHints?.next}
+                  prevHint={keyHints?.prev}
+                />
+              )}
+            </div>
+          ) : (
+            <EncounterCleanup
+              hasCombatants={combatants.length > 0}
+              hasFoes={creatures.length > 0}
+              dispatch={dispatch}
+            />
+          )}
+          <EncounterPlayback
+            started={started}
+            paused={paused}
+            canBegin={combatants.length > 0}
+            dispatch={dispatch}
+            onBegin={onBegin}
+            onStop={onStop}
+            beginHint={keyHints?.begin}
+            pauseHint={keyHints?.pause}
+            stopHint={keyHints?.stop}
+          />
+        </div>
+        <div
+          className="mt-2 flex-1 space-y-2 overflow-auto px-1 py-1"
+          onDragOver={drag ? (e) => e.preventDefault() : undefined}
+          onDrop={
+            drag
+              ? (e) => {
+                  e.preventDefault()
+                  commitReorder()
+                }
+              : undefined
+          }
+        >
+          {combatants.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Nobody is on the board yet. Use <strong>Add creature</strong>, <strong>Add PC</strong>
+              , or <strong>Quick add</strong> at the top to fill it.
+            </p>
+          ) : started ? (
+            // In combat: living in initiative order, the dead grouped below.
+            <>
+              {living.map(renderRow)}
+              {dead.length > 0 && <GroupHeading>Dead</GroupHeading>}
+              {dead.map(renderRow)}
+            </>
+          ) : (
+            // Before combat there's no order yet, so group by kind.
+            <>
+              {players.length > 0 && <GroupHeading>Players and allies</GroupHeading>}
+              {players.map(renderRow)}
+              {creatures.length > 0 && <GroupHeading>Creatures</GroupHeading>}
+              {creatures.map(renderRow)}
+            </>
+          )}
+        </div>
+        {boardActions && <div className="mt-2 flex items-center gap-1">{boardActions}</div>}
+      </section>
+
+      <section
+        className={`${PANE} flex min-h-0 flex-col wide:border-r wide:border-slate-200 wide:px-4 wide:dark:border-slate-800`}
+      >
+        {selected ? (
+          <div className="min-h-0 flex-1 overflow-auto pr-4">
+            {selected.isPC ? (
+              <PcStatBlock
+                name={selected.name}
+                subtitle={
+                  selected.kind === 'quick'
+                    ? 'Quick add'
+                    : [
+                        'Player character',
+                        selected.race,
+                        classLabel(selected),
+                        selected.alignment && titleCase(selected.alignment),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                }
+                ac={acOf(selected)}
+                hp={{ ...selected.hp, max: effectiveMaxHp(selected) }}
+                initiativeMod={selected.initiativeMod ?? 0}
+                speed={selected.speed && effectiveSpeeds(selected.speed, selected.effects)}
+                abilities={selected.abilities}
+                resistances={selected.resistances}
+                immunities={selected.immunities}
+                vulnerabilities={selected.vulnerabilities}
+                languages={selected.languages}
+                senses={selected.senses}
+                passivePerception={selected.passivePerception}
+                faith={selected.faith}
+                personalityTraits={selected.personalityTraits}
+                ideals={selected.ideals}
+                bonds={selected.bonds}
+                flaws={selected.flaws}
+                backstory={selected.backstory}
+                dmNotes={selected.dmNotes}
+                concentration={selected.concentration}
+                onRename={(name) => {
+                  onRename(selected.name, name)
+                  dispatch({
+                    type: 'update',
+                    id: selected.combatantId,
+                    update: (c) => (c.isPC ? { ...c, name } : c),
+                  })
+                }}
+                onHpInput={(raw) => applyHpInput(selected, raw, false)}
+                onTempInput={(raw) => applyHpInput(selected, raw, true)}
+                hpEditRequest={hpEditRequest}
+                onEditDmNotes={
+                  selected.rosterId && onEditPcDmNotes
+                    ? (text) => onEditPcDmNotes(selected, text)
+                    : undefined
+                }
+                onCheck={(label, modifier, kind, ability) =>
+                  rollCheckFor(selected, label, modifier, kind, ability)
+                }
+              />
+            ) : (
+              <SpellLinkContext.Provider value={linkSpells}>
+                <CreatureStatBlock
+                  creature={selected.creature}
+                  hp={{ ...selected.hp, max: effectiveMaxHp(selected) }}
+                  hpEditRequest={hpEditRequest}
+                  liveAc={acOf(selected)}
+                  liveSpeed={effectiveSpeeds(selected.creature.speed, selected.effects)}
+                  concentration={selected.concentration}
+                  label={selected.label}
+                  onRename={(label) => {
+                    onRename(selected.label, label)
+                    dispatch({
+                      type: 'update',
+                      id: selected.combatantId,
+                      update: (c) => (c.isPC ? c : { ...c, label }),
+                    })
+                  }}
+                  onHpInput={(raw) => applyHpInput(selected, raw, false)}
+                  onTempInput={(raw) => applyHpInput(selected, raw, true)}
+                  onAction={setActionFor}
+                  rechargeState={rechargeStateOf(selected)}
+                  onRecharge={(action) => rollRechargeFor(selected, action)}
+                  onCheck={(label, modifier, kind, ability) =>
+                    rollCheckFor(selected, label, modifier, kind, ability)
+                  }
+                  onCastSpell={setCastingSpell}
+                  spellUsesOf={(spell) =>
+                    selected.isPC ? null : spellUsesRemaining(selected, spell)
+                  }
+                  actionUsesOf={(action) =>
+                    selected.isPC ? null : actionUsesRemaining(selected, action)
+                  }
+                  onUseAction={(action) => consumeLimitedAction(selected, action)}
+                  onReaction={
+                    selected.isPC ? undefined : (action) => applyReaction(selected, action)
+                  }
+                  slotsLeftOf={
+                    selected.isPC
+                      ? undefined
+                      : (level) => slotsRemaining(selected, String(level) as SpellLevel)
+                  }
+                  resolveSpell={resolveSpell}
+                  onLegendaryAction={
+                    selected.creature.legendaryActions
+                      ? (action) => applyLegendaryAction(selected, action)
+                      : undefined
+                  }
+                  legendaryRemaining={
+                    selected.creature.legendaryActions ? selected.legendaryRemaining : undefined
+                  }
+                  legendaryResistanceLeft={
+                    selected.creature.legendaryResistance != null
+                      ? legendaryResistanceLeft(selected)
+                      : undefined
+                  }
+                  inLair={selected.inLair}
+                  // Any creature, not only homebrew: what travels is decided by whether the
+                  // reader can resolve it, and a library creature goes as a reference. The
+                  // snapshot on the board is what gets published, which is the one on screen.
+                  onShare={
+                    !selected.isPC && onShareCreature
+                      ? () => onShareCreature(selected.creature)
+                      : undefined
+                  }
+                />
+              </SpellLinkContext.Provider>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Click anyone in the tracker to see their stat block and act on them.
+          </p>
+        )}
+      </section>
+
+      <aside
+        className={`${PANE} flex min-h-0 flex-col gap-4 overflow-y-auto split:col-span-2 split:flex-row split:gap-6 split:border-t split:border-slate-200 split:pt-3 split:dark:border-slate-800 wide:pl-4`}
+      >
+        {selected && (
+          <div className="shrink-0 split:w-72">
+            <h3 className={COLUMN_HEADING}>Controls</h3>
+            <div className="mt-2 space-y-2">
+              {concPrompt && concPrompt.id === selected.combatantId && (
+                <ConcentrationPrompt
+                  dc={concPrompt.dc}
+                  canRoll={!selected.isPC}
+                  onMaintain={() => resolveConcentration()}
+                  onBreak={() => resolveConcentration(true)}
+                  onRoll={
+                    selected.isPC
+                      ? undefined
+                      : () => {
+                          const check = rollConcentrationCheck(selected, concPrompt.damage)
+                          spendEffects(dispatch, selected, check.combatant)
+                          onRoll(`${selected.label}: concentration`, check.roll, {
+                            applied: check.applied,
+                            sourceId: selected.combatantId,
+                          })
+                          resolveConcentration(!check.maintained)
+                        }
+                  }
+                />
+              )}
+              <CombatantControls
+                combatant={selected}
+                combatants={encounter.combatants}
+                round={encounter.round}
+                dispatch={dispatch}
+                onRoll={onRoll}
+                onGmRoll={onGmRoll}
+                presets={presets}
+                enabledLibraries={enabledLibraries}
+                onSavePreset={onSavePreset}
+                openEffectRequest={effectRequest}
+                concentrateRequest={concentrateRequest}
+              />
+              {selected.isPC && selected.rosterId && onEditPc && (
+                <button
+                  type="button"
+                  onClick={() => onEditPc(selected)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Edit character
+                </button>
+              )}
+              {/* Edit only what the library actually holds. A creature added from a shared
+                link carries a custom: id without being kept anywhere, and offering Edit for
+                it gave a button that looked up nothing and did nothing. */}
+              {!selected.isPC &&
+                selected.creatureId.startsWith('custom:') &&
+                (savedCreatureIds.includes(selected.creatureId)
+                  ? onEditCreature && (
+                      <button
+                        type="button"
+                        onClick={() => onEditCreature(selected)}
+                        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Edit creature
+                      </button>
+                    )
+                  : onSaveCreature && (
+                      <button
+                        type="button"
+                        onClick={() => onSaveCreature(selected)}
+                        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Save creature
+                      </button>
+                    ))}
+            </div>
+          </div>
+        )}
+
+        {/* The footer's dice live here in the swipe shell, where the footer carries only
+        the fight's numbers. */}
+        <div className="hidden shrink-0 swipe:block">
+          <h3 className={COLUMN_HEADING}>Quick roll</h3>
+          <div className="mt-2">
+            <QuickRoll onRoll={onRoll} />
+          </div>
+        </div>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 split:border-t-0 split:pt-0">
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className={COLUMN_HEADING}>Game log</h3>
+            {encounter.log.length > 0 && (
+              <button
+                type="button"
+                onClick={onOpenLog}
+                className="text-xs text-slate-500 hover:underline dark:text-slate-400"
+              >
+                View all
+              </button>
+            )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto">
+            {/* Slim recent feed (newest first); the full record lives in the modal. */}
+            <GameLog entries={[...encounter.log].slice(-12).reverse()} />
+          </div>
+        </div>
+      </aside>
+
+      {actionFor && selected && !selected.isPC && (
+        <ActionResolver
+          attacker={selected}
+          action={actionFor}
+          combatants={combatants}
+          dispatch={dispatch}
+          onRoll={onRoll}
+          onUse={() => consumeIfRechargeable(selected, actionFor)}
+          onClose={() => setActionFor(null)}
+        />
+      )}
+
+      {castingSpell && selected && !selected.isPC && (
+        <SpellCastModal
+          caster={selected}
+          spellRef={castingSpell}
+          spell={resolveSpell(castingSpell.ref)}
+          usesRemaining={spellUsesRemaining(selected, castingSpell)}
+          combatants={combatants}
+          dispatch={dispatch}
+          onRoll={onRoll}
+          round={encounter.round}
+          onCast={() => castSpellFrom(selected, castingSpell)}
+          onRestore={() => restoreSpellUseFor(selected, castingSpell)}
+          onClose={() => setCastingSpell(null)}
+        />
+      )}
+    </div>
+  )
+}

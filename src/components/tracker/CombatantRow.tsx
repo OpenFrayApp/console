@@ -1,0 +1,265 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
+import { useRef } from 'react'
+import type { Combatant } from '../../schema/combatant.ts'
+import { effectiveMaxHp, hpTier } from '../../combat/resources.ts'
+import { acOf, isFoe, nameOf } from '../../combat/combatant.ts'
+import { concentrationTitle } from '../../combat/concentration.ts'
+import { isStable } from '../../combat/deathsaves.ts'
+import { cx } from '../../lib/cx.ts'
+import { groupEffects } from '../../combat/effects.ts'
+import { EffectGroupBadge } from './EffectBadge.tsx'
+import { DeathSavePips } from './DeathSaveControls.tsx'
+import { EditableField } from '../ui/EditableField.tsx'
+import { hpToneFor, TIER_LABEL } from '../ui/hpTone.ts'
+
+interface CombatantRowProps {
+  combatant: Combatant
+  /** Whose turn it is (the initiative cursor). */
+  active?: boolean
+  /** The row the GM has selected to inspect in the detail panel. */
+  selected?: boolean
+  /** Selects this combatant when the row is clicked. */
+  onSelect?: () => void
+  /** When set, effect badges become removable. A bundle's badge passes every member,
+   * in one call, so the whole thing clears as one board update and one log line. */
+  onRemoveEffect?: (effectIds: string[]) => void
+  /** Removes this combatant from the encounter (the on-hover X). */
+  onRemove?: () => void
+  /** Click-to-edit current HP from a raw input ("12", "+5", "-3"). */
+  onHpInput?: (raw: string) => void
+  /** This one is being kept off the shared player screen, so the GM can see which. */
+  hiddenFromPlayers?: boolean
+  /** Show a drag handle, to manually reorder the turn order. */
+  reorderable?: boolean
+  /** This row is the one currently being dragged (rendered as a faint placeholder). */
+  dragging?: boolean
+  /** This row's handle started a drag. */
+  onReorderStart?: () => void
+  /** A drag ended (committed or cancelled). */
+  onReorderEnd?: () => void
+  /** The drag is hovering this row — the parent moves the dragged row here as a preview. */
+  onReorderOver?: () => void
+}
+
+/**
+ * One row in the initiative list: initiative, name, HP/AC, and the combatant's
+ * effect badges (conditions and effects, one unified list). Dead/down combatants
+ * are greyed and struck through; living combatants surface their wound tier.
+ */
+export function CombatantRow({
+  combatant,
+  active = false,
+  selected = false,
+  onSelect,
+  onRemoveEffect,
+  onRemove,
+  onHpInput,
+  hiddenFromPlayers = false,
+  reorderable = false,
+  dragging = false,
+  onReorderStart,
+  onReorderEnd,
+  onReorderOver,
+}: CombatantRowProps) {
+  const { hp, status } = combatant
+  const dead = status === 'dead'
+  const downed = dead || status === 'unconscious'
+  const tier = hpTier(combatant)
+  const showTier = !downed && tier !== 'healthy'
+  const rowRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <div
+      ref={rowRef}
+      aria-current={active ? 'true' : undefined}
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect}
+      onKeyDown={
+        onSelect
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelect()
+              }
+            }
+          : undefined
+      }
+      // The whole list is the drop zone; each row reports when the drag hovers it so
+      // the parent can move the dragged row here as a live preview.
+      onDragOver={
+        reorderable
+          ? (e) => {
+              e.preventDefault()
+              onReorderOver?.()
+            }
+          : undefined
+      }
+      className={cx(
+        'group flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2 transition-opacity',
+        isFoe(combatant)
+          ? 'border-l-rose-400 dark:border-l-rose-500'
+          : 'border-l-sky-400 dark:border-l-sky-500',
+        onSelect && 'cursor-pointer',
+        active
+          ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-950/40'
+          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
+        selected && 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-950',
+        dragging && 'opacity-40',
+        dead && 'opacity-50',
+      )}
+    >
+      {reorderable && (
+        <span
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', combatant.combatantId)
+            // Drag a snapshot of the whole row, not just the grip.
+            if (rowRef.current) e.dataTransfer.setDragImage(rowRef.current, 24, 20)
+            onReorderStart?.()
+          }}
+          onDragEnd={() => onReorderEnd?.()}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Drag to reorder ${nameOf(combatant)}`}
+          title="Drag to reorder"
+          className="shrink-0 cursor-grab text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+            <circle cx="9" cy="6" r="1.4" />
+            <circle cx="15" cy="6" r="1.4" />
+            <circle cx="9" cy="12" r="1.4" />
+            <circle cx="15" cy="12" r="1.4" />
+            <circle cx="9" cy="18" r="1.4" />
+            <circle cx="15" cy="18" r="1.4" />
+          </svg>
+        </span>
+      )}
+
+      <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
+        {/* Manual reorder can store a fractional rank; the GM only ever sees the integer. */}
+        {Math.floor(combatant.initiative)}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove()
+              }}
+              aria-label={`Remove ${nameOf(combatant)}`}
+              title="Remove from the encounter"
+              // A finger never hovers, so the hover-reveal left this invisible and still
+              // tappable — a destructive control the GM could hit without seeing it. On a
+              // coarse pointer it is simply shown. It stays well under the 44px floor on
+              // purpose, twice over: it sits inside the row's own tap target, where the
+              // cost of a mis-aimed tap is a combatant off the board, and a target that
+              // size would set the height of every row on the console.
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-400 opacity-0 transition-opacity hover:bg-slate-200 hover:text-rose-600 focus:opacity-100 coarse:h-6 coarse:w-6 coarse:opacity-100 group-hover:opacity-100 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-rose-400"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                className="h-3 w-3"
+              >
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+            </button>
+          )}
+          <span className={cx('truncate font-medium', dead && 'line-through')}>
+            {nameOf(combatant)}
+          </span>
+          {combatant.concentration && (
+            <span
+              title={concentrationTitle(combatant.concentration)}
+              className="inline-flex h-5 shrink-0 items-center justify-center rounded bg-violet-200 px-1 text-xs font-bold text-violet-800 dark:bg-violet-900 dark:text-violet-200"
+            >
+              C
+            </span>
+          )}
+          {hiddenFromPlayers && (
+            <span
+              title="Kept off the shared player screen"
+              className="rounded bg-amber-100 px-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+            >
+              Hidden
+            </span>
+          )}
+          {status === 'dead' && (
+            <span className="rounded bg-slate-200 px-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+              Dead
+            </span>
+          )}
+          {status === 'unconscious' && (
+            <span className="rounded bg-amber-200 px-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              Unconscious
+            </span>
+          )}
+          {combatant.isPC && isStable(combatant) && (
+            <span className="rounded bg-emerald-200 px-1 text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+              Stable
+            </span>
+          )}
+        </div>
+
+        {combatant.effects.length > 0 && (
+          // Labels only — durations and escape saves live in the Applied effects list.
+          // A bundle's members render as one badge and clear together.
+          <div className="mt-1 flex flex-wrap gap-1">
+            {groupEffects(combatant.effects).map((group) => (
+              <EffectGroupBadge
+                key={group.bundle?.id ?? group.effects[0].id}
+                group={group}
+                onRemove={
+                  onRemoveEffect ? () => onRemoveEffect(group.effects.map((e) => e.id)) : undefined
+                }
+              />
+            ))}
+          </div>
+        )}
+
+        {combatant.isPC && combatant.status === 'unconscious' && (
+          <div className="mt-1">
+            <DeathSavePips saves={combatant.deathSaves ?? { successes: 0, failures: 0 }} />
+          </div>
+        )}
+      </div>
+
+      <div className="text-right text-sm">
+        <div>
+          <span className="tabular-nums">
+            {onHpInput ? (
+              // Edit HP inline (damage/heal/set), like the stat block. Stop key events
+              // from reaching the row so Enter commits the edit instead of selecting.
+              <span onKeyDown={(e) => e.stopPropagation()}>
+                <EditableField
+                  initial=""
+                  onCommit={onHpInput}
+                  title="Set hit points, or type +5 or -8"
+                  inputMode="numeric"
+                  inputClassName="w-12 rounded border border-slate-300 bg-white px-1 text-right tabular-nums dark:border-slate-600 dark:bg-slate-800"
+                >
+                  <span className={hpToneFor(tier)}>{hp.current}</span>
+                </EditableField>
+              </span>
+            ) : (
+              <span className={hpToneFor(tier)}>{hp.current}</span>
+            )}
+            <span className="text-slate-400 dark:text-slate-500">/{effectiveMaxHp(combatant)}</span>
+          </span>
+          {hp.temp > 0 && <span className="text-sky-600 dark:text-sky-400"> +{hp.temp}</span>}
+          {showTier && <span className="sr-only"> {TIER_LABEL[tier]}</span>}
+        </div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">AC {acOf(combatant)}</div>
+      </div>
+    </div>
+  )
+}

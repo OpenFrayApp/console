@@ -1,0 +1,657 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
+import { useState } from 'react'
+import type { ArmorName, Combatant } from '../../schema/combatant.ts'
+import { ARMOR, ARMOR_NAMES } from '../../schema/pcStats.ts'
+import type { EncounterAction } from '../../state/encounter.ts'
+import {
+  isStable,
+  markDeathSaveFailure,
+  markDeathSaveSuccess,
+  rollDeathSave,
+} from '../../combat/deathsaves.ts'
+import { startConcentration } from '../../combat/concentration.ts'
+import {
+  legendaryResistanceLeft,
+  setInLair,
+  spendLegendaryResistance,
+} from '../../combat/resources.ts'
+import { saveBonus } from '../../combat/masssave.ts'
+import { isFoe, nameOf } from '../../combat/combatant.ts'
+import { heldBack, onSharedBoard } from '../../combat/playerView.ts'
+import { signed } from '../../compendium/format.ts'
+import {
+  counterOf,
+  describeDuration,
+  describeModifier,
+  groupEffects,
+  setCount,
+} from '../../combat/effects.ts'
+import {
+  EXHAUSTION_MAX,
+  exhaustionLevel,
+  isExhaustion,
+  describeExhaustion,
+} from '../../combat/exhaustion.ts'
+import { useCampaignEdition } from '../../state/campaignRules.ts'
+import { saveEndsClears, saveEndsOf, type SaveEnds } from '../../combat/saveEnds.ts'
+import { roll } from '../../dice/roll.ts'
+import type { Effect } from '../../schema/effect.ts'
+import type { EffectPreset } from '../../schema/preset.ts'
+import { DeathSaveControls } from './DeathSaveControls.tsx'
+import { EffectModal } from '../effects/EffectModal.tsx'
+import type { OnGmRoll, OnRoll } from '../log/GameLog.tsx'
+import { track, EVENTS } from '../../lib/analytics.ts'
+
+const BTN =
+  'tap-y rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+
+/**
+ * Per-combatant controls: remove, apply effects/conditions, concentration, and
+ * death saves. Rolling a creature's own actions lives in the stat block (tap an
+ * action name → resolver), not here.
+ */
+export function CombatantControls({
+  combatant,
+  combatants,
+  round,
+  dispatch,
+  onRoll,
+  onGmRoll,
+  presets,
+  enabledLibraries,
+  onSavePreset,
+  openEffectRequest,
+  concentrateRequest,
+}: {
+  combatant: Combatant
+  /** The rest of the board, to name whoever caused a source-relative effect. */
+  combatants?: Combatant[]
+  /** Current round, recorded when concentration starts. */
+  round: number
+  dispatch: (action: EncounterAction) => void
+  onRoll: OnRoll
+  /** Rolls the shared player view withholds — here, a creature's escape save. */
+  onGmRoll: OnGmRoll
+  /** Effect presets offered above the Apply effect form. */
+  presets?: EffectPreset[]
+  /** Which libraries are on, so the preset picker filters like every other one. */
+  enabledLibraries?: string[]
+  /** Save what's staged as a preset; absent for an anonymous GM, who can't keep one. */
+  onSavePreset?: (preset: EffectPreset) => void
+  /** Bump to open the Apply effect box — the keyboard's command, passed to the modal. */
+  openEffectRequest?: number
+  /** Bump to open the concentration form, or end concentration when it's running. */
+  concentrateRequest?: number
+}) {
+  const [concInput, setConcInput] = useState<string | null>(null)
+  const [concDur, setConcDur] = useState<number | null>(null)
+  // A fresh mount starts at the current counter, so only a later bump acts: the
+  // keyboard's Concentrate ends a running concentration, otherwise opens the form.
+  const [lastConcRequest, setLastConcRequest] = useState(concentrateRequest)
+  if (concentrateRequest !== lastConcRequest) {
+    setLastConcRequest(concentrateRequest)
+    if (combatant.concentration) {
+      setTimeout(() => dispatch({ type: 'endConcentration', id: combatant.combatantId }), 0)
+    } else if (concInput === null) {
+      setConcInput('')
+    }
+  }
+  const id = combatant.combatantId
+  const name = nameOf(combatant)
+  const started = round > 0
+  const edition = useCampaignEdition()
+  const exhaustion = exhaustionLevel(combatant.effects)
+
+  /** Set the Exhaustion level; the reducer rebuilds what the edition's rules give it. */
+  const setExhaustion = (level: number) => dispatch({ type: 'setExhaustion', id, level, edition })
+
+  /** Dispatch a functional update against this combatant. */
+  const apply = (update: (c: Combatant) => Combatant) => dispatch({ type: 'update', id, update })
+
+  /** Start concentration with the typed spell and duration (in rounds), then clear the form. */
+  const startConc = () => {
+    track(EVENTS.concentrationStarted)
+    const spell = (concInput ?? '').trim()
+    apply((c) => startConcentration(c, { spell, saveDc: 0, round, rounds: concDur ?? undefined }))
+    setConcInput(null)
+    setConcDur(null)
+  }
+
+  const showDeathSaves =
+    combatant.isPC && combatant.status === 'unconscious' && !isStable(combatant)
+
+  /** Append the applied effects in one update, so a bundle logs as one event. */
+  const addEffects = (applied: Effect[]) =>
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({ ...c, effects: [...c.effects, ...applied] }),
+    })
+
+  /** Drop one effect from this combatant by id. */
+  const removeEffect = (effectId: string) =>
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({ ...c, effects: c.effects.filter((e) => e.id !== effectId) }),
+    })
+
+  /** Replace one effect on this combatant by id, leaving the rest in place. */
+  const changeEffect = (effectId: string, change: (e: Effect) => Effect) =>
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({
+        ...c,
+        effects: c.effects.map((e) => (e.id === effectId ? change(e) : e)),
+      }),
+    })
+
+  /** Hold a whole bundle back from the player view, or give it back, in one update. */
+  const setBundleHidden = (members: Effect[], hidden: boolean) => {
+    const ids = new Set(members.map((e) => e.id))
+    dispatch({
+      type: 'update',
+      id,
+      update: (c) => ({
+        ...c,
+        effects: c.effects.map((e) =>
+          ids.has(e.id) ? { ...e, gmOnly: hidden ? true : undefined } : e,
+        ),
+      }),
+    })
+  }
+
+  // Alphabetical by display name, so a row keeps its place as effects come and go;
+  // a bundle sorts once, under its own name, with its members kept together.
+  const sortedGroups = groupEffects(combatant.effects).sort((a, b) =>
+    (a.bundle?.name ?? a.effects[0].name).localeCompare(b.bundle?.name ?? b.effects[0].name),
+  )
+
+  /** Name of whoever caused an effect, for a source-relative duration. */
+  const sourceName = (e: Effect): string | undefined => {
+    const src = combatants?.find((c) => c.combatantId === e.source)
+    return src && (src.isPC ? src.name : src.label)
+  }
+
+  // Monster escape save (PCs roll their own). One die per effect — effects that share
+  // an ability and DC came from different sources, so one roll can't end both. A
+  // success also clears the effect's bundle-mates — the save ends the whole spell.
+  const rollSaveEnds = (save: SaveEnds) => {
+    if (combatant.isPC) return
+    const bonus = saveBonus(combatant, save.ability) ?? 0
+    const result = roll(`1d20${signed(bonus)}`, { kind: 'save' })
+    // The die gives away the creature's save bonus; whether the effect ended is
+    // logged separately by the update diff, and that part the table does see.
+    onGmRoll(`${name}: ${save.effect.name} (${save.ability.toUpperCase()} save)`, result)
+    if (result.total >= save.dc) {
+      dispatch({
+        type: 'update',
+        id,
+        update: (c) => {
+          const gone = new Set(saveEndsClears(save.effect, c.effects))
+          return { ...c, effects: c.effects.filter((e) => !gone.has(e.id)) }
+        },
+      })
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <EffectModal
+          name={name}
+          combatantId={id}
+          combatants={combatants}
+          effects={combatant.effects}
+          openRequest={openEffectRequest}
+          onApply={addEffects}
+          onRemove={removeEffect}
+          onSetExhaustion={setExhaustion}
+          presets={presets}
+          enabledLibraries={enabledLibraries}
+          onSavePreset={onSavePreset}
+        />
+
+        {combatant.effects.length > 0 && (
+          <button
+            type="button"
+            onClick={() => apply((c) => ({ ...c, effects: [] }))}
+            title={`Clear every effect on ${name}`}
+            className={BTN}
+          >
+            Clear effects
+          </button>
+        )}
+
+        {combatant.concentration ? (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'endConcentration', id: combatant.combatantId })}
+            className="tap-y rounded border border-violet-400 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+          >
+            End concentration
+          </button>
+        ) : concInput === null ? (
+          <button type="button" className={BTN} onClick={() => setConcInput('')}>
+            Concentrate
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <input
+              autoFocus
+              value={concInput}
+              onChange={(e) => setConcInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') startConc()
+                if (e.key === 'Escape') setConcInput(null)
+              }}
+              placeholder="Spell name (optional)"
+              aria-label={`Concentration spell for ${name}`}
+              className="tap-y w-36 rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            />
+            <select
+              value={concDur === null ? '' : String(concDur)}
+              onChange={(e) => setConcDur(e.target.value === '' ? null : Number(e.target.value))}
+              aria-label={`Concentration duration for ${name}`}
+              className="rounded border border-slate-300 bg-white px-1 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">Until removed</option>
+              <option value="10">1 minute</option>
+              <option value="100">10 minutes</option>
+              <option value="600">1 hour</option>
+              <option value="4800">8 hours</option>
+            </select>
+            <button type="button" className={BTN} onClick={startConc}>
+              Set
+            </button>
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (!combatant.reactionUsed) track(EVENTS.reactionUsed)
+            apply((c) => ({ ...c, reactionUsed: !c.reactionUsed }))
+          }}
+          aria-pressed={combatant.reactionUsed === true}
+          title="One reaction per round (opportunity attack, readied action, Shield, …). Refreshes at the start of this combatant's turn."
+          className={
+            combatant.reactionUsed
+              ? 'tap-y rounded border px-2 py-1 text-xs font-medium border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+              : BTN
+          }
+        >
+          {combatant.reactionUsed ? 'Reaction used' : 'Use reaction'}
+        </button>
+
+        {isFoe(combatant) && (
+          <button
+            type="button"
+            onClick={() =>
+              apply((c) => ({ ...c, shared: onSharedBoard(c, started) ? 'hidden' : 'shown' }))
+            }
+            aria-pressed={heldBack(combatant)}
+            title="Whether the shared player screen shows this creature. Foes appear there when the encounter begins; hide one to keep an ambush off the table's board, or show it early."
+            className={
+              heldBack(combatant)
+                ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                : BTN
+            }
+          >
+            {onSharedBoard(combatant, started) ? 'Hide from players' : 'Show to players'}
+          </button>
+        )}
+
+        {combatant.isPC && combatant.acAuto && (
+          // Don and doff at the table: the armor worn is combat state, and the AC
+          // derivation follows it live. Only a character deriving its AC shows this —
+          // with a typed AC the control would move nothing.
+          <span className="inline-flex items-center gap-2">
+            <select
+              value={combatant.armor ?? ''}
+              onChange={(e) =>
+                apply((c) =>
+                  c.isPC
+                    ? { ...c, armor: (e.target.value || undefined) as ArmorName | undefined }
+                    : c,
+                )
+              }
+              aria-label={`Armor worn by ${name}`}
+              title="What's on right now — AC follows"
+              className="rounded border border-slate-300 bg-white px-1 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="">Unarmored</option>
+              {ARMOR_NAMES.map((a) => (
+                <option key={a} value={a}>
+                  {ARMOR[a].label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => apply((c) => (c.isPC ? { ...c, shield: !c.shield } : c))}
+              aria-pressed={combatant.shield === true}
+              title="Whether the shield is in hand — AC follows"
+              className={
+                combatant.shield
+                  ? 'tap-y rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                  : BTN
+              }
+            >
+              Shield
+            </button>
+          </span>
+        )}
+
+        {!combatant.isPC && (
+          <button
+            type="button"
+            onClick={() => apply((c) => (c.isPC ? c : { ...c, side: isFoe(c) ? 'friend' : 'foe' }))}
+            aria-pressed={!isFoe(combatant)}
+            title="Which side this creature is on — a summons, a hired guard, or an ogre that has just been charmed. Allies keep nothing back from the shared player view."
+            className={
+              isFoe(combatant)
+                ? BTN
+                : 'tap-y rounded border border-sky-400 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+            }
+          >
+            {isFoe(combatant) ? 'Make ally' : 'Ally'}
+          </button>
+        )}
+
+        {!combatant.isPC && combatant.creature.legendaryResistance != null && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                track(EVENTS.legendaryResistanceUsed)
+                apply((c) => (c.isPC ? c : spendLegendaryResistance(c)))
+              }}
+              disabled={legendaryResistanceLeft(combatant) <= 0}
+              title="Turn a failed save into a success; spends one use"
+              className="tap-y rounded border border-amber-400 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40"
+            >
+              Use Legendary Resistance
+            </button>
+            {/* The label carries the hit area: a bare checkbox draws at 13px, which a
+            finger cannot reliably hit. */}
+            {combatant.creature.legendaryResistanceLair != null && (
+              <label className="tap-y flex items-center gap-1 text-xs text-slate-600 coarse:gap-2 coarse:pr-2 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={!!combatant.inLair}
+                  onChange={(e) => apply((c) => (c.isPC ? c : setInLair(c, e.target.checked)))}
+                  className="coarse:h-5 coarse:w-5"
+                />
+                In lair
+              </label>
+            )}
+          </>
+        )}
+
+        {showDeathSaves && (
+          <DeathSaveControls
+            onSave={() =>
+              dispatch({
+                type: 'update',
+                id,
+                update: (c) => (c.isPC ? markDeathSaveSuccess(c) : c),
+              })
+            }
+            onFail={() =>
+              dispatch({
+                type: 'update',
+                id,
+                update: (c) => (c.isPC ? markDeathSaveFailure(c) : c),
+              })
+            }
+            onRoll={() => {
+              if (!combatant.isPC) return
+              const ds = rollDeathSave(combatant)
+              onRoll(`${name}: death save`, ds.result, { sourceId: id })
+              dispatch({ type: 'update', id, update: (c) => (c.isPC ? ds.pc : c) })
+            }}
+          />
+        )}
+      </div>
+
+      {combatant.effects.length > 0 && (
+        <div className="rounded-md border border-slate-300/70 bg-slate-50/70 px-2 py-1.5 dark:border-slate-700/60 dark:bg-slate-900/40">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Applied effects
+          </p>
+          {/* Two columns — what it is, and what to do about it — so the buttons line up.
+              A bundle gets a header row with one Clear for the lot; its members keep
+              their own rows beneath it, so one part can still be cleared alone. */}
+          <ul className="divide-y divide-slate-200/80 dark:divide-slate-800/80">
+            {sortedGroups.map((group) => {
+              if (!group.bundle) {
+                return <EffectRow key={group.effects[0].id} effect={group.effects[0]} />
+              }
+              // Exhaustion is the one bundle whose parts are derived rather than
+              // staged: they are what the level implies, so the level's own buttons
+              // live here and the parts carry none of their own.
+              const leveled = group.effects.some(isExhaustion)
+              const hidden = group.effects.every((e) => e.gmOnly)
+              return (
+                <li key={group.bundle.id} className="py-1 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="font-bold text-slate-700 dark:text-slate-200"
+                      title={leveled ? describeExhaustion(exhaustion, edition) : undefined}
+                    >
+                      {group.bundle.name}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      {leveled && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setExhaustion(exhaustion - 1)}
+                            aria-label={`Lower ${name}'s Exhaustion`}
+                            className={BTN}
+                          >
+                            −1
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExhaustion(exhaustion + 1)}
+                            disabled={exhaustion >= EXHAUSTION_MAX}
+                            aria-label={`Raise ${name}'s Exhaustion`}
+                            className={`${BTN} disabled:opacity-50`}
+                          >
+                            +1
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        // Every member at once: the shared board reads a bundle from
+                        // any part it can see, so hiding one part would hide nothing.
+                        onClick={() => setBundleHidden(group.effects, !hidden)}
+                        aria-pressed={hidden}
+                        title={
+                          hidden
+                            ? `${group.bundle.name} is hidden from the player view — click to show it`
+                            : `Hide ${group.bundle.name} from the player view`
+                        }
+                        className={
+                          hidden
+                            ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                            : BTN
+                        }
+                      >
+                        {hidden ? 'Hidden' : 'Hide'}
+                      </button>
+                      <button
+                        type="button"
+                        // One dispatch for the lot, so the log reads one "ends" line.
+                        onClick={() => {
+                          if (leveled) return setExhaustion(0)
+                          const gone = new Set(group.effects.map((e) => e.id))
+                          dispatch({
+                            type: 'update',
+                            id,
+                            update: (c) => ({
+                              ...c,
+                              effects: c.effects.filter((e) => !gone.has(e.id)),
+                            }),
+                          })
+                        }}
+                        title={`Clear ${group.bundle.name} and everything it applied`}
+                        className={`${BTN} shrink-0`}
+                      >
+                        Clear all
+                      </button>
+                    </span>
+                  </div>
+                  <ul className="mt-0.5 list-disc space-y-0.5 pl-4 marker:text-slate-400 dark:marker:text-slate-500">
+                    {group.effects.map((e) => (
+                      <EffectRow key={e.id} effect={e} bundled derived={leveled} />
+                    ))}
+                  </ul>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+
+  /**
+   * One effect's line in the Applied effects list, with its own controls. A `bundled`
+   * line is a bulleted item, so the flex layout moves to an inner div — a flex `li`
+   * stops being a list item and loses its marker — and it carries no **Hide**: a
+   * bundle reaches the shared board as one label, so hiding it is the header's job and
+   * a per-part toggle would look like it did something while doing nothing. Clearing
+   * one part is still meaningful, so **Clear** stays. A `derived` part carries nothing
+   * at all: it is what a level implies, so changing it alone would only put the bundle
+   * out of step with its own number.
+   */
+  function EffectRow({
+    effect: e,
+    bundled = false,
+    derived = false,
+  }: {
+    effect: Effect
+    bundled?: boolean
+    derived?: boolean
+  }) {
+    const save = saveEndsOf(e)
+    const count = derived ? null : counterOf(e)
+    // A modifier's name alone can't tell two apart — Intoxication narrows checks in
+    // one effect and saves in another — so its row reads out what it actually does.
+    // A bundled reminder shows its note too: the row badge carries only the bundle's
+    // name, so this line is the one place its text is read.
+    const label = e.modifier
+      ? describeModifier({
+          name: e.name,
+          mode: e.modifier.mode,
+          direction: e.modifier.direction,
+          applies: e.modifier.applies,
+          value: e.modifier.value,
+          abilities: e.modifier.abilities,
+          acBase: e.modifier.acBase,
+        })
+      : e.bundle && e.note
+        ? e.note
+        : e.name
+    const row = (
+      <div className="flex items-center justify-between gap-2 py-1 text-xs">
+        <span className="min-w-0 text-slate-700 dark:text-slate-200">
+          <span className="font-medium">{label}</span>{' '}
+          <span className="text-slate-500 dark:text-slate-400">
+            ·{' '}
+            {save ? (
+              <>
+                {save.ability.toUpperCase()} save DC {save.dc} (
+                <abbr
+                  title={save.when === 'startOfTurn' ? 'Start of turn' : 'End of turn'}
+                  className="cursor-help underline decoration-dotted underline-offset-2"
+                >
+                  {save.when === 'startOfTurn' ? 'SoT' : 'EoT'}
+                </abbr>
+                )
+              </>
+            ) : (
+              describeDuration(e, sourceName(e))
+            )}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          {save && !combatant.isPC && (
+            <button type="button" onClick={() => rollSaveEnds(save)} className={BTN}>
+              Roll save
+            </button>
+          )}
+          {!derived && count !== null && (
+            <>
+              <button
+                type="button"
+                onClick={() => changeEffect(e.id, (x) => setCount(x, count - 1))}
+                disabled={count <= 0}
+                aria-label={`Lower ${e.name}`}
+                className={`${BTN} disabled:opacity-50`}
+              >
+                −1
+              </button>
+              <button
+                type="button"
+                onClick={() => changeEffect(e.id, (x) => setCount(x, count + 1))}
+                aria-label={`Raise ${e.name}`}
+                className={BTN}
+              >
+                +1
+              </button>
+              <button
+                type="button"
+                onClick={() => changeEffect(e.id, (x) => setCount(x, 0))}
+                disabled={count === 0}
+                title={`Set ${e.name} back to 0, keeping it on ${name}`}
+                className={`${BTN} disabled:opacity-50`}
+              >
+                Reset
+              </button>
+            </>
+          )}
+          {!derived && !bundled && (
+            <button
+              type="button"
+              onClick={() =>
+                changeEffect(e.id, (x) => ({ ...x, gmOnly: x.gmOnly ? undefined : true }))
+              }
+              aria-pressed={e.gmOnly === true}
+              title={
+                e.gmOnly
+                  ? `${e.name} is hidden from the player view — click to show it`
+                  : `Hide ${e.name} from the player view`
+              }
+              className={
+                e.gmOnly
+                  ? 'tap-y rounded border border-amber-400 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  : BTN
+              }
+            >
+              {e.gmOnly ? 'Hidden' : 'Hide'}
+            </button>
+          )}
+          {!derived && (
+            <button
+              type="button"
+              onClick={() => removeEffect(e.id)}
+              title={save ? `${e.name}: save made — clear it` : `Clear ${e.name}`}
+              className={`${BTN} border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800`}
+            >
+              Clear
+            </button>
+          )}
+        </span>
+      </div>
+    )
+    return <li className={bundled ? 'list-item' : 'list-none'}>{row}</li>
+  }
+}
