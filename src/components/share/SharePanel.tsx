@@ -13,13 +13,14 @@ import { popoverClass } from '../ui/popover.ts'
 import { FieldHint } from '../ui/FieldHint.tsx'
 import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
 
-/** Screen icon — the board as the table sees it. */
-function ScreenIcon() {
+/** Cast icon — the board sent to the table's screens. */
+function CastIcon() {
   return (
     <svg {...ICON} className="h-5 w-5">
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <path d="M8 21h8" />
-      <path d="M12 17v4" />
+      <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
+      <path d="M2 12a9 9 0 0 1 8 8" />
+      <path d="M2 16a5 5 0 0 1 4 4" />
+      <line x1="2" x2="2.01" y1="20" y2="20" />
     </svg>
   )
 }
@@ -98,7 +99,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
         title={sharing ? 'Sharing with players' : 'Share with players'}
         aria-expanded={open}
       >
-        <ScreenIcon />
+        <CastIcon />
         {sharing && (
           <span
             aria-hidden
