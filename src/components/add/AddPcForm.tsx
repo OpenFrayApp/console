@@ -6,13 +6,15 @@ import type { PlayerCharacter } from '../../schema/combatant.ts'
 import { parseSpeedInput } from '../../combat/speed.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
-import { parseList as list, parseNonNegativeInt as num, parseSignedInt } from '../../lib/form.ts'
+import {
+  NO_AUTOFILL,
+  parseList as list,
+  parseNonNegativeInt as num,
+  parseSignedInt,
+} from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { FIELD, LABEL } from '../ui/fieldStyles.ts'
 import { Button } from '../ui/primitives.tsx'
-
-// Not credential fields — keep password-manager and browser-autofill popups off them so they don't cover the inputs.
-const NO_AUTOFILL = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
 /**
  * Add a player character — the combat-relevant fields the GM wants on the board.

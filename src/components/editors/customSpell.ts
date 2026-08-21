@@ -5,6 +5,7 @@ import type { DamageRoll, SaveOutcome } from '../../schema/action.ts'
 import type { Spell, SpellComponents, SpellMechanics, SpellScaling } from '../../schema/spell.ts'
 import type { Ability, DamageType, Edition } from '../../schema/primitives.ts'
 import { hasValue as has, parseList as list } from '../../lib/form.ts'
+import { uid } from '../../lib/uid.ts'
 import { spellLevelLong } from '../../compendium/format.ts'
 
 /**
@@ -102,9 +103,6 @@ export const DURATIONS: string[] = [
   '24 hours',
   'Until dispelled',
 ]
-
-/** A fresh random UUID for draft rows and custom ids. */
-const uid = (): string => crypto.randomUUID()
 
 /** A blank damage row (fire by default). */
 export function emptySpellDamageDraft(): SpellDamageDraft {

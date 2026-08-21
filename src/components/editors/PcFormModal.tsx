@@ -9,14 +9,16 @@ import { rosterInitiativeMod, type RosterPc } from '../../schema/roster.ts'
 import { ARMOR, ARMOR_NAMES, PC_CLASSES, deriveAc } from '../../schema/pcStats.ts'
 import { abilityMod, ABILITIES } from '../../schema/primitives.ts'
 import { ABILITY_LABEL, signed } from '../../compendium/format.ts'
-import { hasValue as has, parseList as list, parseNonNegativeInt as num } from '../../lib/form.ts'
+import {
+  NO_AUTOFILL,
+  hasValue as has,
+  parseList as list,
+  parseNonNegativeInt as num,
+} from '../../lib/form.ts'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 import { FormSection as Section } from './FormSection.tsx'
 import { FormModal } from '../ui/FormModal.tsx'
 import { Button } from '../ui/primitives.tsx'
-
-// Keep password managers / browser autofill off the free-text fields.
-const OFF = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
 const SPEED_KEYS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const
 const SENSE_KEYS = [
@@ -272,7 +274,7 @@ function LineList({
             value={v}
             onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))}
             aria-label={`${label} ${i + 1}`}
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <button
@@ -402,7 +404,7 @@ export function PcFormModal({
             onChange={(e) => patch({ name: e.target.value })}
             placeholder="Name"
             aria-label="PC name"
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <input
@@ -410,7 +412,7 @@ export function PcFormModal({
             onChange={(e) => patch({ race: e.target.value })}
             placeholder="Race / ancestry (Elf, Dwarf…)"
             aria-label="Race"
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <div className="grid grid-cols-2 gap-2">
@@ -629,7 +631,7 @@ export function PcFormModal({
             onChange={(e) => patch({ languages: e.target.value })}
             placeholder="Languages"
             aria-label="Languages"
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -645,7 +647,7 @@ export function PcFormModal({
             onChange={(e) => patch({ resistances: e.target.value })}
             placeholder="Resistances"
             aria-label="Resistances"
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <input
@@ -653,7 +655,7 @@ export function PcFormModal({
             onChange={(e) => patch({ immunities: e.target.value })}
             placeholder="Immunities"
             aria-label="Immunities"
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
           <input
@@ -661,7 +663,7 @@ export function PcFormModal({
             onChange={(e) => patch({ vulnerabilities: e.target.value })}
             placeholder="Vulnerabilities"
             aria-label="Vulnerabilities"
-            {...OFF}
+            {...NO_AUTOFILL}
             className={FIELD}
           />
         </Section>
@@ -674,7 +676,7 @@ export function PcFormModal({
               onChange={(e) => patch({ faith: e.target.value })}
               placeholder="Deity or faith"
               aria-label="Faith"
-              {...OFF}
+              {...NO_AUTOFILL}
               className={FIELD}
             />
           </label>
@@ -710,7 +712,7 @@ export function PcFormModal({
               rows={4}
               placeholder="Goals, history, hooks…"
               aria-label="Backstory and goals"
-              {...OFF}
+              {...NO_AUTOFILL}
               className={FIELD}
             />
           </label>
@@ -722,7 +724,7 @@ export function PcFormModal({
               rows={3}
               placeholder="Private notes for tracking this character…"
               aria-label="GM notes"
-              {...OFF}
+              {...NO_AUTOFILL}
               className={FIELD}
             />
           </label>

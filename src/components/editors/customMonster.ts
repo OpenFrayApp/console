@@ -33,6 +33,7 @@ import {
   parseNonNegativeInt as num,
   parseSignedInt,
 } from '../../lib/form.ts'
+import { uid } from '../../lib/uid.ts'
 
 /**
  * The custom-monster editor's working state. Form inputs are strings; the schema
@@ -255,9 +256,6 @@ export const SKILL_LABELS: Record<Skill, string> = {
   stealth: 'Stealth',
   survival: 'Survival',
 }
-/** A fresh random UUID for draft rows and custom ids. */
-const uid = (): string => crypto.randomUUID()
-
 /** A blank damage row (bludgeoning by default). */
 export function emptyDamageDraft(): DamageDraft {
   return { id: uid(), formula: '', type: 'bludgeoning' }
