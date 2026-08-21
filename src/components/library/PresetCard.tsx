@@ -8,6 +8,7 @@ import { describeExhaustionChange } from '../../combat/exhaustion.ts'
 import { draftEffects, presetToDraft } from '../effects/effectPreset.ts'
 import { SourceLink } from '../statblock/SourceLink.tsx'
 import { MetaTable } from '../statblock/CreatureStatBlock.tsx'
+import { Button } from '../ui/primitives.tsx'
 
 /**
  * A preset shown read-only: what it puts on the board, and where it came from. The
@@ -109,22 +110,14 @@ export function PresetCard({
           own && (onRename || onDelete) ? (
             <span className="flex shrink-0 gap-2">
               {onRename && (
-                <button
-                  type="button"
-                  onClick={rename}
-                  className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
+                <Button size="sm" onClick={rename}>
                   Rename
-                </button>
+                </Button>
               )}
               {onDelete && (
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  className="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                >
+                <Button size="sm" variant="danger" onClick={onDelete}>
                   Delete
-                </button>
+                </Button>
               )}
             </span>
           ) : undefined

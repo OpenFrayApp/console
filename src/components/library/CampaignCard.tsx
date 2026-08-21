@@ -13,6 +13,7 @@ import {
 } from './campaignLabels.ts'
 import { SECTION_HEADING } from '../statblock/CreatureStatBlock.tsx'
 import { GmNotes } from '../statblock/GmNotes.tsx'
+import { Button } from '../ui/primitives.tsx'
 
 /** One label/value line (dt/dd pair) in the rules list. */
 function Row({ label, value }: { label: string; value: string }) {
@@ -73,20 +74,12 @@ export function CampaignCard({
       )}
 
       <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-200 pt-2 dark:border-slate-800">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
+        <Button size="sm" onClick={onEdit}>
           Edit
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
-        >
+        </Button>
+        <Button size="sm" variant="danger" onClick={onDelete}>
           Delete
-        </button>
+        </Button>
       </div>
     </div>
   )

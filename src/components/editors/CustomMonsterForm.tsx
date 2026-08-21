@@ -507,14 +507,14 @@ export function CustomMonsterForm({
                       <option value="proficient">Proficient</option>
                       <option value="expertise">Expertise</option>
                     </select>
-                    <button
-                      type="button"
+                    <Button
+                      size="sm"
+                      className="shrink-0"
                       onClick={() => patch({ skills: d.skills.filter((x) => x.id !== s.id) })}
                       aria-label="Remove skill"
-                      className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                     >
                       ✕
-                    </button>
+                    </Button>
                   </div>
                 ))}
                 <button
@@ -634,14 +634,14 @@ export function CustomMonsterForm({
                         aria-label="Trait name"
                         className={FIELD}
                       />
-                      <button
-                        type="button"
+                      <Button
+                        size="sm"
+                        className="shrink-0"
                         onClick={() => patch({ traits: d.traits.filter((x) => x.id !== t.id) })}
                         aria-label="Remove trait"
-                        className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                     <textarea
                       value={t.text}
@@ -809,16 +809,16 @@ export function CustomMonsterForm({
                           className={`${FIELD_W} w-16`}
                         />
                       )}
-                      <button
-                        type="button"
+                      <Button
+                        size="sm"
+                        className="ml-auto shrink-0"
                         onClick={() =>
                           patch({ spellGroups: d.spellGroups.filter((x) => x.id !== g.id) })
                         }
                         aria-label="Remove spell group"
-                        className="ml-auto shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                     <SpellTagInput
                       value={g.spells}

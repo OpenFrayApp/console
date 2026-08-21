@@ -69,14 +69,14 @@ function DamageRows({
               </option>
             ))}
           </select>
-          <button
-            type="button"
+          <Button
+            size="sm"
+            className="shrink-0"
             onClick={() => onChange(rows.filter((x) => x.id !== d.id))}
             aria-label="Remove damage"
-            className="shrink-0 rounded border border-slate-300 px-1.5 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
           >
             ✕
-          </button>
+          </Button>
         </div>
       ))}
       <button
@@ -523,16 +523,16 @@ export function CustomSpellForm({
                               </option>
                             ))}
                           </select>
-                          <button
-                            type="button"
+                          <Button
+                            size="sm"
+                            className="ml-auto shrink-0"
                             onClick={() =>
                               patch({ scalingRows: d.scalingRows.filter((x) => x.id !== row.id) })
                             }
                             aria-label="Remove level"
-                            className="ml-auto shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                           >
                             Remove
-                          </button>
+                          </Button>
                         </div>
                         <DamageRows
                           rows={row.damage}

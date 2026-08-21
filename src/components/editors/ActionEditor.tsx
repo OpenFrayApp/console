@@ -10,6 +10,7 @@ import {
 } from './customMonster.ts'
 import { DAMAGE_TYPES } from '../../schema/primitives.ts'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
+import { Button } from '../ui/primitives.tsx'
 
 const RECHARGE_KINDS: { value: RechargeKind; label: string }[] = [
   { value: 'none', label: 'No limit' },
@@ -67,14 +68,9 @@ export function ActionEditor({
             </option>
           ))}
         </select>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${label}`}
-          className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
-        >
+        <Button size="sm" className="shrink-0" onClick={onRemove} aria-label={`Remove ${label}`}>
           Remove
-        </button>
+        </Button>
       </div>
 
       {isAttack && (
@@ -206,8 +202,9 @@ export function ActionEditor({
                 </option>
               ))}
             </select>
-            <button
-              type="button"
+            <Button
+              size="sm"
+              className="shrink-0"
               onClick={() =>
                 set(
                   'damage',
@@ -216,10 +213,9 @@ export function ActionEditor({
               }
               aria-label="Remove damage"
               disabled={action.damage.length === 1 && i === 0}
-              className="shrink-0 rounded border border-slate-300 px-1.5 py-1 text-xs text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
             >
               ✕
-            </button>
+            </Button>
           </div>
         ))}
         <button

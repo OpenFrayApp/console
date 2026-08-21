@@ -42,6 +42,7 @@ import { ShareIcon } from '../icons/ShareIcon.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { FloatingCard } from '../ui/FloatingCard.tsx'
 import { useHoverCard } from '../../hooks/useHoverCard.ts'
+import { Button } from '../ui/primitives.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 
 /** Resolve a spell's compendium entry (for the hover preview + cast card). */
@@ -960,22 +961,14 @@ export function CreatureStatBlock({
                 </button>
               )}
               {onEdit && (
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
+                <Button size="sm" onClick={onEdit}>
                   Edit
-                </button>
+                </Button>
               )}
               {onDelete && (
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  className="rounded border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                >
+                <Button size="sm" variant="danger" onClick={onDelete}>
                   Delete
-                </button>
+                </Button>
               )}
             </span>
           ) : undefined
