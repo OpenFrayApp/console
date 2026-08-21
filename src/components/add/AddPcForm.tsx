@@ -13,8 +13,8 @@ import {
   parseSignedInt,
 } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
-import { FIELD, LABEL } from '../ui/fieldStyles.ts'
-import { Button } from '../ui/primitives.tsx'
+import { LABEL } from '../ui/fieldStyles.ts'
+import { Button, Field } from '../ui/primitives.tsx'
 
 /**
  * Add a player character — the combat-relevant fields the GM wants on the board.
@@ -121,96 +121,96 @@ export function AddPcForm({
           {...NO_AUTOFILL}
           className={`${popoverClass('roomy:w-72')} space-y-2 p-2 roomy:max-h-[70dvh] roomy:overflow-auto`}
         >
-          <input
+          <Field
             autoFocus
             value={f.name}
             onChange={set('name')}
             placeholder="Name"
             aria-label="PC name"
             {...NO_AUTOFILL}
-            className={FIELD}
+            className="w-full"
           />
           <div className="grid grid-cols-3 gap-2">
-            <input
+            <Field
               value={f.ac}
               onChange={set('ac')}
               placeholder="AC"
               aria-label="AC"
               inputMode="numeric"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
-            <input
+            <Field
               value={f.hp}
               onChange={set('hp')}
               placeholder="HP"
               aria-label="Max HP"
               inputMode="numeric"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
-            <input
+            <Field
               value={f.init}
               onChange={set('init')}
               placeholder="Init +"
               aria-label="Initiative modifier"
               inputMode="numeric"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input
+            <Field
               value={f.pp}
               onChange={set('pp')}
               placeholder="Passive Perception"
               aria-label="Passive Perception"
               inputMode="numeric"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
-            <input
+            <Field
               value={f.speed}
               onChange={set('speed')}
               placeholder="Speed (30, climb 12)"
               aria-label="Speed"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
           </div>
-          <input
+          <Field
             value={f.languages}
             onChange={set('languages')}
             placeholder="Languages, separated by commas"
             aria-label="Languages"
             {...NO_AUTOFILL}
-            className={FIELD}
+            className="w-full"
           />
           <div className="space-y-1">
             <p className={LABEL}>Defenses, separated by commas</p>
-            <input
+            <Field
               value={f.resistances}
               onChange={set('resistances')}
               placeholder="Resistances"
               aria-label="Resistances"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
-            <input
+            <Field
               value={f.immunities}
               onChange={set('immunities')}
               placeholder="Immunities"
               aria-label="Immunities"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
-            <input
+            <Field
               value={f.vulnerabilities}
               onChange={set('vulnerabilities')}
               placeholder="Vulnerabilities"
               aria-label="Vulnerabilities"
               {...NO_AUTOFILL}
-              className={FIELD}
+              className="w-full"
             />
           </div>
           <Button variant="primary" type="submit" className="w-full">

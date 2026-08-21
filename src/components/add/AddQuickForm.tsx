@@ -7,8 +7,7 @@ import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseNonNegativeInt as num } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
-import { FIELD, FIELD_W } from '../ui/fieldStyles.ts'
-import { Button } from '../ui/primitives.tsx'
+import { Button, Field, Select } from '../ui/primitives.tsx'
 
 /**
  * Quick add — a generic combatant (an NPC, or a creature dropped in mid-fight)
@@ -84,7 +83,7 @@ export function AddQuickForm({
       {open && (
         <form onSubmit={submit} className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}>
           <div className="flex gap-2">
-            <input
+            <Field
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -93,34 +92,34 @@ export function AddQuickForm({
               autoComplete="off"
               data-1p-ignore="true"
               data-lpignore="true"
-              className={`${FIELD_W} min-w-0 flex-1`}
+              className="min-w-0 flex-1"
             />
-            <select
+            <Select
               value={side}
               onChange={(e) => setSide(e.target.value as 'friend' | 'foe')}
               aria-label="Side"
-              className={`${FIELD_W} w-24 shrink-0`}
+              className="w-24 shrink-0"
             >
               <option value="foe">Foe</option>
               <option value="friend">Friend</option>
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input
+            <Field
               value={ac}
               onChange={(e) => setAc(e.target.value)}
               placeholder="AC"
               aria-label="AC"
               inputMode="numeric"
-              className={FIELD}
+              className="w-full"
             />
-            <input
+            <Field
               value={hp}
               onChange={(e) => setHp(e.target.value)}
               placeholder="HP"
               aria-label="Max HP"
               inputMode="numeric"
-              className={FIELD}
+              className="w-full"
             />
           </div>
           <Button variant="primary" type="submit" className="w-full">
