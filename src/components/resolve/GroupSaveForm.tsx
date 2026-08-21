@@ -22,7 +22,7 @@ import {
 } from '../../combat/masssave.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
-import { ConditionChips, DamageTypeSelect, NaturalRoll } from './ActionResolver.tsx'
+import { ConditionChips, DamageTypeSelect, NaturalRoll } from './rollPieces.tsx'
 import { Button, Chip, Field, Select } from '../ui/primitives.tsx'
 import type { OnRoll } from '../log/GameLog.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
