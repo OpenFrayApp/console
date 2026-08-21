@@ -208,14 +208,14 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
           {onClaim ? (
             <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
               <label
-                htmlFor="share-name"
+                htmlFor="share-link-name"
                 className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-200"
               >
                 Name the link
               </label>
               <div className="flex items-center gap-2">
                 <input
-                  id="share-name"
+                  id="share-link-name"
                   value={draft}
                   placeholder={code ?? 'tuesday-game'}
                   onChange={(e) => {
