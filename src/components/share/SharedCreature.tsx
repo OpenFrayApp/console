@@ -8,8 +8,8 @@ import type { ResolveSpell } from '../statblock/Markdown.tsx'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { SharedNote } from './SharedNote.tsx'
+import { SharedFooter } from './sharePieces.tsx'
 import { mayCopy } from '../../schema/license.ts'
-import { ReportIcon } from '../icons/ReportIcon.tsx'
 import { Button } from '../ui/primitives.tsx'
 
 /**
@@ -107,33 +107,17 @@ export function SharedCreature({
               Whoever shared this left no notes with it.
             </p>
           )}
-          <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            {/* Shared by, never "creature by": whoever published this may have written it,
-              or may have found it in a book, or been sent it by somebody else. What the
-              byline can honestly claim is that they are the one who put it here.
-              The license is not repeated here — the stat block's own source line carries it
-              for every creature, and a page with one creature on it has no second place
-              that needs telling. */}
-            <p>{template.by ? `Shared by ${template.by}` : ''}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Dropped from our own, as on a shared encounter: telling a reader to be
-                wary of words that are ours reads as boilerplate, and boilerplate is what
-                people learn to skip on the pages that need it. */}
-              {!official && template.note && (
-                <span className="italic">
-                  Treat any link and information in these notes with caution.
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={onReport}
-                className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200"
-              >
-                <ReportIcon />
-                Report this
-              </button>
-            </div>
-          </div>
+          {/* Shared by, never "creature by": whoever published this may have written it,
+            or may have found it in a book, or been sent it by somebody else. What the
+            byline can honestly claim is that they are the one who put it here.
+            The license is not repeated here — the stat block's own source line carries it
+            for every creature, and a page with one creature on it has no second place
+            that needs telling. */}
+          <SharedFooter
+            byline={template.by ? `Shared by ${template.by}` : ''}
+            caution={!official && !!template.note}
+            onReport={onReport}
+          />
         </div>
       </div>
     </>

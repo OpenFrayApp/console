@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
+import { ReportIcon } from '../icons/ReportIcon.tsx'
 import { Button } from '../ui/primitives.tsx'
 
 /**
@@ -12,6 +13,9 @@ import { Button } from '../ui/primitives.tsx'
  * clipboard write can fail. Everything else about the two is genuinely per-kind — a name and
  * a license for an encounter, a refusal and a warning for a creature — so what is shared is
  * these pieces rather than one dialog wearing a configuration object.
+ *
+ * The pages those links open end identically too: SharedFooter is the strip at their foot,
+ * with the byline, the caution over a stranger's words, and the report button.
  */
 
 export const SHARE_FIELD =
@@ -88,6 +92,53 @@ export function PublishedLink({
       <Button variant="primary" onClick={onDone}>
         Done
       </Button>
+    </div>
+  )
+}
+
+/**
+ * The foot of a shared page: who put it here, whether to squint at it, and where to say so.
+ */
+export function SharedFooter({
+  byline,
+  caution,
+  onReport,
+  children,
+}: {
+  /** The left-hand line: "Shared by …", plus whatever the page counts. */
+  byline: React.ReactNode
+  /** Whether the caution sentence shows — a stranger's words worth doubting. */
+  caution: boolean
+  onReport: () => void
+  /** Extra entries between the caution and the report button (the encounter's license line). */
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <p>{byline}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Next to the report, because the two say one thing between them: these are
+          somebody else's words, and here is what to do if they are wrong. Our own pages
+          drop it — telling a reader to be wary of words that are ours reads as
+          boilerplate, and boilerplate is what people learn to skip on the pages that
+          need it. */}
+        {caution && (
+          <span className="italic">
+            Treat any link and information in these notes with caution.
+          </span>
+        )}
+        {children}
+        {/* A form rather than a mailto: the reason and the code travel with it, and it
+          works on a phone with no mail account set up. */}
+        <button
+          type="button"
+          onClick={onReport}
+          className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200"
+        >
+          <ReportIcon />
+          Report this
+        </button>
+      </div>
     </div>
   )
 }

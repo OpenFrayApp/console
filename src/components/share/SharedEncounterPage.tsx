@@ -27,11 +27,11 @@ import { estimateXp } from '../../combat/difficulty.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { ChevronLeftIcon } from '../icons/ChevronLeftIcon.tsx'
-import { ReportIcon } from '../icons/ReportIcon.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { Wordmark } from '../shell/Wordmark.tsx'
 import { LegalLinks } from '../shell/LegalLinks.tsx'
 import { SharedNote } from './SharedNote.tsx'
+import { SharedFooter } from './sharePieces.tsx'
 import { ReportShareDialog } from './ReportShareDialog.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { LicenseLink } from '../statblock/LicenseLink.tsx'
@@ -444,54 +444,37 @@ export function SharedEncounterPage({
                 so it is the one thing here set in bold. The byline is the publisher's own
                 claim, presented as one: no check mark, no link, nothing that suggests we
                 checked it. */}
-              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                <p>
-                  {template!.by ? `Shared by ${template!.by} · ` : ''}
-                  {total} {total === 1 ? 'creature' : 'creatures'}
-                  {xp > 0 && (
-                    <>
-                      {' · '}
-                      <strong className="font-semibold text-slate-700 dark:text-slate-200">
-                        {xp.toLocaleString()} XP
-                      </strong>
-                    </>
-                  )}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Next to the report, because the two say one thing between them: these
-                    are somebody else's words, and here is what to do if they are wrong. Our
-                    own encounters drop it — telling a reader to be wary of words that are
-                    ours reads as boilerplate, and boilerplate is what people learn to skip
-                    on the pages that need it. */}
-                  {!official && (
-                    <span className="italic">
-                      Treat any link and information in these notes with caution.
-                    </span>
-                  )}
-                  {/* What the publisher said about their own words. The creatures carry
-                    their own on their rows, and the summary after it describes everything
-                    present — none of the three is a grant the page makes on anyone's
-                    behalf. */}
-                  <LicenseLink license={ownLicense} />
-                  {summary.kind === 'single' && summary.license !== ownLicense && (
-                    <> · Strictest here: {LICENSE_LABELS[summary.license]}</>
-                  )}
-                  {summary.kind === 'mixed' && <> · Mixed terms, see each creature</>}
-                  {/* A form rather than a mailto: the reason and the code travel with it, and
-                    it works on a phone with no mail account set up. */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      track(EVENTS.shareReportOpened)
-                      setReporting(true)
-                    }}
-                    className="inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200"
-                  >
-                    <ReportIcon />
-                    Report this
-                  </button>
-                </div>
-              </div>
+              <SharedFooter
+                byline={
+                  <>
+                    {template!.by ? `Shared by ${template!.by} · ` : ''}
+                    {total} {total === 1 ? 'creature' : 'creatures'}
+                    {xp > 0 && (
+                      <>
+                        {' · '}
+                        <strong className="font-semibold text-slate-700 dark:text-slate-200">
+                          {xp.toLocaleString()} XP
+                        </strong>
+                      </>
+                    )}
+                  </>
+                }
+                caution={!official}
+                onReport={() => {
+                  track(EVENTS.shareReportOpened)
+                  setReporting(true)
+                }}
+              >
+                {/* What the publisher said about their own words. The creatures carry
+                  their own on their rows, and the summary after it describes everything
+                  present — none of the three is a grant the page makes on anyone's
+                  behalf. */}
+                <LicenseLink license={ownLicense} />
+                {summary.kind === 'single' && summary.license !== ownLicense && (
+                  <> · Strictest here: {LICENSE_LABELS[summary.license]}</>
+                )}
+                {summary.kind === 'mixed' && <> · Mixed terms, see each creature</>}
+              </SharedFooter>
             </div>
           ) : selected?.creature ? (
             <SpellLinkContext.Provider value={linkSpells}>
