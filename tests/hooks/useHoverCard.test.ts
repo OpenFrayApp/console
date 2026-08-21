@@ -4,7 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, renderHook } from '@testing-library/react'
-import { floatingCardStyle, useHoverCard } from '../../../src/components/ui/spellPreview.ts'
+import { floatingCardStyle, useHoverCard } from '../../src/hooks/useHoverCard.ts'
 
 afterEach(cleanup)
 

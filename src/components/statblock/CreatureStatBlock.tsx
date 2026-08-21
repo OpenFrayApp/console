@@ -40,7 +40,7 @@ import { SourceLink } from './SourceLink.tsx'
 import { ShareIcon } from '../icons/ShareIcon.tsx'
 import { SpellCard } from './SpellCard.tsx'
 import { FloatingCard } from '../ui/FloatingCard.tsx'
-import { useHoverCard } from '../ui/spellPreview.ts'
+import { useHoverCard } from '../../hooks/useHoverCard.ts'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 
 /** Resolve a spell's compendium entry (for the hover preview + cast card). */

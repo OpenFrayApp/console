@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
-const CARD_WIDTH = 384 // matches w-96
+const CARD_WIDTH = 384 // matches the w-96 on FloatingCard
 
 /**
  * Position a floating spell-preview card next to an anchor rect, kept fully inside
@@ -23,9 +23,6 @@ export function floatingCardStyle(rect: DOMRect): CSSProperties {
   }
   return { left, top: rect.bottom + GAP, maxHeight: Math.max(120, below) }
 }
-
-export const FLOATING_CARD =
-  'fixed z-40 w-96 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900'
 
 /**
  * Hover-card open/close state with a short close delay, so the mouse can travel

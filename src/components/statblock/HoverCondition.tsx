@@ -5,7 +5,7 @@ import { type ReactNode } from 'react'
 import type { ConditionName } from '../../schema/effect.ts'
 import { ConditionCard } from './ConditionCard.tsx'
 import { FloatingCard } from '../ui/FloatingCard.tsx'
-import { useHoverCard } from '../ui/spellPreview.ts'
+import { useHoverCard } from '../../hooks/useHoverCard.ts'
 
 /**
  * Wraps a label and shows the condition's reference card on hover, anchored with a

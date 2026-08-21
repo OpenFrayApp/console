@@ -3,7 +3,10 @@
 
 import { type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { FLOATING_CARD } from './spellPreview.ts'
+
+/** The card's chrome; its w-96 is the CARD_WIDTH useHoverCard positions with. */
+const FLOATING_CARD =
+  'fixed z-40 w-96 overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl dark:border-slate-700 dark:bg-slate-900'
 
 /**
  * A fixed-position hover card portalled to <body>, so it escapes any ancestor

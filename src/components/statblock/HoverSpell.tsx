@@ -5,7 +5,7 @@ import { type ReactNode } from 'react'
 import type { Spell } from '../../schema/spell.ts'
 import { FloatingCard } from '../ui/FloatingCard.tsx'
 import { SpellCard } from './SpellCard.tsx'
-import { useHoverCard } from '../ui/spellPreview.ts'
+import { useHoverCard } from '../../hooks/useHoverCard.ts'
 
 /**
  * Wraps a label and shows the spell's card on hover, anchored with a fixed
