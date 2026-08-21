@@ -6,7 +6,11 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Encounter } from '../../src/schema/encounter.ts'
 import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
-import { useBoardBroadcast, usePlayerBoard } from '../../src/state/playerChannel.ts'
+import {
+  lockedChannelName,
+  useBoardBroadcast,
+  usePlayerBoard,
+} from '../../src/state/playerChannel.ts'
 import { makeRealtimeStub } from './supabaseMock.ts'
 
 const supa = vi.hoisted(() => ({ client: null as unknown }))
@@ -192,5 +196,104 @@ describe('usePlayerBoard — the player side', () => {
     act(() => channels[0].emitPresence('join'))
     unmount()
     expect(channels[0].sends.every((s) => s.event === 'hello')).toBe(true)
+  })
+})
+
+describe('a PIN-locked share', () => {
+  it('answers the lobby with locked and keeps the board on the derived channel', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    renderHook(() =>
+      useBoardBroadcast(
+        'code',
+        encounter(),
+        DEFAULT_PLAYER_VIEW,
+        null,
+        undefined,
+        undefined,
+        '1234',
+      ),
+    )
+    await act(async () => {})
+    const derived = await lockedChannelName('code', '1234')
+    expect(channels.map((c) => c.name)).toEqual(['player:code', derived])
+
+    const [lobby, board] = channels
+    act(() => {
+      lobby.ready()
+      board.ready()
+    })
+    // A hello at the door is told the view is locked — never given the board.
+    act(() => {
+      lobby.emit('hello')
+    })
+    expect(lobby.sends.filter((s) => s.event === 'board')).toHaveLength(0)
+    expect(lobby.sends.some((s) => s.event === 'locked')).toBe(true)
+    // The board flows only where the PIN points.
+    expect(board.sends.some((s) => s.event === 'board')).toBe(true)
+  })
+
+  it('derives a stable channel per PIN, and a different one per PIN', async () => {
+    expect(await lockedChannelName('code', '1234')).toBe(await lockedChannelName('code', '1234'))
+    expect(await lockedChannelName('code', '1234')).not.toBe(
+      await lockedChannelName('code', '4321'),
+    )
+    expect(await lockedChannelName('other', '1234')).not.toBe(
+      await lockedChannelName('code', '1234'),
+    )
+  })
+})
+
+describe('usePlayerBoard — a locked link', () => {
+  it('reports locked from the lobby, then goes live once the right PIN answers', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result, rerender } = renderHook(
+      ({ pin }: { pin: string | null }) => usePlayerBoard('code', pin),
+      { initialProps: { pin: null as string | null } },
+    )
+    act(() => channels[0].ready())
+    act(() => channels[0].emit('locked'))
+    expect(result.current.status).toBe('locked')
+
+    rerender({ pin: '1234' })
+    // Awaiting a digest queued after the hook's guarantees the hook's .then ran first.
+    await act(async () => {
+      await lockedChannelName('code', '1234')
+    })
+    expect(channels).toHaveLength(2)
+    expect(channels[1].name).toBe(await lockedChannelName('code', '1234'))
+    act(() => channels[1].ready())
+    act(() => channels[1].emit('board', { round: 2 }))
+    expect(result.current.status).toBe('live')
+    expect(result.current.board).toEqual({ round: 2 })
+    expect(result.current.pinRejected).toBe(false)
+  })
+
+  it('calls a silent channel a wrong PIN, and a later board clears the call', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result, rerender } = renderHook(
+      ({ pin }: { pin: string | null }) => usePlayerBoard('code', pin),
+      { initialProps: { pin: null as string | null } },
+    )
+    act(() => channels[0].ready())
+    act(() => channels[0].emit('locked'))
+
+    rerender({ pin: '9999' })
+    await act(async () => {
+      await lockedChannelName('code', '9999')
+    })
+    act(() => channels[1].ready())
+    act(() => {
+      vi.advanceTimersByTime(2000)
+    })
+    expect(result.current.pinRejected).toBe(true)
+    expect(result.current.status).toBe('locked')
+
+    // A board that limps in late is still the board — the verdict retracts.
+    act(() => channels[1].emit('board', { round: 1 }))
+    expect(result.current.pinRejected).toBe(false)
+    expect(result.current.status).toBe('live')
   })
 })

@@ -19,6 +19,8 @@ function open(props: Partial<Parameters<typeof SharePanel>[0]> = {}) {
       onToggleShare={onToggleShare}
       onClaim={props.onClaim}
       onSignIn={onSignIn}
+      pin={props.pin ?? null}
+      onSetPin={props.onSetPin}
     />,
   )
   fireEvent.click(screen.getByRole('button', { name: /Share with players|Sharing with players/ }))
@@ -136,5 +138,34 @@ describe('SharePanel — naming the link', () => {
     expect(screen.queryByLabelText('Name the link')).toBeNull()
     fireEvent.click(screen.getByText('Sign in'))
     expect(onSignIn).toHaveBeenCalled()
+  })
+})
+
+describe('SharePanel — the PIN', () => {
+  const box = (n: number) => screen.getByLabelText(`PIN digit ${n}`)
+
+  it('keeps the section off a panel nobody wired', () => {
+    open()
+    expect(screen.queryByLabelText('PIN digit 1')).toBeNull()
+  })
+
+  it('sets the PIN at the fourth digit', () => {
+    const onSetPin = vi.fn()
+    open({ onSetPin })
+    fireEvent.change(box(1), { target: { value: '1' } })
+    fireEvent.change(box(2), { target: { value: '2' } })
+    fireEvent.change(box(3), { target: { value: '3' } })
+    expect(onSetPin).not.toHaveBeenCalled()
+    fireEvent.change(box(4), { target: { value: '4' } })
+    expect(onSetPin).toHaveBeenCalledWith('1234')
+    expect(screen.getByText(/PIN set/)).toBeInTheDocument()
+  })
+
+  it('lifts the lock from Remove', () => {
+    const onSetPin = vi.fn()
+    open({ pin: '1234', onSetPin })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(onSetPin).toHaveBeenCalledWith(null)
+    expect(screen.getByText('PIN removed.')).toBeInTheDocument()
   })
 })

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { useState } from 'react'
 import { usePlayerBoard, type PlayerLinkStatus } from '../../state/playerChannel.ts'
 import { useTheme } from '../../hooks/useTheme.ts'
 import type { PlayerRecap } from '../../combat/playerView.ts'
@@ -11,6 +12,7 @@ import { PlayerRow } from './PlayerRow.tsx'
 import { OutcomeBadge, RecapSummary } from '../tracker/Recap.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { COLUMN_HEADING } from '../ui/headings.ts'
+import { PinInput } from '../ui/PinInput.tsx'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -24,6 +26,34 @@ import { COLUMN_HEADING } from '../ui/headings.ts'
 
 /** The console's column heading, pushed off the list below it. */
 const PANE_HEADING = `mb-2 ${COLUMN_HEADING}`
+
+/** The locked door: four boxes, and the verdict of the last try. */
+function PinGate({
+  pin,
+  onPin,
+  rejected,
+}: {
+  pin: string
+  onPin: (pin: string) => void
+  rejected: boolean
+}) {
+  const checking = pin.length === 4 && !rejected
+  return (
+    <div className="space-y-3">
+      <p className="font-medium">This view is locked.</p>
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Your Game Master set a PIN. Type it to open the board.
+      </p>
+      <PinInput value={pin} onChange={onPin} autoFocus />
+      {checking && <p className="text-sm text-slate-500 dark:text-slate-400">Checking…</p>}
+      {rejected && (
+        <p className="text-sm text-rose-600 dark:text-rose-400" role="status">
+          That PIN doesn’t match. Check it with your Game Master.
+        </p>
+      )}
+    </div>
+  )
+}
 
 /** What to say while there's no board — each state names what the reader should do next. */
 function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
@@ -84,7 +114,8 @@ function Standing({ round, paused, turn }: { round: number; paused: boolean; tur
 /** The whole player screen for one share code. */
 export function PlayerView({ code }: { code: string }) {
   const [theme, toggleTheme] = useTheme()
-  const { status, board } = usePlayerBoard(code)
+  const [pin, setPin] = useState('')
+  const { status, board, pinRejected } = usePlayerBoard(code, pin.length === 4 ? pin : null)
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
 
   return (
@@ -113,7 +144,9 @@ export function PlayerView({ code }: { code: string }) {
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
-        {board ? (
+        {!board && status === 'locked' ? (
+          <PinGate pin={pin} onPin={setPin} rejected={pinRejected} />
+        ) : board ? (
           <>
             <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-slate-600 dark:text-slate-300">

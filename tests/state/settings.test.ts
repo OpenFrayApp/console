@@ -127,3 +127,14 @@ describe('keyboard settings', () => {
     expect(loadSettings().hotkeys).toEqual({ prevTurn: 'shift+q' })
   })
 })
+
+describe('playerViewPin', () => {
+  it('keeps four digits and refuses anything else', () => {
+    saveSettings({ playerViewPin: '0420' })
+    expect(loadSettings().playerViewPin).toBe('0420')
+    localStorage.setItem('openfray-settings', JSON.stringify({ playerViewPin: '12a4' }))
+    expect(loadSettings().playerViewPin).toBeNull()
+    localStorage.setItem('openfray-settings', JSON.stringify({ playerViewPin: '12345' }))
+    expect(loadSettings().playerViewPin).toBeNull()
+  })
+})

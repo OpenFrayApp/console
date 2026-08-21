@@ -11,6 +11,7 @@ import { ICON } from '../icons/icon.ts'
 import { OpenIcon } from '../icons/OpenIcon.tsx'
 import { popoverClass } from '../ui/popover.ts'
 import { FieldHint } from '../ui/FieldHint.tsx'
+import { PinInput } from '../ui/PinInput.tsx'
 import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
 
 /** Cast icon — the board sent to the table's screens. */
@@ -43,6 +44,10 @@ interface SharePanelProps {
   onClaim?: (code: string) => Promise<ClaimResult>
   /** Open the sign-in screen, for the anonymous nudge toward naming a link. */
   onSignIn: () => void
+  /** The four-digit PIN locking the view, or null for an open link. */
+  pin?: string | null
+  /** Set or clear the PIN; the section only renders when the caller handles it. */
+  onSetPin?: (pin: string | null) => void
 }
 
 /**
@@ -51,7 +56,15 @@ interface SharePanelProps {
  * rather than a control here, because it's a preference for every fight, not a
  * decision made while sharing one.
  */
-export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: SharePanelProps) {
+export function SharePanel({
+  code,
+  sharing,
+  onToggleShare,
+  onClaim,
+  onSignIn,
+  pin = null,
+  onSetPin,
+}: SharePanelProps) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [message, setMessage] = useState<string | null>(null)
@@ -59,6 +72,19 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
   // name clears it like any other notice.
   const { copied, copy } = useCopyLink(setMessage)
   const [claiming, setClaiming] = useState(false)
+  const [pinDraft, setPinDraft] = useState(pin ?? '')
+
+  /** Keep the draft; a fourth digit commits it, and clearing every box lifts the lock. */
+  const editPin = (next: string) => {
+    setPinDraft(next)
+    if (next.length === 4 && next !== pin) {
+      onSetPin?.(next)
+      setMessage('PIN set. Viewers type it before the board shows.')
+    } else if (next.length === 0 && pin) {
+      onSetPin?.(null)
+      setMessage('PIN removed.')
+    }
+  }
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
@@ -158,6 +184,26 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                 >
                   <OpenIcon />
                 </LinkButton>
+              </div>
+            </div>
+          )}
+
+          {onSetPin && (
+            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+              <span className="mb-1 flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-200">PIN</span>
+                <FieldHint>
+                  Locks the view: players type the four digits before the board shows. Empty boxes
+                  leave the link open.
+                </FieldHint>
+              </span>
+              <div className="flex items-center gap-2">
+                <PinInput value={pinDraft} onChange={editPin} />
+                {pin && (
+                  <Button size="sm" variant="quiet" onClick={() => editPin('')}>
+                    Remove
+                  </Button>
+                )}
               </div>
             </div>
           )}

@@ -97,6 +97,8 @@ export interface AppSettings {
    * theme rather than session state, so anonymous fights still never reach the database.
    */
   playerViewCode: string | null
+  /** The four-digit PIN locking the player view, or null for an open link. */
+  playerViewPin: string | null
   /**
    * Keyboard chord overrides, laid over the defaults in state/hotkeys.ts; `null`
    * unbinds a command. A keyboard is a device property, so like the theme these
@@ -165,6 +167,11 @@ export function loadSettings(): AppSettings {
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
+    // Anything but exactly four digits is no PIN at all.
+    playerViewPin:
+      typeof data.playerViewPin === 'string' && /^\d{4}$/.test(data.playerViewPin)
+        ? data.playerViewPin
+        : null,
     hotkeys: sanitizeHotkeys(data.hotkeys),
     shareByline: typeof data.shareByline === 'string' ? data.shareByline : null,
   }

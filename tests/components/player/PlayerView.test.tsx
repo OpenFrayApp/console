@@ -11,6 +11,7 @@ import { PlayerView } from '../../../src/components/player/PlayerView.tsx'
 const link = vi.hoisted(() => ({
   status: 'connecting' as PlayerLinkStatus,
   board: null as PlayerBoard | null,
+  pinRejected: false,
 }))
 
 vi.mock('../../../src/state/playerChannel.ts', () => ({
@@ -21,6 +22,7 @@ afterEach(() => {
   cleanup()
   link.status = 'connecting'
   link.board = null
+  link.pinRejected = false
 })
 
 function board(overrides: Partial<PlayerBoard> = {}): PlayerBoard {
@@ -104,6 +106,20 @@ describe('PlayerView — live', () => {
     render(<PlayerView code="x" />)
     expect(screen.getByText('AC 16')).toBeInTheDocument()
     expect(screen.queryByText('AC 11')).toBeNull()
+  })
+
+  it('asks for the PIN when the link is locked, and names a wrong try', () => {
+    link.status = 'locked'
+    render(<PlayerView code="x" />)
+    expect(screen.getByText('This view is locked.')).toBeInTheDocument()
+    expect(screen.getByLabelText('PIN digit 1')).toBeInTheDocument()
+    expect(screen.queryByText(/doesn’t match/)).toBeNull()
+
+    cleanup()
+    link.status = 'locked'
+    link.pinRejected = true
+    render(<PlayerView code="x" />)
+    expect(screen.getByText(/That PIN doesn’t match/)).toBeInTheDocument()
   })
 
   it('heads the screen with the campaign and Game Master when the board carries them', () => {

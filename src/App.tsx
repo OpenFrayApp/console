@@ -300,6 +300,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [concentrateRequest, setConcentrateRequest] = useState(0)
   const [diceFocusRequest, setDiceFocusRequest] = useState(0)
   const [playerCode, setPlayerCode] = useState<string | null>(() => loadSettings().playerViewCode)
+  const [playerPin, setPlayerPinState] = useState<string | null>(() => loadSettings().playerViewPin)
+  /** Set or clear the player view's PIN, persisting it like the code beside it. */
+  const setPlayerPin = (pin: string | null) => {
+    setPlayerPinState(pin)
+    saveSettings({ playerViewPin: pin })
+  }
   // Sharing resumes after a reload and ends with the tab, which is what the session
   // snapshot already means — a refresh mid-fight shouldn't drop the table's screens.
   const [sharing, setSharing] = useState(() => restored?.sharing ?? false)
@@ -500,6 +506,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     // Names travel only for a signed-in GM, and only when the setting shares them.
     user ? activeCampaign?.name : undefined,
     user ? (displayName ?? undefined) : undefined,
+    playerPin,
   )
 
   /**
@@ -1570,6 +1577,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onToggleShare={toggleSharing}
                 onClaim={user ? claimShareCode : undefined}
                 onSignIn={() => setAuthOpen(true)}
+                pin={playerPin}
+                onSetPin={setPlayerPin}
               />
               <SettingsMenu
                 theme={theme}
