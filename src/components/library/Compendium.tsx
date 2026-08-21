@@ -28,6 +28,7 @@ import {
 import { CampaignCard } from './CampaignCard.tsx'
 import { CampaignFormModal } from '../editors/CampaignFormModal.tsx'
 import { campaignAcronym } from './campaignLabels.ts'
+import { EntryList } from './EntryList.tsx'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { PresetCard } from './PresetCard.tsx'
 import type { EffectPreset } from '../../schema/preset.ts'
@@ -41,11 +42,16 @@ import { SpellCard, SpellTags } from '../statblock/SpellCard.tsx'
 import { CustomSpellForm } from '../editors/CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from '../editors/customSpell.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
-import { cx } from '../../lib/cx.ts'
 import { Button, EntryBadges, TabButton } from '../ui/primitives.tsx'
 import { useSwipePanes } from '../../hooks/useSwipePanes.ts'
 
 export type Tab = 'creatures' | 'spells' | 'campaigns' | 'characters' | 'effects' | 'encounters'
+
+/** An entry's campaign as an acronym tag; blank when unset or the campaign is gone. */
+function campaignTag(campaigns: Campaign[], campaignId?: string | null): string {
+  const name = campaigns.find((c) => c.id === campaignId)?.name
+  return name ? campaignAcronym(name) : ''
+}
 
 /** The saved-encounter list: name, campaign, when. Signed-in only, like campaigns. */
 function SavedFightList({
@@ -81,44 +87,25 @@ function SavedFightList({
     )
   }
   const list = fights.fights
-  /** The campaign's initials, the same tag the character list wears. */
-  const tag = (campaignId: string | null): string => {
-    const name = campaigns.find((c) => c.id === campaignId)?.name
-    return name ? campaignAcronym(name) : ''
-  }
   return (
-    <>
-      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-        {list.length} {list.length === 1 ? 'encounter' : 'encounters'}
-      </p>
-      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-        {list.map((fight) => (
-          <li key={fight.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(fight.id)}
-              className={cx(
-                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
-                fight.id === selectedId
-                  ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-900',
-              )}
-            >
-              <span className="truncate">{fight.name}</span>
-              <span
-                className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
-                title={campaigns.find((c) => c.id === fight.campaignId)?.name}
-              >
-                {tag(fight.campaignId)}
-              </span>
-            </button>
-          </li>
-        ))}
-        {list.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
-        )}
-      </ul>
-    </>
+    <EntryList
+      items={list}
+      count={`${list.length} ${list.length === 1 ? 'encounter' : 'encounters'}`}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      empty={emptyLabel}
+      row={(fight) => (
+        <>
+          <span className="truncate">{fight.name}</span>
+          <span
+            className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
+            title={campaigns.find((c) => c.id === fight.campaignId)?.name}
+          >
+            {campaignTag(campaigns, fight.campaignId)}
+          </span>
+        </>
+      )}
+    />
   )
 }
 
@@ -144,38 +131,24 @@ function CampaignList({
     )
   }
   return (
-    <>
-      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-        {campaigns.length} {campaigns.length === 1 ? 'campaign' : 'campaigns'}
-      </p>
-      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-        {campaigns.map((c) => (
-          <li key={c.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(c.id)}
-              className={cx(
-                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
-                c.id === selectedId
-                  ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-900',
-              )}
-            >
-              <span className="truncate">{c.name}</span>
-              <span className="flex shrink-0 items-center gap-1.5">
-                <EntryBadges
-                  edition={editionLabel(c.edition)}
-                  editionTone={editionBadgeClass(c.edition)}
-                />
-              </span>
-            </button>
-          </li>
-        ))}
-        {campaigns.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
-        )}
-      </ul>
-    </>
+    <EntryList
+      items={campaigns}
+      count={`${campaigns.length} ${campaigns.length === 1 ? 'campaign' : 'campaigns'}`}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      empty={emptyLabel}
+      row={(c) => (
+        <>
+          <span className="truncate">{c.name}</span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <EntryBadges
+              edition={editionLabel(c.edition)}
+              editionTone={editionBadgeClass(c.edition)}
+            />
+          </span>
+        </>
+      )}
+    />
   )
 }
 
@@ -192,41 +165,27 @@ function PresetList({
   emptyLabel: string
 }) {
   return (
-    <>
-      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-        {presets.length} {presets.length === 1 ? 'preset' : 'presets'}
-      </p>
-      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-        {presets.map((p) => (
-          <li key={p.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(p.id)}
-              className={cx(
-                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
-                p.id === selectedId
-                  ? 'bg-indigo-50 font-medium text-indigo-900 dark:bg-indigo-950/60 dark:text-indigo-100'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-800/60',
-              )}
-            >
-              <span className="min-w-0 truncate">{p.name}</span>
-              <span className="flex shrink-0 items-center gap-1.5">
-                {/* No edition badge: a preset is board state, and a condition or a
-                    modifier reads the same in either edition. */}
-                <EntryBadges
-                  custom={isOwnPreset(p)}
-                  source={p.source && librarySource(p.source)}
-                  sourceTone={p.source && librarySourceBadgeClass(p.source)}
-                />
-              </span>
-            </button>
-          </li>
-        ))}
-        {presets.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
-        )}
-      </ul>
-    </>
+    <EntryList
+      items={presets}
+      count={`${presets.length} ${presets.length === 1 ? 'preset' : 'presets'}`}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      empty={emptyLabel}
+      row={(p) => (
+        <>
+          <span className="min-w-0 truncate">{p.name}</span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {/* No edition badge: a preset is board state, and a condition or a
+                modifier reads the same in either edition. */}
+            <EntryBadges
+              custom={isOwnPreset(p)}
+              source={p.source && librarySource(p.source)}
+              sourceTone={p.source && librarySourceBadgeClass(p.source)}
+            />
+          </span>
+        </>
+      )}
+    />
   )
 }
 
@@ -245,11 +204,6 @@ function PcList({
   onSelect: (id: string) => void
   emptyLabel: string
 }) {
-  /** A PC's campaign as an acronym tag; blank when unset or the campaign is gone. */
-  const tag = (campaignId?: string | null): string => {
-    const name = campaigns.find((c) => c.id === campaignId)?.name
-    return name ? campaignAcronym(name) : ''
-  }
   if (gated) {
     return (
       <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
@@ -258,38 +212,24 @@ function PcList({
     )
   }
   return (
-    <>
-      <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-        {pcs.length} {pcs.length === 1 ? 'character' : 'characters'}
-      </p>
-      <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-        {pcs.map((p) => (
-          <li key={p.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(p.id)}
-              className={cx(
-                'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
-                p.id === selectedId
-                  ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-900',
-              )}
-            >
-              <span className="truncate">{p.name}</span>
-              <span
-                className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
-                title={campaigns.find((c) => c.id === p.campaignId)?.name}
-              >
-                {tag(p.campaignId)}
-              </span>
-            </button>
-          </li>
-        ))}
-        {pcs.length === 0 && (
-          <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</li>
-        )}
-      </ul>
-    </>
+    <EntryList
+      items={pcs}
+      count={`${pcs.length} ${pcs.length === 1 ? 'character' : 'characters'}`}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      empty={emptyLabel}
+      row={(p) => (
+        <>
+          <span className="truncate">{p.name}</span>
+          <span
+            className="shrink-0 text-xs text-slate-400 dark:text-slate-500"
+            title={campaigns.find((c) => c.id === p.campaignId)?.name}
+          >
+            {campaignTag(campaigns, p.campaignId)}
+          </span>
+        </>
+      )}
+    />
   )
 }
 
@@ -756,49 +696,35 @@ export function Compendium({
         ) : loading ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         ) : (
-          <>
-            <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-              {entries.length} {tab}
-            </p>
-            <ul className="mt-1 min-h-0 flex-1 divide-y divide-slate-100 overflow-auto rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-              {entries.map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    onClick={() => showEntry(e.id)}
-                    className={cx(
-                      'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm',
-                      e.id === selectedId
-                        ? 'bg-indigo-50 dark:bg-indigo-950/40'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-900',
-                    )}
-                  >
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate">{e.name}</span>
-                      <SpellTags concentration={e.concentration} ritual={e.ritual} />
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                      <EntryBadges
-                        custom={e.custom}
-                        source={e.src}
-                        sourceTone={e.srcClass}
-                        edition={e.lib && editionLabel(e.lib)}
-                        editionTone={e.libClass}
-                      />
-                      {e.meta}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {entries.length === 0 && (
-                <li className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
-                  {searching
-                    ? `No ${tab} match that search.`
-                    : `No ${tab} in the rule sets you have turned on.`}
-                </li>
-              )}
-            </ul>
-          </>
+          <EntryList
+            items={entries}
+            count={`${entries.length} ${tab}`}
+            selectedId={selectedId}
+            onSelect={showEntry}
+            empty={
+              searching
+                ? `No ${tab} match that search.`
+                : `No ${tab} in the rule sets you have turned on.`
+            }
+            row={(e) => (
+              <>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate">{e.name}</span>
+                  <SpellTags concentration={e.concentration} ritual={e.ritual} />
+                </span>
+                <span className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                  <EntryBadges
+                    custom={e.custom}
+                    source={e.src}
+                    sourceTone={e.srcClass}
+                    edition={e.lib && editionLabel(e.lib)}
+                    editionTone={e.libClass}
+                  />
+                  {e.meta}
+                </span>
+              </>
+            )}
+          />
         )}
       </div>
 
