@@ -99,6 +99,8 @@ export interface AppSettings {
   playerViewCode: string | null
   /** The four-digit PIN locking the player view, or null for an open link. */
   playerViewPin: string | null
+  /** The bundled backdrop behind the player view, or null for the plain screen. */
+  playerViewBackdrop: string | null
   /**
    * Keyboard chord overrides, laid over the defaults in state/hotkeys.ts; `null`
    * unbinds a command. A keyboard is a device property, so like the theme these
@@ -172,6 +174,9 @@ export function loadSettings(): AppSettings {
       typeof data.playerViewPin === 'string' && /^\d{4}$/.test(data.playerViewPin)
         ? data.playerViewPin
         : null,
+    // The boundary re-checks the id against the bundled set; here a string is enough.
+    playerViewBackdrop:
+      typeof data.playerViewBackdrop === 'string' ? data.playerViewBackdrop : null,
     hotkeys: sanitizeHotkeys(data.hotkeys),
     shareByline: typeof data.shareByline === 'string' ? data.shareByline : null,
   }

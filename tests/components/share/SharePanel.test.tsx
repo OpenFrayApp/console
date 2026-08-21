@@ -21,6 +21,8 @@ function open(props: Partial<Parameters<typeof SharePanel>[0]> = {}) {
       onSignIn={onSignIn}
       pin={props.pin ?? null}
       onSetPin={props.onSetPin}
+      backdrop={props.backdrop ?? null}
+      onSetBackdrop={props.onSetBackdrop}
     />,
   )
   fireEvent.click(screen.getByRole('button', { name: /Share with players|Sharing with players/ }))
@@ -167,5 +169,28 @@ describe('SharePanel — the PIN', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     expect(onSetPin).toHaveBeenCalledWith(null)
     expect(screen.getByText('PIN removed.')).toBeInTheDocument()
+  })
+})
+
+describe('SharePanel — the backdrop', () => {
+  it('stays off an unwired panel, sets from a tile, and None takes it off', () => {
+    open()
+    expect(screen.queryByRole('radiogroup', { name: 'Backdrop' })).toBeNull()
+
+    cleanup()
+    const onSetBackdrop = vi.fn()
+    open({ onSetBackdrop })
+    fireEvent.click(screen.getByRole('radio', { name: 'Mountain fortress' }))
+    expect(onSetBackdrop).toHaveBeenCalledWith('mountain-fortress')
+
+    cleanup()
+    const clear = vi.fn()
+    open({ backdrop: 'mountain-fortress', onSetBackdrop: clear })
+    expect(screen.getByRole('radio', { name: 'Mountain fortress' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    fireEvent.click(screen.getByRole('radio', { name: 'None' }))
+    expect(clear).toHaveBeenCalledWith(null)
   })
 })

@@ -77,10 +77,4 @@ export interface Campaign {
    * derives from it; it is a scratchpad the console keeps beside the house rules.
    */
   notes?: string
-  /**
-   * A bundled player-view backdrop's id (see `lib/backgrounds.ts`); absent for the
-   * plain screen. An id rather than a URL, so the table's browsers fetch nothing
-   * the app doesn't ship.
-   */
-  background?: string
 }

@@ -306,6 +306,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setPlayerPinState(pin)
     saveSettings({ playerViewPin: pin })
   }
+  const [playerBackdrop, setPlayerBackdropState] = useState<string | null>(
+    () => loadSettings().playerViewBackdrop,
+  )
+  /** Set or clear the player view's backdrop, persisting it like the PIN beside it. */
+  const setPlayerBackdrop = (id: string | null) => {
+    setPlayerBackdropState(id)
+    saveSettings({ playerViewBackdrop: id })
+  }
   // Sharing resumes after a reload and ends with the tab, which is what the session
   // snapshot already means — a refresh mid-fight shouldn't drop the table's screens.
   const [sharing, setSharing] = useState(() => restored?.sharing ?? false)
@@ -507,7 +515,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     user ? activeCampaign?.name : undefined,
     user ? (displayName ?? undefined) : undefined,
     playerPin,
-    user ? activeCampaign?.background : undefined,
+    playerBackdrop ?? undefined,
   )
 
   /**
@@ -1580,6 +1588,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onSignIn={() => setAuthOpen(true)}
                 pin={playerPin}
                 onSetPin={setPlayerPin}
+                backdrop={playerBackdrop}
+                onSetBackdrop={setPlayerBackdrop}
               />
               <SettingsMenu
                 theme={theme}

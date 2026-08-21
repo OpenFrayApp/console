@@ -128,6 +128,14 @@ describe('keyboard settings', () => {
   })
 })
 
+describe('playerViewBackdrop', () => {
+  it('keeps any string and defaults to none', () => {
+    expect(loadSettings().playerViewBackdrop).toBeNull()
+    saveSettings({ playerViewBackdrop: 'mountain-fortress' })
+    expect(loadSettings().playerViewBackdrop).toBe('mountain-fortress')
+  })
+})
+
 describe('playerViewPin', () => {
   it('keeps four digits and refuses anything else', () => {
     saveSettings({ playerViewPin: '0420' })

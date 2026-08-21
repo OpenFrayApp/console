@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useCallback, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { ClaimResult } from '../../state/cloudEncounter.ts'
 import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../../state/playerCode.ts'
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
-import { useDismiss } from '../../hooks/useDismiss.ts'
+import { CAMPAIGN_BACKGROUNDS } from '../../lib/backgrounds.ts'
 import { CopyIcon } from '../icons/CopyIcon.tsx'
 import { ICON } from '../icons/icon.ts'
 import { OpenIcon } from '../icons/OpenIcon.tsx'
-import { popoverClass } from '../ui/popover.ts'
 import { FieldHint } from '../ui/FieldHint.tsx'
+import { Modal } from '../ui/Modal.tsx'
 import { PinInput } from '../ui/PinInput.tsx'
 import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
 
@@ -35,6 +35,9 @@ function CheckIcon() {
   )
 }
 
+const SECTION = 'border-t border-slate-200 pt-3 dark:border-slate-800'
+const SECTION_LABEL = 'text-xs font-medium text-slate-700 dark:text-slate-200'
+
 interface SharePanelProps {
   /** The current share code, or null before one exists. */
   code: string | null
@@ -48,13 +51,17 @@ interface SharePanelProps {
   pin?: string | null
   /** Set or clear the PIN; the section only renders when the caller handles it. */
   onSetPin?: (pin: string | null) => void
+  /** The bundled backdrop behind the view, or null for the plain screen. */
+  backdrop?: string | null
+  /** Set or clear the backdrop; the section only renders when the caller handles it. */
+  onSetBackdrop?: (id: string | null) => void
 }
 
 /**
- * The Game Master's control for the shared player view: start and stop sharing, copy or
- * open the link, and — signed in — choose what it's called. What players *see* is a setting
- * rather than a control here, because it's a preference for every fight, not a
- * decision made while sharing one.
+ * The Game Master's control for the shared player view, in a modal so mid-fight
+ * changes — the PIN, the backdrop, the link's name — have room to sit side by side.
+ * What players *see* of a creature stays a setting rather than a control here,
+ * because that is a preference for every fight, not a decision made while sharing one.
  */
 export function SharePanel({
   code,
@@ -64,6 +71,8 @@ export function SharePanel({
   onSignIn,
   pin = null,
   onSetPin,
+  backdrop = null,
+  onSetBackdrop,
 }: SharePanelProps) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
@@ -85,9 +94,6 @@ export function SharePanel({
       setMessage('PIN removed.')
     }
   }
-  const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
-  useDismiss(ref, open, close)
 
   const url = code ? playerViewUrl(code) : null
 
@@ -116,7 +122,7 @@ export function SharePanel({
   }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <IconButton
         active={sharing}
         className="relative"
@@ -135,144 +141,182 @@ export function SharePanel({
       </IconButton>
 
       {open && (
-        <div className={`${popoverClass('roomy:w-80')} p-3 roomy:mt-2`}>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Player view</h2>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-            A read-only screen with the turn order and the game log. Anyone with the link can watch,
-            so share it with your table and not the internet.
-          </p>
-
-          <div className="mt-3">
-            <Button variant={sharing ? 'danger' : 'primary'} onClick={onToggleShare}>
-              {sharing ? 'Stop sharing' : 'Start sharing'}
-            </Button>
-          </div>
-
-          {url && (
-            <div className="mt-3">
-              <label
-                htmlFor="share-link"
-                className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-200"
-              >
-                Link
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="share-link"
-                  readOnly
-                  value={url}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => copy(url)}
-                  aria-label={copied ? 'Copied' : 'Copy the link'}
-                  title={copied ? 'Copied' : 'Copy the link'}
-                  className="inline-flex items-center justify-center px-1.5"
-                >
-                  {copied ? <CheckIcon /> : <CopyIcon />}
-                </Button>
-                <LinkButton
-                  size="sm"
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Open the player view in a new tab"
-                  title="Open the player view in a new tab"
-                  className="inline-flex items-center justify-center px-1.5"
-                >
-                  <OpenIcon />
-                </LinkButton>
-              </div>
+        <Modal
+          title="Player view"
+          subtitle="A read-only screen with the turn order and the game log. Anyone with the link can watch, so share it with your table and not the internet."
+          onClose={() => setOpen(false)}
+        >
+          <div className="space-y-3">
+            <div>
+              <Button variant={sharing ? 'danger' : 'primary'} onClick={onToggleShare}>
+                {sharing ? 'Stop sharing' : 'Start sharing'}
+              </Button>
             </div>
-          )}
 
-          {/* The link's own dials — the lock and the name — folded away so the popover
-            stays about the act of sharing; the summary still says when a PIN is on. */}
-          <details className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-            <summary className="cursor-pointer select-none text-xs font-medium text-slate-700 dark:text-slate-200">
-              Link options
-              {pin && (
-                <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                  PIN on
+            {url && (
+              <div className={SECTION}>
+                <label htmlFor="share-link" className={`mb-1 block ${SECTION_LABEL}`}>
+                  Link
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="share-link"
+                    readOnly
+                    value={url}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => copy(url)}
+                    aria-label={copied ? 'Copied' : 'Copy the link'}
+                    title={copied ? 'Copied' : 'Copy the link'}
+                    className="inline-flex items-center justify-center px-1.5"
+                  >
+                    {copied ? <CheckIcon /> : <CopyIcon />}
+                  </Button>
+                  <LinkButton
+                    size="sm"
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Open the player view in a new tab"
+                    title="Open the player view in a new tab"
+                    className="inline-flex items-center justify-center px-1.5"
+                  >
+                    <OpenIcon />
+                  </LinkButton>
+                </div>
+              </div>
+            )}
+
+            {onSetPin && (
+              <div className={SECTION}>
+                <span className="mb-1 flex items-center gap-1.5">
+                  <span className={SECTION_LABEL}>PIN</span>
+                  <FieldHint>
+                    Locks the view: players type the four digits before the board shows. Empty boxes
+                    leave the link open.
+                  </FieldHint>
                 </span>
-              )}
-            </summary>
-            <div className="mt-3 space-y-3">
-              {onSetPin && (
-                <div>
-                  <span className="mb-1 flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                      PIN
-                    </span>
-                    <FieldHint>
-                      Locks the view: players type the four digits before the board shows. Empty
-                      boxes leave the link open.
-                    </FieldHint>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <PinInput value={pinDraft} onChange={editPin} />
-                    {pin && (
-                      <Button size="sm" variant="quiet" onClick={() => editPin('')}>
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {onClaim ? (
-                <div>
-                  <span className="mb-1 flex items-center gap-1.5">
-                    <label
-                      htmlFor="share-link-name"
-                      className="text-xs font-medium text-slate-700 dark:text-slate-200"
-                    >
-                      Name the link
-                    </label>
-                    <FieldHint>
-                      Letters, numbers and hyphens. It stays yours between sessions.
-                    </FieldHint>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="share-link-name"
-                      value={draft}
-                      placeholder={code ?? 'tuesday-game'}
-                      onChange={(e) => {
-                        setDraft(e.target.value)
-                        setMessage(null)
-                      }}
-                      className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                    />
-                    <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
-                      Save
+                <div className="flex items-center gap-2">
+                  <PinInput value={pinDraft} onChange={editPin} />
+                  {pin && (
+                    <Button size="sm" variant="quiet" onClick={() => editPin('')}>
+                      Remove
                     </Button>
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <p className="text-xs text-slate-600 dark:text-slate-400">
+              </div>
+            )}
+
+            {onSetBackdrop && (
+              <div className={SECTION}>
+                <span className="mb-1 flex items-center gap-1.5">
+                  <span className={SECTION_LABEL}>Backdrop</span>
+                  <FieldHint>
+                    Sits dimmed behind the table’s screen, in the art each theme gets. Change it
+                    whenever the scene does.
+                  </FieldHint>
+                </span>
+                <div
+                  className="flex flex-wrap items-center gap-2"
+                  role="radiogroup"
+                  aria-label="Backdrop"
+                >
                   <button
                     type="button"
-                    onClick={onSignIn}
-                    className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                    role="radio"
+                    aria-checked={backdrop === null}
+                    onClick={() => onSetBackdrop(null)}
+                    className={`flex aspect-video w-24 items-center justify-center rounded border text-xs ${
+                      backdrop === null
+                        ? 'border-indigo-500 text-indigo-600 ring-1 ring-indigo-500 dark:text-indigo-400'
+                        : 'border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400'
+                    }`}
                   >
-                    Sign in
-                  </button>{' '}
-                  to name the link something your table can remember.
-                </p>
-              )}
-            </div>
-          </details>
+                    None
+                  </button>
+                  {CAMPAIGN_BACKGROUNDS.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={backdrop === b.id}
+                      aria-label={b.label}
+                      title={b.label}
+                      onClick={() => onSetBackdrop(b.id)}
+                      className={`relative aspect-video w-24 overflow-hidden rounded border ${
+                        backdrop === b.id
+                          ? 'border-indigo-500 ring-1 ring-indigo-500'
+                          : 'border-slate-300 dark:border-slate-700'
+                      }`}
+                    >
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 bg-cover bg-center dark:hidden"
+                        style={{
+                          backgroundImage: `url(${import.meta.env.BASE_URL}${b.fileLight})`,
+                        }}
+                      />
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 hidden bg-cover bg-center dark:block"
+                        style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {message && (
-            <p className="mt-2 text-xs text-slate-700 dark:text-slate-200" role="status">
-              {message}
-            </p>
-          )}
-        </div>
+            {onClaim ? (
+              <div className={SECTION}>
+                <span className="mb-1 flex items-center gap-1.5">
+                  <label htmlFor="share-link-name" className={SECTION_LABEL}>
+                    Name the link
+                  </label>
+                  <FieldHint>
+                    Letters, numbers and hyphens. It stays yours between sessions.
+                  </FieldHint>
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="share-link-name"
+                    value={draft}
+                    placeholder={code ?? 'tuesday-game'}
+                    onChange={(e) => {
+                      setDraft(e.target.value)
+                      setMessage(null)
+                    }}
+                    className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                  <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
+                    Save
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className={`${SECTION} text-xs text-slate-600 dark:text-slate-400`}>
+                <button
+                  type="button"
+                  onClick={onSignIn}
+                  className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  Sign in
+                </button>{' '}
+                to name the link something your table can remember.
+              </p>
+            )}
+
+            {message && (
+              <p className="text-xs text-slate-700 dark:text-slate-200" role="status">
+                {message}
+              </p>
+            )}
+          </div>
+        </Modal>
       )}
-    </div>
+    </>
   )
 }

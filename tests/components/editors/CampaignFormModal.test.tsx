@@ -81,32 +81,6 @@ describe('CampaignFormModal', () => {
     expect((onSubmit.mock.calls[0][0] as Campaign).notes).toBe('The **burgomaster** is lying')
   })
 
-  it('saves the chosen player-view backdrop, and None takes it back off', () => {
-    const onSubmit = vi.fn()
-    render(<CampaignFormModal open onClose={() => {}} onSubmit={onSubmit} />)
-    fireEvent.change(screen.getByLabelText('Campaign name'), { target: { value: 'Barovia' } })
-    fireEvent.click(screen.getByRole('radio', { name: 'Mountain fortress' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }))
-    expect((onSubmit.mock.calls[0][0] as Campaign).background).toBe('mountain-fortress')
-
-    cleanup()
-    const campaign: Campaign = {
-      id: 'c1',
-      name: 'Barovia',
-      edition: '5.5',
-      background: 'mountain-fortress',
-    }
-    const again = vi.fn()
-    render(<CampaignFormModal open campaign={campaign} onClose={() => {}} onSubmit={again} />)
-    expect(screen.getByRole('radio', { name: 'Mountain fortress' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
-    fireEvent.click(screen.getByRole('radio', { name: 'None' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect((again.mock.calls[0][0] as Campaign).background).toBeUndefined()
-  })
-
   it('seeds the notes from the campaign being edited, and keeps them on save', () => {
     const campaign: Campaign = { id: 'c1', name: 'Barovia', edition: '5.5', notes: 'Old note' }
     const onSubmit = vi.fn()
