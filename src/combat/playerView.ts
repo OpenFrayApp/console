@@ -10,7 +10,7 @@ import { effectiveMaxHp, hpTier, type HpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
 import { badgeLabel } from './effects.ts'
 import { acOf, isFoe, nameOf } from './combatant.ts'
-import { backgroundFile } from '../lib/backgrounds.ts'
+import { backgroundEntry } from '../lib/backgrounds.ts'
 
 /**
  * What the shared player view is allowed to know. This module is the boundary: the
@@ -270,7 +270,7 @@ export function playerBoard(
       : {}),
     ...(settings.gmName === 'shown' && identity.gm?.trim() ? { gm: identity.gm.trim() } : {}),
     // Setting a backdrop on the campaign is the opt-in; an id we don't ship never travels.
-    ...(backgroundFile(identity.background) ? { background: identity.background } : {}),
+    ...(backgroundEntry(identity.background) ? { background: identity.background } : {}),
     log: scopedLog(encounter, settings.log)
       .filter((e) => !e.gmOnly && !(e.sourceId && offBoard.has(e.sourceId)))
       // With a creature's conditions held back, the lines announcing them go too —

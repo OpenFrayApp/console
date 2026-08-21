@@ -13,7 +13,7 @@ import { OutcomeBadge, RecapSummary } from '../tracker/Recap.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { COLUMN_HEADING } from '../ui/headings.ts'
 import { PinInput } from '../ui/PinInput.tsx'
-import { backgroundFile } from '../../lib/backgrounds.ts'
+import { backgroundEntry } from '../../lib/backgrounds.ts'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -118,7 +118,9 @@ export function PlayerView({ code }: { code: string }) {
   const [pin, setPin] = useState('')
   const { status, board, pinRejected } = usePlayerBoard(code, pin.length === 4 ? pin : null)
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
-  const backdrop = backgroundFile(board?.background)
+  const entry = backgroundEntry(board?.background)
+  // Each theme gets art treated for it — pre-darkened or pre-lifted — not a veiled twin.
+  const backdrop = entry && (theme === 'dark' ? entry.file : entry.fileLight)
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -158,7 +160,7 @@ export function PlayerView({ code }: { code: string }) {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 bg-white/60 dark:bg-slate-950/75"
+              className="pointer-events-none absolute inset-0 -z-10 bg-white/40 dark:bg-slate-950/50"
             />
           </>
         )}

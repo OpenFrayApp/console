@@ -222,13 +222,23 @@ export function CampaignFormModal({
                 aria-label={b.label}
                 title={b.label}
                 onClick={() => setBackground(b.id)}
-                className={`aspect-video w-24 rounded border bg-cover bg-center ${
+                className={`relative aspect-video w-24 overflow-hidden rounded border ${
                   background === b.id
                     ? 'border-indigo-500 ring-1 ring-indigo-500'
                     : 'border-slate-300 dark:border-slate-700'
                 }`}
-                style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
-              />
+              >
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-cover bg-center dark:hidden"
+                  style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.fileLight})` }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 hidden bg-cover bg-center dark:block"
+                  style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
+                />
+              </button>
             ))}
           </div>
           <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
