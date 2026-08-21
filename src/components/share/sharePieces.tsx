@@ -172,3 +172,20 @@ export function SignInToShare({ what, onSignIn }: { what: string; onSignIn: () =
     </div>
   )
 }
+
+/**
+ * The consent line against the Publish button: what pressing it confirms, and the terms
+ * it agrees to. `holds` names what the publisher claims the rights to ("this stat
+ * block", "this encounter"); `children` is the sentence saying what publishing does.
+ */
+export function PublishConsent({ holds, children }: { holds: string; children: React.ReactNode }) {
+  return (
+    <p className="text-xs text-slate-500 dark:text-slate-400">
+      By publishing this you confirm you hold the rights to {holds}, and you agree to the{' '}
+      <a href="/terms" target="_blank" rel="noreferrer" className="underline">
+        terms
+      </a>
+      . They say the rest, including how a link comes down. {children}
+    </p>
+  )
+}

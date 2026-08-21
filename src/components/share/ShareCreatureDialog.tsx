@@ -7,6 +7,7 @@ import type { PublishResult } from '../../state/shares.ts'
 import { shareUrl } from '../../state/shareCode.ts'
 import {
   BylineField,
+  PublishConsent,
   PublishedLink,
   SHARE_FIELD,
   SHARE_LABEL,
@@ -142,17 +143,9 @@ export function ShareCreatureDialog({
               able to use it.
             </p>
           )}
-          {/* Same clause as the encounter dialog, minus the library sentence: whether a
-            reader may take a copy of this one depends on its license, which the line
-            above says when the answer is no. */}
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Publishing is you saying you hold the rights to this stat block, and letting OpenFray
-            host it on a page anyone can open. The{' '}
-            <a href="/terms" target="_blank" rel="noreferrer" className="underline">
-              terms
-            </a>{' '}
-            say the rest, including how a link comes down.
-          </p>
+          <PublishConsent holds="this stat block">
+            OpenFray hosts it on a page anyone can open.
+          </PublishConsent>
           <Button type="submit" variant="primary" disabled={busy || !!problem}>
             Publish
           </Button>
