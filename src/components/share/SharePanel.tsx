@@ -188,67 +188,83 @@ export function SharePanel({
             </div>
           )}
 
-          {onSetPin && (
-            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-              <span className="mb-1 flex items-center gap-1.5">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-200">PIN</span>
-                <FieldHint>
-                  Locks the view: players type the four digits before the board shows. Empty boxes
-                  leave the link open.
-                </FieldHint>
-              </span>
-              <div className="flex items-center gap-2">
-                <PinInput value={pinDraft} onChange={editPin} />
-                {pin && (
-                  <Button size="sm" variant="quiet" onClick={() => editPin('')}>
-                    Remove
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          {/* The link's own dials — the lock and the name — folded away so the popover
+            stays about the act of sharing; the summary still says when a PIN is on. */}
+          <details className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+            <summary className="cursor-pointer select-none text-xs font-medium text-slate-700 dark:text-slate-200">
+              Link options
+              {pin && (
+                <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                  PIN on
+                </span>
+              )}
+            </summary>
+            <div className="mt-3 space-y-3">
+              {onSetPin && (
+                <div>
+                  <span className="mb-1 flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                      PIN
+                    </span>
+                    <FieldHint>
+                      Locks the view: players type the four digits before the board shows. Empty
+                      boxes leave the link open.
+                    </FieldHint>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <PinInput value={pinDraft} onChange={editPin} />
+                    {pin && (
+                      <Button size="sm" variant="quiet" onClick={() => editPin('')}>
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {onClaim ? (
-            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
-              <span className="mb-1 flex items-center gap-1.5">
-                <label
-                  htmlFor="share-link-name"
-                  className="text-xs font-medium text-slate-700 dark:text-slate-200"
-                >
-                  Name the link
-                </label>
-                <FieldHint>
-                  Letters, numbers and hyphens. It stays yours between sessions.
-                </FieldHint>
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  id="share-link-name"
-                  value={draft}
-                  placeholder={code ?? 'tuesday-game'}
-                  onChange={(e) => {
-                    setDraft(e.target.value)
-                    setMessage(null)
-                  }}
-                  className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                />
-                <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
-                  Save
-                </Button>
-              </div>
+              {onClaim ? (
+                <div>
+                  <span className="mb-1 flex items-center gap-1.5">
+                    <label
+                      htmlFor="share-link-name"
+                      className="text-xs font-medium text-slate-700 dark:text-slate-200"
+                    >
+                      Name the link
+                    </label>
+                    <FieldHint>
+                      Letters, numbers and hyphens. It stays yours between sessions.
+                    </FieldHint>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="share-link-name"
+                      value={draft}
+                      placeholder={code ?? 'tuesday-game'}
+                      onChange={(e) => {
+                        setDraft(e.target.value)
+                        setMessage(null)
+                      }}
+                      className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    />
+                    <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  <button
+                    type="button"
+                    onClick={onSignIn}
+                    className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                  >
+                    Sign in
+                  </button>{' '}
+                  to name the link something your table can remember.
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="mt-3 border-t border-slate-200 pt-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
-              <button
-                type="button"
-                onClick={onSignIn}
-                className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-              >
-                Sign in
-              </button>{' '}
-              to name the link something your table can remember.
-            </p>
-          )}
+          </details>
 
           {message && (
             <p className="mt-2 text-xs text-slate-700 dark:text-slate-200" role="status">

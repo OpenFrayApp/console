@@ -3,8 +3,9 @@
 
 import { useRef, type ClipboardEvent, type KeyboardEvent } from 'react'
 
+// Compact under a mouse; `tap` keeps the 44px floor wherever fingers do the typing.
 const BOX =
-  'h-11 w-10 rounded border border-slate-300 bg-white text-center text-lg font-semibold tabular-nums text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+  'tap h-9 w-8 rounded border border-slate-300 bg-white text-center text-base font-semibold tabular-nums text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
 
 /**
  * A four-digit PIN as four boxes: digits only, each typed digit moves to the next box,
