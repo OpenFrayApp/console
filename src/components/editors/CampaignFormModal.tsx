@@ -14,6 +14,7 @@ import {
   type Option,
 } from '../library/campaignLabels.ts'
 import { FIELD, LABEL } from '../ui/fieldStyles.ts'
+import { FormModal } from '../ui/FormModal.tsx'
 
 /** A labelled dropdown over the given options, typed to the option value union. */
 function SelectField<T extends string>({
@@ -110,120 +111,100 @@ export function CampaignFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
-      onClick={onClose}
+    <FormModal
+      title={editing ? 'Edit campaign' : 'New campaign'}
+      maxWidth="max-w-md"
+      onClose={onClose}
+      onSubmit={submit}
     >
-      <form
-        role="dialog"
-        aria-label={editing ? 'Edit campaign' : 'New campaign'}
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-        className="my-auto w-full max-w-md rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
-      >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-          <h2 className="text-lg font-semibold">{editing ? 'Edit campaign' : 'New campaign'}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
-          <label className="block space-y-1">
-            <span className={LABEL}>Campaign name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Curse of Strahd"
-              aria-label="Campaign name"
-              autoFocus
-              autoComplete="off"
-              className={FIELD}
-            />
-          </label>
-
-          <SelectField
-            label="Edition"
-            value={edition}
-            onChange={setEdition}
-            options={EDITION_OPTIONS}
+      <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
+        <label className="block space-y-1">
+          <span className={LABEL}>Campaign name</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Curse of Strahd"
+            aria-label="Campaign name"
+            autoFocus
+            autoComplete="off"
+            className={FIELD}
           />
+        </label>
 
-          <div className="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              House rules
-            </h3>
-            <SelectField
-              label="Critical hit damage"
-              value={rules.crit}
-              onChange={(v) => setRule('crit', v)}
-              options={CRIT_OPTIONS}
-            />
-            <SelectField
-              label="Surprise round"
-              value={rules.surprise}
-              onChange={(v) => setRule('surprise', v)}
-              options={SURPRISE_OPTIONS}
-            />
-            <SelectField
-              label="Creature HP"
-              value={rules.hp}
-              onChange={(v) => setRule('hp', v)}
-              options={HP_OPTIONS}
-            />
-            <SelectField
-              label="Initiative ties"
-              value={rules.initiativeTiebreak}
-              onChange={(v) => setRule('initiativeTiebreak', v)}
-              options={TIEBREAK_OPTIONS}
-            />
-            <SelectField
-              label="Level up"
-              value={rules.leveling ?? 'xp'}
-              onChange={(v) => setRule('leveling', v)}
-              options={LEVELING_OPTIONS}
-            />
-          </div>
+        <SelectField
+          label="Edition"
+          value={edition}
+          onChange={setEdition}
+          options={EDITION_OPTIONS}
+        />
 
-          <label className="block space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <span className={LABEL}>Campaign notes</span>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
-              placeholder="Private notes on the game — hooks, threads, what the party owes whom…"
-              aria-label="Campaign notes"
-              autoComplete="off"
-              className={FIELD}
-            />
-            <span className="block text-xs text-slate-500 dark:text-slate-400">
-              Markdown, only ever yours. Editable from the campaign card too.
-            </span>
-          </label>
+        <div className="space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">House rules</h3>
+          <SelectField
+            label="Critical hit damage"
+            value={rules.crit}
+            onChange={(v) => setRule('crit', v)}
+            options={CRIT_OPTIONS}
+          />
+          <SelectField
+            label="Surprise round"
+            value={rules.surprise}
+            onChange={(v) => setRule('surprise', v)}
+            options={SURPRISE_OPTIONS}
+          />
+          <SelectField
+            label="Creature HP"
+            value={rules.hp}
+            onChange={(v) => setRule('hp', v)}
+            options={HP_OPTIONS}
+          />
+          <SelectField
+            label="Initiative ties"
+            value={rules.initiativeTiebreak}
+            onChange={(v) => setRule('initiativeTiebreak', v)}
+            options={TIEBREAK_OPTIONS}
+          />
+          <SelectField
+            label="Level up"
+            value={rules.leveling ?? 'xp'}
+            onChange={(v) => setRule('leveling', v)}
+            options={LEVELING_OPTIONS}
+          />
         </div>
 
-        <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-          <button
-            type="submit"
-            disabled={!name.trim()}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
-            {editing ? 'Save changes' : 'Create campaign'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
+        <label className="block space-y-1 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <span className={LABEL}>Campaign notes</span>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={4}
+            placeholder="Private notes on the game — hooks, threads, what the party owes whom…"
+            aria-label="Campaign notes"
+            autoComplete="off"
+            className={FIELD}
+          />
+          <span className="block text-xs text-slate-500 dark:text-slate-400">
+            Markdown, only ever yours. Editable from the campaign card too.
+          </span>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+        <button
+          type="submit"
+          disabled={!name.trim()}
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+        >
+          {editing ? 'Save changes' : 'Create campaign'}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          Cancel
+        </button>
+      </div>
+    </FormModal>
   )
 }

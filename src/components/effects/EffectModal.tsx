@@ -28,6 +28,7 @@ import { describeExhaustion, exhaustionLevel } from '../../combat/exhaustion.ts'
 import { useCampaignEdition } from '../../state/campaignRules.ts'
 import { LibraryPicker } from '../add/LibraryPicker.tsx'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
+import { FormModal } from '../ui/FormModal.tsx'
 import { track as recordEvent, EVENTS } from '../../lib/analytics.ts'
 import { useEnterCommit } from '../../hooks/useEnterCommit.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
@@ -426,402 +427,382 @@ export function EffectModal({
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
-          onClick={() => setOpen(false)}
+        <FormModal
+          title={`Apply effect to ${name}`}
+          maxWidth="max-w-lg"
+          onClose={() => setOpen(false)}
         >
-          <div
-            role="dialog"
-            aria-label={`Apply effect to ${name}`}
-            onClick={(e) => e.stopPropagation()}
-            className="my-auto w-full max-w-lg rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
-          >
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-              <h2 className="text-lg font-semibold">Apply effect to {name}</h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
-              {presets.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <LibraryPicker
-                    label="Presets"
-                    align="left"
-                    placeholder="Search presets…"
-                    searchLabel="Search presets"
-                    entries={pickerEntries}
-                    custom={pickerCustom}
-                    enabledLibraries={enabledLibraries}
-                    showEdition={false}
-                    onPick={stage}
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Fills the form below. Nothing is added to the character until you press Apply.
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <p className={LABEL}>Duration</p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={draft.duration}
-                      onChange={(e) => set('duration', e.target.value as DurChoice)}
-                      aria-label="Duration"
-                      className={`${FIELD_W} w-full`}
-                    >
-                      {DURATION_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    {draft.duration === 'custom' && (
-                      <span className="flex flex-wrap items-center gap-1 text-sm">
-                        <input
-                          value={draft.customAmount}
-                          onChange={(e) => set('customAmount', e.target.value)}
-                          placeholder="#"
-                          aria-label="Duration amount"
-                          inputMode="numeric"
-                          className={`${FIELD_W} w-14`}
-                        />
-                        <select
-                          value={draft.customUnit}
-                          onChange={(e) => set('customUnit', e.target.value as CustomUnit)}
-                          aria-label="Duration unit"
-                          className={`${FIELD_W} w-24`}
-                        >
-                          {CUSTOM_UNITS.map((u) => (
-                            <option key={u} value={u}>
-                              {u}
-                            </option>
-                          ))}
-                        </select>
-                      </span>
-                    )}
-                    {isTurnChoice(draft.duration) && turnGroups.length > 0 && (
-                      <select
-                        value={draft.turnOf}
-                        onChange={(e) => set('turnOf', e.target.value)}
-                        aria-label="Whose turn"
-                        className={`${FIELD_W} w-full`}
-                      >
-                        {turnGroups.map((group) => (
-                          <optgroup key={group.label} label={group.label}>
-                            {group.combatants.map((c) => (
-                              <option key={c.combatantId} value={c.combatantId}>
-                                {nameOf(c)}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    )}
-                    {draft.duration === 'save' && (
-                      <span className="flex flex-wrap items-center gap-1 text-sm">
-                        <select
-                          value={draft.saveAbility}
-                          onChange={(e) => set('saveAbility', e.target.value as Ability)}
-                          aria-label="Save ability"
-                          className={`${FIELD_W} w-20`}
-                        >
-                          {ABILITIES.map((a) => (
-                            <option key={a} value={a}>
-                              {a.toUpperCase()}
-                            </option>
-                          ))}
-                        </select>
-                        DC
-                        <input
-                          value={draft.saveDc}
-                          onChange={(e) => set('saveDc', e.target.value)}
-                          placeholder="#"
-                          aria-label="Save DC"
-                          inputMode="numeric"
-                          className={`${FIELD_W} w-14`}
-                        />
-                        <select
-                          value={draft.saveWhen}
-                          onChange={(e) =>
-                            set('saveWhen', e.target.value as EffectDraft['saveWhen'])
-                          }
-                          aria-label="Save timing"
-                          className={`${FIELD_W} w-32`}
-                        >
-                          <option value="endOfTurn">end of turn</option>
-                          <option value="startOfTurn">start of turn</option>
-                        </select>
-                      </span>
-                    )}
-                  </div>
-                  {draft.duration === 'save' ? (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      OpenFray rolls this for a creature at the chosen moment. A player rolls their
-                      own, and you record it.
-                    </p>
-                  ) : (
-                    // Not offered for Save ends, where a roll ending it is already the point.
-                    <>
-                      <label className="flex items-center gap-1 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={draft.endsOnRoll}
-                          onChange={(e) => set('endsOnRoll', e.target.checked)}
-                        />
-                        or its next roll
-                      </label>
-                      {draft.endsOnRoll && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          OpenFray spends it on the first roll it changes. It never sees a player’s
-                          own rolls, so the duration above is what ends it there.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <p className={LABEL}>Reminders</p>
-                  {draft.notes.map((note, i) => (
-                    <div key={i} className="flex items-center gap-1">
-                      <input
-                        value={note}
-                        onChange={(e) =>
-                          set(
-                            'notes',
-                            draft.notes.map((n, j) => (j === i ? e.target.value : n)),
-                          )
-                        }
-                        placeholder="e.g. Hex: +1d6 necrotic"
-                        aria-label={i === 0 ? 'Custom reminder' : `Reminder ${i + 1}`}
-                        className={`${FIELD_W} w-full`}
-                      />
-                      {draft.notes.length > 1 && (
-                        <button
-                          type="button"
-                          aria-label={`Remove reminder ${i + 1}`}
-                          onClick={() =>
-                            set(
-                              'notes',
-                              draft.notes.filter((_, j) => j !== i),
-                            )
-                          }
-                          className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => set('notes', [...draft.notes, ''])}
-                    className={ADD_LINK}
-                  >
-                    + Add another reminder
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
-                <p className={LABEL}>Condition</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {CONDITIONS.map((c) => {
-                    const active = draft.conditions.includes(c)
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => toggleCondition(c)}
-                        className={
-                          active
-                            ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
-                            : CHIP
-                        }
-                      >
-                        {c}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
-                <p className={LABEL}>Exhaustion</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {EXHAUSTION_LEVELS.map((level) => {
-                    const active = draft.exhaustion === level
-                    return (
-                      <button
-                        key={level}
-                        type="button"
-                        aria-pressed={active}
-                        aria-label={level === 0 ? 'No Exhaustion' : `Exhaustion ${level}`}
-                        onClick={() => set('exhaustion', level)}
-                        className={
-                          active
-                            ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
-                            : CHIP
-                        }
-                      >
-                        {level === 0 ? 'None' : level}
-                      </button>
-                    )
-                  })}
-                </div>
+          <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
+            {presets.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <LibraryPicker
+                  label="Presets"
+                  align="left"
+                  placeholder="Search presets…"
+                  searchLabel="Search presets"
+                  entries={pickerEntries}
+                  custom={pickerCustom}
+                  enabledLibraries={enabledLibraries}
+                  showEdition={false}
+                  onPick={stage}
+                />
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {describeExhaustion(draft.exhaustion, edition)}
+                  Fills the form below. Nothing is added to the character until you press Apply.
                 </p>
               </div>
+            )}
 
-              <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                {draft.counters.length > 0 && <p className={LABEL}>Counters</p>}
-                {draft.counters.map((c, i) => (
-                  <div key={i} className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <p className={LABEL}>Duration</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={draft.duration}
+                    onChange={(e) => set('duration', e.target.value as DurChoice)}
+                    aria-label="Duration"
+                    className={`${FIELD_W} w-full`}
+                  >
+                    {DURATION_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  {draft.duration === 'custom' && (
+                    <span className="flex flex-wrap items-center gap-1 text-sm">
+                      <input
+                        value={draft.customAmount}
+                        onChange={(e) => set('customAmount', e.target.value)}
+                        placeholder="#"
+                        aria-label="Duration amount"
+                        inputMode="numeric"
+                        className={`${FIELD_W} w-14`}
+                      />
+                      <select
+                        value={draft.customUnit}
+                        onChange={(e) => set('customUnit', e.target.value as CustomUnit)}
+                        aria-label="Duration unit"
+                        className={`${FIELD_W} w-24`}
+                      >
+                        {CUSTOM_UNITS.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  )}
+                  {isTurnChoice(draft.duration) && turnGroups.length > 0 && (
+                    <select
+                      value={draft.turnOf}
+                      onChange={(e) => set('turnOf', e.target.value)}
+                      aria-label="Whose turn"
+                      className={`${FIELD_W} w-full`}
+                    >
+                      {turnGroups.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.combatants.map((c) => (
+                            <option key={c.combatantId} value={c.combatantId}>
+                              {nameOf(c)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  )}
+                  {draft.duration === 'save' && (
+                    <span className="flex flex-wrap items-center gap-1 text-sm">
+                      <select
+                        value={draft.saveAbility}
+                        onChange={(e) => set('saveAbility', e.target.value as Ability)}
+                        aria-label="Save ability"
+                        className={`${FIELD_W} w-20`}
+                      >
+                        {ABILITIES.map((a) => (
+                          <option key={a} value={a}>
+                            {a.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                      DC
+                      <input
+                        value={draft.saveDc}
+                        onChange={(e) => set('saveDc', e.target.value)}
+                        placeholder="#"
+                        aria-label="Save DC"
+                        inputMode="numeric"
+                        className={`${FIELD_W} w-14`}
+                      />
+                      <select
+                        value={draft.saveWhen}
+                        onChange={(e) => set('saveWhen', e.target.value as EffectDraft['saveWhen'])}
+                        aria-label="Save timing"
+                        className={`${FIELD_W} w-32`}
+                      >
+                        <option value="endOfTurn">end of turn</option>
+                        <option value="startOfTurn">start of turn</option>
+                      </select>
+                    </span>
+                  )}
+                </div>
+                {draft.duration === 'save' ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    OpenFray rolls this for a creature at the chosen moment. A player rolls their
+                    own, and you record it.
+                  </p>
+                ) : (
+                  // Not offered for Save ends, where a roll ending it is already the point.
+                  <>
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={draft.endsOnRoll}
+                        onChange={(e) => set('endsOnRoll', e.target.checked)}
+                      />
+                      or its next roll
+                    </label>
+                    {draft.endsOnRoll && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        OpenFray spends it on the first roll it changes. It never sees a player’s
+                        own rolls, so the duration above is what ends it there.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <p className={LABEL}>Reminders</p>
+                {draft.notes.map((note, i) => (
+                  <div key={i} className="flex items-center gap-1">
                     <input
-                      value={c.name}
+                      value={note}
+                      onChange={(e) =>
+                        set(
+                          'notes',
+                          draft.notes.map((n, j) => (j === i ? e.target.value : n)),
+                        )
+                      }
+                      placeholder="e.g. Hex: +1d6 necrotic"
+                      aria-label={i === 0 ? 'Custom reminder' : `Reminder ${i + 1}`}
+                      className={`${FIELD_W} w-full`}
+                    />
+                    {draft.notes.length > 1 && (
+                      <button
+                        type="button"
+                        aria-label={`Remove reminder ${i + 1}`}
+                        onClick={() =>
+                          set(
+                            'notes',
+                            draft.notes.filter((_, j) => j !== i),
+                          )
+                        }
+                        className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => set('notes', [...draft.notes, ''])}
+                  className={ADD_LINK}
+                >
+                  + Add another reminder
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
+              <p className={LABEL}>Condition</p>
+              <div className="flex flex-wrap gap-1.5">
+                {CONDITIONS.map((c) => {
+                  const active = draft.conditions.includes(c)
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => toggleCondition(c)}
+                      className={
+                        active
+                          ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
+                          : CHIP
+                      }
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
+              <p className={LABEL}>Exhaustion</p>
+              <div className="flex flex-wrap gap-1.5">
+                {EXHAUSTION_LEVELS.map((level) => {
+                  const active = draft.exhaustion === level
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      aria-pressed={active}
+                      aria-label={level === 0 ? 'No Exhaustion' : `Exhaustion ${level}`}
+                      onClick={() => set('exhaustion', level)}
+                      className={
+                        active
+                          ? 'rounded border border-indigo-500 bg-indigo-600 px-2 py-1 text-sm font-medium text-white'
+                          : CHIP
+                      }
+                    >
+                      {level === 0 ? 'None' : level}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {describeExhaustion(draft.exhaustion, edition)}
+              </p>
+            </div>
+
+            <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+              {draft.counters.length > 0 && <p className={LABEL}>Counters</p>}
+              {draft.counters.map((c, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={c.name}
+                    onChange={(e) =>
+                      set(
+                        'counters',
+                        draft.counters.map((x, j) =>
+                          j === i ? { ...x, name: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="e.g. Depth, Corruption"
+                    aria-label={`Counter ${i + 1} name`}
+                    className={`${FIELD_W} min-w-0 flex-1`}
+                  />
+                  <label className="flex items-center gap-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={c.gmOnly}
                       onChange={(e) =>
                         set(
                           'counters',
                           draft.counters.map((x, j) =>
-                            j === i ? { ...x, name: e.target.value } : x,
+                            j === i ? { ...x, gmOnly: e.target.checked } : x,
                           ),
                         )
                       }
-                      placeholder="e.g. Depth, Corruption"
-                      aria-label={`Counter ${i + 1} name`}
-                      className={`${FIELD_W} min-w-0 flex-1`}
                     />
-                    <label className="flex items-center gap-1 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={c.gmOnly}
-                        onChange={(e) =>
-                          set(
-                            'counters',
-                            draft.counters.map((x, j) =>
-                              j === i ? { ...x, gmOnly: e.target.checked } : x,
-                            ),
-                          )
-                        }
-                      />
-                      Hidden from players
-                    </label>
-                    <button
-                      type="button"
-                      aria-label={`Remove counter ${i + 1}`}
-                      onClick={() =>
-                        set(
-                          'counters',
-                          draft.counters.filter((_, j) => j !== i),
-                        )
-                      }
-                      className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => set('counters', [...draft.counters, { name: '', gmOnly: false }])}
-                  className={ADD_LINK}
-                >
-                  + Add counter
-                </button>
-                {draft.counters.length > 0 && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    A tally you keep by hand. It starts at 0, never ticks down, and stays until you
-                    clear it.
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                {draft.modifiers.map((m, i) => (
-                  <ModifierBuilder
-                    key={i}
-                    modifier={m}
-                    onChange={(next) =>
+                    Hidden from players
+                  </label>
+                  <button
+                    type="button"
+                    aria-label={`Remove counter ${i + 1}`}
+                    onClick={() =>
                       set(
-                        'modifiers',
-                        draft.modifiers.map((x, j) => (j === i ? next : x)),
+                        'counters',
+                        draft.counters.filter((_, j) => j !== i),
                       )
                     }
-                    onRemove={() =>
-                      set(
-                        'modifiers',
-                        draft.modifiers.filter((_, j) => j !== i),
-                      )
-                    }
-                  />
-                ))}
-                <button
-                  type="button"
-                  onClick={() => set('modifiers', [...draft.modifiers, emptyModifier()])}
-                  className={ADD_LINK}
-                >
-                  + Add a bonus or penalty
-                </button>
-              </div>
-
-              {parts.length >= 2 && (
-                <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
-                  <p className={LABEL}>Apply as one</p>
-                  <input
-                    value={draft.bundleName}
-                    onChange={(e) => set('bundleName', e.target.value)}
-                    placeholder="Name it — Drunk, Cursed…"
-                    aria-label="Bundle name"
-                    className={`${FIELD_W} w-full`}
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Named, everything above lands as one badge and clears together. Leave it blank
-                    for separate badges. A counter and an Exhaustion level always stand alone.
-                  </p>
+                    className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                  >
+                    ✕
+                  </button>
                 </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => set('counters', [...draft.counters, { name: '', gmOnly: false }])}
+                className={ADD_LINK}
+              >
+                + Add counter
+              </button>
+              {draft.counters.length > 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  A tally you keep by hand. It starts at 0, never ticks down, and stays until you
+                  clear it.
+                </p>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-              {onSavePreset && (
-                <button
-                  type="button"
-                  onClick={savePreset}
-                  disabled={!stagedAnything}
-                  title="Keep what's staged, so the next encounter is one click"
-                  className="mr-auto rounded-md px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 disabled:hover:bg-transparent dark:text-indigo-400 dark:hover:bg-indigo-950/40"
-                >
-                  Save as preset
-                </button>
-              )}
+            <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+              {draft.modifiers.map((m, i) => (
+                <ModifierBuilder
+                  key={i}
+                  modifier={m}
+                  onChange={(next) =>
+                    set(
+                      'modifiers',
+                      draft.modifiers.map((x, j) => (j === i ? next : x)),
+                    )
+                  }
+                  onRemove={() =>
+                    set(
+                      'modifiers',
+                      draft.modifiers.filter((_, j) => j !== i),
+                    )
+                  }
+                />
+              ))}
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                onClick={() => set('modifiers', [...draft.modifiers, emptyModifier()])}
+                className={ADD_LINK}
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={apply}
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-              >
-                Apply
+                + Add a bonus or penalty
               </button>
             </div>
+
+            {parts.length >= 2 && (
+              <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
+                <p className={LABEL}>Apply as one</p>
+                <input
+                  value={draft.bundleName}
+                  onChange={(e) => set('bundleName', e.target.value)}
+                  placeholder="Name it — Drunk, Cursed…"
+                  aria-label="Bundle name"
+                  className={`${FIELD_W} w-full`}
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Named, everything above lands as one badge and clears together. Leave it blank for
+                  separate badges. A counter and an Exhaustion level always stand alone.
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+            {onSavePreset && (
+              <button
+                type="button"
+                onClick={savePreset}
+                disabled={!stagedAnything}
+                title="Keep what's staged, so the next encounter is one click"
+                className="mr-auto rounded-md px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 disabled:hover:bg-transparent dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+              >
+                Save as preset
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={apply}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+            >
+              Apply
+            </button>
+          </div>
+        </FormModal>
       )}
     </>
   )

@@ -10,6 +10,7 @@ import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { hpToneFor } from '../ui/hpTone.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { Button } from '../ui/primitives.tsx'
+import { FormModal } from '../ui/FormModal.tsx'
 
 /** A campfire — short rest. */
 function BonfireIcon() {
@@ -93,76 +94,56 @@ function ShortRestModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
-      onClick={onClose}
+    <FormModal
+      title="Short rest"
+      maxWidth="max-w-md"
+      onClose={onClose}
+      onSubmit={(e) => {
+        e.preventDefault()
+        submit()
+      }}
     >
-      <form
-        role="dialog"
-        aria-label="Short rest"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => {
-          e.preventDefault()
-          submit()
-        }}
-        className="my-auto w-full max-w-md rounded-lg border border-slate-200 bg-white text-left shadow-xl dark:border-slate-700 dark:bg-slate-900"
-      >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-          <h2 className="text-lg font-semibold">Short rest</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="max-h-[60vh] space-y-2 overflow-auto p-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Type each character's new hit points. A number sets the total, <code>+5</code> heals by
-            that much. Leave a box empty and that character is left alone.
+      <div className="max-h-[60vh] space-y-2 overflow-auto p-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Type each character's new hit points. A number sets the total, <code>+5</code> heals by
+          that much. Leave a box empty and that character is left alone.
+        </p>
+        {combatants.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Nobody on your side is on the board yet. Add your players first.
           </p>
-          {combatants.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Nobody on your side is on the board yet. Add your players first.
-            </p>
-          ) : (
-            combatants.map((c) => (
-              <div key={c.combatantId} className="flex items-center gap-3">
-                <span className="min-w-0 flex-1 truncate text-sm">{label(c)}</span>
-                <span className="shrink-0 text-xs tabular-nums">
-                  <span className={hpToneFor(hpTierOf(c.hp.current, c.hp.max))}>
-                    {c.hp.current}
-                  </span>
-                  <span className="text-slate-400 dark:text-slate-500">/{c.hp.max}</span>
-                </span>
-                <input
-                  value={values[c.combatantId] ?? ''}
-                  onChange={(e) =>
-                    setValues((prev) => ({ ...prev, [c.combatantId]: e.target.value }))
-                  }
-                  placeholder="24 or +5"
-                  aria-label={`New hit points for ${label(c)}`}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  data-1p-ignore="true"
-                  className="w-20 shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-                />
-              </div>
-            ))
-          )}
-        </div>
+        ) : (
+          combatants.map((c) => (
+            <div key={c.combatantId} className="flex items-center gap-3">
+              <span className="min-w-0 flex-1 truncate text-sm">{label(c)}</span>
+              <span className="shrink-0 text-xs tabular-nums">
+                <span className={hpToneFor(hpTierOf(c.hp.current, c.hp.max))}>{c.hp.current}</span>
+                <span className="text-slate-400 dark:text-slate-500">/{c.hp.max}</span>
+              </span>
+              <input
+                value={values[c.combatantId] ?? ''}
+                onChange={(e) =>
+                  setValues((prev) => ({ ...prev, [c.combatantId]: e.target.value }))
+                }
+                placeholder="24 or +5"
+                aria-label={`New hit points for ${label(c)}`}
+                inputMode="numeric"
+                autoComplete="off"
+                data-1p-ignore="true"
+                className="w-20 shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+              />
+            </div>
+          ))
+        )}
+      </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" type="submit">
-            Take short rest
-          </Button>
-        </div>
-      </form>
-    </div>
+      <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="primary" type="submit">
+          Take short rest
+        </Button>
+      </div>
+    </FormModal>
   )
 }
 
