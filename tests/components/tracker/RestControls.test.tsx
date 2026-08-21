@@ -30,7 +30,7 @@ describe('RestControls', () => {
     expect(screen.getByRole('button', { name: 'Long rest' })).toBeDisabled()
   })
 
-  it('shows the short-rest tally only when the counter is enabled', () => {
+  it('badges the tally on the campfire only when the counter is enabled', () => {
     const { rerender } = render(
       <RestControls
         combatants={combatants}
@@ -40,7 +40,8 @@ describe('RestControls', () => {
         showCounter={false}
       />,
     )
-    expect(screen.queryByText('2 short rests')).toBeNull()
+    const shortRest = () => screen.getByRole('button', { name: 'Short rest' })
+    expect(within(shortRest()).queryByText('2')).toBeNull()
     rerender(
       <RestControls
         combatants={combatants}
@@ -50,7 +51,10 @@ describe('RestControls', () => {
         showCounter
       />,
     )
-    expect(screen.getByText('2 short rests')).toBeInTheDocument()
+    expect(within(shortRest()).getByText('2')).toHaveAttribute(
+      'title',
+      'Short rests taken since the last long rest',
+    )
   })
 
   it('takes a long rest after confirming', () => {

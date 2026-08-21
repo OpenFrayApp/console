@@ -219,7 +219,17 @@ export function RestControls({
           title={shortHint ? `Short rest (${shortHint})` : 'Short rest'}
           className={cell()}
         >
-          <BonfireIcon />
+          <span className="relative">
+            <BonfireIcon />
+            {showCounter && (
+              <span
+                title="Short rests taken since the last long rest"
+                className="absolute -left-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-slate-500 px-0.5 text-[9px] font-semibold leading-none tabular-nums text-white dark:bg-slate-600"
+              >
+                {shortRests}
+              </span>
+            )}
+          </span>
         </button>
         <button
           type="button"
@@ -232,16 +242,6 @@ export function RestControls({
           <TentIcon />
         </button>
       </nav>
-      {showCounter && (
-        <span
-          title="Short rests taken since the last long rest"
-          // The only text in a row of controls, and the ~110px that decides whether the
-          // header fits on one line. It stays on the widths that have the room for it.
-          className="hidden text-xs tabular-nums text-slate-500 2xl:inline dark:text-slate-400"
-        >
-          {shortRests} short {shortRests === 1 ? 'rest' : 'rests'}
-        </span>
-      )}
       {open && (
         <ShortRestModal combatants={friendly} dispatch={dispatch} onClose={() => setOpen(false)} />
       )}
