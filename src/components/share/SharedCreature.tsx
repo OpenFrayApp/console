@@ -9,6 +9,7 @@ import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { SharedNote } from './SharedNote.tsx'
 import { mayCopy } from '../../schema/license.ts'
+import { ReportIcon } from '../icons/ReportIcon.tsx'
 import { Button } from '../ui/primitives.tsx'
 
 /**
@@ -23,25 +24,6 @@ import { Button } from '../ui/primitives.tsx'
  * Beasts creature reads and adds for anybody. The one case that fails is a library this
  * version doesn't carry at all, where the page says so and offers nothing else.
  */
-
-/** A flag: the mark this reader is putting on something for somebody else to look at. */
-function ReportIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-3.5 w-3.5"
-    >
-      <path d="M4 21V4" />
-      <path d="M4 4h11l-1.5 3.5L15 11H4" />
-    </svg>
-  )
-}
 
 export function SharedCreature({
   template,

@@ -6,19 +6,11 @@ import type { ClaimResult } from '../../state/cloudEncounter.ts'
 import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../../state/playerCode.ts'
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { CopyIcon } from '../icons/CopyIcon.tsx'
+import { ICON } from '../icons/icon.ts'
+import { OpenIcon } from '../icons/OpenIcon.tsx'
 import { popoverClass } from '../ui/popover.ts'
 import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
-
-/** The shape every icon in this panel is drawn on. */
-const ICON = {
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  'aria-hidden': true,
-} as const
 
 /** Screen icon — the board as the table sees it. */
 function ScreenIcon() {
@@ -31,32 +23,11 @@ function ScreenIcon() {
   )
 }
 
-/** Copy icon — one sheet laid over another. */
-function CopyIcon() {
-  return (
-    <svg {...ICON} className="h-4 w-4">
-      <rect x="9" y="9" width="12" height="12" rx="2" />
-      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-    </svg>
-  )
-}
-
 /** Check icon — the link is on the clipboard. */
 function CheckIcon() {
   return (
     <svg {...ICON} className="h-4 w-4">
       <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
-/** External-link icon — the view, opened somewhere else. */
-function OpenIcon() {
-  return (
-    <svg {...ICON} className="h-4 w-4">
-      <path d="M15 3h6v6" />
-      <path d="M10 14 21 3" />
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     </svg>
   )
 }

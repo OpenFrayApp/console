@@ -26,7 +26,9 @@ import { formatCr } from '../../compendium/format.ts'
 import { estimateXp } from '../../combat/difficulty.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
+import { ChevronLeftIcon } from '../icons/ChevronLeftIcon.tsx'
 import { CrossedSwordsIcon } from '../icons/CrossedSwordsIcon.tsx'
+import { ReportIcon } from '../icons/ReportIcon.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { SharedNote } from './SharedNote.tsx'
 import { ReportShareDialog } from './ReportShareDialog.tsx'
@@ -80,25 +82,6 @@ interface CastRow {
   name: string
   count: number
   side: 'friend' | 'foe'
-}
-
-/** A flag: the mark this reader is putting on something for somebody else to look at. */
-function ReportIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-3.5 w-3.5"
-    >
-      <path d="M4 21V4" />
-      <path d="M4 4h11l-1.5 3.5L15 11H4" />
-    </svg>
-  )
 }
 
 const SIDE_TONE: Record<'friend' | 'foe', string> = {
@@ -438,18 +421,7 @@ export function SharedEncounterPage({
             onClick={() => setPane(0)}
             className="mt-2 flex items-center gap-1 self-start text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 split:hidden wide:hidden"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-              aria-hidden="true"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
+            <ChevronLeftIcon />
             Back
           </button>
 

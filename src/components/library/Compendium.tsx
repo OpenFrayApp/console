@@ -42,6 +42,8 @@ import { SpellCard, SpellTags } from '../statblock/SpellCard.tsx'
 import { CustomSpellForm } from '../editors/CustomSpellForm.tsx'
 import { emptySpellDraft, spellToDraft, type SpellDraft } from '../editors/customSpell.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
+import { BookIcon } from '../icons/BookIcon.tsx'
+import { ChevronLeftIcon } from '../icons/ChevronLeftIcon.tsx'
 import { Button, EntryBadges, TabButton } from '../ui/primitives.tsx'
 import { useSwipePanes } from '../../hooks/useSwipePanes.ts'
 
@@ -734,18 +736,7 @@ export function Compendium({
           onClick={() => setPane(0)}
           className="mt-2 flex items-center gap-1 self-start text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 split:hidden wide:hidden"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-4 w-4"
-            aria-hidden="true"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
+          <ChevronLeftIcon />
           Back
         </button>
         {(tab === 'campaigns' || tab === 'characters' || tab === 'encounters') && createGated ? (
@@ -881,19 +872,10 @@ export function Compendium({
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
             <div className="rounded-full bg-slate-100 p-5 dark:bg-slate-800/70">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <BookIcon
                 className="h-10 w-10 text-slate-400 dark:text-slate-500"
-                aria-hidden="true"
-              >
-                <path d="M12 7v14" />
-                <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-              </svg>
+                strokeWidth={1.5}
+              />
             </div>
             <p className="max-w-sm text-slate-500 dark:text-slate-400">
               {tab === 'creatures'

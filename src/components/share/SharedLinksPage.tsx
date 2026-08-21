@@ -5,6 +5,8 @@ import { useState } from 'react'
 import type { MyShares } from '../../state/shares.ts'
 import { shareUrl } from '../../state/shareCode.ts'
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
+import { CopyIcon } from '../icons/CopyIcon.tsx'
+import { OpenIcon } from '../icons/OpenIcon.tsx'
 import { Button, LinkButton } from '../ui/primitives.tsx'
 
 /**
@@ -22,43 +24,6 @@ import { Button, LinkButton } from '../ui/primitives.tsx'
 
 /** How many links a page holds. Enough to scan without becoming a scroll. */
 const PER_PAGE = 10
-
-function CopyIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-4 w-4"
-    >
-      <rect x="9" y="9" width="12" height="12" rx="2" />
-      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-    </svg>
-  )
-}
-
-function OpenIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-4 w-4"
-    >
-      <path d="M14 4h6v6" />
-      <path d="m20 4-9 9" />
-      <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-    </svg>
-  )
-}
 
 function UnpublishIcon() {
   return (

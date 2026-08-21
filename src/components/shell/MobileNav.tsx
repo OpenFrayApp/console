@@ -3,20 +3,11 @@
 
 import type { ReactNode } from 'react'
 import { cx } from '../../lib/cx.ts'
+import { BookIcon } from '../icons/BookIcon.tsx'
+import { ICON } from '../icons/icon.ts'
 
 /** The screens the phone layout can show, in swipe order, plus the compendium. */
 export type MobileTab = 'tracker' | 'stat-block' | 'controls' | 'compendium'
-
-/** The shape every icon in this bar is drawn on. */
-const ICON = {
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  'aria-hidden': true,
-} as const
 
 /** Rows icon — the tracker's initiative list. */
 function RowsIcon() {
@@ -51,16 +42,6 @@ function DieIcon() {
       <path d="m3.5 17 2.5.5" />
       <path d="m20.5 17-2.5.5" />
       <path d="M12 22v-4.5" />
-    </svg>
-  )
-}
-
-/** Open-book icon — the compendium. */
-function BookIcon() {
-  return (
-    <svg {...ICON} className="h-5 w-5">
-      <path d="M12 7v14" />
-      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
     </svg>
   )
 }
