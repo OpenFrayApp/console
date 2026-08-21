@@ -4,6 +4,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ClaimResult } from '../../state/cloudEncounter.ts'
 import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../../state/playerCode.ts'
+import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { Button, LinkButton } from '../ui/primitives.tsx'
@@ -82,26 +83,15 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [message, setMessage] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  // A blocked clipboard lands in the panel's shared message slot, where typing a
+  // name clears it like any other notice.
+  const { copied, copy } = useCopyLink(setMessage)
   const [claiming, setClaiming] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
   useDismiss(ref, open, close)
 
   const url = code ? playerViewUrl(code) : null
-
-  /** Put the link on the clipboard, and say so briefly. */
-  const copy = async () => {
-    if (!url) return
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // A blocked clipboard is fine — the link is on screen to select by hand.
-      setMessage('Couldn’t copy. Select the link and copy it yourself.')
-    }
-  }
 
   /** Claim the typed name, keeping the current link in force if it's taken. */
   const claim = async () => {
@@ -183,7 +173,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
                 />
                 <Button
                   size="sm"
-                  onClick={copy}
+                  onClick={() => copy(url)}
                   aria-label={copied ? 'Copied' : 'Copy the link'}
                   title={copied ? 'Copied' : 'Copy the link'}
                   className="inline-flex items-center justify-center px-1.5"

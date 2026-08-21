@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import type { MyShares } from '../../state/shares.ts'
 import { shareUrl } from '../../state/shareCode.ts'
+import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { Button, LinkButton } from '../ui/primitives.tsx'
 
 /**
@@ -91,20 +92,10 @@ export function SharedLinksPage({
   onUnpublish: (code: string) => void
   onClose: () => void
 }) {
-  const [copied, setCopied] = useState<string | null>(null)
+  // Keyed by the row's code, so only the copied row says so. No failure notice
+  // here: a blocked clipboard is survivable, the link is on screen to select by hand.
+  const { copied, copy } = useCopyLink()
   const [page, setPage] = useState(0)
-
-  /** Put a link on the clipboard, and mark that row briefly. */
-  const copy = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(shareUrl(code))
-      setCopied(code)
-      setTimeout(() => setCopied(null), 2000)
-    } catch {
-      // A blocked clipboard is survivable: the link is on screen to select by hand.
-      setCopied(null)
-    }
-  }
 
   const links = shares.status === 'ok' ? shares.shares : []
   const pages = Math.max(1, Math.ceil(links.length / PER_PAGE))
@@ -190,7 +181,7 @@ export function SharedLinksPage({
                       <Button
                         size="sm"
                         className="inline-flex items-center gap-1.5"
-                        onClick={() => void copy(share.code)}
+                        onClick={() => copy(shareUrl(share.code), share.code)}
                       >
                         <CopyIcon />
                         {copied === share.code ? 'Copied' : 'Copy'}

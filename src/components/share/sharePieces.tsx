@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useState } from 'react'
+import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { Button } from '../ui/primitives.tsx'
 
 /**
@@ -65,18 +65,7 @@ export function PublishedLink({
   children: React.ReactNode
   onDone: () => void
 }) {
-  const [copied, setCopied] = useState(false)
-  const [failed, setFailed] = useState(false)
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setFailed(true)
-    }
-  }
+  const { copied, error, copy } = useCopyLink()
 
   return (
     <div className="space-y-3">
@@ -89,13 +78,9 @@ export function PublishedLink({
           onFocus={(e) => e.currentTarget.select()}
           className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
         />
-        <Button onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</Button>
+        <Button onClick={() => copy(link)}>{copied ? 'Copied' : 'Copy'}</Button>
       </div>
-      {failed && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Couldn’t copy. Select the link and copy it yourself.
-        </p>
-      )}
+      {error && <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>}
       <p className="text-xs text-slate-500 dark:text-slate-400">
         Your links are in the account menu, under Shared encounters. This one stands until you take
         it down.
