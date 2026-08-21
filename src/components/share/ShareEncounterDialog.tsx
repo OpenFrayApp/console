@@ -17,6 +17,7 @@ import {
   SHARE_LABEL,
   SignInToShare,
 } from './sharePieces.tsx'
+import { shareErrorMessage } from './shareMessages.ts'
 import { useByline } from '../../hooks/useByline.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { Modal } from '../ui/Modal.tsx'
@@ -105,23 +106,14 @@ export function ShareEncounterDialog({
       setMessage(null)
       setName('')
       setNote('')
-    } else if (result.status === 'tooBig') {
-      setMessage('This encounter is too big to share. Try it without the homebrew creatures.')
-    } else if (result.status === 'signInFirst') {
-      // Reachable only if a session ends between opening the dialog and pressing Publish.
-      setMessage('Sharing needs an account. Sign in and try again.')
-    } else if (result.status === 'tooMany') {
-      // The one refusal with something to do about it, so it says what that is.
-      setMessage('You have as many published pages as an account can hold. Take one down first.')
-    } else if (result.status === 'notAllowed') {
-      // What happened, and nothing else. There is no next step to offer here: naming an
-      // address would invite every refusal to become a message, and the answer to most of
-      // them is the one already on screen.
-      setMessage('This account can’t publish encounters.')
-    } else if (result.status === 'unavailable') {
-      setMessage('Sharing isn’t set up on this server yet.')
     } else {
-      setMessage('Couldn’t publish that. Try again.')
+      setMessage(
+        shareErrorMessage(result, {
+          noun: 'encounters',
+          tooBig: 'This encounter is too big to share. Try it without the homebrew creatures.',
+          failed: 'Couldn’t publish that. Try again.',
+        }),
+      )
     }
   }
 
