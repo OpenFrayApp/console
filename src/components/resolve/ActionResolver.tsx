@@ -8,7 +8,7 @@ import type { ConditionName, Effect, EffectDuration } from '../../schema/effect.
 import { DAMAGE_TYPES, type Ability, type DamageType } from '../../schema/primitives.ts'
 import type { Spell } from '../../schema/spell.ts'
 import { spendEffects, type EncounterAction, type NewLogEntry } from '../../state/encounter.ts'
-import type { CritRule, DieGroup, RollResult } from '../../dice/roll.ts'
+import type { DieGroup, RollResult } from '../../dice/roll.ts'
 import { d20Group, keptFlags, roll } from '../../dice/roll.ts'
 import { describeRoll } from '../../dice/describe.ts'
 import { useCampaignEdition, useCampaignRules } from '../../state/campaignRules.ts'
@@ -19,8 +19,15 @@ import {
   legendaryResistanceLeft,
   spendLegendaryResistance,
 } from '../../combat/resources.ts'
-import { adjustForDefense, damageRelation, relationLabel } from '../../combat/damage.ts'
-import { acOf, nameOf } from '../../combat/combatant.ts'
+import {
+  attackHits,
+  damageAgainst,
+  damageRelation,
+  relationLabel,
+  rollDamageComponents,
+  type RolledDamage,
+} from '../../combat/damage.ts'
+import { acOf, nameOf, targetsFor } from '../../combat/combatant.ts'
 import { signed, titleCase } from '../../compendium/format.ts'
 import { parseNonNegativeInt as toNum } from '../../lib/form.ts'
 import {
@@ -47,31 +54,6 @@ import { track, EVENTS } from '../../lib/analytics.ts'
 import { useEnterCommit } from '../../hooks/useEnterCommit.ts'
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-
-/** A rolled damage component before defenses are applied. */
-interface RolledDamage {
-  type: DamageType
-  amount: number
-  result: RollResult
-}
-
-/**
- * Roll each of the action's damage formulas (crit-aware); a negative total clamps to 0.
- *
- * A formula the dice engine won't take is left out rather than allowed to throw — the throw
- * would land in this click handler and break the attack. Reaching here with one is a bug
- * upstream (`projectCreature` refuses them), so this leaves a working resolver behind.
- */
-function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledDamage[] {
-  return (action.damage ?? []).flatMap((d) => {
-    try {
-      const result = roll(d.formula, { kind: 'damage', crit })
-      return [{ type: d.type, amount: Math.max(0, result.total), result }]
-    } catch {
-      return []
-    }
-  })
-}
 
 /**
  * Roll lines the resolver holds until it closes, keyed so a reroll replaces the line it
@@ -104,22 +86,6 @@ function damageEntries(
     message: `${prefix}${action.name} ${c.type} damage`,
     result: c.result,
   }))
-}
-
-/** Per-type damage a target takes after resistance/immunity/vulnerability. */
-function damageAgainst(
-  target: Combatant,
-  components: RolledDamage[],
-): { type: DamageType; amount: number; label: string | null; result: RollResult }[] {
-  return components.map((c) => {
-    const rel = damageRelation(target, c.type)
-    return {
-      type: c.type,
-      amount: adjustForDefense(c.amount, rel),
-      label: relationLabel(rel),
-      result: c.result,
-    }
-  })
 }
 
 interface ResolverProps {
@@ -430,16 +396,6 @@ export function ConditionChips({
       </div>
     </div>
   )
-}
-
-/** Whether a resolved attack landed: a crit always does, otherwise the total meets AC. */
-function attackHits(result: RollResult, target: Combatant): boolean {
-  return result.crit || (!result.fumble && result.total >= acOf(target))
-}
-
-/** All combatants the attacker can target: everyone except itself and the dead. */
-function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combatant[] {
-  return combatants.filter((c) => c.combatantId !== attacker.combatantId && c.status !== 'dead')
 }
 
 /** The attack branch: pick one target, roll to-hit with effects, then apply editable damage. */

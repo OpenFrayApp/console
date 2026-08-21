@@ -96,6 +96,11 @@ export function acOf(c: Combatant): number {
   return base + delta
 }
 
+/** All combatants the attacker can target: everyone except itself and the dead. */
+export function targetsFor(attacker: MonsterCombatant, combatants: Combatant[]): Combatant[] {
+  return combatants.filter((c) => c.combatantId !== attacker.combatantId && c.status !== 'dead')
+}
+
 /**
  * The label for the Nth copy of a creature on the board: "Ghoul", then "Ghoul 2".
  * Auto-numbering is disambiguation, not a name the GM chose — see `isAutoLabel`.

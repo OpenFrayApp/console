@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import type { Action } from '../schema/action.ts'
 import type { Combatant } from '../schema/combatant.ts'
 import type { DamageType } from '../schema/primitives.ts'
+import { roll, type CritRule, type RollResult } from '../dice/roll.ts'
+import { acOf } from './combatant.ts'
 
 /** How a target's defenses modify one type of incoming damage. */
 export type DamageRelation = 'normal' | 'resistant' | 'immune' | 'vulnerable'
@@ -59,4 +62,50 @@ export function relationLabel(relation: DamageRelation): string | null {
     default:
       return null
   }
+}
+
+/** A rolled damage component before defenses are applied. */
+export interface RolledDamage {
+  type: DamageType
+  amount: number
+  result: RollResult
+}
+
+/**
+ * Roll each of the action's damage formulas (crit-aware); a negative total clamps to 0.
+ *
+ * A formula the dice engine won't take is left out rather than allowed to throw — the throw
+ * would land in a click handler and break the attack. Reaching here with one is a bug
+ * upstream (`projectCreature` refuses them), so this leaves a working resolver behind.
+ */
+export function rollDamageComponents(action: Action, crit: boolean | CritRule): RolledDamage[] {
+  return (action.damage ?? []).flatMap((d) => {
+    try {
+      const result = roll(d.formula, { kind: 'damage', crit })
+      return [{ type: d.type, amount: Math.max(0, result.total), result }]
+    } catch {
+      return []
+    }
+  })
+}
+
+/** Per-type damage a target takes after resistance/immunity/vulnerability. */
+export function damageAgainst(
+  target: Combatant,
+  components: RolledDamage[],
+): { type: DamageType; amount: number; label: string | null; result: RollResult }[] {
+  return components.map((c) => {
+    const rel = damageRelation(target, c.type)
+    return {
+      type: c.type,
+      amount: adjustForDefense(c.amount, rel),
+      label: relationLabel(rel),
+      result: c.result,
+    }
+  })
+}
+
+/** Whether a resolved attack landed: a crit always does, otherwise the total meets AC. */
+export function attackHits(result: RollResult, target: Combatant): boolean {
+  return result.crit || (!result.fumble && result.total >= acOf(target))
 }
