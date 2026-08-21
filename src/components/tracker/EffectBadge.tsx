@@ -3,26 +3,6 @@
 
 import type { Effect } from '../../schema/effect.ts'
 import { badgeLabel, describeDuration, type EffectGroup } from '../../combat/effects.ts'
-import { resolveCondition } from '../../compendium/conditions.ts'
-import { useCampaignEdition } from '../../state/campaignRules.ts'
-import { HoverCondition } from '../statblock/HoverCondition.tsx'
-
-/**
- * An effect's name, wrapped in a condition hover preview when the effect is a condition.
- * `children` overrides the text shown (the applied-effects list passes its own label);
- * without it the badge label is used.
- */
-export function EffectLabel({ effect, children }: { effect: Effect; children?: React.ReactNode }) {
-  const edition = useCampaignEdition()
-  const condition = effect.icon === 'condition' ? resolveCondition(effect.name, edition) : undefined
-  const label = children ?? badgeLabel(effect)
-  if (!condition) return <>{label}</>
-  return (
-    <HoverCondition name={condition.name} text={condition.text} className="cursor-help">
-      {label}
-    </HoverCondition>
-  )
-}
 
 /** Badge tone classes by effect kind: debuff rose, buff emerald, reminder amber, counter indigo, else slate. */
 function toneFor(icon: string | undefined): string {
@@ -57,14 +37,14 @@ export function EffectBadge({ effect, onRemove }: { effect: Effect; onRemove?: (
         title={`Remove ${effect.name}`}
         className={`${className} tap-area hover:opacity-80`}
       >
-        <EffectLabel effect={effect} />
+        {badgeLabel(effect)}
         <span aria-hidden>×</span>
       </button>
     )
   }
   return (
     <span title={title} className={className}>
-      <EffectLabel effect={effect} />
+      {badgeLabel(effect)}
     </span>
   )
 }
@@ -94,14 +74,7 @@ export function EffectGroupBadge({
   )[0]
   const className = `inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${toneFor(lead?.icon)}`
   const partNames = group.effects.map((e) => e.name).join(', ')
-  // A bundle led by a condition — Exhaustion 3, a disease stage carrying Poisoned —
-  // reads its rules on hover like a loose condition badge does.
-  const label =
-    lead?.icon === 'condition' ? (
-      <BundleLabel lead={lead} name={group.bundle.name} />
-    ) : (
-      group.bundle.name
-    )
+  const label = group.bundle.name
   if (onRemove) {
     return (
       <button
@@ -119,17 +92,5 @@ export function EffectGroupBadge({
     <span title={`${group.bundle.name} — ${partNames}`} className={className}>
       {label}
     </span>
-  )
-}
-
-/** A bundle's name with the reference card of the condition leading it, on hover. */
-function BundleLabel({ lead, name }: { lead: Effect; name: string }) {
-  const edition = useCampaignEdition()
-  const condition = resolveCondition(lead.name, edition)
-  if (!condition) return <>{name}</>
-  return (
-    <HoverCondition name={condition.name} text={condition.text} className="cursor-help">
-      {name}
-    </HoverCondition>
   )
 }

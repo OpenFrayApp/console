@@ -27,7 +27,8 @@ const joinTableRows = (md: string): string =>
 const TABLE =
   '[&_table]:my-2 [&_table]:w-full [&_table]:text-left [&_th]:border [&_td]:border [&_th]:border-slate-300 [&_td]:border-slate-300 [&_th]:px-2 [&_td]:px-2 [&_th]:py-1 [&_td]:py-1 dark:[&_th]:border-slate-700 dark:[&_td]:border-slate-700 [&_th]:font-semibold'
 
-const HOVER_LINK =
+/** The dotted-underline treatment every hoverable rules term wears, in prose or a list. */
+export const HOVER_LINK =
   'cursor-help font-medium text-indigo-600 underline decoration-dotted dark:text-indigo-400'
 
 /**

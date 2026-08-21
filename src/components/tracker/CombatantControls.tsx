@@ -12,7 +12,9 @@ import {
   rollDeathSave,
 } from '../../combat/deathsaves.ts'
 import { startConcentration } from '../../combat/concentration.ts'
-import { EffectLabel } from './EffectBadge.tsx'
+import { resolveCondition } from '../../compendium/conditions.ts'
+import { HoverCondition } from '../statblock/HoverCondition.tsx'
+import { HOVER_LINK } from '../statblock/Markdown.tsx'
 import {
   legendaryResistanceLeft,
   setInLair,
@@ -48,6 +50,22 @@ import { track, EVENTS } from '../../lib/analytics.ts'
 
 const BTN =
   'tap-y rounded border px-2 py-1 text-xs font-medium border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+
+/**
+ * An applied effect's name, hover-explained like a stat block term when it is a condition,
+ * dotted underline included. The tracker badge beside it stays plain on purpose: the row
+ * is crowded and its badge is a remove button.
+ */
+function EffectLabel({ effect, children }: { effect: Effect; children: React.ReactNode }) {
+  const edition = useCampaignEdition()
+  const condition = effect.icon === 'condition' ? resolveCondition(effect.name, edition) : undefined
+  if (!condition) return <>{children}</>
+  return (
+    <HoverCondition name={condition.name} text={condition.text} className={HOVER_LINK}>
+      {children}
+    </HoverCondition>
+  )
+}
 
 /**
  * Per-combatant controls: remove, apply effects/conditions, concentration, and

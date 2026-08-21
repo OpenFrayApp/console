@@ -44,12 +44,12 @@ describe('EffectBadge', () => {
     expect(screen.getByTitle('Depth — at 4')).toBeInTheDocument()
   })
 
-  it('previews the condition rules on hover', () => {
+  it('stays a plain label on hover — the rules preview lives in Applied effects', () => {
     render(<EffectBadge effect={condition('Stunned')} />)
     fireEvent.mouseEnter(screen.getByText('Stunned'))
     expect(
-      screen.getByText(/automatically fail Strength and Dexterity saving throws/i),
-    ).toBeInTheDocument()
+      screen.queryByText(/automatically fail Strength and Dexterity saving throws/i),
+    ).toBeNull()
   })
 })
 
