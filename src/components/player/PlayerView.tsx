@@ -89,7 +89,7 @@ export function PlayerView({ code }: { code: string }) {
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+      <header className="relative flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
         <a href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
           <span className="text-indigo-500 dark:text-indigo-400">
             <CrossedSwordsIcon />
@@ -98,24 +98,23 @@ export function PlayerView({ code }: { code: string }) {
             <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
           </span>
         </a>
+        {board && (board.campaign || board.gm) && (
+          <p className="absolute left-1/2 max-w-[45vw] -translate-x-1/2 truncate whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+            {board.campaign && (
+              <span className="font-semibold text-slate-800 dark:text-slate-100">
+                {board.campaign}
+              </span>
+            )}
+            {board.campaign && board.gm && ' · '}
+            {board.gm && <span>Run by {board.gm}</span>}
+          </p>
+        )}
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
         {board ? (
           <>
-            {(board.campaign || board.gm) && (
-              <div className="mb-2 shrink-0">
-                {board.campaign && (
-                  <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100">
-                    {board.campaign}
-                  </h1>
-                )}
-                {board.gm && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Run by {board.gm}</p>
-                )}
-              </div>
-            )}
             <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 <Standing round={board.round} paused={board.paused} turn={turn} />

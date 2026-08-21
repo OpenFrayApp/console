@@ -110,7 +110,7 @@ describe('PlayerView — live', () => {
     link.status = 'live'
     link.board = { ...board(), campaign: 'Curse of Strahd', gm: 'Nico' }
     render(<PlayerView code="x" />)
-    expect(screen.getByRole('heading', { name: 'Curse of Strahd' })).toBeInTheDocument()
+    expect(screen.getByText('Curse of Strahd')).toBeInTheDocument()
     expect(screen.getByText('Run by Nico')).toBeInTheDocument()
   })
 
