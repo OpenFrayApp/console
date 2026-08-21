@@ -48,9 +48,16 @@ describe('SaveFightButton', () => {
   })
 
   it('won’t save an empty board or an unnamed fight', () => {
-    openSave({ canSave: false })
-    expect(screen.getByText('Save')).toBeDisabled()
-    expect(screen.getByText('Add someone to the board first.')).toBeTruthy()
+    // An empty board disables the corner button itself — there is nothing to keep.
+    render(
+      <SaveFightButton
+        canSave={false}
+        signedIn
+        onSave={vi.fn().mockResolvedValue('ok')}
+        onSignIn={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Save this encounter' })).toBeDisabled()
 
     cleanup()
     openSave()

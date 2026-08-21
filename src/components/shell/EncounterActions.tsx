@@ -132,7 +132,7 @@ export function SaveFightButton({
   }
 
   return (
-    <CornerPopover label="Save this encounter" icon={<SaveIcon />}>
+    <CornerPopover label="Save this encounter" icon={<SaveIcon />} disabled={!canSave}>
       {() => (
         <>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
