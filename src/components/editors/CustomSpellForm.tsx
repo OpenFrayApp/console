@@ -79,13 +79,9 @@ function DamageRows({
           </Button>
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange([...rows, emptySpellDamageDraft()])}
-        className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-      >
+      <Button variant="link" size="sm" onClick={() => onChange([...rows, emptySpellDamageDraft()])}>
         + {addLabel}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -546,15 +542,15 @@ export function CustomSpellForm({
                         />
                       </div>
                     ))}
-                    <button
-                      type="button"
+                    <Button
+                      variant="link"
+                      size="sm"
                       onClick={() =>
                         patch({ scalingRows: [...d.scalingRows, emptyScalingRowDraft()] })
                       }
-                      className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
                     >
                       + Add level
-                    </button>
+                    </Button>
                   </div>
                 )}
 

@@ -7,8 +7,7 @@ import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../../state
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { popoverClass } from '../ui/popover.ts'
-import { Button, LinkButton } from '../ui/primitives.tsx'
-import { cx } from '../../lib/cx.ts'
+import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
 
 /** The shape every icon in this panel is drawn on. */
 const ICON = {
@@ -119,18 +118,13 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <IconButton
+        active={sharing}
+        className="relative"
         onClick={() => setOpen((v) => !v)}
         aria-label={sharing ? 'Sharing with players' : 'Share with players'}
         title={sharing ? 'Sharing with players' : 'Share with players'}
         aria-expanded={open}
-        className={cx(
-          'tap relative flex h-9 w-9 items-center justify-center rounded-md border',
-          sharing
-            ? 'border-emerald-400 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300'
-            : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
-        )}
       >
         <ScreenIcon />
         {sharing && (
@@ -139,7 +133,7 @@ export function SharePanel({ code, sharing, onToggleShare, onClaim, onSignIn }: 
             className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-950"
           />
         )}
-      </button>
+      </IconButton>
 
       {open && (
         <div className={`${popoverClass('roomy:w-80')} p-3 roomy:mt-2`}>

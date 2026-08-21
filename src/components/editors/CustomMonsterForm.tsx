@@ -73,13 +73,13 @@ function ActionList({
           onRemove={() => onChange(items.filter((x) => x.id !== a.id))}
         />
       ))}
-      <button
-        type="button"
+      <Button
+        variant="link"
+        size="sm"
         onClick={() => onChange([...items, emptyActionDraft(defaultKind)])}
-        className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
       >
         + Add {label}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -517,13 +517,13 @@ export function CustomMonsterForm({
                     </Button>
                   </div>
                 ))}
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => patch({ skills: [...d.skills, emptySkillDraft()] })}
-                  className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
                 >
                   + Add skill
-                </button>
+                </Button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <input
@@ -659,13 +659,13 @@ export function CustomMonsterForm({
                     />
                   </div>
                 ))}
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => patch({ traits: [...d.traits, emptyTraitDraft()] })}
-                  className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
                 >
                   + Add trait
-                </button>
+                </Button>
               </div>
             </Section>
 
@@ -833,13 +833,13 @@ export function CustomMonsterForm({
                     />
                   </div>
                 ))}
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => patch({ spellGroups: [...d.spellGroups, emptySpellGroupDraft()] })}
-                  className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
                 >
                   + Add spell group
-                </button>
+                </Button>
               </div>
             </Section>
           </div>

@@ -18,8 +18,12 @@ import { FIELD_W } from './fieldStyles.ts'
  * and which of them bothered with a dark hover.
  */
 
-/** What a button is for. `quiet` is the underlined text link a dialog closes with. */
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'quiet'
+/**
+ * What a button is for. `quiet` is the underlined text link a dialog closes with;
+ * `link` is the indigo "+ Add another row" link in a form, where size sets only the
+ * text size (`sm` → text-xs, `md` → text-sm).
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'quiet' | 'link'
 
 /** `sm` for dense rows, `md` everywhere else, `lg` for a page's own call to action. */
 export type ButtonSize = 'sm' | 'md' | 'lg'
@@ -39,6 +43,7 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   danger:
     'border border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50',
   quiet: 'text-slate-500 hover:underline dark:text-slate-400',
+  link: 'text-indigo-600 hover:underline dark:text-indigo-400',
 }
 
 /**
@@ -48,7 +53,14 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
  * the whole app.
  */
 function buttonClass(variant: ButtonVariant, size: ButtonSize) {
-  const base = variant === 'quiet' ? 'text-sm' : `${BUTTON_SIZE[size]} disabled:opacity-50`
+  const base =
+    variant === 'quiet'
+      ? 'text-sm'
+      : variant === 'link'
+        ? size === 'sm'
+          ? 'text-xs'
+          : 'text-sm'
+        : `${BUTTON_SIZE[size]} disabled:opacity-50`
   // A label belongs on one line, and this is where that is said. Setting it on a
   // container instead leaks into every popover and modal rendered from inside it.
   return cx('tap-y whitespace-nowrap', base, BUTTON_VARIANT[variant])
@@ -76,6 +88,34 @@ export function LinkButton({
   ...rest
 }: AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: ButtonVariant; size?: ButtonSize }) {
   return <a className={cx(buttonClass(variant, size), className)} {...rest} />
+}
+
+/**
+ * The square icon-only header button (the settings gear, the player-view screen, the
+ * board's corner controls). `active` is the emerald "on" state the share control
+ * lights up with; layout extras (`relative`, …) ride on className.
+ */
+export function IconButton({
+  size = 9,
+  active = false,
+  className,
+  type = 'button',
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { size?: 8 | 9; active?: boolean }) {
+  return (
+    <button
+      type={type}
+      className={cx(
+        'tap flex items-center justify-center rounded-md border disabled:opacity-50',
+        size === 8 ? 'h-8 w-8' : 'h-9 w-9',
+        active
+          ? 'border-emerald-400 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300'
+          : 'border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
+        className,
+      )}
+      {...rest}
+    />
+  )
 }
 
 /** How a chip reads once it's on: the outcome it stands for. */

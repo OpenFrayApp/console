@@ -9,7 +9,7 @@ import { popoverClass } from '../ui/popover.ts'
 import type { ContentLicense } from '../../schema/license.ts'
 import { ShareIcon } from '../icons/ShareIcon.tsx'
 import { ShareEncounterDialog } from '../share/ShareEncounterDialog.tsx'
-import { Button } from '../ui/primitives.tsx'
+import { Button, IconButton } from '../ui/primitives.tsx'
 
 /**
  * What a Game Master can do with the board as a whole: keep it, and hand it out.
@@ -27,9 +27,6 @@ const FIELD =
   'tap-y w-full min-w-0 rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800'
 
 const LABEL = 'mb-1 block text-xs font-medium text-slate-700 dark:text-slate-200'
-
-const ICON_BTN =
-  'tap flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
 
 /** A floppy disk: the one icon everybody still reads as "save", long after the disks went. */
 function SaveIcon() {
@@ -74,17 +71,16 @@ function CornerPopover({
   useDismiss(ref, open, close)
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
+      <IconButton
+        size={8}
         onClick={() => setOpen((was) => !was)}
         aria-label={label}
         title={label}
         aria-expanded={open}
         disabled={disabled}
-        className={ICON_BTN}
       >
         {icon}
-      </button>
+      </IconButton>
       {open && (
         <div className={`${popoverClass('roomy:w-80', 'left', 'above')} p-3`}>
           {children(close)}
@@ -240,16 +236,15 @@ export function ShareEncounterButton({
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button
-        type="button"
+      <IconButton
+        size={8}
         onClick={() => setOpen(true)}
         aria-label="Share this encounter"
         title="Share this encounter"
         disabled={!canShare}
-        className={ICON_BTN}
       >
         <ShareIcon />
-      </button>
+      </IconButton>
 
       {open && (
         <ShareEncounterDialog

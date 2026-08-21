@@ -294,13 +294,9 @@ function LineList({
           </button>
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange([...items, ''])}
-        className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-      >
+      <Button variant="link" size="sm" onClick={() => onChange([...items, ''])}>
         {addLabel}
-      </button>
+      </Button>
     </div>
   )
 }

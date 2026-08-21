@@ -58,8 +58,6 @@ const EXHAUSTION_LEVELS = [0, 1, 2, 3, 4, 5, 6]
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
 
-const ADD_LINK = 'text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400'
-
 const REMOVE_LINK = 'text-xs text-slate-500 hover:underline dark:text-slate-400'
 
 /**
@@ -596,13 +594,9 @@ export function EffectModal({
                     )}
                   </div>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => set('notes', [...draft.notes, ''])}
-                  className={ADD_LINK}
-                >
+                <Button variant="link" onClick={() => set('notes', [...draft.notes, ''])}>
                   + Add another reminder
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -711,13 +705,12 @@ export function EffectModal({
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
+              <Button
+                variant="link"
                 onClick={() => set('counters', [...draft.counters, { name: '', gmOnly: false }])}
-                className={ADD_LINK}
               >
                 + Add counter
-              </button>
+              </Button>
               {draft.counters.length > 0 && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   A tally you keep by hand. It starts at 0, never ticks down, and stays until you
@@ -745,13 +738,12 @@ export function EffectModal({
                   }
                 />
               ))}
-              <button
-                type="button"
+              <Button
+                variant="link"
                 onClick={() => set('modifiers', [...draft.modifiers, emptyModifier()])}
-                className={ADD_LINK}
               >
                 + Add a bonus or penalty
-              </button>
+              </Button>
             </div>
 
             {parts.length >= 2 && (

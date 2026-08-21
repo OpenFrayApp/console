@@ -218,13 +218,13 @@ export function ActionEditor({
             </Button>
           </div>
         ))}
-        <button
-          type="button"
+        <Button
+          variant="link"
+          size="sm"
           onClick={() => set('damage', [...action.damage, emptyDamageDraft()])}
-          className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
         >
           + Add damage
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

@@ -7,6 +7,7 @@ import { useDismiss } from '../../hooks/useDismiss.ts'
 import { MoonIcon, SunIcon } from '../icons/ThemeToggle.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import { popoverClass } from '../ui/popover.ts'
+import { IconButton } from '../ui/primitives.tsx'
 
 /** Gear icon — the menu's own button. */
 function GearIcon() {
@@ -182,17 +183,15 @@ export function SettingsMenu({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <IconButton
         onClick={() => setOpen((v) => !v)}
         aria-label="Settings and more"
         title="Settings and more"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="tap flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <GearIcon />
-      </button>
+      </IconButton>
 
       {open && (
         <div role="menu" className={`${popoverClass('roomy:w-52')} p-1 roomy:mt-2`}>
