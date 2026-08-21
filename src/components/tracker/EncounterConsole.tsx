@@ -32,7 +32,7 @@ import { classLabel } from '../../schema/pcStats.ts'
 import { loadSrdSpells } from '../../compendium/srd.ts'
 import { makeSpellLinker } from '../../compendium/spelllinker.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
-import { isRechargeable, rollRecharge } from '../../combat/recharge.ts'
+import { isRechargeable, rechargeStateOf, rollRecharge } from '../../combat/recharge.ts'
 import { acOf, isFoe, resolveSelected, trackerOrder } from '../../combat/combatant.ts'
 import { heldBack } from '../../combat/playerView.ts'
 import { rollWithEffects } from '../../combat/effectroll.ts'
@@ -61,14 +61,6 @@ function GroupHeading({ children }: { children: string }) {
       {children}
     </p>
   )
-}
-
-/** id → charged? for a monster's tracked recharge abilities (undefined for PCs). */
-function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
-  if (c.isPC) return undefined
-  const out: Record<string, boolean> = {}
-  for (const [id, state] of Object.entries(c.limitedUseState)) out[id] = state.available
-  return out
 }
 
 /**

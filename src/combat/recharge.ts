@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Action } from '../schema/action.ts'
+import type { Combatant } from '../schema/combatant.ts'
 import type { Creature } from '../schema/creature.ts'
 import type { RandomSource } from 'opendice'
 import { roll, type RollResult } from '../dice/roll.ts'
@@ -15,6 +16,14 @@ import { roll, type RollResult } from '../dice/roll.ts'
 /** Is this action gated behind a recharge die? */
 export function isRechargeable(action: Action): boolean {
   return action.recharge?.type === 'dice'
+}
+
+/** id → charged? for a monster's tracked recharge abilities (undefined for PCs). */
+export function rechargeStateOf(c: Combatant): Record<string, boolean> | undefined {
+  if (c.isPC) return undefined
+  const out: Record<string, boolean> = {}
+  for (const [id, state] of Object.entries(c.limitedUseState)) out[id] = state.available
+  return out
 }
 
 /** Every rechargeable action on a creature, across all action categories. */
