@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import type { CastLine } from '../../combat/encounterTemplate.ts'
 import type { SavedFightSummary } from '../../state/cloudEncounter.ts'
-import { SECTION_HEADING } from '../statblock/CreatureStatBlock.tsx'
+import { SECTION_HEADING } from '../statblock/parts.tsx'
 import { Button } from '../ui/primitives.tsx'
 import { EditableField } from '../ui/EditableField.tsx'
 

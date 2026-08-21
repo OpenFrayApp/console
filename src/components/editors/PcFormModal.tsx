@@ -8,7 +8,7 @@ import type { ArmorName, PcClass } from '../../schema/combatant.ts'
 import { rosterInitiativeMod, type RosterPc } from '../../schema/roster.ts'
 import { ARMOR, ARMOR_NAMES, PC_CLASSES, deriveAc } from '../../schema/pcStats.ts'
 import { abilityMod } from '../../schema/primitives.ts'
-import { signed } from '../../compendium/format.ts'
+import { ABILITY_LABEL, signed } from '../../compendium/format.ts'
 import { hasValue as has, parseList as list, parseNonNegativeInt as num } from '../../lib/form.ts'
 import { FIELD, FIELD_W, LABEL } from '../ui/fieldStyles.ts'
 import { FormSection as Section } from './FormSection.tsx'
@@ -19,14 +19,6 @@ import { Button } from '../ui/primitives.tsx'
 const OFF = { autoComplete: 'off', 'data-1p-ignore': true } as const
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha']
-const ABILITY_LABEL: Record<Ability, string> = {
-  str: 'STR',
-  dex: 'DEX',
-  con: 'CON',
-  int: 'INT',
-  wis: 'WIS',
-  cha: 'CHA',
-}
 const SPEED_KEYS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const
 const SENSE_KEYS = [
   { key: 'passivePerception', label: 'Passive Perception', placeholder: 'Passive Perception' },
@@ -603,13 +595,14 @@ export function PcFormModal({
 
         <Section title="Abilities" open>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {/* The shared label worn all-caps — this form has always said "STR", aria-label included. */}
             {ABILITIES.map((a) => (
               <div key={a} className="space-y-1">
-                <p className={`${LABEL} text-center`}>{ABILITY_LABEL[a]}</p>
+                <p className={`${LABEL} text-center`}>{ABILITY_LABEL[a].toUpperCase()}</p>
                 <input
                   value={d.abilities[a]}
                   onChange={(e) => patch({ abilities: { ...d.abilities, [a]: e.target.value } })}
-                  aria-label={ABILITY_LABEL[a]}
+                  aria-label={ABILITY_LABEL[a].toUpperCase()}
                   inputMode="numeric"
                   className={`${FIELD} text-center`}
                 />

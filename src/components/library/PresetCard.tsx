@@ -7,7 +7,7 @@ import { describeDuration, describeModifier } from '../../combat/effects.ts'
 import { describeExhaustionChange } from '../../combat/exhaustion.ts'
 import { draftEffects, presetToDraft } from '../effects/effectPreset.ts'
 import { SourceLink } from '../statblock/SourceLink.tsx'
-import { MetaTable } from '../statblock/CreatureStatBlock.tsx'
+import { MetaTable, SECTION_HEADING } from '../statblock/parts.tsx'
 import { Button } from '../ui/primitives.tsx'
 
 /**
@@ -87,9 +87,7 @@ export function PresetCard({
       <MetaTable rows={rows} />
 
       <div>
-        <p className="mb-2 border-b border-slate-200 pb-1 text-base font-semibold tracking-wide text-slate-600 dark:border-slate-800 dark:text-slate-300">
-          What Apply puts on the board
-        </p>
+        <p className={SECTION_HEADING}>What Apply puts on the board</p>
         {effects.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">Nothing — it is empty.</p>
         ) : (

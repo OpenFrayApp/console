@@ -11,7 +11,7 @@ import {
   TIEBREAK_OPTIONS,
   labelOf,
 } from './campaignLabels.ts'
-import { SECTION_HEADING } from '../statblock/CreatureStatBlock.tsx'
+import { SECTION_HEADING } from '../statblock/parts.tsx'
 import { GmNotes } from '../statblock/GmNotes.tsx'
 import { Button } from '../ui/primitives.tsx'
 

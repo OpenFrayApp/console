@@ -8,12 +8,7 @@ import { speedLines } from '../../combat/speed.ts'
 import { hpTierOf } from '../../combat/resources.ts'
 import { hpToneFor } from '../ui/hpTone.ts'
 import { formatSenses, signed } from '../../compendium/format.ts'
-import {
-  AbilityTable,
-  DefensesAndSenses,
-  SECTION_HEADING,
-  type OnCheck,
-} from './CreatureStatBlock.tsx'
+import { AbilityTable, DefensesAndSenses, SECTION_HEADING, type OnCheck } from './parts.tsx'
 import { HeaderStat, StatHeader } from './StatHeader.tsx'
 import { GmNotes } from './GmNotes.tsx'
 import { Markdown } from './Markdown.tsx'

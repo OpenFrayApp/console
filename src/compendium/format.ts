@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import type { Senses } from '../schema/primitives.ts'
+import type { Ability, Senses } from '../schema/primitives.ts'
 import { LIBRARIES } from './libraries.ts'
 
 /** Where a first-party library is published, so attribution links to the book itself. */
@@ -32,6 +32,16 @@ export const titleCase = (s: string): string => s.replace(/\b\w/g, (c) => c.toUp
 
 /** Format a bonus with its sign, e.g. 5 → "+5", 0 → "+0", -1 → "-1". */
 export const signed = (n: number): string => (n >= 0 ? `+${n}` : `${n}`)
+
+/** An ability key as its display label, e.g. "str" → "Str" (uppercase it where a form shouts). */
+export const ABILITY_LABEL: Record<Ability, string> = {
+  str: 'Str',
+  dex: 'Dex',
+  con: 'Con',
+  int: 'Int',
+  wis: 'Wis',
+  cha: 'Cha',
+}
 
 /**
  * Capitalize the first letter of each comma-separated segment, leaving the rest of
