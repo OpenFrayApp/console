@@ -11,6 +11,7 @@ import {
   isFoe,
   nameOf,
   resolveSelected,
+  targetsFor,
   trackerOrder,
 } from '../../src/combat/combatant.ts'
 import { modifierEffect } from '../../src/combat/effects.ts'
@@ -201,5 +202,21 @@ describe('trackerOrder and resolveSelected', () => {
     expect(resolveSelected(list, null, 'd')?.combatantId).toBe('d')
     expect(resolveSelected(list, 'gone', undefined)?.combatantId).toBe('a')
     expect(resolveSelected([], null, undefined)).toBeUndefined()
+  })
+})
+
+describe('targetsFor', () => {
+  it('offers everyone except the attacker itself and the dead', () => {
+    const attacker = monster()
+    const other = { ...monster(), combatantId: 'other' }
+    const dead = { ...monster(), combatantId: 'gone', status: 'dead' as const }
+    const hero = pc()
+    const targets = targetsFor(attacker as Extract<Combatant, { isPC: false }>, [
+      attacker,
+      other,
+      dead,
+      hero,
+    ])
+    expect(targets.map((t) => t.combatantId)).toEqual(['other', 'c'])
   })
 })
