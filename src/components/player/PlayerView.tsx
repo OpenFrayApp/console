@@ -82,7 +82,7 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
 /** How the encounter went, on the table's own screens, for as long as the GM leaves it up. */
 function SharedRecap({ recap }: { recap: PlayerRecap }) {
   return (
-    <section className="mb-4 shrink-0 rounded-xl border border-slate-200 bg-white/85 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+    <section className="mb-4 shrink-0 rounded-xl border border-slate-200 bg-white/95 p-4 dark:border-slate-800 dark:bg-slate-950/70">
       <div className="mb-3 flex items-center gap-2">
         <OutcomeBadge outcome={recap.outcome} />
         <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
@@ -125,7 +125,7 @@ export function PlayerView({ code }: { code: string }) {
 
   // Text that sits straight on the art needs its own ground, the way every row and
   // log line already carries one; without a backdrop it would be a chip on nothing.
-  const ground = backdrop ? 'rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/70' : ''
+  const ground = backdrop ? 'rounded bg-white/95 px-2 py-0.5 dark:bg-slate-950/70' : ''
 
   // Impose a one-theme backdrop on the document without touching the stored
   // preference, and hand the page back to it the moment the backdrop lets go.

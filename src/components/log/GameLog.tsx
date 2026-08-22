@@ -163,7 +163,7 @@ function LogLine({ entry }: { entry: GameLogEntry }) {
   return (
     // The near-solid fill disappears on the app's own grounds and is what keeps a
     // line readable when the player view paints art behind the log.
-    <li className="rounded border border-slate-200 bg-white/90 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950/70">
+    <li className="rounded border border-slate-200 bg-white/95 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950/70">
       {entry.result ? (
         <>
           <div className="flex items-baseline justify-between gap-2">
