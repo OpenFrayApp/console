@@ -1401,12 +1401,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // The header's two button clusters, built once and rendered twice: in the desktop
   // header's own spots, and again in the phone header's single swipeable rail (only
   // one of the two is ever displayed, so the copies never fight over a popover).
-  const fightControls = view === 'encounter' && encounter.combatants.length > 0 && (
+  // Always on the header, disabled while there is nobody to rest, save or cast at:
+  // a control that vanishes teaches the GM nothing about where it went.
+  const fightControls = view === 'encounter' && (
     <>
       <RestControls
         combatants={encounter.combatants}
         dispatch={dispatch}
-        disabled={started}
+        disabled={started || encounter.combatants.length === 0}
         shortRestRequest={shortRestRequest}
         longRestRequest={longRestRequest}
         shortHint={hint('shortRest')}
