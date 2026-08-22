@@ -256,13 +256,15 @@ export function SharePanel({
                         aria-hidden
                         className="absolute inset-0 bg-cover bg-center dark:hidden"
                         style={{
-                          backgroundImage: `url(${import.meta.env.BASE_URL}${b.fileLight})`,
+                          backgroundImage: `url(${import.meta.env.BASE_URL}${b.themes.light ?? b.themes.dark})`,
                         }}
                       />
                       <span
                         aria-hidden
                         className="absolute inset-0 hidden bg-cover bg-center dark:block"
-                        style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
+                        style={{
+                          backgroundImage: `url(${import.meta.env.BASE_URL}${b.themes.dark ?? b.themes.light})`,
+                        }}
                       />
                     </button>
                   ))}

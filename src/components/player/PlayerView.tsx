@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePlayerBoard, type PlayerLinkStatus } from '../../state/playerChannel.ts'
 import { useTheme } from '../../hooks/useTheme.ts'
 import type { PlayerRecap } from '../../combat/playerView.ts'
@@ -13,7 +13,7 @@ import { OutcomeBadge, RecapSummary } from '../tracker/Recap.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { COLUMN_HEADING } from '../ui/headings.ts'
 import { PinInput } from '../ui/PinInput.tsx'
-import { backgroundEntry } from '../../lib/backgrounds.ts'
+import { backgroundEntry, forcedTheme } from '../../lib/backgrounds.ts'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -119,8 +119,20 @@ export function PlayerView({ code }: { code: string }) {
   const { status, board, pinRejected } = usePlayerBoard(code, pin.length === 4 ? pin : null)
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
   const entry = backgroundEntry(board?.background)
-  // Each theme gets art treated for it — pre-darkened or pre-lifted — not a veiled twin.
-  const backdrop = entry && (theme === 'dark' ? entry.file : entry.fileLight)
+  const forced = entry ? forcedTheme(entry) : null
+  // Each theme gets art treated for it; a one-theme backdrop decides the theme itself.
+  const shown = forced ?? theme
+  const backdrop = entry && entry.themes[shown]
+
+  // Impose a one-theme backdrop on the document without touching the stored
+  // preference, and hand the page back to it the moment the backdrop lets go.
+  useEffect(() => {
+    if (!forced) return
+    document.documentElement.classList.toggle('dark', forced === 'dark')
+    return () => {
+      document.documentElement.classList.toggle('dark', theme === 'dark')
+    }
+  }, [forced, theme])
 
   return (
     <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -144,7 +156,8 @@ export function PlayerView({ code }: { code: string }) {
             {board.gm && <span>Run by {board.gm}</span>}
           </p>
         )}
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        {/* A forced theme is the backdrop's call; a toggle would fight it. */}
+        {!forced && <ThemeToggle theme={theme} onToggle={toggleTheme} />}
       </header>
 
       <div className="isolate relative flex min-h-0 flex-1 flex-col">
