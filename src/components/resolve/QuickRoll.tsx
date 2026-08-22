@@ -4,18 +4,22 @@
 import { useRef, useState } from 'react'
 import { roll } from '../../dice/roll.ts'
 import type { AdvantageState } from 'opendice'
-import { Chip } from '../ui/primitives.tsx'
+import { cx } from '../../lib/cx.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { OnRoll } from '../log/GameLog.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
 
 const DICE = ['d100', 'd20', 'd12', 'd10', 'd8', 'd6', 'd4']
 
-/** The three ways a d20 can be rolled, in the order the resolver offers them. */
-const MODES: { value: AdvantageState; label: string }[] = [
-  { value: 'normal', label: 'Normal' },
-  { value: 'advantage', label: 'Advantage' },
-  { value: 'disadvantage', label: 'Disadvantage' },
+/**
+ * The three ways a d20 can be rolled, in the order the resolver offers them. Short on
+ * screen because they sit in a row of dice; the whole word is the accessible name and
+ * the tooltip, so nothing is lost to the abbreviation.
+ */
+const MODES: { value: AdvantageState; short: string; label: string }[] = [
+  { value: 'normal', short: 'Regular', label: 'Regular' },
+  { value: 'advantage', short: 'Adv', label: 'Advantage' },
+  { value: 'disadvantage', short: 'Dis', label: 'Disadvantage' },
 ]
 
 /** The manual / quick-roll bar — type a formula or tap a die. */
@@ -81,18 +85,32 @@ export function QuickRoll({
           Roll
         </button>
       </form>
-      <div role="radiogroup" aria-label="How to roll a d20" className="flex gap-1 narrow:gap-1.5">
-        {MODES.map((m) => (
-          <Chip
+      {/* One segmented control rather than three chips, drawn the way the rests are:
+        these are three answers to one question, not three things to press. */}
+      <div
+        role="radiogroup"
+        aria-label="How to roll a d20"
+        className="flex overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
+      >
+        {MODES.map((m, i) => (
+          <button
             key={m.value}
-            size="sm"
+            type="button"
             role="radio"
             aria-checked={mode === m.value}
-            active={mode === m.value}
+            aria-label={m.label}
+            title={m.label}
             onClick={() => setMode(m.value)}
+            className={cx(
+              'tap-y px-2 py-1 text-sm',
+              i > 0 && 'border-l border-slate-300 dark:border-slate-700',
+              mode === m.value
+                ? 'font-medium text-indigo-700 dark:text-indigo-300'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+            )}
           >
-            {m.label}
-          </Chip>
+            {m.short}
+          </button>
         ))}
       </div>
       <div className="flex gap-1 narrow:flex-1 narrow:gap-1.5">
