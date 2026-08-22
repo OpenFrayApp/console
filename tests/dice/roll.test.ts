@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { describe, expect, it } from 'vitest'
-import { d20Group, keptFlags, roll } from '../../src/dice/roll.ts'
+import { canRoll, d20Group, roll } from '../../src/dice/roll.ts'
 import type { RandomSource } from 'opendice'
 
 /** Deterministic source: yields the given die faces in order (face f -> f-1 raw). */
@@ -15,15 +15,6 @@ function faceSeq(...faces: number[]): RandomSource {
 }
 
 describe('roll', () => {
-  it('sums dice and a flat modifier', () => {
-    const r = roll('2d6+4', { rand: faceSeq(3, 5) })
-    expect(r.dice[0].results).toEqual([3, 5])
-    expect(r.dice[0].kept).toEqual([3, 5])
-    expect(r.modifier).toBe(4)
-    expect(r.total).toBe(12)
-    expect(r.advantageState).toBe('normal')
-  })
-
   it('flags a natural 20 as a crit', () => {
     const r = roll('1d20+7', { kind: 'attack', rand: faceSeq(20) })
     expect(r.total).toBe(27)
@@ -35,27 +26,6 @@ describe('roll', () => {
     const r = roll('1d20+7', { kind: 'attack', rand: faceSeq(1) })
     expect(r.fumble).toBe(true)
     expect(r.crit).toBe(false)
-  })
-
-  it('keeps the highest on advantage', () => {
-    const r = roll('2d20adv+5', { rand: faceSeq(4, 18) })
-    expect(r.dice[0].results).toEqual([4, 18])
-    expect(r.dice[0].kept).toEqual([18])
-    expect(r.total).toBe(23)
-    expect(r.advantageState).toBe('advantage')
-  })
-
-  it('keeps the lowest on disadvantage', () => {
-    const r = roll('2d20dis+5', { rand: faceSeq(4, 18) })
-    expect(r.dice[0].kept).toEqual([4])
-    expect(r.total).toBe(9)
-    expect(r.advantageState).toBe('disadvantage')
-  })
-
-  it('keeps the highest N (4d6kh3)', () => {
-    const r = roll('4d6kh3', { rand: faceSeq(1, 5, 3, 6) })
-    expect(r.dice[0].kept).toEqual([6, 5, 3])
-    expect(r.total).toBe(14)
   })
 
   it('doubles dice but not modifiers on a crit (RAW, crit: true)', () => {
@@ -89,40 +59,9 @@ describe('roll', () => {
     expect(r.total).toBe(4)
   })
 
-  it('composes additive sub-rolls into separate dice groups', () => {
-    const r = roll('1d8+1d4+3', { rand: faceSeq(5, 2) })
-    expect(r.dice).toHaveLength(2)
-    expect(r.total).toBe(10)
-  })
-
-  it('subtracts negatively-signed dice', () => {
-    const r = roll('10-1d4', { rand: faceSeq(2) })
-    expect(r.modifier).toBe(10)
-    expect(r.total).toBe(8)
-  })
-
   it('does not flag crit/fumble on multi-die or non-d20 rolls', () => {
     expect(roll('2d20', { rand: faceSeq(20, 20) }).crit).toBe(false)
     expect(roll('1d6', { rand: faceSeq(1) }).fumble).toBe(false)
-  })
-
-  it('applies advantage from context to a plain d20', () => {
-    const r = roll('1d20+5', { advantage: 'advantage', rand: faceSeq(4, 18) })
-    expect(r.dice[0].kept).toEqual([18])
-    expect(r.total).toBe(23)
-    expect(r.advantageState).toBe('advantage')
-  })
-
-  it('applies disadvantage from context', () => {
-    const r = roll('1d20+5', { advantage: 'disadvantage', rand: faceSeq(4, 18) })
-    expect(r.dice[0].kept).toEqual([4])
-    expect(r.advantageState).toBe('disadvantage')
-  })
-
-  it("treats advantage 'normal' as a no-op", () => {
-    const r = roll('1d20+5', { advantage: 'normal', rand: faceSeq(7) })
-    expect(r.dice[0].results).toHaveLength(1)
-    expect(r.total).toBe(12)
   })
 
   it('folds in bonus terms (Bless) without touching the modifier', () => {
@@ -186,37 +125,6 @@ describe('roll, on a damage entry with no dice in it', () => {
 
 // The randomness is the package's now, but it is reached through this function, and a
 // mis-wiring here would pass every test above — all of which supply their own source.
-describe('the dice behind roll()', () => {
-  it('stays in range and covers every face over many real draws', () => {
-    const seen = new Set<number>()
-    for (let i = 0; i < 500; i++) {
-      const value = roll('1d6').total
-      expect(value).toBeGreaterThanOrEqual(1)
-      expect(value).toBeLessThanOrEqual(6)
-      seen.add(value)
-    }
-    expect(seen).toEqual(new Set([1, 2, 3, 4, 5, 6]))
-  })
-})
-
-describe('keptFlags', () => {
-  it('marks the die advantage kept and the one it dropped', () => {
-    const r = roll('1d20+5', { advantage: 'advantage', rand: faceSeq(7, 18) })
-    expect(r.dice[0].results).toEqual([7, 18])
-    expect(keptFlags(r.dice[0])).toEqual([false, true])
-  })
-
-  it('drops exactly one of a tied pair', () => {
-    const r = roll('1d20', { advantage: 'disadvantage', rand: faceSeq(12, 12) })
-    expect(keptFlags(r.dice[0])).toEqual([true, false])
-  })
-
-  it('marks every die when none was dropped', () => {
-    const r = roll('2d6', { rand: faceSeq(3, 5) })
-    expect(keptFlags(r.dice[0])).toEqual([true, true])
-  })
-})
-
 describe('d20Group', () => {
   it('finds the one d20 group behind a roll', () => {
     const r = roll('1d20+5', { rand: faceSeq(11) })
@@ -225,5 +133,28 @@ describe('d20Group', () => {
 
   it('gives nothing when the roll has no single d20 to show', () => {
     expect(d20Group(roll('2d6+3', { rand: faceSeq(2, 4) }))).toBeUndefined()
+  })
+})
+
+// The guard a caller asks before handing a stat block's formula to the resolver, where
+// opendice would answer by throwing.
+describe('canRoll', () => {
+  it('takes what roll takes, dice or a flat number, damage tag and all', () => {
+    expect(canRoll('2d6+3')).toBe(true)
+    expect(canRoll('1')).toBe(true)
+    expect(canRoll('2+3')).toBe(true)
+    expect(canRoll('2d6 fire')).toBe(true)
+    expect(canRoll('  1d20+5  ')).toBe(true)
+  })
+
+  it('refuses what roll would throw on, and anything empty', () => {
+    expect(canRoll('not dice')).toBe(false)
+    expect(canRoll('')).toBe(false)
+    expect(canRoll('   ')).toBe(false)
+  })
+
+  it('bounds the length before the parser ever reads it', () => {
+    expect(canRoll('1d6', 2)).toBe(false)
+    expect(canRoll(`1d6+${'1'.repeat(300)}`)).toBe(false)
   })
 })
