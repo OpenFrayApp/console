@@ -34,16 +34,18 @@ const BUTTON_SIZE: Record<ButtonSize, string> = {
   lg: 'rounded-md px-4 py-2 text-sm font-semibold',
 }
 
+// Each variant also says what it stops doing when disabled: a hover that still answers
+// reads as a button that still works, whatever the cursor says.
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-500',
+  primary: 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:hover:bg-indigo-600',
   secondary:
-    'border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
+    'border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:hover:bg-transparent',
   // Applying damage and deleting are the irreversible steps, so they're outlined
   // rather than filled — present, but never the brightest thing on screen.
   danger:
-    'border border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50',
-  quiet: 'text-slate-500 hover:underline dark:text-slate-400',
-  link: 'text-indigo-600 hover:underline dark:text-indigo-400',
+    'border border-rose-300 text-rose-700 hover:bg-rose-50 disabled:hover:bg-transparent dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/50 dark:disabled:hover:bg-transparent',
+  quiet: 'text-slate-500 hover:underline disabled:hover:no-underline dark:text-slate-400',
+  link: 'text-indigo-600 hover:underline disabled:hover:no-underline dark:text-indigo-400',
 }
 
 /**
@@ -63,7 +65,7 @@ function buttonClass(variant: ButtonVariant, size: ButtonSize) {
         : `${BUTTON_SIZE[size]} disabled:opacity-50`
   // A label belongs on one line, and this is where that is said. Setting it on a
   // container instead leaks into every popover and modal rendered from inside it.
-  return cx('tap-y whitespace-nowrap', base, BUTTON_VARIANT[variant])
+  return cx('tap-y whitespace-nowrap disabled:cursor-not-allowed', base, BUTTON_VARIANT[variant])
 }
 
 /** A button. Pick the variant by what pressing it does, the size by how dense the row is. */
