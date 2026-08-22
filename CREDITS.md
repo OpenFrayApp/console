@@ -60,7 +60,7 @@ in the app, on <https://openfray.app>, and in the print edition.
 
 The images in `public/backgrounds/` were generated for OpenFray with Midjourney and
 are part of the project's original content. They ship with the app and appear only
-as backdrops the Game Master picks per campaign.
+as backdrops the Game Master picks for the shared player view.
 
 ## Third-party content
 

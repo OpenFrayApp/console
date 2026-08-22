@@ -30,10 +30,22 @@ export const CAMPAIGN_BACKGROUNDS: CampaignBackground[] = [
     file: 'backgrounds/mountain-fortress.webp',
   },
   {
-    id: 'mountain-fortress-light',
-    label: 'Mountain fortress, light',
-    theme: 'light',
-    file: 'backgrounds/mountain-fortress-light.webp',
+    id: 'hell-fortress',
+    label: 'Hell fortress',
+    theme: 'dark',
+    file: 'backgrounds/hell-fortress.webp',
+  },
+  {
+    id: 'marsh',
+    label: 'Marsh',
+    theme: 'dark',
+    file: 'backgrounds/marsh.webp',
+  },
+  {
+    id: 'sea',
+    label: 'Sea',
+    theme: 'dark',
+    file: 'backgrounds/sea.webp',
   },
   {
     id: 'magical-forest',
