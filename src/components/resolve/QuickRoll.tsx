@@ -59,6 +59,17 @@ export function QuickRoll({
     setFormula('')
   }
 
+  /**
+   * Roll one die at the chosen mode. 5e defines advantage on the d20 alone, so that is
+   * the engine's own advantage and logs as such; on any other die the same idea has to
+   * be said outright — two of them, keep the higher or the lower.
+   */
+  const rollDie = (die: string) => {
+    if (mode === 'normal') return submit(`1${die}`)
+    if (die === 'd20') return submit(`1${die}`, mode)
+    submit(`2${die}${mode === 'advantage' ? 'kh1' : 'kl1'}`)
+  }
+
   return (
     // One row that wraps only when it must. On a compact screen the six dice do not fit
     // beside the formula once they are finger-sized, so they take the next line — and
@@ -122,7 +133,7 @@ export function QuickRoll({
           <button
             key={die}
             type="button"
-            onClick={() => submit(`1${die}`, mode)}
+            onClick={() => rollDie(die)}
             className="tap rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 narrow:flex-1 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             {die}
