@@ -13,7 +13,7 @@ import { OutcomeBadge, RecapSummary } from '../tracker/Recap.tsx'
 import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { COLUMN_HEADING } from '../ui/headings.ts'
 import { PinInput } from '../ui/PinInput.tsx'
-import { backgroundEntry, forcedTheme } from '../../lib/backgrounds.ts'
+import { backgroundEntry } from '../../lib/backgrounds.ts'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -119,10 +119,9 @@ export function PlayerView({ code }: { code: string }) {
   const { status, board, pinRejected } = usePlayerBoard(code, pin.length === 4 ? pin : null)
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
   const entry = backgroundEntry(board?.background)
-  const forced = entry ? forcedTheme(entry) : null
-  // Each theme gets art treated for it; a one-theme backdrop decides the theme itself.
-  const shown = forced ?? theme
-  const backdrop = entry && entry.themes[shown]
+  // A backdrop decides the mode: its art was treated for one theme, and it wears it.
+  const forced = entry?.theme ?? null
+  const backdrop = entry?.file
 
   // Impose a one-theme backdrop on the document without touching the stored
   // preference, and hand the page back to it the moment the backdrop lets go.

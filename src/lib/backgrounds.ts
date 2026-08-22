@@ -13,36 +13,37 @@ export interface CampaignBackground {
   /** The picker's label for it. */
   label: string
   /**
-   * The theme treatments this art actually works in, file per theme. Both keys keep
-   * the viewer's own toggle; a single key forces that theme on the player view while
-   * the backdrop shows, because not every scene survives both a lift and a dim.
+   * The theme this art was treated for, imposed on the player view while it shows.
+   * A backdrop decides the mode: the same scene in another mood is its own entry,
+   * because not every scene survives both a lift and a dim.
    */
-  themes: { dark?: string; light?: string }
+  theme: 'dark' | 'light'
+  /** The file under the app's base URL. */
+  file: string
 }
 
 export const CAMPAIGN_BACKGROUNDS: CampaignBackground[] = [
   {
     id: 'mountain-fortress',
     label: 'Mountain fortress',
-    themes: {
-      dark: 'backgrounds/mountain-fortress.webp',
-      light: 'backgrounds/mountain-fortress-light.webp',
-    },
+    theme: 'dark',
+    file: 'backgrounds/mountain-fortress.webp',
+  },
+  {
+    id: 'mountain-fortress-light',
+    label: 'Mountain fortress, light',
+    theme: 'light',
+    file: 'backgrounds/mountain-fortress-light.webp',
   },
   {
     id: 'magical-forest',
     label: 'Magical forest',
-    themes: { dark: 'backgrounds/magical-forest.webp' },
+    theme: 'dark',
+    file: 'backgrounds/magical-forest.webp',
   },
 ]
 
 /** The bundled backdrop for an id, or undefined for none and for ids we don't ship. */
 export function backgroundEntry(id: string | undefined): CampaignBackground | undefined {
   return CAMPAIGN_BACKGROUNDS.find((b) => b.id === id)
-}
-
-/** The theme a one-theme backdrop imposes while it shows, or null when both work. */
-export function forcedTheme(entry: CampaignBackground): 'dark' | 'light' | null {
-  if (entry.themes.dark && entry.themes.light) return null
-  return entry.themes.dark ? 'dark' : 'light'
 }

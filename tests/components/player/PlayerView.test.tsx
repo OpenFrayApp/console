@@ -135,20 +135,21 @@ describe('PlayerView — live', () => {
     expect(bare.querySelector('[data-backdrop]')).toBeNull()
   })
 
-  it('lets a one-theme backdrop force its theme and puts the toggle away', () => {
+  it('lets a backdrop force its theme and puts the toggle away', () => {
     link.status = 'live'
-    link.board = { ...board(), background: 'magical-forest' }
+    link.board = { ...board(), background: 'mountain-fortress' }
     render(<PlayerView code="x" />)
-    // The forest ships dark only: the document goes dark and the choice is withdrawn.
+    // The fortress is a dark piece: the document goes dark and the choice is withdrawn.
     expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(screen.queryByRole('button', { name: /Switch to/ })).toBeNull()
   })
 
-  it('keeps the toggle for a backdrop treated for both themes', () => {
+  it('wears light for a light-treated backdrop', () => {
     link.status = 'live'
-    link.board = { ...board(), background: 'mountain-fortress' }
+    link.board = { ...board(), background: 'mountain-fortress-light' }
     render(<PlayerView code="x" />)
-    expect(screen.getByRole('button', { name: /Switch to/ })).toBeInTheDocument()
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(screen.queryByRole('button', { name: /Switch to/ })).toBeNull()
   })
 
   it('heads the screen with the campaign and Game Master when the board carries them', () => {
