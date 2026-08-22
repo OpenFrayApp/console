@@ -82,7 +82,7 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
 /** How the encounter went, on the table's own screens, for as long as the GM leaves it up. */
 function SharedRecap({ recap }: { recap: PlayerRecap }) {
   return (
-    <section className="mb-4 shrink-0 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+    <section className="mb-4 shrink-0 rounded-xl border border-slate-200 bg-white/85 p-4 dark:border-slate-800 dark:bg-slate-950/70">
       <div className="mb-3 flex items-center gap-2">
         <OutcomeBadge outcome={recap.outcome} />
         <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
@@ -123,6 +123,10 @@ export function PlayerView({ code }: { code: string }) {
   const forced = entry?.theme ?? null
   const backdrop = entry?.file
 
+  // Text that sits straight on the art needs its own ground, the way every row and
+  // log line already carries one; without a backdrop it would be a chip on nothing.
+  const ground = backdrop ? 'rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/70' : ''
+
   // Impose a one-theme backdrop on the document without touching the stored
   // preference, and hand the page back to it the moment the backdrop lets go.
   useEffect(() => {
@@ -162,17 +166,14 @@ export function PlayerView({ code }: { code: string }) {
       <div className="isolate relative flex min-h-0 flex-1 flex-col">
         {backdrop && (
           <>
-            {/* Full-bleed between the header and the footer, never over them. The veil
-              is what keeps rows readable; each theme dims to its own ground. */}
+            {/* Full-bleed between the header and the footer, never over them. No veil:
+              the art is treated for its theme and every element over it carries its
+              own ground, so nothing needs dimming to stay readable. */}
             <div
               aria-hidden
               data-backdrop={board?.background}
               className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
               style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${backdrop})` }}
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 bg-white/40 dark:bg-slate-950/50"
             />
           </>
         )}
@@ -182,15 +183,17 @@ export function PlayerView({ code }: { code: string }) {
           ) : board ? (
             <>
               <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className={`text-sm text-slate-600 dark:text-slate-300 ${ground}`}>
                   <Standing round={board.round} paused={board.paused} turn={turn} />
                 </p>
                 {board.timers && (
-                  <CombatTimers
-                    stats={board.timers}
-                    round={board.round}
-                    running={board.round > 0 && !board.paused}
-                  />
+                  <div className={ground}>
+                    <CombatTimers
+                      stats={board.timers}
+                      round={board.round}
+                      running={board.round > 0 && !board.paused}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -201,9 +204,9 @@ export function PlayerView({ code }: { code: string }) {
               Below `sm` there isn't width for two, so they stack and the page scrolls. */}
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:overflow-hidden">
                 <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
-                  <h2 className={PANE_HEADING}>Turn order</h2>
+                  <h2 className={`${PANE_HEADING} ${ground} inline-block`}>Turn order</h2>
                   {board.rows.length === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className={`text-sm text-slate-500 dark:text-slate-400 ${ground}`}>
                       Nobody is on the board yet.
                     </p>
                   ) : (
@@ -216,8 +219,16 @@ export function PlayerView({ code }: { code: string }) {
                 </section>
 
                 <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
-                  <h2 className={PANE_HEADING}>Game log</h2>
-                  <GameLog entries={[...board.log].reverse()} />
+                  <h2 className={`${PANE_HEADING} ${ground} inline-block`}>Game log</h2>
+                  {/* The empty line is rendered here rather than left to GameLog, so it
+                    can carry a ground over the art like the turn order's does. */}
+                  {board.log.length === 0 ? (
+                    <p className={`text-sm text-slate-500 dark:text-slate-400 ${ground}`}>
+                      Nothing logged yet.
+                    </p>
+                  ) : (
+                    <GameLog entries={[...board.log].reverse()} />
+                  )}
                 </section>
               </div>
             </>

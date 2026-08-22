@@ -53,6 +53,36 @@ export const CAMPAIGN_BACKGROUNDS: CampaignBackground[] = [
     theme: 'dark',
     file: 'backgrounds/magical-forest.webp',
   },
+  {
+    id: 'valley-road',
+    label: 'Valley road',
+    theme: 'light',
+    file: 'backgrounds/valley-road.webp',
+  },
+  {
+    id: 'elven-city',
+    label: 'Elven city',
+    theme: 'light',
+    file: 'backgrounds/elven-city.webp',
+  },
+  {
+    id: 'desert-ruins',
+    label: 'Desert ruins',
+    theme: 'light',
+    file: 'backgrounds/desert-ruins.webp',
+  },
+  {
+    id: 'frozen-lake',
+    label: 'Frozen lake',
+    theme: 'light',
+    file: 'backgrounds/frozen-lake.webp',
+  },
+  {
+    id: 'morning-harbor',
+    label: 'Morning harbor',
+    theme: 'light',
+    file: 'backgrounds/morning-harbor.webp',
+  },
 ]
 
 /** The bundled backdrop for an id, or undefined for none and for ids we don't ship. */

@@ -144,6 +144,14 @@ describe('PlayerView — live', () => {
     expect(screen.queryByRole('button', { name: /Switch to/ })).toBeNull()
   })
 
+  it('wears light for a light-treated backdrop', () => {
+    link.status = 'live'
+    link.board = { ...board(), background: 'valley-road' }
+    render(<PlayerView code="x" />)
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(screen.queryByRole('button', { name: /Switch to/ })).toBeNull()
+  })
+
   it('heads the screen with the campaign and Game Master when the board carries them', () => {
     link.status = 'live'
     link.board = { ...board(), campaign: 'Curse of Strahd', gm: 'Nico' }
