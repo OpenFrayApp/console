@@ -41,14 +41,16 @@ export function QuickRoll({
     setTimeout(() => inputRef.current?.focus(), 0)
   })
 
-  /** Roll the formula and log it; malformed input does nothing. Either way the box clears. */
-  const submit = (input: string) => {
+  /**
+   * Roll the formula and log it; malformed input does nothing. Either way the box
+   * clears. `advantage` comes from the dice buttons: a typed formula is rolled exactly
+   * as it was typed, since somebody writing `2d20kh1` has already said what they want.
+   */
+  const submit = (input: string, advantage: AdvantageState = 'normal') => {
     const trimmed = input.trim()
     if (!trimmed) return
     try {
-      // opendice forces the pair on the first plain d20 and leaves every other die
-      // alone, so a mode left on advantage does nothing to 2d6+3.
-      const result = roll(trimmed, { advantage: mode })
+      const result = roll(trimmed, { advantage })
       track(EVENTS.manualRoll)
       onRoll(trimmed, result)
     } catch {
@@ -85,40 +87,42 @@ export function QuickRoll({
           Roll
         </button>
       </form>
-      {/* One segmented control rather than three chips, drawn the way the rests are:
-        these are three answers to one question, not three things to press. */}
-      <div
-        role="radiogroup"
-        aria-label="How to roll a d20"
-        className="flex overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
-      >
-        {MODES.map((m, i) => (
-          <button
-            key={m.value}
-            type="button"
-            role="radio"
-            aria-checked={mode === m.value}
-            aria-label={m.label}
-            title={m.label}
-            onClick={() => setMode(m.value)}
-            className={cx(
-              'tap-y px-2 py-1 text-sm',
-              i > 0 && 'border-l border-slate-300 dark:border-slate-700',
-              mode === m.value
-                ? 'font-medium text-indigo-700 dark:text-indigo-300'
-                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
-            )}
-          >
-            {m.short}
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-1 narrow:flex-1 narrow:gap-1.5">
+      {/* The mode and the dice are one cluster: the mode is how the next die is
+        rolled, and the formula beside them is taken exactly as it was typed. */}
+      <div className="flex items-center gap-1 narrow:flex-1 narrow:gap-1.5">
+        {/* One segmented control rather than three chips, drawn the way the rests are:
+          these are three answers to one question, not three things to press. */}
+        <div
+          role="radiogroup"
+          aria-label="How to roll a d20"
+          className="flex shrink-0 overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
+        >
+          {MODES.map((m, i) => (
+            <button
+              key={m.value}
+              type="button"
+              role="radio"
+              aria-checked={mode === m.value}
+              aria-label={m.label}
+              title={m.label}
+              onClick={() => setMode(m.value)}
+              className={cx(
+                'tap-y px-2 py-1 text-sm',
+                i > 0 && 'border-l border-slate-300 dark:border-slate-700',
+                mode === m.value
+                  ? 'font-medium text-indigo-700 dark:text-indigo-300'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+              )}
+            >
+              {m.short}
+            </button>
+          ))}
+        </div>
         {DICE.map((die) => (
           <button
             key={die}
             type="button"
-            onClick={() => submit(`1${die}`)}
+            onClick={() => submit(`1${die}`, mode)}
             className="tap rounded border border-slate-300 px-2 py-1 text-sm hover:bg-slate-100 narrow:flex-1 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             {die}

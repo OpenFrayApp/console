@@ -52,6 +52,16 @@ describe('QuickRoll — the d20 mode', () => {
     expect(result.advantageState).toBe('advantage')
   })
 
+  it('takes a typed formula exactly as typed, whatever the mode says', () => {
+    const onRoll = vi.fn()
+    render(<QuickRoll onRoll={onRoll} />)
+    fireEvent.click(screen.getByRole('radio', { name: 'Advantage' }))
+    fireEvent.change(screen.getByLabelText('Dice formula'), { target: { value: '1d20' } })
+    fireEvent.click(screen.getByText('Roll'))
+    // The mode is the dice buttons' — somebody typing has already said what they want.
+    expect(onRoll.mock.calls[0][1].dice[0].results).toHaveLength(1)
+  })
+
   it('leaves dice that are not a d20 alone, whatever the mode says', () => {
     const onRoll = vi.fn()
     render(<QuickRoll onRoll={onRoll} />)
