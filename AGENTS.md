@@ -107,10 +107,10 @@ independent, more local-first option.
    of source's next turn" tick at **start**, not end.
 6. **One dice chokepoint.** Every roll goes through `roll(formula, ctx)`. That is
    where randomness, effect-awareness, and the roll log live.
-7. **Randomness: CSPRNG + modulo-bias rejection.** Use `crypto.getRandomValues()`,
-   reject the biased top slice and redraw. **Never** add "anti-streak" or
-   "feels-fair" logic. Uniform and transparent only. Trust comes from the
-   transparent roll log, not from tampering.
+7. **Randomness: CSPRNG + modulo-bias rejection**, and it lives in
+   [opendice](https://github.com/SirDarcanos/opendice), which owns the draw and its
+   tests. **Never** add "anti-streak" or "feels-fair" logic, here or there. Uniform and
+   transparent only. Trust comes from the transparent roll log, not from tampering.
 8. **Local-first, never server-read-through.** Mutate in-memory state, render
    immediately, persist to the backend in the **background** (debounced autosave).
    The UI must never wait on a network round-trip to reflect the GM's own action.
@@ -239,9 +239,13 @@ the same commit.
   (`// @vitest-environment jsdom`).
 - **What "testable" means here:** pure logic always (combat math, formatters,
   parsers, transforms); components render-tested for the states that carry logic;
-  network and Supabase access behind mocks. The dice RNG and the `owner_id`/RLS
-  boundary are the two places a change can pass tests and still be wrong. Test
-  them anyway, then reason about them explicitly in the PR.
+  network and Supabase access behind mocks. The `owner_id`/RLS boundary is where a
+  change can pass tests and still be wrong. Test it anyway, then reason about it
+  explicitly in the PR.
+- **Test what this repo owns.** `src/dice/roll.ts` is the 5e layer over the engine:
+  crit rules, attack crit/fumble, damage tags, flat damage, and the formula guard.
+  Grammar, keep rules, advantage and the RNG belong to opendice and are tested there,
+  so a case here that rolls `4d6kh3` covers the dependency.
 - **Spells are gated:** every spell in a shipped library needs a verdict, either an
   implementation in `src/combat/spells/*` or a reasoned entry in
   `tests/combat/spellCoverage.data.ts` — or `spellCoverage.test.ts` fails.
