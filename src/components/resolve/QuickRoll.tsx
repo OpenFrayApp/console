@@ -43,14 +43,14 @@ export function QuickRoll({
 
   /**
    * Roll the formula and log it; malformed input does nothing. Either way the box
-   * clears. `advantage` comes from the dice buttons: a typed formula is rolled exactly
-   * as it was typed, since somebody writing `2d20kh1` has already said what they want.
+   * clears. Whatever was typed is rolled exactly as typed: somebody writing `2d20adv`
+   * has already said what they want, so the dice buttons' mode stays out of it.
    */
-  const submit = (input: string, advantage: AdvantageState = 'normal') => {
+  const submit = (input: string) => {
     const trimmed = input.trim()
     if (!trimmed) return
     try {
-      const result = roll(trimmed, { advantage })
+      const result = roll(trimmed)
       track(EVENTS.manualRoll)
       onRoll(trimmed, result)
     } catch {
@@ -60,14 +60,13 @@ export function QuickRoll({
   }
 
   /**
-   * Roll one die at the chosen mode. 5e defines advantage on the d20 alone, so that is
-   * the engine's own advantage and logs as such; on any other die the same idea has to
-   * be said outright — two of them, keep the higher or the lower.
+   * Roll one die at the chosen mode, said in the formula the roll is logged under:
+   * `adv` and `dis` keep one of two on any die, so the log reads as what was asked
+   * for rather than as a keep rule spelled out.
    */
   const rollDie = (die: string) => {
     if (mode === 'normal') return submit(`1${die}`)
-    if (die === 'd20') return submit(`1${die}`, mode)
-    submit(`2${die}${mode === 'advantage' ? 'kh1' : 'kl1'}`)
+    submit(`2${die}${mode === 'advantage' ? 'adv' : 'dis'}`)
   }
 
   return (

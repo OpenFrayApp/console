@@ -62,13 +62,14 @@ describe('QuickRoll — the d20 mode', () => {
     expect(onRoll.mock.calls[0][1].dice[0].results).toHaveLength(1)
   })
 
-  it('says the same thing as a keep on a die 5e has no advantage for', () => {
+  it('asks any die for the same pair, in the formula it is logged under', () => {
     const onRoll = vi.fn()
     render(<QuickRoll onRoll={onRoll} />)
     fireEvent.click(screen.getByRole('radio', { name: 'Disadvantage' }))
     fireEvent.click(screen.getByRole('button', { name: 'd100' }))
     const [label, result] = onRoll.mock.calls[0]
-    expect(label).toBe('2d100kl1')
+    expect(label).toBe('2d100dis')
+    expect(result.advantageState).toBe('disadvantage')
     expect(result.dice[0].results).toHaveLength(2)
     expect(result.dice[0].kept).toHaveLength(1)
     expect(result.total).toBe(Math.min(...result.dice[0].results))
