@@ -105,7 +105,7 @@ export function QuickRoll({
         <div
           role="radiogroup"
           aria-label="How to roll a d20"
-          className="flex shrink-0 overflow-hidden rounded-md border border-slate-300 dark:border-slate-700"
+          className="flex shrink-0 overflow-hidden rounded border border-slate-300 dark:border-slate-700"
         >
           {MODES.map((m, i) => (
             <button
