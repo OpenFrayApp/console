@@ -39,15 +39,26 @@ describe('SharePanel', () => {
     expect(screen.getByText('Stop sharing')).toBeInTheDocument()
   })
 
-  it('shows the full link for the code it was given', () => {
+  it('shows the link as its fixed part plus the code, and opens the whole of it', () => {
+    open({ onClaim: vi.fn() })
+    expect(screen.getByText('http://localhost:3000/p/')).toBeInTheDocument()
+    expect((screen.getByLabelText('Link name') as HTMLInputElement).value).toBe('tuesday-game')
+    expect(screen.getByRole('link', { name: /Open the player view/ })).toHaveAttribute(
+      'href',
+      'http://localhost:3000/p/tuesday-game',
+    )
+  })
+
+  it('shows an anonymous GM the code as text, with nothing to edit', () => {
     open()
-    const field = screen.getByLabelText('Link') as HTMLInputElement
-    expect(field.value.endsWith('/p/tuesday-game')).toBe(true)
+    expect(screen.getByText('http://localhost:3000/p/')).toBeInTheDocument()
+    expect(screen.getByText('tuesday-game')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Link name')).toBeNull()
   })
 
   it('shows no link at all before a code exists', () => {
     open({ code: null })
-    expect(screen.queryByLabelText('Link')).toBeNull()
+    expect(screen.queryByText('http://localhost:3000/p/')).toBeNull()
   })
 
   it('warns that anyone with the link can watch', () => {
@@ -87,18 +98,27 @@ describe('SharePanel', () => {
 })
 
 describe('SharePanel — naming the link', () => {
-  it('sends the normalized name to be claimed', async () => {
+  it('normalizes what is typed and claims that', async () => {
     const onClaim = vi.fn().mockResolvedValue('ok')
     open({ onClaim })
-    fireEvent.change(screen.getByLabelText('Name the link'), { target: { value: 'Tuesday Game' } })
+    fireEvent.change(screen.getByLabelText('Link name'), { target: { value: 'Dragons Rest!' } })
+    // Typing normalizes in place, so the field reads as the link will.
+    expect((screen.getByLabelText('Link name') as HTMLInputElement).value).toBe('dragons-rest')
     fireEvent.click(screen.getByText('Save'))
-    await waitFor(() => expect(onClaim).toHaveBeenCalledWith('tuesday-game'))
+    await waitFor(() => expect(onClaim).toHaveBeenCalledWith('dragons-rest'))
+  })
+
+  it('offers nothing to save while the name is the one the link already has', () => {
+    open({ onClaim: vi.fn() })
+    expect(screen.queryByText('Save')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Link name'), { target: { value: 'Tuesday Game' } })
+    expect(screen.queryByText('Save')).toBeNull()
   })
 
   it('rejects a name the database would never see, without a round trip', async () => {
     const onClaim = vi.fn()
     open({ onClaim })
-    fireEvent.change(screen.getByLabelText('Name the link'), { target: { value: 'ab' } })
+    fireEvent.change(screen.getByLabelText('Link name'), { target: { value: 'ab' } })
     fireEvent.click(screen.getByText('Save'))
     await screen.findByText(/at least 3/)
     expect(onClaim).not.toHaveBeenCalled()
@@ -109,11 +129,13 @@ describe('SharePanel — naming the link', () => {
   it('reports a taken name and keeps the current link on screen', async () => {
     const onClaim = vi.fn().mockResolvedValue('taken')
     open({ onClaim })
-    fireEvent.change(screen.getByLabelText('Name the link'), { target: { value: 'dragons' } })
+    fireEvent.change(screen.getByLabelText('Link name'), { target: { value: 'dragons' } })
     fireEvent.click(screen.getByText('Save'))
     await screen.findByText('That name is taken. Try another.')
-    const link = (screen.getByLabelText('Link') as HTMLInputElement).value
-    expect(link.endsWith('/p/tuesday-game')).toBe(true)
+    expect(screen.getByRole('link', { name: /Open the player view/ })).toHaveAttribute(
+      'href',
+      'http://localhost:3000/p/tuesday-game',
+    )
   })
 
   // Retrying can't fix a column that was never added, so the GM is told what is
@@ -121,7 +143,7 @@ describe('SharePanel — naming the link', () => {
   it('says the feature is not set up rather than asking for a retry', async () => {
     const onClaim = vi.fn().mockResolvedValue('unavailable')
     open({ onClaim })
-    fireEvent.change(screen.getByLabelText('Name the link'), { target: { value: 'nico' } })
+    fireEvent.change(screen.getByLabelText('Link name'), { target: { value: 'nico' } })
     fireEvent.click(screen.getByText('Save'))
     await screen.findByText(/isn’t set up on this server yet/)
     expect(screen.queryByText(/Try again/)).toBeNull()
@@ -130,14 +152,14 @@ describe('SharePanel — naming the link', () => {
   it('says so when the claim could not be saved at all', async () => {
     const onClaim = vi.fn().mockResolvedValue('failed')
     open({ onClaim })
-    fireEvent.change(screen.getByLabelText('Name the link'), { target: { value: 'dragons' } })
+    fireEvent.change(screen.getByLabelText('Link name'), { target: { value: 'dragons' } })
     fireEvent.click(screen.getByText('Save'))
     await screen.findByText(/Couldn’t save that name/)
   })
 
   it('points an anonymous GM at signing in instead of offering the field', () => {
     const { onSignIn } = open({ onClaim: undefined })
-    expect(screen.queryByLabelText('Name the link')).toBeNull()
+    expect(screen.queryByLabelText('Link name')).toBeNull()
     fireEvent.click(screen.getByText('Sign in'))
     expect(onSignIn).toHaveBeenCalled()
   })

@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  filterPlayerCodeInput,
   normalizePlayerCode,
   playerCodeError,
   playerCodeFromPath,
@@ -99,5 +100,20 @@ describe('playerCodeFromPath', () => {
     expect(playerCodeFromPath('/play/x', '/console/')).toBeNull()
     // The other short namespace belongs to shared encounters, not to the table's board.
     expect(playerCodeFromPath('/s/k7mqx3rt9p', '/console/')).toBeNull()
+  })
+})
+
+describe('filterPlayerCodeInput', () => {
+  it('drops characters a claim would strip, so the field shows what will be claimed', () => {
+    // "$10" used to reach the field whole and then fail as two characters.
+    expect(filterPlayerCodeInput('$10')).toBe('10')
+    expect(filterPlayerCodeInput('Tuesday Game!')).toBe('tuesday-game')
+    expect(filterPlayerCodeInput('a_b')).toBe('a-b')
+    expect(filterPlayerCodeInput('a--b')).toBe('a-b')
+    expect(filterPlayerCodeInput('-lead')).toBe('lead')
+  })
+
+  it('keeps a trailing hyphen, which is a name half-typed rather than a bad one', () => {
+    expect(filterPlayerCodeInput('tuesday-')).toBe('tuesday-')
   })
 })

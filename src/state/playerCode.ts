@@ -66,6 +66,22 @@ export function playerCodeError(raw: string): string | null {
 }
 
 /**
+ * A typed code as it should appear while it is being typed: the same rules as
+ * `normalizePlayerCode`, minus the trailing-hyphen trim that would make "tuesday-game"
+ * impossible to type. Applied on every keystroke so a character that could never
+ * survive a claim never reaches the field, and the length the reader counts is the
+ * length that is checked.
+ */
+export function filterPlayerCodeInput(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+/, '')
+}
+
+/**
  * The full link to hand to the table: `openfray.app/p/<code>`.
  *
  * Rooted at the site rather than under `/console/`, because this is a link read aloud at a
@@ -73,7 +89,16 @@ export function playerCodeError(raw: string): string | null {
  * the app for `/p/*` (see the parent repo's `scripts/assemble-site.mjs`).
  */
 export function playerViewUrl(code: string): string {
-  return `${window.location.origin}/p/${code}`
+  return `${playerViewPrefix()}${code}`
+}
+
+/**
+ * Everything in that link before the code — `openfray.app/p/`. The share control shows
+ * it as text beside the field that edits the code, so one control is the link and the
+ * name at once.
+ */
+export function playerViewPrefix(): string {
+  return `${window.location.origin}/p/`
 }
 
 /**

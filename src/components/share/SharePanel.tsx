@@ -2,8 +2,15 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState } from 'react'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { ClaimResult } from '../../state/cloudEncounter.ts'
-import { playerCodeError, playerViewUrl, normalizePlayerCode } from '../../state/playerCode.ts'
+import {
+  filterPlayerCodeInput,
+  playerCodeError,
+  playerViewPrefix,
+  playerViewUrl,
+  normalizePlayerCode,
+} from '../../state/playerCode.ts'
 import { useCopyLink } from '../../hooks/useCopyLink.ts'
 import { CAMPAIGN_BACKGROUNDS } from '../../lib/backgrounds.ts'
 import { CopyIcon } from '../icons/CopyIcon.tsx'
@@ -75,7 +82,8 @@ export function SharePanel({
   onSetBackdrop,
 }: SharePanelProps) {
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState('')
+  const [draft, setDraft] = useState(code ?? '')
+  useOpenRequest(code, () => setDraft(code ?? ''))
   const [message, setMessage] = useState<string | null>(null)
   // A blocked clipboard lands in the panel's shared message slot, where typing a
   // name clears it like any other notice.
@@ -109,7 +117,6 @@ export function SharePanel({
     const result = await onClaim(normalizePlayerCode(draft))
     setClaiming(false)
     if (result === 'ok') {
-      setDraft('')
       setMessage('Saved.')
     } else if (result === 'taken') {
       setMessage('That name is taken. Try another.')
@@ -155,17 +162,41 @@ export function SharePanel({
 
             {url && (
               <div className={SECTION}>
-                <label htmlFor="share-link" className={`mb-1 block ${SECTION_LABEL}`}>
-                  Link
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="share-link"
-                    readOnly
-                    value={url}
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                  />
+                <span className="mb-1 flex items-center gap-1.5">
+                  <label htmlFor="share-code" className={SECTION_LABEL}>
+                    Link
+                  </label>
+                  {onClaim && (
+                    <FieldHint>
+                      Name it anything in letters, numbers and hyphens. It stays yours between
+                      sessions.
+                    </FieldHint>
+                  )}
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="flex min-w-0 flex-1 items-center gap-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                    <span className="shrink-0">{playerViewPrefix()}</span>
+                    {onClaim ? (
+                      <input
+                        id="share-code"
+                        aria-label="Link name"
+                        value={draft}
+                        placeholder={code ?? 'tuesday-game'}
+                        onChange={(e) => {
+                          setDraft(filterPlayerCodeInput(e.target.value))
+                          setMessage(null)
+                        }}
+                        className="tap-y min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-900 focus:outline-none dark:text-slate-100"
+                      />
+                    ) : (
+                      <span className="truncate text-slate-700 dark:text-slate-200">{code}</span>
+                    )}
+                  </span>
+                  {onClaim && draft !== code && (
+                    <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
+                      Save
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     onClick={() => copy(url)}
@@ -263,33 +294,7 @@ export function SharePanel({
               </div>
             )}
 
-            {onClaim ? (
-              <div className={SECTION}>
-                <span className="mb-1 flex items-center gap-1.5">
-                  <label htmlFor="share-link-name" className={SECTION_LABEL}>
-                    Name the link
-                  </label>
-                  <FieldHint>
-                    Letters, numbers and hyphens. It stays yours between sessions.
-                  </FieldHint>
-                </span>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="share-link-name"
-                    value={draft}
-                    placeholder={code ?? 'tuesday-game'}
-                    onChange={(e) => {
-                      setDraft(e.target.value)
-                      setMessage(null)
-                    }}
-                    className="tap-y min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                  <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
-                    Save
-                  </Button>
-                </div>
-              </div>
-            ) : (
+            {!onClaim && (
               <p className={`${SECTION} text-xs text-slate-600 dark:text-slate-400`}>
                 <button
                   type="button"
