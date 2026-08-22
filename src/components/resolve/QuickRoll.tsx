@@ -3,11 +3,20 @@
 
 import { useRef, useState } from 'react'
 import { roll } from '../../dice/roll.ts'
+import type { AdvantageState } from 'opendice'
+import { Chip } from '../ui/primitives.tsx'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { OnRoll } from '../log/GameLog.tsx'
 import { track, EVENTS } from '../../lib/analytics.ts'
 
-const DICE = ['d20', 'd12', 'd10', 'd8', 'd6', 'd4']
+const DICE = ['d100', 'd20', 'd12', 'd10', 'd8', 'd6', 'd4']
+
+/** The three ways a d20 can be rolled, in the order the resolver offers them. */
+const MODES: { value: AdvantageState; label: string }[] = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'advantage', label: 'Advantage' },
+  { value: 'disadvantage', label: 'Disadvantage' },
+]
 
 /** The manual / quick-roll bar — type a formula or tap a die. */
 export function QuickRoll({
@@ -22,6 +31,7 @@ export function QuickRoll({
   keyHint?: string
 }) {
   const [formula, setFormula] = useState('')
+  const [mode, setMode] = useState<AdvantageState>('normal')
   const inputRef = useRef<HTMLInputElement>(null)
   useOpenRequest(focusRequest, () => {
     setTimeout(() => inputRef.current?.focus(), 0)
@@ -32,7 +42,9 @@ export function QuickRoll({
     const trimmed = input.trim()
     if (!trimmed) return
     try {
-      const result = roll(trimmed)
+      // opendice forces the pair on the first plain d20 and leaves every other die
+      // alone, so a mode left on advantage does nothing to 2d6+3.
+      const result = roll(trimmed, { advantage: mode })
       track(EVENTS.manualRoll)
       onRoll(trimmed, result)
     } catch {
@@ -69,6 +81,20 @@ export function QuickRoll({
           Roll
         </button>
       </form>
+      <div role="radiogroup" aria-label="How to roll a d20" className="flex gap-1 narrow:gap-1.5">
+        {MODES.map((m) => (
+          <Chip
+            key={m.value}
+            size="sm"
+            role="radio"
+            aria-checked={mode === m.value}
+            active={mode === m.value}
+            onClick={() => setMode(m.value)}
+          >
+            {m.label}
+          </Chip>
+        ))}
+      </div>
       <div className="flex gap-1 narrow:flex-1 narrow:gap-1.5">
         {DICE.map((die) => (
           <button

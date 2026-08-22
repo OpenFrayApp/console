@@ -35,3 +35,28 @@ describe('QuickRoll', () => {
     expect(onRoll).not.toHaveBeenCalled()
   })
 })
+
+describe('QuickRoll — the d20 mode', () => {
+  it('rolls a plain d20 by default, and a pair once advantage is set', () => {
+    const onRoll = vi.fn()
+    render(<QuickRoll onRoll={onRoll} />)
+    fireEvent.click(screen.getByRole('button', { name: 'd20' }))
+    // One die group throughout; what advantage changes is how many faces it rolled.
+    expect(onRoll.mock.calls[0][1].dice[0].results).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Advantage' }))
+    fireEvent.click(screen.getByRole('button', { name: 'd20' }))
+    const result = onRoll.mock.calls[1][1]
+    expect(result.dice[0].results).toHaveLength(2)
+    expect(result.dice[0].kept).toHaveLength(1)
+    expect(result.advantageState).toBe('advantage')
+  })
+
+  it('leaves dice that are not a d20 alone, whatever the mode says', () => {
+    const onRoll = vi.fn()
+    render(<QuickRoll onRoll={onRoll} />)
+    fireEvent.click(screen.getByRole('radio', { name: 'Disadvantage' }))
+    fireEvent.click(screen.getByRole('button', { name: 'd100' }))
+    expect(onRoll.mock.calls[0][1].dice[0].results).toHaveLength(1)
+  })
+})
