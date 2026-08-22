@@ -18,8 +18,14 @@ export interface CampaignBackground {
    * because not every scene survives both a lift and a dim.
    */
   theme: 'dark' | 'light'
-  /** The file under the app's base URL. */
+  /** The WebP under the app's base URL — the fallback every browser can read. */
   file: string
+  /**
+   * An AVIF of the same art, offered first where it is genuinely smaller. Only the
+   * daylight pieces carry one: the night art is darkened until there is little left
+   * for AVIF to win on, and its WebP encodes smaller than any AVIF of it.
+   */
+  avif?: string
 }
 
 export const CAMPAIGN_BACKGROUNDS: CampaignBackground[] = [
@@ -58,30 +64,35 @@ export const CAMPAIGN_BACKGROUNDS: CampaignBackground[] = [
     label: 'Valley road',
     theme: 'light',
     file: 'backgrounds/valley-road.webp',
+    avif: 'backgrounds/valley-road.avif',
   },
   {
     id: 'elven-city',
     label: 'Elven city',
     theme: 'light',
     file: 'backgrounds/elven-city.webp',
+    avif: 'backgrounds/elven-city.avif',
   },
   {
     id: 'desert-ruins',
     label: 'Desert ruins',
     theme: 'light',
     file: 'backgrounds/desert-ruins.webp',
+    avif: 'backgrounds/desert-ruins.avif',
   },
   {
     id: 'frozen-lake',
     label: 'Frozen lake',
     theme: 'light',
     file: 'backgrounds/frozen-lake.webp',
+    avif: 'backgrounds/frozen-lake.avif',
   },
   {
     id: 'morning-harbor',
     label: 'Morning harbor',
     theme: 'light',
     file: 'backgrounds/morning-harbor.webp',
+    avif: 'backgrounds/morning-harbor.avif',
   },
 ]
 

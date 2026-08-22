@@ -122,6 +122,7 @@ export function PlayerView({ code }: { code: string }) {
   // A backdrop decides the mode: its art was treated for one theme, and it wears it.
   const forced = entry?.theme ?? null
   const backdrop = entry?.file
+  const base = import.meta.env.BASE_URL
 
   // Text that sits straight on the art needs its own ground, the way every row and
   // log line already carries one; without a backdrop it would be a chip on nothing.
@@ -169,12 +170,18 @@ export function PlayerView({ code }: { code: string }) {
             {/* Full-bleed between the header and the footer, never over them. No veil:
               the art is treated for its theme and every element over it carries its
               own ground, so nothing needs dimming to stay readable. */}
-            <div
-              aria-hidden
-              data-backdrop={board?.background}
-              className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
-              style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${backdrop})` }}
-            />
+            {/* A picture rather than a CSS background, so the browser picks the format
+              itself: AVIF where the art ships one, and the WebP everywhere else. */}
+            <picture>
+              {entry?.avif && <source srcSet={`${base}${entry.avif}`} type="image/avif" />}
+              <img
+                src={`${base}${backdrop}`}
+                alt=""
+                aria-hidden
+                data-backdrop={board?.background}
+                className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover"
+              />
+            </picture>
           </>
         )}
         <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
