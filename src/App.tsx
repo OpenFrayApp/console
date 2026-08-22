@@ -31,6 +31,7 @@ import { emptyEncounter, encounterReducer, type NewLogEntry } from './state/enco
 import { loadSession, saveSession, type View } from './state/persistence.ts'
 import { useTheme } from './hooks/useTheme.ts'
 import { useHotkeys } from './hooks/useHotkeys.ts'
+import { useOpenRequest } from './hooks/useOpenRequest.ts'
 import { formatChord, resolveHotkeys, type HotkeyCommandId } from './state/hotkeys.ts'
 import { KeyboardHelp } from './components/settings/KeyboardHelp.tsx'
 import { onSharedBoard } from './combat/playerView.ts'
@@ -517,6 +518,17 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     playerPin,
     playerBackdrop ?? undefined,
   )
+
+  // Signing out hands the board back to an anonymous session. The reserved name belongs
+  // to the account, so the share stops rather than carrying on under a name this device
+  // no longer owns, and the link is minted fresh the way an anonymous one always is.
+  useOpenRequest(userId, (previous) => {
+    if (!previous || userId) return
+    setSharing(false)
+    const code = randomPlayerCode()
+    setPlayerCode(code)
+    saveSettings({ playerViewCode: code })
+  })
 
   /**
    * Start or stop sharing. An anonymous GM has no name to claim, so the first share
