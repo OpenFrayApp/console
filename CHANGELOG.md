@@ -12,59 +12,7 @@ Versions are `major.minor.patch`. A major bump means the way you use the console
 changed; a minor bump adds to it; a patch fixes it. Dates are the day the version was
 published.
 
-## 1.3.0 (2026-08-24)
-
-A backdrop for the table's screen, a PIN to lock it, and a roll mode on the dice bar.
-
-### Casting to the table
-
-- The share control wears a **cast icon** now, because that is what it does — the
-  monitor read as a setting, not an action.
-- A shared link can be **locked behind a four-digit PIN**: the popover sets it, and a
-  viewer types the same four before the board shows. A wrong PIN gets silence, not an
-  error that gives anything away.
-- A campaign can set a **backdrop** for the table's screen, picked from a bundled set —
-  a mountain fortress, a desert ruin, an elven city, a frozen lake, a morning harbor, a
-  valley road, a magical forest, and more. Each is treated for light or dark and shows
-  at full strength; the theme toggle stands down while one is up, since the art has
-  already chosen.
-- The table's screen can head itself with the **campaign's name and the Game Master's**,
-  each gated by its own setting under Player view, off by default and shared only for a
-  signed-in GM.
-- The link and its name are **one field** now, not two: the part nobody edits reads as
-  text, the code sits after it, and Save appears only once you've actually typed a name.
-- Signing out **hands the link back to an anonymous one**, so a device that no longer
-  owns your name stops broadcasting under it.
-
-### The dice bar
-
-- The bar rolls a **d100** now, alongside the rest.
-- A **roll mode** — Regular, Adv, Dis — sits beside the dice as one control and applies
-  to whichever die you press next, on any die, not just the d20. A d20 rolled at
-  advantage logs as advantage, not as a keep rule spelled out.
-
-### Publishing
-
-- The moment right after publishing an encounter or a creature offers the same three
-  buttons as the **Shared links** page: copy, open in its own tab, and unpublish behind
-  a named confirm. Taking it down there drops the dialog back to its form, saying that
-  publishing again makes a new link.
-
-### Smaller things
-
-- **Rests, Group save and Cast spell** hold their place in the header on an empty board
-  instead of vanishing, and grey out like everything else that needs a creature there.
-- **Save** greys out on an empty board too, the same way sharing already did, instead of
-  opening a popover just to say no.
-- The line above **Publish** now opens with the confirmation itself — you hold the
-  rights, you agree to the terms — rather than a description of what publishing means.
-- A condition named in a spell's rules text, or in the **Applied effects** list, explains
-  itself on hover, the way one in the tracker already does.
-- A field's description sits behind a **hover hint** — the ? beside its label — so what's
-  left visible is state or consequence, not boilerplate.
-- The short-rest tally sits in the **campfire button's corner**, off the artwork.
-
-## 1.2.0 (2026-08-20)
+## 1.2.0 (2026-08-24)
 
 Keep a fight to come back to, and hand one to somebody else.
 
@@ -100,7 +48,9 @@ Keep a fight to come back to, and hand one to somebody else.
   dialog starts on.
 - **Shared links** is a screen of its own, under your account: everything you have up,
   with a copy, an open and an unpublish beside each. Nothing expires on its own, and
-  unpublishing is immediate and final.
+  unpublishing is immediate and final. The moment right after publishing offers the same
+  three buttons; taking a link down there drops the dialog back to its form, saying that
+  publishing again makes a new link.
 - A creature brought in with the OpenFray Importer cannot be published. Those stat blocks
   are Wizards of the Coast's.
 - Up to 200 published pages per account. Unpublishing makes room.
@@ -118,6 +68,33 @@ Keep a fight to come back to, and hand one to somebody else.
   note renders bold, italic, quotes, lists and headings and nothing that navigates or
   fetches.
 
+### Casting to the table
+
+- The share control wears a **cast icon** now, because that is what it does — the
+  monitor read as a setting, not an action.
+- A shared link can be **locked behind a four-digit PIN**: the popover sets it, and a
+  viewer types the same four before the board shows. A wrong PIN gets silence, not an
+  error that gives anything away.
+- A campaign can set a **backdrop** for the table's screen, picked from a bundled set —
+  a mountain fortress, a desert ruin, an elven city, a frozen lake, a morning harbor, a
+  valley road, a magical forest, and more. Each is treated for light or dark and shows
+  at full strength; the theme toggle stands down while one is up, since the art has
+  already chosen.
+- The table's screen can head itself with the **campaign's name and the Game Master's**,
+  each gated by its own setting under Player view, off by default and shared only for a
+  signed-in GM.
+- The link and its name are **one field** now, not two: the part nobody edits reads as
+  text, the code sits after it, and Save appears only once you've actually typed a name.
+- Signing out **hands the link back to an anonymous one**, so a device that no longer
+  owns your name stops broadcasting under it.
+
+### The dice bar
+
+- The bar rolls a **d100** now, alongside the rest.
+- A **roll mode** — Regular, Adv, Dis — sits beside the dice as one control and applies
+  to whichever die you press next, on any die, not just the d20. A d20 rolled at
+  advantage logs as advantage, not as a keep rule spelled out.
+
 ### Smaller things
 
 - The player view moved to `openfray.app/p/`, beside published encounters at
@@ -128,6 +105,17 @@ Keep a fight to come back to, and hand one to somebody else.
 - The app says **encounter** where it used to say fight.
 - A link in your own prose opens in its own tab, so following one does not navigate away
   from the fight you are running.
+- **Rests, Group save and Cast spell** hold their place in the header on an empty board
+  instead of vanishing, and grey out like everything else that needs a creature there.
+- **Save** greys out on an empty board too, the same way sharing already did, instead of
+  opening a popover just to say no.
+- The line above **Publish** now opens with the confirmation itself — you hold the
+  rights, you agree to the terms — rather than a description of what publishing means.
+- A condition named in a spell's rules text, or in the **Applied effects** list, explains
+  itself on hover, the way one in the tracker already does.
+- A field's description sits behind a **hover hint** — the ? beside its label — so what's
+  left visible is state or consequence, not boilerplate.
+- The short-rest tally sits in the **campfire button's corner**, off the artwork.
 
 ## 1.1.0 (2026-08-17)
 
