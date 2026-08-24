@@ -43,6 +43,13 @@ A backdrop for the table's screen, a PIN to lock it, and a roll mode on the dice
   to whichever die you press next, on any die, not just the d20. A d20 rolled at
   advantage logs as advantage, not as a keep rule spelled out.
 
+### Publishing
+
+- The moment right after publishing an encounter or a creature offers the same three
+  buttons as the **Shared links** page: copy, open in its own tab, and unpublish behind
+  a named confirm. Taking it down there drops the dialog back to its form, saying that
+  publishing again makes a new link.
+
 ### Smaller things
 
 - **Rests, Group save and Cast spell** hold their place in the header on an empty board
