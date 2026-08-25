@@ -63,7 +63,7 @@ export function SharedNote({ children }: { children: string }) {
   return (
     <div
       className={
-        'max-h-72 overflow-y-auto break-words text-sm text-slate-700 ' +
+        'break-words text-sm text-slate-700 ' +
         // Line breaks are kept inside a block, never between them. A Game Master's prep is
         // full of single newlines that markdown would fold into one paragraph, so the text
         // has to render as typed; but react-markdown leaves a newline between every block,

@@ -82,7 +82,7 @@ export function SharedCreature({
         the thing being read takes the space, and the publisher's word about it sits beside
         rather than under, where a long stat block would bury it. Narrow screens stack, note
         first, because somebody who followed a link is told what it is before they scroll. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6 split:grid split:grid-cols-[minmax(0,1fr)_20rem] split:items-start split:overflow-hidden wide:grid wide:grid-cols-[minmax(0,1fr)_22rem] wide:overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6 split:grid split:grid-cols-[minmax(0,1fr)_22rem] split:items-start split:overflow-hidden wide:grid wide:grid-cols-[minmax(0,1fr)_24rem] wide:overflow-hidden">
         <div className="order-2 min-w-0 split:order-1 split:h-full split:overflow-y-auto wide:order-1 wide:h-full wide:overflow-y-auto">
           {creature ? (
             <SpellLinkContext.Provider value={linkSpells}>
