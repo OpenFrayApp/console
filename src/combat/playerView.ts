@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import type { Combatant, CombatantStatus, DeathSaves } from '../schema/combatant.ts'
-import type { CombatClock, Encounter, GameLogEntry } from '../schema/encounter.ts'
+import type { Combatant } from '../schema/combatant.ts'
+import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
-import type { Recap } from './recap.ts'
-import { effectiveMaxHp, hpTier, type HpTier } from './resources.ts'
+import type { PlayerBoard, PlayerHp, PlayerRecap, PlayerRow } from '../schema/playerBoard.ts'
+import { effectiveMaxHp, hpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
 import { badgeLabel } from './effects.ts'
 import { acOf, isFoe, nameOf } from './combatant.ts'
@@ -21,61 +21,7 @@ import { backgroundEntry } from '../lib/backgrounds.ts'
  * bookkeeping never enter the message in the first place.
  */
 
-/** A creature's hit points, at the fidelity the GM chose: a number, a wound word, or nothing. */
-export type PlayerHp =
-  | { kind: 'exact'; current: number; max: number; temp: number }
-  | { kind: 'tier'; tier: HpTier }
-  | null
-
-/** One row of the shared tracker — a name, a wound, and what is stuck to it. */
-export interface PlayerRow {
-  id: string
-  initiative: number
-  name: string
-  isFoe: boolean
-  status: CombatantStatus
-  hp: PlayerHp
-  /** Only when the GM chose to show it, and never for a creature otherwise. */
-  ac?: number
-  /** Effect labels only — durations and escape saves stay with the GM. */
-  effects: { id: string; label: string; icon?: string }[]
-  concentrating: boolean
-  deathSaves?: DeathSaves
-  stable?: boolean
-}
-
-/**
- * The end-of-fight summary as the table sees it. The same figures the GM's own recap
- * shows, plus whether experience travels — a milestone campaign counts none, and that
- * is a campaign setting the boundary itself knows nothing about.
- */
-export interface PlayerRecap extends Recap {
-  showXp: boolean
-}
-
-/** The whole message a player receives: the tracker, the log, and where the fight is. */
-export interface PlayerBoard {
-  round: number
-  paused: boolean
-  /** Whose turn it is, or null before the fight starts and while it's held. */
-  activeId: string | null
-  rows: PlayerRow[]
-  log: GameLogEntry[]
-  /**
-   * The fight's clock, when the GM shares it: enough for the table's own screen to
-   * tick along. Only the two clock fields travel — the damage tallies beside them in
-   * `CombatStats` are the GM's.
-   */
-  timers?: CombatClock
-  /** The summary of the fight just ended, while the GM has it up and shares it. */
-  recap?: PlayerRecap
-  /** The campaign's name, when a signed-in GM chose to share it. */
-  campaign?: string
-  /** The Game Master's profile name, when signed in and shared. */
-  gm?: string
-  /** The campaign's bundled backdrop id — cosmetic, chosen per campaign by the GM. */
-  background?: string
-}
+export type { PlayerBoard, PlayerHp, PlayerRecap, PlayerRow } from '../schema/playerBoard.ts'
 
 /**
  * How much of the log travels. The player view is a live feed rather than an archive,

@@ -38,9 +38,10 @@ const board = playerBoard(
 )
 
 /** Send one current board envelope through the Game Master interface. */
-function boardEnvelope(sequence = 0) {
+function boardEnvelope(sequence = 0, senderId = 'gm-session') {
   return sendGameMasterMessage(
     { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: sequence },
+    senderId,
     { type: 'board', board },
     1_900_000_000_000,
   ).envelope
@@ -50,6 +51,7 @@ describe('the live-view protocol envelope', () => {
   it('round-trips the privacy projection through the canonical current envelope', () => {
     const sent = sendGameMasterMessage(
       INITIAL_PLAYER_PROTOCOL_STATE,
+      'gm-session',
       { type: 'board', board },
       1_900_000_000_000,
     )
@@ -58,6 +60,7 @@ describe('the live-view protocol envelope', () => {
       kind: 'player-view',
       protocolVersion: CURRENT_PLAYER_PROTOCOL_VERSION,
       senderRole: 'gm',
+      senderId: 'gm-session',
       sequence: 0,
       sentAt: 1_900_000_000_000,
       messageType: 'board',
@@ -72,17 +75,29 @@ describe('the live-view protocol envelope', () => {
 
   it('gives each role only the message types it may emit', () => {
     expect(
-      sendViewerMessage(INITIAL_PLAYER_PROTOCOL_STATE, { type: 'hello' }, 10).envelope,
+      sendViewerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer-session', { type: 'hello' }, 10)
+        .envelope,
     ).toMatchObject({ senderRole: 'viewer', messageType: 'hello' })
     expect(
-      sendGameMasterMessage(INITIAL_PLAYER_PROTOCOL_STATE, { type: 'closed' }, 10).envelope,
+      sendGameMasterMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'gm-session', { type: 'closed' }, 10)
+        .envelope,
     ).toMatchObject({ senderRole: 'gm', messageType: 'closed' })
 
     expect(() =>
-      sendViewerMessage(INITIAL_PLAYER_PROTOCOL_STATE, { type: 'board', board } as never, 10),
+      sendViewerMessage(
+        INITIAL_PLAYER_PROTOCOL_STATE,
+        'viewer-session',
+        { type: 'board', board } as never,
+        10,
+      ),
     ).toThrow()
     expect(() =>
-      sendGameMasterMessage(INITIAL_PLAYER_PROTOCOL_STATE, { type: 'hello' } as never, 10),
+      sendGameMasterMessage(
+        INITIAL_PLAYER_PROTOCOL_STATE,
+        'gm-session',
+        { type: 'hello' } as never,
+        10,
+      ),
     ).toThrow()
   })
 })
@@ -131,6 +146,20 @@ describe('receiving live-view traffic', () => {
       status: 'rejected',
       reason: 'reordered',
     })
+  })
+
+  it('orders each sender independently and accepts a restarted publisher', () => {
+    const first = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      boardEnvelope(8, 'old-gm-session'),
+    )
+    expect(first.status).toBe('accepted')
+    if (first.status !== 'accepted') return
+
+    expect(
+      receivePlayerMessage(first.state, 'viewer', boardEnvelope(0, 'new-gm-session')),
+    ).toMatchObject({ status: 'accepted', message: { type: 'board' } })
   })
 
   it('rejects messages beyond the byte limit', () => {

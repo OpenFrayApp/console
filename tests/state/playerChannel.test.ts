@@ -10,6 +10,7 @@ import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
 import {
   INITIAL_PLAYER_PROTOCOL_STATE,
   sendGameMasterMessage,
+  sendViewerMessage,
 } from '../../src/state/playerProtocol.ts'
 import {
   lockedChannelName,
@@ -51,6 +52,21 @@ function encounter(overrides: Partial<Encounter> = {}): Encounter {
 /** Build the complete privacy projection accepted on the wire. */
 function wireBoard(round: number) {
   return playerBoard(encounter({ round }), DEFAULT_PLAYER_VIEW)
+}
+
+/** Build one current Game Master board envelope for adapter tests. */
+function gameMasterEnvelope(sequence: number, round: number, senderId = 'gm-session') {
+  return sendGameMasterMessage(
+    { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: sequence },
+    senderId,
+    { type: 'board', board: wireBoard(round) },
+    100,
+  ).envelope
+}
+
+/** Build one current viewer hello envelope for adapter tests. */
+function viewerHelloEnvelope(senderId: string) {
+  return sendViewerMessage(INITIAL_PLAYER_PROTOCOL_STATE, senderId, { type: 'hello' }, 100).envelope
 }
 
 describe('useBoardBroadcast — the Game Master side', () => {
@@ -109,6 +125,22 @@ describe('useBoardBroadcast — the Game Master side', () => {
     expect(boards.at(-1)?.payload).toMatchObject({ round: 7 })
   })
 
+  it('answers independent current-protocol viewers that both begin at sequence 0', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    renderHook(() => useBoardBroadcast('code', encounter({ round: 3 }), DEFAULT_PLAYER_VIEW))
+    act(() => channels[0].ready())
+    const before = channels[0].sends.filter(
+      (message) => message.event === 'player-view-protocol',
+    ).length
+
+    act(() => channels[0].emit('player-view-protocol', viewerHelloEnvelope('viewer-one')))
+    act(() => channels[0].emit('player-view-protocol', viewerHelloEnvelope('viewer-two')))
+    expect(
+      channels[0].sends.filter((message) => message.event === 'player-view-protocol'),
+    ).toHaveLength(before + 2)
+  })
+
   it('says goodbye and drops the channel when sharing stops', () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
@@ -161,20 +193,17 @@ describe('usePlayerBoard — the player side', () => {
     supa.client = client
     const { result } = renderHook(() => usePlayerBoard('code'))
     act(() => channels[0].ready())
-    const envelope = (sequence: number, round: number) =>
-      sendGameMasterMessage(
-        { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: sequence },
-        { type: 'board', board: wireBoard(round) },
-        100,
-      ).envelope
-
-    act(() => channels[0].emit('player-view-protocol', envelope(4, 2)))
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(4, 2)))
     expect(result.current.board?.round).toBe(2)
-    act(() => channels[0].emit('player-view-protocol', envelope(4, 9)))
-    act(() => channels[0].emit('player-view-protocol', envelope(3, 8)))
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(4, 9)))
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(3, 8)))
     expect(result.current.board?.round).toBe(2)
-    act(() => channels[0].emit('player-view-protocol', envelope(5, 3)))
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(5, 3)))
     expect(result.current.board?.round).toBe(3)
+    act(() =>
+      channels[0].emit('player-view-protocol', gameMasterEnvelope(0, 4, 'restarted-gm-session')),
+    )
+    expect(result.current.board?.round).toBe(4)
   })
 
   it('keeps malformed current and rollback traffic out of viewer state', () => {
@@ -331,6 +360,10 @@ describe('usePlayerBoard — a locked link', () => {
     expect(channels).toHaveLength(2)
     expect(channels[1].name).toBe(await lockedChannelName('code', '1234'))
     act(() => channels[1].ready())
+    const lobbyHello = channels[0].sends.find((message) => message.event === 'player-view-protocol')
+    const boardHello = channels[1].sends.find((message) => message.event === 'player-view-protocol')
+    expect(lobbyHello?.payload).toMatchObject({ messageType: 'hello', sequence: 0 })
+    expect(boardHello?.payload).toMatchObject({ messageType: 'hello', sequence: 1 })
     act(() => channels[1].emit('board', wireBoard(2)))
     expect(result.current.status).toBe('live')
     expect(result.current.board).toEqual(wireBoard(2))

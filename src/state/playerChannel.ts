@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
+import { uid } from '../lib/uid.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { PlayerViewSettings } from './settings.ts'
 import { playerBoard, type PlayerBoard, type PlayerRecap } from '../combat/playerView.ts'
@@ -41,9 +42,10 @@ const EVENT = {
 function sendGameMasterEnvelope(
   channel: RealtimeChannel,
   state: PlayerProtocolState,
+  senderId: string,
   message: GameMasterMessage,
 ): PlayerProtocolState {
-  const sent = sendGameMasterMessage(state, message, Date.now())
+  const sent = sendGameMasterMessage(state, senderId, message, Date.now())
   void channel.send({ type: 'broadcast', event: EVENT.protocol, payload: sent.envelope })
   return sent.state
 }
@@ -52,8 +54,9 @@ function sendGameMasterEnvelope(
 function sendViewerHello(
   channel: RealtimeChannel,
   state: PlayerProtocolState,
+  senderId: string,
 ): PlayerProtocolState {
-  const sent = sendViewerMessage(state, { type: 'hello' }, Date.now())
+  const sent = sendViewerMessage(state, senderId, { type: 'hello' }, Date.now())
   void channel.send({ type: 'broadcast', event: EVENT.protocol, payload: sent.envelope })
   return sent.state
 }
@@ -117,6 +120,7 @@ export function useBoardBroadcast(
   const latest = useRef<PlayerBoard | null>(null)
   const sending = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const receiving = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
+  const senderId = useRef(uid())
 
   useEffect(() => {
     if (!supabase || !code) return
@@ -125,11 +129,12 @@ export function useBoardBroadcast(
     const open: RealtimeChannel[] = []
     sending.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
     receiving.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
+    senderId.current = uid()
 
     /** Send the current board over both the versioned and rollback paths. */
     const sendBoard = (ch: RealtimeChannel) => {
       if (!latest.current) return
-      sending.current = sendGameMasterEnvelope(ch, sending.current, {
+      sending.current = sendGameMasterEnvelope(ch, sending.current, senderId.current, {
         type: 'board',
         board: latest.current,
       })
@@ -166,7 +171,9 @@ export function useBoardBroadcast(
       open.push(lobby)
       /** Tell a viewer that the board needs its PIN over both protocol paths. */
       const sendLocked = () => {
-        sending.current = sendGameMasterEnvelope(lobby, sending.current, { type: 'locked' })
+        sending.current = sendGameMasterEnvelope(lobby, sending.current, senderId.current, {
+          type: 'locked',
+        })
         void lobby.send({ type: 'broadcast', event: EVENT.locked, payload: {} })
       }
       lobby.on('broadcast', { event: EVENT.protocol }, ({ payload }) => {
@@ -196,7 +203,9 @@ export function useBoardBroadcast(
       for (const ch of open) {
         // Tell the players this was deliberate before the socket drops, so they read
         // "the Game Master stopped sharing" rather than an unexplained silence.
-        sending.current = sendGameMasterEnvelope(ch, sending.current, { type: 'closed' })
+        sending.current = sendGameMasterEnvelope(ch, sending.current, senderId.current, {
+          type: 'closed',
+        })
         void ch.send({ type: 'broadcast', event: EVENT.closed, payload: {} })
         void client.removeChannel(ch)
       }
@@ -213,7 +222,7 @@ export function useBoardBroadcast(
     latest.current = board
     const handle = setTimeout(() => {
       if (!channel.current) return
-      sending.current = sendGameMasterEnvelope(channel.current, sending.current, {
+      sending.current = sendGameMasterEnvelope(channel.current, sending.current, senderId.current, {
         type: 'board',
         board,
       })
@@ -252,12 +261,14 @@ export function usePlayerBoard(
   const sending = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const receiving = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const currentProtocolSeen = useRef(false)
+  const senderId = useRef(uid())
 
   useEffect(() => {
     sending.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
     receiving.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
     currentProtocolSeen.current = false
-  }, [code, pin])
+    senderId.current = uid()
+  }, [code])
 
   useEffect(() => {
     if (!supabase) return
@@ -331,7 +342,7 @@ export function usePlayerBoard(
     })
     /** Ask for the current board over both the versioned and rollback paths. */
     const sendHello = () => {
-      sending.current = sendViewerHello(ch, sending.current)
+      sending.current = sendViewerHello(ch, sending.current, senderId.current)
       void ch.send({ type: 'broadcast', event: EVENT.hello, payload: {} })
     }
 
@@ -404,7 +415,7 @@ export function usePlayerBoard(
       })
       /** Ask for the PIN-protected board over both compatible paths. */
       const sendHello = () => {
-        sending.current = sendViewerHello(c, sending.current)
+        sending.current = sendViewerHello(c, sending.current, senderId.current)
         void c.send({ type: 'broadcast', event: EVENT.hello, payload: {} })
       }
       c.on('presence', { event: 'join' }, sendHello)

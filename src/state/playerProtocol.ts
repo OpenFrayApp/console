@@ -2,155 +2,33 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import * as v from 'valibot'
-import type { PlayerBoard } from '../combat/playerView.ts'
+import { playerBoardSchema, type PlayerBoard } from '../schema/playerBoard.ts'
 
 export const PLAYER_PROTOCOL_KIND = 'player-view'
 export const CURRENT_PLAYER_PROTOCOL_VERSION = 1
 export const MAX_PLAYER_MESSAGE_BYTES = 240_000
+export const MAX_PLAYER_SENDERS = 100
 
 const finiteNumber = v.pipe(v.number(), v.check<number>(Number.isFinite))
 const integer = v.pipe(finiteNumber, v.integer())
 const nonNegativeInteger = v.pipe(integer, v.minValue(0))
-const text = v.string()
-const status = v.picklist(['active', 'unconscious', 'dead'])
-const advantage = v.picklist(['normal', 'advantage', 'disadvantage'])
-const rollKind = v.picklist(['attack', 'save', 'check', 'damage', 'raw'])
-const logCategory = v.picklist([
-  'roll',
-  'cast',
-  'action',
-  'condition',
-  'concentration',
-  'hp',
-  'heal',
-  'turn',
-  'rest',
-  'death',
-  'note',
-])
-
-const dieGroup = v.strictObject({
-  sides: finiteNumber,
-  sign: v.picklist([1, -1]),
-  results: v.array(finiteNumber),
-  kept: v.array(finiteNumber),
-  multiplier: finiteNumber,
-  total: finiteNumber,
-  naturalHigh: v.boolean(),
-  naturalLow: v.boolean(),
-})
-const rollResult = v.strictObject({
-  formula: text,
-  dice: v.array(dieGroup),
-  modifier: finiteNumber,
-  modifiers: v.array(finiteNumber),
-  total: finiteNumber,
-  advantageState: advantage,
-  kind: rollKind,
-  crit: v.boolean(),
-  fumble: v.boolean(),
-  damageType: v.optional(text),
-})
-const logEntry = v.strictObject({
-  id: text,
-  round: finiteNumber,
-  category: logCategory,
-  message: text,
-  result: v.optional(rollResult),
-  applied: v.optional(v.array(v.strictObject({ source: text, effect: text }))),
-  sourceId: v.optional(text),
-  gmOnly: v.optional(v.boolean()),
-  outcome: v.optional(v.picklist(['hit', 'crit', 'miss'])),
-  damage: v.optional(
-    v.array(
-      v.strictObject({
-        type: text,
-        amount: finiteNumber,
-        result: v.optional(rollResult),
-      }),
-    ),
-  ),
-  saved: v.optional(v.boolean()),
-  amount: v.optional(finiteNumber),
-})
-const hp = v.nullable(
-  v.variant('kind', [
-    v.strictObject({
-      kind: v.literal('exact'),
-      current: finiteNumber,
-      max: finiteNumber,
-      temp: finiteNumber,
-    }),
-    v.strictObject({
-      kind: v.literal('tier'),
-      tier: v.picklist(['healthy', 'hurt', 'bloodied', 'critical']),
-    }),
-  ]),
-)
-const row = v.strictObject({
-  id: text,
-  initiative: finiteNumber,
-  name: text,
-  isFoe: v.boolean(),
-  status,
-  hp,
-  ac: v.optional(finiteNumber),
-  effects: v.pipe(
-    v.array(v.strictObject({ id: text, label: text, icon: v.optional(text) })),
-    v.maxLength(100),
-  ),
-  concentrating: v.boolean(),
-  deathSaves: v.optional(v.strictObject({ successes: finiteNumber, failures: finiteNumber })),
-  stable: v.optional(v.boolean()),
-})
-const recap = v.strictObject({
-  outcome: v.picklist(['victory', 'defeat', 'inconclusive']),
-  difficulty: v.nullable(v.picklist(['trivial', 'easy', 'medium', 'hard', 'deadly'])),
-  rounds: finiteNumber,
-  inGameSeconds: finiteNumber,
-  activeMs: finiteNumber,
-  totalXp: finiteNumber,
-  partySize: finiteNumber,
-  xpPerPlayer: v.nullable(finiteNumber),
-  damageDealtTotal: finiteNumber,
-  damageTakenTotal: finiteNumber,
-  spellsCast: finiteNumber,
-  effectsApplied: finiteNumber,
-  knockouts: finiteNumber,
-  awards: v.pipe(
-    v.array(v.strictObject({ title: text, label: text, amount: finiteNumber })),
-    v.maxLength(20),
-  ),
-  showXp: v.boolean(),
-})
-const board = v.strictObject({
-  round: nonNegativeInteger,
-  paused: v.boolean(),
-  activeId: v.nullable(text),
-  rows: v.pipe(v.array(row), v.maxLength(100)),
-  log: v.pipe(v.array(logEntry), v.maxLength(60)),
-  timers: v.optional(
-    v.strictObject({ activeMs: finiteNumber, runningSince: v.nullable(finiteNumber) }),
-  ),
-  recap: v.optional(recap),
-  campaign: v.optional(text),
-  gm: v.optional(text),
-  background: v.optional(text),
-})
+const senderId = v.pipe(v.string(), v.minLength(1), v.maxLength(100))
 const emptyPayload = v.strictObject({})
 const boardEnvelope = v.strictObject({
   kind: v.literal(PLAYER_PROTOCOL_KIND),
   protocolVersion: v.literal(CURRENT_PLAYER_PROTOCOL_VERSION),
   senderRole: v.literal('gm'),
+  senderId,
   sequence: nonNegativeInteger,
   sentAt: nonNegativeInteger,
   messageType: v.literal('board'),
-  payload: board,
+  payload: playerBoardSchema,
 })
 const closedEnvelope = v.strictObject({
   kind: v.literal(PLAYER_PROTOCOL_KIND),
   protocolVersion: v.literal(CURRENT_PLAYER_PROTOCOL_VERSION),
   senderRole: v.literal('gm'),
+  senderId,
   sequence: nonNegativeInteger,
   sentAt: nonNegativeInteger,
   messageType: v.literal('closed'),
@@ -160,6 +38,7 @@ const lockedEnvelope = v.strictObject({
   kind: v.literal(PLAYER_PROTOCOL_KIND),
   protocolVersion: v.literal(CURRENT_PLAYER_PROTOCOL_VERSION),
   senderRole: v.literal('gm'),
+  senderId,
   sequence: nonNegativeInteger,
   sentAt: nonNegativeInteger,
   messageType: v.literal('locked'),
@@ -169,6 +48,7 @@ const helloEnvelope = v.strictObject({
   kind: v.literal(PLAYER_PROTOCOL_KIND),
   protocolVersion: v.literal(CURRENT_PLAYER_PROTOCOL_VERSION),
   senderRole: v.literal('viewer'),
+  senderId,
   sequence: nonNegativeInteger,
   sentAt: nonNegativeInteger,
   messageType: v.literal('hello'),
@@ -190,12 +70,12 @@ export type PlayerProtocolMessage = GameMasterMessage | ViewerMessage
 
 export interface PlayerProtocolState {
   nextSequence: number
-  lastReceivedSequence: number | null
+  lastReceivedSequences: Readonly<Record<string, number>>
 }
 
 export const INITIAL_PLAYER_PROTOCOL_STATE: PlayerProtocolState = {
   nextSequence: 0,
-  lastReceivedSequence: null,
+  lastReceivedSequences: {},
 }
 
 export interface PlayerProtocolSend {
@@ -215,7 +95,14 @@ export type PlayerProtocolReceive =
   | {
       status: 'rejected'
       state: PlayerProtocolState
-      reason: 'too-large' | 'malformed' | 'unsupported-version' | 'role' | 'duplicate' | 'reordered'
+      reason:
+        | 'too-large'
+        | 'malformed'
+        | 'unsupported-version'
+        | 'role'
+        | 'duplicate'
+        | 'reordered'
+        | 'too-many-senders'
     }
 
 export type LegacyPlayerMessageType = 'board' | 'hello' | 'closed' | 'locked'
@@ -237,6 +124,7 @@ function messageBytes(value: unknown): number | null {
 function sendMessage(
   state: PlayerProtocolState,
   role: PlayerProtocolRole,
+  sender: string,
   message: PlayerProtocolMessage,
   sentAt: number,
 ): PlayerProtocolSend {
@@ -250,6 +138,7 @@ function sendMessage(
     kind: PLAYER_PROTOCOL_KIND,
     protocolVersion: CURRENT_PLAYER_PROTOCOL_VERSION,
     senderRole: role,
+    senderId: sender,
     sequence: state.nextSequence,
     sentAt,
     messageType: message.type,
@@ -271,26 +160,28 @@ function sendMessage(
 /** Build one canonical message from the Game Master's restricted protocol interface. */
 export function sendGameMasterMessage(
   state: PlayerProtocolState,
+  sender: string,
   message: GameMasterMessage,
   sentAt: number,
 ): PlayerProtocolSend {
-  return sendMessage(state, 'gm', message, sentAt)
+  return sendMessage(state, 'gm', sender, message, sentAt)
 }
 
 /** Build one canonical message from the viewer's restricted protocol interface. */
 export function sendViewerMessage(
   state: PlayerProtocolState,
+  sender: string,
   message: ViewerMessage,
   sentAt: number,
 ): PlayerProtocolSend {
-  return sendMessage(state, 'viewer', message, sentAt)
+  return sendMessage(state, 'viewer', sender, message, sentAt)
 }
 
 /** Convert a validated envelope into the role-neutral message consumed by callers. */
 function messageFromEnvelope(value: PlayerEnvelope): PlayerProtocolMessage {
   switch (value.messageType) {
     case 'board':
-      return { type: 'board', board: value.payload as PlayerBoard }
+      return { type: 'board', board: value.payload }
     case 'closed':
       return { type: 'closed' }
     case 'locked':
@@ -312,15 +203,21 @@ export function receiveLegacyPlayerMessage(
   const expected = receiverRole === 'viewer' ? ['board', 'closed', 'locked'] : ['hello']
   if (!expected.includes(messageType)) return { status: 'rejected', reason: 'role' }
   if (messageType === 'board') {
-    const parsed = v.safeParse(board, payload)
+    const parsed = v.safeParse(playerBoardSchema, payload)
     return parsed.success
-      ? { status: 'accepted', message: { type: 'board', board: parsed.output as PlayerBoard } }
+      ? { status: 'accepted', message: { type: 'board', board: parsed.output } }
       : { status: 'rejected', reason: 'malformed' }
   }
   const parsed = v.safeParse(emptyPayload, payload)
-  return parsed.success
-    ? { status: 'accepted', message: { type: messageType } as PlayerProtocolMessage }
-    : { status: 'rejected', reason: 'malformed' }
+  if (!parsed.success) return { status: 'rejected', reason: 'malformed' }
+  switch (messageType) {
+    case 'hello':
+      return { status: 'accepted', message: { type: 'hello' } }
+    case 'closed':
+      return { status: 'accepted', message: { type: 'closed' } }
+    case 'locked':
+      return { status: 'accepted', message: { type: 'locked' } }
+  }
 }
 
 /** Validate, order, and canonicalize one untrusted incoming Realtime value. */
@@ -351,14 +248,24 @@ export function receivePlayerMessage(
 
   const parsed = v.safeParse(envelope, input)
   if (!parsed.success) return { status: 'rejected', reason: 'malformed', state }
-  const last = state.lastReceivedSequence
-  if (last !== null && parsed.output.sequence === last) {
+  const sender = parsed.output.senderId
+  const last = state.lastReceivedSequences[sender]
+  if (last === undefined && Object.keys(state.lastReceivedSequences).length >= MAX_PLAYER_SENDERS) {
+    return { status: 'rejected', reason: 'too-many-senders', state }
+  }
+  if (last !== undefined && parsed.output.sequence === last) {
     return { status: 'rejected', reason: 'duplicate', state }
   }
-  if (last !== null && parsed.output.sequence < last) {
+  if (last !== undefined && parsed.output.sequence < last) {
     return { status: 'rejected', reason: 'reordered', state }
   }
-  const nextState = { ...state, lastReceivedSequence: parsed.output.sequence }
+  const nextState = {
+    ...state,
+    lastReceivedSequences: {
+      ...state.lastReceivedSequences,
+      [sender]: parsed.output.sequence,
+    },
+  }
   return {
     status: 'accepted',
     state: nextState,
