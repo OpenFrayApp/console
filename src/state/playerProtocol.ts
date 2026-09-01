@@ -7,6 +7,7 @@ import { playerBoardSchema, type PlayerBoard } from '../schema/playerBoard.ts'
 export const PLAYER_PROTOCOL_KIND = 'player-view'
 export const CURRENT_PLAYER_PROTOCOL_VERSION = 1
 export const MAX_PLAYER_MESSAGE_BYTES = 240_000
+export const MAX_PLAYER_PAYLOAD_BYTES = 239_000
 export const MAX_PLAYER_SENDERS = 100
 
 const finiteNumber = v.pipe(v.number(), v.check<number>(Number.isFinite))
@@ -71,17 +72,22 @@ export type PlayerProtocolMessage = GameMasterMessage | ViewerMessage
 export interface PlayerProtocolState {
   nextSequence: number
   lastReceivedSequences: Readonly<Record<string, number>>
+  currentProtocolSeen: boolean
 }
 
 export const INITIAL_PLAYER_PROTOCOL_STATE: PlayerProtocolState = {
   nextSequence: 0,
   lastReceivedSequences: {},
+  currentProtocolSeen: false,
 }
+
+export type LegacyPlayerMessageType = 'board' | 'hello' | 'closed' | 'locked'
 
 export interface PlayerProtocolSend {
   state: PlayerProtocolState
   envelope: PlayerEnvelope
   canonical: string
+  legacy: { messageType: LegacyPlayerMessageType; payload: unknown }
 }
 
 export type PlayerProtocolReceive =
@@ -105,10 +111,13 @@ export type PlayerProtocolReceive =
         | 'too-many-senders'
     }
 
-export type LegacyPlayerMessageType = 'board' | 'hello' | 'closed' | 'locked'
 export type LegacyPlayerReceive =
-  | { status: 'accepted'; message: PlayerProtocolMessage }
-  | { status: 'rejected'; reason: 'too-large' | 'malformed' | 'role' }
+  | { status: 'accepted'; state: PlayerProtocolState; message: PlayerProtocolMessage }
+  | {
+      status: 'rejected'
+      state: PlayerProtocolState
+      reason: 'too-large' | 'malformed' | 'role' | 'superseded'
+    }
 
 /** Return the UTF-8 size enforced before a Realtime value reaches state. */
 function messageBytes(value: unknown): number | null {
@@ -147,13 +156,17 @@ function sendMessage(
   const parsed = v.safeParse(envelope, candidate)
   if (!parsed.success) throw new TypeError('The player-view message is malformed.')
   const canonical = JSON.stringify(parsed.output)
-  if (messageBytes(parsed.output)! > MAX_PLAYER_MESSAGE_BYTES) {
+  if (
+    messageBytes(parsed.output.payload)! > MAX_PLAYER_PAYLOAD_BYTES ||
+    messageBytes(parsed.output)! > MAX_PLAYER_MESSAGE_BYTES
+  ) {
     throw new RangeError('The player-view message is too large.')
   }
   return {
     state: { ...state, nextSequence: state.nextSequence + 1 },
     envelope: parsed.output,
     canonical,
+    legacy: { messageType: parsed.output.messageType, payload: parsed.output.payload },
   }
 }
 
@@ -191,33 +204,45 @@ function messageFromEnvelope(value: PlayerEnvelope): PlayerProtocolMessage {
   }
 }
 
-/** Validate a parity-path message without letting legacy shape checks leak into Realtime. */
+/** Validate a parity-path message and apply current-protocol precedence. */
 export function receiveLegacyPlayerMessage(
+  state: PlayerProtocolState,
   receiverRole: PlayerProtocolRole,
   messageType: LegacyPlayerMessageType,
   payload: unknown,
 ): LegacyPlayerReceive {
+  if (state.currentProtocolSeen) return { status: 'rejected', reason: 'superseded', state }
   const bytes = messageBytes({ messageType, payload })
-  if (bytes === null) return { status: 'rejected', reason: 'malformed' }
-  if (bytes > MAX_PLAYER_MESSAGE_BYTES) return { status: 'rejected', reason: 'too-large' }
+  const payloadBytes = messageBytes(payload)
+  if (bytes === null || payloadBytes === null) {
+    return { status: 'rejected', reason: 'malformed', state }
+  }
+  if (bytes > MAX_PLAYER_MESSAGE_BYTES || payloadBytes > MAX_PLAYER_PAYLOAD_BYTES) {
+    return { status: 'rejected', reason: 'too-large', state }
+  }
   const expected = receiverRole === 'viewer' ? ['board', 'closed', 'locked'] : ['hello']
-  if (!expected.includes(messageType)) return { status: 'rejected', reason: 'role' }
+  if (!expected.includes(messageType)) return { status: 'rejected', reason: 'role', state }
   if (messageType === 'board') {
     const parsed = v.safeParse(playerBoardSchema, payload)
     return parsed.success
-      ? { status: 'accepted', message: { type: 'board', board: parsed.output } }
-      : { status: 'rejected', reason: 'malformed' }
+      ? { status: 'accepted', state, message: { type: 'board', board: parsed.output } }
+      : { status: 'rejected', reason: 'malformed', state }
   }
   const parsed = v.safeParse(emptyPayload, payload)
-  if (!parsed.success) return { status: 'rejected', reason: 'malformed' }
+  if (!parsed.success) return { status: 'rejected', reason: 'malformed', state }
   switch (messageType) {
     case 'hello':
-      return { status: 'accepted', message: { type: 'hello' } }
+      return { status: 'accepted', state, message: { type: 'hello' } }
     case 'closed':
-      return { status: 'accepted', message: { type: 'closed' } }
+      return { status: 'accepted', state, message: { type: 'closed' } }
     case 'locked':
-      return { status: 'accepted', message: { type: 'locked' } }
+      return { status: 'accepted', state, message: { type: 'locked' } }
   }
+}
+
+/** Reset incoming ordering and rollback precedence when a transport session ends. */
+export function resetPlayerProtocolReception(state: PlayerProtocolState): PlayerProtocolState {
+  return { ...state, lastReceivedSequences: {}, currentProtocolSeen: false }
 }
 
 /** Validate, order, and canonicalize one untrusted incoming Realtime value. */
@@ -246,6 +271,12 @@ export function receivePlayerMessage(
     return { status: 'rejected', reason: 'role', state }
   }
 
+  const payloadBytes = messageBytes(record.payload)
+  if (payloadBytes === null) return { status: 'rejected', reason: 'malformed', state }
+  if (payloadBytes > MAX_PLAYER_PAYLOAD_BYTES) {
+    return { status: 'rejected', reason: 'too-large', state }
+  }
+
   const parsed = v.safeParse(envelope, input)
   if (!parsed.success) return { status: 'rejected', reason: 'malformed', state }
   const sender = parsed.output.senderId
@@ -261,6 +292,7 @@ export function receivePlayerMessage(
   }
   const nextState = {
     ...state,
+    currentProtocolSeen: receiverRole === 'viewer' && parsed.output.messageType !== 'closed',
     lastReceivedSequences: {
       ...state.lastReceivedSequences,
       [sender]: parsed.output.sequence,

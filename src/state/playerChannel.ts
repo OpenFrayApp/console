@@ -12,6 +12,7 @@ import {
   INITIAL_PLAYER_PROTOCOL_STATE,
   receiveLegacyPlayerMessage,
   receivePlayerMessage,
+  resetPlayerProtocolReception,
   sendGameMasterMessage,
   sendViewerMessage,
   type GameMasterMessage,
@@ -38,19 +39,29 @@ const EVENT = {
   locked: 'locked',
 } as const
 
-/** Send one current Game Master envelope and return its advanced sequence state. */
-function sendGameMasterEnvelope(
+/** Send one Game Master message over the current and rollback paths. */
+function sendGameMasterTraffic(
   channel: RealtimeChannel,
   state: PlayerProtocolState,
   senderId: string,
   message: GameMasterMessage,
 ): PlayerProtocolState {
-  const sent = sendGameMasterMessage(state, senderId, message, Date.now())
-  void channel.send({ type: 'broadcast', event: EVENT.protocol, payload: sent.envelope })
-  return sent.state
+  try {
+    const sent = sendGameMasterMessage(state, senderId, message, Date.now())
+    void channel.send({ type: 'broadcast', event: EVENT.protocol, payload: sent.envelope })
+    void channel.send({
+      type: 'broadcast',
+      event: sent.legacy.messageType,
+      payload: sent.legacy.payload,
+    })
+    return sent.state
+  } catch (error) {
+    if (error instanceof TypeError || error instanceof RangeError) return state
+    throw error
+  }
 }
 
-/** Send one current viewer hello and return its advanced sequence state. */
+/** Send one viewer hello over the current and rollback paths. */
 function sendViewerHello(
   channel: RealtimeChannel,
   state: PlayerProtocolState,
@@ -58,6 +69,11 @@ function sendViewerHello(
 ): PlayerProtocolState {
   const sent = sendViewerMessage(state, senderId, { type: 'hello' }, Date.now())
   void channel.send({ type: 'broadcast', event: EVENT.protocol, payload: sent.envelope })
+  void channel.send({
+    type: 'broadcast',
+    event: sent.legacy.messageType,
+    payload: sent.legacy.payload,
+  })
   return sent.state
 }
 
@@ -134,11 +150,10 @@ export function useBoardBroadcast(
     /** Send the current board over both the versioned and rollback paths. */
     const sendBoard = (ch: RealtimeChannel) => {
       if (!latest.current) return
-      sending.current = sendGameMasterEnvelope(ch, sending.current, senderId.current, {
+      sending.current = sendGameMasterTraffic(ch, sending.current, senderId.current, {
         type: 'board',
         board: latest.current,
       })
-      void ch.send({ type: 'broadcast', event: EVENT.board, payload: latest.current })
     }
 
     /** Open the channel the board flows on, with the hello → board handshake. */
@@ -154,8 +169,10 @@ export function useBoardBroadcast(
         if (received.message.type === 'hello') sendBoard(ch)
       })
       ch.on('broadcast', { event: EVENT.hello }, ({ payload }) => {
-        const received = receiveLegacyPlayerMessage('gm', 'hello', payload)
-        if (received.status === 'accepted') sendBoard(ch)
+        const received = receiveLegacyPlayerMessage(receiving.current, 'gm', 'hello', payload)
+        if (received.status !== 'accepted') return
+        receiving.current = received.state
+        sendBoard(ch)
       })
       ch.subscribe((status) => {
         if (status !== 'SUBSCRIBED') return
@@ -171,10 +188,9 @@ export function useBoardBroadcast(
       open.push(lobby)
       /** Tell a viewer that the board needs its PIN over both protocol paths. */
       const sendLocked = () => {
-        sending.current = sendGameMasterEnvelope(lobby, sending.current, senderId.current, {
+        sending.current = sendGameMasterTraffic(lobby, sending.current, senderId.current, {
           type: 'locked',
         })
-        void lobby.send({ type: 'broadcast', event: EVENT.locked, payload: {} })
       }
       lobby.on('broadcast', { event: EVENT.protocol }, ({ payload }) => {
         const received = receivePlayerMessage(receiving.current, 'gm', payload)
@@ -183,8 +199,10 @@ export function useBoardBroadcast(
         if (received.message.type === 'hello') sendLocked()
       })
       lobby.on('broadcast', { event: EVENT.hello }, ({ payload }) => {
-        const received = receiveLegacyPlayerMessage('gm', 'hello', payload)
-        if (received.status === 'accepted') sendLocked()
+        const received = receiveLegacyPlayerMessage(receiving.current, 'gm', 'hello', payload)
+        if (received.status !== 'accepted') return
+        receiving.current = received.state
+        sendLocked()
       })
       lobby.subscribe((status) => {
         if (status !== 'SUBSCRIBED') return
@@ -203,10 +221,9 @@ export function useBoardBroadcast(
       for (const ch of open) {
         // Tell the players this was deliberate before the socket drops, so they read
         // "the Game Master stopped sharing" rather than an unexplained silence.
-        sending.current = sendGameMasterEnvelope(ch, sending.current, senderId.current, {
+        sending.current = sendGameMasterTraffic(ch, sending.current, senderId.current, {
           type: 'closed',
         })
-        void ch.send({ type: 'broadcast', event: EVENT.closed, payload: {} })
         void client.removeChannel(ch)
       }
       channel.current = null
@@ -222,11 +239,10 @@ export function useBoardBroadcast(
     latest.current = board
     const handle = setTimeout(() => {
       if (!channel.current) return
-      sending.current = sendGameMasterEnvelope(channel.current, sending.current, senderId.current, {
+      sending.current = sendGameMasterTraffic(channel.current, sending.current, senderId.current, {
         type: 'board',
         board,
       })
-      void channel.current.send({ type: 'broadcast', event: EVENT.board, payload: board })
     }, SEND_DEBOUNCE_MS)
     return () => clearTimeout(handle)
   }, [code, encounter, settings, recap, campaign, gm, background])
@@ -260,13 +276,11 @@ export function usePlayerBoard(
   const [pinRejected, setPinRejected] = useState(false)
   const sending = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const receiving = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
-  const currentProtocolSeen = useRef(false)
   const senderId = useRef(uid())
 
   useEffect(() => {
     sending.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
     receiving.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
-    currentProtocolSeen.current = false
     senderId.current = uid()
   }, [code])
 
@@ -303,6 +317,7 @@ export function usePlayerBoard(
      * reading stale hit points is worse off than a table told to ask the GM.
      */
     const stepAway = () => {
+      receiving.current = resetPlayerProtocolReception(receiving.current)
       setStatus('waiting')
       setBoard(null)
     }
@@ -311,30 +326,26 @@ export function usePlayerBoard(
       const received = receivePlayerMessage(receiving.current, 'viewer', payload)
       if (received.status !== 'accepted') return
       receiving.current = received.state
-      currentProtocolSeen.current = true
       if (received.message.type !== 'hello') applyMessage(received.message)
     })
     ch.on('broadcast', { event: EVENT.board }, ({ payload }) => {
-      if (currentProtocolSeen.current) return
-      const received = receiveLegacyPlayerMessage('viewer', 'board', payload)
-      if (received.status === 'accepted' && received.message.type !== 'hello') {
-        applyMessage(received.message)
-      }
+      const received = receiveLegacyPlayerMessage(receiving.current, 'viewer', 'board', payload)
+      if (received.status !== 'accepted' || received.message.type === 'hello') return
+      receiving.current = received.state
+      applyMessage(received.message)
     })
     // The GM is here but the board is behind a PIN; live via the locked channel wins.
     ch.on('broadcast', { event: EVENT.locked }, ({ payload }) => {
-      if (currentProtocolSeen.current) return
-      const received = receiveLegacyPlayerMessage('viewer', 'locked', payload)
-      if (received.status === 'accepted' && received.message.type !== 'hello') {
-        applyMessage(received.message)
-      }
+      const received = receiveLegacyPlayerMessage(receiving.current, 'viewer', 'locked', payload)
+      if (received.status !== 'accepted' || received.message.type === 'hello') return
+      receiving.current = received.state
+      applyMessage(received.message)
     })
     ch.on('broadcast', { event: EVENT.closed }, ({ payload }) => {
-      if (currentProtocolSeen.current) return
-      const received = receiveLegacyPlayerMessage('viewer', 'closed', payload)
-      if (received.status === 'accepted' && received.message.type !== 'hello') {
-        applyMessage(received.message)
-      }
+      const received = receiveLegacyPlayerMessage(receiving.current, 'viewer', 'closed', payload)
+      if (received.status !== 'accepted' || received.message.type === 'hello') return
+      receiving.current = received.state
+      applyMessage(received.message)
     })
     // A GM who closed the tab sends nothing, so presence is what catches them leaving.
     ch.on('presence', { event: 'sync' }, () => {
@@ -343,7 +354,6 @@ export function usePlayerBoard(
     /** Ask for the current board over both the versioned and rollback paths. */
     const sendHello = () => {
       sending.current = sendViewerHello(ch, sending.current, senderId.current)
-      void ch.send({ type: 'broadcast', event: EVENT.hello, payload: {} })
     }
 
     ch.on('presence', { event: 'join' }, sendHello)
@@ -387,6 +397,7 @@ export function usePlayerBoard(
           setBoard(message.board)
           setStatus('live')
         } else if (message.type === 'closed') {
+          receiving.current = resetPlayerProtocolReception(receiving.current)
           setBoard(null)
           setStatus((value) => (value === 'live' ? 'connecting' : value))
         }
@@ -395,28 +406,24 @@ export function usePlayerBoard(
         const received = receivePlayerMessage(receiving.current, 'viewer', payload)
         if (received.status !== 'accepted') return
         receiving.current = received.state
-        currentProtocolSeen.current = true
         if (received.message.type !== 'hello') applyMessage(received.message)
       })
       c.on('broadcast', { event: EVENT.board }, ({ payload }) => {
-        if (currentProtocolSeen.current) return
-        const received = receiveLegacyPlayerMessage('viewer', 'board', payload)
-        if (received.status === 'accepted' && received.message.type !== 'hello') {
-          applyMessage(received.message)
-        }
+        const received = receiveLegacyPlayerMessage(receiving.current, 'viewer', 'board', payload)
+        if (received.status !== 'accepted' || received.message.type === 'hello') return
+        receiving.current = received.state
+        applyMessage(received.message)
       })
       // The GM re-keyed or stopped sharing; the lobby's own events say which.
       c.on('broadcast', { event: EVENT.closed }, ({ payload }) => {
-        if (currentProtocolSeen.current) return
-        const received = receiveLegacyPlayerMessage('viewer', 'closed', payload)
-        if (received.status === 'accepted' && received.message.type !== 'hello') {
-          applyMessage(received.message)
-        }
+        const received = receiveLegacyPlayerMessage(receiving.current, 'viewer', 'closed', payload)
+        if (received.status !== 'accepted' || received.message.type === 'hello') return
+        receiving.current = received.state
+        applyMessage(received.message)
       })
       /** Ask for the PIN-protected board over both compatible paths. */
       const sendHello = () => {
         sending.current = sendViewerHello(c, sending.current, senderId.current)
-        void c.send({ type: 'broadcast', event: EVENT.hello, payload: {} })
       }
       c.on('presence', { event: 'join' }, sendHello)
       c.subscribe((state) => {

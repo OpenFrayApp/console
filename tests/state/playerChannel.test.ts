@@ -96,6 +96,23 @@ describe('useBoardBroadcast — the Game Master side', () => {
     expect(sent[0].payload).toMatchObject({ round: 3 })
   })
 
+  it('emits neither protocol path when the privacy projection exceeds the shared limit', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    renderHook(() =>
+      useBoardBroadcast(
+        'code',
+        encounter(),
+        { ...DEFAULT_PLAYER_VIEW, campaignName: 'shown' },
+        null,
+        'x'.repeat(240_000),
+      ),
+    )
+
+    expect(() => act(() => channels[0].ready())).not.toThrow()
+    expect(channels[0].sends).toHaveLength(0)
+  })
+
   it('coalesces a burst of changes into one send carrying the latest board', () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
@@ -204,6 +221,28 @@ describe('usePlayerBoard — the player side', () => {
       channels[0].emit('player-view-protocol', gameMasterEnvelope(0, 4, 'restarted-gm-session')),
     )
     expect(result.current.board?.round).toBe(4)
+  })
+
+  it('accepts the rollback path again after the current publisher closes', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code'))
+    act(() => channels[0].ready())
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(0, 2)))
+    expect(result.current.board?.round).toBe(2)
+
+    const closed = sendGameMasterMessage(
+      { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: 1 },
+      'gm-session',
+      { type: 'closed' },
+      101,
+    ).envelope
+    act(() => channels[0].emit('player-view-protocol', closed))
+    expect(result.current.board).toBeNull()
+
+    act(() => channels[0].emit('board', wireBoard(3)))
+    expect(result.current.status).toBe('live')
+    expect(result.current.board?.round).toBe(3)
   })
 
   it('keeps malformed current and rollback traffic out of viewer state', () => {
