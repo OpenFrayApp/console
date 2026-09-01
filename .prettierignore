@@ -4,6 +4,7 @@ dist
 
 # Generated / vendored data — never reformat
 public/compendium
+src/types/database.ts
 package-lock.json
 
 # Lockstep license text

@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Nicola Mustone
+name: Database authority
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/database-authority.yml'
+      - 'supabase/**'
+      - 'src/types/database.ts'
+      - 'scripts/generate-database-types.mjs'
+      - 'scripts/lib/supabase-authority.mjs'
+      - 'scripts/verify-supabase-authority.mjs'
+      - 'tests/database/**'
+      - 'tests/scripts/supabaseAuthority.test.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Protected Supabase environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      project_ref:
+        description: 'Supabase project reference'
+        required: true
+        type: string
+
+jobs:
+  verify:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        with:
+          version: 2.116.0
+      - run: npm ci
+      - run: supabase start
+      - run: npm run db:verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: local-database-attestation
+          path: .artifacts/supabase/deployment-attestation.json
+          if-no-files-found: error
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: ${{ inputs.environment }}
+    env:
+      PROJECT_REF: ${{ inputs.project_ref }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DATABASE_APPROVER: ${{ vars.DATABASE_APPROVER }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        with:
+          version: 2.116.0
+      - run: npm ci
+      - run: supabase start
+      - name: Verify the fresh lineage before deployment
+        run: npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
+      - name: Apply forward migrations
+        run: supabase db push --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Record manual provider evidence
+        env:
+          AUTH_OAUTH_EVIDENCE: ${{ vars.AUTH_OAUTH_EVIDENCE }}
+          AUTH_REDIRECT_EVIDENCE: ${{ vars.AUTH_REDIRECT_EVIDENCE }}
+          REPORT_WEBHOOK_EVIDENCE: ${{ vars.REPORT_WEBHOOK_EVIDENCE }}
+        run: |
+          jq -n \
+            --arg oauth "$AUTH_OAUTH_EVIDENCE" \
+            --arg redirects "$AUTH_REDIRECT_EVIDENCE" \
+            --arg webhooks "$REPORT_WEBHOOK_EVIDENCE" \
+            '{checks: [
+              {id: "auth-oauth-only", result: "passed", evidence: $oauth},
+              {id: "auth-redirect-allowlist", result: "passed", evidence: $redirects},
+              {id: "report-webhooks", result: "passed", evidence: $webhooks}
+            ]}' > .artifacts/supabase/manual-evidence.json
+      - name: Verify and attest the hosted deployment
+        run: |
+          npm run db:verify -- \
+            --environment "${{ inputs.environment }}" \
+            --project-ref "$PROJECT_REF" \
+            --approver "$DATABASE_APPROVER" \
+            --workflow "${{ github.workflow }}:${{ github.run_id }}" \
+            --manual-evidence .artifacts/supabase/manual-evidence.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.environment }}-database-attestation
+          path: |
+            .artifacts/supabase/pre-deploy-attestation.json
+            .artifacts/supabase/deployment-attestation.json
+          if-no-files-found: error

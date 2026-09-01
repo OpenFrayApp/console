@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "automatic": {
+    "database": {
+      "ssl_enforced": true
+    },
+    "api": {
+      "max_rows": 1000
+    },
+    "realtime": {
+      "private_only": false,
+      "presence_enabled": true
+    }
+  },
+  "manual": [
+    {
+      "id": "auth-oauth-only",
+      "expectation": "Google and Discord are enabled. Email-password, phone, and anonymous sign-ins are disabled."
+    },
+    {
+      "id": "auth-redirect-allowlist",
+      "expectation": "The site, console, admin, and authorized staging origins are the only OAuth redirect origins."
+    },
+    {
+      "id": "report-webhooks",
+      "expectation": "The share_reports and takedown_notices webhooks target the deployed share-report function with its secret header."
+    }
+  ]
+}
