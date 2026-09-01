@@ -34,6 +34,16 @@ describe('Supabase authority evidence', () => {
       20260901000100 | 20260901000100 | 2026-09-01
     `
     expect(remoteMigrationVersions(listed)).toEqual(['20260901000000', '20260901000100'])
+    expect(
+      remoteMigrationVersions(
+        JSON.stringify({
+          migrations: [
+            { local: '20260901000000', remote: '20260901000000' },
+            { local: '20260901000100', remote: '20260901000100' },
+          ],
+        }),
+      ),
+    ).toEqual(['20260901000000', '20260901000100'])
 
     const dump = `
       -- generated

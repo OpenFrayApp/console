@@ -58,8 +58,19 @@ export function canonicalSchemaDump(value) {
     .trim()
 }
 
-/** Parse the exact remote migration versions from the CLI table. */
+/** Parse the exact remote migration versions from CLI JSON or its legacy table. */
 export function remoteMigrationVersions(value) {
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed?.migrations)) {
+      return parsed.migrations
+        .map(({ remote }) => remote)
+        .filter((version) => /^\d{14}$/.test(version))
+    }
+  } catch {
+    // Older CLI releases emit a table, which remains supported during tool upgrades.
+  }
+
   return value
     .split('\n')
     .map((line) => line.split('|'))

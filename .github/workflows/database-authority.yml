@@ -12,9 +12,12 @@ on:
       - 'supabase/**'
       - 'src/types/database.ts'
       - 'scripts/generate-database-types.mjs'
+      - 'scripts/lib/database-boundary.mjs'
       - 'scripts/lib/supabase-authority.mjs'
+      - 'scripts/verify-database-boundary.mjs'
       - 'scripts/verify-supabase-authority.mjs'
       - 'tests/database/**'
+      - 'tests/scripts/databaseBoundary.test.ts'
       - 'tests/scripts/supabaseAuthority.test.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -45,10 +48,13 @@ jobs:
       - run: npm ci
       - run: supabase start
       - run: npm run db:verify
+      - run: npm run db:boundary
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: local-database-attestation
-          path: .artifacts/supabase/deployment-attestation.json
+          path: |
+            .artifacts/supabase/deployment-attestation.json
+            .artifacts/supabase/database-boundary-attestation.json
           if-no-files-found: error
 
   deploy:
@@ -95,10 +101,19 @@ jobs:
             --approver "$DATABASE_APPROVER" \
             --workflow "${{ github.workflow }}:${{ github.run_id }}" \
             --manual-evidence .artifacts/supabase/manual-evidence.json
+      - name: Prove the staging database boundary
+        if: inputs.environment == 'staging'
+        run: |
+          npm run db:boundary -- \
+            --environment staging \
+            --project-ref "$PROJECT_REF" \
+            --approver "$DATABASE_APPROVER" \
+            --workflow "${{ github.workflow }}:${{ github.run_id }}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ inputs.environment }}-database-attestation
           path: |
             .artifacts/supabase/pre-deploy-attestation.json
             .artifacts/supabase/deployment-attestation.json
+            .artifacts/supabase/database-boundary-attestation.json
           if-no-files-found: error

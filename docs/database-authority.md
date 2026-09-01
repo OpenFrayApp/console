@@ -19,6 +19,14 @@ npm run db:verify
 
 The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized public schema. It writes `.artifacts/supabase/deployment-attestation.json`.
 
+Run the hostile database boundary suite against another fresh reset:
+
+```bash
+npm run db:boundary
+```
+
+The suite exercises owner, other-tenant, anonymous, viewer, stale-writer, and restricted-function actors. It verifies Row-Level Security, grants, privileged functions, Realtime database-change exposure, and account deletion. The command writes `.artifacts/supabase/database-boundary-attestation.json`.
+
 Regenerate types only after a reviewed migration changes the public schema:
 
 ```bash
@@ -58,7 +66,19 @@ npm run db:verify -- \
 
 Use `production` for the production attestation. Configure `DATABASE_APPROVER` as a protected environment variable in GitHub. The deployment workflow records that trusted value after environment approval.
 
-The verifier checks the fresh reset, exact remote migration lineage, normalized hosted schema, generated types, and supported hosted settings. It records the environment identity, migration head, schema and configuration hashes, generated-type hash, result, workflow, approver, and timestamp.
+Run the hostile suite only against authorized staging:
+
+```bash
+npm run db:boundary -- \
+  --environment staging \
+  --project-ref "$SUPABASE_PROJECT_REF" \
+  --approver "$APPROVER" \
+  --workflow database-deploy
+```
+
+The boundary verifier refuses production targets. It checks the exact migration lineage before creating synthetic fixtures. All fixtures are removed in the same database statement. A failure rolls back that statement.
+
+The authority verifier checks the fresh reset, exact remote migration lineage, normalized hosted schema, generated types, and supported hosted settings. It records the environment identity, migration head, schema and configuration hashes, generated-type hash, result, workflow, approver, and timestamp.
 
 Manual evidence uses the identifiers in `supabase/hosted-config.expected.json`:
 
