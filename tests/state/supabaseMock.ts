@@ -98,6 +98,7 @@ export interface RecordedSend {
 /** A stand-in for a realtime channel that records what was sent and can replay events in. */
 export interface StubChannel {
   name: string
+  config: unknown
   sends: RecordedSend[]
   tracked: unknown[]
   removed: boolean
@@ -105,6 +106,8 @@ export interface StubChannel {
   presence: Record<string, unknown[]>
   /** Drive the subscribe callback, as the server would once the socket is up. */
   ready: () => void
+  /** Drive any subscription status, including authorization denial. */
+  status: (value: string) => void
   /** Deliver a broadcast to this channel's handler, as another client would. */
   emit: (event: string, payload?: unknown) => void
   /** Fire a presence event after setting `presence`. */
@@ -118,16 +121,18 @@ export interface StubChannel {
  */
 export function makeRealtimeStub() {
   const channels: StubChannel[] = []
-  const channel = (name: string) => {
+  const channel = (name: string, config?: unknown) => {
     const broadcast = new Map<string, (msg: { payload: unknown }) => void>()
     const presenceHandlers = new Map<string, () => void>()
     const stub: StubChannel = {
       name,
+      config,
       sends: [],
       tracked: [],
       removed: false,
       presence: {},
       ready: () => {},
+      status: () => {},
       emit: (event, payload = {}) => broadcast.get(event)?.({ payload }),
       emitPresence: (event) => presenceHandlers.get(event)?.(),
     }
@@ -140,6 +145,7 @@ export function makeRealtimeStub() {
       },
       subscribe: (cb?: (status: string) => void) => {
         stub.ready = () => cb?.('SUBSCRIBED')
+        stub.status = (value: string) => cb?.(value)
         return api
       },
       send: ({ event, payload }: { event: string; payload: unknown }) => {

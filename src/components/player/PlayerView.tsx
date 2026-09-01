@@ -68,6 +68,13 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
   if (status === 'connecting') {
     return <p className="text-sm text-slate-600 dark:text-slate-300">Connecting…</p>
   }
+  if (status === 'ended') {
+    return (
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Access to this player view has ended. Ask your Game Master for a new link.
+      </p>
+    )
+  }
   return (
     <div className="space-y-2">
       <p className="font-medium">Waiting for the Game Master.</p>
@@ -113,10 +120,20 @@ function Standing({ round, paused, turn }: { round: number; paused: boolean; tur
 }
 
 /** The whole player screen for one share code. */
-export function PlayerView({ code }: { code: string }) {
+export function PlayerView({
+  code,
+  capability = null,
+}: {
+  code: string
+  capability?: string | null
+}) {
   const [theme, toggleTheme] = useTheme()
   const [pin, setPin] = useState('')
-  const { status, board, pinRejected } = usePlayerBoard(code, pin.length === 4 ? pin : null)
+  const { status, board, pinRejected } = usePlayerBoard(
+    code,
+    capability,
+    pin.length === 4 ? pin : null,
+  )
   const turn = board?.rows.find((r) => r.id === board.activeId)?.name
   const entry = backgroundEntry(board?.background)
   // A backdrop decides the mode: its art was treated for one theme, and it wears it.

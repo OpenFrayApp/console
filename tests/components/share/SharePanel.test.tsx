@@ -15,6 +15,7 @@ function open(props: Partial<Parameters<typeof SharePanel>[0]> = {}) {
   render(
     <SharePanel
       code={props.code === undefined ? 'tuesday-game' : props.code}
+      capability={props.capability === undefined ? 'secret-capability' : props.capability}
       sharing={props.sharing ?? false}
       onToggleShare={onToggleShare}
       onClaim={props.onClaim}
@@ -45,7 +46,7 @@ describe('SharePanel', () => {
     expect((screen.getByLabelText('Link name') as HTMLInputElement).value).toBe('tuesday-game')
     expect(screen.getByRole('link', { name: /Open the player view/ })).toHaveAttribute(
       'href',
-      'http://localhost:3000/p/tuesday-game',
+      'http://localhost:3000/p/tuesday-game#live=secret-capability',
     )
   })
 
@@ -92,7 +93,9 @@ describe('SharePanel', () => {
   it('opens the player view in a new tab, as a real link', () => {
     open()
     const link = screen.getByRole('link', { name: 'Open the player view in a new tab' })
-    expect(link.getAttribute('href')?.endsWith('/p/tuesday-game')).toBe(true)
+    expect(link.getAttribute('href')).toBe(
+      'http://localhost:3000/p/tuesday-game#live=secret-capability',
+    )
     expect(link).toHaveAttribute('target', '_blank')
   })
 })
@@ -134,7 +137,7 @@ describe('SharePanel — naming the link', () => {
     await screen.findByText('That name is taken. Try another.')
     expect(screen.getByRole('link', { name: /Open the player view/ })).toHaveAttribute(
       'href',
-      'http://localhost:3000/p/tuesday-game',
+      'http://localhost:3000/p/tuesday-game#live=secret-capability',
     )
   })
 

@@ -48,6 +48,8 @@ const SECTION_LABEL = 'text-xs font-medium text-slate-700 dark:text-slate-200'
 interface SharePanelProps {
   /** The current share code, or null before one exists. */
   code: string | null
+  /** The active high-entropy capability included only in the copied URL fragment. */
+  capability: string | null
   sharing: boolean
   onToggleShare: () => void
   /** Signed in only: claim a chosen name. Absent for an anonymous GM. */
@@ -72,6 +74,7 @@ interface SharePanelProps {
  */
 export function SharePanel({
   code,
+  capability,
   sharing,
   onToggleShare,
   onClaim,
@@ -103,7 +106,7 @@ export function SharePanel({
     }
   }
 
-  const url = code ? playerViewUrl(code) : null
+  const url = code && capability ? playerViewUrl(code, capability) : null
 
   /** Claim the typed name, keeping the current link in force if it's taken. */
   const claim = async () => {
@@ -303,7 +306,7 @@ export function SharePanel({
                 >
                   Sign in
                 </button>{' '}
-                to name the link something your table can remember.
+                to start a player view.
               </p>
             )}
 

@@ -5,6 +5,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { playerCodeFromPath } from './state/playerCode.ts'
+import { liveViewCapabilityFromHash } from './state/liveViewAuthority.ts'
 import { shareCodeFromPath } from './state/shareCode.ts'
 
 const rootElement = document.getElementById('root')
@@ -19,6 +20,7 @@ const root = createRoot(rootElement)
 // is no router; Cloudflare serves this shell for `/console/*`, `/p/*` and `/s/*`, so
 // reading `location.pathname` is all the routing there is.
 const playerCode = playerCodeFromPath(window.location.pathname, import.meta.env.BASE_URL)
+const playerCapability = liveViewCapabilityFromHash(window.location.hash)
 const sharedCode = shareCodeFromPath(window.location.pathname, import.meta.env.BASE_URL)
 
 // Load Fathom Analytics in production builds only — never on the dev server (localhost).
@@ -58,7 +60,7 @@ if (playerCode) {
   void import('./components/player/PlayerView.tsx').then(({ PlayerView }) => {
     root.render(
       <StrictMode>
-        <PlayerView code={playerCode} />
+        <PlayerView code={playerCode} capability={playerCapability} />
       </StrictMode>,
     )
   })

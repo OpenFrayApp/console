@@ -206,12 +206,12 @@ dedup.
   form, identity). No multiplayer.
 - **Phase 2 (in progress):** the read-only **shared player view** is built.
   `src/combat/playerView.ts` filters the encounter into the only shape that leaves the GM's
-  browser, and `src/state/playerChannel.ts` relays it over a Supabase realtime **broadcast**
-  channel that stores nothing (which is what lets an anonymous GM share without a row
-  reaching the database). What players see of a creature is a device-local setting; the
-  per-combatant `visibility` flags on `MonsterCombatant` stay unrendered, reserved for a
-  future per-creature override. Live multi-device sync for the GM's own phone is the
-  remaining half of the same layer.
+  browser. `src/state/playerChannel.ts` relays it over private Supabase Realtime channels
+  that store nothing. Publishing requires the authenticated encounter owner and a
+  revocable high-entropy capability; the short PIN remains an audience latch. What players
+  see of a creature is a device-local setting; the per-combatant `visibility` flags on
+  `MonsterCombatant` stay unrendered, reserved for a future per-creature override. Live
+  multi-device sync for the GM's own phone is the remaining half of the same layer.
 - **Deferred, never core:** D&D Beyond / Roll20 import (no public API; best-effort
   only).
 

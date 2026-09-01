@@ -4,10 +4,9 @@
 import { rollDie } from 'opendice'
 
 /**
- * The share code in a player-view link. A signed-in GM chooses one and keeps it; an
- * anonymous GM gets a random one. The code is the only thing standing between a
- * stranger and a read-only view of the fight, which is a trade the GM makes knowingly
- * when they pick a name they can read aloud at the table.
+ * The readable code in a player-view link. A signed-in GM chooses one or receives a
+ * random default. Publication authority comes from the separate capability in the URL
+ * fragment, so this short code remains only the part read aloud at the table.
  */
 
 export const PLAYER_CODE_MIN = 3
@@ -26,10 +25,8 @@ const RANDOM_LENGTH = 10
 const RESERVED = new Set(['play', 'new', 'admin', 'console', 'docs', 'openfray'])
 
 /**
- * Mint an unguessable code for a GM who hasn't chosen one — ten characters of the
- * ambiguity-free alphabet, about 49 bits. Drawn with the dice engine's unbiased die
- * so there is only ever one piece of randomness in the app; it isn't a roll in the
- * game sense, so it doesn't go through `roll()`.
+ * Mint a readable default code for a GM who has not chosen one. The high-entropy live
+ * capability is generated separately; this ambiguity-free value is only the link name.
  */
 export function randomPlayerCode(): string {
   let out = ''
@@ -88,8 +85,8 @@ export function filterPlayerCodeInput(raw: string): string {
  * table and pasted into a chat, by people who are not opening the console. Cloudflare serves
  * the app for `/p/*` (see the parent repo's `scripts/assemble-site.mjs`).
  */
-export function playerViewUrl(code: string): string {
-  return `${playerViewPrefix()}${code}`
+export function playerViewUrl(code: string, capability: string): string {
+  return `${playerViewPrefix()}${code}#live=${encodeURIComponent(capability)}`
 }
 
 /**
@@ -106,13 +103,9 @@ export function playerViewPrefix(): string {
  * is served under a catch-all fallback, so the path is all there is to read — there is no
  * router.
  *
- * Three forms, and the third is why there is no redirect rule anywhere. `/p/<code>` is what
- * links carry now; `${base}p/<code>` is the same thing under the app's own base path, which
- * the existing `/console/*` fallback already serves and which makes this testable on the dev
- * server; and `${base}play/<code>` is what links carried before the move. Anonymous codes
- * live in `localStorage` and never reach the database, so a signed-out Game Master still
- * holds the same code they pasted somewhere durable — this line is what keeps that link
- * alive, and it can be deleted in a release or two.
+ * Three route forms remain recognized. `/p/<code>` is current; `${base}p/<code>` makes the
+ * route testable through the console dev server; and `${base}play/<code>` recognizes an old
+ * path. Every form still needs a current capability fragment before it can join Realtime.
  */
 export function playerCodeFromPath(pathname: string, base: string): string | null {
   for (const prefix of ['/p/', `${base}p/`, `${base}play/`]) {

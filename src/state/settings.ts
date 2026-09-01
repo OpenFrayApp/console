@@ -91,10 +91,8 @@ export interface AppSettings {
   /** What the shared player view reveals about a creature. */
   playerView: PlayerViewSettings
   /**
-   * The share code an anonymous GM's player-view link uses, minted on first share and
-   * kept so the link stays the same. A signed-in GM's chosen code lives on their
-   * `encounters` row instead; this is the device-local fallback, a preference like the
-   * theme rather than session state, so anonymous fights still never reach the database.
+   * The readable player-view code used before the signed-in encounter copy hydrates.
+   * Publication still requires a fresh owner capability, which is never stored here.
    */
   playerViewCode: string | null
   /** The four-digit PIN locking the player view, or null for an open link. */

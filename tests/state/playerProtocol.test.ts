@@ -9,10 +9,12 @@ import {
   INITIAL_PLAYER_PROTOCOL_STATE,
   MAX_PLAYER_MESSAGE_BYTES,
   MAX_PLAYER_PAYLOAD_BYTES,
-  receiveLegacyPlayerMessage,
   receivePlayerMessage,
   sendGameMasterMessage,
   sendViewerMessage,
+  activateLiveViewAuthority,
+  consumePlayerTraffic,
+  revokeLiveViewAuthority,
 } from '../../src/state/playerProtocol.ts'
 
 const board = playerBoard(
@@ -48,6 +50,37 @@ function boardEnvelope(sequence = 0, senderId = 'gm-session') {
     1_900_000_000_000,
   ).envelope
 }
+
+describe('live-view authority and traffic budgets', () => {
+  it('rotates forward and lets only the matching capability revoke the session', () => {
+    const first = activateLiveViewAuthority(null, 'a'.repeat(64), 1)
+    const rotated = activateLiveViewAuthority(first, 'b'.repeat(64), 2)
+
+    expect(first.generation).toBe(1)
+    expect(rotated).toMatchObject({ capabilityHash: 'b'.repeat(64), generation: 2 })
+    expect(revokeLiveViewAuthority(rotated, 'a'.repeat(64))).toBe(rotated)
+    expect(revokeLiveViewAuthority(rotated, 'b'.repeat(64))).toBeNull()
+  })
+
+  it('bounds each join, retry, presence, and broadcast path independently', () => {
+    let budget = {}
+    for (const path of ['join', 'retry', 'presence', 'broadcast'] as const) {
+      const first = consumePlayerTraffic(budget, path, 1_000)
+      expect(first.allowed).toBe(true)
+      budget = first.state
+      let outcome = first
+      for (let index = 1; index < outcome.limit; index += 1) {
+        outcome = consumePlayerTraffic(budget, path, 1_000)
+        expect(outcome.allowed).toBe(true)
+        budget = outcome.state
+      }
+      expect(consumePlayerTraffic(budget, path, 1_000)).toMatchObject({ allowed: false })
+      const reset = consumePlayerTraffic(budget, path, 1_000 + outcome.windowMs)
+      expect(reset.allowed).toBe(true)
+      budget = reset.state
+    }
+  })
+})
 
 describe('the live-view protocol envelope', () => {
   it('round-trips the privacy projection through the canonical current envelope', () => {
@@ -105,106 +138,6 @@ describe('the live-view protocol envelope', () => {
 })
 
 describe('receiving live-view traffic', () => {
-  it('keeps the rollback path in parity for every role-specific message', () => {
-    const cases = [
-      { receiver: 'viewer' as const, message: { type: 'board' as const, board } },
-      { receiver: 'viewer' as const, message: { type: 'closed' as const } },
-      { receiver: 'viewer' as const, message: { type: 'locked' as const } },
-      { receiver: 'gm' as const, message: { type: 'hello' as const } },
-    ]
-
-    for (const fixture of cases) {
-      const sent =
-        fixture.receiver === 'viewer'
-          ? sendGameMasterMessage(
-              INITIAL_PLAYER_PROTOCOL_STATE,
-              'gm-session',
-              fixture.message as Parameters<typeof sendGameMasterMessage>[2],
-              100,
-            )
-          : sendViewerMessage(
-              INITIAL_PLAYER_PROTOCOL_STATE,
-              'viewer-session',
-              { type: 'hello' },
-              100,
-            )
-      const current = receivePlayerMessage(
-        INITIAL_PLAYER_PROTOCOL_STATE,
-        fixture.receiver,
-        sent.envelope,
-      )
-      const legacy = receiveLegacyPlayerMessage(
-        INITIAL_PLAYER_PROTOCOL_STATE,
-        fixture.receiver,
-        sent.legacy.messageType,
-        sent.legacy.payload,
-      )
-
-      expect(current).toMatchObject({ status: 'accepted', message: fixture.message })
-      expect(legacy).toMatchObject({ status: 'accepted', message: fixture.message })
-    }
-  })
-
-  it('keeps legacy viewers available while current viewers share the Game Master channel', () => {
-    const currentHello = receivePlayerMessage(
-      INITIAL_PLAYER_PROTOCOL_STATE,
-      'gm',
-      sendViewerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'current-viewer', { type: 'hello' }, 100)
-        .envelope,
-    )
-    expect(currentHello.status).toBe('accepted')
-    if (currentHello.status !== 'accepted') return
-
-    expect(receiveLegacyPlayerMessage(currentHello.state, 'gm', 'hello', {})).toMatchObject({
-      status: 'accepted',
-      message: { type: 'hello' },
-    })
-  })
-
-  it('does not let delayed rollback traffic revive a closed current session', () => {
-    const currentBoard = receivePlayerMessage(
-      INITIAL_PLAYER_PROTOCOL_STATE,
-      'viewer',
-      boardEnvelope(),
-    )
-    expect(currentBoard.status).toBe('accepted')
-    if (currentBoard.status !== 'accepted') return
-
-    expect(receiveLegacyPlayerMessage(currentBoard.state, 'viewer', 'board', board)).toMatchObject({
-      status: 'rejected',
-      reason: 'superseded',
-    })
-
-    const closed = receivePlayerMessage(
-      currentBoard.state,
-      'viewer',
-      sendGameMasterMessage(
-        { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: 1 },
-        'gm-session',
-        { type: 'closed' },
-        101,
-      ).envelope,
-    )
-    expect(closed.status).toBe('accepted')
-    if (closed.status !== 'accepted') return
-
-    expect(receiveLegacyPlayerMessage(closed.state, 'viewer', 'board', board)).toMatchObject({
-      status: 'rejected',
-      reason: 'superseded',
-    })
-  })
-
-  it('rejects malformed and role-invalid rollback traffic', () => {
-    expect(
-      receiveLegacyPlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', 'hello', {}),
-    ).toMatchObject({ status: 'rejected', reason: 'role' })
-    expect(
-      receiveLegacyPlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', 'board', {
-        round: 'two',
-      }),
-    ).toMatchObject({ status: 'rejected', reason: 'malformed' })
-  })
-
   it('rejects unsupported roles and messages sent outside a role', () => {
     expect(
       receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', {
@@ -276,7 +209,7 @@ describe('receiving live-view traffic', () => {
     })
   })
 
-  it('uses one payload budget for current and rollback traffic', () => {
+  it('enforces the payload budget before sending or receiving', () => {
     const oversizedBoard = { ...board, campaign: 'x'.repeat(MAX_PLAYER_PAYLOAD_BYTES) }
     const current = { ...boardEnvelope(), payload: oversizedBoard }
 
@@ -284,9 +217,6 @@ describe('receiving live-view traffic', () => {
       status: 'rejected',
       reason: 'too-large',
     })
-    expect(
-      receiveLegacyPlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', 'board', oversizedBoard),
-    ).toMatchObject({ status: 'rejected', reason: 'too-large' })
     expect(() =>
       sendGameMasterMessage(
         INITIAL_PLAYER_PROTOCOL_STATE,

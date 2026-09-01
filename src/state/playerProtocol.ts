@@ -10,6 +10,77 @@ export const MAX_PLAYER_MESSAGE_BYTES = 240_000
 export const MAX_PLAYER_PAYLOAD_BYTES = 239_000
 export const MAX_PLAYER_SENDERS = 100
 
+export interface ActiveLiveView {
+  status: 'ok'
+  capability: string
+  capabilityHash: string
+  generation: number
+}
+
+export interface LiveViewAuthorityState {
+  capabilityHash: string
+  generation: number
+}
+
+export type PlayerTrafficPath = 'join' | 'retry' | 'presence' | 'broadcast'
+export type PlayerTrafficState = Partial<
+  Record<PlayerTrafficPath, { windowStartedAt: number; count: number }>
+>
+
+const PLAYER_TRAFFIC_LIMITS: Record<PlayerTrafficPath, { limit: number; windowMs: number }> = {
+  join: { limit: 3, windowMs: 10_000 },
+  retry: { limit: 3, windowMs: 30_000 },
+  presence: { limit: 5, windowMs: 30_000 },
+  broadcast: { limit: 8, windowMs: 1_000 },
+}
+
+/** Activate the next owner capability generation after validating its opaque hash. */
+export function activateLiveViewAuthority(
+  current: LiveViewAuthorityState | null,
+  capabilityHash: string,
+  generation: number,
+): LiveViewAuthorityState {
+  if (!/^[a-f0-9]{64}$/.test(capabilityHash) || generation <= (current?.generation ?? 0)) {
+    throw new TypeError('The live-view authority transition is invalid.')
+  }
+  return { capabilityHash, generation }
+}
+
+/** Revoke only the matching generation so a delayed stop cannot revoke a rotation. */
+export function revokeLiveViewAuthority(
+  current: LiveViewAuthorityState | null,
+  capabilityHash: string,
+): LiveViewAuthorityState | null {
+  return current?.capabilityHash === capabilityHash ? null : current
+}
+
+/** Consume one bounded protocol action without sharing counters across traffic paths. */
+export function consumePlayerTraffic(
+  state: PlayerTrafficState,
+  path: PlayerTrafficPath,
+  now: number,
+): {
+  allowed: boolean
+  state: PlayerTrafficState
+  limit: number
+  windowMs: number
+} {
+  const { limit, windowMs } = PLAYER_TRAFFIC_LIMITS[path]
+  const previous = state[path]
+  const active = previous && now - previous.windowStartedAt < windowMs
+  const next = active ? previous.count + 1 : 1
+  if (next > limit) return { allowed: false, state, limit, windowMs }
+  return {
+    allowed: true,
+    state: {
+      ...state,
+      [path]: { windowStartedAt: active ? previous.windowStartedAt : now, count: next },
+    },
+    limit,
+    windowMs,
+  }
+}
+
 const finiteNumber = v.pipe(v.number(), v.check<number>(Number.isFinite))
 const integer = v.pipe(finiteNumber, v.integer())
 const nonNegativeInteger = v.pipe(integer, v.minValue(0))
@@ -72,22 +143,19 @@ export type PlayerProtocolMessage = GameMasterMessage | ViewerMessage
 export interface PlayerProtocolState {
   nextSequence: number
   lastReceivedSequences: Readonly<Record<string, number>>
-  currentProtocolSeen: boolean
+  traffic: PlayerTrafficState
 }
 
 export const INITIAL_PLAYER_PROTOCOL_STATE: PlayerProtocolState = {
   nextSequence: 0,
   lastReceivedSequences: {},
-  currentProtocolSeen: false,
+  traffic: {},
 }
-
-export type LegacyPlayerMessageType = 'board' | 'hello' | 'closed' | 'locked'
 
 export interface PlayerProtocolSend {
   state: PlayerProtocolState
   envelope: PlayerEnvelope
   canonical: string
-  legacy: { messageType: LegacyPlayerMessageType; payload: unknown }
 }
 
 export type PlayerProtocolReceive =
@@ -111,14 +179,6 @@ export type PlayerProtocolReceive =
         | 'too-many-senders'
     }
 
-export type LegacyPlayerReceive =
-  | { status: 'accepted'; state: PlayerProtocolState; message: PlayerProtocolMessage }
-  | {
-      status: 'rejected'
-      state: PlayerProtocolState
-      reason: 'too-large' | 'malformed' | 'role' | 'superseded'
-    }
-
 /** Return the UTF-8 size enforced before a Realtime value reaches state. */
 function messageBytes(value: unknown): number | null {
   try {
@@ -137,6 +197,8 @@ function sendMessage(
   message: PlayerProtocolMessage,
   sentAt: number,
 ): PlayerProtocolSend {
+  const budget = consumePlayerTraffic(state.traffic, 'broadcast', sentAt)
+  if (!budget.allowed) throw new RangeError('The player-view broadcast rate is too high.')
   const allowed =
     role === 'viewer'
       ? message.type === 'hello'
@@ -163,10 +225,9 @@ function sendMessage(
     throw new RangeError('The player-view message is too large.')
   }
   return {
-    state: { ...state, nextSequence: state.nextSequence + 1 },
+    state: { ...state, nextSequence: state.nextSequence + 1, traffic: budget.state },
     envelope: parsed.output,
     canonical,
-    legacy: { messageType: parsed.output.messageType, payload: parsed.output.payload },
   }
 }
 
@@ -201,42 +262,6 @@ function messageFromEnvelope(value: PlayerEnvelope): PlayerProtocolMessage {
       return { type: 'locked' }
     case 'hello':
       return { type: 'hello' }
-  }
-}
-
-/** Validate a parity-path message and apply current-protocol precedence. */
-export function receiveLegacyPlayerMessage(
-  state: PlayerProtocolState,
-  receiverRole: PlayerProtocolRole,
-  messageType: LegacyPlayerMessageType,
-  payload: unknown,
-): LegacyPlayerReceive {
-  if (state.currentProtocolSeen) return { status: 'rejected', reason: 'superseded', state }
-  const bytes = messageBytes({ messageType, payload })
-  const payloadBytes = messageBytes(payload)
-  if (bytes === null || payloadBytes === null) {
-    return { status: 'rejected', reason: 'malformed', state }
-  }
-  if (bytes > MAX_PLAYER_MESSAGE_BYTES || payloadBytes > MAX_PLAYER_PAYLOAD_BYTES) {
-    return { status: 'rejected', reason: 'too-large', state }
-  }
-  const expected = receiverRole === 'viewer' ? ['board', 'closed', 'locked'] : ['hello']
-  if (!expected.includes(messageType)) return { status: 'rejected', reason: 'role', state }
-  if (messageType === 'board') {
-    const parsed = v.safeParse(playerBoardSchema, payload)
-    return parsed.success
-      ? { status: 'accepted', state, message: { type: 'board', board: parsed.output } }
-      : { status: 'rejected', reason: 'malformed', state }
-  }
-  const parsed = v.safeParse(emptyPayload, payload)
-  if (!parsed.success) return { status: 'rejected', reason: 'malformed', state }
-  switch (messageType) {
-    case 'hello':
-      return { status: 'accepted', state, message: { type: 'hello' } }
-    case 'closed':
-      return { status: 'accepted', state, message: { type: 'closed' } }
-    case 'locked':
-      return { status: 'accepted', state, message: { type: 'locked' } }
   }
 }
 
@@ -287,7 +312,6 @@ export function receivePlayerMessage(
   }
   const nextState = {
     ...state,
-    currentProtocolSeen: receiverRole === 'viewer',
     lastReceivedSequences: {
       ...state.lastReceivedSequences,
       [sender]: parsed.output.sequence,

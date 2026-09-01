@@ -11,7 +11,7 @@ import {
 } from '../../src/state/playerCode.ts'
 
 describe('randomPlayerCode', () => {
-  it('is long enough not to be guessed, and free of lookalike characters', () => {
+  it('is easy to read aloud and free of lookalike characters', () => {
     for (let i = 0; i < 200; i++) {
       const code = randomPlayerCode()
       expect(code).toHaveLength(10)

@@ -170,13 +170,28 @@ describe('AuthProvider with Supabase configured', () => {
     expect(stub.unsubscribe).toHaveBeenCalledTimes(1)
   })
 
-  it('hands sign-out through to Supabase', async () => {
+  it('revokes live views before handing sign-out through to Supabase', async () => {
     const stub = makeAuthClient(session('gm@openfray.app'))
     supa.client = stub.client
     renderProvider()
     await screen.findByText('gm@openfray.app')
     await latest.signOut()
-    expect(stub.auth.signOut).toHaveBeenCalledTimes(1)
+    expect(stub.rpc).toHaveBeenCalledWith('stop_all_live_views')
+    expect(stub.rpc.mock.invocationCallOrder[0]).toBeLessThan(
+      stub.auth.signOut.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('keeps the authenticated session when live-view revocation fails', async () => {
+    const stub = makeAuthClient(session('gm@openfray.app'))
+    stub.rpc.mockResolvedValueOnce({ error: { message: 'unavailable' } })
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+
+    await latest.signOut()
+
+    expect(stub.auth.signOut).not.toHaveBeenCalled()
   })
 
   it('starts the OAuth redirect back to the app’s own path', async () => {

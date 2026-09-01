@@ -113,6 +113,7 @@ import {
   type PlayerViewSettings,
 } from './state/settings.ts'
 import { useBoardBroadcast } from './state/playerChannel.ts'
+import { startLiveView, stopLiveView, type ActiveLiveView } from './state/liveViewAuthority.ts'
 import { randomPlayerCode } from './state/playerCode.ts'
 import { AddPcForm } from './components/add/AddPcForm.tsx'
 import { AddPcPicker } from './components/add/AddPcPicker.tsx'
@@ -316,9 +317,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setPlayerBackdropState(id)
     saveSettings({ playerViewBackdrop: id })
   }
-  // Sharing resumes after a reload and ends with the tab, which is what the session
-  // snapshot already means — a refresh mid-fight shouldn't drop the table's screens.
-  const [sharing, setSharing] = useState(() => restored?.sharing ?? false)
+  // A live session starts with fresh owner authorization. Reloading rotates the link instead
+  // of reviving a bearer-only channel from persisted UI state.
+  const [sharing, setSharing] = useState(false)
+  const [liveViewSession, setLiveViewSession] = useState<ActiveLiveView | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
   const [recap, setRecap] = useState<Recap | null>(null)
@@ -506,10 +508,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     [recap, activeRules.leveling],
   )
 
-  // Share the board while sharing is on. Broadcast only — nothing about the fight is
-  // written anywhere, so an anonymous GM can share without a row reaching the database.
+  // Share the filtered board while an authenticated owner capability is active. Realtime
+  // relays the board without storing it; the database stores only the capability hash.
   useBoardBroadcast(
-    sharing ? playerCode : null,
+    sharing ? liveViewSession : null,
     encounter,
     playerView,
     sharedRecap,
@@ -520,34 +522,46 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     playerBackdrop ?? undefined,
   )
 
-  // Signing out hands the board back to an anonymous session. The reserved name belongs
-  // to the account, so the share stops rather than carrying on under a name this device
-  // no longer owns, and the link is minted fresh the way an anonymous one always is.
+  // Signing out clears the account-owned player view after AuthProvider revokes it. A fresh
+  // readable code avoids carrying the previous account’s link name into another session.
   useOpenRequest(userId, (previous) => {
     if (!previous || userId) return
     setSharing(false)
+    setLiveViewSession(null)
     const code = randomPlayerCode()
     setPlayerCode(code)
     saveSettings({ playerViewCode: code })
   })
 
-  /**
-   * Start or stop sharing. An anonymous GM has no name to claim, so the first share
-   * mints a random code and keeps it, and the link stays the same from then on.
-   */
-  const toggleSharing = () => {
+  /** Start or revoke the authenticated owner capability behind the player view. */
+  const toggleSharing = async () => {
     if (sharing) {
+      const active = liveViewSession
+      if (!active || !(await stopLiveView(active.capability))) return
       track(EVENTS.playerViewStopped)
       setSharing(false)
+      setLiveViewSession(null)
       return
     }
+    if (!user) {
+      setAuthOpen(true)
+      return
+    }
+    const code = playerCode ?? randomPlayerCode()
     if (!playerCode) {
-      const code = randomPlayerCode()
       setPlayerCode(code)
       saveSettings({ playerViewCode: code })
     }
-    track(EVENTS.playerViewShared)
+    const id = await saveCloudEncounter(cloudId.current, encounter)
+    if (!id) return
+    cloudId.current = id
+    const claimed = await claimPlayerCode(id, code)
+    if (claimed !== 'ok') return
+    const active = await startLiveView(id, code)
+    if (active.status !== 'ok') return
+    setLiveViewSession(active)
     setSharing(true)
+    track(EVENTS.playerViewShared)
   }
 
   /**
@@ -571,6 +585,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (result === 'ok') {
       track(EVENTS.playerViewNamed)
       setPlayerCode(code)
+      if (sharing) {
+        const rotated = await startLiveView(cloudId.current, code, undefined, liveViewSession)
+        if (rotated.status === 'ok') setLiveViewSession(rotated)
+      }
     }
     return result
   }
@@ -1597,6 +1615,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               />
               <SharePanel
                 code={playerCode}
+                capability={liveViewSession?.capability ?? null}
                 sharing={sharing}
                 onToggleShare={toggleSharing}
                 onClaim={user ? claimShareCode : undefined}

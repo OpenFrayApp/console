@@ -50,9 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
-  /** End the current session; a no-op when Supabase isn't configured. */
+  /** Revoke owner publication before ending the authenticated session. */
   const signOut = async (): Promise<void> => {
-    await supabase?.auth.signOut()
+    if (!supabase) return
+    const { error } = await supabase.rpc('stop_all_live_views')
+    if (error) {
+      console.error('[openfray] revoking live views before sign-out failed', error)
+      return
+    }
+    await supabase.auth.signOut()
   }
 
   /**

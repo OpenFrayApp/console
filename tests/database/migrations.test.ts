@@ -38,6 +38,14 @@ const SUPABASE_STUB = `
     end if;
   end $do$;
   grant usage on schema public to anon, authenticated, service_role;
+  create schema realtime;
+  create table realtime.messages (extension text);
+  alter table realtime.messages enable row level security;
+  create or replace function realtime.topic() returns text language sql stable as $fn$
+    select current_setting('realtime.topic', true)
+  $fn$;
+  grant usage on schema realtime to anon, authenticated;
+  grant select, insert on table realtime.messages to anon, authenticated;
 `
 
 let db: PGlite
@@ -86,6 +94,7 @@ describe('the tracked migration lineage', () => {
       'creatures',
       'effects',
       'encounters',
+      'live_view_sessions',
       'players',
       'role_capabilities',
       'role_inherits',
@@ -204,6 +213,63 @@ describe('the tracked migration lineage', () => {
     ).toBe(true)
   })
 
+  it('rotates and revokes only an encounter owner’s live-view capability', async () => {
+    const first = '11111111-1111-1111-1111-111111111113'
+    const second = '22222222-2222-2222-2222-222222222223'
+    const encounter = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    await asOwner()
+    await db.exec(`
+      insert into auth.users (id) values ('${first}'), ('${second}');
+      insert into encounters (id, owner_id, state, player_code)
+        values ('${encounter}', '${first}', '{}'::jsonb, 'tuesday-game');
+    `)
+
+    await as(first)
+    expect(
+      await value<number>(
+        `select start_live_view('${encounter}', 'tuesday-game', '${'a'.repeat(64)}')`,
+      ),
+    ).toBe(1)
+    expect(
+      await value<number>(
+        `select start_live_view('${encounter}', 'tuesday-game', '${'b'.repeat(64)}')`,
+      ),
+    ).toBe(2)
+    expect(await value<boolean>(`select stop_live_view('${'a'.repeat(64)}')`)).toBe(false)
+
+    await as(second)
+    await expect(
+      db.exec(`select start_live_view('${encounter}', 'stolen', '${'c'.repeat(64)}')`),
+    ).rejects.toThrow(/owned live encounter/)
+
+    await as(first)
+    expect(await value<boolean>(`select stop_live_view('${'b'.repeat(64)}')`)).toBe(true)
+    expect(
+      await value<number>(
+        `select start_live_view('${encounter}', 'tuesday-game', '${'c'.repeat(64)}')`,
+      ),
+    ).toBe(1)
+    expect(await value<boolean>(`select stop_all_live_views()`)).toBe(true)
+    expect(
+      await value<boolean>(`select live_view_topic_active('player:${'c'.repeat(64)}:lobby')`),
+    ).toBe(false)
+    await asOwner()
+  })
+
+  it('separates viewer reads and presence from owner-only broadcasts', async () => {
+    const policies = await db.query<{ policyname: string; roles: string[]; cmd: string }>(`
+      select policyname, roles, cmd from pg_policies
+      where schemaname = 'realtime' and tablename = 'messages'
+      order by policyname
+    `)
+
+    expect(policies.rows.map(({ policyname, cmd }) => [policyname, cmd])).toEqual([
+      ['live viewers announce presence', 'INSERT'],
+      ['live viewers receive traffic', 'SELECT'],
+      ['owners publish live traffic', 'INSERT'],
+    ])
+  })
+
   it('removes an account and every owner-linked row through the public function', async () => {
     const owner = '11111111-1111-1111-1111-111111111111'
     await asOwner()
@@ -211,7 +277,10 @@ describe('the tracked migration lineage', () => {
       insert into auth.users (id, email) values ('${owner}', 'owner@example.test');
       insert into campaigns (owner_id, data) values ('${owner}', '{}'::jsonb);
       insert into creatures (owner_id, name, data) values ('${owner}', 'Fixture', '{}'::jsonb);
-      insert into encounters (owner_id, state) values ('${owner}', '{}'::jsonb);
+      insert into encounters (id, owner_id, state, player_code)
+        values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '${owner}', '{}'::jsonb, 'delete-live');
+      insert into live_view_sessions (owner_id, encounter_id, code, capability_hash)
+        values ('${owner}', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'delete-live', '${'d'.repeat(64)}');
       insert into shares (owner_id, code, kind, data)
         values ('${owner}', 'fixture001', 'encounter', '{}'::jsonb);
       select set_config('request.jwt.claim.sub', '${owner}', false);
@@ -223,6 +292,11 @@ describe('the tracked migration lineage', () => {
     )
     expect(
       await value<number>(`select count(*)::int from shares where owner_id = '${owner}'`),
+    ).toBe(0)
+    expect(
+      await value<number>(
+        `select count(*)::int from live_view_sessions where owner_id = '${owner}'`,
+      ),
     ).toBe(0)
   })
 })

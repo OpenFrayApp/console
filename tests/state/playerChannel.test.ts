@@ -10,13 +10,14 @@ import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
 import {
   INITIAL_PLAYER_PROTOCOL_STATE,
   sendGameMasterMessage,
-  sendViewerMessage,
 } from '../../src/state/playerProtocol.ts'
+import { useBoardBroadcast, usePlayerBoard } from '../../src/state/playerChannel.ts'
 import {
-  lockedChannelName,
-  useBoardBroadcast,
-  usePlayerBoard,
-} from '../../src/state/playerChannel.ts'
+  LIVE_VIEW_CAPABILITY_BYTES,
+  liveViewTopics,
+  mintLiveViewCapability,
+  type ActiveLiveView,
+} from '../../src/state/liveViewAuthority.ts'
 import { makeRealtimeStub } from './supabaseMock.ts'
 
 const supa = vi.hoisted(() => ({ client: null as unknown }))
@@ -26,6 +27,14 @@ vi.mock('../../src/lib/supabase.ts', () => ({
     return supa.client
   },
 }))
+
+const capability = mintLiveViewCapability(new Uint8Array(LIVE_VIEW_CAPABILITY_BYTES).fill(3))
+const session: ActiveLiveView = {
+  status: 'ok',
+  capability,
+  capabilityHash: 'a'.repeat(64),
+  generation: 1,
+}
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -37,328 +46,123 @@ afterEach(() => {
   supa.client = null
 })
 
-function encounter(overrides: Partial<Encounter> = {}): Encounter {
+/** Build one minimal encounter for the live-view adapter. */
+function encounter(round = 1): Encounter {
   return {
     encounterId: 'local',
     ownerId: null,
-    round: 1,
+    round,
     activeIndex: 0,
     combatants: [],
     log: [],
-    ...overrides,
   }
 }
 
-/** Build the complete privacy projection accepted on the wire. */
-function wireBoard(round: number) {
-  return playerBoard(encounter({ round }), DEFAULT_PLAYER_VIEW)
-}
-
-/** Build one current Game Master board envelope for adapter tests. */
-function gameMasterEnvelope(sequence: number, round: number, senderId = 'gm-session') {
+/** Build a current owner envelope for viewer adapter tests. */
+function ownerMessage(
+  sequence: number,
+  message: Parameters<typeof sendGameMasterMessage>[2],
+  senderId = 'gm-session',
+) {
   return sendGameMasterMessage(
     { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: sequence },
     senderId,
-    { type: 'board', board: wireBoard(round) },
+    message,
     100,
   ).envelope
 }
 
-/** Build one current viewer hello envelope for adapter tests. */
-function viewerHelloEnvelope(senderId: string) {
-  return sendViewerMessage(INITIAL_PLAYER_PROTOCOL_STATE, senderId, { type: 'hello' }, 100).envelope
+/** Let capability hashing and channel setup finish. */
+async function flushChannelSetup(): Promise<void> {
+  await act(async () => {
+    await liveViewTopics(capability, null)
+    await Promise.resolve()
+  })
 }
 
-describe('useBoardBroadcast — the Game Master side', () => {
-  it('opens no channel at all while sharing is off', () => {
-    const { channels } = makeRealtimeStub()
-    supa.client = { channel: () => ({}), removeChannel: () => Promise.resolve('ok') }
+describe('useBoardBroadcast — owner publication', () => {
+  it('opens no channel without an active owner capability', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
     renderHook(() => useBoardBroadcast(null, encounter(), DEFAULT_PLAYER_VIEW))
     expect(channels).toHaveLength(0)
   })
 
-  it('joins the channel named for the code and announces itself as the GM', () => {
+  it('publishes only on a private capability topic and announces owner presence', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
-    renderHook(() => useBoardBroadcast('tuesday-game', encounter(), DEFAULT_PLAYER_VIEW))
-    expect(channels[0].name).toBe('player:tuesday-game')
+    renderHook(() => useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW))
+    await flushChannelSetup()
+
+    const topics = await liveViewTopics(capability, null)
+    expect(channels[0].name).toBe(topics.board)
+    expect(channels[0].config).toMatchObject({
+      config: { private: true, broadcast: { ack: true }, presence: { key: 'gm' } },
+    })
     act(() => channels[0].ready())
     expect(channels[0].tracked).toEqual([{ role: 'gm' }])
-  })
-
-  it('sends the board straight away once subscribed, so nobody waits on a debounce', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    renderHook(() => useBoardBroadcast('code', encounter({ round: 3 }), DEFAULT_PLAYER_VIEW))
-    act(() => channels[0].ready())
-    const sent = channels[0].sends.filter((s) => s.event === 'board')
-    expect(sent).toHaveLength(1)
-    expect(sent[0].payload).toMatchObject({ round: 3 })
-  })
-
-  it('emits neither protocol path when the privacy projection exceeds the shared limit', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    renderHook(() =>
-      useBoardBroadcast(
-        'code',
-        encounter(),
-        { ...DEFAULT_PLAYER_VIEW, campaignName: 'shown' },
-        null,
-        'x'.repeat(240_000),
-      ),
-    )
-
-    expect(() => act(() => channels[0].ready())).not.toThrow()
-    expect(channels[0].sends).toHaveLength(0)
-  })
-
-  it('coalesces a burst of changes into one send carrying the latest board', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { rerender } = renderHook(
-      ({ e }: { e: Encounter }) => useBoardBroadcast('code', e, DEFAULT_PLAYER_VIEW),
-      { initialProps: { e: encounter({ round: 1 }) } },
-    )
-    act(() => channels[0].ready())
-    const before = channels[0].sends.filter((s) => s.event === 'board').length
-    // Three board changes inside one debounce window — a turn advancing and two hits.
-    rerender({ e: encounter({ round: 2 }) })
-    rerender({ e: encounter({ round: 3 }) })
-    rerender({ e: encounter({ round: 4 }) })
-    act(() => void vi.advanceTimersByTime(300))
-    const sent = channels[0].sends.filter((s) => s.event === 'board')
-    expect(sent).toHaveLength(before + 1)
-    expect(sent.at(-1)?.payload).toMatchObject({ round: 4 })
-  })
-
-  it('answers a late player`s hello with the board as it stands', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    renderHook(() => useBoardBroadcast('code', encounter({ round: 7 }), DEFAULT_PLAYER_VIEW))
-    act(() => channels[0].ready())
-    act(() => channels[0].emit('hello'))
-    const boards = channels[0].sends.filter((s) => s.event === 'board')
-    expect(boards.at(-1)?.payload).toMatchObject({ round: 7 })
-  })
-
-  it('answers independent current-protocol viewers that both begin at sequence 0', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    renderHook(() => useBoardBroadcast('code', encounter({ round: 3 }), DEFAULT_PLAYER_VIEW))
-    act(() => channels[0].ready())
-    const before = channels[0].sends.filter(
-      (message) => message.event === 'player-view-protocol',
-    ).length
-
-    act(() => channels[0].emit('player-view-protocol', viewerHelloEnvelope('viewer-one')))
-    act(() => channels[0].emit('player-view-protocol', viewerHelloEnvelope('viewer-two')))
-    expect(
-      channels[0].sends.filter((message) => message.event === 'player-view-protocol'),
-    ).toHaveLength(before + 2)
-  })
-
-  it('says goodbye and drops the channel when sharing stops', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { unmount } = renderHook(() =>
-      useBoardBroadcast('code', encounter(), DEFAULT_PLAYER_VIEW),
-    )
-    act(() => channels[0].ready())
-    unmount()
-    expect(channels[0].sends.at(-1)?.event).toBe('closed')
-    expect(channels[0].removed).toBe(true)
-  })
-})
-
-describe('usePlayerBoard — the player side', () => {
-  it('reports the view as unavailable when the app has no Supabase project', () => {
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    expect(result.current.status).toBe('unavailable')
-  })
-
-  it('asks for the board as soon as it is subscribed', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    expect(channels[0].sends.map((message) => message.event)).toEqual([
-      'player-view-protocol',
-      'hello',
-    ])
-    expect(channels[0].sends[0].payload).toMatchObject({
-      senderRole: 'viewer',
-      messageType: 'hello',
-      sequence: 0,
+    expect(channels[0].sends).toHaveLength(1)
+    expect(channels[0].sends[0]).toMatchObject({
+      event: 'player-view-protocol',
+      payload: { senderRole: 'gm', messageType: 'board', payload: { round: 3 } },
     })
   })
 
-  it('goes live on the first board it receives', () => {
+  it('coalesces a burst of viewer presence joins into one bounded reply', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    act(() =>
-      channels[0].emit('board', { round: 2, paused: false, activeId: null, rows: [], log: [] }),
+    renderHook(() => useBoardBroadcast(session, encounter(4), DEFAULT_PLAYER_VIEW))
+    await flushChannelSetup()
+    act(() => {
+      channels[0].ready()
+      channels[1].ready()
+      vi.advanceTimersByTime(250)
+    })
+    const before = channels[0].sends.length
+
+    act(() => {
+      channels[1].emitPresence('join')
+      channels[1].emitPresence('join')
+      channels[1].emitPresence('join')
+      vi.advanceTimersByTime(249)
+    })
+    expect(channels[0].sends).toHaveLength(before)
+    act(() => void vi.advanceTimersByTime(1))
+    expect(channels[0].sends).toHaveLength(before + 1)
+  })
+
+  it('sends a lifecycle close and leaves the old topic on rotation', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const rotated: ActiveLiveView = {
+      ...session,
+      capability: mintLiveViewCapability(new Uint8Array(LIVE_VIEW_CAPABILITY_BYTES).fill(4)),
+      generation: 2,
+    }
+    const { rerender } = renderHook(
+      ({ active }: { active: ActiveLiveView }) =>
+        useBoardBroadcast(active, encounter(), DEFAULT_PLAYER_VIEW),
+      { initialProps: { active: session } },
     )
-    expect(result.current.status).toBe('live')
-    expect(result.current.board?.round).toBe(2)
-  })
-
-  it('accepts current protocol boards and rejects duplicate or reordered traffic', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
+    await flushChannelSetup()
     act(() => channels[0].ready())
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(4, 2)))
-    expect(result.current.board?.round).toBe(2)
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(4, 9)))
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(3, 8)))
-    expect(result.current.board?.round).toBe(2)
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(5, 3)))
-    expect(result.current.board?.round).toBe(3)
-    act(() =>
-      channels[0].emit('player-view-protocol', gameMasterEnvelope(0, 4, 'restarted-gm-session')),
-    )
-    expect(result.current.board?.round).toBe(4)
+
+    rerender({ active: rotated })
+    await flushChannelSetup()
+    expect(channels[0].removed).toBe(true)
+    expect(channels[0].sends.at(-1)).toMatchObject({
+      event: 'player-view-protocol',
+      payload: { messageType: 'closed' },
+    })
+    expect(channels[1].name).not.toBe(channels[0].name)
   })
 
-  it('does not let a delayed rollback board revive a closed current session', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(0, 2)))
-    expect(result.current.board?.round).toBe(2)
-
-    const closed = sendGameMasterMessage(
-      { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: 1 },
-      'gm-session',
-      { type: 'closed' },
-      101,
-    ).envelope
-    act(() => channels[0].emit('player-view-protocol', closed))
-    expect(result.current.board).toBeNull()
-
-    act(() => channels[0].emit('board', wireBoard(3)))
-    expect(result.current.status).toBe('waiting')
-    expect(result.current.board).toBeNull()
-  })
-
-  it('preserves ordering history across presence churn', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    channels[0].presence = { gm: [{ role: 'gm' }] }
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(5, 5)))
-    expect(result.current.board?.round).toBe(5)
-
-    channels[0].presence = {}
-    act(() => channels[0].emitPresence('sync'))
-    expect(result.current.board).toBeNull()
-
-    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(4, 4)))
-    expect(result.current.status).toBe('waiting')
-    expect(result.current.board).toBeNull()
-  })
-
-  it('keeps malformed current and rollback traffic out of viewer state', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    act(() =>
-      channels[0].emit('player-view-protocol', {
-        kind: 'player-view',
-        protocolVersion: 1,
-        senderRole: 'gm',
-        sequence: 0,
-        sentAt: 100,
-        messageType: 'board',
-        payload: { round: 'wrong' },
-      }),
-    )
-    act(() => channels[0].emit('board', { round: 99 }))
-    expect(result.current.status).toBe('connecting')
-    expect(result.current.board).toBeNull()
-  })
-
-  it('waits when nobody answers within the timeout', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    expect(result.current.status).toBe('connecting')
-    act(() => void vi.advanceTimersByTime(5000))
-    expect(result.current.status).toBe('waiting')
-  })
-
-  // A board left on screen after the GM leaves reads as live, and a table acting on
-  // stale hit points is worse off than one told to ask.
-  it('drops the board, not just the status, when the Game Master stops sharing', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    act(() =>
-      channels[0].emit('board', { round: 1, paused: false, activeId: null, rows: [], log: [] }),
-    )
-    act(() => channels[0].emit('closed'))
-    expect(result.current.status).toBe('waiting')
-    expect(result.current.board).toBeNull()
-  })
-
-  it('notices a Game Master who just closed the tab, via presence', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { result } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    channels[0].presence = { gm: [{ role: 'gm' }] }
-    act(() =>
-      channels[0].emit('board', { round: 1, paused: false, activeId: null, rows: [], log: [] }),
-    )
-    expect(result.current.status).toBe('live')
-    channels[0].presence = {}
-    act(() => channels[0].emitPresence('sync'))
-    expect(result.current.status).toBe('waiting')
-    expect(result.current.board).toBeNull()
-  })
-
-  it('asks again when a Game Master appears', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    act(() => channels[0].emitPresence('join'))
-    expect(channels[0].sends.filter((s) => s.event === 'hello')).toHaveLength(2)
-  })
-
-  it('never sends a board — the player side is read-only', () => {
-    const { client, channels } = makeRealtimeStub()
-    supa.client = client
-    const { unmount } = renderHook(() => usePlayerBoard('code'))
-    act(() => channels[0].ready())
-    act(() => channels[0].emitPresence('join'))
-    unmount()
-    expect(
-      channels[0].sends.every(
-        (message) =>
-          message.event === 'hello' ||
-          (message.event === 'player-view-protocol' &&
-            (message.payload as { messageType?: string }).messageType === 'hello'),
-      ),
-    ).toBe(true)
-  })
-})
-
-describe('a PIN-locked share', () => {
-  it('answers the lobby with locked and keeps the board on the derived channel', async () => {
+  it('keeps a PIN on a separate private board topic while the lobby says locked', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
     renderHook(() =>
       useBoardBroadcast(
-        'code',
+        session,
         encounter(),
         DEFAULT_PLAYER_VIEW,
         null,
@@ -367,90 +171,121 @@ describe('a PIN-locked share', () => {
         '1234',
       ),
     )
-    await act(async () => {})
-    const derived = await lockedChannelName('code', '1234')
-    expect(channels.map((c) => c.name)).toEqual(['player:code', derived])
+    await flushChannelSetup()
+    const topics = await liveViewTopics(capability, '1234')
 
-    const [lobby, board] = channels
+    expect(channels.map(({ name }) => name)).toEqual([topics.board, topics.lobby, topics.join])
     act(() => {
-      lobby.ready()
-      board.ready()
+      channels[0].ready()
+      channels[1].ready()
+      channels[2].ready()
     })
-    // A hello at the door is told the view is locked — never given the board.
-    act(() => {
-      lobby.emit('hello')
-    })
-    expect(lobby.sends.filter((s) => s.event === 'board')).toHaveLength(0)
-    expect(lobby.sends.some((s) => s.event === 'locked')).toBe(true)
-    // The board flows only where the PIN points.
-    expect(board.sends.some((s) => s.event === 'board')).toBe(true)
-  })
-
-  it('derives a stable channel per PIN, and a different one per PIN', async () => {
-    expect(await lockedChannelName('code', '1234')).toBe(await lockedChannelName('code', '1234'))
-    expect(await lockedChannelName('code', '1234')).not.toBe(
-      await lockedChannelName('code', '4321'),
-    )
-    expect(await lockedChannelName('other', '1234')).not.toBe(
-      await lockedChannelName('code', '1234'),
-    )
+    expect(channels[1].sends.at(-1)?.payload).toMatchObject({ messageType: 'locked' })
+    expect(channels[0].sends.at(-1)?.payload).toMatchObject({ messageType: 'board' })
   })
 })
 
-describe('usePlayerBoard — a locked link', () => {
-  it('reports locked from the lobby, then goes live once the right PIN answers', async () => {
+describe('usePlayerBoard — read-only viewer', () => {
+  it('ends access without a capability and opens no guessable code channel', () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
-    const { result, rerender } = renderHook(
-      ({ pin }: { pin: string | null }) => usePlayerBoard('code', pin),
-      { initialProps: { pin: null as string | null } },
-    )
-    act(() => channels[0].ready())
-    act(() => channels[0].emit('locked'))
-    expect(result.current.status).toBe('locked')
-
-    rerender({ pin: '1234' })
-    // Awaiting a digest queued after the hook's guarantees the hook's .then ran first.
-    await act(async () => {
-      await lockedChannelName('code', '1234')
-    })
-    expect(channels).toHaveLength(2)
-    expect(channels[1].name).toBe(await lockedChannelName('code', '1234'))
-    act(() => channels[1].ready())
-    const lobbyHello = channels[0].sends.find((message) => message.event === 'player-view-protocol')
-    const boardHello = channels[1].sends.find((message) => message.event === 'player-view-protocol')
-    expect(lobbyHello?.payload).toMatchObject({ messageType: 'hello', sequence: 0 })
-    expect(boardHello?.payload).toMatchObject({ messageType: 'hello', sequence: 1 })
-    act(() => channels[1].emit('board', wireBoard(2)))
-    expect(result.current.status).toBe('live')
-    expect(result.current.board).toEqual(wireBoard(2))
-    expect(result.current.pinRejected).toBe(false)
+    const { result } = renderHook(() => usePlayerBoard('tuesday-game', null))
+    expect(result.current.status).toBe('ended')
+    expect(channels).toHaveLength(0)
   })
 
-  it('calls a silent channel a wrong PIN, and a later board clears the call', async () => {
+  it('joins the private capability topic using presence and never broadcasts', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
-    const { result, rerender } = renderHook(
-      ({ pin }: { pin: string | null }) => usePlayerBoard('code', pin),
-      { initialProps: { pin: null as string | null } },
-    )
-    act(() => channels[0].ready())
-    act(() => channels[0].emit('locked'))
+    renderHook(() => usePlayerBoard('tuesday-game', capability))
+    await flushChannelSetup()
 
-    rerender({ pin: '9999' })
-    await act(async () => {
-      await lockedChannelName('code', '9999')
-    })
-    act(() => channels[1].ready())
+    expect(channels[0].config).toMatchObject({ config: { private: true } })
     act(() => {
-      vi.advanceTimersByTime(2000)
+      channels[0].ready()
+      channels[1].ready()
     })
-    expect(result.current.pinRejected).toBe(true)
-    expect(result.current.status).toBe('locked')
+    expect(channels[0].tracked).toEqual([])
+    expect(channels[1].tracked).toEqual([{ role: 'viewer' }])
+    expect(channels.every((channel) => channel.sends.length === 0)).toBe(true)
+  })
 
-    // A board that limps in late is still the board — the verdict retracts.
-    act(() => channels[1].emit('board', wireBoard(1)))
-    expect(result.current.pinRejected).toBe(false)
+  it('ends access when Realtime denies a stale or revoked capability', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code', capability))
+    await flushChannelSetup()
+
+    act(() => channels[0].status('CHANNEL_ERROR'))
+
+    expect(result.current).toMatchObject({ status: 'ended', board: null })
+  })
+
+  it('accepts owner board traffic and rejects replayed or impersonated traffic', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code', capability))
+    await flushChannelSetup()
+    act(() => channels[0].ready())
+    const board = playerBoard(encounter(2), DEFAULT_PLAYER_VIEW)
+
+    act(() => channels[0].emit('player-view-protocol', ownerMessage(4, { type: 'board', board })))
+    expect(result.current.board?.round).toBe(2)
+    const replay = ownerMessage(4, {
+      type: 'board',
+      board: playerBoard(encounter(9), DEFAULT_PLAYER_VIEW),
+    })
+    act(() => channels[0].emit('player-view-protocol', replay))
+    act(() =>
+      channels[0].emit('player-view-protocol', {
+        ...ownerMessage(5, { type: 'closed' }),
+        senderRole: 'viewer',
+      }),
+    )
+    expect(result.current.board?.round).toBe(2)
+  })
+
+  it('drops stale content on owner departure or lifecycle revocation', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code', capability))
+    await flushChannelSetup()
+    act(() => channels[0].ready())
+    channels[0].presence = { gm: [{ role: 'gm' }] }
+    act(() =>
+      channels[0].emit(
+        'player-view-protocol',
+        ownerMessage(0, { type: 'board', board: playerBoard(encounter(2), DEFAULT_PLAYER_VIEW) }),
+      ),
+    )
     expect(result.current.status).toBe('live')
+
+    channels[0].presence = {}
+    act(() => channels[0].emitPresence('sync'))
+    expect(result.current).toMatchObject({ status: 'waiting', board: null })
+
+    act(() => channels[0].emit('player-view-protocol', ownerMessage(1, { type: 'closed' })))
+    expect(result.current).toMatchObject({ status: 'waiting', board: null })
+  })
+
+  it('uses a PIN-derived private topic and rejects a silent wrong PIN', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code', capability, '9999'))
+    await flushChannelSetup()
+    const topics = await liveViewTopics(capability, '9999')
+    expect(channels.map(({ name }) => name)).toEqual([topics.lobby, topics.join, topics.board])
+
+    act(() => channels[2].ready())
+    act(() => void vi.advanceTimersByTime(2000))
+    expect(result.current.pinRejected).toBe(true)
+
+    act(() =>
+      channels[2].emit(
+        'player-view-protocol',
+        ownerMessage(0, { type: 'board', board: playerBoard(encounter(5), DEFAULT_PLAYER_VIEW) }),
+      ),
+    )
+    expect(result.current).toMatchObject({ status: 'live', pinRejected: false })
   })
 })

@@ -8,7 +8,7 @@
       "max_rows": 1000
     },
     "realtime": {
-      "private_only": false,
+      "private_only": true,
       "presence_enabled": true
     }
   },

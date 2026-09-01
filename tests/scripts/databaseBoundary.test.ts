@@ -68,7 +68,7 @@ describe('database boundary evidence', () => {
     }
     const evidence = {
       version: 1,
-      requirementIds: ['CB-1'],
+      requirementIds: ['CB-1', 'CB-3'],
       consoleCommit: expected.consoleCommit,
       environment: { kind: 'staging' },
       migration: {

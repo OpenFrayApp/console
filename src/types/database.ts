@@ -219,6 +219,41 @@ export type Database = {
         }
         Relationships: []
       }
+      live_view_sessions: {
+        Row: {
+          capability_hash: string
+          code: string
+          encounter_id: string
+          generation: number
+          owner_id: string
+          rotated_at: string
+        }
+        Insert: {
+          capability_hash: string
+          code: string
+          encounter_id: string
+          generation?: number
+          owner_id: string
+          rotated_at?: string
+        }
+        Update: {
+          capability_hash?: string
+          code?: string
+          encounter_id?: string
+          generation?: number
+          owner_id?: string
+          rotated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_view_sessions_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: true
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           data: Json
@@ -518,6 +553,8 @@ export type Database = {
         Args: { what: string; who: string; why?: string }
         Returns: boolean
       }
+      live_view_topic_active: { Args: { want_topic: string }; Returns: boolean }
+      live_view_topic_owned: { Args: { want_topic: string }; Returns: boolean }
       may: { Args: { cap: string }; Returns: boolean }
       may_publish_more: { Args: never; Returns: boolean }
       may_use_reserved_byline: { Args: never; Returns: boolean }
@@ -571,6 +608,19 @@ export type Database = {
       revoke_role: { Args: { what: string; who: string }; Returns: boolean }
       roles_of: { Args: { who: string }; Returns: string[] }
       share: { Args: { want: string }; Returns: Json }
+      start_live_view: {
+        Args: {
+          want_capability_hash: string
+          want_code: string
+          want_encounter: string
+        }
+        Returns: number
+      }
+      stop_all_live_views: { Args: never; Returns: boolean }
+      stop_live_view: {
+        Args: { want_capability_hash: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

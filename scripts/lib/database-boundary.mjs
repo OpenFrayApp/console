@@ -20,7 +20,7 @@ export const DATABASE_BOUNDARY_CHECKS = [
   'realtime',
   'accountDeletion',
 ]
-/** Build the immutable CB-1 attestation without retaining fixture identities or query output. */
+/** Build immutable tenant and live-authority evidence without retaining fixture identities. */
 export function buildDatabaseBoundaryAttestation(input) {
   const migrationMatches =
     JSON.stringify(input.observedMigrationVersions) ===
@@ -35,7 +35,7 @@ export function buildDatabaseBoundaryAttestation(input) {
 
   return {
     version: 1,
-    requirementIds: ['CB-1'],
+    requirementIds: ['CB-1', 'CB-3'],
     consoleCommit: input.consoleCommit,
     environment: {
       kind: input.environmentKind,
@@ -51,7 +51,8 @@ export function buildDatabaseBoundaryAttestation(input) {
     actors: input.boundary.actors,
     checks: input.boundary.checks,
     hostileSuiteHash: input.hostileSuiteHash,
-    result: migrationMatches && checksPassed && actorsMatch && suiteIdentified ? 'passed' : 'failed',
+    result:
+      migrationMatches && checksPassed && actorsMatch && suiteIdentified ? 'passed' : 'failed',
     workflow: input.workflow,
     approver: input.approver,
     timestamp: input.timestamp,
@@ -63,6 +64,7 @@ export function verifyStagingBoundaryEvidence(attestation, expected) {
   const valid =
     attestation?.version === 1 &&
     attestation?.requirementIds?.includes('CB-1') &&
+    attestation?.requirementIds?.includes('CB-3') &&
     attestation?.environment?.kind === 'staging' &&
     attestation?.consoleCommit === expected.consoleCommit &&
     attestation?.migration?.expectedHead === expected.migrationHead &&

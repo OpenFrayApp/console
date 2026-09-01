@@ -7,6 +7,7 @@ declare
   affected integer;
   owner_table text;
   insert_statement text;
+  live_encounter uuid;
 begin
   if exists (
     select 1
@@ -149,6 +150,18 @@ begin
       end if;
     end if;
   end loop;
+  update encounters set player_code = 'cb3-owner' returning id into live_encounter;
+  if start_live_view(live_encounter, 'cb3-owner', repeat('a', 64)) <> 1 then
+    raise exception 'CB-3: the encounter owner could not start a live view';
+  end if;
+  if not live_view_topic_owned('player:' || repeat('a', 64) || ':lobby') then
+    raise exception 'CB-3: the encounter owner could not publish';
+  end if;
+  perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
+  insert into realtime.messages (topic, extension, event, private)
+    values
+      ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true),
+      ('player:' || repeat('a', 64) || ':lobby', 'presence', 'cb3-fixture', true);
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);
@@ -198,6 +211,69 @@ begin
       when insufficient_privilege or check_violation then null;
     end;
   end loop;
+  if live_view_topic_owned('player:' || repeat('a', 64) || ':lobby') then
+    raise exception 'CB-3: an authenticated non-owner could publish';
+  end if;
+  begin
+    perform start_live_view(live_encounter, 'cb3-owner', repeat('b', 64));
+    raise exception 'CB-3: a non-owner rotated another encounter' using errcode = 'OF006';
+  exception
+    when raise_exception then
+      if sqlerrm not like '%owned live encounter%' then raise; end if;
+  end;
+  perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
+  foreach owner_table in array array['broadcast', 'presence'] loop
+    begin
+      insert into realtime.messages (topic, extension, event, private)
+        values ('player:' || repeat('a', 64) || ':lobby', owner_table, 'cb3-fixture', true);
+      raise exception 'CB-3: a non-owner published through Realtime' using errcode = 'OF007';
+    exception
+      when insufficient_privilege then null;
+    end;
+  end loop;
+  execute 'reset role';
+
+  execute 'set local role anon';
+  if has_function_privilege('anon', 'public.start_live_view(uuid,text,text)', 'execute')
+    or has_function_privilege('anon', 'public.stop_live_view(text)', 'execute')
+    or has_function_privilege('anon', 'public.stop_all_live_views()', 'execute')
+    or has_function_privilege('anon', 'public.live_view_topic_owned(text)', 'execute')
+  then raise exception 'CB-3: an anonymous caller gained publication authority';
+  end if;
+  if not live_view_topic_active('player:' || repeat('a', 64) || ':lobby') then
+    raise exception 'CB-3: a capability holder could not receive live traffic';
+  end if;
+  perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
+  begin
+    insert into realtime.messages (topic, extension, event, private)
+      values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true);
+    raise exception 'CB-3: an anonymous viewer broadcast through Realtime' using errcode = 'OF008';
+  exception
+    when insufficient_privilege then null;
+  end;
+  perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':join', false);
+  insert into realtime.messages (topic, extension, event, private)
+    values ('player:' || repeat('a', 64) || ':join', 'presence', 'cb3-fixture', true);
+  execute 'reset role';
+
+  perform set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);
+  execute 'set local role authenticated';
+  if start_live_view(live_encounter, 'cb3-owner', repeat('b', 64)) <> 2 then
+    raise exception 'CB-3: rotation did not advance the capability generation';
+  end if;
+  if live_view_topic_active('player:' || repeat('a', 64) || ':lobby')
+    or not live_view_topic_active('player:' || repeat('b', 64) || ':lobby')
+  then raise exception 'CB-3: rotation left a stale capability active';
+  end if;
+  if stop_live_view(repeat('a', 64)) then
+    raise exception 'CB-3: a stale stop revoked the rotated capability';
+  end if;
+  if not stop_live_view(repeat('b', 64)) then
+    raise exception 'CB-3: the owner could not revoke the active capability';
+  end if;
+  if live_view_topic_active('player:' || repeat('b', 64) || ':lobby') then
+    raise exception 'CB-3: revocation left the capability active';
+  end if;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
@@ -317,6 +393,7 @@ begin
 
   delete from share_reports where code = 'cb1delete';
   delete from audit_log where action = 'cb1.fixture';
+  delete from realtime.messages where event = 'cb3-fixture';
   delete from auth.users where id in (
     '11111111-1111-1111-1111-111111111111',
     '22222222-2222-2222-2222-222222222222',
