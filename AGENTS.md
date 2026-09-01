@@ -9,6 +9,17 @@ repo's [STYLE.md](./STYLE.md) (the labeling voice), built on the shared core in
 that repo. **Read all three before working here.** This file carries what is specific to the app:
 the scope principle in full, the architectural rules, and the build order.
 
+## Agent skills
+
+### Issue tracker
+
+Issues for console work live in OpenFrayApp/console on GitHub. See
+`docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
+
 ## What this repo is
 
 The React + Vite combat console served at `/console` on
