@@ -9,6 +9,11 @@ import {
   INITIAL_PLAYER_PROTOCOL_STATE,
   MAX_PLAYER_MESSAGE_BYTES,
   MAX_PLAYER_PAYLOAD_BYTES,
+  INITIAL_PLAYER_FRESHNESS_STATE,
+  LIVE_VIEW_FRESHNESS_GRACE_MS,
+  applyPlayerFreshnessMessage,
+  markPlayerConnectionLost,
+  refreshPlayerFreshness,
   receivePlayerMessage,
   sendGameMasterMessage,
   sendViewerMessage,
@@ -42,12 +47,12 @@ const board = playerBoard(
 )
 
 /** Send one current board envelope through the Game Master interface. */
-function boardEnvelope(sequence = 0, senderId = 'gm-session') {
+function boardEnvelope(sequence = 0, senderId = 'gm-session', sentAt = 1_900_000_000_000) {
   return sendGameMasterMessage(
     { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: sequence },
     senderId,
     { type: 'board', board },
-    1_900_000_000_000,
+    sentAt,
   ).envelope
 }
 
@@ -134,6 +139,114 @@ describe('the live-view protocol envelope', () => {
         10,
       ),
     ).toThrow()
+  })
+})
+
+describe('live-view freshness', () => {
+  it('restores Live only from a validated fresh board', () => {
+    const now = 1_900_000_000_000
+    const valid = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      boardEnvelope(0, 'gm-session', now - 2_000),
+    )
+    const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, valid, now)
+
+    expect(live).toMatchObject({ status: 'live', board, lastAcceptedAt: now })
+
+    const malformed = receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', {
+      ...boardEnvelope(1, 'gm-session', now),
+      payload: { round: 'two' },
+    })
+    expect(
+      applyPlayerFreshnessMessage(markPlayerConnectionLost(live, now), malformed, now),
+    ).toEqual({
+      ...live,
+      status: 'reconnecting',
+    })
+  })
+
+  it('keeps the last board visible for 30 seconds, then marks it as lost', () => {
+    const now = 1_900_000_000_000
+    const accepted = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      boardEnvelope(0, 'gm-session', now),
+    )
+    const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, accepted, now)
+    const reconnecting = markPlayerConnectionLost(live, now + 1_000)
+
+    expect(reconnecting.status).toBe('reconnecting')
+    expect(
+      refreshPlayerFreshness(reconnecting, now + LIVE_VIEW_FRESHNESS_GRACE_MS - 1),
+    ).toMatchObject({ status: 'reconnecting', board })
+    expect(refreshPlayerFreshness(reconnecting, now + LIVE_VIEW_FRESHNESS_GRACE_MS)).toMatchObject({
+      status: 'connection-lost',
+      board,
+    })
+  })
+
+  it('does not let delayed, duplicated, or unsupported traffic restore Live', () => {
+    const now = 1_900_000_000_000
+    const accepted = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      boardEnvelope(4, 'gm-session', now),
+    )
+    expect(accepted.status).toBe('accepted')
+    if (accepted.status !== 'accepted') return
+    const lost = refreshPlayerFreshness(
+      applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, accepted, now),
+      now + LIVE_VIEW_FRESHNESS_GRACE_MS + 1,
+    )
+
+    const delayed = receivePlayerMessage(accepted.state, 'viewer', {
+      ...boardEnvelope(5, 'gm-session', now - LIVE_VIEW_FRESHNESS_GRACE_MS - 1),
+    })
+    const duplicated = receivePlayerMessage(accepted.state, 'viewer', boardEnvelope(4))
+    const unsupported = receivePlayerMessage(accepted.state, 'viewer', {
+      ...boardEnvelope(6),
+      protocolVersion: CURRENT_PLAYER_PROTOCOL_VERSION + 1,
+    })
+
+    expect(applyPlayerFreshnessMessage(lost, delayed, now)).toBe(lost)
+    expect(applyPlayerFreshnessMessage(lost, duplicated, now)).toBe(lost)
+    expect(applyPlayerFreshnessMessage(lost, unsupported, now)).toBe(lost)
+  })
+
+  it('clears the board for a validated PIN lock without ending the capability', () => {
+    const now = 1_900_000_000_000
+    const accepted = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      boardEnvelope(0, 'gm-session', now),
+    )
+    const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, accepted, now)
+    const locked = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      sendGameMasterMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'gm-session', { type: 'locked' }, now)
+        .envelope,
+    )
+
+    expect(applyPlayerFreshnessMessage(live, locked, now)).toEqual(INITIAL_PLAYER_FRESHNESS_STATE)
+  })
+
+  it('ends access immediately on a validated close', () => {
+    const closed = receivePlayerMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'viewer',
+      sendGameMasterMessage(
+        INITIAL_PLAYER_PROTOCOL_STATE,
+        'gm-session',
+        { type: 'closed' },
+        1_900_000_000_000,
+      ).envelope,
+    )
+
+    expect(
+      applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, closed, 1_900_000_000_000),
+    ).toEqual({ status: 'access-ended', board: null, lastAcceptedAt: null })
   })
 })
 

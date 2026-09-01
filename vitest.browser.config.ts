@@ -5,7 +5,17 @@ import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  optimizeDeps: { include: ['@supabase/supabase-js', 'opendice', 'valibot'] },
+  optimizeDeps: {
+    include: [
+      '@supabase/supabase-js',
+      '@testing-library/react',
+      'opendice',
+      'react',
+      'react-dom',
+      'react/jsx-dev-runtime',
+      'valibot',
+    ],
+  },
   test: {
     include: ['tests/**/*.browser.test.ts', 'tests/publication/browser.test.ts'],
     browser: {

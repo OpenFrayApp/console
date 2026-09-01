@@ -107,7 +107,7 @@ export interface StubChannel {
   /** Drive the subscribe callback, as the server would once the socket is up. */
   ready: () => void
   /** Drive any subscription status, including authorization denial. */
-  status: (value: string) => void
+  status: (value: string, error?: Error) => void
   /** Deliver a broadcast to this channel's handler, as another client would. */
   emit: (event: string, payload?: unknown) => void
   /** Fire a presence event after setting `presence`. */
@@ -143,9 +143,9 @@ export function makeRealtimeStub() {
         else presenceHandlers.set(opts.event, handler as unknown as () => void)
         return api
       },
-      subscribe: (cb?: (status: string) => void) => {
+      subscribe: (cb?: (status: string, error?: Error) => void) => {
         stub.ready = () => cb?.('SUBSCRIBED')
-        stub.status = (value: string) => cb?.(value)
+        stub.status = (value: string, error?: Error) => cb?.(value, error)
         return api
       },
       send: ({ event, payload }: { event: string; payload: unknown }) => {
@@ -162,7 +162,10 @@ export function makeRealtimeStub() {
   }
   const removeChannel = (ch: { presenceState: () => Record<string, unknown[]> }) => {
     const found = channels.find((c) => c.presence === ch.presenceState())
-    if (found) found.removed = true
+    if (found) {
+      found.removed = true
+      found.status('CLOSED')
+    }
     return Promise.resolve('ok')
   }
   return { client: { channel, removeChannel }, channels }

@@ -66,13 +66,31 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
     )
   }
   if (status === 'connecting') {
-    return <p className="text-sm text-slate-600 dark:text-slate-300">Connecting…</p>
+    return (
+      <div className="space-y-2">
+        <p className="font-medium">Connecting</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">Opening the player view…</p>
+      </div>
+    )
+  }
+  if (status === 'connection-lost') {
+    return (
+      <div className="space-y-2" role="status">
+        <p className="font-medium">Connection lost</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          The last board is out of date. Leave this page open while it reconnects.
+        </p>
+      </div>
+    )
   }
   if (status === 'ended') {
     return (
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        Access to this player view has ended. Ask your Game Master for a new link.
-      </p>
+      <div className="space-y-2" role="status">
+        <p className="font-medium">Access ended</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Ask your Game Master for a new link.
+        </p>
+      </div>
     )
   }
   return (
@@ -83,6 +101,28 @@ function Standby({ status, code }: { status: PlayerLinkStatus; code: string }) {
         Master starts sharing. Leave it open — it fills in on its own.
       </p>
     </div>
+  )
+}
+
+/** Show whether the displayed board is current or inside its reconnection grace period. */
+function ConnectionState({ status, age }: { status: PlayerLinkStatus; age: number | null }) {
+  if (status !== 'live' && status !== 'reconnecting') return null
+  const ageLabel = `Last update ${age ?? 0} ${age === 1 ? 'second' : 'seconds'} ago`
+  return (
+    <p
+      className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        className={`h-2 w-2 shrink-0 rounded-full ${
+          status === 'live' ? 'bg-emerald-500' : 'bg-amber-500'
+        }`}
+        aria-hidden
+      />
+      <span>{status === 'live' ? 'Live' : 'Reconnecting'}</span>
+      {status === 'reconnecting' && <span aria-hidden>· {ageLabel}</span>}
+    </p>
   )
 }
 
@@ -129,13 +169,14 @@ export function PlayerView({
 }) {
   const [theme, toggleTheme] = useTheme()
   const [pin, setPin] = useState('')
-  const { status, board, pinRejected } = usePlayerBoard(
+  const { status, board, pinRejected, lastUpdateAgeSeconds } = usePlayerBoard(
     code,
     capability,
     pin.length === 4 ? pin : null,
   )
-  const turn = board?.rows.find((r) => r.id === board.activeId)?.name
-  const entry = backgroundEntry(board?.background)
+  const boardVisible = status !== 'connection-lost' && status !== 'ended' ? board : null
+  const turn = boardVisible?.rows.find((r) => r.id === boardVisible.activeId)?.name
+  const entry = backgroundEntry(boardVisible?.background)
   // A backdrop decides the mode: its art was treated for one theme, and it wears it.
   const forced = entry?.theme ?? null
   const backdrop = entry?.file
@@ -166,15 +207,15 @@ export function PlayerView({
             <span className="text-indigo-500 dark:text-indigo-400">Open</span>Fray
           </span>
         </a>
-        {board && (board.campaign || board.gm) && (
+        {boardVisible && (boardVisible.campaign || boardVisible.gm) && (
           <p className="absolute left-1/2 max-w-[45vw] -translate-x-1/2 truncate whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-            {board.campaign && (
+            {boardVisible.campaign && (
               <span className="font-semibold text-slate-800 dark:text-slate-100">
-                {board.campaign}
+                {boardVisible.campaign}
               </span>
             )}
-            {board.campaign && board.gm && ' · '}
-            {board.gm && <span>Run by {board.gm}</span>}
+            {boardVisible.campaign && boardVisible.gm && ' · '}
+            {boardVisible.gm && <span>Run by {boardVisible.gm}</span>}
           </p>
         )}
         {/* A forced theme is the backdrop's call; a toggle would fight it. */}
@@ -195,33 +236,36 @@ export function PlayerView({
                 src={`${base}${backdrop}`}
                 alt=""
                 aria-hidden
-                data-backdrop={board?.background}
+                data-backdrop={boardVisible?.background}
                 className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover"
               />
             </picture>
           </>
         )}
         <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden px-4 py-4">
-          {!board && status === 'locked' ? (
+          {!boardVisible && status === 'locked' ? (
             <PinGate pin={pin} onPin={setPin} rejected={pinRejected} />
-          ) : board ? (
+          ) : boardVisible ? (
             <>
               <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-                <p className={`text-sm text-slate-600 dark:text-slate-300 ${ground}`}>
-                  <Standing round={board.round} paused={board.paused} turn={turn} />
-                </p>
-                {board.timers && (
+                <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${ground}`}>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    <Standing round={boardVisible.round} paused={boardVisible.paused} turn={turn} />
+                  </p>
+                  <ConnectionState status={status} age={lastUpdateAgeSeconds} />
+                </div>
+                {boardVisible.timers && (
                   <div className={ground}>
                     <CombatTimers
-                      stats={board.timers}
-                      round={board.round}
-                      running={board.round > 0 && !board.paused}
+                      stats={boardVisible.timers}
+                      round={boardVisible.round}
+                      running={boardVisible.round > 0 && !boardVisible.paused}
                     />
                   </div>
                 )}
               </div>
 
-              {board.recap && <SharedRecap recap={board.recap} />}
+              {boardVisible.recap && <SharedRecap recap={boardVisible.recap} />}
 
               {/* Two columns that scroll independently, so a long fight's log never pushes
               the turn order off the screen — and neither one drags the other along.
@@ -229,14 +273,18 @@ export function PlayerView({
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:flex-row sm:overflow-hidden">
                 <section className="min-h-0 sm:flex-1 sm:overflow-y-auto">
                   <h2 className={`${PANE_HEADING} ${ground} inline-block`}>Turn order</h2>
-                  {board.rows.length === 0 ? (
+                  {boardVisible.rows.length === 0 ? (
                     <p className={`text-sm text-slate-500 dark:text-slate-400 ${ground}`}>
                       Nobody is on the board yet.
                     </p>
                   ) : (
                     <ul className="space-y-1.5">
-                      {board.rows.map((row) => (
-                        <PlayerRow key={row.id} row={row} active={row.id === board.activeId} />
+                      {boardVisible.rows.map((row) => (
+                        <PlayerRow
+                          key={row.id}
+                          row={row}
+                          active={row.id === boardVisible.activeId}
+                        />
                       ))}
                     </ul>
                   )}
@@ -246,12 +294,12 @@ export function PlayerView({
                   <h2 className={`${PANE_HEADING} ${ground} inline-block`}>Game log</h2>
                   {/* The empty line is rendered here rather than left to GameLog, so it
                     can carry a ground over the art like the turn order's does. */}
-                  {board.log.length === 0 ? (
+                  {boardVisible.log.length === 0 ? (
                     <p className={`text-sm text-slate-500 dark:text-slate-400 ${ground}`}>
                       Nothing logged yet.
                     </p>
                   ) : (
-                    <GameLog entries={[...board.log].reverse()} />
+                    <GameLog entries={[...boardVisible.log].reverse()} />
                   )}
                 </section>
               </div>

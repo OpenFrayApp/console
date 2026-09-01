@@ -9,6 +9,8 @@ export const CURRENT_PLAYER_PROTOCOL_VERSION = 1
 export const MAX_PLAYER_MESSAGE_BYTES = 240_000
 export const MAX_PLAYER_PAYLOAD_BYTES = 239_000
 export const MAX_PLAYER_SENDERS = 100
+export const LIVE_VIEW_FRESHNESS_GRACE_MS = 30_000
+export const LIVE_VIEW_CLOCK_SKEW_MS = 5_000
 
 export interface ActiveLiveView {
   status: 'ok'
@@ -178,6 +180,79 @@ export type PlayerProtocolReceive =
         | 'reordered'
         | 'too-many-senders'
     }
+
+export type PlayerFreshnessStatus =
+  'connecting' | 'live' | 'reconnecting' | 'connection-lost' | 'access-ended'
+
+export interface PlayerFreshnessState {
+  status: PlayerFreshnessStatus
+  board: PlayerBoard | null
+  lastAcceptedAt: number | null
+}
+
+export const INITIAL_PLAYER_FRESHNESS_STATE: PlayerFreshnessState = {
+  status: 'connecting',
+  board: null,
+  lastAcceptedAt: null,
+}
+
+/** Apply only validated, current owner traffic to the player-view freshness state. */
+export function applyPlayerFreshnessMessage(
+  state: PlayerFreshnessState,
+  received: PlayerProtocolReceive,
+  receivedAt: number,
+): PlayerFreshnessState {
+  if (state.status === 'access-ended' || received.status !== 'accepted') return state
+  if (received.message.type === 'closed') {
+    return { status: 'access-ended', board: null, lastAcceptedAt: null }
+  }
+  if (received.message.type === 'locked') return INITIAL_PLAYER_FRESHNESS_STATE
+  if (received.message.type !== 'board') return state
+  const age = receivedAt - received.envelope.sentAt
+  if (age > LIVE_VIEW_FRESHNESS_GRACE_MS || age < -LIVE_VIEW_CLOCK_SKEW_MS) return state
+  return { status: 'live', board: received.message.board, lastAcceptedAt: receivedAt }
+}
+
+/** Move a formerly live player view into its bounded reconnection grace period. */
+export function markPlayerConnectionLost(
+  state: PlayerFreshnessState,
+  now: number,
+): PlayerFreshnessState {
+  if (state.status === 'access-ended' || state.status === 'connection-lost') return state
+  if (state.board && state.lastAcceptedAt !== null) {
+    return refreshPlayerFreshness({ ...state, status: 'reconnecting' }, now)
+  }
+  return { ...state, status: 'connection-lost' }
+}
+
+/** Cover a board once its last validated update is older than the grace period. */
+export function refreshPlayerFreshness(
+  state: PlayerFreshnessState,
+  now: number,
+): PlayerFreshnessState {
+  if (
+    (state.status !== 'live' && state.status !== 'reconnecting') ||
+    state.lastAcceptedAt === null ||
+    now - state.lastAcceptedAt < LIVE_VIEW_FRESHNESS_GRACE_MS
+  ) {
+    return state
+  }
+  return { ...state, status: 'connection-lost' }
+}
+
+/** End access immediately after a confirmed authorization or lifecycle failure. */
+export function endPlayerAccess(): PlayerFreshnessState {
+  return { status: 'access-ended', board: null, lastAcceptedAt: null }
+}
+
+/** Return the whole-second age shown during the reconnection grace period. */
+export function playerUpdateAgeSeconds(state: PlayerFreshnessState, now: number): number | null {
+  if (state.status !== 'reconnecting' || state.lastAcceptedAt === null) return null
+  return Math.min(
+    LIVE_VIEW_FRESHNESS_GRACE_MS / 1000,
+    Math.max(0, Math.floor((now - state.lastAcceptedAt) / 1000)),
+  )
+}
 
 /** Return the UTF-8 size enforced before a Realtime value reaches state. */
 function messageBytes(value: unknown): number | null {

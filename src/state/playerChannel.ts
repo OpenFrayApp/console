@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import { uid } from '../lib/uid.ts'
@@ -9,10 +9,17 @@ import type { Encounter } from '../schema/encounter.ts'
 import type { PlayerViewSettings } from './settings.ts'
 import { playerBoard, type PlayerBoard, type PlayerRecap } from '../combat/playerView.ts'
 import {
+  INITIAL_PLAYER_FRESHNESS_STATE,
   INITIAL_PLAYER_PROTOCOL_STATE,
+  applyPlayerFreshnessMessage,
+  endPlayerAccess,
+  markPlayerConnectionLost,
+  playerUpdateAgeSeconds,
   receivePlayerMessage,
+  refreshPlayerFreshness,
   sendGameMasterMessage,
   type GameMasterMessage,
+  type PlayerFreshnessState,
   type PlayerProtocolState,
 } from './playerProtocol.ts'
 import { liveViewTopics, type ActiveLiveView } from './liveViewAuthority.ts'
@@ -21,6 +28,8 @@ const EVENT = 'player-view-protocol'
 const HELLO_TIMEOUT_MS = 4000
 const PIN_TRY_TIMEOUT_MS = 2000
 const SEND_DEBOUNCE_MS = 250
+const BOARD_HEARTBEAT_MS = 10_000
+const FRESHNESS_TICK_MS = 1_000
 
 /** Send one bounded Game Master message on an owner-authorized private channel. */
 function sendGameMasterTraffic(
@@ -73,6 +82,8 @@ export function useBoardBroadcast(
 ): void {
   const channel = useRef<RealtimeChannel | null>(null)
   const latest = useRef<PlayerBoard | null>(null)
+  const activeSession = useRef(session)
+  activeSession.current = session
   const sending = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const senderId = useRef(uid())
 
@@ -81,6 +92,7 @@ export function useBoardBroadcast(
     const client = supabase
     let cancelled = false
     let responseTimer: ReturnType<typeof setTimeout> | undefined
+    let heartbeatTimer: ReturnType<typeof setInterval> | undefined
     const open: RealtimeChannel[] = []
     const publicationChannels: RealtimeChannel[] = []
     sending.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
@@ -136,6 +148,7 @@ export function useBoardBroadcast(
         void boardTarget.track({ role: 'gm' })
         sendBoard(boardTarget)
       })
+      heartbeatTimer = setInterval(() => sendBoard(boardTarget), BOARD_HEARTBEAT_MS)
 
       const joins = client.channel(topics.join, privateChannelConfig('gm-joins'))
       open.push(joins)
@@ -146,10 +159,13 @@ export function useBoardBroadcast(
     return () => {
       cancelled = true
       clearTimeout(responseTimer)
-      for (const target of publicationChannels) {
-        sending.current = sendGameMasterTraffic(target, sending.current, senderId.current, {
-          type: 'closed',
-        })
+      clearInterval(heartbeatTimer)
+      if (activeSession.current?.capability !== session.capability) {
+        for (const target of publicationChannels) {
+          sending.current = sendGameMasterTraffic(target, sending.current, senderId.current, {
+            type: 'closed',
+          })
+        }
       }
       for (const target of open) void client.removeChannel(target)
       channel.current = null
@@ -175,7 +191,14 @@ export function useBoardBroadcast(
 }
 
 export type PlayerLinkStatus =
-  'unavailable' | 'connecting' | 'waiting' | 'locked' | 'live' | 'ended'
+  | 'unavailable'
+  | 'connecting'
+  | 'waiting'
+  | 'locked'
+  | 'live'
+  | 'reconnecting'
+  | 'connection-lost'
+  | 'ended'
 
 /** Return whether presence contains the authenticated Game Master marker. */
 function gameMasterPresent(channel: RealtimeChannel): boolean {
@@ -184,9 +207,27 @@ function gameMasterPresent(channel: RealtimeChannel): boolean {
   )
 }
 
-/** Return whether Realtime denied or ended a private subscription. */
-function subscriptionEnded(status: string): boolean {
-  return status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED'
+/** Return whether structured Realtime error data confirms an authorization failure. */
+function authorizationFailed(value: unknown, depth = 0): boolean {
+  if (!value || typeof value !== 'object' || depth > 4) return false
+  const error = value as Record<string, unknown>
+  if (error.status === 401 || error.status === 403 || error.code === 401 || error.code === 403) {
+    return true
+  }
+  if (
+    typeof error.reason === 'string' &&
+    ['unauthorized', 'forbidden', 'permission denied', 'invalid jwt', 'token expired'].includes(
+      error.reason.toLowerCase(),
+    )
+  ) {
+    return true
+  }
+  return authorizationFailed(error.cause, depth + 1)
+}
+
+/** Translate the pure protocol state into the player hook's public status names. */
+function playerLinkStatus(state: PlayerFreshnessState): PlayerLinkStatus {
+  return state.status === 'access-ended' ? 'ended' : state.status
 }
 
 /** Subscribe read-only to a capability-authorized player board. */
@@ -198,21 +239,68 @@ export function usePlayerBoard(
   status: PlayerLinkStatus
   board: PlayerBoard | null
   pinRejected: boolean
+  lastUpdateAgeSeconds: number | null
 } {
-  const [status, setStatus] = useState<PlayerLinkStatus>(
-    !playerViewAvailable() ? 'unavailable' : capability ? 'connecting' : 'ended',
+  const initialFreshness = capability ? INITIAL_PLAYER_FRESHNESS_STATE : endPlayerAccess()
+  const [freshness, setFreshness] = useState<PlayerFreshnessState>(initialFreshness)
+  const freshnessRef = useRef<PlayerFreshnessState>(initialFreshness)
+  const [standby, setStandby] = useState<'unavailable' | 'waiting' | 'locked' | null>(
+    !playerViewAvailable() ? 'unavailable' : null,
   )
-  const [board, setBoard] = useState<PlayerBoard | null>(null)
   const [pinRejected, setPinRejected] = useState(false)
+  const [observedAt, setObservedAt] = useState(Date.now())
   const receiving = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const senderId = useRef(uid())
+
+  /** Keep event callbacks and rendered freshness on the same pure state transition. */
+  const updateFreshness = useCallback((next: PlayerFreshnessState) => {
+    freshnessRef.current = next
+    setFreshness(next)
+  }, [])
+
+  /** Apply one untrusted owner payload only after protocol and freshness validation. */
+  const applyPayload = useCallback(
+    (payload: unknown) => {
+      const received = receivePlayerMessage(receiving.current, 'viewer', payload)
+      if (received.status !== 'accepted' || received.message.type === 'hello') return
+      receiving.current = received.state
+      const now = Date.now()
+      const next = applyPlayerFreshnessMessage(freshnessRef.current, received, now)
+      if (received.message.type === 'locked') {
+        setStandby('locked')
+        if (next !== freshnessRef.current) updateFreshness(next)
+        return
+      }
+      if (next === freshnessRef.current) return
+      if (next.status === 'live') {
+        setObservedAt(now)
+        setStandby(null)
+        setPinRejected(false)
+      } else if (next.status === 'access-ended') {
+        setStandby(null)
+      }
+      updateFreshness(next)
+    },
+    [updateFreshness],
+  )
 
   useEffect(() => {
     receiving.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
     senderId.current = uid()
-    setBoard(null)
-    setStatus(!playerViewAvailable() ? 'unavailable' : capability ? 'connecting' : 'ended')
-  }, [code, capability])
+    const next = capability ? INITIAL_PLAYER_FRESHNESS_STATE : endPlayerAccess()
+    updateFreshness(next)
+    setStandby(!playerViewAvailable() ? 'unavailable' : null)
+  }, [code, capability, updateFreshness])
+
+  useEffect(() => {
+    if (!supabase || !capability) return
+    const timer = setInterval(() => {
+      const now = Date.now()
+      setObservedAt(now)
+      updateFreshness(refreshPlayerFreshness(freshnessRef.current, now))
+    }, FRESHNESS_TICK_MS)
+    return () => clearInterval(timer)
+  }, [code, capability, updateFreshness])
 
   useEffect(() => {
     if (!supabase || !capability) return
@@ -221,27 +309,26 @@ export function usePlayerBoard(
     const targets: RealtimeChannel[] = []
     let waiting: ReturnType<typeof setTimeout> | undefined
 
-    /** Remove stale content as soon as presence or lifecycle traffic ends access. */
-    const stepAway = () => {
-      setStatus('waiting')
-      setBoard(null)
+    /** Keep a recent board during transport recovery and cover one that cannot be trusted. */
+    const reconnect = () => {
+      clearTimeout(waiting)
+      setStandby(null)
+      updateFreshness(markPlayerConnectionLost(freshnessRef.current, Date.now()))
     }
 
-    /** Apply one validated owner message to viewer state. */
-    const applyMessage = (message: GameMasterMessage) => {
-      switch (message.type) {
-        case 'board':
-          clearTimeout(waiting)
-          setBoard(message.board)
-          setStatus('live')
-          break
-        case 'locked':
-          clearTimeout(waiting)
-          setStatus((value) => (value === 'live' ? value : 'locked'))
-          break
-        case 'closed':
-          stepAway()
-          break
+    /** End this capability immediately after confirmed closure or authorization failure. */
+    const endAccess = () => {
+      clearTimeout(waiting)
+      setStandby(null)
+      updateFreshness(endPlayerAccess())
+    }
+
+    /** Apply one subscription status without treating a transient timeout as revocation. */
+    const applySubscription = (state: string, error?: Error) => {
+      if (state === 'CLOSED' || authorizationFailed(error)) {
+        endAccess()
+      } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
+        reconnect()
       }
     }
 
@@ -250,36 +337,28 @@ export function usePlayerBoard(
       const joined = client.channel(lobby, privateChannelConfig(senderId.current))
       targets.push(joined)
       joined.on('broadcast', { event: EVENT }, ({ payload }) => {
-        const received = receivePlayerMessage(receiving.current, 'viewer', payload)
-        if (received.status !== 'accepted' || received.message.type === 'hello') return
-        receiving.current = received.state
-        applyMessage(received.message)
+        if (!cancelled) applyPayload(payload)
       })
       joined.on('presence', { event: 'sync' }, () => {
-        if (!gameMasterPresent(joined)) stepAway()
+        if (cancelled || gameMasterPresent(joined)) return
+        if (freshnessRef.current.board) reconnect()
+        else setStandby('waiting')
       })
-      joined.subscribe((state) => {
-        if (subscriptionEnded(state)) {
-          setBoard(null)
-          setStatus('ended')
-          return
-        }
+      joined.subscribe((state, error) => {
+        if (cancelled) return
+        applySubscription(state, error)
         if (state !== 'SUBSCRIBED') return
-        waiting = setTimeout(
-          () => setStatus((value) => (value === 'connecting' ? 'waiting' : value)),
-          HELLO_TIMEOUT_MS,
-        )
+        waiting = setTimeout(() => {
+          if (freshnessRef.current.status === 'connecting') setStandby('waiting')
+        }, HELLO_TIMEOUT_MS)
       })
 
       const arrivals = client.channel(join, privateChannelConfig(senderId.current))
       targets.push(arrivals)
-      arrivals.subscribe((state) => {
-        if (subscriptionEnded(state)) {
-          setBoard(null)
-          setStatus('ended')
-        } else if (state === 'SUBSCRIBED') {
-          void arrivals.track({ role: 'viewer' })
-        }
+      arrivals.subscribe((state, error) => {
+        if (cancelled) return
+        applySubscription(state, error)
+        if (state === 'SUBSCRIBED') void arrivals.track({ role: 'viewer' })
       })
     })
 
@@ -288,7 +367,7 @@ export function usePlayerBoard(
       clearTimeout(waiting)
       for (const target of targets) void client.removeChannel(target)
     }
-  }, [code, capability])
+  }, [code, capability, applyPayload, updateFreshness])
 
   useEffect(() => {
     setPinRejected(false)
@@ -304,29 +383,32 @@ export function usePlayerBoard(
       const joined = client.channel(boardTopic, privateChannelConfig(senderId.current))
       target = joined
       joined.on('broadcast', { event: EVENT }, ({ payload }) => {
-        const received = receivePlayerMessage(receiving.current, 'viewer', payload)
-        if (received.status !== 'accepted' || received.message.type === 'hello') return
-        receiving.current = received.state
-        if (received.message.type === 'board') {
+        if (cancelled) return
+        const before = freshnessRef.current
+        applyPayload(payload)
+        if (freshnessRef.current.status === 'live' && freshnessRef.current !== before) {
           answered = true
           clearTimeout(waiting)
-          setPinRejected(false)
-          setBoard(received.message.board)
-          setStatus('live')
-        } else if (received.message.type === 'closed') {
-          setBoard(null)
-          setStatus('connecting')
         }
       })
       joined.subscribe((state) => {
-        if (subscriptionEnded(state)) {
-          setBoard(null)
-          setStatus('ended')
+        if (cancelled) return
+        if (state === 'CLOSED') {
+          updateFreshness(endPlayerAccess())
+          setStandby(null)
+          return
+        }
+        if (state === 'CHANNEL_ERROR') {
+          setPinRejected(true)
+          setStandby('locked')
           return
         }
         if (state !== 'SUBSCRIBED') return
         waiting = setTimeout(() => {
-          if (!answered) setPinRejected(true)
+          if (!answered) {
+            setPinRejected(true)
+            setStandby('locked')
+          }
         }, PIN_TRY_TIMEOUT_MS)
       })
     })
@@ -336,7 +418,13 @@ export function usePlayerBoard(
       clearTimeout(waiting)
       if (target) void client.removeChannel(target)
     }
-  }, [code, capability, pin])
+  }, [code, capability, pin, applyPayload, updateFreshness])
 
-  return { status, board, pinRejected }
+  const status = standby ?? playerLinkStatus(freshness)
+  return {
+    status,
+    board: freshness.board,
+    pinRejected,
+    lastUpdateAgeSeconds: playerUpdateAgeSeconds(freshness, observedAt),
+  }
 }

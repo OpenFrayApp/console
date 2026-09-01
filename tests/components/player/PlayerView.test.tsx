@@ -12,6 +12,7 @@ const link = vi.hoisted(() => ({
   status: 'connecting' as PlayerLinkStatus,
   board: null as PlayerBoard | null,
   pinRejected: false,
+  lastUpdateAgeSeconds: null as number | null,
 }))
 
 vi.mock('../../../src/state/playerChannel.ts', () => ({
@@ -23,6 +24,7 @@ afterEach(() => {
   link.status = 'connecting'
   link.board = null
   link.pinRejected = false
+  link.lastUpdateAgeSeconds = null
 })
 
 function board(overrides: Partial<PlayerBoard> = {}): PlayerBoard {
@@ -61,7 +63,7 @@ function board(overrides: Partial<PlayerBoard> = {}): PlayerBoard {
 describe('PlayerView — before a board arrives', () => {
   it('says it is connecting while the link is opening', () => {
     render(<PlayerView code="tuesday-game" />)
-    expect(screen.getByText('Connecting…')).toBeInTheDocument()
+    expect(screen.getByText('Connecting')).toBeInTheDocument()
   })
 
   it('tells the reader to wait, and names the link they are on', () => {
@@ -89,6 +91,39 @@ describe('PlayerView — live', () => {
     expect(screen.getAllByText('Ogre')).toHaveLength(2)
     expect(screen.getByText('’s turn', { exact: false })).toBeInTheDocument()
     expect(screen.getByText('Thalia')).toBeInTheDocument()
+    expect(screen.getByText('Live')).toBeInTheDocument()
+  })
+
+  it('keeps the board visible with its update age while reconnecting', () => {
+    link.status = 'reconnecting'
+    link.board = board()
+    link.lastUpdateAgeSeconds = 12
+
+    render(<PlayerView code="x" />)
+
+    expect(screen.getByText('Reconnecting')).toBeInTheDocument()
+    expect(screen.getByText('· Last update 12 seconds ago')).toBeInTheDocument()
+    expect(screen.getByText('Thalia')).toBeInTheDocument()
+  })
+
+  it('covers stale content when the connection is lost', () => {
+    link.status = 'connection-lost'
+    link.board = board()
+
+    render(<PlayerView code="x" />)
+
+    expect(screen.getByText('Connection lost')).toBeInTheDocument()
+    expect(screen.queryByText('Thalia')).toBeNull()
+  })
+
+  it('removes the board immediately when access ends', () => {
+    link.status = 'ended'
+    link.board = board()
+
+    render(<PlayerView code="x" />)
+
+    expect(screen.getByText('Access ended')).toBeInTheDocument()
+    expect(screen.queryByText('Thalia')).toBeNull()
   })
 
   it('renders a creature`s wound as a word and a character`s as numbers', () => {
