@@ -271,8 +271,8 @@ describe('parseTemplate — fuzzed', () => {
       if (!template) continue
       expect(JSON.stringify(template).length).toBeLessThanOrEqual(LIMITS.readBytes)
       const { combatants } = templateToCombatants(template, { creatures: [], hpMethod: 'average' })
-      // What the debounced autosave writes to the recipient's row every 600ms, for a board
-      // they did not build. A normal full board is a couple of hundred kilobytes.
+      // What immediate recovery writes for a board the recipient did not build. A normal
+      // full board is a couple of hundred kilobytes.
       expect(JSON.stringify(combatants).length).toBeLessThan(2 * 1024 * 1024)
     }
   })

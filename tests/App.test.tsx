@@ -3,10 +3,21 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import App from '../src/App.tsx'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  sessionStorage.clear()
+})
+
+/** Put one quick-add foe on the board. */
+function addFoe(name: string): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+  fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: name } })
+  fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+}
 
 describe('App', () => {
   it('shows the encounter console by default with view navigation', () => {
@@ -16,17 +27,21 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Show the encounter' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show the compendium' })).toBeInTheDocument()
   })
+
+  it('writes a committed board action without waiting for a debounce timer', async () => {
+    sessionStorage.clear()
+    render(<App />)
+    await screen.findByRole('button', { name: 'Sign in to resume saving' })
+    sessionStorage.clear()
+
+    addFoe('Bandit')
+    await act(() => Promise.resolve())
+
+    expect(sessionStorage.getItem('openfray:session')).toContain('Bandit')
+  })
 })
 
 describe('App — when initiative reaches the log', () => {
-  /** Put one quick-add foe on the board, so Begin has someone to roll for. */
-  const addFoe = (name: string) => {
-    fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
-    fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: name } })
-    fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-  }
-
   /** Every game-log line currently on screen, newest first. */
   const logLines = () => Array.from(document.querySelectorAll('li')).map((li) => li.textContent)
 

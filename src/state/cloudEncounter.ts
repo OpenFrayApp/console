@@ -96,8 +96,8 @@ export async function claimPlayerCode(id: string, code: string): Promise<ClaimRe
 /**
  * Upsert the encounter. With an `id` it updates that row; without one it inserts
  * (owner_id auto-fills from the session) and returns the new id to reuse. Returns
- * the row id, or the passed id on failure — persistence is best-effort, never a
- * gatekeeper for the UI.
+ * the row id on success and null on failure. Persistence remains background work,
+ * while the lifecycle uses the result to avoid claiming an unsuccessful save.
  *
  * `kind` is deliberately not written here: the column defaults to `live`, so the autosave
  * keeps working unchanged on a project where the column hasn't been added yet. Sending it
@@ -108,13 +108,13 @@ export async function saveCloudEncounter(
   encounter: Encounter,
   updatedAt = new Date().toISOString(),
 ): Promise<string | null> {
-  if (!supabase) return id
+  if (!supabase) return null
   if (id) {
     const { error } = await supabase
       .from('encounters')
       .update({ state: encounter, updated_at: updatedAt })
       .eq('id', id)
-    return error ? id : id
+    return error ? null : id
   }
   const { data, error } = await supabase
     .from('encounters')

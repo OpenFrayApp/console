@@ -57,6 +57,54 @@ describe('IndexedDB recovery', () => {
     await restartedDevice.close()
   })
 
+  it('retains the current and previous validated recovery copies', async () => {
+    const databaseName = `openfray-copies-${crypto.randomUUID()}`
+    const recovery = new IndexedDbRecovery(databaseName)
+
+    await recovery.save('owner-a', snapshot('first'), '2026-09-02T10:11:12.000Z')
+    await recovery.save('owner-a', snapshot('second'), '2026-09-02T10:12:12.000Z')
+    await recovery.save('owner-a', snapshot('third'), '2026-09-02T10:13:12.000Z')
+
+    await expect(recovery.load('owner-a')).resolves.toMatchObject({
+      snapshot: snapshot('third'),
+    })
+    await expect(recovery.loadPrevious('owner-a')).resolves.toMatchObject({
+      snapshot: snapshot('second'),
+    })
+    await recovery.close()
+  })
+
+  it('restores the previous validated copy when the current copy is damaged', async () => {
+    const databaseName = `openfray-fallback-${crypto.randomUUID()}`
+    const recovery = new IndexedDbRecovery(databaseName)
+    await recovery.save('owner-a', snapshot('first'), '2026-09-02T10:11:12.000Z')
+    await recovery.save('owner-a', snapshot('second'), '2026-09-02T10:12:12.000Z')
+    await recovery.close()
+
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName)
+      request.addEventListener('success', () => resolve(request.result), { once: true })
+      request.addEventListener('error', () => reject(request.error), { once: true })
+    })
+    const transaction = database.transaction('copies', 'readwrite')
+    const copies = transaction.objectStore('copies')
+    const record = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      const request = copies.get('owner-a')
+      request.addEventListener('success', () => resolve(request.result), { once: true })
+      request.addEventListener('error', () => reject(request.error), { once: true })
+    })
+    copies.put({ ...record, serialized: '{ damaged' })
+    await new Promise<void>((resolve, reject) => {
+      transaction.addEventListener('complete', () => resolve(), { once: true })
+      transaction.addEventListener('error', () => reject(transaction.error), { once: true })
+    })
+    database.close()
+
+    const restarted = new IndexedDbRecovery(databaseName)
+    await expect(restarted.load('owner-a')).resolves.toMatchObject({ snapshot: snapshot('first') })
+    await restarted.close()
+  })
+
   it('keeps each signed-in identity in its own recovery slot', async () => {
     const databaseName = `openfray-identities-${crypto.randomUUID()}`
     const recovery = new IndexedDbRecovery(databaseName)

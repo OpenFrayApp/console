@@ -133,8 +133,8 @@ describe('loadCloudEncounter', () => {
 })
 
 describe('saveCloudEncounter', () => {
-  it('echoes the passed id without a configured client, touching nothing', async () => {
-    expect(await saveCloudEncounter('row-9', encounter())).toBe('row-9')
+  it('reports failure without a configured client, touching nothing', async () => {
+    expect(await saveCloudEncounter('row-9', encounter())).toBeNull()
     expect(await saveCloudEncounter(null, encounter())).toBeNull()
   })
 
@@ -154,10 +154,10 @@ describe('saveCloudEncounter', () => {
     ])
   })
 
-  it('with an id, still returns that id when the update fails', async () => {
+  it('with an id, reports when the update fails', async () => {
     const { client } = makeSupabaseStub({ data: null, error: { message: 'boom' } })
     supa.client = client
-    expect(await saveCloudEncounter('row-1', encounter())).toBe('row-1')
+    expect(await saveCloudEncounter('row-1', encounter())).toBeNull()
   })
 
   it('without an id, inserts a new row and returns its generated id', async () => {

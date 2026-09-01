@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react'
 import type { ContentLicense } from './schema/license.ts'
 import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
@@ -29,7 +37,11 @@ import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from './s
 import { CampaignEditionContext, CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer, type NewLogEntry } from './state/encounter.ts'
 import type { SessionSnapshot, View } from './state/persistence.ts'
-import { createBrowserEncounterLifecycle } from './state/encounterLifecycle.ts'
+import {
+  createBrowserEncounterLifecycle,
+  installNavigationWarning,
+  requiresNavigationWarning,
+} from './state/encounterLifecycle.ts'
 import { useTheme } from './hooks/useTheme.ts'
 import { useHotkeys } from './hooks/useHotkeys.ts'
 import { useOpenRequest } from './hooks/useOpenRequest.ts'
@@ -66,6 +78,8 @@ import {
 import type { EncounterTemplate } from './schema/encounterTemplate.ts'
 import { loadSrdCreatures } from './compendium/srd.ts'
 import { SaveFightButton, ShareEncounterButton } from './components/shell/EncounterActions.tsx'
+import { RecoveryStatus } from './components/shell/RecoveryStatus.tsx'
+import { downloadRecoveryCopy } from './state/recoveryDownload.ts'
 import {
   deleteCustomCreature,
   loadCustomCreatures,
@@ -234,6 +248,7 @@ const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex
 /** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
 function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [lifecycle] = useState(createBrowserEncounterLifecycle)
+  const [saveStatus, setSaveStatus] = useState(() => lifecycle.saveStatus())
   // Theme is shared with the marketing site (and the player view) through its own
   // device-local preference, independent of authored encounter recovery.
   const [theme, toggleTheme] = useTheme()
@@ -394,6 +409,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (user) setAuthOpen(false)
   }, [user])
 
+  useEffect(() => lifecycle.subscribe(setSaveStatus), [lifecycle])
+
   // Wait for identity resolution before loading or clearing account-owned reference data.
   useEffect(() => {
     if (authLoading) return
@@ -462,15 +479,24 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     }
   }, [applyRecovery, userId, authLoading, lifecycle])
 
-  // Local-first autosave (debounced): the lifecycle chooses tab-scoped anonymous recovery
-  // or restart-safe owner recovery, then persists to cloud in the background.
-  useEffect(() => {
+  // Start recovery before the browser's next paint. The working board has already changed,
+  // and the lifecycle keeps it responsive while device and cloud adapters continue.
+  useLayoutEffect(() => {
     if (!boardReady) return
-    const handle = setTimeout(() => {
-      void lifecycle.commit({ encounter, theme, view, selectedId, activeCampaignId, sharing })
-    }, 600)
-    return () => clearTimeout(handle)
+    void lifecycle.commit({ encounter, theme, view, selectedId, activeCampaignId, sharing })
   }, [boardReady, encounter, theme, view, selectedId, activeCampaignId, sharing, userId, lifecycle])
+
+  const navigationUnsafe = requiresNavigationWarning(saveStatus)
+  useEffect(() => {
+    if (!boardReady || !navigationUnsafe) return
+    return installNavigationWarning()
+  }, [boardReady, navigationUnsafe])
+
+  /** Download the latest working board without depending on browser recovery storage. */
+  const downloadRecovery = () => {
+    const recovery = lifecycle.recoveryDownload()
+    if (recovery) downloadRecoveryCopy(recovery)
+  }
 
   // The summary travels with the board while the GM has it up, so the table reads the
   // fight's outcome on their own screens. Experience is left out of a milestone
@@ -1570,6 +1596,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               <div className="hidden split:block wide:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
+              <RecoveryStatus
+                status={saveStatus}
+                onRetry={() => void lifecycle.retry()}
+                onDownload={downloadRecovery}
+                onSignIn={() => setAuthOpen(true)}
+              />
               <AccountControl
                 onSignIn={() => setAuthOpen(true)}
                 allowReserved={bylineGranted}

@@ -49,8 +49,8 @@ vi.mock('../../../src/compendium/srd.ts', () => ({
 const { default: App } = await import('../../../src/App.tsx')
 const { EncounterConsole } = await import('../../../src/components/tracker/EncounterConsole.tsx')
 
-// Clear sessionStorage too: the debounced autosave can fire during longer tests and
-// would otherwise restore stale combatants/log into the next test's fresh App.
+// Clear sessionStorage too: recovery writes during longer tests would otherwise restore
+// stale combatants and log entries into the next test's fresh App.
 afterEach(() => {
   cleanup()
   sessionStorage.clear()

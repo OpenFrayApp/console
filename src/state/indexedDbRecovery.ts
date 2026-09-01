@@ -19,6 +19,7 @@ interface RecoveryRecord {
   ownerId: string
   savedAt: string
   serialized: string
+  previousSerialized?: string
 }
 
 interface MetadataRecord {
@@ -77,6 +78,21 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     )
     if (!record) return null
     const decoded = decodeSession(record.serialized)
+    if (decoded.status === 'ok') return { ownerId, snapshot: decoded.snapshot }
+    if (decoded.status === 'unsupported' || !record.previousSerialized) return null
+    const previous = decodeSession(record.previousSerialized)
+    return previous.status === 'ok' ? { ownerId, snapshot: previous.snapshot } : null
+  }
+
+  /** Load the validated recovery copy that immediately preceded the current copy. */
+  async loadPrevious(ownerId: string): Promise<DeviceRecovery | null> {
+    const database = await this.database()
+    const transaction = database.transaction(COPIES, 'readonly')
+    const record = await requested(
+      transaction.objectStore(COPIES).get(ownerId) as IDBRequest<RecoveryRecord | undefined>,
+    )
+    if (!record?.previousSerialized) return null
+    const decoded = decodeSession(record.previousSerialized)
     return decoded.status === 'ok' ? { ownerId, snapshot: decoded.snapshot } : null
   }
 
@@ -99,6 +115,7 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
       const transaction = database.transaction([COPIES, METADATA], 'readwrite')
       const copies = transaction.objectStore(COPIES)
       const current = await requested(copies.get(ownerId) as IDBRequest<RecoveryRecord | undefined>)
+      let currentCanonical: string | undefined
       if (current) {
         const decoded = decodeSession(current.serialized)
         if (decoded.status === 'unsupported') {
@@ -109,8 +126,14 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
           transaction.abort()
           return { status: 'blocked', reason: 'invalid' }
         }
+        currentCanonical = decoded.canonical
       }
-      copies.put({ ownerId, savedAt, serialized: encoded.serialized } satisfies RecoveryRecord)
+      copies.put({
+        ownerId,
+        savedAt,
+        serialized: encoded.serialized,
+        previousSerialized: currentCanonical,
+      } satisfies RecoveryRecord)
       transaction
         .objectStore(METADATA)
         .put({ key: ACTIVE_OWNER, value: ownerId } satisfies MetadataRecord)
