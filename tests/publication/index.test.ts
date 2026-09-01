@@ -8,6 +8,7 @@ import {
   SOURCE_MANIFEST_VERSION,
   PUBLICATION_SOURCE_MANIFEST,
   normalizePublication,
+  publicationSources,
   resolvePublicationPreview,
 } from '../../src/publication/index.ts'
 
@@ -52,6 +53,9 @@ describe('publication contract', () => {
     expect(normalized.status).toBe('ok')
     if (normalized.status !== 'ok') return
 
+    expect(publicationSources(normalized.publication)).toEqual([
+      { id: 'srd-5.2', indexPath: 'srd-creatures.index.json' },
+    ])
     const preview = resolvePublicationPreview(normalized.publication, {
       'srd-5.2': index,
     })

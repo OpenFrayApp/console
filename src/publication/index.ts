@@ -384,6 +384,24 @@ export function normalizePublication(input: unknown): PublicationOutcome {
   }
 }
 
+/** Describe the exact source indexes a normalized publication needs. */
+export function publicationSources(
+  publication: NormalizedPublication,
+): { id: string; indexPath: string }[] {
+  const ids = new Set<string>()
+  if (publication.kind === 'encounter') {
+    for (const entry of publication.entries) {
+      if (entry.kind === 'reference') ids.add(entry.sourceId)
+    }
+  } else if (publication.ref) {
+    ids.add(publication.ref.sourceId)
+  }
+  return [...ids].flatMap((id) => {
+    const source = SOURCE_BY_ID.get(id)
+    return source ? [{ id: source.id, indexPath: source.indexPath }] : []
+  })
+}
+
 /** Resolve references through untrusted sidecar indexes and emit preview-only facts. */
 export function resolvePublicationPreview(
   publication: NormalizedPublication,
