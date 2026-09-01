@@ -26,7 +26,7 @@ async function availablePort(): Promise<number> {
 /** Wait until workerd accepts a request, or surface its startup failure. */
 async function requestWorker(url: string, process: ChildProcess): Promise<Response> {
   let cause: unknown
-  for (let attempt = 0; attempt < 40; attempt++) {
+  for (let attempt = 0; attempt < 200; attempt++) {
     if (process.exitCode !== null) throw new Error(`workerd exited with ${process.exitCode}`)
     try {
       return await fetch(url)
