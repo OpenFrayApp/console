@@ -233,7 +233,8 @@ const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex
 
 /** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
 function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
-  const [restored] = useState(loadSession)
+  const [sessionLoad] = useState(loadSession)
+  const restored = sessionLoad.snapshot
   // Theme is shared with the marketing site (and the player view) via the
   // `openfray-theme` key; the restored session is the fallback, then dark.
   const [theme, toggleTheme] = useTheme(restored?.theme ?? 'dark')

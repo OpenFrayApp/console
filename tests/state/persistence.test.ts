@@ -3,35 +3,32 @@
 
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Encounter } from '../../src/schema/encounter.ts'
 import {
   clearSession,
+  deleteRecoveryCopy,
+  exportRecoveryCopy,
+  listRecoveryCopies,
   loadSession,
+  replaceSession,
   saveSession,
   type SessionSnapshot,
 } from '../../src/state/persistence.ts'
 
-function encounter(combatantIds: string[] = []): Encounter {
+/** Build a valid encounter for the browser-storage boundary. */
+function encounter(id = 'local'): Encounter {
   return {
-    encounterId: 'local',
+    encounterId: id,
     ownerId: null,
     round: 0,
     activeIndex: 0,
-    combatants: combatantIds.map(
-      (id) =>
-        ({
-          isPC: false,
-          combatantId: id,
-          creatureId: 'srd:goblin',
-          label: id,
-          initiative: 0,
-        }) as never,
-    ),
+    combatants: [],
     log: [],
   }
 }
 
+/** Build a valid recovery snapshot. */
 function snapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
   return {
     encounter: encounter(),
@@ -44,57 +41,113 @@ function snapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
 
 describe('session persistence', () => {
   beforeEach(() => {
-    clearSession()
+    sessionStorage.clear()
   })
 
-  it('returns null when nothing has been saved', () => {
-    expect(loadSession()).toBeNull()
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
-  it('round-trips a saved snapshot', () => {
-    const enc = encounter()
-    enc.log = [{ id: '0-0', round: 0, category: 'note', message: 'Goblin: initiative' }]
-    const snap = snapshot({ theme: 'light', view: 'compendium', encounter: enc })
-    saveSession(snap)
-    expect(loadSession()).toEqual(snap)
+  it('returns an empty result when nothing has been saved', () => {
+    expect(loadSession()).toEqual({ status: 'empty', snapshot: null })
   })
 
-  it('returns null when the stored version does not match', () => {
-    sessionStorage.setItem(
-      'openfray:session',
-      JSON.stringify({ version: 999, snapshot: snapshot() }),
-    )
-    expect(loadSession()).toBeNull()
+  it('round-trips a canonical saved snapshot', () => {
+    const value = snapshot({ theme: 'light', view: 'compendium' })
+    expect(saveSession(value)).toEqual({ status: 'saved' })
+    expect(loadSession()).toEqual({ status: 'loaded', snapshot: value })
+    expect(JSON.parse(sessionStorage.getItem('openfray:session') ?? '{}')).toMatchObject({
+      kind: 'session',
+      schemaVersion: 3,
+      payload: value,
+    })
   })
 
-  it('returns null for a malformed blob instead of throwing', () => {
-    sessionStorage.setItem('openfray:session', '{ not json')
-    expect(loadSession()).toBeNull()
+  it('retains the last validated current copy as previous', () => {
+    saveSession(snapshot({ encounter: encounter('first') }))
+    saveSession(snapshot({ encounter: encounter('second') }))
+
+    expect(exportRecoveryCopy('previous')?.serialized).toContain('"encounterId":"first"')
+    expect(listRecoveryCopies()).toEqual([
+      { slot: 'current', bytes: expect.any(Number), status: 'valid' },
+      { slot: 'previous', bytes: expect.any(Number), status: 'valid' },
+    ])
   })
 
-  it('drops a selectedId that no longer matches a combatant', () => {
-    saveSession(snapshot({ encounter: encounter(['a', 'b']), selectedId: 'gone' }))
-    expect(loadSession()?.selectedId).toBeNull()
+  it('quarantines invalid current data and restores the previous validated copy', () => {
+    const first = snapshot({ encounter: encounter('first') })
+    saveSession(first)
+    saveSession(snapshot({ encounter: encounter('second') }))
+    const malformed = '{ not json'
+    sessionStorage.setItem('openfray:session', malformed)
+
+    expect(loadSession()).toEqual({ status: 'recovered', snapshot: first, blockedBy: 'invalid' })
+    expect(exportRecoveryCopy('current')?.serialized).toBe(malformed)
+    expect(exportRecoveryCopy('quarantine')?.serialized).toBe(malformed)
   })
 
-  it('keeps a selectedId that still matches a combatant', () => {
-    saveSession(snapshot({ encounter: encounter(['a', 'b']), selectedId: 'b' }))
-    expect(loadSession()?.selectedId).toBe('b')
+  it('does not overwrite an earlier quarantined value', () => {
+    sessionStorage.setItem('openfray:session:quarantine', 'earlier invalid value')
+    sessionStorage.setItem('openfray:session', '{ later invalid value')
+    loadSession()
+    expect(exportRecoveryCopy('quarantine')?.serialized).toBe('earlier invalid value')
   })
 
-  // A refresh is not the end of the session: the players' screens should still be
-  // following the fight afterwards. Closing the tab is what stops it, which is what
-  // sessionStorage means.
-  it('carries the share across a reload, and reads an old blob as not sharing', () => {
-    saveSession(snapshot({ sharing: true }))
-    expect(loadSession()?.sharing).toBe(true)
+  it('preserves future data byte-for-byte and blocks ordinary autosave', () => {
+    const future = '{"kind":"session","schemaVersion":999,"payload":{"future":true}}'
+    sessionStorage.setItem('openfray:session', future)
+
+    expect(loadSession()).toEqual({ status: 'blocked', snapshot: null, blockedBy: 'unsupported' })
+    expect(saveSession(snapshot())).toEqual({ status: 'blocked', reason: 'unsupported' })
+    expect(exportRecoveryCopy('current')).toEqual({
+      slot: 'current',
+      filename: 'openfray-session-current.json',
+      serialized: future,
+    })
+  })
+
+  it('archives a supported legacy value before rewriting it canonically', () => {
+    const legacy = JSON.stringify({ version: 2, snapshot: snapshot() })
+    sessionStorage.setItem('openfray:session', legacy)
+
+    expect(loadSession()).toEqual({ status: 'loaded', snapshot: snapshot() })
+    expect(exportRecoveryCopy('migrated')?.serialized).toBe(legacy)
+    expect(exportRecoveryCopy('current')?.serialized).toContain('"schemaVersion":3')
+  })
+
+  it('allows explicit replacement and deletion of a future copy', () => {
+    const future = '{"kind":"session","schemaVersion":999,"payload":{}}'
+    sessionStorage.setItem('openfray:session', future)
+
+    expect(replaceSession(snapshot())).toEqual({ status: 'saved' })
+    expect(loadSession()).toEqual({ status: 'loaded', snapshot: snapshot() })
+    expect(deleteRecoveryCopy('current')).toEqual({ status: 'deleted' })
+    expect(loadSession()).toEqual({ status: 'empty', snapshot: null })
+  })
+
+  it('keeps the existing current and previous copies when a later write exceeds storage quota', () => {
+    const first = snapshot({ encounter: encounter('first') })
+    const second = snapshot({ encounter: encounter('second') })
+    saveSession(first)
+    saveSession(second)
+    const original = Storage.prototype.setItem
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+      if (key === 'openfray:session') throw new DOMException('full', 'QuotaExceededError')
+      return original.call(this, key, value)
+    })
+
+    expect(saveSession(snapshot({ encounter: encounter('third') }))).toEqual({
+      status: 'failed',
+      reason: 'quota',
+    })
+    expect(loadSession()).toEqual({ status: 'loaded', snapshot: second })
+    expect(exportRecoveryCopy('previous')?.serialized).toContain('"encounterId":"first"')
+  })
+
+  it('clearSession removes every recovery copy', () => {
     saveSession(snapshot())
-    expect(loadSession()?.sharing ?? false).toBe(false)
-  })
-
-  it('clearSession removes the saved snapshot', () => {
-    saveSession(snapshot())
-    clearSession()
-    expect(loadSession()).toBeNull()
+    sessionStorage.setItem('openfray:session:quarantine', 'invalid')
+    expect(clearSession()).toEqual({ status: 'deleted' })
+    expect(listRecoveryCopies()).toEqual([])
   })
 })

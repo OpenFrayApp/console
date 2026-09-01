@@ -21,7 +21,7 @@
       "id": "hardening.legacy.v1",
       "fixtureClass": "legacy",
       "path": "legacy.json",
-      "sha256": "34a103f09a83b3e74cf469cd4fb0f6f22c735d94b206b42a0dd94d5c5f8c9eae",
+      "sha256": "05a7473f254f68580c4da9c20306254abb8640df2c2d6755d2980ee6f9d4a964",
       "provenance": "synthetic",
       "description": "Supported legacy session and effect shapes."
     },
@@ -53,7 +53,7 @@
       "id": "hardening.performance.20.v1",
       "fixtureClass": "performance",
       "path": "performance-20.json",
-      "sha256": "af1b02783c981c36765922a2749e2d992ba644e4074a9bb424ffda1b101fb073",
+      "sha256": "7006cb54e902583e09651619a4dfcc0ef2117c317ee6cb07e8178c991af6ab2a",
       "provenance": "synthetic",
       "description": "Representative 20-combatant encounter with 240 log entries."
     },
@@ -61,7 +61,7 @@
       "id": "hardening.performance.100.v1",
       "fixtureClass": "performance",
       "path": "performance-100.json",
-      "sha256": "3d40415f04e10b28bcdab6f35e4fa54803f7cb1fa034c57dff2dfa73532b872d",
+      "sha256": "42dba04aef446575dea4d48895b2ed86a957cdc7ec5fe4879ff007263af1ad9d",
       "provenance": "synthetic",
       "description": "Stress 100-combatant encounter with 240 log entries."
     }

@@ -23,9 +23,25 @@
           "rollLog": [
             {
               "id": "synthetic-legacy-roll",
-              "round": 1,
-              "category": "roll",
-              "message": "Synthetic legacy roll"
+              "label": "Synthetic legacy roll",
+              "result": {
+                "formula": "1d20+3",
+                "kind": "attack",
+                "dice": [
+                  {
+                    "sides": 20,
+                    "sign": 1,
+                    "results": [14],
+                    "kept": [14],
+                    "total": 14
+                  }
+                ],
+                "modifier": 3,
+                "total": 17,
+                "crit": false,
+                "fumble": false,
+                "advantageState": "normal"
+              }
             }
           ]
         }
