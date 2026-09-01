@@ -72,6 +72,22 @@ describe('canonical hardening fixture corpus', () => {
     expect(() => execFileSync(process.execPath, [validator], { stdio: 'pipe' })).not.toThrow()
   })
 
+  it('emits only canonical identities and hashes as release evidence', () => {
+    const result = spawnSync(process.execPath, [validator, '--evidence'], { encoding: 'utf8' })
+
+    expect(result.status).toBe(0)
+    const evidence = JSON.parse(result.stdout) as {
+      fixtures: Array<Record<string, unknown>>
+    }
+    expect(evidence.fixtures).toHaveLength(8)
+    expect(evidence.fixtures[0]).toEqual({
+      id: 'hardening.hostile.v1',
+      fixtureClass: 'hostile',
+      sha256: 'eda79619411a14f15af2b9a78ee88abe018295e3ff08c35da656c94eef4c26f9',
+    })
+    expect(Object.keys(evidence.fixtures[0])).toEqual(['id', 'fixtureClass', 'sha256'])
+  })
+
   it('rejects a fixture changed without a new catalog hash', () => {
     const { directory, catalogPath } = copyCorpus()
     const path = join(directory, 'legacy.json')
@@ -99,16 +115,16 @@ describe('canonical hardening fixture corpus', () => {
     expect(result.stderr).toContain('missing 100-combatant performance fixture')
   })
 
-  it('requires a non-empty versioned stable identity', () => {
+  it('requires a canonical versioned stable identity', () => {
     const { catalogPath } = copyCorpus()
     const catalog = readCatalog(catalogPath)
-    catalog.fixtures[0].id = ''
+    catalog.fixtures[0].id = 'hardening.secret-private-value.v1'
     writeCatalog(catalogPath, catalog)
 
     const result = validate(catalogPath)
 
     expect(result.status).toBe(1)
-    expect(result.stderr).toContain('identity must be a non-empty versioned hardening fixture ID')
+    expect(result.stderr).toContain('identity must be a canonical versioned hardening fixture ID')
   })
 
   it('requires every documented canonical case', () => {

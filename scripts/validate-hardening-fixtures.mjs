@@ -30,7 +30,8 @@ const requiredCases = {
     'owner-delete',
   ],
 }
-const fixtureIdentity = /^hardening\.[a-z0-9-]+(?:\.\d+)?\.v[1-9]\d*$/
+const fixtureIdentity =
+  /^hardening\.(?:(?:hostile|malformed|legacy|recovery|publication|tenant-isolation)|performance\.(?:20|100))\.v[1-9]\d*$/
 const forbiddenPrivacyKeys = new Set([
   'accesskey',
   'apikey',
@@ -317,12 +318,14 @@ export function validateFixtureCorpus(catalogPath = defaultCatalog) {
   for (const entry of catalog.fixtures) {
     const fixtureId = typeof entry?.id === 'string' ? entry.id : '<missing fixture id>'
     if (!fixtureIdentity.test(fixtureId)) {
-      errors.push(`${fixtureId}: identity must be a non-empty versioned hardening fixture ID`)
+      errors.push(`${fixtureId}: identity must be a canonical versioned hardening fixture ID`)
     }
     if (seenIds.has(fixtureId)) errors.push(`duplicate fixture identity ${fixtureId}`)
     seenIds.add(fixtureId)
     if (typeof entry?.fixtureClass !== 'string') {
       errors.push(`${fixtureId}: fixtureClass must be a string`)
+    } else if (!requiredClasses.has(entry.fixtureClass)) {
+      errors.push(`${fixtureId}: fixtureClass must be canonical`)
     } else {
       classes.add(entry.fixtureClass)
     }
@@ -383,17 +386,37 @@ export function validateFixtureCorpus(catalogPath = defaultCatalog) {
   return errors
 }
 
+/** Return the validated, privacy-safe fixture fields accepted by release evidence. */
+export function releaseFixtureEvidence(catalogPath = defaultCatalog) {
+  const errors = validateFixtureCorpus(catalogPath)
+  if (errors.length > 0) return { errors, fixtures: [] }
+  const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'))
+  return {
+    errors: [],
+    fixtures: catalog.fixtures.map((fixture) => ({
+      id: fixture.id,
+      fixtureClass: fixture.fixtureClass,
+      sha256: fixture.sha256,
+    })),
+  }
+}
+
 /** Read, validate, and report the fixture catalog selected by the command line. */
 function main() {
-  const catalogPath = process.argv[2] ?? defaultCatalog
-  const errors = validateFixtureCorpus(catalogPath)
-  if (errors.length > 0) {
-    for (const error of errors) console.error(error)
+  const arguments_ = process.argv.slice(2)
+  const evidenceRequested = arguments_.includes('--evidence')
+  const catalogPath = arguments_.find((argument) => argument !== '--evidence') ?? defaultCatalog
+  const evidence = releaseFixtureEvidence(catalogPath)
+  if (evidence.errors.length > 0) {
+    for (const error of evidence.errors) console.error(error)
     process.exitCode = 1
     return
   }
-  const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'))
-  console.log(`Validated ${catalog.fixtures.length} canonical hardening fixtures.`)
+  if (evidenceRequested) {
+    console.log(JSON.stringify({ fixtures: evidence.fixtures }))
+    return
+  }
+  console.log(`Validated ${evidence.fixtures.length} canonical hardening fixtures.`)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main()
