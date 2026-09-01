@@ -190,7 +190,15 @@ function withinBounds(value: unknown): boolean {
 
 /** Normalize one untrusted display line and reject control characters. */
 function line(value: unknown, max: number): string | null {
-  if (typeof value !== 'string' || /[\u0000-\u001f\u007f]/.test(value)) return null
+  if (
+    typeof value !== 'string' ||
+    [...value].some((character) => {
+      const codePoint = character.codePointAt(0)
+      return codePoint !== undefined && (codePoint <= 0x1f || codePoint === 0x7f)
+    })
+  ) {
+    return null
+  }
   const clean = value.trim().replace(/\s+/g, ' ')
   return clean.length > 0 && clean.length <= max ? clean : null
 }
