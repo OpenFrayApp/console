@@ -1,0 +1,67 @@
+{
+  "fixtureVersion": 1,
+  "provenance": "synthetic",
+  "principals": [
+    {
+      "ref": "tenant-alpha",
+      "role": "authenticated-owner"
+    },
+    {
+      "ref": "tenant-beta",
+      "role": "authenticated-owner"
+    },
+    {
+      "ref": "anonymous",
+      "role": "anonymous"
+    }
+  ],
+  "rows": [
+    {
+      "ref": "encounter-alpha",
+      "ownerRef": "tenant-alpha",
+      "kind": "encounter"
+    },
+    {
+      "ref": "encounter-beta",
+      "ownerRef": "tenant-beta",
+      "kind": "encounter"
+    }
+  ],
+  "cases": [
+    {
+      "id": "owner-read",
+      "principalRef": "tenant-alpha",
+      "operation": "read",
+      "rowRef": "encounter-alpha",
+      "allowed": true
+    },
+    {
+      "id": "cross-tenant-read",
+      "principalRef": "tenant-alpha",
+      "operation": "read",
+      "rowRef": "encounter-beta",
+      "allowed": false
+    },
+    {
+      "id": "cross-tenant-write",
+      "principalRef": "tenant-beta",
+      "operation": "update",
+      "rowRef": "encounter-alpha",
+      "allowed": false
+    },
+    {
+      "id": "anonymous-read",
+      "principalRef": "anonymous",
+      "operation": "read",
+      "rowRef": "encounter-alpha",
+      "allowed": false
+    },
+    {
+      "id": "owner-delete",
+      "principalRef": "tenant-beta",
+      "operation": "delete",
+      "rowRef": "encounter-beta",
+      "allowed": true
+    }
+  ]
+}

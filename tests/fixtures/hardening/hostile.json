@@ -1,0 +1,74 @@
+{
+  "fixtureVersion": 1,
+  "provenance": "synthetic",
+  "cases": [
+    {
+      "id": "unknown-keys",
+      "input": {
+        "kind": "encounter",
+        "schemaVersion": 1,
+        "payload": {
+          "encounterId": "synthetic-encounter",
+          "ownerId": null,
+          "name": "Synthetic hardening fixture",
+          "round": 3,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [],
+          "log": [],
+          "unknownRoot": "reject-or-remove",
+          "nested": {
+            "unknownChild": true
+          }
+        },
+        "unknownEnvelope": "reject-or-remove"
+      }
+    },
+    {
+      "id": "future-version",
+      "input": {
+        "kind": "encounter",
+        "schemaVersion": 2147483647,
+        "payload": {
+          "encounterId": "synthetic-future-version",
+          "ownerId": null,
+          "name": "Synthetic hardening fixture",
+          "round": 3,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [],
+          "log": []
+        }
+      }
+    },
+    {
+      "id": "oversized-input",
+      "limitBytes": 1048576,
+      "materialize": {
+        "kind": "repeated-string",
+        "character": "x",
+        "byteLength": 1048577
+      }
+    },
+    {
+      "id": "prototype-pollution",
+      "input": {
+        "kind": "encounter",
+        "schemaVersion": 1,
+        "__proto__": {
+          "polluted": true
+        },
+        "payload": {
+          "constructor": {
+            "prototype": {
+              "polluted": true
+            }
+          },
+          "prototype": {
+            "polluted": true
+          }
+        }
+      }
+    }
+  ]
+}

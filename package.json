@@ -18,6 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate:requirements": "node scripts/validate-requirements.mjs",
+    "validate:fixtures": "node scripts/validate-hardening-fixtures.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

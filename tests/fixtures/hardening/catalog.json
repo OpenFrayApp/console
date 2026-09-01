@@ -1,0 +1,69 @@
+{
+  "catalogVersion": 1,
+  "fixtures": [
+    {
+      "id": "hardening.hostile.v1",
+      "fixtureClass": "hostile",
+      "path": "hostile.json",
+      "sha256": "eda79619411a14f15af2b9a78ee88abe018295e3ff08c35da656c94eef4c26f9",
+      "provenance": "synthetic",
+      "description": "Unknown keys, future versions, oversized input, and prototype-pollution attempts."
+    },
+    {
+      "id": "hardening.malformed.v1",
+      "fixtureClass": "malformed",
+      "path": "malformed.json",
+      "sha256": "48e92321f6ee605af6fa0575e501d461e942c4a3c63a89ec88f46f73c3069588",
+      "provenance": "synthetic",
+      "description": "Malformed child values, truncated JSON, and invalid aggregate discriminators."
+    },
+    {
+      "id": "hardening.legacy.v1",
+      "fixtureClass": "legacy",
+      "path": "legacy.json",
+      "sha256": "34a103f09a83b3e74cf469cd4fb0f6f22c735d94b206b42a0dd94d5c5f8c9eae",
+      "provenance": "synthetic",
+      "description": "Supported legacy session and effect shapes."
+    },
+    {
+      "id": "hardening.recovery.v1",
+      "fixtureClass": "recovery",
+      "path": "recovery.json",
+      "sha256": "c602ddea83d0932b44ac16edf6c6652ed09946241009909eefc602085843388e",
+      "provenance": "synthetic",
+      "description": "Current, previous, divergent, and quarantined recovery copies."
+    },
+    {
+      "id": "hardening.publication.v1",
+      "fixtureClass": "publication",
+      "path": "publication.json",
+      "sha256": "492b169f7bada90235f78514270820b3b0593792640adb8687ec82d1fcaf14e1",
+      "provenance": "synthetic",
+      "description": "Valid, private-field, and unsupported publication inputs."
+    },
+    {
+      "id": "hardening.tenant-isolation.v1",
+      "fixtureClass": "tenant-isolation",
+      "path": "tenant-isolation.json",
+      "sha256": "b4ffc7c043a1551f62d40adace52b1b40ce7dfb72744f5897899867be4f082f0",
+      "provenance": "synthetic",
+      "description": "Synthetic owner, cross-tenant, and anonymous authorization cases."
+    },
+    {
+      "id": "hardening.performance.20.v1",
+      "fixtureClass": "performance",
+      "path": "performance-20.json",
+      "sha256": "af1b02783c981c36765922a2749e2d992ba644e4074a9bb424ffda1b101fb073",
+      "provenance": "synthetic",
+      "description": "Representative 20-combatant encounter with 240 log entries."
+    },
+    {
+      "id": "hardening.performance.100.v1",
+      "fixtureClass": "performance",
+      "path": "performance-100.json",
+      "sha256": "3d40415f04e10b28bcdab6f35e4fa54803f7cb1fa034c57dff2dfa73532b872d",
+      "provenance": "synthetic",
+      "description": "Stress 100-combatant encounter with 240 log entries."
+    }
+  ]
+}

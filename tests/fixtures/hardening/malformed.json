@@ -1,0 +1,51 @@
+{
+  "fixtureVersion": 1,
+  "provenance": "synthetic",
+  "cases": [
+    {
+      "id": "malformed-children",
+      "input": {
+        "kind": "encounter",
+        "schemaVersion": 1,
+        "payload": {
+          "encounterId": "synthetic-malformed-children",
+          "ownerId": null,
+          "name": "Synthetic hardening fixture",
+          "round": 3,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [
+            null,
+            42,
+            {
+              "combatantId": ["wrong-shape"]
+            },
+            {
+              "combatantId": "synthetic-child",
+              "effects": "not-an-array"
+            }
+          ],
+          "log": [
+            null,
+            {
+              "id": "synthetic-log",
+              "category": ["wrong-shape"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "truncated-json",
+      "serialized": "{\"kind\":\"encounter\",\"schemaVersion\":1,\"payload\":"
+    },
+    {
+      "id": "wrong-aggregate-kind",
+      "input": {
+        "kind": ["encounter"],
+        "schemaVersion": "one",
+        "payload": false
+      }
+    }
+  ]
+}

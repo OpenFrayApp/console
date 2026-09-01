@@ -1,0 +1,79 @@
+{
+  "fixtureVersion": 1,
+  "provenance": "synthetic",
+  "cases": [
+    {
+      "id": "session-envelope-v1",
+      "input": {
+        "version": 1,
+        "snapshot": {
+          "encounter": {
+            "encounterId": "synthetic-legacy-session",
+            "ownerId": null,
+            "name": "Synthetic hardening fixture",
+            "round": 3,
+            "activeIndex": 0,
+            "shortRests": 1,
+            "combatants": [],
+            "log": []
+          },
+          "theme": "dark",
+          "view": "encounter",
+          "selectedId": null,
+          "rollLog": [
+            {
+              "id": "synthetic-legacy-roll",
+              "round": 1,
+              "category": "roll",
+              "message": "Synthetic legacy roll"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "encounter-with-legacy-effect",
+      "input": {
+        "encounterId": "synthetic-legacy-effect",
+        "ownerId": null,
+        "name": "Synthetic hardening fixture",
+        "round": 3,
+        "activeIndex": 0,
+        "shortRests": 1,
+        "combatants": [
+          {
+            "isPC": true,
+            "kind": "quick",
+            "combatantId": "synthetic-legacy-combatant",
+            "name": "Fixture scout",
+            "initiative": 10,
+            "ac": 12,
+            "status": "active",
+            "hp": {
+              "current": 9,
+              "max": 9,
+              "temp": 0
+            },
+            "concentration": null,
+            "effects": [
+              {
+                "id": "synthetic-legacy-effect",
+                "name": "Fixture modifier",
+                "modifier": {
+                  "applies": "attackRolls",
+                  "mode": "advantage",
+                  "value": null,
+                  "direction": "outgoing"
+                },
+                "duration": {
+                  "type": "consumeOnRoll"
+                }
+              }
+            ]
+          }
+        ],
+        "log": []
+      }
+    }
+  ]
+}

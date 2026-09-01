@@ -1,0 +1,77 @@
+{
+  "fixtureVersion": 1,
+  "provenance": "synthetic",
+  "cases": [
+    {
+      "id": "current-and-previous",
+      "current": {
+        "revision": 8,
+        "writer": "device-alpha",
+        "encounter": {
+          "encounterId": "synthetic-recovery-current",
+          "ownerId": null,
+          "name": "Synthetic recovery current",
+          "round": 4,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [],
+          "log": []
+        }
+      },
+      "previous": {
+        "revision": 7,
+        "writer": "device-alpha",
+        "encounter": {
+          "encounterId": "synthetic-recovery-previous",
+          "ownerId": null,
+          "name": "Synthetic recovery previous",
+          "round": 3,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [],
+          "log": []
+        }
+      },
+      "expected": "restore-current"
+    },
+    {
+      "id": "divergent-copies",
+      "device": {
+        "revision": 9,
+        "parentRevision": 7,
+        "writer": "device-alpha",
+        "encounter": {
+          "encounterId": "synthetic-recovery-current",
+          "ownerId": null,
+          "name": "Synthetic recovery current",
+          "round": 5,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [],
+          "log": []
+        }
+      },
+      "cloud": {
+        "revision": 10,
+        "parentRevision": 7,
+        "writer": "device-beta",
+        "encounter": {
+          "encounterId": "synthetic-recovery-current",
+          "ownerId": null,
+          "name": "Synthetic recovery current",
+          "round": 6,
+          "activeIndex": 0,
+          "shortRests": 1,
+          "combatants": [],
+          "log": []
+        }
+      },
+      "expected": "require-explicit-choice"
+    },
+    {
+      "id": "quarantined-copy",
+      "serialized": "{\"kind\":\"encounter\",\"schemaVersion\":1,\"payload\":{\"combatants\":[",
+      "expected": "quarantine-without-overwrite"
+    }
+  ]
+}

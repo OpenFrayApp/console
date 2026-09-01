@@ -133,7 +133,7 @@ A combined release-verification interface runs the applicable checks and emits i
 
 ### EF: evidence foundation
 
-- **EF-1:** Establish canonical hostile, malformed, legacy, performance, recovery, publication, and tenant-isolation fixtures.
+- **EF-1:** Establish canonical hostile, malformed, legacy, performance, recovery, publication, and tenant-isolation fixtures. The [canonical fixture catalog](./fixtures.md) defines their identities and privacy rules.
 - **EF-2:** Map every requirement identifier to an owner, dependencies, acceptance check, evidence class, rollback condition, and release-blocking status.
 - **EF-3:** Establish authorized staging, representative physical-device coverage, provider baselines, machine-readable evidence manifests, and human-readable release reports.
 - Evidence records immutable commits, lockfiles, migration heads, generated-type hashes, provider-configuration hashes, fixtures, environment identities, commands, results, timestamps, approver, and rollback target.

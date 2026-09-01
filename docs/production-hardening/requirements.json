@@ -3,8 +3,8 @@
     "id": "EF-1",
     "owner": "OpenFrayApp/console",
     "dependencies": [],
-    "acceptanceCheck": "The canonical fixture catalog covers hostile, malformed, legacy, performance, recovery, publication, and tenant-isolation cases.",
-    "evidenceClass": "Source review and deterministic fixture validation",
+    "acceptanceCheck": "The privacy-safe canonical fixture catalog covers hostile, malformed, legacy, performance, recovery, publication, and tenant-isolation cases with stable identities and verified SHA-256 hashes.",
+    "evidenceClass": "Source review, privacy review, and deterministic fixture validation",
     "rollbackCondition": "Revert the dormant fixture catalog before any acceptance gate depends on it.",
     "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": true }
   },

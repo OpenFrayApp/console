@@ -1,0 +1,5236 @@
+{
+  "fixtureVersion": 1,
+  "provenance": "synthetic",
+  "profile": {
+    "combatants": 20,
+    "logEntries": 240,
+    "complexity": ["effects", "resources", "damage-relations", "initiative-ties"]
+  },
+  "encounter": {
+    "encounterId": "synthetic-performance-20",
+    "ownerId": null,
+    "name": "Synthetic 20-combatant performance fixture",
+    "round": 12,
+    "activeIndex": 7,
+    "shortRests": 1,
+    "combatants": [
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-001",
+        "creatureId": "synthetic:creature-0",
+        "creature": {
+          "id": "synthetic:creature-0",
+          "source": "custom",
+          "name": "Fixture creature 1",
+          "size": "Large",
+          "type": "construct",
+          "ac": 13,
+          "maxHp": 24,
+          "initiative": 0,
+          "speed": {
+            "walk": 30,
+            "fly": 40
+          },
+          "abilities": {
+            "str": 12,
+            "dex": 10,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": ["fire"],
+          "immunities": ["poison"],
+          "vulnerabilities": ["thunder"],
+          "actions": [
+            {
+              "id": "synthetic-action-0",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 4,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "spellcasting": {
+            "ability": "wis",
+            "saveDc": 13,
+            "groups": [
+              {
+                "usage": {
+                  "type": "perDay",
+                  "per": 2
+                },
+                "spells": [
+                  {
+                    "name": "Synthetic pulse"
+                  }
+                ]
+              }
+            ]
+          },
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-0",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-0",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ],
+          "legendaryActions": {
+            "perRound": 3,
+            "actions": [
+              {
+                "id": "synthetic-legendary-0",
+                "name": "Fixture move",
+                "kind": "utility",
+                "toHit": null,
+                "legendaryCost": 1,
+                "text": "Synthetic fixture movement."
+              }
+            ]
+          }
+        },
+        "label": "Fixture creature (1)",
+        "initiative": 10,
+        "status": "active",
+        "hp": {
+          "current": 20,
+          "max": 30,
+          "temp": 4
+        },
+        "slotsUsed": {
+          "1": 1
+        },
+        "spellUsesSpent": {
+          "Synthetic pulse": 1
+        },
+        "actionUsesSpent": {
+          "synthetic-burst-0": 1
+        },
+        "limitedUseState": {
+          "synthetic-recharge-0": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 2,
+        "concentration": {
+          "spell": "Synthetic field",
+          "saveDc": 10,
+          "round": 2
+        },
+        "effects": [
+          {
+            "id": "synthetic-effect-0",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-001",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "friend",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-002",
+        "creatureId": "synthetic:creature-1",
+        "creature": {
+          "id": "synthetic:creature-1",
+          "source": "custom",
+          "name": "Fixture creature 2",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 14,
+          "maxHp": 27,
+          "initiative": 1,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 13,
+            "dex": 11,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-1",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 5,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-1",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-1",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (2)",
+        "initiative": 10,
+        "status": "active",
+        "hp": {
+          "current": 21,
+          "max": 31,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-1": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-1",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-002",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-003",
+        "creatureId": "synthetic:creature-2",
+        "creature": {
+          "id": "synthetic:creature-2",
+          "source": "custom",
+          "name": "Fixture creature 3",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 15,
+          "maxHp": 30,
+          "initiative": 2,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 14,
+            "dex": 12,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-2",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 6,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-2",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-2",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (3)",
+        "initiative": 11,
+        "status": "active",
+        "hp": {
+          "current": 22,
+          "max": 32,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-2": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-2",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-003",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-004",
+        "creatureId": "synthetic:creature-3",
+        "creature": {
+          "id": "synthetic:creature-3",
+          "source": "custom",
+          "name": "Fixture creature 4",
+          "size": "Large",
+          "type": "construct",
+          "ac": 16,
+          "maxHp": 33,
+          "initiative": 3,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 15,
+            "dex": 13,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": ["fire"],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-3",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 7,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-3",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-3",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (4)",
+        "initiative": 11,
+        "status": "active",
+        "hp": {
+          "current": 23,
+          "max": 33,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-3": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-3",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-004",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-005",
+        "creatureId": "synthetic:creature-4",
+        "creature": {
+          "id": "synthetic:creature-4",
+          "source": "custom",
+          "name": "Fixture creature 5",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 17,
+          "maxHp": 36,
+          "initiative": 0,
+          "speed": {
+            "walk": 30,
+            "fly": 40
+          },
+          "abilities": {
+            "str": 12,
+            "dex": 14,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-4",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 4,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-4",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-4",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (5)",
+        "initiative": 12,
+        "status": "active",
+        "hp": {
+          "current": 24,
+          "max": 34,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {
+          "synthetic-burst-4": 1
+        },
+        "limitedUseState": {
+          "synthetic-recharge-4": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-4",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-005",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-006",
+        "creatureId": "synthetic:creature-0",
+        "creature": {
+          "id": "synthetic:creature-0",
+          "source": "custom",
+          "name": "Fixture creature 1",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 13,
+          "maxHp": 39,
+          "initiative": 1,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 13,
+            "dex": 10,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-5",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 5,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "spellcasting": {
+            "ability": "wis",
+            "saveDc": 13,
+            "groups": [
+              {
+                "usage": {
+                  "type": "perDay",
+                  "per": 2
+                },
+                "spells": [
+                  {
+                    "name": "Synthetic pulse"
+                  }
+                ]
+              }
+            ]
+          },
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-5",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-5",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (6)",
+        "initiative": 12,
+        "status": "active",
+        "hp": {
+          "current": 25,
+          "max": 35,
+          "temp": 0
+        },
+        "slotsUsed": {
+          "1": 1
+        },
+        "spellUsesSpent": {
+          "Synthetic pulse": 1
+        },
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-5": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-5",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-006",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-007",
+        "creatureId": "synthetic:creature-1",
+        "creature": {
+          "id": "synthetic:creature-1",
+          "source": "custom",
+          "name": "Fixture creature 2",
+          "size": "Large",
+          "type": "construct",
+          "ac": 14,
+          "maxHp": 42,
+          "initiative": 2,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 14,
+            "dex": 11,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": ["fire"],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-6",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 6,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-6",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-6",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (7)",
+        "initiative": 13,
+        "status": "active",
+        "hp": {
+          "current": 26,
+          "max": 36,
+          "temp": 4
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-6": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-6",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-007",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "friend",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-008",
+        "creatureId": "synthetic:creature-2",
+        "creature": {
+          "id": "synthetic:creature-2",
+          "source": "custom",
+          "name": "Fixture creature 3",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 15,
+          "maxHp": 24,
+          "initiative": 3,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 15,
+            "dex": 12,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": ["poison"],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-7",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 7,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-7",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-7",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (8)",
+        "initiative": 13,
+        "status": "active",
+        "hp": {
+          "current": 27,
+          "max": 37,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-7": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-7",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-008",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-009",
+        "creatureId": "synthetic:creature-3",
+        "creature": {
+          "id": "synthetic:creature-3",
+          "source": "custom",
+          "name": "Fixture creature 4",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 16,
+          "maxHp": 27,
+          "initiative": 0,
+          "speed": {
+            "walk": 30,
+            "fly": 40
+          },
+          "abilities": {
+            "str": 12,
+            "dex": 13,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-8",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 4,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-8",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-8",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (9)",
+        "initiative": 14,
+        "status": "active",
+        "hp": {
+          "current": 20,
+          "max": 30,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {
+          "synthetic-burst-8": 1
+        },
+        "limitedUseState": {
+          "synthetic-recharge-8": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-8",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-009",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-010",
+        "creatureId": "synthetic:creature-4",
+        "creature": {
+          "id": "synthetic:creature-4",
+          "source": "custom",
+          "name": "Fixture creature 5",
+          "size": "Large",
+          "type": "construct",
+          "ac": 17,
+          "maxHp": 30,
+          "initiative": 1,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 13,
+            "dex": 14,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": ["fire"],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-9",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 5,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-9",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-9",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (10)",
+        "initiative": 14,
+        "status": "active",
+        "hp": {
+          "current": 21,
+          "max": 31,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-9": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": {
+          "spell": "Synthetic field",
+          "saveDc": 10,
+          "round": 2
+        },
+        "effects": [
+          {
+            "id": "synthetic-effect-9",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-010",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-011",
+        "creatureId": "synthetic:creature-0",
+        "creature": {
+          "id": "synthetic:creature-0",
+          "source": "custom",
+          "name": "Fixture creature 1",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 13,
+          "maxHp": 33,
+          "initiative": 2,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 14,
+            "dex": 10,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-10",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 6,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "spellcasting": {
+            "ability": "wis",
+            "saveDc": 13,
+            "groups": [
+              {
+                "usage": {
+                  "type": "perDay",
+                  "per": 2
+                },
+                "spells": [
+                  {
+                    "name": "Synthetic pulse"
+                  }
+                ]
+              }
+            ]
+          },
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-10",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-10",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ],
+          "legendaryActions": {
+            "perRound": 3,
+            "actions": [
+              {
+                "id": "synthetic-legendary-10",
+                "name": "Fixture move",
+                "kind": "utility",
+                "toHit": null,
+                "legendaryCost": 1,
+                "text": "Synthetic fixture movement."
+              }
+            ]
+          }
+        },
+        "label": "Fixture creature (11)",
+        "initiative": 15,
+        "status": "active",
+        "hp": {
+          "current": 22,
+          "max": 32,
+          "temp": 0
+        },
+        "slotsUsed": {
+          "1": 1
+        },
+        "spellUsesSpent": {
+          "Synthetic pulse": 1
+        },
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-10": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 2,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-10",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-011",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-012",
+        "creatureId": "synthetic:creature-1",
+        "creature": {
+          "id": "synthetic:creature-1",
+          "source": "custom",
+          "name": "Fixture creature 2",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 14,
+          "maxHp": 36,
+          "initiative": 3,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 15,
+            "dex": 11,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": ["thunder"],
+          "actions": [
+            {
+              "id": "synthetic-action-11",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 7,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-11",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-11",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (12)",
+        "initiative": 15,
+        "status": "active",
+        "hp": {
+          "current": 23,
+          "max": 33,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-11": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-11",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-012",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-013",
+        "creatureId": "synthetic:creature-2",
+        "creature": {
+          "id": "synthetic:creature-2",
+          "source": "custom",
+          "name": "Fixture creature 3",
+          "size": "Large",
+          "type": "construct",
+          "ac": 15,
+          "maxHp": 39,
+          "initiative": 0,
+          "speed": {
+            "walk": 30,
+            "fly": 40
+          },
+          "abilities": {
+            "str": 12,
+            "dex": 12,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": ["fire"],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-12",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 4,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-12",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-12",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (13)",
+        "initiative": 16,
+        "status": "active",
+        "hp": {
+          "current": 24,
+          "max": 34,
+          "temp": 4
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {
+          "synthetic-burst-12": 1
+        },
+        "limitedUseState": {
+          "synthetic-recharge-12": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-12",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-013",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "friend",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-014",
+        "creatureId": "synthetic:creature-3",
+        "creature": {
+          "id": "synthetic:creature-3",
+          "source": "custom",
+          "name": "Fixture creature 4",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 16,
+          "maxHp": 42,
+          "initiative": 1,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 13,
+            "dex": 13,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-13",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 5,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-13",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-13",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (14)",
+        "initiative": 16,
+        "status": "active",
+        "hp": {
+          "current": 25,
+          "max": 35,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-13": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-13",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-014",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-015",
+        "creatureId": "synthetic:creature-4",
+        "creature": {
+          "id": "synthetic:creature-4",
+          "source": "custom",
+          "name": "Fixture creature 5",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 17,
+          "maxHp": 24,
+          "initiative": 2,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 14,
+            "dex": 14,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": [],
+          "immunities": ["poison"],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-14",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 6,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-14",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-14",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (15)",
+        "initiative": 17,
+        "status": "active",
+        "hp": {
+          "current": 26,
+          "max": 36,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-14": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-14",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-015",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-016",
+        "creatureId": "synthetic:creature-0",
+        "creature": {
+          "id": "synthetic:creature-0",
+          "source": "custom",
+          "name": "Fixture creature 1",
+          "size": "Large",
+          "type": "construct",
+          "ac": 13,
+          "maxHp": 27,
+          "initiative": 3,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 15,
+            "dex": 10,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": ["fire"],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-15",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 7,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "spellcasting": {
+            "ability": "wis",
+            "saveDc": 13,
+            "groups": [
+              {
+                "usage": {
+                  "type": "perDay",
+                  "per": 2
+                },
+                "spells": [
+                  {
+                    "name": "Synthetic pulse"
+                  }
+                ]
+              }
+            ]
+          },
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-15",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-15",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (16)",
+        "initiative": 17,
+        "status": "active",
+        "hp": {
+          "current": 27,
+          "max": 37,
+          "temp": 0
+        },
+        "slotsUsed": {
+          "1": 1
+        },
+        "spellUsesSpent": {
+          "Synthetic pulse": 1
+        },
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-15": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-15",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-016",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-017",
+        "creatureId": "synthetic:creature-1",
+        "creature": {
+          "id": "synthetic:creature-1",
+          "source": "custom",
+          "name": "Fixture creature 2",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 14,
+          "maxHp": 30,
+          "initiative": 0,
+          "speed": {
+            "walk": 30,
+            "fly": 40
+          },
+          "abilities": {
+            "str": 12,
+            "dex": 11,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-16",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 4,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-16",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-16",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (17)",
+        "initiative": 18,
+        "status": "active",
+        "hp": {
+          "current": 20,
+          "max": 30,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {
+          "synthetic-burst-16": 1
+        },
+        "limitedUseState": {
+          "synthetic-recharge-16": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-16",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-017",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-018",
+        "creatureId": "synthetic:creature-2",
+        "creature": {
+          "id": "synthetic:creature-2",
+          "source": "custom",
+          "name": "Fixture creature 3",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 15,
+          "maxHp": 33,
+          "initiative": 1,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 13,
+            "dex": 12,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-17",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 5,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-17",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-17",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (18)",
+        "initiative": 18,
+        "status": "active",
+        "hp": {
+          "current": 21,
+          "max": 31,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-17": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-17",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-018",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-019",
+        "creatureId": "synthetic:creature-3",
+        "creature": {
+          "id": "synthetic:creature-3",
+          "source": "custom",
+          "name": "Fixture creature 4",
+          "size": "Large",
+          "type": "construct",
+          "ac": 16,
+          "maxHp": 36,
+          "initiative": 2,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 14,
+            "dex": 13,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11
+          },
+          "resistances": ["fire"],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-18",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 6,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-18",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-18",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (19)",
+        "initiative": 19,
+        "status": "active",
+        "hp": {
+          "current": 22,
+          "max": 32,
+          "temp": 4
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-18": {
+            "available": true
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": {
+          "spell": "Synthetic field",
+          "saveDc": 10,
+          "round": 2
+        },
+        "effects": [
+          {
+            "id": "synthetic-effect-18",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-019",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "advantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "friend",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      },
+      {
+        "isPC": false,
+        "combatantId": "synthetic-monster-020",
+        "creatureId": "synthetic:creature-4",
+        "creature": {
+          "id": "synthetic:creature-4",
+          "source": "custom",
+          "name": "Fixture creature 5",
+          "size": "Medium",
+          "type": "construct",
+          "ac": 17,
+          "maxHp": 39,
+          "initiative": 3,
+          "speed": {
+            "walk": 30
+          },
+          "abilities": {
+            "str": 15,
+            "dex": 14,
+            "con": 14,
+            "int": 6,
+            "wis": 12,
+            "cha": 8
+          },
+          "senses": {
+            "passivePerception": 11,
+            "darkvision": 60
+          },
+          "resistances": [],
+          "immunities": [],
+          "vulnerabilities": [],
+          "actions": [
+            {
+              "id": "synthetic-action-19",
+              "name": "Fixture strike",
+              "kind": "melee",
+              "toHit": 7,
+              "reach": 5,
+              "damage": [
+                {
+                  "formula": "2d6+3",
+                  "type": "bludgeoning"
+                }
+              ],
+              "text": "Synthetic fixture action."
+            }
+          ],
+          "limitedUse": [
+            {
+              "id": "synthetic-recharge-19",
+              "name": "Fixture recharge",
+              "recharge": {
+                "type": "dice",
+                "value": 5
+              },
+              "action": {
+                "id": "synthetic-burst-19",
+                "name": "Fixture burst",
+                "kind": "save",
+                "toHit": null,
+                "save": {
+                  "ability": "dex",
+                  "dc": 13,
+                  "onSave": "half"
+                },
+                "damage": [
+                  {
+                    "formula": "3d6",
+                    "type": "force"
+                  }
+                ],
+                "text": "Synthetic fixture burst."
+              }
+            }
+          ]
+        },
+        "label": "Fixture creature (20)",
+        "initiative": 19,
+        "status": "active",
+        "hp": {
+          "current": 23,
+          "max": 33,
+          "temp": 0
+        },
+        "slotsUsed": {},
+        "spellUsesSpent": {},
+        "actionUsesSpent": {},
+        "limitedUseState": {
+          "synthetic-recharge-19": {
+            "available": false
+          }
+        },
+        "legendaryRemaining": 0,
+        "concentration": null,
+        "effects": [
+          {
+            "id": "synthetic-effect-19",
+            "name": "Fixture pressure",
+            "source": "synthetic-monster-020",
+            "modifier": {
+              "applies": "attackRolls",
+              "mode": "disadvantage",
+              "value": null,
+              "direction": "outgoing"
+            },
+            "duration": {
+              "type": "rounds",
+              "rounds": 2
+            },
+            "note": "Synthetic performance effect."
+          }
+        ],
+        "side": "foe",
+        "visibility": {
+          "name": "shown",
+          "hp": "bloodied",
+          "conditions": "shown",
+          "ac": "hidden"
+        }
+      }
+    ],
+    "log": [
+      {
+        "id": "synthetic-log-001",
+        "round": 1,
+        "category": "roll",
+        "message": "Synthetic performance event 1",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-002",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 2",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-003",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 3",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-004",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 4",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-005",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 5",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-006",
+        "round": 1,
+        "category": "roll",
+        "message": "Synthetic performance event 6",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-007",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 7",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-008",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 8",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-009",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 9",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-010",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 10",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-011",
+        "round": 1,
+        "category": "roll",
+        "message": "Synthetic performance event 11",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-012",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 12",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-013",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 13",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-014",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 14",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-015",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 15",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-016",
+        "round": 1,
+        "category": "roll",
+        "message": "Synthetic performance event 16",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-017",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 17",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-018",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 18",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-019",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 19",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-020",
+        "round": 1,
+        "category": "action",
+        "message": "Synthetic performance event 20",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-021",
+        "round": 2,
+        "category": "roll",
+        "message": "Synthetic performance event 21",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-022",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 22",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-023",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 23",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-024",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 24",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-025",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 25",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-026",
+        "round": 2,
+        "category": "roll",
+        "message": "Synthetic performance event 26",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-027",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 27",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-028",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 28",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-029",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 29",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-030",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 30",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-031",
+        "round": 2,
+        "category": "roll",
+        "message": "Synthetic performance event 31",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-032",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 32",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-033",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 33",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-034",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 34",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-035",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 35",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-036",
+        "round": 2,
+        "category": "roll",
+        "message": "Synthetic performance event 36",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-037",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 37",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-038",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 38",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-039",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 39",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-040",
+        "round": 2,
+        "category": "action",
+        "message": "Synthetic performance event 40",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-041",
+        "round": 3,
+        "category": "roll",
+        "message": "Synthetic performance event 41",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-042",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 42",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-043",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 43",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-044",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 44",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-045",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 45",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-046",
+        "round": 3,
+        "category": "roll",
+        "message": "Synthetic performance event 46",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-047",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 47",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-048",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 48",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-049",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 49",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-050",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 50",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-051",
+        "round": 3,
+        "category": "roll",
+        "message": "Synthetic performance event 51",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-052",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 52",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-053",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 53",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-054",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 54",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-055",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 55",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-056",
+        "round": 3,
+        "category": "roll",
+        "message": "Synthetic performance event 56",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-057",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 57",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-058",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 58",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-059",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 59",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-060",
+        "round": 3,
+        "category": "action",
+        "message": "Synthetic performance event 60",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-061",
+        "round": 4,
+        "category": "roll",
+        "message": "Synthetic performance event 61",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-062",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 62",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-063",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 63",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-064",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 64",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-065",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 65",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-066",
+        "round": 4,
+        "category": "roll",
+        "message": "Synthetic performance event 66",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-067",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 67",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-068",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 68",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-069",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 69",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-070",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 70",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-071",
+        "round": 4,
+        "category": "roll",
+        "message": "Synthetic performance event 71",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-072",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 72",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-073",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 73",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-074",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 74",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-075",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 75",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-076",
+        "round": 4,
+        "category": "roll",
+        "message": "Synthetic performance event 76",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-077",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 77",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-078",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 78",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-079",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 79",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-080",
+        "round": 4,
+        "category": "action",
+        "message": "Synthetic performance event 80",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-081",
+        "round": 5,
+        "category": "roll",
+        "message": "Synthetic performance event 81",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-082",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 82",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-083",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 83",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-084",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 84",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-085",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 85",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-086",
+        "round": 5,
+        "category": "roll",
+        "message": "Synthetic performance event 86",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-087",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 87",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-088",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 88",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-089",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 89",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-090",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 90",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-091",
+        "round": 5,
+        "category": "roll",
+        "message": "Synthetic performance event 91",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-092",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 92",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-093",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 93",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-094",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 94",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-095",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 95",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-096",
+        "round": 5,
+        "category": "roll",
+        "message": "Synthetic performance event 96",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-097",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 97",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-098",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 98",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-099",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 99",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-100",
+        "round": 5,
+        "category": "action",
+        "message": "Synthetic performance event 100",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-101",
+        "round": 6,
+        "category": "roll",
+        "message": "Synthetic performance event 101",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-102",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 102",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-103",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 103",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-104",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 104",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-105",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 105",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-106",
+        "round": 6,
+        "category": "roll",
+        "message": "Synthetic performance event 106",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-107",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 107",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-108",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 108",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-109",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 109",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-110",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 110",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-111",
+        "round": 6,
+        "category": "roll",
+        "message": "Synthetic performance event 111",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-112",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 112",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-113",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 113",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-114",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 114",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-115",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 115",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-116",
+        "round": 6,
+        "category": "roll",
+        "message": "Synthetic performance event 116",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-117",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 117",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-118",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 118",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-119",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 119",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-120",
+        "round": 6,
+        "category": "action",
+        "message": "Synthetic performance event 120",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-121",
+        "round": 7,
+        "category": "roll",
+        "message": "Synthetic performance event 121",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-122",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 122",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-123",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 123",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-124",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 124",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-125",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 125",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-126",
+        "round": 7,
+        "category": "roll",
+        "message": "Synthetic performance event 126",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-127",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 127",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-128",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 128",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-129",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 129",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-130",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 130",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-131",
+        "round": 7,
+        "category": "roll",
+        "message": "Synthetic performance event 131",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-132",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 132",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-133",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 133",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-134",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 134",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-135",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 135",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-136",
+        "round": 7,
+        "category": "roll",
+        "message": "Synthetic performance event 136",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-137",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 137",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-138",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 138",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-139",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 139",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-140",
+        "round": 7,
+        "category": "action",
+        "message": "Synthetic performance event 140",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-141",
+        "round": 8,
+        "category": "roll",
+        "message": "Synthetic performance event 141",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-142",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 142",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-143",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 143",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-144",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 144",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-145",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 145",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-146",
+        "round": 8,
+        "category": "roll",
+        "message": "Synthetic performance event 146",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-147",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 147",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-148",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 148",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-149",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 149",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-150",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 150",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-151",
+        "round": 8,
+        "category": "roll",
+        "message": "Synthetic performance event 151",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-152",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 152",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-153",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 153",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-154",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 154",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-155",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 155",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-156",
+        "round": 8,
+        "category": "roll",
+        "message": "Synthetic performance event 156",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-157",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 157",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-158",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 158",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-159",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 159",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-160",
+        "round": 8,
+        "category": "action",
+        "message": "Synthetic performance event 160",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-161",
+        "round": 9,
+        "category": "roll",
+        "message": "Synthetic performance event 161",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-162",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 162",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-163",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 163",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-164",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 164",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-165",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 165",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-166",
+        "round": 9,
+        "category": "roll",
+        "message": "Synthetic performance event 166",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-167",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 167",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-168",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 168",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-169",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 169",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-170",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 170",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-171",
+        "round": 9,
+        "category": "roll",
+        "message": "Synthetic performance event 171",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-172",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 172",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-173",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 173",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-174",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 174",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-175",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 175",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-176",
+        "round": 9,
+        "category": "roll",
+        "message": "Synthetic performance event 176",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-177",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 177",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-178",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 178",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-179",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 179",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-180",
+        "round": 9,
+        "category": "action",
+        "message": "Synthetic performance event 180",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-181",
+        "round": 10,
+        "category": "roll",
+        "message": "Synthetic performance event 181",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-182",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 182",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-183",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 183",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-184",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 184",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-185",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 185",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-186",
+        "round": 10,
+        "category": "roll",
+        "message": "Synthetic performance event 186",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-187",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 187",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-188",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 188",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-189",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 189",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-190",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 190",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-191",
+        "round": 10,
+        "category": "roll",
+        "message": "Synthetic performance event 191",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-192",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 192",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-193",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 193",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-194",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 194",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-195",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 195",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-196",
+        "round": 10,
+        "category": "roll",
+        "message": "Synthetic performance event 196",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-197",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 197",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-198",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 198",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-199",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 199",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-200",
+        "round": 10,
+        "category": "action",
+        "message": "Synthetic performance event 200",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-201",
+        "round": 11,
+        "category": "roll",
+        "message": "Synthetic performance event 201",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-202",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 202",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-203",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 203",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-204",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 204",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-205",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 205",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-206",
+        "round": 11,
+        "category": "roll",
+        "message": "Synthetic performance event 206",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-207",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 207",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-208",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 208",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-209",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 209",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-210",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 210",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-211",
+        "round": 11,
+        "category": "roll",
+        "message": "Synthetic performance event 211",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-212",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 212",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-213",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 213",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-214",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 214",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-215",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 215",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-216",
+        "round": 11,
+        "category": "roll",
+        "message": "Synthetic performance event 216",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-217",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 217",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-218",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 218",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-219",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 219",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-220",
+        "round": 11,
+        "category": "action",
+        "message": "Synthetic performance event 220",
+        "sourceId": "synthetic-monster-020"
+      },
+      {
+        "id": "synthetic-log-221",
+        "round": 12,
+        "category": "roll",
+        "message": "Synthetic performance event 221",
+        "sourceId": "synthetic-monster-001",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-222",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 222",
+        "sourceId": "synthetic-monster-002"
+      },
+      {
+        "id": "synthetic-log-223",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 223",
+        "sourceId": "synthetic-monster-003"
+      },
+      {
+        "id": "synthetic-log-224",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 224",
+        "sourceId": "synthetic-monster-004"
+      },
+      {
+        "id": "synthetic-log-225",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 225",
+        "sourceId": "synthetic-monster-005"
+      },
+      {
+        "id": "synthetic-log-226",
+        "round": 12,
+        "category": "roll",
+        "message": "Synthetic performance event 226",
+        "sourceId": "synthetic-monster-006",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-227",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 227",
+        "sourceId": "synthetic-monster-007"
+      },
+      {
+        "id": "synthetic-log-228",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 228",
+        "sourceId": "synthetic-monster-008"
+      },
+      {
+        "id": "synthetic-log-229",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 229",
+        "sourceId": "synthetic-monster-009"
+      },
+      {
+        "id": "synthetic-log-230",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 230",
+        "sourceId": "synthetic-monster-010"
+      },
+      {
+        "id": "synthetic-log-231",
+        "round": 12,
+        "category": "roll",
+        "message": "Synthetic performance event 231",
+        "sourceId": "synthetic-monster-011",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-232",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 232",
+        "sourceId": "synthetic-monster-012"
+      },
+      {
+        "id": "synthetic-log-233",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 233",
+        "sourceId": "synthetic-monster-013"
+      },
+      {
+        "id": "synthetic-log-234",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 234",
+        "sourceId": "synthetic-monster-014"
+      },
+      {
+        "id": "synthetic-log-235",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 235",
+        "sourceId": "synthetic-monster-015"
+      },
+      {
+        "id": "synthetic-log-236",
+        "round": 12,
+        "category": "roll",
+        "message": "Synthetic performance event 236",
+        "sourceId": "synthetic-monster-016",
+        "result": {
+          "formula": "1d20+4",
+          "kind": "attack",
+          "dice": [
+            {
+              "sides": 20,
+              "results": [11],
+              "kept": [11],
+              "sign": 1,
+              "multiplier": 1,
+              "total": 11,
+              "naturalHigh": false,
+              "naturalLow": false
+            }
+          ],
+          "modifier": 4,
+          "modifiers": [4],
+          "total": 15,
+          "crit": false,
+          "fumble": false
+        }
+      },
+      {
+        "id": "synthetic-log-237",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 237",
+        "sourceId": "synthetic-monster-017"
+      },
+      {
+        "id": "synthetic-log-238",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 238",
+        "sourceId": "synthetic-monster-018"
+      },
+      {
+        "id": "synthetic-log-239",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 239",
+        "sourceId": "synthetic-monster-019"
+      },
+      {
+        "id": "synthetic-log-240",
+        "round": 12,
+        "category": "action",
+        "message": "Synthetic performance event 240",
+        "sourceId": "synthetic-monster-020"
+      }
+    ]
+  }
+}
