@@ -3,24 +3,19 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildDatabaseBoundaryAttestation } from './lib/database-boundary.mjs'
-import { migrationLineage, remoteMigrationVersions } from './lib/supabase-authority.mjs'
+import {
+  buildDatabaseBoundaryAttestation,
+  DATABASE_BOUNDARY_ACTORS,
+  DATABASE_BOUNDARY_CHECKS,
+} from './lib/database-boundary.mjs'
+import { migrationLineage, remoteMigrationVersions, sha256 } from './lib/supabase-authority.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const migrationsDirectory = resolve(root, 'supabase/migrations')
 const hostileQueryPath = resolve(root, 'supabase/tests/database-boundary.sql')
-const CHECKS = [
-  'rls',
-  'grants',
-  'definerSearchPaths',
-  'deprecatedOverloads',
-  'restrictedExecution',
-  'realtime',
-  'accountDeletion',
-]
 
 /** Parse the protected target and evidence metadata accepted by this command. */
 function parseArgs(argv) {
@@ -98,8 +93,8 @@ function main() {
     JSON.stringify(observedMigrationVersions) === JSON.stringify(expectedMigrationVersions)
   let boundary = {
     version: 1,
-    actors: ['anonymous', 'owner', 'other-tenant', 'viewer', 'stale-writer', 'restricted-function'],
-    checks: Object.fromEntries(CHECKS.map((check) => [check, 'missing'])),
+    actors: DATABASE_BOUNDARY_ACTORS,
+    checks: Object.fromEntries(DATABASE_BOUNDARY_CHECKS.map((check) => [check, 'missing'])),
   }
 
   if (lineageMatches) {
@@ -110,7 +105,7 @@ function main() {
     run('supabase', queryArgs)
     boundary = {
       ...boundary,
-      checks: Object.fromEntries(CHECKS.map((check) => [check, 'passed'])),
+      checks: Object.fromEntries(DATABASE_BOUNDARY_CHECKS.map((check) => [check, 'passed'])),
     }
   }
 
@@ -121,6 +116,7 @@ function main() {
     expectedMigrationVersions,
     observedMigrationVersions,
     boundary,
+    hostileSuiteHash: sha256(readFileSync(hostileQueryPath)),
     workflow: options.workflow,
     approver: options.approver,
     timestamp: new Date().toISOString(),

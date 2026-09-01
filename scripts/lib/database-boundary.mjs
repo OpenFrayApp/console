@@ -3,7 +3,7 @@
 
 import { sha256 } from './supabase-authority.mjs'
 
-const ACTORS = [
+export const DATABASE_BOUNDARY_ACTORS = [
   'anonymous',
   'owner',
   'other-tenant',
@@ -11,7 +11,7 @@ const ACTORS = [
   'stale-writer',
   'restricted-function',
 ]
-const CHECKS = [
+export const DATABASE_BOUNDARY_CHECKS = [
   'rls',
   'grants',
   'definerSearchPaths',
@@ -25,9 +25,13 @@ export function buildDatabaseBoundaryAttestation(input) {
   const migrationMatches =
     JSON.stringify(input.observedMigrationVersions) ===
     JSON.stringify(input.expectedMigrationVersions)
-  const checksPassed = CHECKS.every((check) => input.boundary.checks[check] === 'passed')
+  const checksPassed = DATABASE_BOUNDARY_CHECKS.every(
+    (check) => input.boundary.checks[check] === 'passed',
+  )
   const actorsMatch =
-    JSON.stringify(input.boundary.actors) === JSON.stringify(ACTORS) && input.boundary.version === 1
+    JSON.stringify(input.boundary.actors) === JSON.stringify(DATABASE_BOUNDARY_ACTORS) &&
+    input.boundary.version === 1
+  const suiteIdentified = /^[a-f0-9]{64}$/.test(input.hostileSuiteHash)
 
   return {
     version: 1,
@@ -46,9 +50,27 @@ export function buildDatabaseBoundaryAttestation(input) {
     },
     actors: input.boundary.actors,
     checks: input.boundary.checks,
-    result: migrationMatches && checksPassed && actorsMatch ? 'passed' : 'failed',
+    hostileSuiteHash: input.hostileSuiteHash,
+    result: migrationMatches && checksPassed && actorsMatch && suiteIdentified ? 'passed' : 'failed',
     workflow: input.workflow,
     approver: input.approver,
     timestamp: input.timestamp,
   }
+}
+
+/** Reject staging evidence that cannot authorize this exact production candidate. */
+export function verifyStagingBoundaryEvidence(attestation, expected) {
+  const valid =
+    attestation?.version === 1 &&
+    attestation?.requirementIds?.includes('CB-1') &&
+    attestation?.environment?.kind === 'staging' &&
+    attestation?.consoleCommit === expected.consoleCommit &&
+    attestation?.migration?.expectedHead === expected.migrationHead &&
+    attestation?.migration?.observedHead === expected.migrationHead &&
+    attestation?.migration?.result === 'passed' &&
+    attestation?.result === 'passed' &&
+    typeof attestation?.hostileSuiteHash === 'string' &&
+    attestation.hostileSuiteHash === expected.hostileSuiteHash
+  if (!valid) throw new Error('Staging boundary evidence does not match this production candidate.')
+  return true
 }

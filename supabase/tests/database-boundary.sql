@@ -5,6 +5,8 @@
 do $cb1$
 declare
   affected integer;
+  owner_table text;
+  insert_statement text;
 begin
   if exists (
     select 1
@@ -21,11 +23,30 @@ begin
   end if;
 
   if exists (
-    select 1 from information_schema.role_table_grants
-    where table_schema = 'public'
-      and grantee = 'authenticated'
-      and privilege_type in ('TRUNCATE', 'REFERENCES', 'TRIGGER')
-  ) then raise exception 'CB-1: authenticated callers must have only minimal table grants';
+    with expected(table_name, privilege_type) as (
+      values
+        ('campaigns', 'SELECT'), ('campaigns', 'INSERT'),
+        ('campaigns', 'UPDATE'), ('campaigns', 'DELETE'),
+        ('creatures', 'SELECT'), ('creatures', 'INSERT'),
+        ('creatures', 'UPDATE'), ('creatures', 'DELETE'),
+        ('effects', 'SELECT'), ('effects', 'INSERT'),
+        ('effects', 'UPDATE'), ('effects', 'DELETE'),
+        ('encounters', 'SELECT'), ('encounters', 'INSERT'),
+        ('encounters', 'UPDATE'), ('encounters', 'DELETE'),
+        ('players', 'SELECT'), ('players', 'INSERT'),
+        ('players', 'UPDATE'), ('players', 'DELETE'),
+        ('shares', 'SELECT'), ('shares', 'INSERT'), ('shares', 'DELETE'),
+        ('spells', 'SELECT'), ('spells', 'INSERT'),
+        ('spells', 'UPDATE'), ('spells', 'DELETE')
+    ), actual as (
+      select table_name, privilege_type
+      from information_schema.role_table_grants
+      where table_schema = 'public' and grantee = 'authenticated'
+    )
+    (select * from actual except select * from expected)
+    union all
+    (select * from expected except select * from actual)
+  ) then raise exception 'CB-1: authenticated table grants differ from the exact allowlist';
   end if;
 
   if exists (
@@ -108,13 +129,26 @@ begin
   );
   execute 'set local role authenticated';
   insert into campaigns (name, data) values ('Owner fixture', '{}'::jsonb);
-  if (select count(*) <> 1 from campaigns where name = 'Owner fixture') then
-    raise exception 'CB-1: the owner must be allowed to create and read their row';
-  end if;
-  update campaigns set name = 'Owner updated' where name = 'Owner fixture';
-  get diagnostics affected = row_count;
-  if affected <> 1 then raise exception 'CB-1: the owner must be allowed to update their row';
-  end if;
+  insert into creatures (name, data) values ('Owner fixture', '{}'::jsonb);
+  insert into effects (name, data) values ('Owner fixture', '{}'::jsonb);
+  insert into encounters (state) values ('{}'::jsonb);
+  insert into players (name, data) values ('Owner fixture', '{}'::jsonb);
+  insert into shares (code, kind, data) values ('cb1owner', 'encounter', '{}'::jsonb);
+  insert into spells (name, data) values ('Owner fixture', '{}'::jsonb);
+  foreach owner_table in array array[
+    'campaigns', 'creatures', 'effects', 'encounters', 'players', 'shares', 'spells'
+  ] loop
+    execute format('select count(*) from %I', owner_table) into affected;
+    if affected <> 1 then
+      raise exception 'CB-1: the owner could not create or read %', owner_table;
+    end if;
+    if owner_table <> 'shares' then
+      execute format('update %I set owner_id = owner_id', owner_table);
+      get diagnostics affected = row_count;
+      if affected <> 1 then raise exception 'CB-1: the owner could not update %', owner_table;
+      end if;
+    end if;
+  end loop;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);
@@ -124,24 +158,46 @@ begin
     false
   );
   execute 'set local role authenticated';
-  if (select count(*) <> 0 from campaigns) then
-    raise exception 'CB-1: another tenant must not read the owner row';
-  end if;
-  update campaigns set name = 'Cross-tenant update';
-  get diagnostics affected = row_count;
-  if affected <> 0 then raise exception 'CB-1: another tenant must not update the owner row';
-  end if;
-  delete from campaigns;
-  get diagnostics affected = row_count;
-  if affected <> 0 then raise exception 'CB-1: another tenant must not delete the owner row';
-  end if;
-  begin
-    insert into campaigns (owner_id, name, data)
-      values ('11111111-1111-1111-1111-111111111111', 'Cross-tenant insert', '{}'::jsonb);
-    raise exception 'CB-1: another tenant inserted an owner row' using errcode = 'OF001';
-  exception
-    when insufficient_privilege or check_violation then null;
-  end;
+  foreach owner_table in array array[
+    'campaigns', 'creatures', 'effects', 'encounters', 'players', 'shares', 'spells'
+  ] loop
+    execute format('select count(*) from %I', owner_table) into affected;
+    if affected <> 0 then raise exception 'CB-1: another tenant read %', owner_table;
+    end if;
+    if owner_table = 'shares' then
+      begin
+        execute 'update shares set owner_id = owner_id';
+        raise exception 'CB-1: shares unexpectedly allow updates' using errcode = 'OF005';
+      exception
+        when insufficient_privilege then null;
+      end;
+    else
+      execute format('update %I set owner_id = owner_id', owner_table);
+      get diagnostics affected = row_count;
+      if affected <> 0 then raise exception 'CB-1: another tenant updated %', owner_table;
+      end if;
+    end if;
+    execute format('delete from %I', owner_table);
+    get diagnostics affected = row_count;
+    if affected <> 0 then raise exception 'CB-1: another tenant deleted from %', owner_table;
+    end if;
+  end loop;
+  foreach insert_statement in array array[
+    $sql$insert into campaigns (owner_id, name, data) values ('11111111-1111-1111-1111-111111111111', 'Cross-tenant insert', '{}')$sql$,
+    $sql$insert into creatures (owner_id, name, data) values ('11111111-1111-1111-1111-111111111111', 'Cross-tenant insert', '{}')$sql$,
+    $sql$insert into effects (owner_id, name, data) values ('11111111-1111-1111-1111-111111111111', 'Cross-tenant insert', '{}')$sql$,
+    $sql$insert into encounters (owner_id, state) values ('11111111-1111-1111-1111-111111111111', '{}')$sql$,
+    $sql$insert into players (owner_id, name, data) values ('11111111-1111-1111-1111-111111111111', 'Cross-tenant insert', '{}')$sql$,
+    $sql$insert into shares (owner_id, code, kind, data) values ('11111111-1111-1111-1111-111111111111', 'cb1cross', 'encounter', '{}')$sql$,
+    $sql$insert into spells (owner_id, name, data) values ('11111111-1111-1111-1111-111111111111', 'Cross-tenant insert', '{}')$sql$
+  ] loop
+    begin
+      execute insert_statement;
+      raise exception 'CB-1: another tenant inserted an owner row' using errcode = 'OF001';
+    exception
+      when insufficient_privilege or check_violation then null;
+    end;
+  end loop;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
@@ -169,7 +225,20 @@ begin
   );
   execute 'set local role authenticated';
   if grant_role('66666666-6666-6666-6666-666666666666', 'admin', null)
+    or revoke_role('11111111-1111-1111-1111-111111111111', 'gm')
+    or deny_capability('11111111-1111-1111-1111-111111111111', 'share.encounter', null)
+    or restore_capability('11111111-1111-1111-1111-111111111111', 'share.encounter')
+    or answer_reports('cb1owner', 'dismissed') <> 0
     or reports_open() <> 0
+    or exists (select 1 from audit_recent())
+    or exists (select 1 from accounts())
+    or exists (select 1 from capabilities_of('11111111-1111-1111-1111-111111111111'))
+    or exists (select 1 from reports_queue())
+    or exists (select 1 from reports_for('cb1owner'))
+    or exists (select 1 from reported_share('cb1owner'))
+    or exists (select 1 from account_overview('11111111-1111-1111-1111-111111111111'))
+    or exists (select 1 from account_made('11111111-1111-1111-1111-111111111111'))
+    or exists (select 1 from account_libraries())
   then raise exception 'CB-1: a restricted-function actor gained administrative authority';
   end if;
   execute 'reset role';

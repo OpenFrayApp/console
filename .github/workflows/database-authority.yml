@@ -3,6 +3,7 @@
 name: Database authority
 
 permissions:
+  actions: read
   contents: read
 
 on:
@@ -15,6 +16,7 @@ on:
       - 'scripts/lib/database-boundary.mjs'
       - 'scripts/lib/supabase-authority.mjs'
       - 'scripts/verify-database-boundary.mjs'
+      - 'scripts/verify-staging-boundary-evidence.mjs'
       - 'scripts/verify-supabase-authority.mjs'
       - 'tests/database/**'
       - 'tests/scripts/databaseBoundary.test.ts'
@@ -33,6 +35,10 @@ on:
       project_ref:
         description: 'Supabase project reference'
         required: true
+        type: string
+      staging_attestation_run_id:
+        description: 'Required for production: workflow run containing matching staging evidence'
+        required: false
         type: string
 
 jobs:
@@ -76,6 +82,17 @@ jobs:
       - run: supabase start
       - name: Verify the fresh lineage before deployment
         run: npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
+      - name: Download staging boundary evidence
+        if: inputs.environment == 'production'
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: staging-database-attestation
+          path: .artifacts/staging-proof
+          run-id: ${{ inputs.staging_attestation_run_id }}
+          github-token: ${{ github.token }}
+      - name: Require matching staging boundary evidence
+        if: inputs.environment == 'production'
+        run: node scripts/verify-staging-boundary-evidence.mjs .artifacts/staging-proof/database-boundary-attestation.json
       - name: Apply forward migrations
         run: supabase db push --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Record manual provider evidence

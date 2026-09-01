@@ -78,6 +78,8 @@ npm run db:boundary -- \
 
 The boundary verifier refuses production targets. It checks the exact migration lineage before creating synthetic fixtures. All fixtures are removed in the same database statement. A failure rolls back that statement.
 
+Run the staging workflow first. Supply its workflow run ID as `staging_attestation_run_id` when dispatching production. Production verifies the staging commit, migration head, hostile-suite hash, and passing result before applying migrations.
+
 The authority verifier checks the fresh reset, exact remote migration lineage, normalized hosted schema, generated types, and supported hosted settings. It records the environment identity, migration head, schema and configuration hashes, generated-type hash, result, workflow, approver, and timestamp.
 
 Manual evidence uses the identifiers in `supabase/hosted-config.expected.json`:
