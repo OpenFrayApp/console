@@ -114,6 +114,16 @@ describe('publication contract', () => {
       'invalid',
     ],
     [
+      'oversized input',
+      { kind: 'encounter', data: { ...encounter.data, note: 'x'.repeat(70_000) } },
+      'invalid',
+    ],
+    [
+      'oversized excluded prose',
+      { kind: 'encounter', data: { ...encounter.data, note: 'x'.repeat(2001) } },
+      'invalid',
+    ],
+    [
       'hostile prototype key',
       JSON.parse(
         '{"kind":"encounter","data":{"v":1,"name":"Bad","entries":[],"__proto__":{"polluted":true}}}',

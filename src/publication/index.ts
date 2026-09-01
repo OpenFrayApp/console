@@ -193,6 +193,11 @@ function line(value: unknown, max: number): string | null {
   return clean.length > 0 && clean.length <= max ? clean : null
 }
 
+/** Accept bounded prose while keeping it out of every preview projection. */
+function validProse(value: unknown, max: number): boolean {
+  return value === undefined || (typeof value === 'string' && value.length <= max)
+}
+
 /** Read a finite number in a closed range. */
 function numberIn(value: unknown, min: number, max: number): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
@@ -292,8 +297,8 @@ export function normalizePublication(input: unknown): PublicationOutcome {
   }
 
   const name = line(data.name, 60)
-  const by = data.by === undefined ? undefined : line(data.by, 30)
-  if (data.by !== undefined && !by) return { status: 'invalid', reason: 'shape' }
+  const by = data.by === undefined ? undefined : (line(data.by, 30) ?? undefined)
+  if (!validProse(data.note, 2000)) return { status: 'invalid', reason: 'bounds' }
 
   if (row.kind === 'encounter') {
     if (!name || !Array.isArray(data.entries) || data.entries.length === 0) {
@@ -311,6 +316,14 @@ export function normalizePublication(input: unknown): PublicationOutcome {
       if (count === null) return { status: 'invalid', reason: 'shape' }
       creatures += count
       if (creatures > MAX_COMBATANTS) return { status: 'invalid', reason: 'bounds' }
+      if (entry.labels !== undefined) {
+        if (!Array.isArray(entry.labels) || entry.labels.length > 30) {
+          return { status: 'invalid', reason: 'shape' }
+        }
+        for (const label of entry.labels) {
+          if (!line(label, 40)) return { status: 'invalid', reason: 'shape' }
+        }
+      }
       const ways = [entry.ref, entry.creature, entry.quick].filter((item) => item != null).length
       if (ways !== 1) return { status: 'invalid', reason: 'shape' }
       if (entry.ref !== undefined) {
