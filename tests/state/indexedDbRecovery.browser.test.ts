@@ -23,7 +23,14 @@ function lifecycle(
     },
     cloud: {
       load: async () => cloudResult,
-      save: async (id) => id ?? 'cloud-row',
+      acquire: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),
+      takeover: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),
+      save: async (_ownerId, id, revision, writerId) => ({
+        status: 'saved',
+        id: id ?? 'cloud-row',
+        revision: revision + 1,
+        leaseToken: writerId,
+      }),
     },
     clock: { now: () => new Date('2026-09-02T10:11:12.000Z') },
   })
@@ -45,6 +52,7 @@ describe('IndexedDB recovery', () => {
     await expect(restartedBrowserSession.restore()).resolves.toEqual({
       ownerId: 'owner-a',
       snapshot: recovered,
+      savedAt: '2026-09-02T10:11:12.000Z',
     })
     const resolution = await restartedBrowserSession.identify('owner-a')
     expect(resolution.snapshot).toEqual(recovered)
@@ -114,10 +122,12 @@ describe('IndexedDB recovery', () => {
     await expect(recovery.load('owner-a')).resolves.toEqual({
       ownerId: 'owner-a',
       snapshot: snapshot('owner-a-fight'),
+      savedAt: '2026-09-02T10:11:12.000Z',
     })
     await expect(recovery.loadLatest()).resolves.toEqual({
       ownerId: 'owner-b',
       snapshot: snapshot('owner-b-fight'),
+      savedAt: '2026-09-02T10:12:12.000Z',
     })
     await recovery.close()
   })

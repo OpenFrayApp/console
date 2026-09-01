@@ -21,7 +21,14 @@ import type { Encounter } from '../schema/encounter.ts'
  * guessing.
  */
 export type LoadedEncounter =
-  | { status: 'loaded'; id: string; encounter: Encounter; playerCode: string | null }
+  | {
+      status: 'loaded'
+      id: string
+      encounter: Encounter
+      playerCode: string | null
+      revision: number | null
+      updatedAt: string
+    }
   | { status: 'empty' }
   | { status: 'failed' }
 
@@ -39,23 +46,29 @@ export type LoadedEncounter =
  */
 export async function loadCloudEncounter(): Promise<LoadedEncounter> {
   if (!supabase) return { status: 'failed' }
-  const newest = () =>
-    supabase!
-      .from('encounters')
-      .select('id, state, player_code')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-  let { data, error } = await newest().eq('kind', 'live').maybeSingle()
+  const newest = (columns: string) =>
+    supabase!.from('encounters').select(columns).order('updated_at', { ascending: false }).limit(1)
+  let { data, error } = await newest('id, state, player_code, revision, updated_at')
+    .eq('kind', 'live')
+    .maybeSingle()
   if (error && MISSING_SCHEMA.includes((error as { code?: string }).code ?? '')) {
-    ;({ data, error } = await newest().maybeSingle())
+    ;({ data, error } = await newest('id, state, player_code, updated_at')
+      .eq('kind', 'live')
+      .maybeSingle())
+  }
+  if (error && MISSING_SCHEMA.includes((error as { code?: string }).code ?? '')) {
+    ;({ data, error } = await newest('id, state, player_code, updated_at').maybeSingle())
   }
   if (error) return { status: 'failed' }
   if (!data) return { status: 'empty' }
+  const row = data as unknown as Record<string, unknown>
   return {
     status: 'loaded',
-    id: data.id,
-    encounter: data.state as Encounter,
-    playerCode: (data.player_code as string | null) ?? null,
+    id: row.id as string,
+    encounter: row.state as Encounter,
+    playerCode: (row.player_code as string | null) ?? null,
+    revision: typeof row.revision === 'number' ? row.revision : null,
+    updatedAt: row.updated_at as string,
   }
 }
 
@@ -93,35 +106,106 @@ export async function claimPlayerCode(id: string, code: string): Promise<ClaimRe
   return pg && MISSING_SCHEMA.includes(pg) ? 'unavailable' : 'failed'
 }
 
-/**
- * Upsert the encounter. With an `id` it updates that row; without one it inserts
- * (owner_id auto-fills from the session) and returns the new id to reuse. Returns
- * the row id on success and null on failure. Persistence remains background work,
- * while the lifecycle uses the result to avoid claiming an unsuccessful save.
- *
- * `kind` is deliberately not written here: the column defaults to `live`, so the autosave
- * keeps working unchanged on a project where the column hasn't been added yet. Sending it
- * would turn a pending deploy step into a fight that stops saving.
- */
+/** The result of acquiring or replacing one encounter's active writer lease. */
+export type CloudLeaseResult =
+  | { status: 'acquired'; revision: number; leaseToken: string }
+  | { status: 'read-only'; revision: number }
+  | { status: 'identity-expired' }
+  | { status: 'failed' }
+
+/** Every authoritative outcome from an atomic revision write. */
+export type CloudWriteResult =
+  | { status: 'saved'; id: string; revision: number; leaseToken: string }
+  | { status: 'stale'; revision: number }
+  | { status: 'lease-lost'; revision: number }
+  | { status: 'identity-expired' }
+  | { status: 'failed' }
+
+/** Whether a provider error means the authenticated identity can no longer write. */
+function identityExpired(error: unknown): boolean {
+  const candidate = error as { code?: string; status?: number } | null
+  return candidate?.code === '28000' || candidate?.code === 'PGRST301' || candidate?.status === 401
+}
+
+/** Accept one bounded lease response from the database function. */
+function leaseResult(data: unknown, error: unknown): CloudLeaseResult {
+  if (error) return identityExpired(error) ? { status: 'identity-expired' } : { status: 'failed' }
+  if (!data || typeof data !== 'object') return { status: 'failed' }
+  const result = data as Record<string, unknown>
+  if (
+    result.status === 'acquired' &&
+    typeof result.revision === 'number' &&
+    typeof result.leaseToken === 'string'
+  ) {
+    return { status: 'acquired', revision: result.revision, leaseToken: result.leaseToken }
+  }
+  if (result.status === 'read-only' && typeof result.revision === 'number') {
+    return { status: 'read-only', revision: result.revision }
+  }
+  return { status: 'failed' }
+}
+
+/** Ask the database for writer authority without displacing a current lease. */
+export async function acquireCloudWriter(id: string, clientId: string): Promise<CloudLeaseResult> {
+  if (!supabase) return { status: 'failed' }
+  const { data, error } = await supabase.rpc('claim_encounter_writer', {
+    want_encounter: id,
+    want_writer: clientId,
+  })
+  return leaseResult(data, error)
+}
+
+/** Explicitly checkpoint the cloud copy and replace its current writer lease. */
+export async function takeOverCloudWriter(id: string, clientId: string): Promise<CloudLeaseResult> {
+  if (!supabase) return { status: 'failed' }
+  const { data, error } = await supabase.rpc('takeover_encounter_writer', {
+    want_encounter: id,
+    want_writer: clientId,
+  })
+  return leaseResult(data, error)
+}
+
+/** Persist one compare-and-swap revision while the caller holds the writer lease. */
 export async function saveCloudEncounter(
+  ownerId: string,
   id: string | null,
+  expectedRevision: number,
+  writerId: string,
   encounter: Encounter,
   updatedAt = new Date().toISOString(),
-): Promise<string | null> {
-  if (!supabase) return null
-  if (id) {
-    const { error } = await supabase
-      .from('encounters')
-      .update({ state: encounter, updated_at: updatedAt })
-      .eq('id', id)
-    return error ? null : id
+): Promise<CloudWriteResult> {
+  if (!supabase) return { status: 'failed' }
+  const { data, error } = await supabase.rpc('save_encounter_revision', {
+    want_owner: ownerId,
+    want_encounter: id,
+    expected_revision: expectedRevision,
+    want_writer: writerId,
+    want_state: encounter,
+    want_updated_at: updatedAt,
+  })
+  if (error) return identityExpired(error) ? { status: 'identity-expired' } : { status: 'failed' }
+  if (!data || typeof data !== 'object') return { status: 'failed' }
+  const result = data as Record<string, unknown>
+  if (
+    result.status === 'saved' &&
+    typeof result.id === 'string' &&
+    typeof result.revision === 'number' &&
+    typeof result.leaseToken === 'string'
+  ) {
+    return {
+      status: 'saved',
+      id: result.id,
+      revision: result.revision,
+      leaseToken: result.leaseToken,
+    }
   }
-  const { data, error } = await supabase
-    .from('encounters')
-    .insert({ state: encounter, updated_at: updatedAt })
-    .select('id')
-    .single()
-  return error || !data ? null : (data.id as string)
+  if (
+    (result.status === 'stale' || result.status === 'lease-lost') &&
+    typeof result.revision === 'number'
+  ) {
+    return { status: result.status, revision: result.revision }
+  }
+  return { status: 'failed' }
 }
 
 /**

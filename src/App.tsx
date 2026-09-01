@@ -1601,6 +1601,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onRetry={() => void lifecycle.retry()}
                 onDownload={downloadRecovery}
                 onSignIn={() => setAuthOpen(true)}
+                onTakeOver={() => void lifecycle.takeOver()}
               />
               <AccountControl
                 onSignIn={() => setAuthOpen(true)}

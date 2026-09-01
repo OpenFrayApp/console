@@ -75,6 +75,22 @@ describe('RecoveryStatus', () => {
     expect(safe.defaultPrevented).toBe(false)
   })
 
+  it('offers explicit takeover while another client owns cloud saving', () => {
+    const takeOver = vi.fn()
+    render(
+      <RecoveryStatus
+        status={{ kind: 'read-only' }}
+        onRetry={vi.fn()}
+        onDownload={vi.fn()}
+        onTakeOver={takeOver}
+      />,
+    )
+
+    expect(screen.getByText('Saving elsewhere')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Take over saving' }))
+    expect(takeOver).toHaveBeenCalledOnce()
+  })
+
   it('opens sign-in from the anonymous durability state', () => {
     const signIn = vi.fn()
     render(

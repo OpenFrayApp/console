@@ -3,7 +3,15 @@
 
 import { encodeSession } from '../codecs/session.ts'
 import type { Encounter } from '../schema/encounter.ts'
-import { loadCloudEncounter, saveCloudEncounter, type LoadedEncounter } from './cloudEncounter.ts'
+import {
+  acquireCloudWriter,
+  loadCloudEncounter,
+  saveCloudEncounter,
+  takeOverCloudWriter,
+  type CloudLeaseResult,
+  type CloudWriteResult,
+  type LoadedEncounter,
+} from './cloudEncounter.ts'
 import { IndexedDbRecovery } from './indexedDbRecovery.ts'
 import {
   loadSession,
@@ -16,6 +24,7 @@ import {
 export interface DeviceRecovery {
   ownerId: string
   snapshot: SessionSnapshot
+  savedAt: string
 }
 
 export interface DeviceRecoveryAdapter {
@@ -31,7 +40,16 @@ export interface SessionRecoveryAdapter {
 
 export interface CloudEncounterAdapter {
   load: () => Promise<LoadedEncounter>
-  save: (id: string | null, encounter: Encounter, updatedAt: string) => Promise<string | null>
+  acquire: (id: string, writerId: string) => Promise<CloudLeaseResult>
+  takeover: (id: string, writerId: string) => Promise<CloudLeaseResult>
+  save: (
+    ownerId: string,
+    id: string | null,
+    revision: number,
+    writerId: string,
+    encounter: Encounter,
+    updatedAt: string,
+  ) => Promise<CloudWriteResult>
 }
 
 export interface LifecycleClock {
@@ -52,6 +70,7 @@ export type LifecycleSaveStatus =
   | { kind: 'saved' }
   | { kind: 'offline' }
   | { kind: 'sign-in' }
+  | { kind: 'read-only' }
   | {
       kind: 'failed'
       reason: 'unavailable' | 'quota' | 'invalid-snapshot' | 'too-large' | 'invalid' | 'unsupported'
@@ -90,6 +109,7 @@ export interface EncounterLifecycleAdapters {
 export interface LifecycleRestore {
   ownerId: string | null
   snapshot: SessionSnapshot | null
+  savedAt?: string
   playerCode?: string | null
   clearWorkingBoard?: boolean
 }
@@ -100,6 +120,9 @@ export class EncounterLifecycle {
   private readonly restorePromise: Promise<LifecycleRestore>
   private ownerId: string | null = null
   private cloudId: string | null = null
+  private cloudRevision = 0
+  private cloudWriterId: string | null = null
+  private readonly clientId: string
   private cloudWritable = false
   private cloudQueue: Promise<void> = Promise.resolve()
   private cancelCloudSave: (() => void) | null = null
@@ -112,8 +135,9 @@ export class EncounterLifecycle {
   private readonly statusListeners = new Set<(status: LifecycleSaveStatus) => void>()
 
   /** Start device recovery immediately and retain the adapters for later identity changes. */
-  constructor(adapters: EncounterLifecycleAdapters) {
+  constructor(adapters: EncounterLifecycleAdapters, clientId: string = crypto.randomUUID()) {
     this.adapters = adapters
+    this.clientId = clientId
     this.restorePromise = this.restoreOnce()
   }
 
@@ -167,6 +191,8 @@ export class EncounterLifecycle {
     const previousOwnerId = this.ownerId
     this.ownerId = ownerId
     this.cloudId = null
+    this.cloudRevision = 0
+    this.cloudWriterId = null
     this.cloudWritable = false
     this.cancelCloudSave?.()
     this.cancelCloudSave = null
@@ -191,6 +217,8 @@ export class EncounterLifecycle {
     const recovery =
       device?.snapshot ??
       (startup.ownerId === ownerId || deviceUnavailable ? startup.snapshot : null)
+    const recoverySavedAt =
+      device?.savedAt ?? (startup.ownerId === ownerId ? startup.savedAt : undefined)
     const cloud = await this.adapters.cloud.load()
     if (generation !== this.identityGeneration) {
       return { ownerId, snapshot: recovery }
@@ -201,24 +229,48 @@ export class EncounterLifecycle {
         ? { ownerId, snapshot: recovery }
         : { ownerId, snapshot: null, clearWorkingBoard: true }
     }
-    this.cloudWritable = true
     if (cloud.status === 'empty') {
+      this.cloudWritable = true
+      this.cloudWriterId = this.clientId
       return recovery
         ? { ownerId, snapshot: recovery }
         : { ownerId, snapshot: null, clearWorkingBoard: true }
     }
 
     this.cloudId = cloud.id
+    if (cloud.revision !== null) {
+      const lease = await this.adapters.cloud.acquire(cloud.id, this.clientId)
+      if (generation !== this.identityGeneration) return { ownerId, snapshot: recovery }
+      if (lease.status === 'acquired') {
+        this.cloudWritable = true
+        this.cloudRevision = lease.revision
+        this.cloudWriterId = lease.leaseToken
+      } else if (lease.status === 'read-only') {
+        this.cloudRevision = lease.revision
+        this.publishStatus({ kind: 'read-only' })
+      } else if (lease.status === 'identity-expired') {
+        this.publishStatus({ kind: 'sign-in' })
+      } else {
+        this.publishStatus({ kind: 'offline' })
+      }
+    } else {
+      this.publishStatus({ kind: 'offline' })
+    }
+    const recoveryIsNewer =
+      recovery && recoverySavedAt && Date.parse(recoverySavedAt) > Date.parse(cloud.updatedAt)
     return {
       ownerId,
-      snapshot: recovery
-        ? { ...recovery, encounter: cloud.encounter, selectedId: null }
-        : {
-            encounter: cloud.encounter,
-            theme: 'dark',
-            view: 'encounter',
-            selectedId: null,
-          },
+      snapshot: recoveryIsNewer
+        ? recovery
+        : recovery
+          ? { ...recovery, encounter: cloud.encounter, selectedId: null }
+          : {
+              encounter: cloud.encounter,
+              theme: 'dark',
+              view: 'encounter',
+              selectedId: null,
+            },
+      savedAt: recoveryIsNewer ? recoverySavedAt : cloud.updatedAt,
       playerCode: cloud.playerCode,
     }
   }
@@ -279,7 +331,12 @@ export class EncounterLifecycle {
     }
     if (!this.ownerId) return { kind: 'sign-in' }
     if (this.adapters.network && !this.adapters.network.online()) return { kind: 'offline' }
-    return this.cloudWritable ? { kind: 'saving' } : { kind: 'offline' }
+    if (!this.cloudWritable) {
+      return this.status.kind === 'read-only' || this.status.kind === 'sign-in'
+        ? this.status
+        : { kind: 'offline' }
+    }
+    return { kind: 'saving' }
   }
 
   /** Debounce cloud persistence while immediate recovery continues for every commit. */
@@ -289,12 +346,14 @@ export class EncounterLifecycle {
     savedAt: string,
     generation: number,
   ): void {
+    const identityGeneration = this.identityGeneration
     this.cancelCloudSave?.()
     const save = async () => {
       this.cancelCloudSave = null
+      if (identityGeneration !== this.identityGeneration || ownerId !== this.ownerId) return
       const id = await this.saveCloud(encounter, savedAt)
       if (generation !== this.commitGeneration || ownerId !== this.ownerId) return
-      this.publishStatus(id ? { kind: 'saved' } : { kind: 'offline' })
+      this.publishStatus(id ? { kind: 'saved' } : this.status)
     }
     this.cancelCloudSave = this.adapters.scheduler
       ? this.adapters.scheduler.after(600, save)
@@ -304,9 +363,34 @@ export class EncounterLifecycle {
         })()
   }
 
+  /** Checkpoint the cloud copy, replace its writer, and save the current working board. */
+  async takeOver(): Promise<boolean> {
+    if (!this.ownerId || !this.cloudId || !this.latestSnapshot) return false
+    const ownerId = this.ownerId
+    const identityGeneration = this.identityGeneration
+    const lease = await this.adapters.cloud.takeover(this.cloudId, this.clientId)
+    if (identityGeneration !== this.identityGeneration || ownerId !== this.ownerId) return false
+    if (lease.status !== 'acquired') {
+      this.publishStatus(
+        lease.status === 'identity-expired' ? { kind: 'sign-in' } : { kind: 'offline' },
+      )
+      return false
+    }
+    this.cloudWritable = true
+    this.cloudRevision = lease.revision
+    this.cloudWriterId = lease.leaseToken
+    this.publishStatus({ kind: 'saving' })
+    const id = await this.saveCloud(
+      this.latestSnapshot.encounter,
+      this.adapters.clock.now().toISOString(),
+    )
+    this.publishStatus(id ? { kind: 'saved' } : this.status)
+    return id !== null
+  }
+
   /** React to connectivity changes without claiming an unverified cloud write succeeded. */
   private networkChanged(): void {
-    if (!this.ownerId || this.status.kind === 'failed') return
+    if (!this.ownerId || this.status.kind === 'failed' || this.status.kind === 'read-only') return
     if (!this.adapters.network?.online()) {
       this.cancelCloudSave?.()
       this.cancelCloudSave = null
@@ -335,7 +419,7 @@ export class EncounterLifecycle {
     this.publishStatus({ kind: 'saving' })
     const id = await this.saveCloud(encounter, this.adapters.clock.now().toISOString())
     if (generation === this.commitGeneration) {
-      this.publishStatus(id ? { kind: 'saved' } : { kind: 'offline' })
+      this.publishStatus(id ? { kind: 'saved' } : this.status)
     }
     return id
   }
@@ -357,18 +441,59 @@ export class EncounterLifecycle {
     return { ownerId: null, snapshot: loaded.snapshot }
   }
 
-  /** Serialize every cloud write so an older snapshot cannot finish after a newer one. */
+  /** Serialize cloud writes while the database fences every revision across clients. */
   private saveCloud(encounter: Encounter, updatedAt: string): Promise<string | null> {
+    const identityGeneration = this.identityGeneration
+    const ownerId = this.ownerId
     let resolveSave: (id: string | null) => void = () => undefined
     const saved = new Promise<string | null>((resolve) => {
       resolveSave = resolve
     })
     this.cloudQueue = this.cloudQueue.then(async () => {
+      if (identityGeneration !== this.identityGeneration || ownerId !== this.ownerId) {
+        resolveSave(null)
+        return
+      }
+      if (!ownerId || !this.cloudWriterId) {
+        this.publishStatus({ kind: 'offline' })
+        resolveSave(null)
+        return
+      }
       try {
-        const id = await this.adapters.cloud.save(this.cloudId, encounter, updatedAt)
-        if (id) this.cloudId = id
-        resolveSave(id)
+        const result = await this.adapters.cloud.save(
+          ownerId,
+          this.cloudId,
+          this.cloudRevision,
+          this.cloudWriterId,
+          encounter,
+          updatedAt,
+        )
+        if (identityGeneration !== this.identityGeneration || ownerId !== this.ownerId) {
+          resolveSave(null)
+          return
+        }
+        if (result.status === 'saved') {
+          this.cloudId = result.id
+          this.cloudRevision = result.revision
+          this.cloudWriterId = result.leaseToken
+          resolveSave(result.id)
+          return
+        }
+        this.cloudWritable = false
+        if (result.status === 'stale' || result.status === 'lease-lost') {
+          this.cloudRevision = result.revision
+          this.publishStatus({ kind: 'read-only' })
+        } else if (result.status === 'identity-expired') {
+          this.publishStatus({ kind: 'sign-in' })
+        } else {
+          this.publishStatus({ kind: 'offline' })
+        }
+        resolveSave(null)
       } catch {
+        if (identityGeneration === this.identityGeneration && ownerId === this.ownerId) {
+          this.cloudWritable = false
+          this.publishStatus({ kind: 'offline' })
+        }
         resolveSave(null)
       }
     })
@@ -384,6 +509,8 @@ export function createBrowserEncounterLifecycle(): EncounterLifecycle {
     session: { load: loadSession, save: saveSession },
     cloud: {
       load: loadCloudEncounter,
+      acquire: acquireCloudWriter,
+      takeover: takeOverCloudWriter,
       save: saveCloudEncounter,
     },
     clock: { now: () => new Date() },

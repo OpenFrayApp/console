@@ -9,6 +9,7 @@ export const DATABASE_BOUNDARY_ACTORS = [
   'other-tenant',
   'viewer',
   'stale-writer',
+  'second-writer',
   'restricted-function',
 ]
 export const DATABASE_BOUNDARY_CHECKS = [
@@ -18,6 +19,7 @@ export const DATABASE_BOUNDARY_CHECKS = [
   'deprecatedOverloads',
   'restrictedExecution',
   'realtime',
+  'revisionAuthority',
   'accountDeletion',
 ]
 /** Build immutable tenant and live-authority evidence without retaining fixture identities. */
@@ -35,7 +37,7 @@ export function buildDatabaseBoundaryAttestation(input) {
 
   return {
     version: 1,
-    requirementIds: ['CB-1', 'CB-3'],
+    requirementIds: ['CB-1', 'CB-3', 'DC-3'],
     consoleCommit: input.consoleCommit,
     environment: {
       kind: input.environmentKind,
@@ -68,6 +70,7 @@ export function verifyStagingBoundaryEvidence(attestation, expected) {
     attestation?.version === 1 &&
     attestation?.requirementIds?.includes('CB-1') &&
     attestation?.requirementIds?.includes('CB-3') &&
+    attestation?.requirementIds?.includes('DC-3') &&
     attestation?.environment?.kind === 'staging' &&
     attestation?.environment?.identity === expected.environmentIdentity &&
     attestation?.consoleCommit === expected.consoleCommit &&

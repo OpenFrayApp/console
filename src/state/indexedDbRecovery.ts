@@ -20,6 +20,7 @@ interface RecoveryRecord {
   savedAt: string
   serialized: string
   previousSerialized?: string
+  previousSavedAt?: string
 }
 
 interface MetadataRecord {
@@ -78,10 +79,13 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     )
     if (!record) return null
     const decoded = decodeSession(record.serialized)
-    if (decoded.status === 'ok') return { ownerId, snapshot: decoded.snapshot }
+    if (decoded.status === 'ok')
+      return { ownerId, snapshot: decoded.snapshot, savedAt: record.savedAt }
     if (decoded.status === 'unsupported' || !record.previousSerialized) return null
     const previous = decodeSession(record.previousSerialized)
-    return previous.status === 'ok' ? { ownerId, snapshot: previous.snapshot } : null
+    return previous.status === 'ok'
+      ? { ownerId, snapshot: previous.snapshot, savedAt: record.previousSavedAt ?? '' }
+      : null
   }
 
   /** Load the validated recovery copy that immediately preceded the current copy. */
@@ -93,7 +97,9 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     )
     if (!record?.previousSerialized) return null
     const decoded = decodeSession(record.previousSerialized)
-    return decoded.status === 'ok' ? { ownerId, snapshot: decoded.snapshot } : null
+    return decoded.status === 'ok'
+      ? { ownerId, snapshot: decoded.snapshot, savedAt: record.previousSavedAt ?? '' }
+      : null
   }
 
   /** Save a canonical owner recovery copy without overwriting unsupported or invalid data. */
@@ -133,6 +139,7 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
         savedAt,
         serialized: encoded.serialized,
         previousSerialized: currentCanonical,
+        previousSavedAt: current?.savedAt,
       } satisfies RecoveryRecord)
       transaction
         .objectStore(METADATA)

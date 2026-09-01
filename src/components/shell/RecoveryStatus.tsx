@@ -9,6 +9,7 @@ const LABEL = {
   offline: 'Offline',
   failed: 'Save failed',
   'sign-in': 'Sign in to resume saving',
+  'read-only': 'Saving elsewhere',
 } as const
 
 const DOT = {
@@ -17,6 +18,7 @@ const DOT = {
   offline: 'bg-slate-400',
   failed: 'bg-red-500',
   'sign-in': 'bg-slate-400',
+  'read-only': 'bg-amber-500',
 } as const
 
 /** Show whether the working board is recoverable and expose recovery actions on failure. */
@@ -25,11 +27,13 @@ export function RecoveryStatus({
   onRetry,
   onDownload,
   onSignIn,
+  onTakeOver,
 }: {
   status: LifecycleSaveStatus
   onRetry: () => void
   onDownload: () => void
   onSignIn?: () => void
+  onTakeOver?: () => void
 }) {
   if (status.kind === 'failed') {
     return (
@@ -54,6 +58,27 @@ export function RecoveryStatus({
           className="tap-area font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
         >
           Download recovery copy
+        </button>
+      </div>
+    )
+  }
+
+  if (status.kind === 'read-only' && onTakeOver) {
+    return (
+      <div
+        className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs"
+        role="status"
+      >
+        <span className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-300">
+          <span className={`h-2 w-2 rounded-full ${DOT['read-only']}`} aria-hidden="true" />
+          {LABEL['read-only']}
+        </span>
+        <button
+          type="button"
+          onClick={onTakeOver}
+          className="tap-area font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
+        >
+          Take over saving
         </button>
       </div>
     )

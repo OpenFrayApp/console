@@ -33,8 +33,7 @@ begin
         ('creatures', 'UPDATE'), ('creatures', 'DELETE'),
         ('effects', 'SELECT'), ('effects', 'INSERT'),
         ('effects', 'UPDATE'), ('effects', 'DELETE'),
-        ('encounters', 'SELECT'), ('encounters', 'INSERT'),
-        ('encounters', 'UPDATE'), ('encounters', 'DELETE'),
+        ('encounters', 'SELECT'), ('encounters', 'INSERT'), ('encounters', 'DELETE'),
         ('players', 'SELECT'), ('players', 'INSERT'),
         ('players', 'UPDATE'), ('players', 'DELETE'),
         ('shares', 'SELECT'), ('shares', 'INSERT'), ('shares', 'DELETE'),
@@ -80,6 +79,7 @@ begin
         ('answer_reports(text,text)', 'authenticated'),
         ('audit_recent(integer)', 'authenticated'),
         ('capabilities_of(uuid)', 'authenticated'),
+        ('claim_encounter_writer(uuid,uuid)', 'authenticated'),
         ('delete_account()', 'authenticated'),
         ('deny_capability(uuid,text,text)', 'authenticated'),
         ('grant_role(uuid,text,text)', 'authenticated'),
@@ -98,11 +98,13 @@ begin
         ('reports_queue(integer)', 'authenticated'),
         ('restore_capability(uuid,text)', 'authenticated'),
         ('revoke_role(uuid,text)', 'authenticated'),
+        ('save_encounter_revision(uuid,uuid,bigint,uuid,jsonb,timestamp with time zone)', 'authenticated'),
         ('share(text)', 'anon'),
         ('share(text)', 'authenticated'),
         ('start_live_view(uuid,text,text)', 'authenticated'),
         ('stop_all_live_views()', 'authenticated'),
-        ('stop_live_view(text)', 'authenticated')
+        ('stop_live_view(text)', 'authenticated'),
+        ('takeover_encounter_writer(uuid,uuid)', 'authenticated')
     ), actual as (
       select p.oid::regprocedure::text, r.rolname
       from pg_proc p
@@ -183,7 +185,20 @@ begin
   insert into campaigns (name, data) values ('Owner fixture', '{}'::jsonb);
   insert into creatures (name, data) values ('Owner fixture', '{}'::jsonb);
   insert into effects (name, data) values ('Owner fixture', '{}'::jsonb);
-  insert into encounters (state) values ('{}'::jsonb);
+  select (save_encounter_revision(
+    '11111111-1111-1111-1111-111111111111',
+    null,
+    0,
+    'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    '{}'::jsonb,
+    now()
+  )->>'id')::uuid into live_encounter;
+  if claim_encounter_writer(
+    live_encounter,
+    'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb'
+  )->>'status' <> 'read-only' then
+    raise exception 'DC-3: a second active client was not kept read-only';
+  end if;
   insert into players (name, data) values ('Owner fixture', '{}'::jsonb);
   insert into shares (code, kind, data) values ('cb1owner', 'encounter', '{}'::jsonb);
   insert into spells (name, data) values ('Owner fixture', '{}'::jsonb);
@@ -194,14 +209,19 @@ begin
     if affected <> 1 then
       raise exception 'CB-1: the owner could not create or read %', owner_table;
     end if;
-    if owner_table <> 'shares' then
+    if owner_table = 'encounters' then
+      update encounters set player_code = player_code;
+      get diagnostics affected = row_count;
+      if affected <> 1 then raise exception 'DC-3: the owner could not update an encounter label';
+      end if;
+    elsif owner_table <> 'shares' then
       execute format('update %I set owner_id = owner_id', owner_table);
       get diagnostics affected = row_count;
       if affected <> 1 then raise exception 'CB-1: the owner could not update %', owner_table;
       end if;
     end if;
   end loop;
-  update encounters set player_code = 'cb3-owner' returning id into live_encounter;
+  update encounters set player_code = 'cb3-owner';
   if start_live_view(live_encounter, 'cb3-owner', repeat('a', 64)) <> 1 then
     raise exception 'CB-3: the encounter owner could not start a live view';
   end if;
@@ -228,10 +248,11 @@ begin
     execute format('select count(*) from %I', owner_table) into affected;
     if affected <> 0 then raise exception 'CB-1: another tenant read %', owner_table;
     end if;
-    if owner_table = 'shares' then
+    if owner_table in ('encounters', 'shares') then
       begin
-        execute 'update shares set owner_id = owner_id';
-        raise exception 'CB-1: shares unexpectedly allow updates' using errcode = 'OF005';
+        execute format('update %I set owner_id = owner_id', owner_table);
+        raise exception 'CB-1: % unexpectedly allows owner updates', owner_table
+          using errcode = 'OF005';
       exception
         when insufficient_privilege then null;
       end;
@@ -262,6 +283,16 @@ begin
       when insufficient_privilege or check_violation then null;
     end;
   end loop;
+  begin
+    perform takeover_encounter_writer(
+      live_encounter,
+      'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb'
+    );
+    raise exception 'DC-3: another tenant took over the writer lease' using errcode = 'OF011';
+  exception
+    when raise_exception then
+      if sqlerrm not like '%owned live encounter%' then raise; end if;
+  end;
   if live_view_topic_owned('player:' || repeat('a', 64) || ':lobby') then
     raise exception 'CB-3: an authenticated non-owner could publish';
   end if;
@@ -370,8 +401,34 @@ begin
   if live_view_topic_active('player:' || repeat('b', 64) || ':lobby') then
     raise exception 'CB-3: revocation left the capability active';
   end if;
+  if takeover_encounter_writer(
+    live_encounter,
+    'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb'
+  )->>'status' <> 'acquired' then
+    raise exception 'DC-3: explicit takeover did not acquire writer authority';
+  end if;
+  if save_encounter_revision(
+    '11111111-1111-1111-1111-111111111111',
+    live_encounter,
+    1,
+    'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+    '{"writer":"stale"}'::jsonb,
+    now()
+  )->>'status' <> 'lease-lost' then
+    raise exception 'DC-3: takeover left the previous writer active';
+  end if;
+  if save_encounter_revision(
+    '11111111-1111-1111-1111-111111111111',
+    live_encounter,
+    1,
+    'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+    '{"writer":"active"}'::jsonb,
+    now()
+  )->>'status' <> 'saved' then
+    raise exception 'DC-3: the takeover writer could not save';
+  end if;
   foreach owner_table in array array[
-    'campaigns', 'creatures', 'effects', 'encounters', 'players', 'shares', 'spells'
+    'campaigns', 'creatures', 'effects', 'players', 'shares', 'spells'
   ] loop
     execute format('delete from %I', owner_table);
     get diagnostics affected = row_count;

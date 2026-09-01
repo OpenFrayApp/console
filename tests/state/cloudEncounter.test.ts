@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Encounter } from '../../src/schema/encounter.ts'
 import {
+  acquireCloudWriter,
   claimPlayerCode,
   deleteSavedFight,
   listSavedFights,
@@ -12,6 +13,7 @@ import {
   renameSavedFight,
   saveCloudEncounter,
   saveFight,
+  takeOverCloudWriter,
 } from '../../src/state/cloudEncounter.ts'
 import { makeSupabaseStub } from './supabaseMock.ts'
 
@@ -59,13 +61,17 @@ describe('loadCloudEncounter', () => {
 
   it('reads the single newest live row from the encounters table', async () => {
     const enc = encounter()
-    const { client, queries } = makeSupabaseStub({ data: { id: 'row-1', state: enc } })
+    const { client, queries } = makeSupabaseStub({
+      data: { id: 'row-1', state: enc, revision: 4, updated_at: NOW },
+    })
     supa.client = client
     expect(await loadCloudEncounter()).toEqual({
       status: 'loaded',
       id: 'row-1',
       encounter: enc,
       playerCode: null,
+      revision: 4,
+      updatedAt: NOW,
     })
     // The `kind` filter is what keeps a saved fight from being mistaken for the session in
     // progress now that both live in this table.
@@ -73,7 +79,7 @@ describe('loadCloudEncounter', () => {
       {
         table: 'encounters',
         steps: [
-          ['select', 'id, state, player_code'],
+          ['select', 'id, state, player_code, revision, updated_at'],
           ['order', 'updated_at', { ascending: false }],
           ['limit', 1],
           ['eq', 'kind', 'live'],
@@ -83,19 +89,33 @@ describe('loadCloudEncounter', () => {
     ])
   })
 
-  // The column is added by hand at deploy time. Going dark on the GM's fight because that
-  // step is pending would be the worst possible way to fail, so the filter is dropped and
-  // the read runs again — every row is a live one on such a project anyway.
-  it('reads again without the filter when the kind column isn’t there yet', async () => {
+  it('keeps the live-row filter when only the revision column is pending', async () => {
     const enc = encounter()
     const { client, queries } = makeSupabaseStub(
-      { data: null, error: { code: 'PGRST204', message: "Could not find the 'kind' column" } },
+      { data: null, error: { code: 'PGRST204', message: "Could not find the 'revision' column" } },
+      { data: { id: 'row-1', state: enc } },
+    )
+    supa.client = client
+
+    expect(await loadCloudEncounter()).toMatchObject({ status: 'loaded', id: 'row-1' })
+    expect(queries).toHaveLength(2)
+    expect(queries[1].steps).toContainEqual(['eq', 'kind', 'live'])
+  })
+
+  // Going dark on the GM's fight while an older schema is still deployed would be the
+  // worst failure, so the loader drops `kind` only after proving that column is absent too.
+  it('reads again without the filter when the kind column isn’t there yet', async () => {
+    const enc = encounter()
+    const missing = { code: 'PGRST204', message: 'missing column' }
+    const { client, queries } = makeSupabaseStub(
+      { data: null, error: missing },
+      { data: null, error: missing },
       { data: { id: 'row-1', state: enc } },
     )
     supa.client = client
     expect(await loadCloudEncounter()).toMatchObject({ status: 'loaded', id: 'row-1' })
-    expect(queries).toHaveLength(2)
-    expect(queries[1].steps).not.toContainEqual(['eq', 'kind', 'live'])
+    expect(queries).toHaveLength(3)
+    expect(queries[2].steps).not.toContainEqual(['eq', 'kind', 'live'])
   })
 
   it('still reports a real failure as failed rather than retrying forever', async () => {
@@ -132,57 +152,91 @@ describe('loadCloudEncounter', () => {
   })
 })
 
-describe('saveCloudEncounter', () => {
-  it('reports failure without a configured client, touching nothing', async () => {
-    expect(await saveCloudEncounter('row-9', encounter())).toBeNull()
-    expect(await saveCloudEncounter(null, encounter())).toBeNull()
-  })
-
-  it('with an id, updates that row with the state and a fresh updated_at', async () => {
-    const enc = encounter()
-    const { client, queries } = makeSupabaseStub()
+describe('revisioned cloud persistence', () => {
+  it('claims and explicitly takes over writer authority through owner-scoped functions', async () => {
+    const { client, rpcs } = makeSupabaseStub(
+      { data: { status: 'acquired', revision: 4, leaseToken: 'lease-a' } },
+      { data: { status: 'acquired', revision: 4, leaseToken: 'lease-b' } },
+    )
     supa.client = client
-    expect(await saveCloudEncounter('row-1', enc)).toBe('row-1')
-    expect(queries).toEqual([
+
+    await expect(acquireCloudWriter('row-1', 'writer-a')).resolves.toEqual({
+      status: 'acquired',
+      revision: 4,
+      leaseToken: 'lease-a',
+    })
+    await expect(takeOverCloudWriter('row-1', 'writer-b')).resolves.toEqual({
+      status: 'acquired',
+      revision: 4,
+      leaseToken: 'lease-b',
+    })
+    expect(rpcs).toEqual([
       {
-        table: 'encounters',
-        steps: [
-          ['update', { state: enc, updated_at: NOW }],
-          ['eq', 'id', 'row-1'],
-        ],
+        fn: 'claim_encounter_writer',
+        args: { want_encounter: 'row-1', want_writer: 'writer-a' },
+      },
+      {
+        fn: 'takeover_encounter_writer',
+        args: { want_encounter: 'row-1', want_writer: 'writer-b' },
       },
     ])
   })
 
-  it('with an id, reports when the update fails', async () => {
-    const { client } = makeSupabaseStub({ data: null, error: { message: 'boom' } })
-    supa.client = client
-    expect(await saveCloudEncounter('row-1', encounter())).toBeNull()
-  })
-
-  it('without an id, inserts a new row and returns its generated id', async () => {
+  it.each([
+    ['saved', { status: 'saved', id: 'row-1', revision: 5, leaseToken: 'lease-a' }],
+    ['stale', { status: 'stale', revision: 6 }],
+    ['lease-lost', { status: 'lease-lost', revision: 4 }],
+  ] as const)('preserves the database %s write outcome', async (_name, result) => {
     const enc = encounter()
-    const { client, queries } = makeSupabaseStub({ data: { id: 'row-2' } })
+    const { client, rpcs } = makeSupabaseStub({ data: result })
     supa.client = client
-    expect(await saveCloudEncounter(null, enc)).toBe('row-2')
-    expect(queries).toEqual([
+
+    await expect(saveCloudEncounter('owner-a', 'row-1', 4, 'writer-a', enc, NOW)).resolves.toEqual(
+      result,
+    )
+    expect(rpcs).toEqual([
       {
-        table: 'encounters',
-        steps: [['insert', { state: enc, updated_at: NOW }], ['select', 'id'], ['single']],
+        fn: 'save_encounter_revision',
+        args: {
+          want_owner: 'owner-a',
+          want_encounter: 'row-1',
+          expected_revision: 4,
+          want_writer: 'writer-a',
+          want_state: enc,
+          want_updated_at: NOW,
+        },
       },
     ])
   })
 
-  it('without an id, returns null when the insert fails', async () => {
-    const { client } = makeSupabaseStub({ data: null, error: { message: 'boom' } })
-    supa.client = client
-    expect(await saveCloudEncounter(null, encounter())).toBeNull()
+  it('distinguishes expired identity from provider failure', async () => {
+    const expired = makeSupabaseStub({ error: { code: '28000', message: 'expired' } })
+    supa.client = expired.client
+    await expect(
+      saveCloudEncounter('owner-a', 'row-1', 4, 'writer-a', encounter(), NOW),
+    ).resolves.toEqual({
+      status: 'identity-expired',
+    })
+
+    const failed = makeSupabaseStub({ error: { code: '40001', message: 'provider failed' } })
+    supa.client = failed.client
+    await expect(
+      saveCloudEncounter('owner-a', 'row-1', 4, 'writer-a', encounter(), NOW),
+    ).resolves.toEqual({
+      status: 'failed',
+    })
   })
 
-  it('without an id, returns null when the insert reports no row back', async () => {
-    const { client } = makeSupabaseStub({ data: null, error: null })
+  it('reports provider failure without a configured client or a valid function result', async () => {
+    await expect(
+      saveCloudEncounter('owner-a', 'row-9', 1, 'writer-a', encounter(), NOW),
+    ).resolves.toEqual({ status: 'failed' })
+
+    const { client } = makeSupabaseStub({ data: null })
     supa.client = client
-    expect(await saveCloudEncounter(null, encounter())).toBeNull()
+    await expect(
+      saveCloudEncounter('owner-a', 'row-9', 1, 'writer-a', encounter(), NOW),
+    ).resolves.toEqual({ status: 'failed' })
   })
 })
 

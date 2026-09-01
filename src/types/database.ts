@@ -183,6 +183,73 @@ export type Database = {
         }
         Relationships: []
       }
+      encounter_revisions: {
+        Row: {
+          checkpoint: boolean
+          created_at: string
+          encounter_id: string
+          owner_id: string
+          revision: number
+          state: Json
+        }
+        Insert: {
+          checkpoint?: boolean
+          created_at?: string
+          encounter_id: string
+          owner_id: string
+          revision: number
+          state: Json
+        }
+        Update: {
+          checkpoint?: boolean
+          created_at?: string
+          encounter_id?: string
+          owner_id?: string
+          revision?: number
+          state?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_revisions_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encounter_writer_leases: {
+        Row: {
+          encounter_id: string
+          expires_at: string
+          owner_id: string
+          updated_at: string
+          writer_id: string
+        }
+        Insert: {
+          encounter_id: string
+          expires_at: string
+          owner_id: string
+          updated_at?: string
+          writer_id: string
+        }
+        Update: {
+          encounter_id?: string
+          expires_at?: string
+          owner_id?: string
+          updated_at?: string
+          writer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounter_writer_leases_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: true
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       encounters: {
         Row: {
           campaign_id: string | null
@@ -191,6 +258,7 @@ export type Database = {
           name: string | null
           owner_id: string
           player_code: string | null
+          revision: number
           state: Json
           status: string
           updated_at: string
@@ -202,6 +270,7 @@ export type Database = {
           name?: string | null
           owner_id?: string
           player_code?: string | null
+          revision?: number
           state: Json
           status?: string
           updated_at?: string
@@ -213,6 +282,7 @@ export type Database = {
           name?: string | null
           owner_id?: string
           player_code?: string | null
+          revision?: number
           state?: Json
           status?: string
           updated_at?: string
@@ -544,6 +614,10 @@ export type Database = {
           via: string
         }[]
       }
+      claim_encounter_writer: {
+        Args: { want_encounter: string; want_writer: string }
+        Returns: Json
+      }
       delete_account: { Args: never; Returns: undefined }
       deny_capability: {
         Args: { cap: string; who: string; why?: string }
@@ -607,6 +681,17 @@ export type Database = {
       }
       revoke_role: { Args: { what: string; who: string }; Returns: boolean }
       roles_of: { Args: { who: string }; Returns: string[] }
+      save_encounter_revision: {
+        Args: {
+          expected_revision: number
+          want_encounter: string
+          want_owner: string
+          want_state: Json
+          want_updated_at: string
+          want_writer: string
+        }
+        Returns: Json
+      }
       share: { Args: { want: string }; Returns: Json }
       start_live_view: {
         Args: {
@@ -620,6 +705,10 @@ export type Database = {
       stop_live_view: {
         Args: { want_capability_hash: string }
         Returns: boolean
+      }
+      takeover_encounter_writer: {
+        Args: { want_encounter: string; want_writer: string }
+        Returns: Json
       }
     }
     Enums: {
