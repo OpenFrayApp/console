@@ -4,10 +4,14 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+
+const require = createRequire(import.meta.url)
+const WORKERD_BIN = require.resolve('workerd/bin/workerd')
 
 /** Reserve an available local port for one short-lived workerd process. */
 async function availablePort(): Promise<number> {
@@ -62,16 +66,16 @@ describe('publication contract in workerd', () => {
         `  compatibilityDate = "2026-07-01"\n` +
         `);\n`,
     )
-    const process = spawn(resolve('node_modules/.bin/workerd'), ['serve', 'config.capnp'], {
+    const child = spawn(process.execPath, [WORKERD_BIN, 'serve', 'config.capnp'], {
       cwd: directory,
       stdio: 'ignore',
     })
     try {
-      const response = await requestWorker(`http://127.0.0.1:${port}/`, process)
+      const response = await requestWorker(`http://127.0.0.1:${port}/`, child)
       expect(response.status).toBe(200)
       expect(await response.json()).toMatchObject({ status: 'ok' })
     } finally {
-      process.kill('SIGTERM')
+      child.kill('SIGTERM')
       rmSync(directory, { recursive: true, force: true })
     }
   })
