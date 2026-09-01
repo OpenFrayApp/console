@@ -5,7 +5,12 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Encounter } from '../../src/schema/encounter.ts'
+import { playerBoard } from '../../src/combat/playerView.ts'
 import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
+import {
+  INITIAL_PLAYER_PROTOCOL_STATE,
+  sendGameMasterMessage,
+} from '../../src/state/playerProtocol.ts'
 import {
   lockedChannelName,
   useBoardBroadcast,
@@ -41,6 +46,11 @@ function encounter(overrides: Partial<Encounter> = {}): Encounter {
     log: [],
     ...overrides,
   }
+}
+
+/** Build the complete privacy projection accepted on the wire. */
+function wireBoard(round: number) {
+  return playerBoard(encounter({ round }), DEFAULT_PLAYER_VIEW)
 }
 
 describe('useBoardBroadcast — the Game Master side', () => {
@@ -123,7 +133,15 @@ describe('usePlayerBoard — the player side', () => {
     supa.client = client
     renderHook(() => usePlayerBoard('code'))
     act(() => channels[0].ready())
-    expect(channels[0].sends).toEqual([{ event: 'hello', payload: {} }])
+    expect(channels[0].sends.map((message) => message.event)).toEqual([
+      'player-view-protocol',
+      'hello',
+    ])
+    expect(channels[0].sends[0].payload).toMatchObject({
+      senderRole: 'viewer',
+      messageType: 'hello',
+      sequence: 0,
+    })
   })
 
   it('goes live on the first board it receives', () => {
@@ -136,6 +154,48 @@ describe('usePlayerBoard — the player side', () => {
     )
     expect(result.current.status).toBe('live')
     expect(result.current.board?.round).toBe(2)
+  })
+
+  it('accepts current protocol boards and rejects duplicate or reordered traffic', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code'))
+    act(() => channels[0].ready())
+    const envelope = (sequence: number, round: number) =>
+      sendGameMasterMessage(
+        { ...INITIAL_PLAYER_PROTOCOL_STATE, nextSequence: sequence },
+        { type: 'board', board: wireBoard(round) },
+        100,
+      ).envelope
+
+    act(() => channels[0].emit('player-view-protocol', envelope(4, 2)))
+    expect(result.current.board?.round).toBe(2)
+    act(() => channels[0].emit('player-view-protocol', envelope(4, 9)))
+    act(() => channels[0].emit('player-view-protocol', envelope(3, 8)))
+    expect(result.current.board?.round).toBe(2)
+    act(() => channels[0].emit('player-view-protocol', envelope(5, 3)))
+    expect(result.current.board?.round).toBe(3)
+  })
+
+  it('keeps malformed current and rollback traffic out of viewer state', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code'))
+    act(() => channels[0].ready())
+    act(() =>
+      channels[0].emit('player-view-protocol', {
+        kind: 'player-view',
+        protocolVersion: 1,
+        senderRole: 'gm',
+        sequence: 0,
+        sentAt: 100,
+        messageType: 'board',
+        payload: { round: 'wrong' },
+      }),
+    )
+    act(() => channels[0].emit('board', { round: 99 }))
+    expect(result.current.status).toBe('connecting')
+    expect(result.current.board).toBeNull()
   })
 
   it('waits when nobody answers within the timeout', () => {
@@ -195,7 +255,14 @@ describe('usePlayerBoard — the player side', () => {
     act(() => channels[0].ready())
     act(() => channels[0].emitPresence('join'))
     unmount()
-    expect(channels[0].sends.every((s) => s.event === 'hello')).toBe(true)
+    expect(
+      channels[0].sends.every(
+        (message) =>
+          message.event === 'hello' ||
+          (message.event === 'player-view-protocol' &&
+            (message.payload as { messageType?: string }).messageType === 'hello'),
+      ),
+    ).toBe(true)
   })
 })
 
@@ -264,9 +331,9 @@ describe('usePlayerBoard — a locked link', () => {
     expect(channels).toHaveLength(2)
     expect(channels[1].name).toBe(await lockedChannelName('code', '1234'))
     act(() => channels[1].ready())
-    act(() => channels[1].emit('board', { round: 2 }))
+    act(() => channels[1].emit('board', wireBoard(2)))
     expect(result.current.status).toBe('live')
-    expect(result.current.board).toEqual({ round: 2 })
+    expect(result.current.board).toEqual(wireBoard(2))
     expect(result.current.pinRejected).toBe(false)
   })
 
@@ -292,7 +359,7 @@ describe('usePlayerBoard — a locked link', () => {
     expect(result.current.status).toBe('locked')
 
     // A board that limps in late is still the board — the verdict retracts.
-    act(() => channels[1].emit('board', { round: 1 }))
+    act(() => channels[1].emit('board', wireBoard(1)))
     expect(result.current.pinRejected).toBe(false)
     expect(result.current.status).toBe('live')
   })
