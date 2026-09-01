@@ -64,7 +64,7 @@ npm run db:verify -- \
   --manual-evidence .artifacts/supabase/manual-evidence.json
 ```
 
-Use `production` for the production attestation. Configure `DATABASE_APPROVER` as a protected environment variable in GitHub. The deployment workflow records that trusted value after environment approval.
+Use `production` for the production attestation. Configure `DATABASE_APPROVER` and `SUPABASE_PROJECT_REF` as protected environment variables in GitHub. Set `AUTHORIZED_STAGING_PROJECT_REF` on production to the staging project reference. The deployment workflow rejects dispatcher-supplied targets and records the trusted values after environment approval.
 
 Run the hostile suite only against authorized staging:
 
@@ -78,7 +78,7 @@ npm run db:boundary -- \
 
 The boundary verifier refuses production targets. It checks the exact migration lineage before creating synthetic fixtures. All fixtures are removed in the same database statement. A failure rolls back that statement.
 
-Run the staging workflow first. Supply its workflow run ID as `staging_attestation_run_id` when dispatching production. Production verifies the staging commit, migration head, hostile-suite hash, and passing result before applying migrations.
+Run the staging workflow first. Supply its workflow run ID as `staging_attestation_run_id` when dispatching production. Production verifies the protected staging project, commit, migration lineage, hostile actors, individual checks, approver, workflow run, suite hash, and passing result before applying migrations.
 
 The authority verifier checks the fresh reset, exact remote migration lineage, normalized hosted schema, generated types, and supported hosted settings. It records the environment identity, migration head, schema and configuration hashes, generated-type hash, result, workflow, approver, and timestamp.
 

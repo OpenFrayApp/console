@@ -39,7 +39,12 @@ const SUPABASE_STUB = `
   end $do$;
   grant usage on schema public to anon, authenticated, service_role;
   create schema realtime;
-  create table realtime.messages (extension text);
+  create table realtime.messages (
+    topic text not null,
+    extension text not null,
+    event text not null,
+    private boolean not null default true
+  );
   alter table realtime.messages enable row level security;
   create or replace function realtime.topic() returns text language sql stable as $fn$
     select current_setting('realtime.topic', true)
@@ -177,7 +182,7 @@ describe('the tracked migration lineage', () => {
     await asOwner()
   })
 
-  it('fixes every security-definer search path and restricts execution', async () => {
+  it('fixes every security-definer search path and grants only the reviewed execution set', async () => {
     const result = await db.query<{ name: string; settings: string[] | null }>(`
       select p.proname as name, p.proconfig as settings
       from pg_proc p
@@ -190,12 +195,51 @@ describe('the tracked migration lineage', () => {
     for (const routine of result.rows) {
       expect(routine.settings).toContain('search_path=public')
     }
-    expect(
-      await value<boolean>(`select has_function_privilege('anon', 'delete_account()', 'execute')`),
-    ).toBe(false)
-    expect(
-      await value<boolean>(`select has_function_privilege('anon', 'share(text)', 'execute')`),
-    ).toBe(true)
+
+    const grants = await db.query<{ signature: string; grantee: string }>(`
+      select p.oid::regprocedure::text as signature, r.rolname as grantee
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+      join pg_roles r on r.oid = acl.grantee
+      where n.nspname = 'public'
+        and p.prosecdef
+        and acl.privilege_type = 'EXECUTE'
+        and r.rolname in ('anon', 'authenticated')
+      order by signature, grantee
+    `)
+    expect(grants.rows.map(({ signature, grantee }) => `${signature}:${grantee}`)).toEqual([
+      'account_libraries():authenticated',
+      'account_made(uuid,integer):authenticated',
+      'account_overview(uuid):authenticated',
+      'accounts(integer):authenticated',
+      'answer_reports(text,text):authenticated',
+      'audit_recent(integer):authenticated',
+      'capabilities_of(uuid):authenticated',
+      'delete_account():authenticated',
+      'deny_capability(uuid,text,text):authenticated',
+      'grant_role(uuid,text,text):authenticated',
+      'live_view_topic_active(text):anon',
+      'live_view_topic_active(text):authenticated',
+      'live_view_topic_owned(text):authenticated',
+      'may(text):authenticated',
+      'may_publish_more():authenticated',
+      'may_use_reserved_byline():authenticated',
+      'my_capabilities():authenticated',
+      'report_share(text,text,text,text):anon',
+      'report_share(text,text,text,text):authenticated',
+      'reported_share(text):authenticated',
+      'reports_for(text):authenticated',
+      'reports_open():authenticated',
+      'reports_queue(integer):authenticated',
+      'restore_capability(uuid,text):authenticated',
+      'revoke_role(uuid,text):authenticated',
+      'share(text):anon',
+      'share(text):authenticated',
+      'start_live_view(uuid,text,text):authenticated',
+      'stop_all_live_views():authenticated',
+      'stop_live_view(text):authenticated',
+    ])
   })
 
   it('keeps one live encounter per owner and share ownership required', async () => {
@@ -249,6 +293,12 @@ describe('the tracked migration lineage', () => {
         `select start_live_view('${encounter}', 'tuesday-game', '${'c'.repeat(64)}')`,
       ),
     ).toBe(1)
+    expect(
+      await value<boolean>(`select live_view_topic_active('player:${'c'.repeat(64)}:arbitrary')`),
+    ).toBe(false)
+    expect(
+      await value<boolean>(`select live_view_topic_owned('player:${'c'.repeat(64)}:arbitrary')`),
+    ).toBe(false)
     expect(await value<boolean>(`select stop_all_live_views()`)).toBe(true)
     expect(
       await value<boolean>(`select live_view_topic_active('player:${'c'.repeat(64)}:lobby')`),
@@ -268,6 +318,54 @@ describe('the tracked migration lineage', () => {
       ['live viewers receive traffic', 'SELECT'],
       ['owners publish live traffic', 'INSERT'],
     ])
+
+    const owner = '11111111-1111-1111-1111-111111111114'
+    const otherOwner = '22222222-2222-2222-2222-222222222224'
+    const encounter = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab'
+    const otherEncounter = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaac'
+    const active = 'e'.repeat(64)
+    const other = 'f'.repeat(64)
+    await asOwner()
+    await db.exec(`
+      insert into auth.users (id) values ('${owner}'), ('${otherOwner}');
+      insert into encounters (id, owner_id, state, player_code) values
+        ('${encounter}', '${owner}', '{}'::jsonb, 'viewer-test'),
+        ('${otherEncounter}', '${otherOwner}', '{}'::jsonb, 'other-viewer-test');
+    `)
+    await as(owner)
+    await db.exec(`select start_live_view('${encounter}', 'viewer-test', '${active}')`)
+    await db.exec(`select set_config('realtime.topic', 'player:${active}:lobby', false)`)
+    await db.exec(`
+      insert into realtime.messages (topic, extension, event)
+      values ('player:${active}:lobby', 'broadcast', 'visible')
+    `)
+    await as(otherOwner)
+    await db.exec(`select start_live_view('${otherEncounter}', 'other-viewer-test', '${other}')`)
+    await db.exec(`select set_config('realtime.topic', 'player:${other}:lobby', false)`)
+    await expect(
+      db.exec(`
+        insert into realtime.messages (topic, extension, event)
+        values ('player:${active}:lobby', 'broadcast', 'cross-topic-owner')
+      `),
+    ).rejects.toThrow()
+    await db.exec(`
+      insert into realtime.messages (topic, extension, event)
+      values ('player:${other}:lobby', 'broadcast', 'other-visible')
+    `)
+
+    await db.exec('set role anon')
+    await db.exec(`select set_config('realtime.topic', 'player:${active}:join', false)`)
+    await expect(
+      db.exec(`
+        insert into realtime.messages (topic, extension, event)
+        values ('player:${other}:join', 'presence', 'cross-topic-viewer')
+      `),
+    ).rejects.toThrow()
+    await db.exec(`select set_config('realtime.topic', 'player:${active}:lobby', false)`)
+    expect(await value<string>(`select event from realtime.messages`)).toBe('visible')
+    await db.exec(`select set_config('realtime.topic', 'player:${other}:lobby', false)`)
+    expect(await value<string>(`select event from realtime.messages`)).toBe('other-visible')
+    await asOwner()
   })
 
   it('removes an account and every owner-linked row through the public function', async () => {

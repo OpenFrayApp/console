@@ -61,16 +61,26 @@ export function buildDatabaseBoundaryAttestation(input) {
 
 /** Reject staging evidence that cannot authorize this exact production candidate. */
 export function verifyStagingBoundaryEvidence(attestation, expected) {
+  const checksPassed = DATABASE_BOUNDARY_CHECKS.every(
+    (check) => attestation?.checks?.[check] === 'passed',
+  )
   const valid =
     attestation?.version === 1 &&
     attestation?.requirementIds?.includes('CB-1') &&
     attestation?.requirementIds?.includes('CB-3') &&
     attestation?.environment?.kind === 'staging' &&
+    attestation?.environment?.identity === expected.environmentIdentity &&
     attestation?.consoleCommit === expected.consoleCommit &&
     attestation?.migration?.expectedHead === expected.migrationHead &&
     attestation?.migration?.observedHead === expected.migrationHead &&
+    attestation?.migration?.expectedLineageHash === expected.migrationLineageHash &&
+    attestation?.migration?.observedLineageHash === expected.migrationLineageHash &&
     attestation?.migration?.result === 'passed' &&
+    JSON.stringify(attestation?.actors) === JSON.stringify(DATABASE_BOUNDARY_ACTORS) &&
+    checksPassed &&
     attestation?.result === 'passed' &&
+    attestation?.approver === expected.approver &&
+    attestation?.workflow === expected.workflow &&
     typeof attestation?.hostileSuiteHash === 'string' &&
     attestation.hostileSuiteHash === expected.hostileSuiteHash
   if (!valid) throw new Error('Staging boundary evidence does not match this production candidate.')

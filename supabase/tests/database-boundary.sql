@@ -8,6 +8,7 @@ declare
   owner_table text;
   insert_statement text;
   live_encounter uuid;
+  other_live_encounter uuid;
 begin
   if exists (
     select 1
@@ -67,6 +68,56 @@ begin
     cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
     where n.nspname = 'public' and p.prosecdef and acl.grantee = 0
   ) then raise exception 'CB-1: security-definer functions must not retain PUBLIC execution';
+  end if;
+
+  if exists (
+    with expected(signature, grantee) as (
+      values
+        ('account_libraries()', 'authenticated'),
+        ('account_made(uuid,integer)', 'authenticated'),
+        ('account_overview(uuid)', 'authenticated'),
+        ('accounts(integer)', 'authenticated'),
+        ('answer_reports(text,text)', 'authenticated'),
+        ('audit_recent(integer)', 'authenticated'),
+        ('capabilities_of(uuid)', 'authenticated'),
+        ('delete_account()', 'authenticated'),
+        ('deny_capability(uuid,text,text)', 'authenticated'),
+        ('grant_role(uuid,text,text)', 'authenticated'),
+        ('live_view_topic_active(text)', 'anon'),
+        ('live_view_topic_active(text)', 'authenticated'),
+        ('live_view_topic_owned(text)', 'authenticated'),
+        ('may(text)', 'authenticated'),
+        ('may_publish_more()', 'authenticated'),
+        ('may_use_reserved_byline()', 'authenticated'),
+        ('my_capabilities()', 'authenticated'),
+        ('report_share(text,text,text,text)', 'anon'),
+        ('report_share(text,text,text,text)', 'authenticated'),
+        ('reported_share(text)', 'authenticated'),
+        ('reports_for(text)', 'authenticated'),
+        ('reports_open()', 'authenticated'),
+        ('reports_queue(integer)', 'authenticated'),
+        ('restore_capability(uuid,text)', 'authenticated'),
+        ('revoke_role(uuid,text)', 'authenticated'),
+        ('share(text)', 'anon'),
+        ('share(text)', 'authenticated'),
+        ('start_live_view(uuid,text,text)', 'authenticated'),
+        ('stop_all_live_views()', 'authenticated'),
+        ('stop_live_view(text)', 'authenticated')
+    ), actual as (
+      select p.oid::regprocedure::text, r.rolname
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+      join pg_roles r on r.oid = acl.grantee
+      where n.nspname = 'public'
+        and p.prosecdef
+        and acl.privilege_type = 'EXECUTE'
+        and r.rolname in ('anon', 'authenticated')
+    )
+    (select * from actual except select * from expected)
+    union all
+    (select * from expected except select * from actual)
+  ) then raise exception 'CB-1: privileged function grants differ from the exact allowlist';
   end if;
 
   if to_regprocedure('public.answer_report(uuid,text)') is not null
@@ -231,6 +282,25 @@ begin
       when insufficient_privilege then null;
     end;
   end loop;
+  insert into encounters (state, player_code)
+    values ('{}'::jsonb, 'cb3-other') returning id into other_live_encounter;
+  if start_live_view(other_live_encounter, 'cb3-other', repeat('c', 64)) <> 1 then
+    raise exception 'CB-3: another owner could not start an independent live view';
+  end if;
+  if live_view_topic_active('player:' || repeat('c', 64) || ':arbitrary') then
+    raise exception 'CB-3: an unsupported channel shape became active';
+  end if;
+  perform set_config('realtime.topic', 'player:' || repeat('c', 64) || ':lobby', false);
+  begin
+    insert into realtime.messages (topic, extension, event, private)
+      values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-cross-fixture', true);
+    raise exception 'CB-3: an owner published to a channel other than the requested topic'
+      using errcode = 'OF009';
+  exception
+    when insufficient_privilege then null;
+  end;
+  insert into realtime.messages (topic, extension, event, private)
+    values ('player:' || repeat('c', 64) || ':lobby', 'broadcast', 'cb3-other-fixture', true);
   execute 'reset role';
 
   execute 'set local role anon';
@@ -244,6 +314,24 @@ begin
     raise exception 'CB-3: a capability holder could not receive live traffic';
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
+  select count(*) into affected from realtime.messages where event = 'cb3-fixture';
+  if affected <> 2 then
+    raise exception 'CB-3: a viewer could not read the active channel';
+  end if;
+  select count(*) into affected from realtime.messages where event = 'cb3-other-fixture';
+  if affected <> 0 then
+    raise exception 'CB-3: a viewer read another active channel';
+  end if;
+  perform set_config('realtime.topic', 'player:' || repeat('c', 64) || ':lobby', false);
+  select count(*) into affected from realtime.messages where event = 'cb3-other-fixture';
+  if affected <> 1 then
+    raise exception 'CB-3: another viewer could not read its active channel';
+  end if;
+  select count(*) into affected from realtime.messages where event = 'cb3-fixture';
+  if affected <> 0 then
+    raise exception 'CB-3: another viewer read the owner channel';
+  end if;
+  perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
   begin
     insert into realtime.messages (topic, extension, event, private)
       values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true);
@@ -252,6 +340,14 @@ begin
     when insufficient_privilege then null;
   end;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':join', false);
+  begin
+    insert into realtime.messages (topic, extension, event, private)
+      values ('player:' || repeat('c', 64) || ':join', 'presence', 'cb3-cross-fixture', true);
+    raise exception 'CB-3: a viewer announced presence on another channel'
+      using errcode = 'OF010';
+  exception
+    when insufficient_privilege then null;
+  end;
   insert into realtime.messages (topic, extension, event, private)
     values ('player:' || repeat('a', 64) || ':join', 'presence', 'cb3-fixture', true);
   execute 'reset role';
@@ -274,6 +370,14 @@ begin
   if live_view_topic_active('player:' || repeat('b', 64) || ':lobby') then
     raise exception 'CB-3: revocation left the capability active';
   end if;
+  foreach owner_table in array array[
+    'campaigns', 'creatures', 'effects', 'encounters', 'players', 'shares', 'spells'
+  ] loop
+    execute format('delete from %I', owner_table);
+    get diagnostics affected = row_count;
+    if affected <> 1 then raise exception 'CB-1: the owner could not delete from %', owner_table;
+    end if;
+  end loop;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
@@ -374,17 +478,23 @@ begin
   perform delete_account();
   execute 'reset role';
 
+  foreach owner_table in array array(
+    select table_name::text
+    from information_schema.columns
+    where table_schema = 'public' and column_name = 'owner_id'
+    order by table_name
+  ) loop
+    execute format(
+      'select count(*) from %I where owner_id = %L',
+      owner_table,
+      '55555555-5555-5555-5555-555555555555'
+    ) into affected;
+    if affected <> 0 then
+      raise exception 'CB-1: account deletion left an owner link in %', owner_table;
+    end if;
+  end loop;
+
   if exists (select 1 from auth.users where id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from campaigns where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from creatures where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from effects where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from encounters where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from players where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from shares where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from spells where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from byline_grants where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from user_roles where owner_id = '55555555-5555-5555-5555-555555555555')
-    or exists (select 1 from capability_denials where owner_id = '55555555-5555-5555-5555-555555555555')
     or exists (select 1 from audit_log where actor_id = '55555555-5555-5555-5555-555555555555')
     or exists (select 1 from takedown_notices where to_address = 'delete@example.test')
     or exists (select 1 from share_reports where reporter_id = '55555555-5555-5555-5555-555555555555')
@@ -393,7 +503,7 @@ begin
 
   delete from share_reports where code = 'cb1delete';
   delete from audit_log where action = 'cb1.fixture';
-  delete from realtime.messages where event = 'cb3-fixture';
+  delete from realtime.messages where event in ('cb3-fixture', 'cb3-other-fixture');
   delete from auth.users where id in (
     '11111111-1111-1111-1111-111111111111',
     '22222222-2222-2222-2222-222222222222',

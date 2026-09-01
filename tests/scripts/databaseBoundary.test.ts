@@ -63,29 +63,48 @@ describe('database boundary evidence', () => {
   it('accepts production promotion evidence only from matching authorized staging', () => {
     const expected = {
       consoleCommit: 'a'.repeat(40),
+      environmentIdentity: 'abcdefghijklmnopqrst',
       migrationHead: '20260901000600',
+      migrationLineageHash: 'c'.repeat(64),
       hostileSuiteHash: 'b'.repeat(64),
+      approver: 'maintainer',
+      workflow: 'Database authority:123',
     }
     const evidence = {
       version: 1,
       requirementIds: ['CB-1', 'CB-3'],
       consoleCommit: expected.consoleCommit,
-      environment: { kind: 'staging' },
+      environment: { kind: 'staging', identity: expected.environmentIdentity },
       migration: {
         expectedHead: expected.migrationHead,
         observedHead: expected.migrationHead,
+        expectedLineageHash: expected.migrationLineageHash,
+        observedLineageHash: expected.migrationLineageHash,
         result: 'passed',
       },
+      actors: DATABASE_BOUNDARY_ACTORS,
+      checks: passedChecks,
       hostileSuiteHash: expected.hostileSuiteHash,
       result: 'passed',
+      approver: expected.approver,
+      workflow: expected.workflow,
     }
 
     expect(verifyStagingBoundaryEvidence(evidence, expected)).toBe(true)
-    expect(() =>
-      verifyStagingBoundaryEvidence({ ...evidence, consoleCommit: 'c'.repeat(40) }, expected),
-    ).toThrow(/does not match/)
-    expect(() =>
-      verifyStagingBoundaryEvidence({ ...evidence, environment: { kind: 'production' } }, expected),
-    ).toThrow(/does not match/)
+    for (const partial of [
+      { ...evidence, consoleCommit: 'd'.repeat(40) },
+      { ...evidence, environment: { kind: 'production', identity: expected.environmentIdentity } },
+      { ...evidence, environment: { kind: 'staging', identity: 'wrongprojectrefxxxxx' } },
+      { ...evidence, actors: DATABASE_BOUNDARY_ACTORS.slice(0, -1) },
+      { ...evidence, checks: { ...passedChecks, realtime: 'missing' } },
+      {
+        ...evidence,
+        migration: { ...evidence.migration, observedLineageHash: 'd'.repeat(64) },
+      },
+      { ...evidence, approver: 'someone else' },
+      { ...evidence, workflow: 'Database authority:456' },
+    ]) {
+      expect(() => verifyStagingBoundaryEvidence(partial, expected)).toThrow(/does not match/)
+    }
   })
 })

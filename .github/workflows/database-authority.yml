@@ -32,10 +32,6 @@ on:
         options:
           - staging
           - production
-      project_ref:
-        description: 'Supabase project reference'
-        required: true
-        type: string
       staging_attestation_run_id:
         description: 'Required for production: workflow run containing matching staging evidence'
         required: false
@@ -69,7 +65,8 @@ jobs:
     timeout-minutes: 25
     environment: ${{ inputs.environment }}
     env:
-      PROJECT_REF: ${{ inputs.project_ref }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      AUTHORIZED_STAGING_PROJECT_REF: ${{ vars.AUTHORIZED_STAGING_PROJECT_REF }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       DATABASE_APPROVER: ${{ vars.DATABASE_APPROVER }}
@@ -79,6 +76,14 @@ jobs:
         with:
           version: 2.116.0
       - run: npm ci
+      - name: Require the protected database target
+        run: |
+          [[ "$PROJECT_REF" =~ ^[a-z]{20}$ ]]
+          [[ -n "$DATABASE_APPROVER" ]]
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
+            [[ "$AUTHORIZED_STAGING_PROJECT_REF" =~ ^[a-z]{20}$ ]]
+            [[ -n "${{ inputs.staging_attestation_run_id }}" ]]
+          fi
       - run: supabase start
       - name: Verify the fresh lineage before deployment
         run: npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
@@ -92,7 +97,12 @@ jobs:
           github-token: ${{ github.token }}
       - name: Require matching staging boundary evidence
         if: inputs.environment == 'production'
-        run: node scripts/verify-staging-boundary-evidence.mjs .artifacts/staging-proof/database-boundary-attestation.json
+        run: |
+          node scripts/verify-staging-boundary-evidence.mjs \
+            .artifacts/staging-proof/database-boundary-attestation.json \
+            "$AUTHORIZED_STAGING_PROJECT_REF" \
+            "$DATABASE_APPROVER" \
+            "${{ github.workflow }}:${{ inputs.staging_attestation_run_id }}"
       - name: Apply forward migrations
         run: supabase db push --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Record manual provider evidence
