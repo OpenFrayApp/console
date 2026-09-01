@@ -2,7 +2,12 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { decodeSession, encodeSession } from '../codecs/session.ts'
-import type { DeviceRecovery, DeviceRecoveryAdapter } from './encounterLifecycle.ts'
+import type {
+  DeviceRecovery,
+  DeviceRecoveryAdapter,
+  ReconciliationConflict,
+} from './encounterLifecycle.ts'
+import type { RecoveryLineage } from './reconciliation.ts'
 import {
   storageFailureReason,
   type SessionSnapshot,
@@ -10,9 +15,10 @@ import {
 } from './persistence.ts'
 
 const DATABASE_NAME = 'openfray-encounter-recovery'
-const DATABASE_VERSION = 1
+const DATABASE_VERSION = 2
 const COPIES = 'copies'
 const METADATA = 'metadata'
+const CONFLICTS = 'conflicts'
 const ACTIVE_OWNER = 'active-owner'
 
 interface RecoveryRecord {
@@ -21,6 +27,16 @@ interface RecoveryRecord {
   serialized: string
   previousSerialized?: string
   previousSavedAt?: string
+  lineage?: RecoveryLineage
+}
+
+interface ConflictRecord {
+  ownerId: string
+  deviceSerialized: string
+  cloudSerialized: string
+  deviceActiveAt: string
+  cloudActiveAt: string
+  cloudRevision: number
 }
 
 interface MetadataRecord {
@@ -80,12 +96,39 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     if (!record) return null
     const decoded = decodeSession(record.serialized)
     if (decoded.status === 'ok')
-      return { ownerId, snapshot: decoded.snapshot, savedAt: record.savedAt }
+      return {
+        ownerId,
+        snapshot: decoded.snapshot,
+        savedAt: record.savedAt,
+        ...(record.lineage ? { lineage: record.lineage } : {}),
+      }
     if (decoded.status === 'unsupported' || !record.previousSerialized) return null
     const previous = decodeSession(record.previousSerialized)
     return previous.status === 'ok'
       ? { ownerId, snapshot: previous.snapshot, savedAt: record.previousSavedAt ?? '' }
       : null
+  }
+
+  /** Load the latest archived divergence only after validating both stored branches. */
+  async loadConflict(ownerId: string): Promise<ReconciliationConflict | null> {
+    const database = await this.database()
+    const transaction = database.transaction(CONFLICTS, 'readonly')
+    const record = await requested(
+      transaction.objectStore(CONFLICTS).get(ownerId) as IDBRequest<ConflictRecord | undefined>,
+    )
+    if (!record) return null
+    const device = decodeSession(record.deviceSerialized)
+    const cloud = decodeSession(record.cloudSerialized)
+    if (device.status !== 'ok' || cloud.status !== 'ok') return null
+    return {
+      id: crypto.randomUUID(),
+      device: { snapshot: device.snapshot, activeAt: record.deviceActiveAt },
+      cloud: {
+        snapshot: cloud.snapshot,
+        activeAt: record.cloudActiveAt,
+        revision: record.cloudRevision,
+      },
+    }
   }
 
   /** Load the validated recovery copy that immediately preceded the current copy. */
@@ -140,10 +183,64 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
         serialized: encoded.serialized,
         previousSerialized: currentCanonical,
         previousSavedAt: current?.savedAt,
+        lineage: current?.lineage,
       } satisfies RecoveryRecord)
       transaction
         .objectStore(METADATA)
         .put({ key: ACTIVE_OWNER, value: ownerId } satisfies MetadataRecord)
+      await committed(transaction)
+      return { status: 'saved' }
+    } catch (error) {
+      return storageFailureResult(error)
+    }
+  }
+
+  /** Attach proven cloud ancestry only when the same recovery snapshot is still current. */
+  async markSynced(
+    ownerId: string,
+    snapshot: SessionSnapshot,
+    lineage: RecoveryLineage,
+  ): Promise<SessionWriteResult> {
+    const encoded = encodeSession(snapshot)
+    if (encoded.status !== 'ok') return { status: 'failed', reason: 'invalid-snapshot' }
+    try {
+      const database = await this.database()
+      const transaction = database.transaction(COPIES, 'readwrite')
+      const store = transaction.objectStore(COPIES)
+      const current = await requested(store.get(ownerId) as IDBRequest<RecoveryRecord | undefined>)
+      if (!current || current.serialized !== encoded.serialized) {
+        transaction.abort()
+        return { status: 'blocked', reason: 'invalid' }
+      }
+      store.put({ ...current, lineage } satisfies RecoveryRecord)
+      await committed(transaction)
+      return { status: 'saved' }
+    } catch (error) {
+      return storageFailureResult(error)
+    }
+  }
+
+  /** Preserve both divergent branches in a dedicated owner-scoped recovery slot. */
+  async archiveConflict(
+    ownerId: string,
+    conflict: ReconciliationConflict,
+  ): Promise<SessionWriteResult> {
+    const deviceEncoded = encodeSession(conflict.device.snapshot)
+    const cloudEncoded = encodeSession(conflict.cloud.snapshot)
+    if (deviceEncoded.status !== 'ok' || cloudEncoded.status !== 'ok') {
+      return { status: 'failed', reason: 'invalid-snapshot' }
+    }
+    try {
+      const database = await this.database()
+      const transaction = database.transaction(CONFLICTS, 'readwrite')
+      transaction.objectStore(CONFLICTS).put({
+        ownerId,
+        deviceSerialized: deviceEncoded.serialized,
+        cloudSerialized: cloudEncoded.serialized,
+        deviceActiveAt: conflict.device.activeAt,
+        cloudActiveAt: conflict.cloud.activeAt,
+        cloudRevision: conflict.cloud.revision,
+      } satisfies ConflictRecord)
       await committed(transaction)
       return { status: 'saved' }
     } catch (error) {
@@ -177,6 +274,9 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
           }
           if (!database.objectStoreNames.contains(METADATA)) {
             database.createObjectStore(METADATA, { keyPath: 'key' })
+          }
+          if (!database.objectStoreNames.contains(CONFLICTS)) {
+            database.createObjectStore(CONFLICTS, { keyPath: 'ownerId' })
           }
         },
         { once: true },

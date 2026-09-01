@@ -82,6 +82,55 @@ describe('IndexedDB recovery', () => {
     await recovery.close()
   })
 
+  it('retains cloud ancestry across local commits and archives both conflict branches', async () => {
+    const databaseName = `openfray-lineage-${crypto.randomUUID()}`
+    const recovery = new IndexedDbRecovery(databaseName)
+    const first = snapshot('first')
+    const lineage = {
+      cloudEncounterId: 'cloud-row',
+      cloudRevision: 7,
+      cloudStateHash: 'cloud-hash',
+    }
+
+    await recovery.save('owner-a', first, '2026-09-02T10:11:12.000Z')
+    await recovery.markSynced('owner-a', first, lineage)
+    await recovery.save('owner-a', snapshot('second'), '2026-09-02T10:12:12.000Z')
+    await recovery.archiveConflict('owner-a', {
+      id: 'conflict-a',
+      device: { snapshot: snapshot('second'), activeAt: '2026-09-02T10:12:12.000Z' },
+      cloud: {
+        snapshot: snapshot('cloud'),
+        activeAt: '2026-09-02T10:13:12.000Z',
+        revision: 8,
+      },
+    })
+
+    await expect(recovery.load('owner-a')).resolves.toMatchObject({ lineage })
+    await expect(recovery.loadConflict('owner-a')).resolves.toMatchObject({
+      device: { snapshot: snapshot('second'), activeAt: '2026-09-02T10:12:12.000Z' },
+      cloud: {
+        snapshot: snapshot('cloud'),
+        activeAt: '2026-09-02T10:13:12.000Z',
+        revision: 8,
+      },
+    })
+    await recovery.close()
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(databaseName)
+      request.addEventListener('success', () => resolve(request.result), { once: true })
+      request.addEventListener('error', () => reject(request.error), { once: true })
+    })
+    const transaction = database.transaction('conflicts', 'readonly')
+    const archived = await new Promise<Record<string, string>>((resolve, reject) => {
+      const request = transaction.objectStore('conflicts').get('owner-a')
+      request.addEventListener('success', () => resolve(request.result), { once: true })
+      request.addEventListener('error', () => reject(request.error), { once: true })
+    })
+    expect(archived.deviceSerialized).toContain('second')
+    expect(archived.cloudSerialized).toContain('cloud')
+    database.close()
+  })
+
   it('restores the previous validated copy when the current copy is damaged', async () => {
     const databaseName = `openfray-fallback-${crypto.randomUUID()}`
     const recovery = new IndexedDbRecovery(databaseName)

@@ -51,8 +51,8 @@ function makeAuthClient(initial: Session | null) {
   }
   const rpc = vi.fn(async (): Promise<AuthResponse> => ({ error: null }))
   /** Fire every registered auth listener with the next session, inside act. */
-  const emit = (next: Session | null) =>
-    act(() => listeners.forEach((listener) => listener('TOKEN_REFRESHED', next)))
+  const emit = (next: Session | null, event = 'TOKEN_REFRESHED') =>
+    act(() => listeners.forEach((listener) => listener(event, next)))
   return { client: { auth, rpc }, auth, rpc, unsubscribe, emit }
 }
 
@@ -147,6 +147,18 @@ describe('AuthProvider with Supabase configured', () => {
     expect(await screen.findByText('anonymous')).toBeInTheDocument()
     expect(latest.user).toBeNull()
     expect(latest.loading).toBe(false)
+  })
+
+  it('marks an unexpected session loss as expired so the board can stay recovered', async () => {
+    const stub = makeAuthClient(session('gm@openfray.app'))
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+
+    stub.emit(null, 'SIGNED_OUT')
+
+    expect(latest.user).toBeNull()
+    expect(latest.identityExpired).toBe(true)
   })
 
   it('follows auth state changes, in and out', async () => {

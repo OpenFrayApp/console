@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { isContentLicense, type ContentLicense } from '../schema/license.ts'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
@@ -16,6 +16,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   // Only "loading" if there's a session to look up; otherwise we're anon at once.
   const [loading, setLoading] = useState(Boolean(supabase))
+  const [identityExpired, setIdentityExpired] = useState(false)
+  const explicitSignOut = useRef(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -26,7 +28,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
     // Fires on sign-in/out and token refresh, keeping `user` in sync across tabs.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      setIdentityExpired(event === 'SIGNED_OUT' && !explicitSignOut.current)
       setUser(session?.user ?? null)
     })
     return () => {
@@ -58,7 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('[openfray] revoking live views before sign-out failed', error)
       return
     }
-    await supabase.auth.signOut()
+    explicitSignOut.current = true
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      explicitSignOut.current = false
+    }
   }
 
   /**
@@ -105,10 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Self-delete can't use the admin API from the browser, so this calls a
     // security-definer SQL function (delete_account) that erases the caller's data
     // and auth row. On success we sign out — the session is already invalid.
-    const { error } = await supabase.rpc('delete_account')
-    if (error) return { error: error.message }
-    await supabase.auth.signOut()
-    return { error: null }
+    explicitSignOut.current = true
+    try {
+      const { error } = await supabase.rpc('delete_account')
+      if (error) return { error: error.message }
+      await supabase.auth.signOut()
+      return { error: null }
+    } finally {
+      explicitSignOut.current = false
+    }
   }
 
   return (
@@ -130,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? user.user_metadata.share_license
           : null,
         loading,
+        identityExpired,
         configured: Boolean(supabase),
         signInWithProvider,
         signOut,

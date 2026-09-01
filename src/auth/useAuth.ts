@@ -31,6 +31,8 @@ export interface AuthState {
   shareLicense: ContentLicense | null
   /** True until the initial session lookup resolves (avoids an auth-UI flash). */
   loading: boolean
+  /** The prior session expired without an explicit sign-out on this device. */
+  identityExpired: boolean
   /** Whether Supabase is wired up at all (`.env.local` present). */
   configured: boolean
   /** Start an OAuth sign-in. Redirects to the provider; the session lands on
@@ -53,6 +55,7 @@ const ANONYMOUS: AuthState = {
   displayName: null,
   shareLicense: null,
   loading: false,
+  identityExpired: false,
   configured: false,
   signInWithProvider: async () => ({
     error: 'Signing in isn’t available on this copy of OpenFray.',

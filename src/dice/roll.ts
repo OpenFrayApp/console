@@ -43,12 +43,18 @@ export type CritRule = 'none' | 'double-dice' | 'double-total' | 'max-plus-roll'
  * label it never interprets, while here it is always one of the 5e damage types.
  */
 export interface RollResult extends Omit<DiceRollResult, 'tag'> {
+  /** Stable identity for this resolved random outcome across persistence and reconciliation. */
+  rollId?: string
   kind: RollKind
   /** Natural 20 on a single d20, on an attack roll. */
   crit: boolean
   /** Natural 1 on a single d20, on an attack roll. */
   fumble: boolean
   damageType?: DamageType
+}
+
+export interface ResolvedRollResult extends RollResult {
+  rollId: string
 }
 
 export interface RollContext {
@@ -179,7 +185,11 @@ function splitDamageType(formula: string): { expr: string; damageType?: DamageTy
  * refuses these outright, which is the right call for a dice library and the wrong
  * answer for a console that has to show the 1. Crit rules inflate dice, so none apply.
  */
-function flatResult(source: string, expr: string, bonuses: (number | string)[]): RollResult {
+function flatResult(
+  source: string,
+  expr: string,
+  bonuses: (number | string)[],
+): Omit<ResolvedRollResult, 'rollId'> {
   const values = [
     ...expr.split(/(?=[+-])/).map(Number),
     ...bonuses.map((b) => {
@@ -228,12 +238,17 @@ export function canRoll(formula: string, maxLength = 200): boolean {
 }
 
 /** The one dice chokepoint: parse, apply adv/dis and bonuses, roll, flag attack crit/fumble. */
-export function roll(formula: string, ctx: RollContext = {}): RollResult {
+export function roll(formula: string, ctx: RollContext = {}): ResolvedRollResult {
   const bonuses = ctx.bonuses ?? []
   const { expr, damageType } = splitDamageType(formula)
   if (isFlat(expr)) {
     const flat = flatResult(formula.trim(), expr.replace(/\s+/g, ''), bonuses)
-    return { ...flat, kind: ctx.kind ?? 'raw', ...(damageType ? { damageType } : {}) }
+    return {
+      ...flat,
+      rollId: crypto.randomUUID(),
+      kind: ctx.kind ?? 'raw',
+      ...(damageType ? { damageType } : {}),
+    }
   }
 
   const result = rollDice(formula, {
@@ -254,6 +269,7 @@ export function roll(formula: string, ctx: RollContext = {}): RollResult {
   const { crit, fumble } = ctx.kind === 'attack' ? critFumble(dice) : { crit: false, fumble: false }
   return {
     ...result,
+    rollId: crypto.randomUUID(),
     dice,
     total: result.total + total,
     kind: ctx.kind ?? 'raw',

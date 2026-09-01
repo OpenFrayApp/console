@@ -124,6 +124,7 @@ describe('session codec', () => {
         category: 'roll',
         message: 'Older roll',
         result: {
+          rollId: 'legacy:fixture:older:1:result',
           formula: '1d20',
           kind: 'attack',
           dice: [

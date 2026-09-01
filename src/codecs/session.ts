@@ -331,6 +331,7 @@ const dieGroup = v.strictObject({
   naturalLow: v.boolean(),
 })
 const rollResult = v.strictObject({
+  rollId: v.optional(v.string()),
   formula: v.string(),
   dice: v.array(dieGroup),
   modifier: number,
@@ -565,21 +566,66 @@ function inspectInput(value: unknown): 'ok' | 'dangerous-key' | 'too-complex' {
   return 'ok'
 }
 
+/** Give historical dice records deterministic identities without replaying their outcomes. */
+function repairRollIdentities(value: ParsedSessionSnapshot): ParsedSessionSnapshot {
+  const log = value.encounter.log.map((entry, entryIndex) => ({
+    ...entry,
+    ...(entry.result
+      ? {
+          result: {
+            ...entry.result,
+            rollId:
+              entry.result.rollId ??
+              `legacy:${value.encounter.encounterId}:${entry.id}:${entryIndex}:result`,
+          },
+        }
+      : {}),
+    ...(entry.damage
+      ? {
+          damage: entry.damage.map((part, partIndex) => ({
+            ...part,
+            ...(part.result
+              ? {
+                  result: {
+                    ...part.result,
+                    rollId:
+                      part.result.rollId ??
+                      `legacy:${value.encounter.encounterId}:${entry.id}:${entryIndex}:damage:${partIndex}`,
+                  },
+                }
+              : {}),
+          })),
+        }
+      : {}),
+  }))
+  return { ...value, encounter: { ...value.encounter, log } }
+}
+
 /** Apply named non-semantic repairs after structural decoding. */
 function repairSnapshot(value: ParsedSessionSnapshot): ParsedSessionSnapshot {
+  const identified = repairRollIdentities(value)
   if (
-    value.selectedId !== null &&
-    !value.encounter.combatants.some((combatant) => combatant.combatantId === value.selectedId)
+    identified.selectedId !== null &&
+    !identified.encounter.combatants.some(
+      (combatant) => combatant.combatantId === identified.selectedId,
+    )
   ) {
-    return { ...value, selectedId: null }
+    return { ...identified, selectedId: null }
   }
-  return value
+  return identified
 }
 
 /** Check aggregate invariants that cannot be expressed as local structural fields. */
 function isSemanticallyValid(value: ParsedSessionSnapshot): boolean {
   const ids = value.encounter.combatants.map((combatant) => combatant.combatantId)
   if (new Set(ids).size !== ids.length) return false
+  const logIds = value.encounter.log.map((entry) => entry.id)
+  if (new Set(logIds).size !== logIds.length) return false
+  const rollIds = value.encounter.log.flatMap((entry) => [
+    ...(entry.result?.rollId ? [entry.result.rollId] : []),
+    ...(entry.damage?.flatMap((part) => (part.result?.rollId ? [part.result.rollId] : [])) ?? []),
+  ])
+  if (new Set(rollIds).size !== rollIds.length) return false
   if (value.encounter.combatants.length === 0) return value.encounter.activeIndex === 0
   return value.encounter.activeIndex < value.encounter.combatants.length
 }

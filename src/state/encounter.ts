@@ -74,10 +74,9 @@ export type NewLogEntry = Omit<GameLogEntry, 'id' | 'round'>
  */
 function withLogs(state: Encounter, entries: NewLogEntry[], round = state.round): Encounter {
   if (entries.length === 0) return state
-  const base = state.log.length
   return {
     ...state,
-    log: [...state.log, ...entries.map((e, i) => ({ ...e, id: `${round}-${base + i}`, round }))],
+    log: [...state.log, ...entries.map((entry) => ({ ...entry, id: crypto.randomUUID(), round }))],
   }
 }
 

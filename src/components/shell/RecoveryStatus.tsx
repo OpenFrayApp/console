@@ -10,6 +10,7 @@ const LABEL = {
   failed: 'Save failed',
   'sign-in': 'Sign in to resume saving',
   'read-only': 'Saving elsewhere',
+  conflict: 'Copies need attention',
 } as const
 
 const DOT = {
@@ -19,6 +20,7 @@ const DOT = {
   failed: 'bg-red-500',
   'sign-in': 'bg-slate-400',
   'read-only': 'bg-amber-500',
+  conflict: 'bg-red-500',
 } as const
 
 /** Show whether the working board is recoverable and expose recovery actions on failure. */
@@ -28,12 +30,14 @@ export function RecoveryStatus({
   onDownload,
   onSignIn,
   onTakeOver,
+  onResolveCopies,
 }: {
   status: LifecycleSaveStatus
   onRetry: () => void
   onDownload: () => void
   onSignIn?: () => void
   onTakeOver?: () => void
+  onResolveCopies?: () => void
 }) {
   if (status.kind === 'failed') {
     return (
@@ -60,6 +64,19 @@ export function RecoveryStatus({
           Download recovery copy
         </button>
       </div>
+    )
+  }
+
+  if (status.kind === 'conflict' && onResolveCopies) {
+    return (
+      <button
+        type="button"
+        onClick={onResolveCopies}
+        className="tap-area flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100"
+      >
+        <span className={`h-2 w-2 rounded-full ${DOT.conflict}`} aria-hidden="true" />
+        Resolve copies
+      </button>
     )
   }
 

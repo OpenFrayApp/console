@@ -256,13 +256,16 @@ describe('encounterReducer', () => {
     expect(new Set(e.log.map((l) => l.id)).size).toBe(2)
   })
 
-  it('clears the log', () => {
+  it('clears the log without allowing a later entry to reuse an identity', () => {
     let e = encounterReducer(emptyEncounter(), {
       type: 'log',
       entry: { category: 'note', message: 'x' },
     })
+    const clearedId = e.log[0].id
     e = encounterReducer(e, { type: 'clearLog' })
     expect(e.log).toEqual([])
+    e = encounterReducer(e, { type: 'log', entry: { category: 'note', message: 'y' } })
+    expect(e.log[0].id).not.toBe(clearedId)
   })
 
   it('rewrites a renamed combatant across existing log entries', () => {

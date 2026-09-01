@@ -13,6 +13,7 @@ import {
   requiresNavigationWarning,
   type CloudEncounterAdapter,
   type DeviceRecoveryAdapter,
+  type ReconciliationConflict,
   type SessionRecoveryAdapter,
 } from '../../src/state/encounterLifecycle.ts'
 import type {
@@ -21,6 +22,7 @@ import type {
   SessionWriteResult,
 } from '../../src/state/persistence.ts'
 import type { CloudLeaseResult, CloudWriteResult } from '../../src/state/cloudEncounter.ts'
+import { encounterHash, type RecoveryLineage } from '../../src/state/reconciliation.ts'
 
 /** Build deterministic lifecycle adapters and expose their observed calls. */
 function harness(options: {
@@ -28,6 +30,7 @@ function harness(options: {
   byOwner?: Record<string, SessionSnapshot>
   anonymous?: SessionLoadResult
   cloud?: Awaited<ReturnType<CloudEncounterAdapter['load']>>
+  cloudLoad?: CloudEncounterAdapter['load']
   cloudSaveResult?: CloudWriteResult
   cloudSave?: CloudEncounterAdapter['save']
   cloudLeaseResult?: CloudLeaseResult
@@ -37,10 +40,18 @@ function harness(options: {
   deviceSave?: () => Promise<SessionWriteResult>
   sessionWrite?: SessionWriteResult
   online?: boolean
+  lineage?: RecoveryLineage
+  archivedConflict?: ReconciliationConflict
 }) {
   const calls: string[] = []
   const deviceWrites: Array<{ ownerId: string; snapshot: SessionSnapshot; savedAt: string }> = []
   const sessionWrites: SessionSnapshot[] = []
+  const archivedConflicts: Array<{
+    ownerId: string
+    device: SessionSnapshot
+    cloud: SessionSnapshot
+  }> = []
+  const syncedLineages: RecoveryLineage[] = []
   const cloudWrites: Array<{
     ownerId: string
     id: string | null
@@ -57,21 +68,42 @@ function harness(options: {
   let networkUnsubscriptions = 0
   let scheduledCloud: (() => void | Promise<void>) | null = null
   const device: DeviceRecoveryAdapter = {
+    /** Load the deterministic startup recovery. */
     async loadLatest() {
       calls.push('device:latest')
       if (options.deviceUnavailable) throw new Error('IndexedDB unavailable')
-      return options.latest ? { ...options.latest, savedAt } : null
+      return options.latest ? { ...options.latest, savedAt, lineage: options.lineage } : null
     },
+    /** Load one deterministic owner recovery. */
     async load(ownerId) {
       calls.push(`device:${ownerId}`)
       if (options.deviceUnavailable) throw new Error('IndexedDB unavailable')
       const value = options.byOwner?.[ownerId]
-      return value ? { ownerId, snapshot: value, savedAt } : null
+      return value ? { ownerId, snapshot: value, savedAt, lineage: options.lineage } : null
     },
+    /** Record one deterministic owner recovery write. */
     async save(ownerId, value, savedAt) {
       calls.push(`device-save:${ownerId}`)
       deviceWrites.push({ ownerId, snapshot: value, savedAt })
       return options.deviceSave ? options.deviceSave() : (options.deviceWrite ?? saved)
+    },
+    /** Load one deterministic archived divergence. */
+    async loadConflict() {
+      return options.archivedConflict ?? null
+    },
+    /** Record one deterministic lineage update. */
+    async markSynced(_ownerId, _snapshot, lineage) {
+      syncedLineages.push(lineage)
+      return saved
+    },
+    /** Record both branches of one deterministic divergence. */
+    async archiveConflict(ownerId, conflict) {
+      archivedConflicts.push({
+        ownerId,
+        device: conflict.device.snapshot,
+        cloud: conflict.cloud.snapshot,
+      })
+      return saved
     },
   }
   const session: SessionRecoveryAdapter = {
@@ -88,7 +120,7 @@ function harness(options: {
   const cloud: CloudEncounterAdapter = {
     async load() {
       calls.push('cloud:load')
-      return options.cloud ?? { status: 'failed' }
+      return options.cloudLoad ? options.cloudLoad() : (options.cloud ?? { status: 'failed' })
     },
     async acquire() {
       calls.push('cloud:acquire')
@@ -160,6 +192,8 @@ function harness(options: {
     calls,
     deviceWrites,
     sessionWrites,
+    archivedConflicts,
+    syncedLineages,
     cloudWrites,
     /** Report deterministic network-listener counts. */
     networkCounts() {
@@ -304,22 +338,148 @@ describe('encounter lifecycle', () => {
     expect(lifecycle.saveStatus()).toEqual({ kind: 'saved' })
   })
 
-  it('keeps newer device work when an older cloud revision arrives', async () => {
-    const recovered = snapshot('newer-device-copy')
+  it('opens newer device work automatically only with proven cloud ancestry', async () => {
+    const recovered = snapshot('device-descendant')
+    const cloudEncounter = encounter('cloud-ancestor')
     const { lifecycle } = harness({
       latest: { ownerId: 'owner-a', snapshot: recovered },
       byOwner: { 'owner-a': recovered },
+      lineage: {
+        cloudEncounterId: 'cloud-row',
+        cloudRevision: 7,
+        cloudStateHash: await encounterHash(cloudEncounter),
+      },
       cloud: {
         status: 'loaded',
         id: 'cloud-row',
-        encounter: encounter('older-cloud-copy'),
+        encounter: cloudEncounter,
         playerCode: null,
         revision: 7,
         updatedAt: '2026-09-02T10:10:12.000Z',
       },
     })
 
-    await expect(lifecycle.identify('owner-a')).resolves.toMatchObject({ snapshot: recovered })
+    const result = await lifecycle.identify('owner-a')
+    expect(result).toMatchObject({ snapshot: recovered })
+    expect(result.conflict).toBeUndefined()
+  })
+
+  it('exposes genuine divergence without overwriting either copy automatically', async () => {
+    const recovered = snapshot('device-branch')
+    const cloudEncounter = encounter('cloud-branch')
+    const { lifecycle, cloudWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: recovered },
+      byOwner: { 'owner-a': recovered },
+      cloud: {
+        status: 'loaded',
+        id: 'cloud-row',
+        encounter: cloudEncounter,
+        playerCode: null,
+        revision: 8,
+        updatedAt: '2026-09-02T10:10:12.000Z',
+      },
+    })
+
+    const result = await lifecycle.identify('owner-a')
+    expect(result).toMatchObject({
+      snapshot: recovered,
+      conflict: {
+        device: { activeAt: '2026-09-02T10:11:12.000Z' },
+        cloud: { activeAt: '2026-09-02T10:10:12.000Z' },
+      },
+    })
+    expect(lifecycle.saveStatus()).toEqual({ kind: 'conflict' })
+    expect(cloudWrites).toEqual([])
+    const download = lifecycle.recoveryDownload()
+    expect(download?.filename).toBe('openfray-recovery-conflict.json')
+    expect(download?.serialized).toContain('device-branch')
+    expect(download?.serialized).toContain('cloud-branch')
+  })
+
+  it('archives the unchosen device branch before opening the cloud copy', async () => {
+    const recovered = snapshot('device-branch')
+    const { lifecycle, archivedConflicts } = harness({
+      latest: { ownerId: 'owner-a', snapshot: recovered },
+      byOwner: { 'owner-a': recovered },
+      cloud: {
+        status: 'loaded',
+        id: 'cloud-row',
+        encounter: encounter('cloud-branch'),
+        playerCode: null,
+        revision: 8,
+        updatedAt: '2026-09-02T10:10:12.000Z',
+      },
+    })
+
+    const identified = await lifecycle.identify('owner-a')
+    await lifecycle.commit(snapshot('device-latest'))
+    expect(lifecycle.saveStatus()).toEqual({ kind: 'conflict' })
+    expect(lifecycle.conflict()?.device.snapshot).toEqual(snapshot('device-latest'))
+    const resolved = await lifecycle.resolveConflict(identified.conflict!.id, 'cloud')
+
+    expect(resolved?.snapshot?.encounter.encounterId).toBe('cloud-branch')
+    expect(archivedConflicts).toMatchObject([
+      {
+        ownerId: 'owner-a',
+        device: { encounter: { encounterId: 'device-latest' } },
+        cloud: { encounter: { encounterId: 'cloud-branch' } },
+      },
+    ])
+    const download = lifecycle.recoveryDownload()
+    expect(download?.serialized).toContain('device-latest')
+    expect(download?.serialized).toContain('cloud-branch')
+  })
+
+  it('keeps archived divergent copies downloadable after lifecycle restart', async () => {
+    const archivedConflict: ReconciliationConflict = {
+      id: 'archived-a',
+      device: { snapshot: snapshot('archived-device'), activeAt: '2026-09-02T10:11:12.000Z' },
+      cloud: {
+        snapshot: snapshot('archived-cloud'),
+        activeAt: '2026-09-02T10:10:12.000Z',
+        revision: 8,
+      },
+    }
+    const { lifecycle } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('current') },
+      byOwner: { 'owner-a': snapshot('current') },
+      archivedConflict,
+      cloud: { status: 'failed' },
+    })
+
+    await lifecycle.identify('owner-a')
+
+    const download = lifecycle.recoveryDownload()
+    expect(download?.serialized).toContain('archived-device')
+    expect(download?.serialized).toContain('archived-cloud')
+  })
+
+  it('refreshes divergence instead of applying a choice against an advanced cloud revision', async () => {
+    let loads = 0
+    const recovered = snapshot('device-branch')
+    const { lifecycle, archivedConflicts, cloudWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: recovered },
+      byOwner: { 'owner-a': recovered },
+      cloudLoad: async () => {
+        loads += 1
+        const revision = loads === 1 ? 8 : 9
+        return {
+          status: 'loaded',
+          id: 'cloud-row',
+          encounter: encounter(`cloud-branch-${revision}`),
+          playerCode: null,
+          revision,
+          updatedAt: `2026-09-02T10:0${revision}:12.000Z`,
+        }
+      },
+    })
+
+    const first = await lifecycle.identify('owner-a')
+    const refreshed = await lifecycle.resolveConflict(first.conflict!.id, 'device')
+
+    expect(refreshed?.conflict?.cloud.revision).toBe(9)
+    expect(archivedConflicts).toEqual([])
+    expect(cloudWrites).toEqual([])
   })
 
   it('fences queued cloud operations when the authenticated identity changes', async () => {
@@ -403,6 +563,11 @@ describe('encounter lifecycle', () => {
         revision: 7,
         updatedAt: '2026-09-02T10:10:12.000Z',
       },
+      lineage: {
+        cloudEncounterId: 'cloud-row',
+        cloudRevision: 7,
+        cloudStateHash: await encounterHash(encounter('cloud-copy')),
+      },
       cloudLeaseResult: { status: 'read-only', revision: 7 },
       takeoverResult: { status: 'acquired', revision: 7, leaseToken: 'writer-a' },
     })
@@ -418,6 +583,28 @@ describe('encounter lifecycle', () => {
       { id: 'cloud-row', revision: 7, writerId: 'writer-a', encounter: encounter('local-next') },
     ])
     expect(lifecycle.saveStatus()).toEqual({ kind: 'saved' })
+  })
+
+  it('keeps recovery active and fences cloud writes after authentication expires', async () => {
+    const { lifecycle, deviceWrites, cloudWrites, flushCloud } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('first') },
+      byOwner: { 'owner-a': snapshot('first') },
+      cloud: { status: 'empty' },
+    })
+    await lifecycle.identify('owner-a')
+    await lifecycle.commit(snapshot('before-expiry'))
+
+    lifecycle.expireIdentity()
+    await flushCloud()
+    await lifecycle.commit(snapshot('after-expiry'))
+    await flushCloud()
+
+    expect(lifecycle.saveStatus()).toEqual({ kind: 'sign-in' })
+    expect(deviceWrites.map((write) => write.snapshot.encounter.encounterId)).toEqual([
+      'before-expiry',
+      'after-expiry',
+    ])
+    expect(cloudWrites).toEqual([])
   })
 
   it.each([

@@ -91,6 +91,21 @@ describe('RecoveryStatus', () => {
     expect(takeOver).toHaveBeenCalledOnce()
   })
 
+  it('reopens copy resolution while divergence remains unresolved', () => {
+    const resolve = vi.fn()
+    render(
+      <RecoveryStatus
+        status={{ kind: 'conflict' }}
+        onRetry={vi.fn()}
+        onDownload={vi.fn()}
+        onResolveCopies={resolve}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve copies' }))
+    expect(resolve).toHaveBeenCalledOnce()
+  })
+
   it('opens sign-in from the anonymous durability state', () => {
     const signIn = vi.fn()
     render(

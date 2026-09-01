@@ -12,6 +12,16 @@ Versions are `major.minor.patch`. A major bump means the way you use the console
 changed; a minor bump adds to it; a patch fixes it. Dates are the day the version was
 published.
 
+## Unreleased
+
+### Recovery
+
+- When device recovery and cloud copies contain different changes, the console shows both
+  activity times and asks which copy should continue. Both remain available in one recovery
+  download.
+- An expired sign-in keeps the working board and device recovery in place until the Game
+  Master signs in again.
+
 ## 1.2.0 (2026-08-24)
 
 Keep a fight to come back to, and hand one to somebody else.

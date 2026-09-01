@@ -41,6 +41,8 @@ import {
   createBrowserEncounterLifecycle,
   installNavigationWarning,
   requiresNavigationWarning,
+  type CopyChoice,
+  type ReconciliationConflict,
 } from './state/encounterLifecycle.ts'
 import { useTheme } from './hooks/useTheme.ts'
 import { useHotkeys } from './hooks/useHotkeys.ts'
@@ -79,6 +81,7 @@ import type { EncounterTemplate } from './schema/encounterTemplate.ts'
 import { loadSrdCreatures } from './compendium/srd.ts'
 import { SaveFightButton, ShareEncounterButton } from './components/shell/EncounterActions.tsx'
 import { RecoveryStatus } from './components/shell/RecoveryStatus.tsx'
+import { ReconciliationDialog } from './components/shell/ReconciliationDialog.tsx'
 import { downloadRecoveryCopy } from './state/recoveryDownload.ts'
 import {
   deleteCustomCreature,
@@ -249,6 +252,9 @@ const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex
 function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [lifecycle] = useState(createBrowserEncounterLifecycle)
   const [saveStatus, setSaveStatus] = useState(() => lifecycle.saveStatus())
+  const [copyConflict, setCopyConflict] = useState<ReconciliationConflict | null>(null)
+  const [copyConflictOpen, setCopyConflictOpen] = useState(false)
+  const [resolvingCopies, setResolvingCopies] = useState(false)
   // Theme is shared with the marketing site (and the player view) through its own
   // device-local preference, independent of authored encounter recovery.
   const [theme, toggleTheme] = useTheme()
@@ -358,7 +364,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // somewhere to record it — and dropped if the Game Master backs out of Begin.
   const preRolled = useRef<Record<string, NewLogEntry>>({})
 
-  const { user, displayName, shareLicense, setDisplayName, loading: authLoading } = useAuth()
+  const {
+    user,
+    displayName,
+    shareLicense,
+    setDisplayName,
+    loading: authLoading,
+    identityExpired,
+  } = useAuth()
   const userId = user?.id ?? null
   const [authOpen, setAuthOpen] = useState(false)
   /**
@@ -460,6 +473,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // the validated device copy on the working board.
   useEffect(() => {
     if (authLoading) return
+    if (identityExpired) {
+      lifecycle.expireIdentity()
+      setBoardReady(true)
+      return
+    }
     let active = true
     void lifecycle.identify(userId).then((result) => {
       if (!active) return
@@ -469,6 +487,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         setSelectedId(null)
         setActiveCampaignId(null)
       }
+      setCopyConflict(result.conflict ?? null)
+      setCopyConflictOpen(Boolean(result.conflict))
       // A signed-in GM's chosen name follows the account, so it wins over whatever
       // this device happened to mint while anonymous.
       if (result.playerCode) setPlayerCode(result.playerCode)
@@ -477,20 +497,55 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return () => {
       active = false
     }
-  }, [applyRecovery, userId, authLoading, lifecycle])
+  }, [applyRecovery, userId, authLoading, identityExpired, lifecycle])
 
   // Start recovery before the browser's next paint. The working board has already changed,
   // and the lifecycle keeps it responsive while device and cloud adapters continue.
   useLayoutEffect(() => {
-    if (!boardReady) return
+    if (!boardReady || resolvingCopies) return
     void lifecycle.commit({ encounter, theme, view, selectedId, activeCampaignId, sharing })
-  }, [boardReady, encounter, theme, view, selectedId, activeCampaignId, sharing, userId, lifecycle])
+  }, [
+    boardReady,
+    resolvingCopies,
+    encounter,
+    theme,
+    view,
+    selectedId,
+    activeCampaignId,
+    sharing,
+    userId,
+    lifecycle,
+  ])
 
   const navigationUnsafe = requiresNavigationWarning(saveStatus)
   useEffect(() => {
     if (!boardReady || !navigationUnsafe) return
     return installNavigationWarning()
   }, [boardReady, navigationUnsafe])
+
+  const activeCopyConflict = lifecycle.conflict() ?? copyConflict
+
+  /** Apply one explicit reconciliation choice after the lifecycle preserves both branches. */
+  const resolveCopies = async (choice: CopyChoice) => {
+    const conflict = activeCopyConflict
+    if (!conflict) return
+    setResolvingCopies(true)
+    setCopyConflictOpen(false)
+    applyRecovery(conflict[choice].snapshot)
+    const result = await lifecycle.resolveConflict(conflict.id, choice)
+    if (!result) {
+      const unresolved = lifecycle.conflict() ?? conflict
+      applyRecovery(unresolved.device.snapshot)
+      setCopyConflict(unresolved)
+      setCopyConflictOpen(true)
+      setResolvingCopies(false)
+      return
+    }
+    if (result.snapshot) applyRecovery(result.snapshot)
+    setCopyConflict(result.conflict ?? null)
+    setCopyConflictOpen(Boolean(result.conflict))
+    setResolvingCopies(false)
+  }
 
   /** Download the latest working board without depending on browser recovery storage. */
   const downloadRecovery = () => {
@@ -1602,6 +1657,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onDownload={downloadRecovery}
                 onSignIn={() => setAuthOpen(true)}
                 onTakeOver={() => void lifecycle.takeOver()}
+                onResolveCopies={() => setCopyConflictOpen(true)}
               />
               <AccountControl
                 onSignIn={() => setAuthOpen(true)}
@@ -1769,6 +1825,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
           )}
 
           {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
+
+          {activeCopyConflict && copyConflictOpen && (
+            <ReconciliationDialog
+              conflict={activeCopyConflict}
+              onChoose={(choice) => void resolveCopies(choice)}
+              onDownload={downloadRecovery}
+              onClose={() => setCopyConflictOpen(false)}
+            />
+          )}
 
           {endPrompt && (
             <EndCombatPrompt onConfirm={endCombat} onCancel={() => setEndPrompt(false)} />

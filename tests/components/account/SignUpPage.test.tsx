@@ -25,6 +25,7 @@ function renderPage(overrides: Partial<AuthState> = {}) {
     displayName: null,
     shareLicense: null,
     loading: false,
+    identityExpired: false,
     configured: true,
     signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),

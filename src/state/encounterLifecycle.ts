@@ -13,6 +13,7 @@ import {
   type LoadedEncounter,
 } from './cloudEncounter.ts'
 import { IndexedDbRecovery } from './indexedDbRecovery.ts'
+import { classifyCopies, encounterHash, type RecoveryLineage } from './reconciliation.ts'
 import {
   loadSession,
   saveSession,
@@ -25,12 +26,23 @@ export interface DeviceRecovery {
   ownerId: string
   snapshot: SessionSnapshot
   savedAt: string
+  lineage?: RecoveryLineage
 }
 
 export interface DeviceRecoveryAdapter {
   loadLatest: () => Promise<DeviceRecovery | null>
   load: (ownerId: string) => Promise<DeviceRecovery | null>
+  loadConflict: (ownerId: string) => Promise<ReconciliationConflict | null>
   save: (ownerId: string, snapshot: SessionSnapshot, savedAt: string) => Promise<SessionWriteResult>
+  markSynced: (
+    ownerId: string,
+    snapshot: SessionSnapshot,
+    lineage: RecoveryLineage,
+  ) => Promise<SessionWriteResult>
+  archiveConflict: (
+    ownerId: string,
+    conflict: ReconciliationConflict,
+  ) => Promise<SessionWriteResult>
 }
 
 export interface SessionRecoveryAdapter {
@@ -71,6 +83,7 @@ export type LifecycleSaveStatus =
   | { kind: 'offline' }
   | { kind: 'sign-in' }
   | { kind: 'read-only' }
+  | { kind: 'conflict' }
   | {
       kind: 'failed'
       reason: 'unavailable' | 'quota' | 'invalid-snapshot' | 'too-large' | 'invalid' | 'unsupported'
@@ -106,12 +119,21 @@ export interface EncounterLifecycleAdapters {
   scheduler?: LifecycleScheduler
 }
 
+export type CopyChoice = 'device' | 'cloud'
+
+export interface ReconciliationConflict {
+  id: string
+  device: { snapshot: SessionSnapshot; activeAt: string }
+  cloud: { snapshot: SessionSnapshot; activeAt: string; revision: number }
+}
+
 export interface LifecycleRestore {
   ownerId: string | null
   snapshot: SessionSnapshot | null
   savedAt?: string
   playerCode?: string | null
   clearWorkingBoard?: boolean
+  conflict?: ReconciliationConflict
 }
 
 /** Own recovery ordering, identity changes, and cloud hydration for the working board. */
@@ -124,6 +146,7 @@ export class EncounterLifecycle {
   private cloudWriterId: string | null = null
   private readonly clientId: string
   private cloudWritable = false
+  private cloudIdentityExpired = false
   private cloudQueue: Promise<void> = Promise.resolve()
   private cancelCloudSave: (() => void) | null = null
   private networkUnsubscribe: (() => void) | null = null
@@ -131,6 +154,8 @@ export class EncounterLifecycle {
   private commitGeneration = 0
   private recoveryQueue: Promise<void> = Promise.resolve()
   private latestSnapshot: SessionSnapshot | null = null
+  private pendingConflict: ReconciliationConflict | null = null
+  private archivedConflict: ReconciliationConflict | null = null
   private status: LifecycleSaveStatus = { kind: 'saving' }
   private readonly statusListeners = new Set<(status: LifecycleSaveStatus) => void>()
 
@@ -163,6 +188,30 @@ export class EncounterLifecycle {
 
   /** Encode the latest working board for a local recovery download. */
   recoveryDownload(): RecoveryDownload | null {
+    const recoverableConflict = this.pendingConflict ?? this.archivedConflict
+    if (recoverableConflict) {
+      const device = encodeSession(recoverableConflict.device.snapshot)
+      const cloud = encodeSession(recoverableConflict.cloud.snapshot)
+      if (device.status !== 'ok' || cloud.status !== 'ok') return null
+      return {
+        filename: 'openfray-recovery-conflict.json',
+        serialized: JSON.stringify({
+          kind: 'reconciliation-recovery',
+          schemaVersion: 1,
+          copies: {
+            device: {
+              activeAt: recoverableConflict.device.activeAt,
+              envelope: JSON.parse(device.serialized),
+            },
+            cloud: {
+              activeAt: recoverableConflict.cloud.activeAt,
+              revision: recoverableConflict.cloud.revision,
+              envelope: JSON.parse(cloud.serialized),
+            },
+          },
+        }),
+      }
+    }
     if (!this.latestSnapshot) return null
     const encoded = encodeSession(this.latestSnapshot)
     return encoded.status === 'ok'
@@ -194,6 +243,9 @@ export class EncounterLifecycle {
     this.cloudRevision = 0
     this.cloudWriterId = null
     this.cloudWritable = false
+    this.cloudIdentityExpired = false
+    this.pendingConflict = null
+    this.archivedConflict = null
     this.cancelCloudSave?.()
     this.cancelCloudSave = null
 
@@ -209,7 +261,10 @@ export class EncounterLifecycle {
     let device: DeviceRecovery | null = null
     let deviceUnavailable = false
     try {
-      device = await this.adapters.device.load(ownerId)
+      ;[device, this.archivedConflict] = await Promise.all([
+        this.adapters.device.load(ownerId),
+        this.adapters.device.loadConflict(ownerId),
+      ])
     } catch {
       deviceUnavailable = true
     }
@@ -238,40 +293,150 @@ export class EncounterLifecycle {
     }
 
     this.cloudId = cloud.id
-    if (cloud.revision !== null) {
-      const lease = await this.adapters.cloud.acquire(cloud.id, this.clientId)
+    const cloudSnapshot: SessionSnapshot = recovery
+      ? { ...recovery, encounter: cloud.encounter, selectedId: null }
+      : { encounter: cloud.encounter, theme: 'dark', view: 'encounter', selectedId: null }
+    let selected = cloudSnapshot
+    let selectedAt = cloud.updatedAt
+    if (recovery) {
+      const relationship =
+        cloud.revision === null
+          ? (await encounterHash(recovery.encounter)) === (await encounterHash(cloud.encounter))
+            ? 'same'
+            : 'divergent'
+          : await classifyCopies(
+              recovery.encounter,
+              cloud.encounter,
+              cloud.revision,
+              device?.lineage,
+              cloud.id,
+            )
       if (generation !== this.identityGeneration) return { ownerId, snapshot: recovery }
-      if (lease.status === 'acquired') {
-        this.cloudWritable = true
-        this.cloudRevision = lease.revision
-        this.cloudWriterId = lease.leaseToken
-      } else if (lease.status === 'read-only') {
-        this.cloudRevision = lease.revision
-        this.publishStatus({ kind: 'read-only' })
-      } else if (lease.status === 'identity-expired') {
-        this.publishStatus({ kind: 'sign-in' })
-      } else {
-        this.publishStatus({ kind: 'offline' })
+      if (relationship === 'divergent') {
+        const conflict: ReconciliationConflict = {
+          id: crypto.randomUUID(),
+          device: { snapshot: recovery, activeAt: recoverySavedAt ?? cloud.updatedAt },
+          cloud: {
+            snapshot: cloudSnapshot,
+            activeAt: cloud.updatedAt,
+            revision: cloud.revision ?? 0,
+          },
+        }
+        this.pendingConflict = conflict
+        this.latestSnapshot = recovery
+        this.publishStatus({ kind: 'conflict' })
+        return {
+          ownerId,
+          snapshot: recovery,
+          savedAt: recoverySavedAt,
+          playerCode: cloud.playerCode,
+          conflict,
+        }
       }
-    } else {
-      this.publishStatus({ kind: 'offline' })
+      if (relationship === 'device-descendant') {
+        selected = recovery
+        selectedAt = recoverySavedAt ?? cloud.updatedAt
+      }
     }
-    const recoveryIsNewer =
-      recovery && recoverySavedAt && Date.parse(recoverySavedAt) > Date.parse(cloud.updatedAt)
+    if (cloud.revision !== null) await this.acquireWriter(cloud.id, generation)
+    else this.publishStatus({ kind: 'offline' })
     return {
       ownerId,
-      snapshot: recoveryIsNewer
-        ? recovery
-        : recovery
-          ? { ...recovery, encounter: cloud.encounter, selectedId: null }
-          : {
-              encounter: cloud.encounter,
-              theme: 'dark',
-              view: 'encounter',
-              selectedId: null,
-            },
-      savedAt: recoveryIsNewer ? recoverySavedAt : cloud.updatedAt,
+      snapshot: selected,
+      savedAt: selectedAt,
       playerCode: cloud.playerCode,
+    }
+  }
+
+  /** Fence cloud work after authentication expires while retaining the board and recovery owner. */
+  expireIdentity(): void {
+    this.identityGeneration += 1
+    this.cloudWritable = false
+    this.cloudIdentityExpired = true
+    this.cloudWriterId = null
+    this.cancelCloudSave?.()
+    this.cancelCloudSave = null
+    this.publishStatus({ kind: 'sign-in' })
+  }
+
+  /** Return the latest unresolved conflict branch after local board commits. */
+  conflict(): ReconciliationConflict | null {
+    return this.pendingConflict
+  }
+
+  /** Resolve a displayed divergence only if the cloud revision has not changed meanwhile. */
+  async resolveConflict(conflictId: string, choice: CopyChoice): Promise<LifecycleRestore | null> {
+    const conflict = this.pendingConflict
+    const ownerId = this.ownerId
+    if (!conflict || conflict.id !== conflictId || !ownerId || !this.cloudId) return null
+    const current = await this.adapters.cloud.load()
+    if (
+      current.status !== 'loaded' ||
+      current.id !== this.cloudId ||
+      current.revision !== conflict.cloud.revision
+    ) {
+      return this.identify(ownerId)
+    }
+    const archived = await this.adapters.device.archiveConflict(ownerId, conflict)
+    if (archived.status !== 'saved') {
+      this.publishDeviceFailure(archived)
+      return null
+    }
+
+    this.pendingConflict = null
+    this.archivedConflict = conflict
+    const snapshot = choice === 'device' ? conflict.device.snapshot : conflict.cloud.snapshot
+    this.latestSnapshot = snapshot
+    const generation = this.identityGeneration
+    await this.acquireWriter(this.cloudId, generation)
+    if (ownerId !== this.ownerId) return null
+    if (choice === 'device' && this.cloudWritable) {
+      await this.saveCloud(snapshot.encounter, conflict.device.activeAt)
+    } else if (choice === 'cloud') {
+      const savedAt = this.adapters.clock.now().toISOString()
+      const saved = await this.adapters.device.save(ownerId, snapshot, savedAt)
+      if (saved.status !== 'saved') {
+        this.publishDeviceFailure(saved)
+        return null
+      }
+      await this.adapters.device.markSynced(ownerId, snapshot, {
+        cloudEncounterId: this.cloudId,
+        cloudRevision: conflict.cloud.revision,
+        cloudStateHash: await encounterHash(snapshot.encounter),
+      })
+      if (this.cloudWritable) this.publishStatus({ kind: 'saved' })
+    }
+    return {
+      ownerId,
+      snapshot,
+      savedAt: choice === 'device' ? conflict.device.activeAt : conflict.cloud.activeAt,
+      playerCode: current.playerCode,
+    }
+  }
+
+  /** Surface one failed device operation through the shared durability status. */
+  private publishDeviceFailure(result: SessionWriteResult): void {
+    this.publishStatus({
+      kind: 'failed',
+      reason: 'reason' in result ? result.reason : 'unavailable',
+    })
+  }
+
+  /** Acquire cloud authority after reconciliation has selected one working branch. */
+  private async acquireWriter(id: string, generation: number): Promise<void> {
+    const lease = await this.adapters.cloud.acquire(id, this.clientId)
+    if (generation !== this.identityGeneration) return
+    if (lease.status === 'acquired') {
+      this.cloudWritable = true
+      this.cloudRevision = lease.revision
+      this.cloudWriterId = lease.leaseToken
+    } else if (lease.status === 'read-only') {
+      this.cloudRevision = lease.revision
+      this.publishStatus({ kind: 'read-only' })
+    } else if (lease.status === 'identity-expired') {
+      this.expireIdentity()
+    } else {
+      this.publishStatus({ kind: 'offline' })
     }
   }
 
@@ -281,6 +446,12 @@ export class EncounterLifecycle {
     const ownerId = this.ownerId
     const savedAt = this.adapters.clock.now().toISOString()
     this.latestSnapshot = snapshot
+    if (this.pendingConflict && ownerId === this.ownerId) {
+      this.pendingConflict = {
+        ...this.pendingConflict,
+        device: { snapshot, activeAt: savedAt },
+      }
+    }
     this.publishStatus({ kind: 'saving' })
 
     let resolveWrite: (result: SessionWriteResult) => void = () => undefined
@@ -329,9 +500,11 @@ export class EncounterLifecycle {
         reason: 'reason' in result ? result.reason : 'unavailable',
       }
     }
+    if (this.pendingConflict) return { kind: 'conflict' }
     if (!this.ownerId) return { kind: 'sign-in' }
     if (this.adapters.network && !this.adapters.network.online()) return { kind: 'offline' }
     if (!this.cloudWritable) {
+      if (this.cloudIdentityExpired) return { kind: 'sign-in' }
       return this.status.kind === 'read-only' || this.status.kind === 'sign-in'
         ? this.status
         : { kind: 'offline' }
@@ -476,6 +649,17 @@ export class EncounterLifecycle {
           this.cloudId = result.id
           this.cloudRevision = result.revision
           this.cloudWriterId = result.leaseToken
+          const latest = this.latestSnapshot
+          if (
+            latest &&
+            (await encounterHash(latest.encounter)) === (await encounterHash(encounter))
+          ) {
+            await this.adapters.device.markSynced(ownerId, latest, {
+              cloudEncounterId: result.id,
+              cloudRevision: result.revision,
+              cloudStateHash: await encounterHash(encounter),
+            })
+          }
           resolveSave(result.id)
           return
         }
@@ -484,7 +668,7 @@ export class EncounterLifecycle {
           this.cloudRevision = result.revision
           this.publishStatus({ kind: 'read-only' })
         } else if (result.status === 'identity-expired') {
-          this.publishStatus({ kind: 'sign-in' })
+          this.expireIdentity()
         } else {
           this.publishStatus({ kind: 'offline' })
         }

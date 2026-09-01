@@ -15,6 +15,14 @@ function faceSeq(...faces: number[]): RandomSource {
 }
 
 describe('roll', () => {
+  it('gives every resolved random outcome a stable identity', () => {
+    const first = roll('1d6', { rand: faceSeq(3) })
+    const second = roll('1d6', { rand: faceSeq(3) })
+
+    expect(first.rollId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(second.rollId).not.toBe(first.rollId)
+  })
+
   it('flags a natural 20 as a crit', () => {
     const r = roll('1d20+7', { kind: 'attack', rand: faceSeq(20) })
     expect(r.total).toBe(27)
