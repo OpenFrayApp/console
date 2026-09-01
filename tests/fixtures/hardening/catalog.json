@@ -34,10 +34,10 @@
       "description": "Current, previous, divergent, and quarantined recovery copies."
     },
     {
-      "id": "hardening.publication.v1",
+      "id": "hardening.publication.v2",
       "fixtureClass": "publication",
       "path": "publication.json",
-      "sha256": "492b169f7bada90235f78514270820b3b0593792640adb8687ec82d1fcaf14e1",
+      "sha256": "298d2a87e465d07b7d30dba7d909ae72fe8ea3f878a82b04cfa4146d407a530f",
       "provenance": "synthetic",
       "description": "Valid, private-field, and unsupported publication inputs."
     },

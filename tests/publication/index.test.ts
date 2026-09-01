@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   PUBLICATION_INTERFACE_VERSION,
@@ -28,6 +29,12 @@ const encounter = {
   },
 }
 
+const publicationFixture = JSON.parse(
+  readFileSync(new URL('../fixtures/hardening/publication.json', import.meta.url), 'utf8'),
+) as {
+  cases: { id: string; kind: string; input: unknown; expected: string }[]
+}
+
 const index = {
   'srd-5.2:goblin': {
     name: 'Goblin',
@@ -46,6 +53,22 @@ describe('publication contract', () => {
     expect(PUBLISHED_SHARE_SCHEMA_VERSION).toBe(1)
     expect(SOURCE_MANIFEST_VERSION).toBe(1)
     expect(PUBLICATION_SOURCE_MANIFEST).toMatchObject({ version: 1, sources: expect.any(Array) })
+  })
+
+  it('classifies every canonical publication fixture through the public interface', () => {
+    for (const fixture of publicationFixture.cases) {
+      const outcome = normalizePublication({ kind: fixture.kind, data: fixture.input })
+      if (fixture.expected === 'unsupported') expect(outcome.status, fixture.id).toBe('unsupported')
+      else expect(outcome.status, fixture.id).toBe('ok')
+      if (outcome.status !== 'ok') continue
+      const preview = resolvePublicationPreview(outcome.publication, {})
+      if (fixture.expected === 'generic-fallback') {
+        expect(preview.status, fixture.id).not.toBe('ok')
+      }
+      if (fixture.expected === 'allowlist-only') {
+        expect(JSON.stringify(outcome), fixture.id).not.toContain('MUST_NOT_PUBLISH')
+      }
+    }
   })
 
   it('normalizes a canonical encounter into explicitly allowlisted preview facts', () => {

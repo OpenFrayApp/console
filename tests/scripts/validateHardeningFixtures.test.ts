@@ -134,7 +134,7 @@ describe('canonical hardening fixture corpus', () => {
       ['hardening.malformed.v1', 'malformed.json', 'wrong-aggregate-kind'],
       ['hardening.legacy.v1', 'legacy.json', 'encounter-with-legacy-effect'],
       ['hardening.recovery.v1', 'recovery.json', 'divergent-copies'],
-      ['hardening.publication.v1', 'publication.json', 'published-creature'],
+      ['hardening.publication.v2', 'publication.json', 'published-creature'],
       ['hardening.tenant-isolation.v1', 'tenant-isolation.json', 'cross-tenant-write'],
     ] as const
     for (const [fixtureId, path, caseId] of removals) {
@@ -168,7 +168,7 @@ describe('canonical hardening fixture corpus', () => {
       cases: Array<{ id: string; input?: { v?: number } }>
     }
     publication.cases.find((entry) => entry.id === 'published-encounter')!.input!.v = 2
-    replaceFixture(directory, catalogPath, 'hardening.publication.v1', publication)
+    replaceFixture(directory, catalogPath, 'hardening.publication.v2', publication)
 
     const tenants = JSON.parse(readFileSync(join(directory, 'tenant-isolation.json'), 'utf8')) as {
       cases: Array<{ id: string; rowRef: string }>
@@ -196,16 +196,16 @@ describe('canonical hardening fixture corpus', () => {
       refresh_token: 'fixture',
       client_secret: 'ghp_1234567890abcdef',
     })
-    replaceFixture(directory, catalogPath, 'hardening.publication.v1', publication)
+    replaceFixture(directory, catalogPath, 'hardening.publication.v2', publication)
 
     const result = validate(catalogPath)
 
     expect(result.status).toBe(1)
-    expect(result.stderr).toContain('privacy-sensitive key $.cases.4.email')
-    expect(result.stderr).toContain('privacy-sensitive value at $.cases.4.email')
-    expect(result.stderr).toContain('privacy-sensitive key $.cases.4.refresh_token')
-    expect(result.stderr).toContain('privacy-sensitive key $.cases.4.client_secret')
-    expect(result.stderr).toContain('privacy-sensitive value at $.cases.4.client_secret')
+    expect(result.stderr).toContain('privacy-sensitive key $.cases.7.email')
+    expect(result.stderr).toContain('privacy-sensitive value at $.cases.7.email')
+    expect(result.stderr).toContain('privacy-sensitive key $.cases.7.refresh_token')
+    expect(result.stderr).toContain('privacy-sensitive key $.cases.7.client_secret')
+    expect(result.stderr).toContain('privacy-sensitive value at $.cases.7.client_secret')
   })
 
   it('enforces the agreed performance counts and complexity', () => {

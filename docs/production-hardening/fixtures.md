@@ -6,16 +6,16 @@ synthetic and safe to include in test output. The catalog lives at
 
 ## Canonical identities
 
-| Fixture class    | Stable identity                 | File                    | Coverage                                                                           |
-| ---------------- | ------------------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| Hostile          | `hardening.hostile.v1`          | `hostile.json`          | Unknown keys, a future version, oversized input, and prototype-pollution keys      |
-| Malformed        | `hardening.malformed.v1`        | `malformed.json`        | Malformed children, truncated JSON, and invalid aggregate discriminators           |
-| Legacy           | `hardening.legacy.v1`           | `legacy.json`           | A version 1 session and the legacy `consumeOnRoll` effect duration                 |
-| Recovery         | `hardening.recovery.v1`         | `recovery.json`         | Current and previous copies, divergent revisions, and quarantine                   |
-| Publication      | `hardening.publication.v1`      | `publication.json`      | Encounter and creature publication, private-field exclusion, and unsupported kinds |
-| Tenant isolation | `hardening.tenant-isolation.v1` | `tenant-isolation.json` | Owner access, cross-tenant denial, and anonymous denial                            |
-| Performance      | `hardening.performance.20.v1`   | `performance-20.json`   | 20 combatants and 240 log entries                                                  |
-| Performance      | `hardening.performance.100.v1`  | `performance-100.json`  | 100 combatants and 240 log entries                                                 |
+| Fixture class    | Stable identity                 | File                    | Coverage                                                                                                       |
+| ---------------- | ------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Hostile          | `hardening.hostile.v1`          | `hostile.json`          | Unknown keys, a future version, oversized input, and prototype-pollution keys                                  |
+| Malformed        | `hardening.malformed.v1`        | `malformed.json`        | Malformed children, truncated JSON, and invalid aggregate discriminators                                       |
+| Legacy           | `hardening.legacy.v1`           | `legacy.json`           | A version 1 session and the legacy `consumeOnRoll` effect duration                                             |
+| Recovery         | `hardening.recovery.v1`         | `recovery.json`         | Current and previous copies, divergent revisions, and quarantine                                               |
+| Publication      | `hardening.publication.v2`      | `publication.json`      | Encounter and creature publication, private-field exclusion, licensing, missing content, and unsupported kinds |
+| Tenant isolation | `hardening.tenant-isolation.v1` | `tenant-isolation.json` | Owner access, cross-tenant denial, and anonymous denial                                                        |
+| Performance      | `hardening.performance.20.v1`   | `performance-20.json`   | 20 combatants and 240 log entries                                                                              |
+| Performance      | `hardening.performance.100.v1`  | `performance-100.json`  | 100 combatants and 240 log entries                                                                             |
 
 The performance encounters include effects, resource state, damage relations, and
 initiative ties. Their log entries and game text use synthetic labels.
