@@ -159,6 +159,8 @@ const MAX_COMBATANTS = 100
 /** Return a plain record without trusting inherited properties. */
 function record(value: unknown): Record<string, unknown> | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) return null
   return value as Record<string, unknown>
 }
 
@@ -180,7 +182,7 @@ function isHostile(value: unknown, seen = new Set<object>()): boolean {
 function withinBounds(value: unknown): boolean {
   try {
     const json = JSON.stringify(value)
-    return typeof json === 'string' && json.length <= MAX_BYTES
+    return typeof json === 'string' && new TextEncoder().encode(json).byteLength <= MAX_BYTES
   } catch {
     return false
   }
@@ -280,8 +282,8 @@ export function isPublicationShareCode(value: unknown): value is string {
   )
 }
 
-/** Normalize an unknown published-share row into bounded publication facts. */
-export function normalizePublication(input: unknown): PublicationOutcome {
+/** Decode one exception-safe publication candidate into bounded facts. */
+function normalizePublicationValue(input: unknown): PublicationOutcome {
   if (isHostile(input) || !withinBounds(input)) return { status: 'invalid', reason: 'bounds' }
   const row = record(input)
   if (!row || typeof row.kind !== 'string') return { status: 'invalid', reason: 'shape' }
@@ -394,6 +396,15 @@ export function normalizePublication(input: unknown): PublicationOutcome {
       name: name ?? creature.name,
       ...(by ? { by } : {}),
     },
+  }
+}
+
+/** Normalize any unknown value without allowing hostile accessors to escape. */
+export function normalizePublication(input: unknown): PublicationOutcome {
+  try {
+    return normalizePublicationValue(input)
+  } catch {
+    return { status: 'invalid', reason: 'shape' }
   }
 }
 

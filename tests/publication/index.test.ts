@@ -119,6 +119,11 @@ describe('publication contract', () => {
       'invalid',
     ],
     [
+      'oversized multibyte input',
+      { kind: 'encounter', data: { ...encounter.data, note: '🜁'.repeat(17_000) } },
+      'invalid',
+    ],
+    [
       'oversized excluded prose',
       { kind: 'encounter', data: { ...encounter.data, note: 'x'.repeat(2001) } },
       'invalid',
@@ -137,6 +142,29 @@ describe('publication contract', () => {
       status === 'ok' ? ['publication', 'status'] : ['reason', 'status'],
     )
     expect(JSON.stringify(outcome)).not.toContain('polluted')
+  })
+
+  it('returns invalid for inherited fields, throwing accessors, and hostile proxies', () => {
+    const inherited = Object.create({ kind: 'encounter', data: encounter.data })
+    expect(normalizePublication(inherited)).toEqual({ status: 'invalid', reason: 'shape' })
+
+    const throwing = Object.defineProperty({}, 'kind', {
+      enumerable: true,
+      get() {
+        throw new Error('MUST_NOT_ESCAPE')
+      },
+    })
+    expect(normalizePublication(throwing)).toEqual({ status: 'invalid', reason: 'shape' })
+
+    const proxy = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error('MUST_NOT_ESCAPE')
+        },
+      },
+    )
+    expect(normalizePublication(proxy)).toEqual({ status: 'invalid', reason: 'shape' })
   })
 
   it('falls back when a referenced compendium entry is missing', () => {
