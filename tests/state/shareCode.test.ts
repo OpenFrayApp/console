@@ -2,11 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { describe, expect, it } from 'vitest'
-import {
-  isShareCode,
-  randomShareCode,
-  shareCodeFromPath,
-} from '../../src/state/shareCode.ts'
+import { isShareCode, randomShareCode, shareCodeFromPath } from '../../src/state/shareCode.ts'
 
 /**
  * The code is the only thing standing between a stranger and a published encounter, and it
