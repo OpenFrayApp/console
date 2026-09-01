@@ -1,59 +1,67 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Nightly backup of the Supabase database to Cloudflare R2. The free tier takes no
-# automatic backups, so this is the only restore path a signed-in Game Master's
-# creatures, spells, characters, campaigns and in-progress fight have.
+# Nightly encrypted backup of the Supabase database to Cloudflare R2.
 #
-# The dump NEVER becomes a workflow artifact: this repository is public, and artifacts
-# on a public repo are downloadable by anyone. It goes straight to a private bucket,
-# encrypted first when BACKUP_AGE_RECIPIENT is set.
-#
-# Setup (repository secrets) and the restore procedure are in local/deploy.md.
+# Export, upload, download, decrypt, and retention use separate credential-bearing
+# steps. The private age identity never shares a process with object credentials.
+# R2_BACKUP_* is bucket-scoped Object Read & Write; R2_RECOVERY_* is Object Read only.
 name: Supabase backup
 
-# No GitHub API calls are made, so no token permissions are needed. An empty map at
-# the root applies least privilege to every job (CodeQL).
 permissions: {}
 
 on:
   schedule:
-    # Daily at 03:41 UTC — after the day's play in Europe and the Americas, and on an
-    # off-round minute to miss the top-of-hour scheduling backlog on Actions.
     - cron: '41 3 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dump and verify only — upload nothing'
+        description: 'Export, verify, and encrypt without object access'
         type: boolean
         default: false
 
 concurrency:
-  # Two dumps at once would race on the same daily key for no benefit.
   group: supabase-backup
   cancel-in-progress: false
 
 jobs:
-  dump:
+  encryption-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Validate encryption key pair
+        env:
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
+        run: |
+          set -euo pipefail
+          [[ -n "$BACKUP_AGE_RECIPIENT" ]] || { echo 'backup: missing $BACKUP_AGE_RECIPIENT' >&2; exit 1; }
+          [[ -n "$BACKUP_AGE_IDENTITY" ]] || { echo 'backup: missing $BACKUP_AGE_IDENTITY' >&2; exit 1; }
+          work=$(mktemp -d)
+          trap 'rm -rf "$work"' EXIT
+          umask 077
+          printf '%s\n' "$BACKUP_AGE_IDENTITY" > "$work/identity.txt"
+          printf '%s\n' 'openfray-backup-key-preflight' > "$work/challenge.txt"
+          age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$work/challenge.age" "$work/challenge.txt"
+          age --decrypt --identity "$work/identity.txt" --output "$work/recovered.txt" "$work/challenge.age"
+          cmp "$work/challenge.txt" "$work/recovered.txt"
+          echo 'backup: encryption key pair verified before export'
+
+  backup:
+    needs: encryption-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      # Lifted to the job so the steps below can branch on it: the `secrets` context
-      # is not available in a step-level `if`.
-      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+    outputs:
+      object_key: ${{ steps.upload.outputs.object_key }}
+      ciphertext_sha256: ${{ steps.export.outputs.ciphertext_sha256 }}
     steps:
-      # v5 runs on Node 24; v4 targets the deprecated Node 20 and warns every run.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
 
       - name: Install a pg_dump new enough for the server
-        # pg_dump refuses a server newer than itself, and the runner's bundled client
-        # trails Supabase. PGDG carries the current major, which reads older ones too.
-        #
-        # Installing it is only half the job: `pg_dump` on Ubuntu is pg_wrapper, which
-        # resolves to the version of whichever *local* cluster owns the port being
-        # connected to. The session pooler is on 5432, the runner has its own
-        # PostgreSQL there, and so the wrapper handed over that cluster's 16.x client
-        # and it refused the 17.x server. PG_DUMP names the real binary instead —
-        # newest installed, so a future Supabase upgrade needs only the version bump
-        # in apt-get above.
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
@@ -64,21 +72,73 @@ jobs:
           echo "PG_DUMP=$newest/pg_dump" >> "$GITHUB_ENV"
           "$newest/pg_dump" --version
 
-      - name: Install age
-        if: env.BACKUP_AGE_RECIPIENT != ''
-        run: sudo apt-get install -y -qq age
-
-      - name: Warn when the dump would be stored unencrypted
-        if: env.BACKUP_AGE_RECIPIENT == ''
-        run: |
-          echo "::warning::No BACKUP_AGE_RECIPIENT secret — the dump will be stored unencrypted. It contains auth.users, and so every signed-in user's email address."
-
-      - name: Dump, verify, upload, prune
+      - name: Export, verify, and encrypt
+        id: export
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: scripts/backup-supabase.sh ${{ inputs.dry_run && '--dry-run' || '--output' }} ${{ !inputs.dry_run && format('{0}/openfray-backup.age', runner.temp) || '' }}
+
+      - name: Upload ciphertext
+        if: ${{ !inputs.dry_run }}
+        id: upload
+        env:
+          BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-backup.age
+          BACKUP_CIPHERTEXT_SHA256: ${{ steps.export.outputs.ciphertext_sha256 }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto # R2 ignores the region; the CLI insists on one
-        run: scripts/backup-supabase.sh ${{ inputs.dry_run && '--dry-run' || '' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: scripts/upload-encrypted-backup.sh
+
+  recoverability:
+    if: ${{ !inputs.dry_run }}
+    needs: backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Download and inspect ciphertext
+        env:
+          BACKUP_OBJECT_KEY: ${{ needs.backup.outputs.object_key }}
+          BACKUP_CIPHERTEXT_SHA256: ${{ needs.backup.outputs.ciphertext_sha256 }}
+          BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-recovery.age
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_RECOVERY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_RECOVERY_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: scripts/download-encrypted-backup.sh
+
+      - name: Decrypt and verify recovery
+        env:
+          BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-recovery.age
+          BACKUP_AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
+        run: scripts/verify-encrypted-backup.sh
+
+  retention:
+    if: ${{ !inputs.dry_run }}
+    needs: [backup, recoverability]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Prove deletion and apply retention
+        env:
+          BACKUP_OBJECT_KEY: ${{ needs.backup.outputs.object_key }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: scripts/retain-encrypted-backups.sh
