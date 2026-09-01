@@ -106,9 +106,9 @@ export async function claimPlayerCode(id: string, code: string): Promise<ClaimRe
 export async function saveCloudEncounter(
   id: string | null,
   encounter: Encounter,
+  updatedAt = new Date().toISOString(),
 ): Promise<string | null> {
   if (!supabase) return id
-  const updatedAt = new Date().toISOString()
   if (id) {
     const { error } = await supabase
       .from('encounters')

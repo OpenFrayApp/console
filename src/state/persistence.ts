@@ -75,7 +75,7 @@ function storage(): Storage | null {
 }
 
 /** Classify a browser storage exception without exposing its message or stored data. */
-function storageFailure(error: unknown): 'quota' | 'unavailable' {
+export function storageFailureReason(error: unknown): 'quota' | 'unavailable' {
   return error instanceof DOMException &&
     (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
     ? 'quota'
@@ -180,10 +180,10 @@ export function saveSession(snapshot: SessionSnapshot): SessionWriteResult {
       } catch {
         // The validated current copy still remains when rollback storage also fails.
       }
-      return { status: 'failed', reason: storageFailure(error) }
+      return { status: 'failed', reason: storageFailureReason(error) }
     }
   } catch (error) {
-    return { status: 'failed', reason: storageFailure(error) }
+    return { status: 'failed', reason: storageFailureReason(error) }
   }
 }
 
@@ -197,7 +197,7 @@ export function replaceSession(snapshot: SessionSnapshot): SessionWriteResult {
     store.setItem(KEYS.current, encoded.serialized)
     return { status: 'saved' }
   } catch (error) {
-    return { status: 'failed', reason: storageFailure(error) }
+    return { status: 'failed', reason: storageFailureReason(error) }
   }
 }
 
@@ -250,7 +250,7 @@ export function deleteRecoveryCopy(slot: RecoverySlot): SessionWriteResult {
     store.removeItem(KEYS[slot])
     return { status: 'deleted' }
   } catch (error) {
-    return { status: 'failed', reason: storageFailure(error) }
+    return { status: 'failed', reason: storageFailureReason(error) }
   }
 }
 
@@ -262,6 +262,6 @@ export function clearSession(): SessionWriteResult {
     for (const key of Object.values(KEYS)) store.removeItem(key)
     return { status: 'deleted' }
   } catch (error) {
-    return { status: 'failed', reason: storageFailure(error) }
+    return { status: 'failed', reason: storageFailureReason(error) }
   }
 }

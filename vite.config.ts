@@ -33,6 +33,7 @@ export default defineConfig({
       'site/**',
       'docs/**',
       '.claude/worktrees/**',
+      'tests/**/*.browser.test.ts',
       'tests/publication/browser.test.ts',
     ],
   },

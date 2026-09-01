@@ -4,7 +4,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Encounter } from '../../src/schema/encounter.ts'
+import { recoverySnapshot } from '../fixtures/sessionSnapshot.ts'
 import {
   clearSession,
   deleteRecoveryCopy,
@@ -13,31 +13,7 @@ import {
   loadSession,
   replaceSession,
   saveSession,
-  type SessionSnapshot,
 } from '../../src/state/persistence.ts'
-
-/** Build a valid encounter for the browser-storage boundary. */
-function encounter(id = 'local'): Encounter {
-  return {
-    encounterId: id,
-    ownerId: null,
-    round: 0,
-    activeIndex: 0,
-    combatants: [],
-    log: [],
-  }
-}
-
-/** Build a valid recovery snapshot. */
-function snapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
-  return {
-    encounter: encounter(),
-    theme: 'dark',
-    view: 'encounter',
-    selectedId: null,
-    ...overrides,
-  }
-}
 
 describe('session persistence', () => {
   beforeEach(() => {
@@ -53,7 +29,7 @@ describe('session persistence', () => {
   })
 
   it('round-trips a canonical saved snapshot', () => {
-    const value = snapshot({ theme: 'light', view: 'compendium' })
+    const value = recoverySnapshot('local', { theme: 'light', view: 'compendium' })
     expect(saveSession(value)).toEqual({ status: 'saved' })
     expect(loadSession()).toEqual({ status: 'loaded', snapshot: value })
     expect(JSON.parse(sessionStorage.getItem('openfray:session') ?? '{}')).toMatchObject({
@@ -64,8 +40,8 @@ describe('session persistence', () => {
   })
 
   it('retains the last validated current copy as previous', () => {
-    saveSession(snapshot({ encounter: encounter('first') }))
-    saveSession(snapshot({ encounter: encounter('second') }))
+    saveSession(recoverySnapshot('first'))
+    saveSession(recoverySnapshot('second'))
 
     expect(exportRecoveryCopy('previous')?.serialized).toContain('"encounterId":"first"')
     expect(listRecoveryCopies()).toEqual([
@@ -75,9 +51,9 @@ describe('session persistence', () => {
   })
 
   it('quarantines invalid current data and restores the previous validated copy', () => {
-    const first = snapshot({ encounter: encounter('first') })
+    const first = recoverySnapshot('first')
     saveSession(first)
-    saveSession(snapshot({ encounter: encounter('second') }))
+    saveSession(recoverySnapshot('second'))
     const malformed = '{ not json'
     sessionStorage.setItem('openfray:session', malformed)
 
@@ -98,7 +74,10 @@ describe('session persistence', () => {
     sessionStorage.setItem('openfray:session', future)
 
     expect(loadSession()).toEqual({ status: 'blocked', snapshot: null, blockedBy: 'unsupported' })
-    expect(saveSession(snapshot())).toEqual({ status: 'blocked', reason: 'unsupported' })
+    expect(saveSession(recoverySnapshot())).toEqual({
+      status: 'blocked',
+      reason: 'unsupported',
+    })
     expect(exportRecoveryCopy('current')).toEqual({
       slot: 'current',
       filename: 'openfray-session-current.json',
@@ -107,10 +86,10 @@ describe('session persistence', () => {
   })
 
   it('archives a supported legacy value before rewriting it canonically', () => {
-    const legacy = JSON.stringify({ version: 2, snapshot: snapshot() })
+    const legacy = JSON.stringify({ version: 2, snapshot: recoverySnapshot() })
     sessionStorage.setItem('openfray:session', legacy)
 
-    expect(loadSession()).toEqual({ status: 'loaded', snapshot: snapshot() })
+    expect(loadSession()).toEqual({ status: 'loaded', snapshot: recoverySnapshot() })
     expect(exportRecoveryCopy('migrated')?.serialized).toBe(legacy)
     expect(exportRecoveryCopy('current')?.serialized).toContain('"schemaVersion":3')
   })
@@ -119,15 +98,15 @@ describe('session persistence', () => {
     const future = '{"kind":"session","schemaVersion":999,"payload":{}}'
     sessionStorage.setItem('openfray:session', future)
 
-    expect(replaceSession(snapshot())).toEqual({ status: 'saved' })
-    expect(loadSession()).toEqual({ status: 'loaded', snapshot: snapshot() })
+    expect(replaceSession(recoverySnapshot())).toEqual({ status: 'saved' })
+    expect(loadSession()).toEqual({ status: 'loaded', snapshot: recoverySnapshot() })
     expect(deleteRecoveryCopy('current')).toEqual({ status: 'deleted' })
     expect(loadSession()).toEqual({ status: 'empty', snapshot: null })
   })
 
   it('keeps the existing current and previous copies when a later write exceeds storage quota', () => {
-    const first = snapshot({ encounter: encounter('first') })
-    const second = snapshot({ encounter: encounter('second') })
+    const first = recoverySnapshot('first')
+    const second = recoverySnapshot('second')
     saveSession(first)
     saveSession(second)
     const original = Storage.prototype.setItem
@@ -136,7 +115,7 @@ describe('session persistence', () => {
       return original.call(this, key, value)
     })
 
-    expect(saveSession(snapshot({ encounter: encounter('third') }))).toEqual({
+    expect(saveSession(recoverySnapshot('third'))).toEqual({
       status: 'failed',
       reason: 'quota',
     })
@@ -145,7 +124,7 @@ describe('session persistence', () => {
   })
 
   it('clearSession removes every recovery copy', () => {
-    saveSession(snapshot())
+    saveSession(recoverySnapshot())
     sessionStorage.setItem('openfray:session:quarantine', 'invalid')
     expect(clearSession()).toEqual({ status: 'deleted' })
     expect(listRecoveryCopies()).toEqual([])

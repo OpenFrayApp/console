@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ContentLicense } from './schema/license.ts'
 import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
@@ -28,7 +28,8 @@ import { DEFAULT_CAMPAIGN_RULES, type Campaign } from './schema/campaign.ts'
 import { rosterPcToCombatant, syncCombatantFromRoster, type RosterPc } from './schema/roster.ts'
 import { CampaignEditionContext, CampaignRulesContext } from './state/campaignRules.ts'
 import { emptyEncounter, encounterReducer, type NewLogEntry } from './state/encounter.ts'
-import { loadSession, saveSession, type View } from './state/persistence.ts'
+import type { SessionSnapshot, View } from './state/persistence.ts'
+import { createBrowserEncounterLifecycle } from './state/encounterLifecycle.ts'
 import { useTheme } from './hooks/useTheme.ts'
 import { useHotkeys } from './hooks/useHotkeys.ts'
 import { useOpenRequest } from './hooks/useOpenRequest.ts'
@@ -39,10 +40,8 @@ import {
   claimPlayerCode,
   deleteSavedFight,
   listSavedFights,
-  loadCloudEncounter,
   loadSavedFight,
   renameSavedFight,
-  saveCloudEncounter,
   saveFight,
   type ClaimResult,
   type SavedFights,
@@ -234,12 +233,11 @@ const dexMod = (creature: Creature): number => abilityMod(creature.abilities.dex
 
 /** The app shell: owns encounter, library, and UI state; wires persistence; renders every view. */
 function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
-  const [sessionLoad] = useState(loadSession)
-  const restored = sessionLoad.snapshot
-  // Theme is shared with the marketing site (and the player view) via the
-  // `openfray-theme` key; the restored session is the fallback, then dark.
-  const [theme, toggleTheme] = useTheme(restored?.theme ?? 'dark')
-  const [view, setView] = useState<View>(() => restored?.view ?? 'encounter')
+  const [lifecycle] = useState(createBrowserEncounterLifecycle)
+  // Theme is shared with the marketing site (and the player view) through its own
+  // device-local preference, independent of authored encounter recovery.
+  const [theme, toggleTheme] = useTheme()
+  const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   // Which content libraries the compendium/picker show. A device-local preference
   // for every user (anon included), persisted in localStorage like the theme.
@@ -334,16 +332,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     draft: MonsterDraft
     editId: string
   } | null>(null)
-  const [encounter, dispatch] = useReducer(
-    encounterReducer,
-    undefined,
-    () => restored?.encounter ?? emptyEncounter(),
-  )
+  const [encounter, dispatch] = useReducer(encounterReducer, undefined, emptyEncounter)
   const [logOpen, setLogOpen] = useState(false)
   // Which of the console's three screens is up on a phone (0 tracker, 1 stat block,
   // 2 controls). Meaningless from lg up, where all three are columns.
   const [mobilePane, setMobilePane] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(() => restored?.selectedId ?? null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [initPrompt, setInitPrompt] = useState<Record<string, string> | null>(null)
   // The initiative the app pre-rolled into that box, held until the fight it starts has
   // somewhere to record it — and dropped if the Game Master backs out of Begin.
@@ -351,16 +345,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
   const { user, displayName, shareLicense, setDisplayName, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
-  const cloudId = useRef<string | null>(null)
-  const cloudHydrated = useRef(false)
-  const cloudInserting = useRef(false)
   const [authOpen, setAuthOpen] = useState(false)
   /**
-   * Whether the board is the one this Game Master should be looking at: for a signed-in user
-   * that means the cloud copy has landed, for an anonymous one it is true as soon as auth
-   * settles. A cast arriving from a shared link waits on this — adding into a board that is
-   * about to be replaced by the cloud load would lose it, and racing the debounced autosave
-   * would persist half a board.
+   * Whether recovery and identity-triggered cloud reconciliation have settled. A cast from
+   * a shared link waits on this so hydration cannot replace it or persist half a board.
    */
   const [boardReady, setBoardReady] = useState(false)
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
@@ -379,9 +367,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Whether this account may publish under one of the reserved names. The answer comes from
   // the database — a granted capability — so nothing here has to know whose name it is.
   const [bylineGranted, setBylineGranted] = useState(false)
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(
-    () => restored?.activeCampaignId ?? null,
-  )
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null)
   const activeCampaign = activeCampaignId
     ? campaigns.find((c) => c.id === activeCampaignId)
     : undefined
@@ -396,13 +382,19 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     [ownPresets, enabledLibraries],
   )
 
+  /** Put a validated recovery snapshot onto the working board. */
+  const applyRecovery = useCallback((snapshot: SessionSnapshot) => {
+    dispatch({ type: 'load', encounter: snapshot.encounter })
+    setView(snapshot.view)
+    setSelectedId(snapshot.selectedId)
+    setActiveCampaignId(snapshot.activeCampaignId ?? null)
+  }, [])
+
   useEffect(() => {
     if (user) setAuthOpen(false)
   }, [user])
 
-  // Wait for the initial session lookup before loading/clearing user data — otherwise
-  // the first render (user still null) runs the sign-out branch and wipes the active
-  // campaign restored from the session.
+  // Wait for identity resolution before loading or clearing account-owned reference data.
   useEffect(() => {
     if (authLoading) return
     if (!userId) {
@@ -447,58 +439,38 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     }
   }, [userId, authLoading])
 
-  // On sign-in, hydrate the live encounter from the cloud (the authoritative copy).
+  // Recovery completes before identity-triggered cloud reconciliation. Offline failure keeps
+  // the validated device copy on the working board.
   useEffect(() => {
     if (authLoading) return
-    cloudHydrated.current = false
-    cloudInserting.current = false
-    if (!userId) {
-      cloudId.current = null
-      // Nothing to wait for: an anonymous board is whatever sessionStorage restored, and
-      // that happened before the first render.
-      setBoardReady(true)
-      return
-    }
     let active = true
-    loadCloudEncounter().then((res) => {
+    void lifecycle.identify(userId).then((result) => {
       if (!active) return
-      if (res.status === 'loaded') {
-        cloudId.current = res.id
-        dispatch({ type: 'load', encounter: res.encounter })
+      if (result.snapshot) applyRecovery(result.snapshot)
+      else if (result.clearWorkingBoard) {
+        dispatch({ type: 'load', encounter: emptyEncounter() })
         setSelectedId(null)
-        // A signed-in GM's chosen name follows the account, so it wins over whatever
-        // this device happened to mint while anonymous.
-        if (res.playerCode) setPlayerCode(res.playerCode)
+        setActiveCampaignId(null)
       }
-      // Only write once the answer is known. A read that failed is not "this user has
-      // no row" — treating it as one is what orphaned encounters into duplicates, and
-      // the fight is safe in sessionStorage meanwhile.
-      cloudHydrated.current = res.status !== 'failed'
+      // A signed-in GM's chosen name follows the account, so it wins over whatever
+      // this device happened to mint while anonymous.
+      if (result.playerCode) setPlayerCode(result.playerCode)
       setBoardReady(true)
     })
     return () => {
       active = false
     }
-  }, [userId, authLoading])
+  }, [applyRecovery, userId, authLoading, lifecycle])
 
-  // Local-first autosave (debounced): mirror the session to sessionStorage, and when
-  // signed in also persist the encounter to the cloud. Background — the UI never waits.
+  // Local-first autosave (debounced): the lifecycle chooses tab-scoped anonymous recovery
+  // or restart-safe owner recovery, then persists to cloud in the background.
   useEffect(() => {
+    if (!boardReady) return
     const handle = setTimeout(() => {
-      saveSession({ encounter, theme, view, selectedId, activeCampaignId, sharing })
-      // Guard against duplicate rows: only write once hydrated, and never start a
-      // second insert while the first is in flight.
-      if (userId && cloudHydrated.current && !cloudInserting.current) {
-        const inserting = cloudId.current == null
-        if (inserting) cloudInserting.current = true
-        saveCloudEncounter(cloudId.current, encounter).then((id) => {
-          if (id) cloudId.current = id
-          if (inserting) cloudInserting.current = false
-        })
-      }
+      void lifecycle.commit({ encounter, theme, view, selectedId, activeCampaignId, sharing })
     }, 600)
     return () => clearTimeout(handle)
-  }, [encounter, theme, view, selectedId, activeCampaignId, sharing, userId])
+  }, [boardReady, encounter, theme, view, selectedId, activeCampaignId, sharing, userId, lifecycle])
 
   // The summary travels with the board while the GM has it up, so the table reads the
   // fight's outcome on their own screens. Experience is left out of a milestone
@@ -552,9 +524,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       setPlayerCode(code)
       saveSettings({ playerViewCode: code })
     }
-    const id = await saveCloudEncounter(cloudId.current, encounter)
+    const id = await lifecycle.ensureCloudEncounter(encounter)
     if (!id) return
-    cloudId.current = id
     const claimed = await claimPlayerCode(id, code)
     if (claimed !== 'ok') return
     const active = await startLiveView(id, code)
@@ -571,22 +542,16 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
    */
   const claimShareCode = async (code: string): Promise<ClaimResult> => {
     // The code rides on the encounter row, and a GM who has just signed in may not have
-    // one yet — the autosave is debounced. Mint it here rather than refusing the claim,
-    // guarding the insert the same way the autosave does so the two can't race a
-    // duplicate row into existence.
-    if (!cloudId.current && !cloudInserting.current) {
-      cloudInserting.current = true
-      const id = await saveCloudEncounter(null, encounter)
-      if (id) cloudId.current = id
-      cloudInserting.current = false
-    }
-    if (!cloudId.current) return 'failed'
-    const result = await claimPlayerCode(cloudId.current, code)
+    // one yet because autosave is debounced. The lifecycle serializes this insert with
+    // background persistence so the two paths cannot create duplicate rows.
+    const cloudId = await lifecycle.ensureCloudEncounter(encounter)
+    if (!cloudId) return 'failed'
+    const result = await claimPlayerCode(cloudId, code)
     if (result === 'ok') {
       track(EVENTS.playerViewNamed)
       setPlayerCode(code)
       if (sharing) {
-        const rotated = await startLiveView(cloudId.current, code, undefined, liveViewSession)
+        const rotated = await startLiveView(cloudId, code, undefined, liveViewSession)
         if (rotated.status === 'ok') setLiveViewSession(rotated)
       }
     }
