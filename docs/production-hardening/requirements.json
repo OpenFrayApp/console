@@ -1,0 +1,263 @@
+[
+  {
+    "id": "EF-1",
+    "owner": "OpenFrayApp/console",
+    "dependencies": [],
+    "acceptanceCheck": "The canonical fixture catalog covers hostile, malformed, legacy, performance, recovery, publication, and tenant-isolation cases.",
+    "evidenceClass": "Source review and deterministic fixture validation",
+    "rollbackCondition": "Revert the dormant fixture catalog before any acceptance gate depends on it.",
+    "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "EF-2",
+    "owner": "OpenFrayApp/console",
+    "dependencies": [],
+    "acceptanceCheck": "The reviewed specification and registry contain the same unique requirement identifiers, and every registry entry has complete delivery metadata.",
+    "evidenceClass": "Source review and deterministic registry validation",
+    "rollbackCondition": "Revert the documentation and dormant registry before any implementation ticket consumes it.",
+    "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "EF-3",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["EF-1", "EF-2"],
+    "acceptanceCheck": "Authorized staging, device coverage, provider baselines, evidence manifests, and release reports produce privacy-safe evidence tied to immutable inputs.",
+    "evidenceClass": "Staging attestation and evidence-manifest validation",
+    "rollbackCondition": "Disable the dormant evidence collector and retain the last valid release process.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "AC-1",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-1", "EF-2", "EF-3"],
+    "acceptanceCheck": "A fresh database rebuild, generated-type drift check, hosted-configuration comparison, and deployment attestation agree with the tracked migration lineage.",
+    "evidenceClass": "Database integration tests and provider attestation",
+    "rollbackCondition": "Roll back the client and compatible expand migration to the recorded migration head without contracting shared schema early.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "AC-2",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-1", "EF-2"],
+    "acceptanceCheck": "Codec fixtures prove versioned decoding, sequential idempotent migration, canonical encoding, bounded rejection, quarantine, and non-overwrite behavior.",
+    "evidenceClass": "Deterministic codec tests",
+    "rollbackCondition": "Keep the codecs dormant or return readers to the previous compatible envelope while preserving unsupported values.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "AC-3",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-1", "EF-2"],
+    "acceptanceCheck": "Browser and Worker tests prove the publication entrypoint accepts unknown input, returns bounded outcomes, exposes only allowlisted facts, and carries independent interface versions.",
+    "evidenceClass": "Cross-runtime publication contract tests",
+    "rollbackCondition": "Restore the previous publication adapter and generic fallback while retaining the prior compatible manifest version.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "CB-1",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["AC-1", "EF-3"],
+    "acceptanceCheck": "Authorized staging proves cross-tenant denial, owner success, minimal grants, fixed search paths, restricted execution, Realtime authorization, and complete account deletion.",
+    "evidenceClass": "Hostile multi-tenant database integration tests",
+    "rollbackCondition": "Stop promotion and restore the last attested schema and client pair if any tenant or privilege boundary fails.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "CB-2",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-3"],
+    "acceptanceCheck": "Backup tests fail before export when encryption is invalid and prove ciphertext upload, decryptability, integrity, retention, least privilege, and isolated restoration.",
+    "evidenceClass": "Backup fault tests and restore evidence",
+    "rollbackCondition": "Disable backup execution and use the last verified encrypted backup path; never fall back to plaintext export or upload.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "CB-3",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["AC-1", "AC-2", "EF-3"],
+    "acceptanceCheck": "Protocol and staging tests prove owner-only publishing, viewer role restrictions, high-entropy capabilities, rotation, revocation, and bounded traffic.",
+    "evidenceClass": "Protocol state-machine tests and authorized Realtime integration tests",
+    "rollbackCondition": "Disable live sharing and revoke affected capabilities if publisher authority or capability invalidation cannot be proven.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "CB-4",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["AC-1", "AC-2", "EF-3"],
+    "acceptanceCheck": "Route tests prove server-side challenge and share verification, bounded validation, deduplication, quotas, restricted insertion, and notification queue isolation.",
+    "evidenceClass": "Cloudflare route integration and abuse-boundary tests",
+    "rollbackCondition": "Disable anonymous reporting at the edge if verification, quotas, restricted insertion, or queue isolation fails.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "DC-1",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["AC-2"],
+    "acceptanceCheck": "Lifecycle contract tests distinguish the working board, tab-scoped anonymous recovery, restart-safe signed-in recovery, and owner-scoped cloud copy.",
+    "evidenceClass": "Encounter lifecycle contract tests",
+    "rollbackCondition": "Keep the new recovery stores dormant and retain the current in-memory and session behavior.",
+    "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "DC-2",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["DC-1"],
+    "acceptanceCheck": "Fault tests prove every committed action enters recovery promptly, failures remain visible and playable, retry and download work, navigation warns, and two validated copies remain available.",
+    "evidenceClass": "Deterministic storage fault tests and browser recovery journeys",
+    "rollbackCondition": "Return to the previous persistence path only before the recovery cutover; after cutover, preserve and export both validated copies.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "DC-3",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["AC-1", "AC-2", "DC-1", "DC-2"],
+    "acceptanceCheck": "Database and lifecycle tests prove atomic expected revisions, writer leases, retained history, takeover checkpoints, and read-only stale writers.",
+    "evidenceClass": "Database concurrency integration tests and lifecycle contract tests",
+    "rollbackCondition": "Stop cloud writes and continue from device recovery if revision or lease guarantees fail; preserve all retained revisions.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "DC-4",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["DC-3"],
+    "acceptanceCheck": "Reconciliation tests prove descendant selection, explicit divergence, preservation and download of both copies, stable roll identifiers, and safe authentication expiry.",
+    "evidenceClass": "Deterministic reconciliation tests and browser conflict journeys",
+    "rollbackCondition": "Stop automatic cloud reconciliation and require recovery-copy selection if ancestry or identity cannot be established.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "RC-1",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["AC-2", "CB-3"],
+    "acceptanceCheck": "Protocol and browser tests prove all freshness states, update age, the 30-second stale cover, immediate access termination, and fresh validated recovery.",
+    "evidenceClass": "Protocol state-machine tests and player-view browser journeys",
+    "rollbackCondition": "End the live session and hide stale content if validated freshness or authorization state cannot be determined.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "RC-2",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["DC-2"],
+    "acceptanceCheck": "Browser recovery journeys prove controlled offline reopening, deferred activation during a fight, checkpointed updates, and preservation of the previous validated shell.",
+    "evidenceClass": "Service-worker integration and offline browser tests",
+    "rollbackCondition": "Serve the previous validated shell and unregister the candidate worker if installation, activation, or checkpoint validation fails.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "RC-3",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["AC-1", "EF-3"],
+    "acceptanceCheck": "Mixed-version release tests prove expand-and-contract compatibility, promotion checks, rollback before contraction, and rejection of unsafe irreversible migrations.",
+    "evidenceClass": "Coordinated deployment and rollback tests",
+    "rollbackCondition": "Return client and routes to the recorded compatible commits while leaving expanded schema in place through the rollback window.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "RC-4",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["AC-1", "CB-2", "EF-3"],
+    "acceptanceCheck": "An isolated staged restore meets the recovery targets and verifies deletion handling, tenant isolation, authentication, row counts, critical functions, encounter integrity, and monitoring.",
+    "evidenceClass": "Timed isolated restore drill and monitoring evidence",
+    "rollbackCondition": "Block promotion and continue from the last verified encrypted recovery point if restore integrity or deletion replay fails.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "PC-1",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-1", "EF-3"],
+    "acceptanceCheck": "Heap snapshots attribute retained growth, the complete mixed-action soak stays within 10 percent after warm-up and garbage collection, and the fresh-fight retest passes.",
+    "evidenceClass": "Heap-profile analysis and performance benchmark",
+    "rollbackCondition": "Revert the attributed retention change if the soak or fresh-fight budget regresses; do not delete authored encounter history.",
+    "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "PC-2",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-1", "EF-3"],
+    "acceptanceCheck": "Constrained-profile evidence keeps first search at or below 4.8 seconds for remediation and never above six seconds, with later searches within 200 milliseconds.",
+    "evidenceClass": "Compendium search benchmark and payload analysis",
+    "rollbackCondition": "Restore the previous generated payload or index when constrained first or subsequent search regresses.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "PC-3",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["AC-3", "EF-3"],
+    "acceptanceCheck": "Route-specific bundle evidence proves the published route and player view remain below 175 KiB compressed, the console below 325 KiB, and any 10 percent baseline regression is investigated.",
+    "evidenceClass": "Production bundle composition and transfer-budget checks",
+    "rollbackCondition": "Revert the route or bundle change that breaches an absolute budget or has an unexplained baseline regression.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "PC-4",
+    "owner": "OpenFrayApp/console",
+    "dependencies": ["EF-1", "EF-3"],
+    "acceptanceCheck": "The maintained browser, device, input, zoom, display-preference, and assistive-technology journeys complete with accurate tested-combination reporting.",
+    "evidenceClass": "Automated accessibility checks and manual compatibility matrix",
+    "rollbackCondition": "Revert the interaction change or document the combination as Not measured; do not claim hardened status while required coverage is missing.",
+    "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "OH-1",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["EF-3"],
+    "acceptanceCheck": "Required application paths pass an enforced Content Security Policy after privacy-safe report-only evidence shows no required violation.",
+    "evidenceClass": "CSP route tests and redacted violation evidence",
+    "rollbackCondition": "Return to the last safe enforced policy or privacy-safe reporting mode if a required path is blocked.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "OH-2",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["AC-3", "EF-3"],
+    "acceptanceCheck": "Public route tests prove bounded upstream timeouts, normalized cache keys, payload limits, route-specific rate limits, coarse thresholds, correct statuses, and privacy-safe request identifiers.",
+    "evidenceClass": "Cloudflare route integration and abuse-load tests",
+    "rollbackCondition": "Disable or fall back the affected public route when its work, cache, or abuse boundary cannot be bounded.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "OH-3",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["AC-1", "EF-3"],
+    "acceptanceCheck": "Redacted source-controlled baselines cover every named provider and fail on unexplained drift affecting authentication, tenant isolation, secrets, backups, or public access.",
+    "evidenceClass": "Provider-configuration comparison and drift report",
+    "rollbackCondition": "Block promotion and restore the last reviewed provider baseline when critical configuration drift is unexplained.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "OH-4",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["EF-3"],
+    "acceptanceCheck": "The incident matrix names evidence, redaction, retention, threshold, owner, and response for each mandatory signal, and staged exercises prove delivery and runbook use.",
+    "evidenceClass": "Source review and staged monitoring exercise",
+    "rollbackCondition": "Keep the previous alert path active until the replacement signal, redaction, owner, and runbook pass a staged exercise.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": false }
+  },
+  {
+    "id": "CA-1",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["EF-1", "EF-2", "EF-3"],
+    "acceptanceCheck": "The combined pull-request gate runs every applicable formatting, static, test, build, security, dependency, migration, fixture, benchmark, and route-boundary check and fails on missing checks.",
+    "evidenceClass": "Combined pull-request evidence manifest",
+    "rollbackCondition": "Restore the last complete required-check set if path selection omits or bypasses an applicable gate.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "CA-2",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["CA-1", "RC-3"],
+    "acceptanceCheck": "Production promotion requires passing pull-request evidence, staging attestation, applicable migration and configuration evidence, backup health, route and assembly evidence, coordinated commits, approval, and a tested rollback target.",
+    "evidenceClass": "Protected production-release attestation",
+    "rollbackCondition": "Stop promotion or return every coordinated repository and provider to the recorded rollback target when a mandatory gate fails.",
+    "releaseBlocking": { "ordinaryRelease": true, "hardenedRelease": true, "dependentWork": true }
+  },
+  {
+    "id": "CA-3",
+    "owner": "OpenFrayApp/openfray",
+    "dependencies": ["CA-2", "PC-1", "PC-2", "PC-3", "PC-4", "RC-4", "OH-4"],
+    "acceptanceCheck": "The hardened-release gate refreshes or validly reuses complete performance, browser, device, accessibility, fault, restore, monitoring, and residual-risk evidence and blocks ineligible or expired risk acceptance.",
+    "evidenceClass": "Hardened-release evidence manifest and maintainer approval",
+    "rollbackCondition": "Withdraw the hardened-release claim and restore the coordinated rollback target when complete evidence or an eligible risk decision is absent.",
+    "releaseBlocking": { "ordinaryRelease": false, "hardenedRelease": true, "dependentWork": false }
+  }
+]

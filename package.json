@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "validate:requirements": "node scripts/validate-requirements.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
