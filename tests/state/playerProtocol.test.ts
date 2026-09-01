@@ -161,7 +161,7 @@ describe('receiving live-view traffic', () => {
     })
   })
 
-  it('suppresses rollback traffic only until the current publisher closes', () => {
+  it('does not let delayed rollback traffic revive a closed current session', () => {
     const currentBoard = receivePlayerMessage(
       INITIAL_PLAYER_PROTOCOL_STATE,
       'viewer',
@@ -189,8 +189,8 @@ describe('receiving live-view traffic', () => {
     if (closed.status !== 'accepted') return
 
     expect(receiveLegacyPlayerMessage(closed.state, 'viewer', 'board', board)).toMatchObject({
-      status: 'accepted',
-      message: { type: 'board', board },
+      status: 'rejected',
+      reason: 'superseded',
     })
   })
 

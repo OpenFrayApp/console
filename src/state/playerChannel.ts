@@ -12,7 +12,6 @@ import {
   INITIAL_PLAYER_PROTOCOL_STATE,
   receiveLegacyPlayerMessage,
   receivePlayerMessage,
-  resetPlayerProtocolReception,
   sendGameMasterMessage,
   sendViewerMessage,
   type GameMasterMessage,
@@ -317,7 +316,6 @@ export function usePlayerBoard(
      * reading stale hit points is worse off than a table told to ask the GM.
      */
     const stepAway = () => {
-      receiving.current = resetPlayerProtocolReception(receiving.current)
       setStatus('waiting')
       setBoard(null)
     }
@@ -397,7 +395,6 @@ export function usePlayerBoard(
           setBoard(message.board)
           setStatus('live')
         } else if (message.type === 'closed') {
-          receiving.current = resetPlayerProtocolReception(receiving.current)
           setBoard(null)
           setStatus((value) => (value === 'live' ? 'connecting' : value))
         }

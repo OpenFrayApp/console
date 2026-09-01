@@ -223,7 +223,7 @@ describe('usePlayerBoard — the player side', () => {
     expect(result.current.board?.round).toBe(4)
   })
 
-  it('accepts the rollback path again after the current publisher closes', () => {
+  it('does not let a delayed rollback board revive a closed current session', () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
     const { result } = renderHook(() => usePlayerBoard('code'))
@@ -241,8 +241,26 @@ describe('usePlayerBoard — the player side', () => {
     expect(result.current.board).toBeNull()
 
     act(() => channels[0].emit('board', wireBoard(3)))
-    expect(result.current.status).toBe('live')
-    expect(result.current.board?.round).toBe(3)
+    expect(result.current.status).toBe('waiting')
+    expect(result.current.board).toBeNull()
+  })
+
+  it('preserves ordering history across presence churn', () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const { result } = renderHook(() => usePlayerBoard('code'))
+    act(() => channels[0].ready())
+    channels[0].presence = { gm: [{ role: 'gm' }] }
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(5, 5)))
+    expect(result.current.board?.round).toBe(5)
+
+    channels[0].presence = {}
+    act(() => channels[0].emitPresence('sync'))
+    expect(result.current.board).toBeNull()
+
+    act(() => channels[0].emit('player-view-protocol', gameMasterEnvelope(4, 4)))
+    expect(result.current.status).toBe('waiting')
+    expect(result.current.board).toBeNull()
   })
 
   it('keeps malformed current and rollback traffic out of viewer state', () => {

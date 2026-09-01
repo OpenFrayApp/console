@@ -240,11 +240,6 @@ export function receiveLegacyPlayerMessage(
   }
 }
 
-/** Reset incoming ordering and rollback precedence when a transport session ends. */
-export function resetPlayerProtocolReception(state: PlayerProtocolState): PlayerProtocolState {
-  return { ...state, lastReceivedSequences: {}, currentProtocolSeen: false }
-}
-
 /** Validate, order, and canonicalize one untrusted incoming Realtime value. */
 export function receivePlayerMessage(
   state: PlayerProtocolState,
@@ -292,7 +287,7 @@ export function receivePlayerMessage(
   }
   const nextState = {
     ...state,
-    currentProtocolSeen: receiverRole === 'viewer' && parsed.output.messageType !== 'closed',
+    currentProtocolSeen: receiverRole === 'viewer',
     lastReceivedSequences: {
       ...state.lastReceivedSequences,
       [sender]: parsed.output.sequence,
