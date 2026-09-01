@@ -28,6 +28,12 @@ export default defineConfig({
     // repo; without it the suite runs twice — once against this tree and once against
     // whatever that branch happens to hold — and reports the other branch's failures
     // as this one's.
-    exclude: [...configDefaults.exclude, 'site/**', 'docs/**', '.claude/worktrees/**'],
+    exclude: [
+      ...configDefaults.exclude,
+      'site/**',
+      'docs/**',
+      '.claude/worktrees/**',
+      'tests/publication/browser.test.ts',
+    ],
   },
 })

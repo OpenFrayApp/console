@@ -3,3 +3,7 @@
 
 // Registers jest-dom matchers (toBeInTheDocument, etc.) for component tests.
 import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest'
+
+// Vitest 4 defaults this built-in to `/`; production Vite serves the console at `/console/`.
+vi.stubEnv('BASE_URL', '/console/')

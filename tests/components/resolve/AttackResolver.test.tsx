@@ -232,7 +232,9 @@ describe('ActionResolver — attacks', () => {
   })
 
   /** Render one attack at a single target, reporting how it went. */
-  const attackWith = (onResolved: ReturnType<typeof vi.fn>) =>
+  const attackWith = (
+    onResolved: NonNullable<Parameters<typeof ActionResolver>[0]['onResolved']>,
+  ) =>
     render(
       <ActionResolver
         attacker={monster()}

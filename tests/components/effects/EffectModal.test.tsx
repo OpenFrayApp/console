@@ -76,7 +76,7 @@ const clickApply = (dialog: HTMLElement) =>
   fireEvent.click(within(dialog).getByRole('button', { name: 'Apply' }))
 
 describe('the roll early-out', () => {
-  const renderPlain = (onApply: ReturnType<typeof vi.fn>) =>
+  const renderPlain = (onApply: Parameters<typeof EffectModal>[0]['onApply']) =>
     render(
       <EffectModal
         name="Goblin"
@@ -141,7 +141,7 @@ describe('the turn picker', () => {
   ] as unknown as Parameters<typeof EffectModal>[0]['combatants']
 
   /** The modal on that board, applying to the Goblin. */
-  const renderOn = (onApply: ReturnType<typeof vi.fn>) =>
+  const renderOn = (onApply: Parameters<typeof EffectModal>[0]['onApply']) =>
     render(
       <EffectModal
         name="Goblin"

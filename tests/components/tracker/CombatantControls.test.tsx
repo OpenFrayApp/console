@@ -548,7 +548,7 @@ describe('CombatantControls', () => {
     /** Render a combatant, optionally inside a campaign playing a given edition. */
     const show = (
       combatant: MonsterCombatant,
-      dispatch: ReturnType<typeof vi.fn>,
+      dispatch: Parameters<typeof CombatantControls>[0]['dispatch'],
       edition?: Edition,
     ) => {
       const controls = (
