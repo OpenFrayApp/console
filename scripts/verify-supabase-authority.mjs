@@ -55,26 +55,36 @@ function parseArgs(argv) {
 }
 
 /** Run a command and return stdout without copying rejected output into evidence. */
-function run(command, args) {
+function run(command, args, environment = process.env) {
   return execFileSync(command, args, {
     cwd: root,
     encoding: 'utf8',
+    env: environment,
     stdio: ['ignore', 'pipe', 'inherit'],
     timeout: 10 * 60 * 1000,
   })
 }
 
+/** Run a local Supabase command without exposing the hosted database password. */
+function runLocal(command, args) {
+  const environment = { ...process.env }
+  delete environment.SUPABASE_DB_PASSWORD
+  return run(command, args, environment)
+}
+
 /** Generate database types from one verified Supabase target. */
-function generateTypes(args) {
-  return run('supabase', ['gen', 'types', 'typescript', ...args, '--schema', 'public'])
+function generateTypes(args, local = false) {
+  const execute = local ? runLocal : run
+  return execute('supabase', ['gen', 'types', 'typescript', ...args, '--schema', 'public'])
 }
 
 /** Dump and normalize one public schema without retaining provider secrets. */
-function dumpSchema(args) {
+function dumpSchema(args, local = false) {
   const directory = mkdtempSync(resolve(tmpdir(), 'openfray-schema-'))
   const path = resolve(directory, 'schema.sql')
   try {
-    run('supabase', ['db', 'dump', ...args, '--schema', 'public', '--file', path])
+    const execute = local ? runLocal : run
+    execute('supabase', ['db', 'dump', ...args, '--schema', 'public', '--file', path])
     return canonicalSchemaDump(readFileSync(path, 'utf8'))
   } finally {
     rmSync(directory, { recursive: true, force: true })
@@ -111,9 +121,9 @@ async function main() {
   const expectations = readJson(expectationsPath)
   const committedTypes = canonicalGeneratedTypes(readFileSync(generatedTypesPath, 'utf8'))
 
-  run('supabase', ['db', 'reset', '--local'])
-  const localTypes = canonicalGeneratedTypes(generateTypes(['--local']))
-  const localSchema = dumpSchema(['--local'])
+  runLocal('supabase', ['db', 'reset', '--local'])
+  const localTypes = canonicalGeneratedTypes(generateTypes(['--local'], true))
+  const localSchema = dumpSchema(['--local'], true)
   let generatedTypesResult = localTypes === committedTypes ? 'passed' : 'failed'
   let schemaResult = 'passed'
   let deployedSchema = localSchema

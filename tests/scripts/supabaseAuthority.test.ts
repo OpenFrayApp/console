@@ -22,6 +22,10 @@ const authorityWorkflow = readFileSync(
   fileURLToPath(new URL('../../.github/workflows/database-authority.yml', import.meta.url)),
   'utf8',
 )
+const authorityVerifier = readFileSync(
+  fileURLToPath(new URL('../../scripts/verify-supabase-authority.mjs', import.meta.url)),
+  'utf8',
+)
 
 describe('Supabase authority evidence', () => {
   it('gives the forward-only lineage a stable head and schema hash', () => {
@@ -98,6 +102,9 @@ describe('Supabase authority evidence', () => {
     )?.[1]
 
     expect(step).toContain('env -u SUPABASE_DB_PASSWORD npm run db:verify')
+    expect(authorityVerifier).toContain('delete environment.SUPABASE_DB_PASSWORD')
+    expect(authorityVerifier).toContain("generateTypes(['--local'], true)")
+    expect(authorityVerifier).toContain("dumpSchema(['--local'], true)")
   })
 
   it('fails an attestation when any required authority result is missing', () => {
