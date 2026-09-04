@@ -107,6 +107,20 @@ describe('Supabase authority evidence', () => {
     expect(authorityVerifier).toContain("dumpSchema(['--local'], true)")
   })
 
+  it('links the protected project before pushing through the IPv4 pooler', () => {
+    const linkStep = authorityWorkflow.match(
+      /- name: Link the protected database target\n([\s\S]*?)(?=\n\s{6}- name:)/,
+    )?.[1]
+    const pushStep = authorityWorkflow.match(
+      /- name: Apply forward migrations\n([\s\S]*?)(?=\n\s{6}- name:)/,
+    )?.[1]
+
+    expect(linkStep).toContain('supabase link --project-ref "$PROJECT_REF"')
+    expect(linkStep).toContain('--password "$SUPABASE_DB_PASSWORD"')
+    expect(pushStep).toContain('supabase db push --linked')
+    expect(pushStep).not.toContain('--project-ref')
+  })
+
   it('fails an attestation when any required authority result is missing', () => {
     const lineage = migrationLineage(migrations)
     const attestation = buildDatabaseAttestation({

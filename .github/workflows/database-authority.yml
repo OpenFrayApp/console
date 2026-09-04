@@ -103,8 +103,10 @@ jobs:
             "$AUTHORIZED_STAGING_PROJECT_REF" \
             "$DATABASE_APPROVER" \
             "${{ github.workflow }}:${{ inputs.staging_attestation_run_id }}"
+      - name: Link the protected database target
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Apply forward migrations
-        run: supabase db push --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD"
       - name: Record manual provider evidence
         env:
           AUTH_OAUTH_EVIDENCE: ${{ vars.AUTH_OAUTH_EVIDENCE }}
