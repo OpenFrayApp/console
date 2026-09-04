@@ -86,7 +86,7 @@ jobs:
           fi
       - run: supabase start
       - name: Verify the fresh lineage before deployment
-        run: npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
+        run: env -u SUPABASE_DB_PASSWORD npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
       - name: Download staging boundary evidence
         if: inputs.environment == 'production'
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5

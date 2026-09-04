@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 // @ts-expect-error The release script is plain JavaScript and has no generated declaration.
@@ -17,6 +18,10 @@ const {
 } = authority
 
 const migrations = fileURLToPath(new URL('../../supabase/migrations', import.meta.url))
+const authorityWorkflow = readFileSync(
+  fileURLToPath(new URL('../../.github/workflows/database-authority.yml', import.meta.url)),
+  'utf8',
+)
 
 describe('Supabase authority evidence', () => {
   it('gives the forward-only lineage a stable head and schema hash', () => {
@@ -85,6 +90,14 @@ describe('Supabase authority evidence', () => {
       { id: 'oauth', result: 'passed', evidence: 'release/AC-1/oauth-review.md' },
       { id: 'webhooks', result: 'missing', evidence: null },
     ])
+  })
+
+  it('keeps hosted credentials out of fresh local verification', () => {
+    const step = authorityWorkflow.match(
+      /- name: Verify the fresh lineage before deployment\n([\s\S]*?)(?=\n\s{6}- name:)/,
+    )?.[1]
+
+    expect(step).toContain('env -u SUPABASE_DB_PASSWORD npm run db:verify')
   })
 
   it('fails an attestation when any required authority result is missing', () => {
