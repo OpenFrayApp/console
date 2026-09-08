@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { spawnSync } from 'node:child_process'
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 // @ts-expect-error The release script is plain JavaScript and has no generated declaration.
 import * as boundary from '../../scripts/lib/database-boundary.mjs'
@@ -16,6 +20,53 @@ const passedChecks = Object.fromEntries(
 )
 
 describe('database boundary evidence', () => {
+  it('runs the hosted proof with an explicit linked target and protected project reference', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'boundary-cli-'))
+    try {
+      const versions = readdirSync('supabase/migrations')
+        .filter((file) => /^\d{14}_.*\.sql$/.test(file))
+        .sort()
+        .map((file) => file.slice(0, 14))
+      const cli = join(directory, 'supabase')
+      writeFileSync(
+        cli,
+        `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args[0] === 'migration') {
+  console.log(JSON.stringify({ migrations: ${JSON.stringify(versions)}.map(remote => ({ remote })) }))
+} else if (args[0] === 'db' && args[1] === 'query' && args.includes('--linked') &&
+  args[args.indexOf('--project-ref') + 1] === 'abcdefghijklmnopqrst') {
+  console.log('{}')
+} else {
+  console.error('Expected an explicitly linked hosted query')
+  process.exitCode = 1
+}
+`,
+      )
+      chmodSync(cli, 0o700)
+      const output = join(directory, 'attestation.json')
+      const result = spawnSync(
+        process.execPath,
+        [
+          'scripts/verify-database-boundary.mjs',
+          '--environment',
+          'staging',
+          '--project-ref',
+          'abcdefghijklmnopqrst',
+          '--approver',
+          'maintainer',
+          '--output',
+          output,
+        ],
+        { encoding: 'utf8', env: { ...process.env, PATH: `${directory}:${process.env.PATH}` } },
+      )
+      expect(result.status, result.stderr).toBe(0)
+      expect(JSON.parse(readFileSync(output, 'utf8')).result).toBe('passed')
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
   it('passes only with the complete lineage, hostile actors, and checks', () => {
     const attestation = buildDatabaseBoundaryAttestation({
       consoleCommit: 'a'.repeat(40),

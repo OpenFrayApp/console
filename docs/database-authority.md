@@ -82,6 +82,10 @@ Run the staging workflow first. Supply its workflow run ID as `staging_attestati
 
 The authority verifier checks the fresh reset, exact remote migration lineage, normalized hosted schema, generated types, and supported hosted settings. It records the environment identity, migration head, schema and configuration hashes, generated-type hash, result, workflow, approver, and timestamp.
 
+The verifier prints each authority check and manual-evidence result without printing provider values. Failed verification keeps its failing exit status. Unless canceled, the workflow uploads available attestations even after a failed step. Inspect the individual checks before retrying; a retained artifact does not mean verification passed.
+
+Set `AUTH_OAUTH_EVIDENCE`, `AUTH_REDIRECT_EVIDENCE`, and `REPORT_WEBHOOK_EVIDENCE` in each protected GitHub environment after reviewing those settings. Missing references fail verification. A successful backup does not prove these provider settings or the database boundary.
+
 Manual evidence uses the identifiers in `supabase/hosted-config.expected.json`:
 
 ```json

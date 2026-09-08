@@ -313,8 +313,15 @@ begin
       when insufficient_privilege then null;
     end;
   end loop;
-  insert into encounters (state, player_code)
-    values ('{}'::jsonb, 'cb3-other') returning id into other_live_encounter;
+  select (save_encounter_revision(
+    '22222222-2222-2222-2222-222222222222',
+    null,
+    0,
+    'cccccccc-3333-4333-8333-cccccccccccc',
+    '{}'::jsonb,
+    now()
+  )->>'id')::uuid into other_live_encounter;
+  update encounters set player_code = 'cb3-other' where id = other_live_encounter;
   if start_live_view(other_live_encounter, 'cb3-other', repeat('c', 64)) <> 1 then
     raise exception 'CB-3: another owner could not start an independent live view';
   end if;

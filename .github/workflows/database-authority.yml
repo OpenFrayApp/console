@@ -52,6 +52,7 @@ jobs:
       - run: npm run db:verify
       - run: npm run db:boundary
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
         with:
           name: local-database-attestation
           path: |
@@ -139,6 +140,7 @@ jobs:
             --approver "$DATABASE_APPROVER" \
             --workflow "${{ github.workflow }}:${{ github.run_id }}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
         with:
           name: ${{ inputs.environment }}-database-attestation
           path: |

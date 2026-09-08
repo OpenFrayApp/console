@@ -188,6 +188,12 @@ async function main() {
   mkdirSync(dirname(options.output), { recursive: true })
   writeFileSync(options.output, `${JSON.stringify(attestation, null, 2)}\n`)
   console.log(`Supabase authority: ${attestation.result}. Attestation: ${options.output}`)
+  for (const [check, result] of Object.entries(attestation.checks)) {
+    console.log(`Authority check ${check}: ${result}`)
+  }
+  for (const { id, result } of manualEvidence) {
+    console.log(`Manual evidence ${id}: ${result}`)
+  }
   if (attestation.result !== 'passed') process.exitCode = 1
 }
 

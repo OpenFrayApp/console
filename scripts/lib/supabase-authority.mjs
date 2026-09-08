@@ -122,12 +122,14 @@ export function compareManualEvidence(expectations, evidence) {
 
 /** Build the immutable, privacy-safe deployment attestation for AC-1. */
 export function buildDatabaseAttestation(input) {
-  const passed =
-    input.freshReset === 'passed' &&
-    input.generatedTypes === 'passed' &&
-    input.migrationHead === input.expectedMigrationHead &&
-    input.schema === 'passed' &&
-    input.configuration === 'passed'
+  const checks = {
+    freshReset: input.freshReset,
+    generatedTypes: input.generatedTypes,
+    migrationLineage: input.migrationHead === input.expectedMigrationHead ? 'passed' : 'failed',
+    schema: input.schema,
+    configuration: input.configuration,
+  }
+  const passed = Object.values(checks).every((result) => result === 'passed')
 
   return {
     version: 1,
@@ -141,7 +143,8 @@ export function buildDatabaseAttestation(input) {
       head: input.migrationHead,
       schemaHash: input.schemaHash,
       lineageHash: input.lineageHash,
-      result: input.schema,
+      result:
+        checks.migrationLineage === 'passed' && checks.schema === 'passed' ? 'passed' : 'failed',
       files: input.lineage.map(({ file, hash }) => ({ file: basename(file), hash })),
     },
     configuration: {
@@ -155,6 +158,7 @@ export function buildDatabaseAttestation(input) {
       result: input.generatedTypes,
     },
     freshReset: input.freshReset,
+    checks,
     result: passed ? 'passed' : 'failed',
     workflow: input.workflow,
     approver: input.approver,

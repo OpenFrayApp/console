@@ -101,7 +101,15 @@ function main() {
     const queryArgs =
       options.environment === 'local'
         ? ['db', 'query', '--local', '--file', hostileQueryPath]
-        : ['db', 'query', '--project-ref', options.projectRef, '--file', hostileQueryPath]
+        : [
+            'db',
+            'query',
+            '--linked',
+            '--project-ref',
+            options.projectRef,
+            '--file',
+            hostileQueryPath,
+          ]
     run('supabase', queryArgs)
     boundary = {
       ...boundary,

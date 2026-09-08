@@ -107,6 +107,15 @@ describe('Supabase authority evidence', () => {
     expect(authorityVerifier).toContain("dumpSchema(['--local'], true)")
   })
 
+  it('retains diagnostic attestations when local or hosted verification fails', () => {
+    const uploads = authorityWorkflow.match(
+      /- uses: actions\/upload-artifact@[^\n]+\n[\s\S]*?(?=\n\s{2}[a-z]+:|$)/g,
+    )
+
+    expect(uploads).toHaveLength(2)
+    for (const upload of uploads ?? []) expect(upload).toContain('if: ${{ !cancelled() }}')
+  })
+
   it('links the protected project before pushing through the IPv4 pooler', () => {
     const linkStep = authorityWorkflow.match(
       /- name: Link the protected database target\n([\s\S]*?)(?=\n\s{6}- name:)/,
@@ -147,6 +156,14 @@ describe('Supabase authority evidence', () => {
 
     expect(attestation.result).toBe('failed')
     expect(attestation.migration.head).toBe('missing')
+    expect(attestation.migration.result).toBe('failed')
+    expect(attestation.checks).toEqual({
+      freshReset: 'passed',
+      generatedTypes: 'passed',
+      migrationLineage: 'failed',
+      schema: 'passed',
+      configuration: 'failed',
+    })
     expect(attestation).not.toHaveProperty('credentials')
   })
 })
