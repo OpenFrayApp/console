@@ -36,6 +36,12 @@ npm run db:types
 
 Commit the migration and generated types together. `npm run db:verify` fails when they drift.
 
+## Automatic RLS for new tables
+
+The tracked `ensure_rls` event trigger enables RLS on new public tables, including partitions, `CREATE TABLE AS`, and `SELECT INTO`. Its `public.rls_auto_enable()` function uses the fixed `pg_catalog` search path. Only the function owner retains execution permission. If enabling RLS fails, table creation fails too.
+
+The forward migration adopts the existing hosted trigger without changing existing table data or policies. The boundary suite verifies its configuration, restricted grants, and behavior. Other application security-definer functions still require the fixed `public` search path.
+
 ## Adopt the hosted baseline
 
 The hosted project predates the tracked lineage. Baseline adoption is a one-time operation.

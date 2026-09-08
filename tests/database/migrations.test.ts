@@ -114,6 +114,27 @@ describe('the tracked migration lineage', () => {
     ])
   })
 
+  it('automatically enables RLS on newly created public tables without exposing the trigger', async () => {
+    await asOwner()
+    try {
+      await db.exec('create table public.rls_probe (id integer)')
+      expect(
+        await value<boolean>(
+          `select relrowsecurity from pg_class where oid = 'public.rls_probe'::regclass`,
+        ),
+      ).toBe(true)
+      for (const role of ['anon', 'authenticated', 'service_role']) {
+        expect(
+          await value<boolean>(
+            `select has_function_privilege('${role}', 'public.rls_auto_enable()', 'execute')`,
+          ),
+        ).toBe(false)
+      }
+    } finally {
+      await db.exec('drop table if exists public.rls_probe')
+    }
+  })
+
   it('enables RLS on every application table', async () => {
     expect(
       await value<number>(`
@@ -195,7 +216,9 @@ describe('the tracked migration lineage', () => {
 
     expect(result.rows.length).toBeGreaterThan(10)
     for (const routine of result.rows) {
-      expect(routine.settings).toContain('search_path=public')
+      expect(routine.settings).toEqual([
+        routine.name === 'rls_auto_enable' ? 'search_path=pg_catalog' : 'search_path=public',
+      ])
     }
 
     const grants = await db.query<{ signature: string; grantee: string }>(`
@@ -585,11 +608,110 @@ describe('the tracked migration lineage', () => {
   })
 })
 
+describe('automatic RLS adoption', () => {
+  it('rejects a disabled, exposed, misconfigured, or ineffective automatic RLS trigger', async () => {
+    const isolated = await new PGlite()
+    try {
+      await isolated.exec(SUPABASE_STUB)
+      for (const migration of migrationFiles) {
+        await isolated.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+      }
+      const proof = readFileSync(here('../../supabase/tests/database-boundary.sql'), 'utf8')
+      await expect(isolated.exec(proof)).resolves.toBeDefined()
+      for (const [change, failure] of [
+        [
+          'alter event trigger ensure_rls disable',
+          /automatic public-table RLS must remain enabled/,
+        ],
+        [
+          'grant execute on function public.rls_auto_enable() to authenticated',
+          /only the owner may execute/,
+        ],
+        [
+          'alter function public.rls_auto_enable() set search_path = public',
+          /must fix its search path/,
+        ],
+        [
+          `create or replace function public.rls_auto_enable() returns event_trigger
+          language plpgsql security definer set search_path = pg_catalog
+          as $fn$ begin return; end; $fn$`,
+          /did not receive automatic RLS/,
+        ],
+      ] as const) {
+        await isolated.exec('begin')
+        try {
+          await isolated.exec(change)
+          await expect(isolated.exec(proof)).rejects.toThrow(failure)
+        } finally {
+          await isolated.exec('rollback')
+        }
+      }
+    } finally {
+      await isolated.close()
+    }
+  })
+
+  it('adopts the hosted trigger without losing data or exposing non-public tables', async () => {
+    const hosted = await new PGlite()
+    try {
+      await hosted.exec(SUPABASE_STUB)
+      await hosted.exec(`
+        create table public.existing_table (id integer);
+        insert into public.existing_table values (42);
+        create function public.rls_auto_enable() returns event_trigger
+          language plpgsql security definer set search_path = pg_catalog
+          as $fn$ begin return; end; $fn$;
+        grant execute on function public.rls_auto_enable() to anon, authenticated, service_role;
+        create event trigger ensure_rls on ddl_command_end
+          when tag in ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
+          execute function public.rls_auto_enable();
+      `)
+      await hosted.exec(
+        readFileSync(`${migrationsDirectory}/20260908000000_automatic_table_rls.sql`, 'utf8'),
+      )
+      await hosted.exec(`
+        create table public.new_table (id integer);
+        create table public.copied_table as select 1 as id;
+        select 1 as id into public.selected_table;
+        create table public.partitioned_table (id integer) partition by range (id);
+        create table public.child_table partition of public.partitioned_table for values from (0) to (10);
+        create schema private_probe;
+        create table private_probe.unrelated_table (id integer);
+      `)
+      const tables = await hosted.query<{ name: string; rls: boolean }>(`
+        select c.relname as name, c.relrowsecurity as rls
+        from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname in ('public', 'private_probe') and c.relkind in ('r', 'p')
+        order by c.relname
+      `)
+      expect(tables.rows).toEqual([
+        { name: 'child_table', rls: true },
+        { name: 'copied_table', rls: true },
+        { name: 'existing_table', rls: false },
+        { name: 'new_table', rls: true },
+        { name: 'partitioned_table', rls: true },
+        { name: 'selected_table', rls: true },
+        { name: 'unrelated_table', rls: false },
+      ])
+      expect((await hosted.query('select id from existing_table')).rows).toEqual([{ id: 42 }])
+      const grants = await hosted.query(`
+        select acl.grantee from pg_proc p
+        cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+        where p.oid = 'public.rls_auto_enable()'::regprocedure and acl.grantee <> p.proowner
+      `)
+      expect(grants.rows).toEqual([])
+    } finally {
+      await hosted.close()
+    }
+  })
+})
+
 describe('forward revision migration', () => {
   it('checkpoints every existing live cloud copy as revision zero', async () => {
     const recovery = await new PGlite()
     await recovery.exec(SUPABASE_STUB)
-    for (const migration of migrationFiles.slice(0, -1)) {
+    const revisionMigration = '20260901000900_revisioned_encounters.sql'
+    for (const migration of migrationFiles.filter((file) => file < revisionMigration)) {
       await recovery.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
     }
     const owner = '11111111-1111-1111-1111-111111111117'
@@ -604,7 +726,7 @@ describe('forward revision migration', () => {
           '2026-08-31T12:00:00.000Z'
         );
     `)
-    await recovery.exec(readFileSync(`${migrationsDirectory}/${migrationFiles.at(-1)}`, 'utf8'))
+    await recovery.exec(readFileSync(`${migrationsDirectory}/${revisionMigration}`, 'utf8'))
 
     const result = await recovery.query<{
       revision: number

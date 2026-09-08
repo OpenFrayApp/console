@@ -56,9 +56,41 @@ begin
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.prosecdef
-      and p.proconfig is distinct from array['search_path=public']::text[]
+      and p.proconfig is distinct from case
+        when p.oid = to_regprocedure('public.rls_auto_enable()')
+          and p.prorettype = 'event_trigger'::regtype
+        then array['search_path=pg_catalog']::text[]
+        else array['search_path=public']::text[]
+      end
   ) then raise exception 'CB-1: every public security-definer function must fix its search path';
   end if;
+
+  if not exists (
+    select 1 from pg_event_trigger e
+    join pg_proc p on p.oid = e.evtfoid
+    where e.evtname = 'ensure_rls' and e.evtevent = 'ddl_command_end'
+      and e.evtenabled = 'O'
+      and e.evttags @> array['CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO']::text[]
+      and cardinality(e.evttags) = 3
+      and p.oid = to_regprocedure('public.rls_auto_enable()')
+      and p.prosecdef and p.prorettype = 'event_trigger'::regtype
+      and p.proconfig = array['search_path=pg_catalog']::text[]
+  ) then raise exception 'CB-1: automatic public-table RLS must remain enabled';
+  end if;
+
+  if exists (
+    select 1 from pg_proc p
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+    where p.oid = to_regprocedure('public.rls_auto_enable()')
+      and acl.grantee <> p.proowner
+  ) then raise exception 'CB-1: only the owner may execute the automatic RLS function';
+  end if;
+
+  create table public.cb1_rls_probe (id integer);
+  if not (select relrowsecurity from pg_class where oid = 'public.cb1_rls_probe'::regclass) then
+    raise exception 'CB-1: a new public table did not receive automatic RLS';
+  end if;
+  drop table public.cb1_rls_probe;
 
   if exists (
     select 1
