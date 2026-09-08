@@ -42,6 +42,12 @@ The tracked `ensure_rls` event trigger enables RLS on new public tables, includi
 
 The forward migration adopts the existing hosted trigger without changing existing table data or policies. The boundary suite verifies its configuration, restricted grants, and behavior. Other application security-definer functions still require the fixed `public` search path.
 
+## Function execution grants
+
+The grant-reconciliation migration removes `PUBLIC`, `anon`, and `authenticated` execution from the named application security-definer functions, then restores the reviewed client allowlist. Internal helpers remain unavailable to client roles. Existing `service_role` grants are preserved; the automatic RLS function remains owner-only.
+
+Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. The migration leaves provider defaults and unrelated functions unchanged. Future function migrations must revoke explicit client grants before granting their intended callers. The regression test rebuilds the lineage with hosted-style defaults and runs the unchanged hostile suite.
+
 ## Adopt the hosted baseline
 
 The hosted project predates the tracked lineage. Baseline adoption is a one-time operation.

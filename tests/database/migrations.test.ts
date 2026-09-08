@@ -608,6 +608,26 @@ describe('the tracked migration lineage', () => {
   })
 })
 
+describe('hosted function grants', () => {
+  it('enforces the hostile boundary after migrations inherit explicit API-role execution', async () => {
+    const hosted = await new PGlite()
+    try {
+      await hosted.exec(SUPABASE_STUB)
+      await hosted.exec(`
+        alter default privileges in schema public
+          grant execute on functions to anon, authenticated, service_role;
+      `)
+      for (const migration of migrationFiles) {
+        await hosted.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+      }
+      const proof = readFileSync(here('../../supabase/tests/database-boundary.sql'), 'utf8')
+      await expect(hosted.exec(proof)).resolves.toBeDefined()
+    } finally {
+      await hosted.close()
+    }
+  })
+})
+
 describe('automatic RLS adoption', () => {
   it('rejects a disabled, exposed, misconfigured, or ineffective automatic RLS trigger', async () => {
     const isolated = await new PGlite()
