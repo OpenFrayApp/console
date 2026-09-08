@@ -84,6 +84,7 @@ if (args[0] === 'migration') {
     expect(attestation.result).toBe('passed')
     expect(attestation.migration.result).toBe('passed')
     expect(attestation.actors).toEqual(DATABASE_BOUNDARY_ACTORS)
+    expect(attestation.actors).toContain('service-role')
     expect(attestation.hostileSuiteHash).toBe('b'.repeat(64))
   })
 
@@ -147,6 +148,10 @@ if (args[0] === 'migration') {
       { ...evidence, environment: { kind: 'production', identity: expected.environmentIdentity } },
       { ...evidence, environment: { kind: 'staging', identity: 'wrongprojectrefxxxxx' } },
       { ...evidence, actors: DATABASE_BOUNDARY_ACTORS.slice(0, -1) },
+      {
+        ...evidence,
+        actors: DATABASE_BOUNDARY_ACTORS.filter((actor: string) => actor !== 'service-role'),
+      },
       { ...evidence, checks: { ...passedChecks, realtime: 'missing' } },
       {
         ...evidence,

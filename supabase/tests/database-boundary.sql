@@ -51,6 +51,71 @@ begin
   end if;
 
   if exists (
+    with expected(table_name, privilege_type, grantable) as (
+      values ('takedown_notices', 'DELETE', false)
+    ), actual as (
+      select c.relname::text, acl.privilege_type, acl.is_grantable
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      cross join lateral aclexplode(c.relacl) acl
+      where n.nspname = 'public' and c.relkind in ('r', 'p')
+        and acl.grantee = 'service_role'::regrole
+      union
+      select c.relname::text, privilege_type,
+        has_table_privilege('service_role', c.oid, privilege_type || ' WITH GRANT OPTION')
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']) privilege_type
+      where n.nspname = 'public' and c.relkind in ('r', 'p')
+        and has_table_privilege('service_role', c.oid, privilege_type)
+    )
+    (select * from actual except select * from expected)
+    union all
+    (select * from expected except select * from actual)
+  ) then raise exception 'CB-1: service-role table grants differ from the exact allowlist';
+  end if;
+
+  if exists (
+    with expected(table_name, column_name, privilege_type, grantable) as (
+      values
+        ('share_reports', 'id', 'SELECT', false),
+        ('share_reports', 'code', 'SELECT', false),
+        ('share_reports', 'reason', 'SELECT', false),
+        ('share_reports', 'resolution', 'SELECT', false),
+        ('share_reports', 'created_at', 'SELECT', false),
+        ('takedown_notices', 'id', 'SELECT', false)
+    ), actual as (
+      select c.relname::text, a.attname::text, privilege_type,
+        has_column_privilege('service_role', c.oid, a.attnum, privilege_type || ' WITH GRANT OPTION')
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
+      cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'REFERENCES']) privilege_type
+      where n.nspname = 'public' and c.relkind in ('r', 'p')
+        and has_column_privilege('service_role', c.oid, a.attnum, privilege_type)
+    )
+    (select * from actual except select * from expected)
+    union all
+    (select * from expected except select * from actual)
+  ) then raise exception 'CB-1: effective service-role column grants differ from the exact allowlist';
+  end if;
+
+  if exists (
+    select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    cross join unnest(array['anon', 'authenticated', 'service_role']) actor
+    where n.nspname = 'public' and c.relkind = 'S'
+      and has_sequence_privilege(actor, c.oid, 'SELECT,UPDATE,USAGE')
+  ) then raise exception 'CB-1: API roles must have no application sequence access';
+  end if;
+
+  if exists (
+    select 1 from pg_default_acl d
+    cross join lateral aclexplode(d.defaclacl) acl
+    where d.defaclrole = 'postgres'::regrole
+      and d.defaclnamespace = 'public'::regnamespace
+      and d.defaclobjtype in ('r', 'S', 'f')
+      and acl.grantee in ('anon'::regrole, 'authenticated'::regrole, 'service_role'::regrole)
+  ) then raise exception 'CB-1: postgres public default privileges must not grant API roles access';
+  end if;
+
+  if exists (
     select 1
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
@@ -146,7 +211,7 @@ begin
       where n.nspname = 'public'
         and p.prosecdef
         and acl.privilege_type = 'EXECUTE'
-        and r.rolname in ('anon', 'authenticated')
+        and r.rolname in ('anon', 'authenticated', 'service_role')
     )
     (select * from actual except select * from expected)
     union all
@@ -179,6 +244,26 @@ begin
       )
   ) then raise exception 'CB-1: owner rows must not leave through Realtime database-change channels';
   end if;
+
+  -- Synthetic mail fixtures must not enqueue hosted webhook requests.
+  execute 'set local session_replication_role = replica';
+  insert into share_reports (id, code, reason, created_at)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'cb1worker', 'spam', '2026-01-01');
+  insert into takedown_notices (id, code, to_address)
+    values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'cb1worker', 'worker@example.test');
+  execute 'set local session_replication_role = origin';
+  execute 'set local role service_role';
+  if not exists (
+    select id from share_reports where code = 'cb1worker' and reason = 'spam'
+      and resolution is null and created_at < '2026-01-02' limit 1
+  ) then raise exception 'CB-1: report worker must read earlier report IDs';
+  end if;
+  delete from takedown_notices where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'CB-1: report worker must delete the sent notice';
+  end if;
+  execute 'reset role';
+  delete from share_reports where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   execute 'set local role anon';
   perform share('missing-cb1-share');

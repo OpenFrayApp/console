@@ -25,7 +25,7 @@ Run the hostile database boundary suite against another fresh reset:
 npm run db:boundary
 ```
 
-The suite exercises owner, other-tenant, anonymous, viewer, stale-writer, and restricted-function actors. It verifies Row-Level Security, grants, privileged functions, Realtime database-change exposure, and account deletion. The command writes `.artifacts/supabase/database-boundary-attestation.json`.
+The suite exercises owner, other-tenant, anonymous, viewer, stale-writer, restricted-function, and service-role actors. It verifies Row-Level Security, grants, privileged functions, Realtime database-change exposure, and account deletion. The command writes `.artifacts/supabase/database-boundary-attestation.json`.
 
 Regenerate types only after a reviewed migration changes the public schema:
 
@@ -44,9 +44,26 @@ The forward migration adopts the existing hosted trigger without changing existi
 
 ## Function execution grants
 
-The grant-reconciliation migration removes `PUBLIC`, `anon`, and `authenticated` execution from the named application security-definer functions, then restores the reviewed client allowlist. Internal helpers remain unavailable to client roles. Existing `service_role` grants are preserved; the automatic RLS function remains owner-only.
+The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. Application functions grant no execution to `service_role`; the automatic RLS function remains owner-only.
 
-Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. The migration leaves provider defaults and unrelated functions unchanged. Future function migrations must revoke explicit client grants before granting their intended callers. The regression test rebuilds the lineage with hosted-style defaults and runs the unchanged hostile suite.
+Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. Every future function migration must revoke `PUBLIC` and explicit API-role grants before granting its intended callers.
+
+## Public privilege contract
+
+Migration `20260908000200_public_privilege_contract.sql` limits the report worker’s `service_role` access to these operations:
+
+- Read `id`, `code`, `reason`, `resolution`, and `created_at` from `share_reports` to check earlier reports.
+- Read `id` from `takedown_notices` and delete the sent notice identified by its webhook payload.
+
+Reporter messages and addresses remain outside these read grants. No application sequence access is granted to `anon`, `authenticated`, or `service_role`. The admin browser continues using capability-gated authenticated functions. Database backups use their separate database connection.
+
+The migration removes API-role default grants for tables, sequences, and functions created by `postgres` in `public`. Each creating migration must grant its required access explicitly. PostgreSQL’s global `PUBLIC` function-execution default remains unchanged; each function migration must still revoke it on the function.
+
+Only named application objects and `postgres` defaults in `public` are reconciled. Other schemas, other creating roles, unrelated objects, ownership, and existing client grants are unchanged. An unexpected remaining grant blocks verification instead of being hidden by schema normalization.
+
+The boundary suite checks the exact service-role table and column grants, sequence denial, and public defaults. It also runs the report worker’s two SQL operations with synthetic fixtures and suppressed webhook triggers. Local integration tests reproduce both local and hosted-style defaults and reject injected privilege drift.
+
+Before hosted application, review any additional service-role consumers and authorize the migration. Verify column-level access through PostgREST and refresh protected staging evidence before promotion.
 
 ## Adopt the hosted baseline
 

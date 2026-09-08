@@ -11,6 +11,7 @@ export const DATABASE_BOUNDARY_ACTORS = [
   'stale-writer',
   'second-writer',
   'restricted-function',
+  'service-role',
 ]
 export const DATABASE_BOUNDARY_CHECKS = [
   'rls',

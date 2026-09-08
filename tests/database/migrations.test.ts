@@ -34,7 +34,7 @@ const SUPABASE_STUB = `
       create role authenticated;
     end if;
     if not exists (select 1 from pg_roles where rolname = 'service_role') then
-      create role service_role;
+      create role service_role bypassrls;
     end if;
   end $do$;
   grant usage on schema public to anon, authenticated, service_role;
@@ -605,6 +605,199 @@ describe('the tracked migration lineage', () => {
         `select count(*)::int from live_view_sessions where owner_id = '${owner}'`,
       ),
     ).toBe(0)
+  })
+})
+
+describe('report-worker privileges', () => {
+  it('fails the boundary proof when backend privileges or public defaults drift', async () => {
+    const isolated = await new PGlite()
+    try {
+      await isolated.exec(SUPABASE_STUB)
+      for (const migration of migrationFiles) {
+        await isolated.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+      }
+      const proof = readFileSync(here('../../supabase/tests/database-boundary.sql'), 'utf8')
+      await expect(isolated.exec(proof)).resolves.toBeDefined()
+      for (const [change, failure] of [
+        ['alter role service_role nobypassrls', /report worker/],
+        ['grant delete on public.encounters to public', /service-role/],
+        ['grant select on public.encounters to service_role', /service-role/],
+        ['grant select (message) on public.share_reports to service_role', /service-role/],
+        [
+          'grant select (id) on public.share_reports to service_role with grant option',
+          /service-role/,
+        ],
+        ['revoke select (id) on public.share_reports from service_role', /service-role/],
+        ['grant usage on sequence public.audit_log_id_seq to anon', /sequence/],
+        ['grant execute on function public.may(text) to service_role', /function grants/],
+        [
+          'alter default privileges for role postgres in schema public grant select on tables to anon',
+          /default privileges/,
+        ],
+        [
+          'alter default privileges for role postgres in schema public grant usage on sequences to service_role',
+          /default privileges/,
+        ],
+        [
+          'alter default privileges for role postgres in schema public grant execute on functions to authenticated',
+          /default privileges/,
+        ],
+      ] as const) {
+        await isolated.exec('begin')
+        try {
+          await isolated.exec(change)
+          await expect(isolated.exec(proof), change).rejects.toThrow(failure)
+        } finally {
+          await isolated.exec('rollback')
+        }
+      }
+    } finally {
+      await isolated.close()
+    }
+  })
+
+  it('preserves other schemas, creating roles, and unrelated objects when reapplied', async () => {
+    await asOwner()
+    await db.exec('begin')
+    try {
+      await db.exec(`
+        create role provider_fixture;
+        create schema provider_fixture;
+        alter default privileges for role provider_fixture in schema public
+          grant all on tables to service_role;
+        alter default privileges for role postgres in schema provider_fixture
+          grant all on tables to service_role;
+        create table provider_fixture.private_table (id integer);
+        create table public.unrelated_table (id integer);
+        grant select on public.unrelated_table to service_role;
+        create function public.unrelated_function() returns integer language sql as 'select 1';
+        grant execute on function public.unrelated_function() to service_role;
+      `)
+      const catalog = `
+        select 'default' as kind, defaclrole::regrole::text || ':' || defaclnamespace::regnamespace::text as name,
+          defaclacl::text as acl from pg_default_acl
+          where defaclrole = 'provider_fixture'::regrole or defaclnamespace = 'provider_fixture'::regnamespace
+        union all
+        select 'table', oid::regclass::text, relacl::text from pg_class
+          where oid in ('provider_fixture.private_table'::regclass, 'public.unrelated_table'::regclass)
+        union all
+        select 'function', oid::regprocedure::text, proacl::text from pg_proc
+          where oid = 'public.unrelated_function()'::regprocedure
+        order by kind, name
+      `
+      const before = await db.query(catalog)
+      await db.exec(
+        readFileSync(`${migrationsDirectory}/20260908000200_public_privilege_contract.sql`, 'utf8'),
+      )
+      expect((await db.query(catalog)).rows).toEqual(before.rows)
+    } finally {
+      await db.exec('rollback')
+    }
+  })
+
+  it.each(['local', 'hosted'])(
+    'denies unrelated service-role operations after %s defaults',
+    async (baseline) => {
+      const isolated = await new PGlite()
+      try {
+        await isolated.exec(SUPABASE_STUB)
+        await isolated.exec(`
+        alter default privileges for role postgres in schema public
+          grant all on tables to anon, authenticated, service_role;
+        alter default privileges for role postgres in schema public
+          grant all on sequences to anon, authenticated, service_role;
+        alter default privileges for role postgres in schema public
+          grant execute on functions to anon, authenticated, service_role;
+      `)
+        if (baseline === 'local') {
+          await isolated.exec(`
+          alter default privileges for role postgres in schema public
+            revoke select, insert, update, delete on tables from anon, authenticated, service_role;
+          alter default privileges for role postgres in schema public
+            revoke select, usage on sequences from anon, authenticated, service_role;
+          alter default privileges for role postgres in schema public
+            revoke execute on functions from anon, authenticated, service_role;
+        `)
+        }
+        for (const migration of migrationFiles) {
+          await isolated.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+        }
+        await isolated.exec('set role service_role')
+        for (const statement of [
+          'select message, reply_to from share_reports',
+          'select to_address from takedown_notices',
+          'select state from encounters',
+          "insert into share_reports (code, reason) values ('unwanted', 'spam')",
+          "update share_reports set resolution = 'dismissed'",
+          'delete from share_reports',
+          'truncate share_reports',
+          "select nextval('audit_log_id_seq')",
+          "select may('reports.read')",
+        ]) {
+          await expect(isolated.exec(statement), statement).rejects.toThrow(/permission denied/)
+        }
+        await isolated.exec('reset role')
+        await expect(
+          isolated.exec(readFileSync(here('../../supabase/tests/database-boundary.sql'), 'utf8')),
+        ).resolves.toBeDefined()
+        await isolated.exec(`
+        create table public.future_table (id integer);
+        create sequence public.future_sequence;
+        create function public.future_function() returns integer language sql as 'select 1';
+        revoke execute on function public.future_function() from public;
+      `)
+        for (const role of ['anon', 'authenticated', 'service_role']) {
+          await isolated.exec(`set role ${role}`)
+          for (const statement of [
+            'select * from public.future_table',
+            'truncate public.future_table',
+            "select nextval('public.future_sequence')",
+            'select public.future_function()',
+          ]) {
+            await expect(isolated.exec(statement), `${role}: ${statement}`).rejects.toThrow(
+              /permission denied/,
+            )
+          }
+          await isolated.exec('reset role')
+        }
+      } finally {
+        await isolated.close()
+      }
+    },
+  )
+
+  it('lets the service role check earlier reports and delete a sent notice', async () => {
+    await asOwner()
+    await db.exec('begin')
+    try {
+      await db.exec(`
+        insert into share_reports (id, code, reason, created_at)
+          values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'worker-test', 'spam', '2026-01-01');
+        insert into takedown_notices (id, code, to_address)
+          values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'worker-test', 'fixture@example.test');
+        set local role service_role;
+      `)
+      expect(
+        (
+          await db.query(`
+          select id from share_reports where code = 'worker-test' and reason = 'spam'
+            and resolution is null and created_at < '2026-01-02' limit 1
+        `)
+        ).rows,
+      ).toEqual([{ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }])
+      await db.exec(
+        `delete from takedown_notices where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'`,
+      )
+      expect(
+        (
+          await db.query(
+            `select id from takedown_notices where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'`,
+          )
+        ).rows,
+      ).toEqual([])
+    } finally {
+      await db.exec('rollback')
+    }
   })
 })
 
