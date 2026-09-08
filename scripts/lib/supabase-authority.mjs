@@ -51,7 +51,10 @@ export function canonicalGeneratedTypes(value) {
 /** Normalize a public-schema dump while excluding environment-owned webhook triggers. */
 export function canonicalSchemaDump(value) {
   return value
-    .replace(/^\s*CREATE TRIGGER "(?:share-reports|takedown-notices)"[^\n]*\n/gm, '')
+    .replace(
+      /^\s*CREATE (?:OR REPLACE )?TRIGGER "(?:share-reports|takedown-notices)"[^\n]*\n/gm,
+      '',
+    )
     .replace(/^\s*--.*$/gm, '')
     .replace(/^\s*\\(?:un)?restrict.*$/gm, '')
     .replace(/\s+/g, ' ')

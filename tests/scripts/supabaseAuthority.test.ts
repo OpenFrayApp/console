@@ -62,6 +62,16 @@ describe('Supabase authority evidence', () => {
     expect(canonicalSchemaDump(dump)).toBe('CREATE TABLE "public"."shares" ("code" text);')
   })
 
+  it('strips both CLI webhook trigger forms while retaining unrelated triggers and grants', () => {
+    const retained = 'GRANT SELECT ON public.shares TO service_role;'
+    const unrelated =
+      'CREATE OR REPLACE TRIGGER "other-hook" AFTER INSERT ON public.shares EXECUTE FUNCTION hook();'
+    for (const create of ['CREATE TRIGGER', 'CREATE OR REPLACE TRIGGER']) {
+      const dump = `${retained}\n${create} "share-reports" AFTER INSERT ON public.share_reports EXECUTE FUNCTION hook('MUST_NOT_APPEAR');\n${create} "takedown-notices" AFTER INSERT ON public.takedown_notices EXECUTE FUNCTION hook('MUST_NOT_APPEAR');\n${unrelated}\n`
+      expect(canonicalSchemaDump(dump)).toBe(`${retained} ${unrelated}`)
+    }
+  })
+
   it('reports only expected non-secret hosted fields when configuration drifts', () => {
     const comparison = compareHostedConfig(
       { database: { ssl_enforced: true }, realtime: { private_only: false } },
