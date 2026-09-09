@@ -226,9 +226,56 @@ export class EncounterLifecycle {
       : Promise.resolve({ status: 'failed', reason: 'invalid-snapshot' })
   }
 
+  /** Write and read back the latest board before permitting an application reload. */
+  async checkpointForUpdate(): Promise<boolean> {
+    if (!this.latestSnapshot || this.pendingConflict) return false
+    const snapshot = this.latestSnapshot
+    const ownerId = this.ownerId
+    const identityGeneration = this.identityGeneration
+    const expected = encodeSession(snapshot)
+    if (expected.status !== 'ok') return false
+    const write = this.commit(snapshot)
+    const generation = this.commitGeneration
+    try {
+      if ((await write).status !== 'saved') return false
+      const recovered = ownerId
+        ? (await this.adapters.device.load(ownerId))?.snapshot
+        : this.adapters.session.load().snapshot
+      if (!recovered) return false
+      const actual = encodeSession(recovered)
+      return (
+        generation === this.commitGeneration &&
+        identityGeneration === this.identityGeneration &&
+        !this.pendingConflict &&
+        actual.status === 'ok' &&
+        actual.serialized === expected.serialized
+      )
+    } catch {
+      return false
+    }
+  }
+
   /** Return restart-safe recovery that began before identity or cloud reconciliation. */
   restore(): Promise<LifecycleRestore> {
     return this.restorePromise
+  }
+
+  /** Resume device recovery during an outage without treating its owner as authenticated. */
+  async resumeOffline(): Promise<LifecycleRestore> {
+    const generation = this.identityGeneration
+    const startup = await this.restore()
+    if (generation !== this.identityGeneration) {
+      return {
+        ownerId: this.ownerId,
+        snapshot: this.cloudIdentityExpired ? this.latestSnapshot : null,
+      }
+    }
+    if (!this.latestSnapshot) {
+      this.ownerId = startup.ownerId
+      this.latestSnapshot = startup.snapshot
+    }
+    this.expireIdentity()
+    return { ownerId: this.ownerId, snapshot: this.latestSnapshot }
   }
 
   /** Resolve the active identity, then reconcile its recovery copy with the cloud copy. */
@@ -274,7 +321,10 @@ export class EncounterLifecycle {
       (startup.ownerId === ownerId || deviceUnavailable ? startup.snapshot : null)
     const recoverySavedAt =
       device?.savedAt ?? (startup.ownerId === ownerId ? startup.savedAt : undefined)
-    const cloud = await this.adapters.cloud.load()
+    const cloud =
+      this.adapters.network && !this.adapters.network.online()
+        ? { status: 'failed' as const }
+        : await this.adapters.cloud.load()
     if (generation !== this.identityGeneration) {
       return { ownerId, snapshot: recovery }
     }

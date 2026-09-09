@@ -22,11 +22,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return
     let active = true
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return
-      setUser(data.session?.user ?? null)
-      setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!active) return
+        setUser(data.session?.user ?? null)
+        if (error) setIdentityExpired(true)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (!active) return
+        setIdentityExpired(true)
+        setLoading(false)
+      })
     // Fires on sign-in/out and token refresh, keeping `user` in sync across tabs.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       setIdentityExpired(event === 'SIGNED_OUT' && !explicitSignOut.current)

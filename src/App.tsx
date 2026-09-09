@@ -81,6 +81,7 @@ import type { EncounterTemplate } from './schema/encounterTemplate.ts'
 import { loadSrdCreatures } from './compendium/srd.ts'
 import { SaveFightButton, ShareEncounterButton } from './components/shell/EncounterActions.tsx'
 import { RecoveryStatus } from './components/shell/RecoveryStatus.tsx'
+import { ApplicationUpdate } from './components/shell/ApplicationUpdate.tsx'
 import { ReconciliationDialog } from './components/shell/ReconciliationDialog.tsx'
 import { downloadRecoveryCopy } from './state/recoveryDownload.ts'
 import {
@@ -474,9 +475,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   useEffect(() => {
     if (authLoading) return
     if (identityExpired) {
-      lifecycle.expireIdentity()
-      setBoardReady(true)
-      return
+      let active = true
+      void lifecycle.resumeOffline().then((result) => {
+        if (!active) return
+        if (result.snapshot) applyRecovery(result.snapshot)
+        setBoardReady(true)
+      })
+      return () => {
+        active = false
+      }
     }
     let active = true
     void lifecycle.identify(userId).then((result) => {
@@ -1693,6 +1700,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               />
             </div>
           </header>
+          <ApplicationUpdate
+            lifecycle={lifecycle}
+            ready={boardReady && !resolvingCopies}
+            onDownload={downloadRecovery}
+          />
 
           {settingsOpen && (
             <SettingsPanel

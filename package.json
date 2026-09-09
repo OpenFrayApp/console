@@ -24,6 +24,7 @@
     "validate:fixtures": "node scripts/validate-hardening-fixtures.mjs",
     "test": "vitest run && npm run test:browser",
     "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts",
+    "test:offline": "npm run typecheck && playwright install chromium && node scripts/verify-offline-shell.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {

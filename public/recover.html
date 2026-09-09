@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Nicola Mustone -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Repair the offline console</title>
+    <script src="/console/recover.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>Repair the offline console</h1>
+      <p>
+        Reconnect before repairing. This replaces the service worker and reopens the console. Device
+        recovery copies and retained static files stay on this browser.
+      </p>
+      <button id="repair" type="button">Repair offline setup</button>
+      <p id="result" role="status"></p>
+    </main>
+  </body>
+</html>

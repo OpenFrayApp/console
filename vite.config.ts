@@ -4,6 +4,7 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { offlineShell } from './scripts/offlineShell.ts'
 
 // https://vite.dev/config/ · https://vitest.dev/config/
 export default defineConfig({
@@ -11,7 +12,7 @@ export default defineConfig({
   // separate landing page. `base` makes Vite emit asset URLs under /console/, and
   // `import.meta.env.BASE_URL` (= '/console/') is the prefix for runtime fetches.
   base: '/console/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), offlineShell()],
   // Fixed so the site's dev server can proxy /console here (see site/astro.config.mjs),
   // and so the Supabase OAuth redirect allow-list has one dev URL to trust.
   server: { port: 5199, strictPort: true },

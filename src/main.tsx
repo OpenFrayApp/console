@@ -7,6 +7,9 @@ import './index.css'
 import { playerCodeFromPath } from './state/playerCode.ts'
 import { liveViewCapabilityFromHash } from './state/liveViewAuthority.ts'
 import { shareCodeFromPath } from './state/shareCode.ts'
+import { answerShellVersion } from './offline/client.ts'
+
+answerShellVersion()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Root element #root not found')

@@ -33,11 +33,11 @@ function session(email: string, metadata: Record<string, unknown> = {}): Session
 }
 
 /** Build a Supabase stub covering the auth calls and the delete-account RPC. */
-function makeAuthClient(initial: Session | null) {
+function makeAuthClient(initial: Session | null, initialError: AuthResponse['error'] = null) {
   const listeners: AuthListener[] = []
   const unsubscribe = vi.fn()
   const auth = {
-    getSession: vi.fn(async () => ({ data: { session: initial } })),
+    getSession: vi.fn(async () => ({ data: { session: initial }, error: initialError })),
     onAuthStateChange: vi.fn((listener: AuthListener) => {
       listeners.push(listener)
       return { data: { subscription: { unsubscribe } } }
@@ -147,6 +147,13 @@ describe('AuthProvider with Supabase configured', () => {
     expect(await screen.findByText('anonymous')).toBeInTheDocument()
     expect(latest.user).toBeNull()
     expect(latest.loading).toBe(false)
+  })
+
+  it('distinguishes an unavailable session from an explicit anonymous startup', async () => {
+    supa.client = makeAuthClient(null, { message: 'Network unavailable' }).client
+    renderProvider()
+    await screen.findByText('anonymous')
+    expect(latest.identityExpired).toBe(true)
   })
 
   it('marks an unexpected session loss as expired so the board can stay recovered', async () => {
