@@ -10,6 +10,25 @@ export function sha256(value) {
   return createHash('sha256').update(value).digest('hex')
 }
 
+/** Return CLI arguments for one credentialed hosted database URL. */
+export function hostedDatabaseArgs(databaseUrl) {
+  let parsed
+  try {
+    parsed = new URL(databaseUrl)
+  } catch {
+    throw new Error('SUPABASE_DB_URL must be a valid PostgreSQL URL.')
+  }
+  if (
+    !['postgres:', 'postgresql:'].includes(parsed.protocol) ||
+    !parsed.hostname ||
+    !parsed.username ||
+    !parsed.password
+  ) {
+    throw new Error('SUPABASE_DB_URL must be a credentialed PostgreSQL URL.')
+  }
+  return ['--db-url', databaseUrl]
+}
+
 /** Return the ordered migration files that define the database authority. */
 export function migrationLineage(directory) {
   const files = readdirSync(directory)

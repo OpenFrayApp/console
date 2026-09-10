@@ -11,7 +11,12 @@ import {
   DATABASE_BOUNDARY_ACTORS,
   DATABASE_BOUNDARY_CHECKS,
 } from './lib/database-boundary.mjs'
-import { migrationLineage, remoteMigrationVersions, sha256 } from './lib/supabase-authority.mjs'
+import {
+  hostedDatabaseArgs,
+  migrationLineage,
+  remoteMigrationVersions,
+  sha256,
+} from './lib/supabase-authority.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const migrationsDirectory = resolve(root, 'supabase/migrations')
@@ -76,7 +81,7 @@ function observedMigrations(options) {
   const args =
     options.environment === 'local'
       ? ['migration', 'list', '--local']
-      : ['migration', 'list', '--project-ref', options.projectRef]
+      : ['migration', 'list', ...hostedDatabaseArgs(process.env.SUPABASE_DB_URL)]
   return remoteMigrationVersions(run('supabase', args))
 }
 
@@ -104,9 +109,7 @@ function main() {
         : [
             'db',
             'query',
-            '--linked',
-            '--project-ref',
-            options.projectRef,
+            ...hostedDatabaseArgs(process.env.SUPABASE_DB_URL),
             '--file',
             hostileQueryPath,
           ]

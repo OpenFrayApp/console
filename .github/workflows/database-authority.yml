@@ -69,7 +69,7 @@ jobs:
       PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
       AUTHORIZED_STAGING_PROJECT_REF: ${{ vars.AUTHORIZED_STAGING_PROJECT_REF }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       DATABASE_APPROVER: ${{ vars.DATABASE_APPROVER }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -81,13 +81,14 @@ jobs:
         run: |
           [[ "$PROJECT_REF" =~ ^[a-z]{20}$ ]]
           [[ -n "$DATABASE_APPROVER" ]]
+          [[ -n "$SUPABASE_DB_URL" ]]
           if [[ "${{ inputs.environment }}" == "production" ]]; then
             [[ "$AUTHORIZED_STAGING_PROJECT_REF" =~ ^[a-z]{20}$ ]]
             [[ -n "${{ inputs.staging_attestation_run_id }}" ]]
           fi
       - run: supabase start
       - name: Verify the fresh lineage before deployment
-        run: env -u SUPABASE_DB_PASSWORD npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
+        run: env -u SUPABASE_DB_PASSWORD -u SUPABASE_DB_URL npm run db:verify -- --output .artifacts/supabase/pre-deploy-attestation.json
       - name: Download staging boundary evidence
         if: inputs.environment == 'production'
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
@@ -104,10 +105,8 @@ jobs:
             "$AUTHORIZED_STAGING_PROJECT_REF" \
             "$DATABASE_APPROVER" \
             "${{ github.workflow }}:${{ inputs.staging_attestation_run_id }}"
-      - name: Link the protected database target
-        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Apply forward migrations
-        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD"
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
       - name: Record manual provider evidence
         env:
           AUTH_OAUTH_EVIDENCE: ${{ vars.AUTH_OAUTH_EVIDENCE }}

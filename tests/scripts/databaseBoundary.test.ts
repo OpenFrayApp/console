@@ -20,7 +20,7 @@ const passedChecks = Object.fromEntries(
 )
 
 describe('database boundary evidence', () => {
-  it('runs the hosted proof with an explicit linked target and protected project reference', () => {
+  it('runs the hosted proof through the protected database URL', () => {
     const directory = mkdtempSync(join(tmpdir(), 'boundary-cli-'))
     try {
       const versions = readdirSync('supabase/migrations')
@@ -34,11 +34,11 @@ describe('database boundary evidence', () => {
 const args = process.argv.slice(2)
 if (args[0] === 'migration') {
   console.log(JSON.stringify({ migrations: ${JSON.stringify(versions)}.map(remote => ({ remote })) }))
-} else if (args[0] === 'db' && args[1] === 'query' && args.includes('--linked') &&
-  args[args.indexOf('--project-ref') + 1] === 'abcdefghijklmnopqrst') {
+} else if (args[0] === 'db' && args[1] === 'query' &&
+  args[args.indexOf('--db-url') + 1] === 'postgresql://user:secret@staging.example/test') {
   console.log('{}')
 } else {
-  console.error('Expected an explicitly linked hosted query')
+  console.error('Expected a protected database URL')
   process.exitCode = 1
 }
 `,
@@ -58,7 +58,14 @@ if (args[0] === 'migration') {
           '--output',
           output,
         ],
-        { encoding: 'utf8', env: { ...process.env, PATH: `${directory}:${process.env.PATH}` } },
+        {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: `${directory}:${process.env.PATH}`,
+            SUPABASE_DB_URL: 'postgresql://user:secret@staging.example/test',
+          },
+        },
       )
       expect(result.status, result.stderr).toBe(0)
       expect(JSON.parse(readFileSync(output, 'utf8')).result).toBe('passed')

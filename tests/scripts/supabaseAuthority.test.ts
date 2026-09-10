@@ -12,6 +12,7 @@ const {
   canonicalSchemaDump,
   compareHostedConfig,
   compareManualEvidence,
+  hostedDatabaseArgs,
   migrationLineage,
   remoteMigrationVersions,
   schemaHash,
@@ -106,13 +107,29 @@ describe('Supabase authority evidence', () => {
     ])
   })
 
+  it('accepts only credentialed PostgreSQL URLs for hosted database commands', () => {
+    expect(hostedDatabaseArgs('postgresql://user:secret@staging.example/postgres')).toEqual([
+      '--db-url',
+      'postgresql://user:secret@staging.example/postgres',
+    ])
+    for (const value of [
+      undefined,
+      '',
+      'https://staging.example',
+      'postgresql://staging.example',
+    ]) {
+      expect(() => hostedDatabaseArgs(value)).toThrow(/SUPABASE_DB_URL/)
+    }
+  })
+
   it('keeps hosted credentials out of fresh local verification', () => {
     const step = authorityWorkflow.match(
       /- name: Verify the fresh lineage before deployment\n([\s\S]*?)(?=\n\s{6}- name:)/,
     )?.[1]
 
-    expect(step).toContain('env -u SUPABASE_DB_PASSWORD npm run db:verify')
+    expect(step).toContain('env -u SUPABASE_DB_PASSWORD -u SUPABASE_DB_URL npm run db:verify')
     expect(authorityVerifier).toContain('delete environment.SUPABASE_DB_PASSWORD')
+    expect(authorityVerifier).toContain('delete environment.SUPABASE_DB_URL')
     expect(authorityVerifier).toContain("generateTypes(['--local'], true)")
     expect(authorityVerifier).toContain("dumpSchema(['--local'], true)")
   })
@@ -126,18 +143,14 @@ describe('Supabase authority evidence', () => {
     for (const upload of uploads ?? []) expect(upload).toContain('if: ${{ !cancelled() }}')
   })
 
-  it('links the protected project before pushing through the IPv4 pooler', () => {
-    const linkStep = authorityWorkflow.match(
-      /- name: Link the protected database target\n([\s\S]*?)(?=\n\s{6}- name:)/,
-    )?.[1]
+  it('uses the protected database URL without linking through the Management API', () => {
     const pushStep = authorityWorkflow.match(
       /- name: Apply forward migrations\n([\s\S]*?)(?=\n\s{6}- name:)/,
     )?.[1]
 
-    expect(linkStep).toContain('supabase link --project-ref "$PROJECT_REF"')
-    expect(linkStep).toContain('--password "$SUPABASE_DB_PASSWORD"')
-    expect(pushStep).toContain('supabase db push --linked')
-    expect(pushStep).not.toContain('--project-ref')
+    expect(authorityWorkflow).not.toContain('supabase link')
+    expect(pushStep).toContain('supabase db push --db-url "$SUPABASE_DB_URL"')
+    expect(authorityVerifier).toContain('hostedDatabaseArgs(process.env.SUPABASE_DB_URL)')
   })
 
   it('fails an attestation when any required authority result is missing', () => {

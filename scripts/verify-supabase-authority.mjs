@@ -13,6 +13,7 @@ import {
   canonicalSchemaDump,
   compareHostedConfig,
   compareManualEvidence,
+  hostedDatabaseArgs,
   migrationLineage,
   remoteMigrationVersions,
   schemaHash,
@@ -69,6 +70,7 @@ function run(command, args, environment = process.env) {
 function runLocal(command, args) {
   const environment = { ...process.env }
   delete environment.SUPABASE_DB_PASSWORD
+  delete environment.SUPABASE_DB_URL
   return run(command, args, environment)
 }
 
@@ -133,21 +135,17 @@ async function main() {
   let manualEvidence = []
 
   if (options.environment !== 'local') {
-    const migrationList = run('supabase', [
-      'migration',
-      'list',
-      '--project-ref',
-      options.projectRef,
-    ])
+    const hostedArgs = hostedDatabaseArgs(process.env.SUPABASE_DB_URL)
+    const migrationList = run('supabase', ['migration', 'list', ...hostedArgs])
     const remoteVersions = remoteMigrationVersions(migrationList)
     migrationHead = remoteVersions.at(-1) ?? 'missing'
     if (JSON.stringify(remoteVersions) !== JSON.stringify(expectedVersions))
       migrationHead = 'mismatch'
 
-    const remoteTypes = canonicalGeneratedTypes(generateTypes(['--project-id', options.projectRef]))
+    const remoteTypes = canonicalGeneratedTypes(generateTypes(hostedArgs))
     if (remoteTypes !== committedTypes) generatedTypesResult = 'failed'
 
-    deployedSchema = dumpSchema(['--project-ref', options.projectRef])
+    deployedSchema = dumpSchema(hostedArgs)
     if (deployedSchema !== localSchema) schemaResult = 'failed'
 
     const observed = await hostedConfiguration(options.projectRef)

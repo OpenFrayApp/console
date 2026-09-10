@@ -81,10 +81,10 @@ Never mark the cutover migration as applied unless its SQL ran successfully. A f
 
 ## Deploy and attest
 
-Set `SUPABASE_ACCESS_TOKEN`, then deploy migrations and verify the tracked hosted expectations:
+Set `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_URL`, then deploy migrations and verify the tracked hosted expectations:
 
 ```bash
-supabase db push --project-ref "$SUPABASE_PROJECT_REF"
+supabase db push --db-url "$SUPABASE_DB_URL"
 npm run db:verify -- \
   --environment staging \
   --project-ref "$SUPABASE_PROJECT_REF" \
@@ -93,7 +93,7 @@ npm run db:verify -- \
   --manual-evidence .artifacts/supabase/manual-evidence.json
 ```
 
-Use `production` for the production attestation. Configure `DATABASE_APPROVER` and `SUPABASE_PROJECT_REF` as protected environment variables in GitHub. Set `AUTHORIZED_STAGING_PROJECT_REF` on production to the staging project reference. The deployment workflow rejects dispatcher-supplied targets and records the trusted values after environment approval.
+Use `production` for the production attestation. Store the session-pooler connection string as the protected `SUPABASE_DB_URL` secret for each GitHub environment. Configure `DATABASE_APPROVER` and `SUPABASE_PROJECT_REF` as protected environment variables. Set `AUTHORIZED_STAGING_PROJECT_REF` on production to the staging project reference. The deployment workflow rejects dispatcher-supplied targets and records the trusted values after environment approval.
 
 Run the hostile suite only against authorized staging:
 
@@ -105,7 +105,7 @@ npm run db:boundary -- \
   --workflow database-deploy
 ```
 
-The boundary verifier refuses production targets. It checks the exact migration lineage before creating synthetic fixtures. All fixtures are removed in the same database statement. A failure rolls back that statement.
+The boundary verifier refuses production targets. It connects through the protected database URL and checks the exact migration lineage before creating synthetic fixtures. All fixtures are removed in the same database statement. A failure rolls back that statement.
 
 Run the staging workflow first. Supply its workflow run ID as `staging_attestation_run_id` when dispatching production. Production verifies the protected staging project, commit, migration lineage, hostile actors, individual checks, approver, workflow run, suite hash, and passing result before applying migrations.
 
