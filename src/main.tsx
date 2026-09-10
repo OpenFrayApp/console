@@ -31,7 +31,7 @@ const sharedCode = shareCodeFromPath(window.location.pathname, import.meta.env.B
 // On the two shared surfaces the path *is* the secret. A `/s/` or `/p/` address is unlisted,
 // and the whole of its privacy is the code in it; Fathom's automatic pageview would send
 // that code to a third party and leave it in a dashboard's list of pages, which is the one
-// place an unlisted link must not appear. That is the same reasoning the site's `_headers`
+// place an unlisted link must not appear. That is the same reasoning the deployment's `_headers`
 // gives for refusing to index them.
 //
 // So those two count as their prefix and nothing more. `data-auto="false"` stops the
