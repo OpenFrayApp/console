@@ -2,10 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Ability, Senses } from '../schema/primitives.ts'
-import { LIBRARIES } from './libraries.ts'
-
-/** Where a first-party library is published, so attribution links to the book itself. */
-const bookUrl = (id: string): string | undefined => LIBRARIES.find((l) => l.id === id)?.bookUrl
+import { LIBRARIES, type Library } from './libraries.ts'
 
 /** A sense range, stored in feet, printed the way a stat block does: whole miles as
  *  miles ("Tremorsense 1 mile"), everything else as feet. */
@@ -152,60 +149,32 @@ export interface SourceInfo {
   url?: string
 }
 
+const SOURCE_LICENSE: Record<string, string> = {
+  'srd-5.2': 'CC-BY-4.0',
+  'srd-5.1': 'CC-BY-4.0',
+  'kobold-press-tob': 'OGL-1.0a',
+  'kobold-press-tob2': 'OGL-1.0a',
+  'kobold-press-ccdx': 'OGL-1.0a',
+  'kobold-press-tob3': 'OGL-1.0a',
+  'openfray-brood-and-bloom': 'CC-BY-4.0',
+  'openfray-strong-waters': 'CC-BY-4.0',
+  'openfray-waking-garden': 'CC-BY-4.0',
+}
+
+/** Adapt a library label to the shorter wording used on a stat-block source line. */
+function statBlockSourceLabel(library: Library): string {
+  const withoutPublisher = library.label.replace(/ \(Kobold Press\)$/, '')
+  return library.id === 'kobold-press-tob' ? withoutPublisher.replace(/ 1$/, '') : withoutPublisher
+}
+
 /** Ruleset + license + link for a content source (see CREDITS.md for attribution). */
 export function sourceInfo(source: string): SourceInfo {
-  switch (source) {
-    case 'srd-5.2':
-      return {
-        ruleset: 'Basic Rules 2024 (SRD 5.2.1)',
-        license: 'CC-BY-4.0',
-      }
-    case 'srd-5.1':
-      return {
-        ruleset: 'Basic Rules 2014 (SRD 5.1)',
-        license: 'CC-BY-4.0',
-      }
-    case 'kobold-press-tob':
-      return {
-        ruleset: 'Tome of Beasts',
-        license: 'OGL-1.0a',
-      }
-    case 'kobold-press-tob2':
-      return {
-        ruleset: 'Tome of Beasts 2',
-        license: 'OGL-1.0a',
-      }
-    case 'kobold-press-ccdx':
-      return {
-        ruleset: 'Creature Codex',
-        license: 'OGL-1.0a',
-      }
-    case 'kobold-press-tob3':
-      return {
-        ruleset: 'Tome of Beasts 3',
-        license: 'OGL-1.0a',
-      }
-    case 'openfray-brood-and-bloom':
-      return {
-        ruleset: 'Brood & Bloom',
-        license: 'CC-BY-4.0',
-        url: bookUrl(source),
-      }
-    case 'openfray-strong-waters':
-      return {
-        ruleset: 'On Strong Waters and Potent Simples',
-        license: 'CC-BY-4.0',
-        url: bookUrl(source),
-      }
-    case 'openfray-waking-garden':
-      return {
-        ruleset: 'The Waking Garden',
-        license: 'CC-BY-4.0',
-        url: bookUrl(source),
-      }
-    case 'custom':
-      return { ruleset: 'Custom (you)' }
-    default:
-      return { ruleset: source }
+  const library = LIBRARIES.find(({ id }) => id === source)
+  if (!library) return { ruleset: source === 'custom' ? 'Custom (you)' : source }
+
+  return {
+    ruleset: statBlockSourceLabel(library),
+    license: SOURCE_LICENSE[source],
+    ...(library.bookUrl ? { url: library.bookUrl } : {}),
   }
 }

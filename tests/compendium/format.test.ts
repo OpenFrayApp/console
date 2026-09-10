@@ -9,11 +9,13 @@ import {
   legendaryPreamble,
   proficiencyBonus,
   signed,
+  sourceInfo,
   spellLevelLong,
   spellLevelOrdinal,
   spellLevelShort,
   titleCase,
 } from '../../src/compendium/format.ts'
+import { LIBRARIES } from '../../src/compendium/libraries.ts'
 
 describe('formatSenses', () => {
   it('lists each sense in feet, passive perception last', () => {
@@ -121,6 +123,34 @@ describe('capitalizeSegments', () => {
   it('passes through empty/undefined unchanged', () => {
     expect(capitalizeSegments(undefined)).toBeUndefined()
     expect(capitalizeSegments('')).toBe('')
+  })
+})
+
+describe('sourceInfo', () => {
+  it('reflects the display name registered for a library', () => {
+    const library = LIBRARIES.find(({ id }) => id === 'openfray-brood-and-bloom')!
+    const originalLabel = library.label
+
+    try {
+      library.label = 'The renamed library'
+      expect(sourceInfo(library.id).ruleset).toBe('The renamed library')
+    } finally {
+      library.label = originalLabel
+    }
+  })
+
+  it('keeps source-line formatting for the Tome of Beasts titles', () => {
+    expect(sourceInfo('kobold-press-tob').ruleset).toBe('Tome of Beasts')
+    expect(sourceInfo('kobold-press-tob2').ruleset).toBe('Tome of Beasts 2')
+    expect(sourceInfo('kobold-press-tob3').ruleset).toBe('Tome of Beasts 3')
+  })
+
+  it('states the license for every registered library without inferring it from its group', () => {
+    for (const library of LIBRARIES) {
+      expect(sourceInfo(library.id).license, library.id).toBeDefined()
+    }
+    expect(sourceInfo('srd-5.2').license).toBe('CC-BY-4.0')
+    expect(sourceInfo('kobold-press-tob').license).toBe('OGL-1.0a')
   })
 })
 
