@@ -48,9 +48,26 @@ The tracked migrations remove inherited execution grants from named application 
 
 Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. Every future function migration must revoke `PUBLIC` and explicit API-role grants before granting its intended callers.
 
+## Report ingress
+
+Migration `20260910000000_report_ingress_boundary.sql` removes client execution from `report_share()` and creates the `report_ingress` role. The role can execute only `accept_share_report()`. It cannot read or write report rows directly, use application sequences, or execute another application function.
+
+Create a separately signed JWT whose only database role claim is `report_ingress`. Store it in the Pages environment as `REPORT_INGRESS_TOKEN`. Do not use the service-role key for report insertion. Rotate the token through the provider’s reviewed signing workflow before its expiry.
+
+Configure these Pages values per environment:
+
+- `TURNSTILE_SECRET_KEY`: The secret paired with the console’s public site key.
+- `REPORT_FINGERPRINT_KEY`: A separate random HMAC key used to derive unlinkable quota keys from network addresses and report content.
+- `REPORT_ALLOWED_HOSTS`: A comma-separated list containing only the deployed hostnames allowed by the Turnstile widget.
+- `REPORT_INGRESS_TOKEN`: The restricted-role JWT.
+
+The Function verifies Turnstile, checks that the share is still published, and enforces request bounds before calling the database. The database repeats share and field checks inside the insertion transaction. It rejects duplicates for 24 hours, more than five reports per network per hour, more than 20 per network per day, and more than 10 per share per hour.
+
+Raw network addresses never enter the database. The Function stores keyed HMAC values for quota and duplicate comparisons. Notification webhooks run after insertion, so a mail failure leaves the accepted report in the moderation queue. Every provider request uses the database event identity as its idempotency key. Duplicate and quota rejections create no row and trigger no notification.
+
 ## Public privilege contract
 
-Migration `20260908000200_public_privilege_contract.sql` limits the report worker’s `service_role` access to these operations:
+Migration `20260908000200_public_privilege_contract.sql` limits the notification worker’s `service_role` access to these operations:
 
 - Read `id`, `code`, `reason`, `resolution`, and `created_at` from `share_reports` to check earlier reports.
 - Read `id` from `takedown_notices` and delete the sent notice identified by its webhook payload.
@@ -113,7 +130,7 @@ The authority verifier checks the fresh reset, exact remote migration lineage, n
 
 The verifier prints each authority check and manual-evidence result without printing provider values. Failed verification keeps its failing exit status. Unless canceled, the workflow uploads available attestations even after a failed step. Inspect the individual checks before retrying; a retained artifact does not mean verification passed.
 
-Set `AUTH_OAUTH_EVIDENCE`, `AUTH_REDIRECT_EVIDENCE`, and `REPORT_WEBHOOK_EVIDENCE` in each protected GitHub environment after reviewing those settings. Missing references fail verification. A successful backup does not prove these provider settings or the database boundary.
+Set `AUTH_OAUTH_EVIDENCE`, `AUTH_REDIRECT_EVIDENCE`, `REPORT_INGRESS_EVIDENCE`, and `REPORT_WEBHOOK_EVIDENCE` in each protected GitHub environment after reviewing those settings. Missing references fail verification. A successful backup does not prove these provider settings or the database boundary.
 
 Manual evidence uses the identifiers in `supabase/hosted-config.expected.json`:
 

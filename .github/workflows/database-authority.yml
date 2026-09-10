@@ -111,15 +111,18 @@ jobs:
         env:
           AUTH_OAUTH_EVIDENCE: ${{ vars.AUTH_OAUTH_EVIDENCE }}
           AUTH_REDIRECT_EVIDENCE: ${{ vars.AUTH_REDIRECT_EVIDENCE }}
+          REPORT_INGRESS_EVIDENCE: ${{ vars.REPORT_INGRESS_EVIDENCE }}
           REPORT_WEBHOOK_EVIDENCE: ${{ vars.REPORT_WEBHOOK_EVIDENCE }}
         run: |
           jq -n \
             --arg oauth "$AUTH_OAUTH_EVIDENCE" \
             --arg redirects "$AUTH_REDIRECT_EVIDENCE" \
+            --arg ingress "$REPORT_INGRESS_EVIDENCE" \
             --arg webhooks "$REPORT_WEBHOOK_EVIDENCE" \
             '{checks: [
               {id: "auth-oauth-only", result: "passed", evidence: $oauth},
               {id: "auth-redirect-allowlist", result: "passed", evidence: $redirects},
+              {id: "report-ingress", result: "passed", evidence: $ingress},
               {id: "report-webhooks", result: "passed", evidence: $webhooks}
             ]}' > .artifacts/supabase/manual-evidence.json
       - name: Verify and attest the hosted deployment

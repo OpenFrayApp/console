@@ -19,6 +19,27 @@ vi.mock('../../../src/state/reports.ts', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../src/lib/turnstile.ts', () => ({ turnstileConfigured: true }))
+
+vi.mock('../../../src/components/share/TurnstileChallenge.tsx', () => ({
+  TurnstileChallenge: ({
+    onToken,
+    onUnavailable,
+  }: {
+    onToken: (token: string) => void
+    onUnavailable: () => void
+  }) => (
+    <>
+      <button type="button" onClick={() => onToken('challenge-token')}>
+        Complete verification
+      </button>
+      <button type="button" onClick={onUnavailable}>
+        Fail verification
+      </button>
+    </>
+  ),
+}))
+
 const { ReportShareDialog } = await import('../../../src/components/share/ReportShareDialog.tsx')
 
 afterEach(() => {
@@ -27,6 +48,12 @@ afterEach(() => {
   report.calls = []
   delete (window as { fathom?: unknown }).fathom
 })
+
+/** Complete the challenge and submit the report form. */
+function sendReport() {
+  fireEvent.click(screen.getByRole('button', { name: 'Complete verification' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+}
 
 /** Stand in for Fathom, which the real `track` calls through when the script has loaded. */
 function countEvents() {
@@ -42,12 +69,12 @@ describe('ReportShareDialog', () => {
     report.result = 'failed'
     const trackEvent = countEvents()
     render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
     await waitFor(() => expect(screen.getByText(/Couldn’t send/)).toBeInTheDocument())
     expect(trackEvent).not.toHaveBeenCalled()
 
     report.result = 'ok'
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
     await waitFor(() => expect(trackEvent).toHaveBeenCalledWith('Encounter reported'))
   })
 
@@ -57,7 +84,7 @@ describe('ReportShareDialog', () => {
     fireEvent.change(screen.getByLabelText('Anything to add (optional)'), {
       target: { value: '  Claims to be someone else.  ' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
 
     await waitFor(() =>
       expect(report.calls[0]).toEqual([
@@ -65,6 +92,7 @@ describe('ReportShareDialog', () => {
         'impersonation',
         'Claims to be someone else.',
         '',
+        'challenge-token',
       ]),
     )
     await screen.findByText(/somebody will read it/)
@@ -91,8 +119,10 @@ describe('ReportShareDialog', () => {
     // Picking a reason is the whole effort for most reporters; a form that demanded prose
     // would collect nothing.
     render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
-    await waitFor(() => expect(report.calls[0]).toEqual(['k7mqx3rt9p', 'spam', '', '']))
+    sendReport()
+    await waitFor(() =>
+      expect(report.calls[0]).toEqual(['k7mqx3rt9p', 'spam', '', '', 'challenge-token']),
+    )
   })
 
   it('offers an address to reply to without ever requiring one', async () => {
@@ -104,9 +134,15 @@ describe('ReportShareDialog', () => {
     expect(screen.getByText(/don’t have to say who you are/)).toBeTruthy()
 
     fireEvent.change(email, { target: { value: 'reader@example.com' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
     await waitFor(() =>
-      expect(report.calls[0]).toEqual(['k7mqx3rt9p', 'spam', '', 'reader@example.com']),
+      expect(report.calls[0]).toEqual([
+        'k7mqx3rt9p',
+        'spam',
+        '',
+        'reader@example.com',
+        'challenge-token',
+      ]),
     )
   })
 
@@ -115,22 +151,36 @@ describe('ReportShareDialog', () => {
     fireEvent.change(screen.getByLabelText('Your email (optional)'), {
       target: { value: 'reader@example' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
     await screen.findByText(/doesn’t look like an email address/)
+    expect(report.calls).toHaveLength(0)
+  })
+
+  it('does not send until the abuse challenge is complete', async () => {
+    render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    await screen.findByText(/Complete the verification/)
+    expect(report.calls).toHaveLength(0)
+  })
+
+  it('gives an email fallback when the challenge cannot load', async () => {
+    render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Fail verification' }))
+    await screen.findByText(/Verification isn’t available/)
     expect(report.calls).toHaveLength(0)
   })
 
   it('gives an address to write to when reporting isn’t set up', async () => {
     report.result = 'unavailable'
     render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
     await screen.findByText(/reports@openfray.app/)
   })
 
   it('says a failure is a failure rather than thanking them for nothing', async () => {
     report.result = 'failed'
     render(<ReportShareDialog code="k7mqx3rt9p" onClose={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }))
+    sendReport()
     await screen.findByText(/Couldn’t send that/)
     expect(screen.queryByText(/somebody will read it/)).toBeNull()
   })

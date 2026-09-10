@@ -390,8 +390,10 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          duplicate_key: string | null
           id: string
           message: string | null
+          network_key: string | null
           reason: string
           reply_to: string | null
           reporter_id: string | null
@@ -401,8 +403,10 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          duplicate_key?: string | null
           id?: string
           message?: string | null
+          network_key?: string | null
           reason: string
           reply_to?: string | null
           reporter_id?: string | null
@@ -412,8 +416,10 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          duplicate_key?: string | null
           id?: string
           message?: string | null
+          network_key?: string | null
           reason?: string
           reply_to?: string | null
           reporter_id?: string | null
@@ -538,6 +544,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_share_report: {
+        Args: {
+          duplicate_key: string
+          network_key: string
+          note: string
+          reply_to: string
+          want: string
+          why: string
+        }
+        Returns: string
+      }
       account_libraries: {
         Args: never
         Returns: {

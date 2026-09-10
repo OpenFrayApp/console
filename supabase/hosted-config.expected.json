@@ -22,8 +22,12 @@
       "expectation": "The site, console, admin, and authorized staging origins are the only OAuth redirect origins."
     },
     {
+      "id": "report-ingress",
+      "expectation": "The report Pages Function has a report_ingress JWT, separate Turnstile and fingerprint secrets, the reviewed hostname allowlist, and no service-role key."
+    },
+    {
       "id": "report-webhooks",
-      "expectation": "The share_reports and takedown_notices webhooks target the deployed share-report function with its secret header."
+      "expectation": "The share_reports and takedown_notices webhooks queue notification work through the deployed share-report function with its secret header and database-event idempotency keys."
     }
   ]
 }

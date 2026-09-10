@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent } from 'react'
 import {
   REPORT_EMAIL_MAX,
   REPORT_MAX,
@@ -15,6 +15,8 @@ import { SHARE_FIELD, SHARE_LABEL } from './sharePieces.tsx'
 import { FieldHint } from '../ui/FieldHint.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
+import { turnstileConfigured } from '../../lib/turnstile.ts'
+import { TurnstileChallenge } from './TurnstileChallenge.tsx'
 
 /**
  * Reporting the encounter on screen: a reason, and room to say what's wrong.
@@ -35,16 +37,28 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
   const [replyTo, setReplyTo] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
+  const [challenge, setChallenge] = useState('')
+  const [challengeReset, setChallengeReset] = useState(0)
+  const [challengeUnavailable, setChallengeUnavailable] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const challengeFailed = useCallback(() => setChallengeUnavailable(true), [])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
     const badAddress = replyAddressError(replyTo)
     if (badAddress) return setError(badAddress)
+    if (!turnstileConfigured || challengeUnavailable) {
+      setError('Reporting isn’t set up on this server yet. Please email reports@openfray.app.')
+      return
+    }
+    if (!challenge) {
+      setError('Complete the verification before sending this report.')
+      return
+    }
     setBusy(true)
     setError(null)
-    const result = await reportShare(code, reason, message.trim(), replyTo)
+    const result = await reportShare(code, reason, message.trim(), replyTo, challenge)
     setBusy(false)
     if (result === 'ok') {
       // Only the reports that landed. Counting attempts would fold a broken server into
@@ -55,6 +69,8 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
       // Nothing the reporter can do, and telling them to try again would waste their time.
       setError('Reporting isn’t set up on this server yet. Please email reports@openfray.app.')
     } else {
+      setChallenge('')
+      setChallengeReset((current) => current + 1)
       setError('Couldn’t send that. Try again in a moment.')
     }
   }
@@ -134,6 +150,16 @@ export function ReportShareDialog({ code, onClose }: { code: string; onClose: ()
               className={SHARE_FIELD}
             />
           </div>
+          <TurnstileChallenge
+            onToken={setChallenge}
+            resetKey={challengeReset}
+            onUnavailable={challengeFailed}
+          />
+          {challengeUnavailable && !error && (
+            <p className="text-sm text-rose-600 dark:text-rose-400">
+              Verification isn’t available. Please email reports@openfray.app.
+            </p>
+          )}
           {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
           <div className="flex items-center gap-2">
             <Button type="submit" variant="primary" disabled={busy}>

@@ -11,6 +11,7 @@ export const DATABASE_BOUNDARY_ACTORS = [
   'stale-writer',
   'second-writer',
   'restricted-function',
+  'report-ingress',
   'service-role',
 ]
 export const DATABASE_BOUNDARY_CHECKS = [
@@ -19,6 +20,7 @@ export const DATABASE_BOUNDARY_CHECKS = [
   'definerSearchPaths',
   'deprecatedOverloads',
   'restrictedExecution',
+  'reportIngress',
   'realtime',
   'revisionAuthority',
   'accountDeletion',
@@ -38,7 +40,7 @@ export function buildDatabaseBoundaryAttestation(input) {
 
   return {
     version: 1,
-    requirementIds: ['CB-1', 'CB-3', 'DC-3'],
+    requirementIds: ['CB-1', 'CB-3', 'CB-4', 'DC-3'],
     consoleCommit: input.consoleCommit,
     environment: {
       kind: input.environmentKind,
@@ -71,6 +73,7 @@ export function verifyStagingBoundaryEvidence(attestation, expected) {
     attestation?.version === 1 &&
     attestation?.requirementIds?.includes('CB-1') &&
     attestation?.requirementIds?.includes('CB-3') &&
+    attestation?.requirementIds?.includes('CB-4') &&
     attestation?.requirementIds?.includes('DC-3') &&
     attestation?.environment?.kind === 'staging' &&
     attestation?.environment?.identity === expected.environmentIdentity &&

@@ -91,6 +91,7 @@ if (args[0] === 'migration') {
     expect(attestation.result).toBe('passed')
     expect(attestation.migration.result).toBe('passed')
     expect(attestation.actors).toEqual(DATABASE_BOUNDARY_ACTORS)
+    expect(attestation.actors).toContain('report-ingress')
     expect(attestation.actors).toContain('service-role')
     expect(attestation.hostileSuiteHash).toBe('b'.repeat(64))
   })
@@ -131,7 +132,7 @@ if (args[0] === 'migration') {
     }
     const evidence = {
       version: 1,
-      requirementIds: ['CB-1', 'CB-3', 'DC-3'],
+      requirementIds: ['CB-1', 'CB-3', 'CB-4', 'DC-3'],
       consoleCommit: expected.consoleCommit,
       environment: { kind: 'staging', identity: expected.environmentIdentity },
       migration: {
@@ -155,6 +156,10 @@ if (args[0] === 'migration') {
       { ...evidence, environment: { kind: 'production', identity: expected.environmentIdentity } },
       { ...evidence, environment: { kind: 'staging', identity: 'wrongprojectrefxxxxx' } },
       { ...evidence, actors: DATABASE_BOUNDARY_ACTORS.slice(0, -1) },
+      {
+        ...evidence,
+        actors: DATABASE_BOUNDARY_ACTORS.filter((actor: string) => actor !== 'report-ingress'),
+      },
       {
         ...evidence,
         actors: DATABASE_BOUNDARY_ACTORS.filter((actor: string) => actor !== 'service-role'),

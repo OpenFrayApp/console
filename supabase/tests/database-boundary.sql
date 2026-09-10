@@ -169,6 +169,7 @@ begin
   if exists (
     with expected(signature, grantee) as (
       values
+        ('accept_share_report(text,text,text,text,text,text)', 'report_ingress'),
         ('account_libraries()', 'authenticated'),
         ('account_made(uuid,integer)', 'authenticated'),
         ('account_overview(uuid)', 'authenticated'),
@@ -187,8 +188,6 @@ begin
         ('may_publish_more()', 'authenticated'),
         ('may_use_reserved_byline()', 'authenticated'),
         ('my_capabilities()', 'authenticated'),
-        ('report_share(text,text,text,text)', 'anon'),
-        ('report_share(text,text,text,text)', 'authenticated'),
         ('reported_share(text)', 'authenticated'),
         ('reports_for(text)', 'authenticated'),
         ('reports_open()', 'authenticated'),
@@ -211,7 +210,7 @@ begin
       where n.nspname = 'public'
         and p.prosecdef
         and acl.privilege_type = 'EXECUTE'
-        and r.rolname in ('anon', 'authenticated', 'service_role')
+        and r.rolname in ('anon', 'authenticated', 'service_role', 'report_ingress')
     )
     (select * from actual except select * from expected)
     union all
@@ -230,9 +229,32 @@ begin
 
   if has_function_privilege('anon', 'public.delete_account()', 'execute')
     or has_function_privilege('anon', 'public.may(text)', 'execute')
+    or has_function_privilege('anon', 'public.report_share(text,text,text,text)', 'execute')
     or not has_function_privilege('anon', 'public.share(text)', 'execute')
   then raise exception 'CB-1: anonymous function execution must match the explicit allowlist';
   end if;
+
+  if exists (
+    select 1 from pg_roles where rolname = 'report_ingress'
+      and (rolsuper or rolcreatedb or rolcreaterole or rolreplication or rolcanlogin
+        or rolinherit or rolbypassrls)
+  ) then raise exception 'CB-4: report ingress role attributes are privileged';
+  end if;
+
+  execute 'set local role report_ingress';
+  begin
+    perform count(*) from share_reports;
+    raise exception 'CB-4: report ingress read reports' using errcode = 'OF012';
+  exception
+    when insufficient_privilege then null;
+  end;
+  begin
+    insert into share_reports (code, reason) values ('bypass2222', 'spam');
+    raise exception 'CB-4: report ingress bypassed its operation' using errcode = 'OF013';
+  exception
+    when insufficient_privilege then null;
+  end;
+  execute 'reset role';
 
   if exists (
     select 1

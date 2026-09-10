@@ -230,10 +230,11 @@ describe('the tracked migration lineage', () => {
       where n.nspname = 'public'
         and p.prosecdef
         and acl.privilege_type = 'EXECUTE'
-        and r.rolname in ('anon', 'authenticated')
+        and r.rolname in ('anon', 'authenticated', 'report_ingress')
       order by signature, grantee
     `)
     expect(grants.rows.map(({ signature, grantee }) => `${signature}:${grantee}`)).toEqual([
+      'accept_share_report(text,text,text,text,text,text):report_ingress',
       'account_libraries():authenticated',
       'account_made(uuid,integer):authenticated',
       'account_overview(uuid):authenticated',
@@ -252,8 +253,6 @@ describe('the tracked migration lineage', () => {
       'may_publish_more():authenticated',
       'may_use_reserved_byline():authenticated',
       'my_capabilities():authenticated',
-      'report_share(text,text,text,text):anon',
-      'report_share(text,text,text,text):authenticated',
       'reported_share(text):authenticated',
       'reports_for(text):authenticated',
       'reports_open():authenticated',
@@ -605,6 +604,142 @@ describe('the tracked migration lineage', () => {
         `select count(*)::int from live_view_sessions where owner_id = '${owner}'`,
       ),
     ).toBe(0)
+  })
+})
+
+describe('anonymous report ingress', () => {
+  it('removes direct anonymous reporting and gives the ingress role one operation', async () => {
+    await asOwner()
+    for (const role of ['anon', 'authenticated', 'service_role', 'report_ingress']) {
+      expect(
+        await value<boolean>(
+          `select has_function_privilege('${role}', 'public.report_share(text,text,text,text)', 'execute')`,
+        ),
+      ).toBe(false)
+    }
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      expect(
+        await value<boolean>(
+          `select has_function_privilege('${role}', 'public.accept_share_report(text,text,text,text,text,text)', 'execute')`,
+        ),
+      ).toBe(false)
+    }
+    expect(
+      await value<boolean>(
+        `select has_function_privilege('report_ingress', 'public.accept_share_report(text,text,text,text,text,text)', 'execute')`,
+      ),
+    ).toBe(true)
+    expect(
+      await db.query(`
+        select rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolcanlogin, rolinherit,
+          rolbypassrls
+        from pg_roles where rolname = 'report_ingress'
+      `),
+    ).toMatchObject({
+      rows: [
+        {
+          rolsuper: false,
+          rolcreatedb: false,
+          rolcreaterole: false,
+          rolreplication: false,
+          rolcanlogin: false,
+          rolinherit: false,
+          rolbypassrls: false,
+        },
+      ],
+    })
+  })
+
+  it('cannot read reports or insert around the restricted operation', async () => {
+    await asOwner()
+    await db.exec('set role report_ingress')
+    await expect(db.exec('select * from share_reports')).rejects.toThrow(/permission denied/)
+    await expect(
+      db.exec(`insert into share_reports (code, reason) values ('bypass00001', 'spam')`),
+    ).rejects.toThrow(/permission denied/)
+    await db.exec('reset role')
+  })
+
+  it('accepts a bounded report for a published share and rejects its duplicate', async () => {
+    await asOwner()
+    await db.exec('begin')
+    try {
+      await db.exec(`
+        insert into auth.users (id) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+        insert into shares (code, kind, owner_id, data)
+          values ('testaa2222', 'encounter', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '{}');
+        set local role report_ingress;
+      `)
+      const call = `accept_share_report(
+        'testaa2222', 'spam', 'A note', null, '${'a'.repeat(64)}', '${'b'.repeat(64)}'
+      )`
+      expect(await value<string>(`select ${call}`)).toBe('accepted')
+      expect(await value<string>(`select ${call}`)).toBe('duplicate')
+      await db.exec('reset role')
+      expect(
+        await value<number>(`select count(*)::int from share_reports where code = 'testaa2222'`),
+      ).toBe(1)
+    } finally {
+      await db.exec('rollback')
+    }
+  })
+
+  it('enforces network and per-share quotas inside the insertion transaction', async () => {
+    await asOwner()
+    await db.exec('begin')
+    try {
+      await db.exec(`
+        insert into auth.users (id) values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+        insert into shares (code, kind, owner_id, data) values
+          ('testbb2222', 'encounter', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '{}'),
+          ('testcc2222', 'encounter', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '{}'),
+          ('testdd2222', 'encounter', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '{}');
+        set local role report_ingress;
+      `)
+      for (let index = 0; index < 5; index += 1) {
+        expect(
+          await value<string>(`select accept_share_report(
+            'testbb2222', 'spam', '${index}', null, '${'c'.repeat(64)}',
+            '${index.toString(16).padStart(64, '0')}'
+          )`),
+        ).toBe('accepted')
+      }
+      expect(
+        await value<string>(`select accept_share_report(
+          'testcc2222', 'spam', null, null, '${'c'.repeat(64)}', '${'d'.repeat(64)}'
+        )`),
+      ).toBe('network_limited')
+
+      for (let index = 0; index < 10; index += 1) {
+        expect(
+          await value<string>(`select accept_share_report(
+            'testcc2222', 'other', '${index}', null,
+            '${index.toString(16).padStart(64, 'e')}', '${index.toString(16).padStart(64, 'f')}'
+          )`),
+        ).toBe('accepted')
+      }
+      expect(
+        await value<string>(`select accept_share_report(
+          'testcc2222', 'other', null, null, '${'1'.repeat(64)}', '${'2'.repeat(64)}'
+        )`),
+      ).toBe('share_limited')
+
+      await db.exec(`
+        reset role;
+        insert into share_reports (code, reason, network_key, duplicate_key, created_at)
+          select 'testdd2222', 'spam', '${'3'.repeat(64)}', lpad(to_hex(n), 64, '4'),
+            now() - interval '2 hours'
+          from generate_series(1, 20) n;
+        set local role report_ingress;
+      `)
+      expect(
+        await value<string>(`select accept_share_report(
+          'testdd2222', 'other', null, null, '${'3'.repeat(64)}', '${'5'.repeat(64)}'
+        )`),
+      ).toBe('network_limited')
+    } finally {
+      await db.exec('rollback')
+    }
   })
 })
 

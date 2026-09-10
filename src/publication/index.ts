@@ -1,6 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+/** Public report reasons and their console labels. */
+export const REPORT_REASONS = [
+  { value: 'spam', label: 'Spam or advertising' },
+  { value: 'sexual', label: 'Sexual or explicit content' },
+  { value: 'hate', label: 'Hate or harassment' },
+  { value: 'impersonation', label: 'Pretending to be someone else' },
+  { value: 'copyright', label: 'Copied from a published book' },
+  { value: 'other', label: 'Something else' },
+] as const
+
+export type ReportReason = (typeof REPORT_REASONS)[number]['value']
+
+/** Bounds shared by the console form and the deployment-owned report route. */
+export const REPORT_LIMITS = {
+  messageCharacters: 1000,
+  replyCharacters: 254,
+  challengeCharacters: 2048,
+  requestBytes: 4096,
+} as const
+
+const REPORT_REASON_VALUES = new Set<string>(REPORT_REASONS.map(({ value }) => value))
+
+/** Return whether an unknown value is one supported public report reason. */
+export function isReportReason(value: unknown): value is ReportReason {
+  return typeof value === 'string' && REPORT_REASON_VALUES.has(value)
+}
+
 /** The only console interface deployment code may use for published shares. */
 
 export const PUBLICATION_INTERFACE_VERSION = 1
