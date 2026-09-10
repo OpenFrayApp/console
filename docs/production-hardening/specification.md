@@ -1,6 +1,8 @@
 # Production-hardening specification
 
-This is the reviewed production-hardening specification for the OpenFray consumer path.
+> **Status: historical.** The project now targets safe, responsive everyday use and does not pursue a separate hardened-release claim. Issue #23 records the current release-critical scope. The 20-combatant fixture represents everyday performance. The 100-combatant fixture, accelerated soak, complete provider evidence, restore drills, and full device matrix are optional follow-up work unless they expose an everyday failure.
+
+This was the reviewed production-hardening specification for the OpenFray consumer path.
 
 Normative decisions:
 
