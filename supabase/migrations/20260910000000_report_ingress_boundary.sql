@@ -5,12 +5,17 @@
 do $do$
 begin
   if not exists (select 1 from pg_roles where rolname = 'report_ingress') then
-    create role report_ingress nologin noinherit nobypassrls;
+    create role report_ingress
+      nosuperuser nocreatedb nocreaterole noreplication nologin noinherit nobypassrls;
+  elsif exists (
+    select 1 from pg_roles where rolname = 'report_ingress'
+      and (rolsuper or rolcreatedb or rolcreaterole or rolreplication or rolcanlogin
+        or rolinherit or rolbypassrls)
+  ) then
+    raise exception 'report_ingress has unsafe attributes and requires privileged remediation';
   end if;
 end
 $do$;
-alter role report_ingress
-  nosuperuser nocreatedb nocreaterole noreplication nologin noinherit nobypassrls;
 
 do $do$
 begin
