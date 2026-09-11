@@ -704,6 +704,14 @@ begin
   then raise exception 'CB-1: account deletion left an active owner link';
   end if;
 
+  if not exists (
+    select 1 from recovery_deletions
+    where kind = 'account' and subject = '55555555-5555-5555-5555-555555555555'
+  ) or not exists (
+    select 1 from recovery_deletions where kind = 'share' and subject = 'cb1delete'
+  ) then raise exception 'RC-4: account deletion did not enter the recovery ledger';
+  end if;
+
   delete from share_reports where code = 'cb1delete';
   delete from audit_log where action = 'cb1.fixture';
   delete from realtime.messages where event in ('cb3-fixture', 'cb3-other-fixture');
@@ -713,5 +721,14 @@ begin
     '33333333-3333-3333-3333-333333333333',
     '66666666-6666-6666-6666-666666666666'
   );
+  delete from recovery_deletions
+    where (kind = 'account' and subject in (
+      '11111111-1111-1111-1111-111111111111',
+      '22222222-2222-2222-2222-222222222222',
+      '33333333-3333-3333-3333-333333333333',
+      '44444444-4444-4444-4444-444444444444',
+      '55555555-5555-5555-5555-555555555555',
+      '66666666-6666-6666-6666-666666666666'
+    )) or (kind = 'share' and subject in ('cb1owner', 'cb1delete'));
 end
 $cb1$;

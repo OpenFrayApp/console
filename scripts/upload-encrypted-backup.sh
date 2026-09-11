@@ -32,7 +32,8 @@ UNIQUE="${GITHUB_RUN_ID:-manual}-${GITHUB_RUN_ATTEMPT:-1}-$$"
 KEY="daily/openfray-$STAMP-$UNIQUE.sql.gz.age"
 LOCAL_BYTES="$(wc -c <"$BACKUP_CIPHERTEXT_PATH" | tr -d ' ')"
 aws s3 cp "$BACKUP_CIPHERTEXT_PATH" "s3://$R2_BUCKET/$KEY" \
-  --endpoint-url "$R2_ENDPOINT" --only-show-errors
+  --endpoint-url "$R2_ENDPOINT" --only-show-errors \
+  --metadata "sha256=$BACKUP_CIPHERTEXT_SHA256"
 REMOTE_BYTES="$(aws s3api head-object --bucket "$R2_BUCKET" --key "$KEY" \
   --endpoint-url "$R2_ENDPOINT" --query ContentLength --output text)"
 [[ "$REMOTE_BYTES" == "$LOCAL_BYTES" ]] || backup_die "uploaded ciphertext size does not match"

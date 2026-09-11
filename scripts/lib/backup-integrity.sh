@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Nicola Mustone
 
-BACKUP_TABLES=(campaigns creatures effects encounters players spells)
+BACKUP_TABLES=(campaigns creatures effects encounters players recovery_deletions shares spells)
 BACKUP_MIN_BYTES=1024
 
 # Stop backup work with a diagnostic.
@@ -21,6 +21,17 @@ backup_have() {
   command -v "$1" >/dev/null 2>&1 || backup_die "$1 is not installed"
 }
 
+# Return an ISO-8601 timestamp as Unix seconds on GNU or BSD date.
+timestamp_seconds() {
+  local timestamp="$1"
+  date -u -d "$timestamp" +%s 2>/dev/null || {
+    timestamp="${timestamp%+00:00}"
+    timestamp="${timestamp%Z}"
+    timestamp="${timestamp%%.*}Z"
+    date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$timestamp" +%s
+  }
+}
+
 # Return a portable SHA-256 digest for a file.
 file_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -28,6 +39,18 @@ file_sha256() {
   else
     shasum -a 256 "$1" | awk '{print $1}'
   fi
+}
+
+# Return the number of rows in one COPY block from a verified dump.
+backup_dump_count() {
+  local dump="$1" relation="$2" quoted
+  quoted="\"${relation/./\".\"}\""
+  gzip -dc "$dump" | awk -v relation="$quoted" '
+    /^COPY / { inblock = index($0, relation) > 0; count = 0; next }
+    inblock && $0 == "\\." { print count; found = 1; exit }
+    inblock { count++ }
+    END { if (!found) exit 1 }
+  '
 }
 
 # Refuse a dump that is empty, corrupt, incomplete, or carrying no application data.

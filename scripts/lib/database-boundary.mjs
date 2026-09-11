@@ -24,6 +24,7 @@ export const DATABASE_BOUNDARY_CHECKS = [
   'realtime',
   'revisionAuthority',
   'accountDeletion',
+  'recoveryDeletion',
 ]
 /** Build immutable tenant and live-authority evidence without retaining fixture identities. */
 export function buildDatabaseBoundaryAttestation(input) {

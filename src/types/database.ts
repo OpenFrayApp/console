@@ -348,6 +348,24 @@ export type Database = {
         }
         Relationships: []
       }
+      recovery_deletions: {
+        Row: {
+          deleted_at: string
+          kind: string
+          subject: string
+        }
+        Insert: {
+          deleted_at?: string
+          kind: string
+          subject: string
+        }
+        Update: {
+          deleted_at?: string
+          kind?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       role_capabilities: {
         Row: {
           capability: string
@@ -606,6 +624,7 @@ export type Database = {
         Args: { decision: string; want: string }
         Returns: number
       }
+      apply_recovery_deletions: { Args: never; Returns: Json }
       audit_recent: {
         Args: { limit_to?: number }
         Returns: {
