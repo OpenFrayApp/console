@@ -348,6 +348,24 @@ export type Database = {
         }
         Relationships: []
       }
+      recovery_deletions: {
+        Row: {
+          deleted_at: string
+          kind: string
+          subject: string
+        }
+        Insert: {
+          deleted_at?: string
+          kind: string
+          subject: string
+        }
+        Update: {
+          deleted_at?: string
+          kind?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       role_capabilities: {
         Row: {
           capability: string
@@ -383,6 +401,21 @@ export type Database = {
         Update: {
           inherits?: string
           role?: string
+        }
+        Relationships: []
+      }
+      share_identities: {
+        Row: {
+          code: string
+          first_published_at: string
+        }
+        Insert: {
+          code: string
+          first_published_at?: string
+        }
+        Update: {
+          code?: string
+          first_published_at?: string
         }
         Relationships: []
       }
@@ -606,6 +639,7 @@ export type Database = {
         Args: { decision: string; want: string }
         Returns: number
       }
+      apply_recovery_deletions: { Args: never; Returns: Json }
       audit_recent: {
         Args: { limit_to?: number }
         Returns: {
@@ -652,6 +686,10 @@ export type Database = {
       my_capabilities: { Args: never; Returns: string[] }
       note_action: {
         Args: { extra?: Json; what: string; which: string }
+        Returns: undefined
+      }
+      reconcile_recovery_dependencies: {
+        Args: { attach: boolean }
         Returns: undefined
       }
       report_share: {

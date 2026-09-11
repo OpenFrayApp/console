@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/lib/backup-integrity.sh"
 
 backup_need BACKUP_CIPHERTEXT_PATH
 backup_need BACKUP_CIPHERTEXT_SHA256
+backup_need BACKUP_CREATED_AT
 backup_need R2_BUCKET
 backup_need R2_ENDPOINT
 backup_need AWS_ACCESS_KEY_ID
@@ -27,12 +28,15 @@ if gzip -t "$BACKUP_CIPHERTEXT_PATH" >/dev/null 2>&1; then
   backup_die "refusing to upload a plaintext gzip dump"
 fi
 
-STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+[[ "$BACKUP_CREATED_AT" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] ||
+  backup_die "backup creation time is invalid"
+STAMP="${BACKUP_CREATED_AT//:/-}"
 UNIQUE="${GITHUB_RUN_ID:-manual}-${GITHUB_RUN_ATTEMPT:-1}-$$"
 KEY="daily/openfray-$STAMP-$UNIQUE.sql.gz.age"
 LOCAL_BYTES="$(wc -c <"$BACKUP_CIPHERTEXT_PATH" | tr -d ' ')"
 aws s3 cp "$BACKUP_CIPHERTEXT_PATH" "s3://$R2_BUCKET/$KEY" \
-  --endpoint-url "$R2_ENDPOINT" --only-show-errors
+  --endpoint-url "$R2_ENDPOINT" --only-show-errors \
+  --metadata "sha256=$BACKUP_CIPHERTEXT_SHA256,created_at=$BACKUP_CREATED_AT"
 REMOTE_BYTES="$(aws s3api head-object --bucket "$R2_BUCKET" --key "$KEY" \
   --endpoint-url "$R2_ENDPOINT" --query ContentLength --output text)"
 [[ "$REMOTE_BYTES" == "$LOCAL_BYTES" ]] || backup_die "uploaded ciphertext size does not match"

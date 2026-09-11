@@ -19,11 +19,22 @@ else
 fi
 
 PG_DUMP="${PG_DUMP:-pg_dump}"
-STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+STAMP="${CREATED_AT//:/-}"
 WORK="$(mktemp -d)"
 DUMP="$WORK/openfray-$STAMP.sql.gz"
 CIPHERTEXT="$DUMP.age"
-trap 'rm -rf "$WORK"' EXIT
+SNAPSHOT_PID=""
+
+# Close the exported snapshot and remove every plaintext work file.
+cleanup() {
+  if [[ -n "$SNAPSHOT_PID" ]]; then
+    kill "$SNAPSHOT_PID" >/dev/null 2>&1 || true
+    wait "$SNAPSHOT_PID" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$WORK"
+}
+trap cleanup EXIT
 
 # Encryption is the first data-boundary preflight. No database command runs before it.
 backup_need BACKUP_AGE_RECIPIENT
@@ -40,19 +51,51 @@ echo "backup: encryption configuration verified before export"
 backup_need SUPABASE_DB_URL
 backup_have "$PG_DUMP"
 backup_have gzip
+backup_have psql
 [[ -z "${AWS_ACCESS_KEY_ID:-}" && -z "${AWS_SECRET_ACCESS_KEY:-}" ]] ||
   backup_die "object-storage credentials must not be available to the export job"
 
+SNAPSHOT_CONTROL="$WORK/snapshot-control"
+SNAPSHOT_OUTPUT="$WORK/snapshot-output"
+mkfifo "$SNAPSHOT_CONTROL"
+psql "$SUPABASE_DB_URL" --no-psqlrc --tuples-only --no-align --quiet \
+  <"$SNAPSHOT_CONTROL" >"$SNAPSHOT_OUTPUT" &
+SNAPSHOT_PID=$!
+exec 9>"$SNAPSHOT_CONTROL"
+printf '%s\n' 'begin isolation level repeatable read read only;' 'select pg_export_snapshot();' >&9
+for _ in {1..100}; do
+  [[ -s "$SNAPSHOT_OUTPUT" ]] && break
+  kill -0 "$SNAPSHOT_PID" >/dev/null 2>&1 || backup_die "could not export a backup snapshot"
+  sleep 0.1
+done
+SNAPSHOT="$(tr -d '[:space:]' <"$SNAPSHOT_OUTPUT")"
+[[ "$SNAPSHOT" =~ ^[0-9A-F]+-[0-9A-F]+-[0-9]+$ ]] || backup_die "exported backup snapshot is invalid"
+
 echo "backup: dumping public + auth with $("$PG_DUMP" --version) …"
-"$PG_DUMP" "$SUPABASE_DB_URL" \
-  --schema=public \
-  --schema=auth \
-  --clean \
-  --if-exists \
-  --quote-all-identifiers \
-  --no-owner \
-  --no-privileges |
+# The isolated target owns provider-role defaults; only the tracked postgres defaults travel.
+{
+  printf '%s\n' "-- openfray-backup-created-at: $CREATED_AT"
+  "$PG_DUMP" "$SUPABASE_DB_URL" \
+    --snapshot="$SNAPSHOT" \
+    --data-only \
+    --table=auth.users \
+    --table=auth.identities \
+    --quote-all-identifiers \
+    --no-owner \
+    --no-privileges
+  "$PG_DUMP" "$SUPABASE_DB_URL" \
+    --snapshot="$SNAPSHOT" \
+    --schema=public \
+    --clean \
+    --if-exists \
+    --quote-all-identifiers \
+    --no-owner
+} | awk '/^ALTER DEFAULT PRIVILEGES FOR ROLE / && $6 != "\"postgres\"" { next } { print }' |
   gzip -9 >"$DUMP"
+printf '%s\n' 'rollback;' '\q' >&9
+exec 9>&-
+wait "$SNAPSHOT_PID"
+SNAPSHOT_PID=""
 
 verify_backup_dump "$DUMP"
 age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$CIPHERTEXT" "$DUMP"
@@ -70,6 +113,7 @@ fi
 
 mv "$CIPHERTEXT" "$OUTPUT"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-  printf 'ciphertext_path=%s\nciphertext_sha256=%s\n' "$OUTPUT" "$CIPHERTEXT_SHA256" >>"$GITHUB_OUTPUT"
+  printf 'ciphertext_path=%s\nciphertext_sha256=%s\nbackup_created_at=%s\n' \
+    "$OUTPUT" "$CIPHERTEXT_SHA256" "$CREATED_AT" >>"$GITHUB_OUTPUT"
 fi
 echo "backup: ciphertext ready for isolated upload"

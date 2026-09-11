@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Nicola Mustone
 
-BACKUP_TABLES=(campaigns creatures effects encounters players spells)
+BACKUP_TABLES=(campaigns creatures effects encounters players recovery_deletions share_identities shares spells)
 BACKUP_MIN_BYTES=1024
 
 # Stop backup work with a diagnostic.
@@ -21,6 +21,26 @@ backup_have() {
   command -v "$1" >/dev/null 2>&1 || backup_die "$1 is not installed"
 }
 
+# Return an ISO-8601 timestamp as Unix seconds on GNU or BSD date.
+timestamp_seconds() {
+  local timestamp="$1"
+  date -u -d "$timestamp" +%s 2>/dev/null || {
+    timestamp="${timestamp%+00:00}"
+    timestamp="${timestamp%Z}"
+    timestamp="${timestamp%%.*}Z"
+    date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$timestamp" +%s
+  }
+}
+
+# Return the creation timestamp encoded in an encrypted-backup object key.
+backup_key_created_at() {
+  local key="$1" stamp
+  stamp="${key#daily/openfray-}"
+  stamp="${stamp:0:20}"
+  [[ "$stamp" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z$ ]] || return 1
+  printf '%s:%s:%s\n' "${stamp:0:13}" "${stamp:14:2}" "${stamp:17:3}"
+}
+
 # Return a portable SHA-256 digest for a file.
 file_sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -30,10 +50,31 @@ file_sha256() {
   fi
 }
 
+# Return the encrypted creation time carried inside a backup dump.
+backup_dump_created_at() {
+  local dump="$1" created_at
+  created_at="$(gzip -dc "$dump" | awk '/^-- openfray-backup-created-at: / { print $3; exit }')"
+  [[ "$created_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
+  printf '%s\n' "$created_at"
+}
+
+# Return the number of rows in one COPY block from a verified dump.
+backup_dump_count() {
+  local dump="$1" relation="$2" quoted
+  quoted="\"${relation/./\".\"}\""
+  gzip -dc "$dump" | awk -v relation="$quoted" '
+    /^COPY / { inblock = index($0, relation) > 0; count = 0; next }
+    inblock && $0 == "\\." { print count; found = 1; exit }
+    inblock { count++ }
+    END { if (!found) exit 1 }
+  '
+}
+
 # Refuse a dump that is empty, corrupt, incomplete, or carrying no application data.
 verify_backup_dump() {
   local dump="$1" body size counts total missing=()
   gzip -t "$dump" || backup_die "dump is not a valid gzip stream"
+  backup_dump_created_at "$dump" >/dev/null || backup_die "dump has no valid creation time"
   body=$(gzip -dc "$dump")
   size=${#body}
   [[ "$size" -ge "$BACKUP_MIN_BYTES" ]] ||

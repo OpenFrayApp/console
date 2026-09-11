@@ -8,6 +8,8 @@ Use separate Supabase projects for staging and production. Local development use
 
 Keep project references, access tokens, database passwords, OAuth credentials, and webhook headers outside the repository. The committed configuration contains non-secret defaults and expectations only.
 
+The encrypted restore drill and its protected environment are documented in [`recovery.md`](./recovery.md).
+
 ## Verify a fresh database
 
 Start Docker, then run:

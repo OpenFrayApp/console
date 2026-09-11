@@ -1,0 +1,195 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Nicola Mustone
+name: Recovery drill
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/backup.yml'
+      - '.github/workflows/recovery.yml'
+      - 'docs/recovery.md'
+      - 'scripts/attest-recovery-restore.mjs'
+      - 'scripts/backup-supabase.sh'
+      - 'scripts/check-backup-freshness.sh'
+      - 'scripts/download-encrypted-backup.sh'
+      - 'scripts/lib/backup-integrity.sh'
+      - 'scripts/lib/database-boundary.mjs'
+      - 'scripts/lib/recovery.mjs'
+      - 'scripts/notify-recovery-monitor.sh'
+      - 'scripts/restore-supabase.sh'
+      - 'scripts/upload-encrypted-backup.sh'
+      - 'scripts/verify-recovery-auth.mjs'
+      - 'scripts/verify-share-code-concurrency.sh'
+      - 'src/types/database.ts'
+      - 'supabase/**'
+      - 'tests/database/**'
+      - 'tests/scripts/backup.test.ts'
+      - 'tests/scripts/databaseBoundary.test.ts'
+      - 'tests/scripts/recovery.test.ts'
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      object_key:
+        description: 'Exact encrypted daily object to restore'
+        required: true
+        type: string
+      ciphertext_sha256:
+        description: 'Digest for an older object without stored SHA-256 metadata'
+        required: false
+        type: string
+
+concurrency:
+  group: supabase-recovery
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        with:
+          version: 2.116.0
+      - run: npm ci
+      - run: supabase start
+      - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts
+      - run: npm run db:boundary
+      - name: Prove concurrent revocation
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-concurrency.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-concurrency.env"
+          set +a
+          RECOVERY_TARGET_DB_URL="$DB_URL" npm run db:recovery-concurrency
+
+  backup-health:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check the 24-hour recovery point
+        id: freshness
+        continue-on-error: true
+        env:
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_RECOVERY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_RECOVERY_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: scripts/check-backup-freshness.sh
+      - name: Report stale backup health
+        if: steps.freshness.outcome != 'success'
+        env:
+          RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
+        run: scripts/notify-recovery-monitor.sh backup_stale
+      - name: Preserve the failed health result
+        if: steps.freshness.outcome != 'success'
+        run: exit 1
+
+  restore:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+    environment: recovery
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        with:
+          version: 2.116.0
+      - run: npm ci
+      - name: Record the operator start time
+        run: echo "RECOVERY_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
+      - name: Install recovery tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age postgresql-client
+      - name: Start the ephemeral restore target
+        run: |
+          supabase start
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          set -a
+          source "$RUNNER_TEMP/supabase.env"
+          set +a
+          [[ "$DB_URL" == *"@127.0.0.1:"* ]]
+          echo "RECOVERY_TARGET_DB_URL=$DB_URL" >> "$GITHUB_ENV"
+      - name: Download the encrypted recovery point
+        id: download
+        env:
+          BACKUP_OBJECT_KEY: ${{ inputs.object_key }}
+          BACKUP_CIPHERTEXT_SHA256: ${{ inputs.ciphertext_sha256 }}
+          BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-recovery.age
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_RECOVERY_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_RECOVERY_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: scripts/download-encrypted-backup.sh
+      - name: Restore, replay deletions, and verify boundaries
+        id: restore
+        env:
+          BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-recovery.age
+          BACKUP_AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
+          BACKUP_AGE_SECONDS: ${{ steps.download.outputs.backup_age_seconds }}
+          BACKUP_CREATED_AT: ${{ steps.download.outputs.backup_created_at }}
+          RECOVERY_SOURCE_DB_URL: ${{ secrets.RECOVERY_SOURCE_DB_URL }}
+          RECOVERY_TARGET_DB_URL: ${{ env.RECOVERY_TARGET_DB_URL }}
+          RECOVERY_TARGET_KIND: local
+          RECOVERY_OPERATOR: ${{ vars.RECOVERY_OPERATOR }}
+          RECOVERY_CHECKS_PATH: .artifacts/supabase/recovery-restore-checks.json
+        run: scripts/restore-supabase.sh
+      - name: Verify isolated authentication
+        id: auth
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-auth.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-auth.env"
+          set +a
+          RECOVERY_API_URL="$API_URL" \
+          RECOVERY_ANON_KEY="$ANON_KEY" \
+          RECOVERY_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+          RECOVERY_JWT_SECRET="$JWT_SECRET" \
+          RECOVERY_AUTH_CHECK_PATH=.artifacts/supabase/recovery-auth-check.json \
+            node scripts/verify-recovery-auth.mjs
+      - name: Exercise restore failure monitoring
+        id: monitor
+        env:
+          RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
+        run: scripts/notify-recovery-monitor.sh restore_failure_exercise
+      - name: Record the abandonment decision
+        if: ${{ always() && !cancelled() }}
+        env:
+          RECOVERY_RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          RECOVERY_AUTH_OUTCOME: ${{ steps.auth.outcome }}
+          RECOVERY_MONITOR_OUTCOME: ${{ steps.monitor.outcome }}
+        run: |
+          node scripts/attest-recovery-restore.mjs \
+            --owner "${{ vars.RECOVERY_OPERATOR }}" \
+            --workflow "${{ github.workflow }}:${{ github.run_id }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
+        with:
+          name: recovery-drill-attestation
+          path: |
+            .artifacts/supabase/recovery-restore-checks.json
+            .artifacts/supabase/recovery-auth-check.json
+            .artifacts/supabase/recovery-restore-attestation.json
+          if-no-files-found: error
+
+  restore-failure-monitor:
+    if: always() && github.event_name == 'workflow_dispatch' && needs.restore.result == 'failure'
+    needs: restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Report the restore failure
+        env:
+          RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
+        run: scripts/notify-recovery-monitor.sh restore_failed

@@ -67,11 +67,22 @@ function withTools(directory: string, environment: NodeJS.ProcessEnv): NodeJS.Pr
 
 /** Return a complete pg_dump-style SQL body with application data. */
 function validDump() {
-  const tables = ['campaigns', 'creatures', 'effects', 'encounters', 'players', 'spells']
+  const tables = [
+    'campaigns',
+    'creatures',
+    'effects',
+    'encounters',
+    'players',
+    'recovery_deletions',
+    'share_identities',
+    'shares',
+    'spells',
+  ]
   const blocks = tables
     .map((table) => `COPY "public"."${table}" ("id") FROM stdin;\n${table}-1\n\\.\n`)
     .join('')
-  return `${'-- integrity padding\n'.repeat(80)}${blocks}COPY "auth"."users" ("id") FROM stdin;\nuser-1\n\\.\n`
+  const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+  return `-- openfray-backup-created-at: ${createdAt}\n${'-- integrity padding\n'.repeat(80)}${blocks}COPY "auth"."users" ("id") FROM stdin;\nuser-1\n\\.\nCOPY "supabase_migrations"."schema_migrations" ("version") FROM stdin;\n20260911000000\n\\.\n`
 }
 
 /** Write a deterministic matching identity and recipient for the age test double. */
@@ -86,10 +97,18 @@ function ageKeyPair(directory: string) {
 function pgDump(directory: string) {
   const dump = join(directory, 'dump.sql')
   writeFileSync(dump, validDump())
+  executable(
+    directory,
+    'psql',
+    `while IFS= read -r line; do
+  if [[ "$line" == *pg_export_snapshot* ]]; then printf '00000003-0000001B-1\\n'; fi
+done`,
+  )
   return executable(
     directory,
     'pg_dump',
-    `if [[ "\${1:-}" == "--version" ]]; then echo 'pg_dump test'; else cat "${dump}"; fi`,
+    `echo "$*" >> "${join(directory, 'pg_dump.log')}"
+if [[ "\${1:-}" == "--version" ]]; then echo 'pg_dump test'; else cat "${dump}"; fi`,
   )
 }
 
@@ -192,6 +211,15 @@ describe('encrypted database backup', () => {
     expect(result.status, result.stderr).toBe(0)
     expect(result.stdout).toContain('encryption configuration verified before export')
     expect(result.stdout).toContain('encrypted backup verified and discarded, nothing uploaded')
+    const dumpCalls = readFileSync(join(directory, 'pg_dump.log'), 'utf8')
+      .trim()
+      .split('\n')
+      .filter((call) => call !== '--version')
+    expect(dumpCalls).toHaveLength(2)
+    expect(dumpCalls.every((call) => call.includes('--snapshot=00000003-0000001B-1'))).toBe(true)
+    expect(dumpCalls[0]).toMatch(/--data-only .*--table=auth\.users .*--table=auth\.identities/)
+    expect(dumpCalls[1]).toContain('--schema=public')
+    expect(dumpCalls[1]).not.toContain('--no-privileges')
   })
 
   it('uploads immutable ciphertext, then applies retention only as a later stage', () => {
@@ -218,7 +246,9 @@ describe('encrypted database backup', () => {
       ['--output', ciphertext],
     )
     expect(exported.status, exported.stderr).toBe(0)
-    const sha256 = readFileSync(exportOutputs, 'utf8').match(/ciphertext_sha256=([a-f0-9]{64})/)![1]
+    const exportEvidence = readFileSync(exportOutputs, 'utf8')
+    const sha256 = exportEvidence.match(/ciphertext_sha256=([a-f0-9]{64})/)![1]
+    const createdAt = exportEvidence.match(/backup_created_at=(.+)/)![1]
 
     executable(
       directory,
@@ -239,6 +269,7 @@ fi`,
       PATH: `${directory}:${process.env.PATH}`,
       BACKUP_CIPHERTEXT_PATH: ciphertext,
       BACKUP_CIPHERTEXT_SHA256: sha256,
+      BACKUP_CREATED_AT: createdAt,
       BACKUP_AGE_IDENTITY: '',
       SUPABASE_DB_URL: '',
       R2_BUCKET: 'private-backups',
@@ -272,12 +303,42 @@ fi`,
     expect(retained.status, retained.stderr).toBe(0)
     expect(retained.stdout).toContain('retention and deletion permissions verified')
     const log = readFileSync(awsLog, 'utf8')
-    expect(log).toMatch(/s3 cp .*\.age s3:\/\/private-backups\/daily\/.*\.age/)
+    expect(log).toMatch(
+      /s3 cp .*\.age s3:\/\/private-backups\/daily\/.*\.age .*--metadata sha256=[a-f0-9]{64},created_at=\d{4}-/,
+    )
     expect(log).not.toMatch(/s3:\/\/private-backups\/daily\/.*\.sql\.gz(?:\s|$)/)
     expect(log).toContain('s3 rm s3://private-backups/permission-probe/retention-')
     expect(log).toContain(
       's3 rm s3://private-backups/daily/openfray-2000-01-01T00-00-00Z-old-1.sql.gz.age',
     )
+  })
+
+  it('rejects re-uploaded ciphertext whose modification time is newer than its key', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'openfray-recovery-stale-'))
+    const createdAt = new Date(Date.now() - 2 * 86_400_000).toISOString().replace(/\.\d{3}Z$/, 'Z')
+    const objectKey = `daily/openfray-${createdAt.replaceAll(':', '-')}-1234-1-99.sql.gz.age`
+    executable(
+      directory,
+      'aws',
+      `if [[ "\${1:-} \${2:-}" == "s3api head-object" ]]; then
+  printf '%s %s %s %s\\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 100 "${'a'.repeat(64)}" "$EXPECTED_CREATED"
+elif [[ "\${1:-} \${2:-}" == "s3api delete-object" || "\${1:-} \${2:-}" == "s3api put-object" ]]; then
+  exit 1
+fi`,
+    )
+    const result = run(scripts.download, {
+      PATH: `${directory}:${process.env.PATH}`,
+      BACKUP_OBJECT_KEY: objectKey,
+      BACKUP_CIPHERTEXT_PATH: join(directory, 'downloaded.age'),
+      R2_BUCKET: 'private-backups',
+      R2_ENDPOINT: 'https://objects.invalid',
+      AWS_ACCESS_KEY_ID: 'read-only',
+      AWS_SECRET_ACCESS_KEY: 'read-only-secret',
+      EXPECTED_CREATED: createdAt,
+    })
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('object modification time does not match backup creation')
   })
 
   it('downloads with read-only credentials before isolated decryption', () => {
@@ -288,6 +349,8 @@ fi`,
     const ciphertext = join(directory, 'stored.age')
     const downloaded = join(directory, 'downloaded.age')
     const awsLog = join(directory, 'aws.log')
+    const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+    const objectKey = `daily/openfray-${createdAt.replaceAll(':', '-')}-1234-1-99.sql.gz.age`
     writeFileSync(compressed, gzipSync(validDump()))
     execFileSync(age, ['--encrypt', '--recipient', recipient, '--output', ciphertext, compressed])
     executable(
@@ -295,7 +358,7 @@ fi`,
       'aws',
       `echo "$*" >> "${awsLog}"
 if [[ "\${1:-} \${2:-}" == "s3api head-object" ]]; then
-  printf '%s %s\\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(wc -c < "${ciphertext}")"
+  printf '%s %s %s %s\\n' "$EXPECTED_CREATED" "$(wc -c < "${ciphertext}")" "$EXPECTED_SHA" "$EXPECTED_CREATED"
 elif [[ "\${1:-} \${2:-}" == "s3 cp" ]]; then
   cp "${ciphertext}" "\${4}"
 elif [[ "\${1:-} \${2:-}" == "s3api delete-object" || "\${1:-} \${2:-}" == "s3api put-object" ]]; then
@@ -305,14 +368,16 @@ fi`,
     const sha256 = createHash('sha256').update(readFileSync(ciphertext)).digest('hex')
     const downloadResult = run(scripts.download, {
       PATH: `${directory}:${process.env.PATH}`,
-      BACKUP_OBJECT_KEY: 'daily/openfray-2026-09-01T03-41-00Z-1234-1-99.sql.gz.age',
-      BACKUP_CIPHERTEXT_SHA256: sha256,
+      BACKUP_OBJECT_KEY: objectKey,
+      BACKUP_CIPHERTEXT_SHA256: '',
       BACKUP_CIPHERTEXT_PATH: downloaded,
       BACKUP_AGE_IDENTITY: '',
       R2_BUCKET: 'private-backups',
       R2_ENDPOINT: 'https://objects.invalid',
       AWS_ACCESS_KEY_ID: 'read-only',
       AWS_SECRET_ACCESS_KEY: 'read-only-secret',
+      EXPECTED_SHA: sha256,
+      EXPECTED_CREATED: createdAt,
     })
     expect(downloadResult.status, downloadResult.stderr).toBe(0)
     expect(downloadResult.stdout).toContain('recovery credential is read-only')

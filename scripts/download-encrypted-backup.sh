@@ -8,17 +8,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib/backup-integrity.sh
 source "$SCRIPT_DIR/lib/backup-integrity.sh"
 
-# Return an ISO-8601 timestamp as Unix seconds on GNU or BSD date.
-timestamp_seconds() {
-  local timestamp="$1"
-  date -u -d "$timestamp" +%s 2>/dev/null || {
-    timestamp="${timestamp%+00:00}"
-    timestamp="${timestamp%Z}"
-    timestamp="${timestamp%%.*}Z"
-    date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$timestamp" +%s
-  }
-}
-
 # Prove that the recovery credential cannot create or delete objects.
 verify_read_permissions() {
   local key
@@ -35,7 +24,6 @@ verify_read_permissions() {
 }
 
 backup_need BACKUP_OBJECT_KEY
-backup_need BACKUP_CIPHERTEXT_SHA256
 backup_need BACKUP_CIPHERTEXT_PATH
 backup_need R2_BUCKET
 backup_need R2_ENDPOINT
@@ -50,28 +38,51 @@ backup_have gzip
 [[ ! -e "$BACKUP_CIPHERTEXT_PATH" ]] || backup_die "download path already exists"
 
 verify_read_permissions
-read -r LAST_MODIFIED CONTENT_LENGTH < <(aws s3api head-object \
+read -r LAST_MODIFIED CONTENT_LENGTH STORED_SHA256 STORED_CREATED_AT < <(aws s3api head-object \
   --bucket "$R2_BUCKET" \
   --key "$BACKUP_OBJECT_KEY" \
   --endpoint-url "$R2_ENDPOINT" \
-  --query '[LastModified,ContentLength]' \
+  --query '[LastModified,ContentLength,Metadata.sha256,Metadata.created_at]' \
   --output text)
 [[ "$CONTENT_LENGTH" =~ ^[1-9][0-9]*$ ]] || backup_die "encrypted object is empty"
+if [[ "$STORED_SHA256" == "None" || "$STORED_SHA256" == "null" || -z "$STORED_SHA256" ]]; then
+  backup_need BACKUP_CIPHERTEXT_SHA256
+  EXPECTED_SHA256="$BACKUP_CIPHERTEXT_SHA256"
+else
+  [[ "$STORED_SHA256" =~ ^[a-f0-9]{64}$ ]] || backup_die "stored SHA-256 metadata is invalid"
+  [[ -z "${BACKUP_CIPHERTEXT_SHA256:-}" || "$BACKUP_CIPHERTEXT_SHA256" == "$STORED_SHA256" ]] ||
+    backup_die "stored SHA-256 metadata does not match the requested digest"
+  EXPECTED_SHA256="$STORED_SHA256"
+fi
+CREATED_AT="$(backup_key_created_at "$BACKUP_OBJECT_KEY")" ||
+  backup_die "backup object creation time is invalid"
+if [[ "$STORED_CREATED_AT" != "None" && "$STORED_CREATED_AT" != "null" && -n "$STORED_CREATED_AT" ]]; then
+  [[ "$STORED_CREATED_AT" == "$CREATED_AT" ]] ||
+    backup_die "stored creation metadata does not match the object key"
+fi
 NOW="$(date -u +%s)"
+CREATED="$(timestamp_seconds "$CREATED_AT")" || backup_die "backup creation time is unreadable"
 MODIFIED="$(timestamp_seconds "$LAST_MODIFIED")" || backup_die "object freshness is unreadable"
-AGE_SECONDS=$((NOW - MODIFIED))
+UPLOAD_DELAY=$((MODIFIED - CREATED))
+[[ "$UPLOAD_DELAY" -ge -300 && "$UPLOAD_DELAY" -le 600 ]] ||
+  backup_die "object modification time does not match backup creation"
+AGE_SECONDS=$((NOW - CREATED))
 [[ "$AGE_SECONDS" -ge -300 && "$AGE_SECONDS" -le 86400 ]] ||
   backup_die "encrypted object is outside the 24-hour freshness window"
 
 aws s3 cp "s3://$R2_BUCKET/$BACKUP_OBJECT_KEY" "$BACKUP_CIPHERTEXT_PATH" \
   --endpoint-url "$R2_ENDPOINT" --only-show-errors
-[[ "$(file_sha256 "$BACKUP_CIPHERTEXT_PATH")" == "$BACKUP_CIPHERTEXT_SHA256" ]] ||
+[[ "$(file_sha256 "$BACKUP_CIPHERTEXT_PATH")" == "$EXPECTED_SHA256" ]] ||
   backup_die "downloaded ciphertext failed its SHA-256 integrity check"
 if gzip -t "$BACKUP_CIPHERTEXT_PATH" >/dev/null 2>&1; then
   backup_die "stored object is a plaintext gzip dump"
 fi
 
 echo "backup: ciphertext is fresh and intact"
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  printf 'backup_age_seconds=%s\nbackup_created_at=%s\n' \
+    "$AGE_SECONDS" "$CREATED_AT" >>"$GITHUB_OUTPUT"
+fi
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   cat >>"$GITHUB_STEP_SUMMARY" <<'EOF'
 ## Encrypted backup object recovery

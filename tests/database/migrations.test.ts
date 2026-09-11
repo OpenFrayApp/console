@@ -103,8 +103,10 @@ describe('the tracked migration lineage', () => {
       'encounters',
       'live_view_sessions',
       'players',
+      'recovery_deletions',
       'role_capabilities',
       'role_inherits',
+      'share_identities',
       'share_reports',
       'share_tombstones',
       'shares',
@@ -604,6 +606,104 @@ describe('the tracked migration lineage', () => {
         `select count(*)::int from live_view_sessions where owner_id = '${owner}'`,
       ),
     ).toBe(0)
+    expect(
+      await db.query(`
+        select kind, subject from recovery_deletions
+        where subject in ('${owner}', 'fixture001') order by kind
+      `),
+    ).toMatchObject({
+      rows: [
+        { kind: 'account', subject: owner },
+        { kind: 'share', subject: 'fixture001' },
+      ],
+    })
+  })
+
+  it('replays account deletion and share revocation without exposing the ledger', async () => {
+    const owner = '33333333-3333-4333-8333-333333333333'
+    const revokedOwner = '44444444-4444-4444-8444-444444444444'
+    await asOwner()
+    await db.exec(`
+      insert into auth.users (id) values ('${owner}'), ('${revokedOwner}');
+      insert into campaigns (owner_id, data) values ('${owner}', '{}'::jsonb);
+      insert into encounters (id, owner_id, state, player_code)
+        values ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '${revokedOwner}', '{}'::jsonb, 'restored-live');
+      insert into live_view_sessions (owner_id, encounter_id, code, capability_hash)
+        values (
+          '${revokedOwner}',
+          'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          'restored-live',
+          '${'9'.repeat(64)}'
+        );
+      insert into encounter_writer_leases (encounter_id, owner_id, writer_id, expires_at)
+        values (
+          'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          '${revokedOwner}',
+          'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          now() + interval '1 minute'
+        );
+      insert into shares (owner_id, code, kind, data) values
+        ('${owner}', 'restore001', 'encounter', '{}'::jsonb),
+        ('${revokedOwner}', 'restore002', 'creature', '{}'::jsonb);
+      insert into recovery_deletions (kind, subject) values
+        ('account', '${owner}'),
+        ('share', 'restore002');
+    `)
+
+    expect(
+      await value<{ accounts: number; shares: number }>(`select apply_recovery_deletions()`),
+    ).toEqual({ accounts: 1, shares: 1 })
+    expect(await value<number>(`select count(*)::int from auth.users where id = '${owner}'`)).toBe(
+      0,
+    )
+    expect(await value<number>(`select count(*)::int from shares where code = 'restore002'`)).toBe(
+      0,
+    )
+    expect(await value<number>(`select count(*)::int from live_view_sessions`)).toBe(0)
+    expect(await value<number>(`select count(*)::int from encounter_writer_leases`)).toBe(0)
+    expect(
+      await value<number>(`select count(*)::int from share_identities where code = 'restore002'`),
+    ).toBe(1)
+    await expect(
+      db.exec(`
+        insert into shares (owner_id, code, kind, data)
+        values ('${revokedOwner}', 'restore002', 'creature', '{}'::jsonb)
+      `),
+    ).rejects.toThrow(/revoked share code/)
+
+    for (const role of ['anon', 'authenticated', 'service_role', 'report_ingress']) {
+      expect(
+        await value<boolean>(
+          `select has_table_privilege('${role}', 'recovery_deletions', 'select')`,
+        ),
+      ).toBe(false)
+      expect(
+        await value<boolean>(
+          `select has_function_privilege('${role}', 'apply_recovery_deletions()', 'execute')`,
+        ),
+      ).toBe(false)
+    }
+  })
+
+  it('accepts a restored saved encounter without live revision history', async () => {
+    const recovery = await new PGlite()
+    try {
+      await recovery.exec(SUPABASE_STUB)
+      for (const migration of migrationFiles) {
+        await recovery.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+      }
+      await recovery.exec(`
+        insert into auth.users (id) values ('44444444-4444-4444-8444-444444444444');
+        insert into encounters (owner_id, kind, state)
+          values ('44444444-4444-4444-8444-444444444444', 'saved', '{"name":"Saved"}'::jsonb)
+      `)
+
+      await expect(
+        recovery.exec(readFileSync(here('../../supabase/tests/recovery-restore.sql'), 'utf8')),
+      ).resolves.toBeDefined()
+    } finally {
+      await recovery.close()
+    }
   })
 })
 

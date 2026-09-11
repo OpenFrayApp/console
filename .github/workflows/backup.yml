@@ -70,6 +70,7 @@ jobs:
           sudo apt-get install -y -qq postgresql-client-17
           newest=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)
           echo "PG_DUMP=$newest/pg_dump" >> "$GITHUB_ENV"
+          echo "$newest" >> "$GITHUB_PATH"
           "$newest/pg_dump" --version
 
       - name: Export, verify, and encrypt
@@ -85,6 +86,7 @@ jobs:
         env:
           BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-backup.age
           BACKUP_CIPHERTEXT_SHA256: ${{ steps.export.outputs.ciphertext_sha256 }}
+          BACKUP_CREATED_AT: ${{ steps.export.outputs.backup_created_at }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
