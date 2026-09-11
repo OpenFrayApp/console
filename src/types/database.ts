@@ -404,6 +404,21 @@ export type Database = {
         }
         Relationships: []
       }
+      share_identities: {
+        Row: {
+          code: string
+          first_published_at: string
+        }
+        Insert: {
+          code: string
+          first_published_at?: string
+        }
+        Update: {
+          code?: string
+          first_published_at?: string
+        }
+        Relationships: []
+      }
       share_reports: {
         Row: {
           code: string
@@ -671,6 +686,10 @@ export type Database = {
       my_capabilities: { Args: never; Returns: string[] }
       note_action: {
         Args: { extra?: Json; what: string; which: string }
+        Returns: undefined
+      }
+      reconcile_recovery_dependencies: {
+        Args: { attach: boolean }
         Returns: undefined
       }
       report_share: {

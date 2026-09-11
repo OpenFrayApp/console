@@ -106,6 +106,7 @@ describe('the tracked migration lineage', () => {
       'recovery_deletions',
       'role_capabilities',
       'role_inherits',
+      'share_identities',
       'share_reports',
       'share_tombstones',
       'shares',
@@ -660,6 +661,9 @@ describe('the tracked migration lineage', () => {
     )
     expect(await value<number>(`select count(*)::int from live_view_sessions`)).toBe(0)
     expect(await value<number>(`select count(*)::int from encounter_writer_leases`)).toBe(0)
+    expect(
+      await value<number>(`select count(*)::int from share_identities where code = 'restore002'`),
+    ).toBe(1)
     await expect(
       db.exec(`
         insert into shares (owner_id, code, kind, data)
@@ -678,6 +682,27 @@ describe('the tracked migration lineage', () => {
           `select has_function_privilege('${role}', 'apply_recovery_deletions()', 'execute')`,
         ),
       ).toBe(false)
+    }
+  })
+
+  it('accepts a restored saved encounter without live revision history', async () => {
+    const recovery = await new PGlite()
+    try {
+      await recovery.exec(SUPABASE_STUB)
+      for (const migration of migrationFiles) {
+        await recovery.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+      }
+      await recovery.exec(`
+        insert into auth.users (id) values ('44444444-4444-4444-8444-444444444444');
+        insert into encounters (owner_id, kind, state)
+          values ('44444444-4444-4444-8444-444444444444', 'saved', '{"name":"Saved"}'::jsonb)
+      `)
+
+      await expect(
+        recovery.exec(readFileSync(here('../../supabase/tests/recovery-restore.sql'), 'utf8')),
+      ).resolves.toBeDefined()
+    } finally {
+      await recovery.close()
     }
   })
 })

@@ -721,6 +721,7 @@ begin
     '33333333-3333-3333-3333-333333333333',
     '66666666-6666-6666-6666-666666666666'
   );
+  delete from share_identities where code in ('cb1owner', 'cb1delete');
   delete from recovery_deletions
     where (kind = 'account' and subject in (
       '11111111-1111-1111-1111-111111111111',

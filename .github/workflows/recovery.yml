@@ -21,6 +21,8 @@ on:
       - 'scripts/notify-recovery-monitor.sh'
       - 'scripts/restore-supabase.sh'
       - 'scripts/upload-encrypted-backup.sh'
+      - 'scripts/verify-recovery-auth.mjs'
+      - 'scripts/verify-share-code-concurrency.sh'
       - 'src/types/database.ts'
       - 'supabase/**'
       - 'tests/database/**'
@@ -58,6 +60,13 @@ jobs:
       - run: supabase start
       - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts
       - run: npm run db:boundary
+      - name: Prove concurrent revocation
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-concurrency.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-concurrency.env"
+          set +a
+          RECOVERY_TARGET_DB_URL="$DB_URL" npm run db:recovery-concurrency
 
   backup-health:
     if: github.event_name == 'schedule'
@@ -123,21 +132,42 @@ jobs:
           AWS_DEFAULT_REGION: auto
         run: scripts/download-encrypted-backup.sh
       - name: Restore, replay deletions, and verify boundaries
+        id: restore
         env:
           BACKUP_CIPHERTEXT_PATH: ${{ runner.temp }}/openfray-recovery.age
           BACKUP_AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
           BACKUP_AGE_SECONDS: ${{ steps.download.outputs.backup_age_seconds }}
+          BACKUP_CREATED_AT: ${{ steps.download.outputs.backup_created_at }}
           RECOVERY_SOURCE_DB_URL: ${{ secrets.RECOVERY_SOURCE_DB_URL }}
           RECOVERY_TARGET_DB_URL: ${{ env.RECOVERY_TARGET_DB_URL }}
           RECOVERY_TARGET_KIND: local
           RECOVERY_OPERATOR: ${{ vars.RECOVERY_OPERATOR }}
           RECOVERY_CHECKS_PATH: .artifacts/supabase/recovery-restore-checks.json
         run: scripts/restore-supabase.sh
+      - name: Verify isolated authentication
+        id: auth
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-auth.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-auth.env"
+          set +a
+          RECOVERY_API_URL="$API_URL" \
+          RECOVERY_ANON_KEY="$ANON_KEY" \
+          RECOVERY_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+          RECOVERY_JWT_SECRET="$JWT_SECRET" \
+          RECOVERY_AUTH_CHECK_PATH=.artifacts/supabase/recovery-auth-check.json \
+            node scripts/verify-recovery-auth.mjs
       - name: Exercise restore failure monitoring
+        id: monitor
         env:
           RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
         run: scripts/notify-recovery-monitor.sh restore_failure_exercise
       - name: Record the abandonment decision
+        if: ${{ always() && !cancelled() }}
+        env:
+          RECOVERY_RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          RECOVERY_AUTH_OUTCOME: ${{ steps.auth.outcome }}
+          RECOVERY_MONITOR_OUTCOME: ${{ steps.monitor.outcome }}
         run: |
           node scripts/attest-recovery-restore.mjs \
             --owner "${{ vars.RECOVERY_OPERATOR }}" \
@@ -148,8 +178,9 @@ jobs:
           name: recovery-drill-attestation
           path: |
             .artifacts/supabase/recovery-restore-checks.json
+            .artifacts/supabase/recovery-auth-check.json
             .artifacts/supabase/recovery-restore-attestation.json
-          if-no-files-found: warn
+          if-no-files-found: error
 
   restore-failure-monitor:
     if: always() && github.event_name == 'workflow_dispatch' && needs.restore.result == 'failure'

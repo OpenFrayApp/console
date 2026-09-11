@@ -43,6 +43,9 @@ export function buildRecoveryAttestation(input) {
     !Number.isNaN(Date.parse(input.timestamp))
   const isolated = input.environment === 'isolated'
   const abandoned = input.decision === 'abandon'
+  const failedPhase = ['restore', 'authentication', 'monitoring'].includes(input.failedPhase)
+    ? input.failedPhase
+    : null
   const result =
     checksPassed &&
     countsValid &&
@@ -82,6 +85,7 @@ export function buildRecoveryAttestation(input) {
     owner: input.owner,
     workflow: input.workflow,
     decision: input.decision,
+    failedPhase,
     result,
     timestamp: input.timestamp,
   }

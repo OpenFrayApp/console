@@ -22,8 +22,14 @@ read -r object_key modified size < <(aws s3api list-objects-v2 \
 [[ "$object_key" =~ ^daily/openfray-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}Z-[A-Za-z0-9._-]+\.sql\.gz\.age$ ]] ||
   backup_die "no valid encrypted recovery point exists"
 [[ "$size" =~ ^[1-9][0-9]*$ ]] || backup_die "latest encrypted recovery point is empty"
+created_at="$(backup_key_created_at "$object_key")" ||
+  backup_die "latest recovery point has no valid creation time"
 now="$(date -u +%s)"
-created="$(timestamp_seconds "$modified")" || backup_die "recovery-point freshness is unreadable"
+created="$(timestamp_seconds "$created_at")" || backup_die "recovery-point freshness is unreadable"
+modified_seconds="$(timestamp_seconds "$modified")" || backup_die "object freshness is unreadable"
+upload_delay=$((modified_seconds - created))
+[[ "$upload_delay" -ge -300 && "$upload_delay" -le 600 ]] ||
+  backup_die "latest object modification time does not match backup creation"
 age_seconds=$((now - created))
 [[ "$age_seconds" -ge -300 && "$age_seconds" -le 86400 ]] ||
   backup_die "latest encrypted recovery point is outside the 24-hour window"

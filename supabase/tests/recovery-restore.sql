@@ -3,12 +3,25 @@
 
 -- Verify restored relationships and structures without returning authored content.
 do $recovery$
+declare
+  active_sessions integer := 0;
 begin
   if exists (
     select 1 from auth.identities i
     left join auth.users u on u.id = i.user_id
     where u.id is null
   ) then raise exception 'RC-4: restored authentication identities have no account';
+  end if;
+
+  if to_regclass('auth.sessions') is not null then
+    execute 'select count(*) from auth.sessions' into active_sessions;
+  end if;
+  if to_regclass('auth.refresh_tokens') is not null then
+    execute 'select $1 + count(*) from auth.refresh_tokens'
+      into active_sessions using active_sessions;
+  end if;
+  if active_sessions <> 0 then
+    raise exception 'RC-4: authentication sessions entered the recovery point';
   end if;
 
   if exists (select 1 from public.live_view_sessions)
@@ -23,10 +36,10 @@ begin
 
   if exists (
     select 1 from public.encounters e
-    where not exists (
+    where e.kind = 'live' and not exists (
       select 1 from public.encounter_revisions r where r.encounter_id = e.id
     )
-  ) then raise exception 'RC-4: a restored encounter has no recovery revision';
+  ) then raise exception 'RC-4: a restored live encounter has no recovery revision';
   end if;
 
   if exists (
@@ -35,7 +48,7 @@ begin
       select state from public.encounter_revisions
       where encounter_id = e.id order by revision desc limit 1
     ) latest on true
-    where latest.state is distinct from e.state
+    where e.kind = 'live' and latest.state is distinct from e.state
   ) then raise exception 'RC-4: a restored encounter differs from its latest revision';
   end if;
 

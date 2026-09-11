@@ -38,11 +38,11 @@ backup_have gzip
 [[ ! -e "$BACKUP_CIPHERTEXT_PATH" ]] || backup_die "download path already exists"
 
 verify_read_permissions
-read -r LAST_MODIFIED CONTENT_LENGTH STORED_SHA256 < <(aws s3api head-object \
+read -r LAST_MODIFIED CONTENT_LENGTH STORED_SHA256 STORED_CREATED_AT < <(aws s3api head-object \
   --bucket "$R2_BUCKET" \
   --key "$BACKUP_OBJECT_KEY" \
   --endpoint-url "$R2_ENDPOINT" \
-  --query '[LastModified,ContentLength,Metadata.sha256]' \
+  --query '[LastModified,ContentLength,Metadata.sha256,Metadata.created_at]' \
   --output text)
 [[ "$CONTENT_LENGTH" =~ ^[1-9][0-9]*$ ]] || backup_die "encrypted object is empty"
 if [[ "$STORED_SHA256" == "None" || "$STORED_SHA256" == "null" || -z "$STORED_SHA256" ]]; then
@@ -54,9 +54,19 @@ else
     backup_die "stored SHA-256 metadata does not match the requested digest"
   EXPECTED_SHA256="$STORED_SHA256"
 fi
+CREATED_AT="$(backup_key_created_at "$BACKUP_OBJECT_KEY")" ||
+  backup_die "backup object creation time is invalid"
+if [[ "$STORED_CREATED_AT" != "None" && "$STORED_CREATED_AT" != "null" && -n "$STORED_CREATED_AT" ]]; then
+  [[ "$STORED_CREATED_AT" == "$CREATED_AT" ]] ||
+    backup_die "stored creation metadata does not match the object key"
+fi
 NOW="$(date -u +%s)"
+CREATED="$(timestamp_seconds "$CREATED_AT")" || backup_die "backup creation time is unreadable"
 MODIFIED="$(timestamp_seconds "$LAST_MODIFIED")" || backup_die "object freshness is unreadable"
-AGE_SECONDS=$((NOW - MODIFIED))
+UPLOAD_DELAY=$((MODIFIED - CREATED))
+[[ "$UPLOAD_DELAY" -ge -300 && "$UPLOAD_DELAY" -le 600 ]] ||
+  backup_die "object modification time does not match backup creation"
+AGE_SECONDS=$((NOW - CREATED))
 [[ "$AGE_SECONDS" -ge -300 && "$AGE_SECONDS" -le 86400 ]] ||
   backup_die "encrypted object is outside the 24-hour freshness window"
 
@@ -70,7 +80,8 @@ fi
 
 echo "backup: ciphertext is fresh and intact"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-  printf 'backup_age_seconds=%s\n' "$AGE_SECONDS" >>"$GITHUB_OUTPUT"
+  printf 'backup_age_seconds=%s\nbackup_created_at=%s\n' \
+    "$AGE_SECONDS" "$CREATED_AT" >>"$GITHUB_OUTPUT"
 fi
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   cat >>"$GITHUB_STEP_SUMMARY" <<'EOF'

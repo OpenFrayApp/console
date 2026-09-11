@@ -19,7 +19,8 @@ else
 fi
 
 PG_DUMP="${PG_DUMP:-pg_dump}"
-STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+STAMP="${CREATED_AT//:/-}"
 WORK="$(mktemp -d)"
 DUMP="$WORK/openfray-$STAMP.sql.gz"
 CIPHERTEXT="$DUMP.age"
@@ -73,6 +74,7 @@ SNAPSHOT="$(tr -d '[:space:]' <"$SNAPSHOT_OUTPUT")"
 echo "backup: dumping public + auth with $("$PG_DUMP" --version) …"
 # The isolated target owns provider-role defaults; only the tracked postgres defaults travel.
 {
+  printf '%s\n' "-- openfray-backup-created-at: $CREATED_AT"
   "$PG_DUMP" "$SUPABASE_DB_URL" \
     --snapshot="$SNAPSHOT" \
     --data-only \
@@ -111,6 +113,7 @@ fi
 
 mv "$CIPHERTEXT" "$OUTPUT"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-  printf 'ciphertext_path=%s\nciphertext_sha256=%s\n' "$OUTPUT" "$CIPHERTEXT_SHA256" >>"$GITHUB_OUTPUT"
+  printf 'ciphertext_path=%s\nciphertext_sha256=%s\nbackup_created_at=%s\n' \
+    "$OUTPUT" "$CIPHERTEXT_SHA256" "$CREATED_AT" >>"$GITHUB_OUTPUT"
 fi
 echo "backup: ciphertext ready for isolated upload"

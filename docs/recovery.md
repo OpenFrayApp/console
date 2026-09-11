@@ -8,7 +8,7 @@ Migration `20260911000000_recovery_deletion_ledger.sql` records account deletion
 
 The drill reads the current ledger through a protected database connection after restoring the backup. It replays every recorded account and share deletion. It also clears restored live-view sessions and writer leases. This prevents a recovery point created before a deletion from making that account, share, or live authority active again.
 
-The encrypted backup contains public schema definitions, grants, policies, and data. It contains data from `auth.users` and `auth.identities` without replacing the provider-owned auth schema. Provider-owned default privileges remain those of the ephemeral target.
+The encrypted backup contains an authenticated creation time, public schema definitions, grants, policies, and data. It contains data from `auth.users` and `auth.identities` without replacing the provider-owned auth schema. Auth sessions and refresh tokens stay outside the recovery point. Provider-owned default privileges remain those of the ephemeral target.
 
 ## Configure the protected environment
 
@@ -22,7 +22,7 @@ Add these environment secrets:
 Add these repository secrets so unattended health and failure jobs can use them:
 
 - `R2_BUCKET` and `R2_ENDPOINT`: The private backup bucket and endpoint.
-- `R2_RECOVERY_ACCESS_KEY_ID` and `R2_RECOVERY_SECRET_ACCESS_KEY`: Object Read-only credentials.
+- `R2_RECOVERY_ACCESS_KEY_ID` and `R2_RECOVERY_SECRET_ACCESS_KEY`: Object read-only credentials.
 - `RECOVERY_MONITOR_WEBHOOK`: An endpoint that accepts the allowlisted recovery health events.
 
 The webhook receives only an event name and the `openfray-recovery` service label. It receives no authored content, account identifiers, share codes, object keys, database addresses, or credentials.
@@ -41,12 +41,12 @@ Use a backup created after the recovery-ledger migration. The restore rejects an
 
 ## What the drill verifies
 
-The workflow has an eight-hour timeout and rejects a backup older than 24 hours. It checks:
+The workflow has an eight-hour timeout and rejects a backup older than 24 hours. The encrypted creation time must match the object key and stored metadata. It checks:
 
 - Exact backed-up and restored row counts before deletion replay.
 - Deleted-account and revoked-share fixtures after replay.
 - Cleared live-view sessions and writer leases.
-- Tenant isolation and authentication relationships.
+- Tenant isolation, authentication relationships, and an authenticated synthetic-user request through the isolated Auth service.
 - Row-Level Security, policies, grants, and restricted function execution.
 - Critical recovery, account, sharing, and encounter functions.
 - Encounter JSON and its latest recovery revision.
@@ -62,8 +62,8 @@ When any restore, integrity, isolation, deletion, or monitoring check fails:
 
 1. Leave production unchanged.
 2. Keep the last verified encrypted recovery point.
-3. Retain the failed workflow logs and available attestation files.
-4. Record the failing check and the operator.
+3. Retain the failed workflow logs and its abandonment attestation.
+4. Record the failing phase and the operator.
 5. Fix the backup or restore path forward.
 6. Run the complete drill again before relying on a newer recovery point.
 
