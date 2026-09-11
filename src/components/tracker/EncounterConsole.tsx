@@ -39,7 +39,7 @@ import { rollWithEffects } from '../../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
 import { ActionResolver } from '../resolve/ActionResolver.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
-import { CombatantRow } from './CombatantRow.tsx'
+import { CombatantRow, type ReorderDirection } from './CombatantRow.tsx'
 import { ConcentrationPrompt } from '../resolve/ConcentrationPrompt.tsx'
 import { CreatureStatBlock } from '../statblock/CreatureStatBlock.tsx'
 import { PcStatBlock } from '../statblock/PcStatBlock.tsx'
@@ -358,7 +358,15 @@ export function EncounterConsole({
     if (isRollable(action)) setActionFor(action)
   }
 
-  /** A combatant's tracker row, wired for selection, HP input, effects, and drag reordering. */
+  /** Move a living combatant one place in the visible initiative order. */
+  const moveOnePlace = (c: Combatant, direction: ReorderDirection) => {
+    const order = trackerOrder(combatants, started).filter((entry) => entry.status !== 'dead')
+    const from = order.findIndex((entry) => entry.combatantId === c.combatantId)
+    const target = order[from + (direction === 'earlier' ? -1 : 1)]
+    if (target) dispatch({ type: 'reorder', id: c.combatantId, toId: target.combatantId })
+  }
+
+  /** A combatant's tracker row, wired for selection, HP input, effects, and reordering. */
   const renderRow = (c: Combatant) => (
     <CombatantRow
       key={c.combatantId}
@@ -386,6 +394,7 @@ export function EncounterConsole({
       dragging={drag?.id === c.combatantId}
       onReorderStart={() => setDrag({ id: c.combatantId, overId: null })}
       onReorderEnd={() => setDrag(null)}
+      onReorderBy={(direction) => moveOnePlace(c, direction)}
       onReorderOver={() =>
         setDrag((d) =>
           d && d.id !== c.combatantId && d.overId !== c.combatantId
@@ -422,7 +431,8 @@ export function EncounterConsole({
   // app's sheets, with the bottom bar to jump. In `split` (small tablets, landscape)
   // the same three regions are a two-column grid: tracker beside stat block, controls
   // and log in a band below. In `wide` they are the three aligned desktop columns.
-  const PANE = 'swipe:w-full swipe:shrink-0 swipe:snap-center swipe:px-4 swipe:pt-4 swipe:pb-3'
+  const PANE =
+    'min-w-0 swipe:w-full swipe:shrink-0 swipe:snap-center swipe:px-4 swipe:pt-4 swipe:pb-3'
   return (
     <div
       ref={panesRef}

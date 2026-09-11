@@ -14,6 +14,8 @@ import { DeathSavePips } from './DeathSaveControls.tsx'
 import { EditableField } from '../ui/EditableField.tsx'
 import { hpToneFor, TIER_LABEL } from '../ui/hpTone.ts'
 
+export type ReorderDirection = 'earlier' | 'later'
+
 interface CombatantRowProps {
   combatant: Combatant
   /** Whose turn it is (the initiative cursor). */
@@ -39,6 +41,8 @@ interface CombatantRowProps {
   onReorderStart?: () => void
   /** A drag ended (committed or cancelled). */
   onReorderEnd?: () => void
+  /** Move this row one place with a keyboard arrow key. */
+  onReorderBy?: (direction: ReorderDirection) => void
   /** The drag is hovering this row — the parent moves the dragged row here as a preview. */
   onReorderOver?: () => void
 }
@@ -61,6 +65,7 @@ export function CombatantRow({
   dragging = false,
   onReorderStart,
   onReorderEnd,
+  onReorderBy,
   onReorderOver,
 }: CombatantRowProps) {
   const { hp, status } = combatant
@@ -74,19 +79,8 @@ export function CombatantRow({
     <div
       ref={rowRef}
       aria-current={active ? 'true' : undefined}
-      role={onSelect ? 'button' : undefined}
-      tabIndex={onSelect ? 0 : undefined}
+      data-combatant-row=""
       onClick={onSelect}
-      onKeyDown={
-        onSelect
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onSelect()
-              }
-            }
-          : undefined
-      }
       // The whole list is the drop zone; each row reports when the drag hovers it so
       // the parent can move the dragged row here as a live preview.
       onDragOver={
@@ -112,7 +106,8 @@ export function CombatantRow({
       )}
     >
       {reorderable && (
-        <span
+        <button
+          type="button"
           draggable
           onDragStart={(e) => {
             e.dataTransfer.effectAllowed = 'move'
@@ -123,9 +118,16 @@ export function CombatantRow({
           }}
           onDragEnd={() => onReorderEnd?.()}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+            e.preventDefault()
+            e.stopPropagation()
+            onReorderBy?.(e.key === 'ArrowUp' ? 'earlier' : 'later')
+          }}
           aria-label={`Drag to reorder ${nameOf(combatant)}`}
+          aria-description="Use the Up and Down Arrow keys to move one place."
           title="Drag to reorder"
-          className="shrink-0 cursor-grab text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
+          className="tap -mx-3 flex shrink-0 cursor-grab items-center justify-center rounded text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
             <circle cx="9" cy="6" r="1.4" />
@@ -135,7 +137,7 @@ export function CombatantRow({
             <circle cx="9" cy="18" r="1.4" />
             <circle cx="15" cy="18" r="1.4" />
           </svg>
-        </span>
+        </button>
       )}
 
       <div className="w-7 text-center text-sm tabular-nums text-slate-500 dark:text-slate-400">
@@ -174,9 +176,22 @@ export function CombatantRow({
               </svg>
             </button>
           )}
-          <span className={cx('truncate font-medium', dead && 'line-through')}>
-            {nameOf(combatant)}
-          </span>
+          {onSelect ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelect()
+              }}
+              className={cx('truncate text-left font-medium', dead && 'line-through')}
+            >
+              {nameOf(combatant)}
+            </button>
+          ) : (
+            <span className={cx('truncate font-medium', dead && 'line-through')}>
+              {nameOf(combatant)}
+            </span>
+          )}
           {combatant.concentration && (
             <span
               title={concentrationTitle(combatant.concentration)}

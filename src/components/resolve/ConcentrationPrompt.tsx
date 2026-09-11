@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { Button } from '../ui/primitives.tsx'
-
-const BTN = 'rounded border px-2 py-1 text-xs font-medium'
+import { Button, OUTCOME_BUTTON_BASE } from '../ui/primitives.tsx'
 
 /**
  * Concentration check after a concentrator takes damage. Mirrors the death-save
@@ -32,14 +30,14 @@ export function ConcentrationPrompt({
       <button
         type="button"
         onClick={onMaintain}
-        className={`${BTN} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
+        className={`${OUTCOME_BUTTON_BASE} border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950`}
       >
         Maintained
       </button>
       <button
         type="button"
         onClick={onBreak}
-        className={`${BTN} border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950`}
+        className={`${OUTCOME_BUTTON_BASE} border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950`}
       >
         Broken
       </button>

@@ -14,6 +14,10 @@ published.
 
 ## Unreleased
 
+### Accessibility
+
+- Keyboard focus has a consistent visible outline, initiative rows can be reordered with arrow keys, and repeated touch controls meet a 44 CSS pixel target. ([#42](https://github.com/OpenFrayApp/console/issues/42))
+
 ### Compendium
 
 - A first search loads creatures from the libraries that are turned on, while keeping every spell reference available. ([#41](https://github.com/OpenFrayApp/console/issues/41))

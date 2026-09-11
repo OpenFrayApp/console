@@ -1608,7 +1608,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   return (
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
-        <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
           {/* The header wraps at every width and its buttons never break their labels:
           a cluster that no longer fits drops to its own line whole, so every button
           keeps one size instead of squeezing onto two lines of text. */}

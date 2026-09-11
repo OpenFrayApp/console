@@ -64,7 +64,7 @@ function Tab({
       onClick={onSelect}
       aria-current={active ? 'page' : undefined}
       className={cx(
-        'flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium',
+        'tap-y flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium',
         active
           ? 'text-indigo-600 dark:text-indigo-400'
           : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',

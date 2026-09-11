@@ -121,6 +121,28 @@ describe('Encounter flow', () => {
     expect([before, after].sort()).toEqual(['Goblin', 'Ogre'])
   })
 
+  it('reorders adjacent turns with arrow keys and keeps focus on the moved row', async () => {
+    render(<App />)
+    await addCreature('Goblin')
+    await addCreature('Ogre')
+    beginCombat()
+
+    const labels = () =>
+      screen
+        .getAllByRole('button', { name: /Drag to reorder/ })
+        .map((handle) => handle.getAttribute('aria-label'))
+    const first = screen.getAllByRole('button', { name: /Drag to reorder/ })[0]
+    const before = labels()
+    first.focus()
+
+    fireEvent.keyDown(first, { key: 'ArrowUp' })
+    expect(labels()).toEqual(before)
+
+    fireEvent.keyDown(first, { key: 'ArrowDown' })
+    expect(labels()).toEqual([...before].reverse())
+    expect(document.activeElement).toHaveAttribute('aria-label', before[0])
+  })
+
   it('using a reaction from the stat block spends the round’s reaction', async () => {
     render(<App />)
     await addCreature('Ogre')
@@ -154,7 +176,7 @@ describe('Encounter flow', () => {
     // Read the new combatant's initiative from its tracker row (the stat block also
     // shows the name, so scope to the left section).
     const tracker = container.querySelector('section') as HTMLElement
-    const row = within(tracker).getByText('Goblin 2').closest('[role="button"]') as HTMLElement
+    const row = within(tracker).getByText('Goblin 2').closest('[data-combatant-row]') as HTMLElement
     const init = Number(row.querySelector('.w-7')?.textContent)
     expect(init).toBeGreaterThan(0) // Goblin's +2 init mod → d20+2, always ≥ 3
   })
