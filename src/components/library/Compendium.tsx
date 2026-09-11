@@ -13,7 +13,7 @@ import { rosterAc, rosterInitiativeMod, type RosterPc } from '../../schema/roste
 import { formatCr, spellLevelShort, titleCase } from '../../compendium/format.ts'
 import { classLabel } from '../../schema/pcStats.ts'
 import type { LibrarySort } from '../../state/settings.ts'
-import { loadSrdCreatures, loadSrdSpells } from '../../compendium/srd.ts'
+import { loadLibraries, loadSrdSpells } from '../../compendium/srd.ts'
 import { makeSpellLinker } from '../../compendium/spelllinker.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import {
@@ -364,7 +364,18 @@ export function Compendium({
   }
 
   useEffect(() => {
-    loadSrdCreatures().then(setCreatures, () => setCreatures([]))
+    let active = true
+    setCreatures(null)
+    void loadLibraries(enabledLibraries).then(
+      ({ creatures: loaded }) => active && setCreatures(loaded),
+      () => active && setCreatures([]),
+    )
+    return () => {
+      active = false
+    }
+  }, [enabledLibraries])
+
+  useEffect(() => {
     loadSrdSpells().then(setSpells, () => setSpells([]))
   }, [])
 

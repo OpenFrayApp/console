@@ -22,6 +22,7 @@
     "db:boundary": "node scripts/verify-database-boundary.mjs",
     "validate:requirements": "node scripts/validate-requirements.mjs",
     "validate:fixtures": "node scripts/validate-hardening-fixtures.mjs",
+    "benchmark:compendium": "npm run build && node scripts/benchmark-compendium-search.mjs",
     "test": "vitest run && npm run test:browser",
     "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts",
     "test:offline": "npm run typecheck && playwright install chromium && node scripts/verify-offline-shell.mjs",
