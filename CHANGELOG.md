@@ -14,6 +14,10 @@ published.
 
 ## Unreleased
 
+### Compendium
+
+- A first search loads creatures from the libraries that are turned on, while keeping every spell reference available. ([#41](https://github.com/OpenFrayApp/console/issues/41))
+
 ### Player view
 
 - The player view labels its connection as **Connecting**, **Live**, **Reconnecting**,

@@ -78,6 +78,27 @@ describe('loadSrdCreatures', () => {
   })
 })
 
+describe('loadLibraries', () => {
+  it('fetches only the named sources and shares their file cache with complete loads', async () => {
+    const fetchMock = stubFetch()
+    const srd = await freshSrd()
+    const wanted = ['srd-5.2', 'openfray-waking-garden']
+
+    const selected = await srd.loadLibraries(wanted)
+    const selectedFiles = LIBRARIES.filter((library) => wanted.includes(library.id))
+    const creatureFiles = selectedFiles.flatMap((library) => library.creaturesFile ?? [])
+    const spellFiles = selectedFiles.flatMap((library) => library.spellsFile ?? [])
+    expect(requestedUrls(fetchMock)).toEqual([
+      ...creatureFiles.map((file) => `${BASE}/${file}`),
+      ...spellFiles.map((file) => `${BASE}/${file}`),
+    ])
+    expect(selected.creatures).toEqual(creatureFiles.map((file) => ({ id: `from:${file}` })))
+
+    await srd.loadSrdCreatures()
+    expect(fetchMock).toHaveBeenCalledTimes(CREATURE_LIBRARIES.length + 1)
+  })
+})
+
 describe('loadSrdSpells', () => {
   it('fetches spells only from the libraries that ship them, merged in order', async () => {
     const fetchMock = stubFetch()
