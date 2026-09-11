@@ -162,6 +162,43 @@ html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
+}
+
+/*
+ * Every keyboard-operable control gets the same two-pixel focus boundary. Using an
+ * outline keeps the indicator outside the control without changing layout, and the
+ * scroll margin leaves it clear of the fixed phone chrome when the browser reveals it.
+ */
+:where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  scroll-margin-block: 1rem;
+}
+
+/* Keep authored boundaries legible when Windows replaces the app's color palette. */
+@media (forced-colors: active) {
+  :where(button, input, select, textarea, [role='button']) {
+    border-color: ButtonText;
+  }
+
+  [aria-current],
+  [aria-selected='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+/* Remove decorative movement while preserving immediate state changes. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /*

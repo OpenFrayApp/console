@@ -65,7 +65,7 @@ function buttonClass(variant: ButtonVariant, size: ButtonSize) {
         : `${BUTTON_SIZE[size]} disabled:opacity-50`
   // A label belongs on one line, and this is where that is said. Setting it on a
   // container instead leaks into every popover and modal rendered from inside it.
-  return cx('tap-y whitespace-nowrap disabled:cursor-not-allowed', base, BUTTON_VARIANT[variant])
+  return cx('tap whitespace-nowrap disabled:cursor-not-allowed', base, BUTTON_VARIANT[variant])
 }
 
 /** A button. Pick the variant by what pressing it does, the size by how dense the row is. */
@@ -133,6 +133,9 @@ const CHIP_TONE: Record<ChipTone, string> = {
 const CHIP_OFF =
   'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
 
+/** Shared sizing for compact success and failure controls. */
+export const OUTCOME_BUTTON_BASE = 'tap rounded border px-2 py-1 text-xs font-medium'
+
 /**
  * A small bordered toggle: a target, a condition, a save's outcome. `sm` is for a
  * resolved row that has to stay on one line; `md` is the tap target everywhere else.
@@ -153,7 +156,7 @@ export function Chip({
     <button
       type={type}
       className={cx(
-        'rounded border',
+        'tap rounded border',
         size === 'sm' ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-sm',
         active ? `font-medium ${CHIP_TONE[tone]}` : CHIP_OFF,
         'disabled:opacity-50',
@@ -179,7 +182,7 @@ export function TabButton({
       role="tab"
       aria-selected={active}
       className={cx(
-        'rounded-md px-2.5 py-1 text-sm font-medium',
+        'tap rounded-md px-2.5 py-1 text-sm font-medium',
         active
           ? 'bg-indigo-600 text-white'
           : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',

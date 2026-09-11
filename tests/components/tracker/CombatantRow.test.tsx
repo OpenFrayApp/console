@@ -102,12 +102,12 @@ describe('CombatantRow', () => {
     expect(onRemove).toHaveBeenCalledOnce()
   })
 
-  it('selects on click when onSelect is provided', () => {
+  it('selects through a native button when onSelect is provided', () => {
     const onSelect = vi.fn()
-    const { container } = render(<CombatantRow combatant={pc()} onSelect={onSelect} />)
-    const row = container.querySelector('[role="button"]')
-    expect(row).not.toBeNull()
-    fireEvent.click(row as Element)
+    render(<CombatantRow combatant={pc()} onSelect={onSelect} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thalia' }))
+
     expect(onSelect).toHaveBeenCalledOnce()
   })
 
@@ -152,7 +152,7 @@ describe('CombatantRow', () => {
         onReorderOver={onReorderOver}
       />,
     )
-    const handle = screen.getByLabelText(/Drag to reorder/)
+    const handle = screen.getByRole('button', { name: /reorder/i })
     fireEvent.dragStart(handle, {
       dataTransfer: { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' },
     })
@@ -161,9 +161,21 @@ describe('CombatantRow', () => {
     expect(onReorderOver).toHaveBeenCalledOnce()
   })
 
+  it('moves a reorderable combatant with the keyboard arrow keys', () => {
+    const onReorderBy = vi.fn()
+    render(<CombatantRow combatant={monster()} reorderable onReorderBy={onReorderBy} />)
+    const handle = screen.getByRole('button', { name: /reorder/i })
+
+    fireEvent.keyDown(handle, { key: 'ArrowUp' })
+    fireEvent.keyDown(handle, { key: 'ArrowDown' })
+
+    expect(onReorderBy).toHaveBeenNthCalledWith(1, 'earlier')
+    expect(onReorderBy).toHaveBeenNthCalledWith(2, 'later')
+  })
+
   it('has no drag handle when not reorderable', () => {
     render(<CombatantRow combatant={monster()} />)
-    expect(screen.queryByLabelText(/Drag to reorder/)).toBeNull()
+    expect(screen.queryByRole('button', { name: /reorder/i })).toBeNull()
   })
 
   it('flags a stabilized PC', () => {
