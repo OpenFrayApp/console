@@ -14,6 +14,10 @@ esac
   echo "recovery monitor: missing webhook" >&2
   exit 1
 }
+[[ -n "${RECOVERY_MONITOR_TOKEN:-}" ]] || {
+  echo "recovery monitor: missing token" >&2
+  exit 1
+}
 command -v curl >/dev/null 2>&1 || {
   echo "recovery monitor: curl is unavailable" >&2
   exit 1
@@ -22,6 +26,7 @@ command -v curl >/dev/null 2>&1 || {
 payload=$(printf '{"event":"%s","service":"openfray-recovery"}' "$event")
 curl --fail --silent --show-error \
   --header 'content-type: application/json' \
+  --header "authorization: Bearer $RECOVERY_MONITOR_TOKEN" \
   --data "$payload" \
   "$RECOVERY_MONITOR_WEBHOOK" >/dev/null
 echo "recovery monitor: $event delivered"

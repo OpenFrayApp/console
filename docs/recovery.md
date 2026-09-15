@@ -23,9 +23,10 @@ Add these repository secrets so unattended health and failure jobs can use them:
 
 - `R2_BUCKET` and `R2_ENDPOINT`: The private backup bucket and endpoint.
 - `R2_RECOVERY_ACCESS_KEY_ID` and `R2_RECOVERY_SECRET_ACCESS_KEY`: Object read-only credentials.
-- `RECOVERY_MONITOR_WEBHOOK`: An endpoint that accepts the allowlisted recovery health events.
+- `RECOVERY_MONITOR_WEBHOOK`: The deployed Supabase `recovery-monitor` Edge Function endpoint.
+- `RECOVERY_MONITOR_TOKEN`: A separate random bearer token shared only with the recovery-monitor endpoint.
 
-The webhook receives only an event name and the `openfray-recovery` service label. It receives no authored content, account identifiers, share codes, object keys, database addresses, or credentials.
+The authenticated webhook receives only an event name and the `openfray-recovery` service label. It receives no authored content, account identifiers, share codes, object keys, database addresses, or credentials.
 
 ## Run a drill
 

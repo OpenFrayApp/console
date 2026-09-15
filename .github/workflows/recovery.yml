@@ -58,7 +58,7 @@ jobs:
           version: 2.116.0
       - run: npm ci
       - run: supabase start
-      - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts
+      - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts tests/scripts/recoveryMonitor.test.ts
       - run: npm run db:boundary
       - name: Prove concurrent revocation
         run: |
@@ -88,6 +88,7 @@ jobs:
         if: steps.freshness.outcome != 'success'
         env:
           RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
+          RECOVERY_MONITOR_TOKEN: ${{ secrets.RECOVERY_MONITOR_TOKEN }}
         run: scripts/notify-recovery-monitor.sh backup_stale
       - name: Preserve the failed health result
         if: steps.freshness.outcome != 'success'
@@ -161,6 +162,7 @@ jobs:
         id: monitor
         env:
           RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
+          RECOVERY_MONITOR_TOKEN: ${{ secrets.RECOVERY_MONITOR_TOKEN }}
         run: scripts/notify-recovery-monitor.sh restore_failure_exercise
       - name: Record the abandonment decision
         if: ${{ always() && !cancelled() }}
@@ -192,4 +194,5 @@ jobs:
       - name: Report the restore failure
         env:
           RECOVERY_MONITOR_WEBHOOK: ${{ secrets.RECOVERY_MONITOR_WEBHOOK }}
+          RECOVERY_MONITOR_TOKEN: ${{ secrets.RECOVERY_MONITOR_TOKEN }}
         run: scripts/notify-recovery-monitor.sh restore_failed
