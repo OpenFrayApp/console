@@ -85,6 +85,7 @@ describe('application music player', () => {
 
     fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
     fireEvent.click(screen.getByRole('button', { name: 'Play music' }))
+    expect(audio.src).toBe('/console/music/ancient-god')
     audio.dispatchEvent(new Event('playing'))
     expect(screen.getByRole('button', { name: 'Pause music' })).toBeInTheDocument()
 
