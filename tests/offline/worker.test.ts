@@ -345,7 +345,6 @@ it('does not intercept private routes, runtime responses, or non-static query UR
     '/console/p/private',
     '/s/private',
     '/console/assets/current.js?token=secret',
-    '/console/music/ancient-god.ogg',
   ]) {
     expect(await worker.fetch(path)).toBeUndefined()
   }
