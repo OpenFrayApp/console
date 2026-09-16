@@ -56,6 +56,25 @@ in the app, on <https://openfray.app>, and in the print edition.
 - **Game rules.** Conditions, spell names, and rules terminology come from the System
   Reference Document 5.2.1, used under CC BY 4.0 (see the SRD 5.2.1 attribution above).
 
+## Curated fight music
+
+### Ancient God
+
+“Ancient God” is by Gary Boudreaux and comes from
+[gbproductions](https://gbproductions.itch.io/ancient-god-free-dark-fantasy-battle-music-loop).
+It is licensed under the
+[Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
+The required attribution is:
+
+> “Ancient God” by Gary Boudreaux, licensed under CC BY 4.0.
+
+**Changes were made:** the supplied WAV master was transcoded to Ogg Vorbis for web
+playback. The arrangement, duration, and loudness were not changed. The deployed encode uses
+the stable track ID `ancient-god`.
+
+The source identifies the track as a seamless loop. The deployed encode’s boundary jump is
+below its 99.9th-percentile adjacent-sample jump.
+
 ## Player view backdrops
 
 The images in `public/backgrounds/` were generated for OpenFray with Midjourney and

@@ -2,10 +2,11 @@
 // Copyright (C) 2026 Nicola Mustone
 
 const SOURCE_URL = 'https://github.com/OpenFrayApp/console'
+const CREDITS_URL = SOURCE_URL + '/blob/main/CREDITS.md'
 const LICENSE_URL = 'https://www.gnu.org/licenses/agpl-3.0.html'
 
 /**
- * The legal row: Privacy, Terms, Source, and the license.
+ * The legal row: Privacy, Terms, Credits, Source, and the license.
  *
  * The Source link is the running app's AGPL §13 offer, so it ships wherever this row
  * does. The layout is each surface's own; the links and their addresses are not.
@@ -36,6 +37,10 @@ export function LegalLinks({
       {dot}
       <a href="/terms" className={linkClassName}>
         Terms
+      </a>
+      {dot}
+      <a href={CREDITS_URL} target="_blank" rel="noreferrer" className={linkClassName}>
+        Credits
       </a>
       {dot}
       {sourceAsIcon ? (
