@@ -5,6 +5,7 @@ import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
 import { sanitizeHotkeys } from './hotkeys.ts'
 import type { HotkeyCommandId } from './hotkeys.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
+import { normalizeMusicVolume } from '../music/player.ts'
 
 /**
  * App preferences for every user (anonymous included), persisted in `localStorage`
@@ -88,6 +89,8 @@ export interface AppSettings {
   showHomebrew: boolean
   /** How the compendium sorts creatures and spells. Defaults to by name. */
   librarySort: LibrarySort
+  /** The native music player's device-level volume, from silent (0) to full (1). */
+  musicVolume: number
   /** What the shared player view reveals about a creature. */
   playerView: PlayerViewSettings
   /**
@@ -165,6 +168,7 @@ export function loadSettings(): AppSettings {
     showHomebrew: data.showHomebrew !== false,
     // By name unless an explicit 'cr' is stored.
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
+    musicVolume: normalizeMusicVolume(data.musicVolume),
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
     // Anything but exactly four digits is no PIN at all.

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { musicCatalog } from '../music/catalog.ts'
+
 // A null-safe wrapper over Fathom's trackEvent. Fathom is loaded from index.html and may
 // be absent (blocked, not yet loaded, or ignored on localhost), so every call is guarded.
-// Event names are static strings from EVENTS below — never interpolate user data, so no
-// personal data ever reaches Fathom.
+// Event names are static strings from EVENTS below. Music adds only an ID checked against
+// the bundled catalog, so no user or listening data ever reaches Fathom.
 
 declare global {
   interface Window {
@@ -98,6 +100,16 @@ export type EventName = (typeof EVENTS)[keyof typeof EVENTS]
 export function track(event: EventName): void {
   try {
     window.fathom?.trackEvent(event)
+  } catch {
+    // Analytics must never break the app.
+  }
+}
+
+/** Record successful music playback with an approved stable ID and no listening details. */
+export function trackMusicPlayed(trackId: string): void {
+  if (!musicCatalog.some((track) => track.id === trackId)) return
+  try {
+    window.fathom?.trackEvent(`Music played: ${trackId}`)
   } catch {
     // Analytics must never break the app.
   }

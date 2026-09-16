@@ -22,6 +22,10 @@ published.
 
 - A first search loads creatures from the libraries that are turned on, while keeping every spell reference available. ([#41](https://github.com/OpenFrayApp/console/issues/41))
 
+### Music
+
+- The tracker can queue, play, pause, loop, and switch between approved music tracks. Its volume stays on the device. ([#52](https://github.com/OpenFrayApp/console/issues/52))
+
 ### Player view
 
 - The player view labels its connection as **Connecting**, **Live**, **Reconnecting**,

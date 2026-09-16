@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { EVENTS, track } from '../../src/lib/analytics.ts'
+import { EVENTS, track, trackMusicPlayed } from '../../src/lib/analytics.ts'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -35,6 +35,15 @@ describe('track', () => {
       },
     })
     expect(() => track(EVENTS.combatStarted)).not.toThrow()
+  })
+
+  it('records music playback with its stable catalog ID only', () => {
+    const trackEvent = vi.fn()
+    vi.stubGlobal('window', { fathom: { trackEvent } })
+
+    trackMusicPlayed('ancient-god')
+
+    expect(trackEvent).toHaveBeenCalledWith('Music played: ancient-god')
   })
 })
 
