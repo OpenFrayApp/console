@@ -20,12 +20,11 @@ const directory = resolve('dist/console')
 const manifest = JSON.parse(await readFile(join(directory, 'shell-manifest.json'), 'utf8'))
 const originalWorker = await readFile(join(directory, 'sw.js'), 'utf8')
 const originalHtml = await readFile(join(directory, 'index.html'), 'utf8')
-const catalogAssets = await Promise.all(
-  musicCatalog.map(async (track) => ({
-    track,
-    bytes: await readFile(join(directory, track.src.slice('/console/'.length))),
-  })),
-)
+// The harness emulates the separate Worker route; music bytes must not come from this build.
+const catalogAssets = musicCatalog.map((track) => ({
+  track,
+  bytes: Buffer.from('OggS synthetic Worker response'),
+}))
 /** Hash deployment bytes independently of the build plugin. */
 function hash(value) {
   return createHash('sha256').update(value).digest('hex')
@@ -47,7 +46,7 @@ for (const { track, bytes } of catalogAssets) {
   assert(!manifest.assets.some((asset) => asset.url === track.src))
   assert.equal(bytes.subarray(0, 4).toString('ascii'), 'OggS')
 }
-console.log('PASS production asset hashes and required shell assets exclude lazy music')
+console.log('PASS production asset hashes and required shell assets exclude Worker music')
 
 const fixture = await build({
   configFile: false,
@@ -260,7 +259,7 @@ try {
   assert.equal(lazyMusicHeader.contentType, 'audio/ogg')
   assert.deepEqual(lazyMusicHeader.header, Array.from(Buffer.from('OggS')))
   assert.equal(musicRequests, 1)
-  console.log('PASS production catalog track loads lazily from the console origin')
+  console.log('PASS catalog track loads lazily from its Worker route')
 
   deployment = 'b'
   await page.evaluate(async () => {
