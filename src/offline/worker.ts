@@ -3,6 +3,7 @@
 /// <reference lib="webworker" />
 
 import * as v from 'valibot'
+import { MUSIC_PATH_PREFIX } from '../music/catalog.ts'
 
 const shellVersion = v.pipe(v.string(), v.regex(/^[a-z0-9-]{1,80}$/))
 const shellManifest = v.strictObject({
@@ -100,6 +101,8 @@ export function installOfflineShell(
 
   /** Populate a new cache atomically from hash-verified deployment assets. */
   async function install(): Promise<void> {
+    if (manifest.assets.some((asset) => asset.url.startsWith(MUSIC_PATH_PREFIX)))
+      throw new Error('Lazy media cannot be a shell asset')
     const cache = await scope.caches.open(name)
     if (await complete(cache, manifest)) return
     try {
@@ -258,6 +261,7 @@ export function installOfflineShell(
   scope.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url)
     if (event.request.method !== 'GET' || url.origin !== scope.location.origin) return
+    if (url.pathname.startsWith(MUSIC_PATH_PREFIX)) return
     if (url.pathname === '/console/recover.html' || url.pathname === '/console/recover.js') return
     if (
       event.request.mode === 'navigate' &&

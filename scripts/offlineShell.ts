@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { build, type Plugin, type ResolvedConfig } from 'vite'
+import { MUSIC_PATH_PREFIX } from '../src/music/catalog.ts'
 
 /** List deployment files recursively using URL-compatible relative paths. */
 async function files(directory: string, prefix = ''): Promise<string[]> {
@@ -23,7 +24,7 @@ export function isRequiredOfflineAsset(path: string): boolean {
   return (
     !['sw.js', 'shell-manifest.json'].includes(path) &&
     !path.endsWith('.map') &&
-    !path.startsWith('music/')
+    !path.startsWith(MUSIC_PATH_PREFIX.slice('/console/'.length))
   )
 }
 
@@ -52,6 +53,7 @@ export function offlineShell(): Plugin {
       const source = await readFile(resolve(config.root, 'src/offline/worker.ts'), 'utf8')
       const version = createHash('sha256')
         .update(source)
+        .update(MUSIC_PATH_PREFIX)
         .update(JSON.stringify(assets))
         .digest('hex')
         .slice(0, 20)
