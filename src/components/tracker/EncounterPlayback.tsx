@@ -132,10 +132,12 @@ export function EncounterCleanup({
   hasCombatants,
   hasFoes,
   dispatch,
+  onClearAll,
 }: {
   hasCombatants: boolean
   hasFoes: boolean
   dispatch: (action: EncounterAction) => void
+  onClearAll?: () => void
 }) {
   const grey =
     'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -145,7 +147,8 @@ export function EncounterCleanup({
       window.confirm('Remove everyone from the board and clear the game log? This can’t be undone.')
     ) {
       track(EVENTS.clearedBoard)
-      dispatch({ type: 'clearAll' })
+      if (onClearAll) onClearAll()
+      else dispatch({ type: 'clearAll' })
     }
   }
   /** Confirm, then remove every foe; the party stays on the board. */
@@ -193,6 +196,8 @@ export function EncounterPlayback({
   canBegin,
   dispatch,
   onBegin,
+  onPause,
+  onResume,
   onStop,
   beginHint,
   pauseHint,
@@ -204,6 +209,10 @@ export function EncounterPlayback({
   dispatch: (action: EncounterAction) => void
   /** Override for begin so the caller can also move the selection. */
   onBegin?: () => void
+  /** Override for pause so the caller can coordinate device-local media. */
+  onPause?: () => void
+  /** Override for resume so the caller can coordinate device-local media. */
+  onResume?: () => void
   /** Override for stop so the caller can show the end-of-combat recap. */
   onStop?: () => void
   /** The keyboard chords for begin, pause/resume, and stop, shown in the tooltips. */
@@ -242,7 +251,7 @@ export function EncounterPlayback({
           type="button"
           aria-label="Resume"
           title={pauseHint ? `Resume (${pauseHint})` : 'Resume'}
-          onClick={() => dispatch({ type: 'resume' })}
+          onClick={onResume ?? (() => dispatch({ type: 'resume' }))}
           className={`${ICON_BTN} ${green}`}
         >
           <PlayIcon />
@@ -252,7 +261,7 @@ export function EncounterPlayback({
           type="button"
           aria-label="Pause"
           title={pauseHint ? `Pause (${pauseHint})` : 'Pause'}
-          onClick={() => dispatch({ type: 'pause' })}
+          onClick={onPause ?? (() => dispatch({ type: 'pause' }))}
           className={`${ICON_BTN} ${grey}`}
         >
           <PauseIcon />

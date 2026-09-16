@@ -59,6 +59,16 @@ export function useMusicPlayer() {
   const play = useCallback(() => void controller.current?.play(), [])
   /** Pause music without releasing its queued selection. */
   const pause = useCallback(() => controller.current?.pause(), [])
+  /** Start queued music for a newly started fight. */
+  const startCombat = useCallback(() => controller.current?.startCombat(), [])
+  /** Pause active music because the fight was paused. */
+  const pauseForCombat = useCallback(() => controller.current?.pauseForCombat(), [])
+  /** Resume music only when the fight pause interrupted it. */
+  const resumeForCombat = useCallback(() => controller.current?.resumeForCombat(), [])
+  /** Stop and rewind music when a fight ends. */
+  const endCombat = useCallback(() => controller.current?.endCombat(), [])
+  /** Stop music and clear its selection with the board. */
+  const clearBoard = useCallback(() => controller.current?.clearBoard(), [])
   /** Apply and retain a device-level volume preference. */
   const setVolume = useCallback((volume: number) => {
     const next = normalizeMusicVolume(volume)
@@ -66,5 +76,18 @@ export function useMusicPlayer() {
     saveSettings({ musicVolume: next })
   }, [])
 
-  return { tracks: musicCatalog, state, restore, select, play, pause, setVolume }
+  return {
+    tracks: musicCatalog,
+    state,
+    restore,
+    select,
+    play,
+    pause,
+    startCombat,
+    pauseForCombat,
+    resumeForCombat,
+    endCombat,
+    clearBoard,
+    setVolume,
+  }
 }

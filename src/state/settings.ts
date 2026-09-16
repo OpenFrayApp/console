@@ -91,6 +91,8 @@ export interface AppSettings {
   librarySort: LibrarySort
   /** The native music player's device-level volume, from silent (0) to full (1). */
   musicVolume: number
+  /** Whether pausing combat also pauses active music. */
+  pauseMusicWithCombat: boolean
   /** What the shared player view reveals about a creature. */
   playerView: PlayerViewSettings
   /**
@@ -169,6 +171,7 @@ export function loadSettings(): AppSettings {
     // By name unless an explicit 'cr' is stored.
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
     musicVolume: normalizeMusicVolume(data.musicVolume),
+    pauseMusicWithCombat: data.pauseMusicWithCombat !== false,
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
     // Anything but exactly four digits is no PIN at all.

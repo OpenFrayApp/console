@@ -79,7 +79,10 @@ export function EncounterConsole({
   paused,
   onBegin,
   onNextTurn,
+  onPause,
+  onResume,
   onStop,
+  onClearAll,
   onOpenLog,
   onNote,
   onRename,
@@ -134,7 +137,10 @@ export function EncounterConsole({
   paused: boolean
   onBegin: () => void
   onNextTurn: () => void
+  onPause?: () => void
+  onResume?: () => void
   onStop?: () => void
+  onClearAll?: () => void
   /** Open the full game-log review modal. */
   onOpenLog: () => void
   /** Effect presets offered in the Apply effect modal. */
@@ -463,6 +469,7 @@ export function EncounterConsole({
               hasCombatants={combatants.length > 0}
               hasFoes={creatures.length > 0}
               dispatch={dispatch}
+              onClearAll={onClearAll}
             />
           )}
           <EncounterPlayback
@@ -471,6 +478,8 @@ export function EncounterConsole({
             canBegin={combatants.length > 0}
             dispatch={dispatch}
             onBegin={onBegin}
+            onPause={onPause}
+            onResume={onResume}
             onStop={onStop}
             beginHint={keyHints?.begin}
             pauseHint={keyHints?.pause}

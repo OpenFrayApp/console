@@ -71,6 +71,7 @@ function ImporterLink({ href, children }: { href: string; children: string }) {
 const TABS = [
   { key: 'libraries', label: 'Libraries' },
   { key: 'player-view', label: 'Player view' },
+  { key: 'music', label: 'Music' },
   { key: 'keyboard', label: 'Keyboard' },
   { key: 'importer', label: 'Importer' },
 ] as const
@@ -95,6 +96,8 @@ export function SettingsPanel({
   onSetLibrarySort,
   playerView,
   onSetPlayerView,
+  pauseMusicWithCombat,
+  onSetPauseMusicWithCombat,
   hotkeys,
   onSetHotkeys,
 }: {
@@ -107,6 +110,8 @@ export function SettingsPanel({
   onSetLibrarySort: (value: LibrarySort) => void
   playerView: PlayerViewSettings
   onSetPlayerView: (value: PlayerViewSettings) => void
+  pauseMusicWithCombat: boolean
+  onSetPauseMusicWithCombat: (value: boolean) => void
   /** Keyboard chord overrides, laid over the defaults; null unbinds a command. */
   hotkeys: Partial<Record<HotkeyCommandId, string | null>>
   onSetHotkeys: (value: Partial<Record<HotkeyCommandId, string | null>>) => void
@@ -151,7 +156,7 @@ export function SettingsPanel({
           <Button onClick={onClose}>Done</Button>
         </div>
 
-        <div role="tablist" aria-label="Settings" className="mb-4 flex gap-1">
+        <div role="tablist" aria-label="Settings" className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (
             <TabButton
               key={t.key}
@@ -446,6 +451,23 @@ export function SettingsPanel({
                 </select>
               </SettingRow>
             </div>
+          </section>
+
+          <section
+            role="tabpanel"
+            aria-labelledby="settings-tab-music"
+            hidden={tab !== 'music'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
+            <label className="tap-y flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-indigo-600"
+                checked={pauseMusicWithCombat}
+                onChange={() => onSetPauseMusicWithCombat(!pauseMusicWithCombat)}
+              />
+              Pause with fight
+            </label>
           </section>
 
           <section

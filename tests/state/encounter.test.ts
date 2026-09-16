@@ -207,11 +207,13 @@ describe('encounterReducer', () => {
     expect(e.activeIndex).toBe(0)
   })
 
-  it('clears all combatants and resets the round', () => {
+  it('clears all combatants, queued music, and the round', () => {
     let e = withCombatants(monster('foe1', 12), monster('foe2', 8))
     e = encounterReducer(e, { type: 'add', combatant: pc('hero', 20, 20) })
+    e = encounterReducer(e, { type: 'setMusicTrack', trackId: 'ancient-god' })
     e = encounterReducer(e, { type: 'clearAll' })
     expect(e.combatants).toEqual([])
+    expect(e.musicTrackId).toBeUndefined()
     expect(e.round).toBe(0)
     expect(e.activeIndex).toBe(0)
   })

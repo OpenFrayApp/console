@@ -263,6 +263,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [theme, toggleTheme] = useTheme()
   const music = useMusicPlayer()
   const restoreMusic = music.restore
+  const [pauseMusicWithCombat, setPauseMusicWithCombatState] = useState(
+    () => loadSettings().pauseMusicWithCombat,
+  )
+  /** Set whether combat pauses active music and retain the device-level choice. */
+  const setPauseMusicWithCombat = (value: boolean) => {
+    setPauseMusicWithCombatState(value)
+    saveSettings({ pauseMusicWithCombat: value })
+  }
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   // Which content libraries the compendium/picker show. A device-local preference
@@ -1268,6 +1276,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       .map((c) => rolled[c.combatantId])
       .filter((entry): entry is NewLogEntry => entry != null)
     dispatch({ type: 'begin', tiebreak: activeRules.initiativeTiebreak, rolls })
+    music.startCombat()
     preRolled.current = {}
     selectActive(next)
     autoRecharge(next)
@@ -1305,10 +1314,29 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     autoRollSaveEnds(next.combatants[next.activeIndex], 'startOfTurn')
   }
 
+  /** Pause the fight and, by default, active music. */
+  const pauseCombat = () => {
+    dispatch({ type: 'pause' })
+    if (pauseMusicWithCombat) music.pauseForCombat()
+  }
+
+  /** Resume the fight and only the music its pause interrupted. */
+  const resumeCombat = () => {
+    dispatch({ type: 'resume' })
+    music.resumeForCombat()
+  }
+
+  /** Clear the board and its queued music after the cleanup confirmation. */
+  const clearBoard = () => {
+    music.clearBoard()
+    dispatch({ type: 'clearAll' })
+  }
+
   // End combat: snapshot the recap from the live state (before stop zeroes the round),
   // then reset to setup. Used by the Stop button, the all-enemies prompt, and a TPK.
   const endCombat = () => {
     track(EVENTS.combatStopped)
+    music.endCombat()
     setRecap(buildRecap(encounter, Date.now()))
     setEndPrompt(false)
     dispatch({ type: 'stop' })
@@ -1419,7 +1447,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       if (started) endCombat()
     },
     pauseResume: () => {
-      if (started) dispatch({ type: paused ? 'resume' : 'pause' })
+      if (started) (paused ? resumeCombat : pauseCombat)()
     },
     selectNext: () => selectRelative(1),
     selectPrev: () => selectRelative(-1),
@@ -1744,6 +1772,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               onSetLibrarySort={setLibrarySort}
               playerView={playerView}
               onSetPlayerView={setPlayerView}
+              pauseMusicWithCombat={pauseMusicWithCombat}
+              onSetPauseMusicWithCombat={setPauseMusicWithCombat}
               hotkeys={hotkeys}
               onSetHotkeys={(value) => {
                 track(EVENTS.keybindingChanged)
@@ -1844,7 +1874,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 paused={paused}
                 onBegin={handleBegin}
                 onNextTurn={handleNextTurn}
+                onPause={pauseCombat}
+                onResume={resumeCombat}
                 onStop={endCombat}
+                onClearAll={clearBoard}
                 onOpenLog={() => setLogOpen(true)}
                 presets={presets}
                 enabledLibraries={enabledLibraries}
