@@ -3,7 +3,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { encodeSession } from '../../src/codecs/session.ts'
+import { recoverySnapshot } from '../fixtures/sessionSnapshot.ts'
 
 class FakeAudio extends EventTarget {
   static instances: FakeAudio[] = []
@@ -44,6 +46,38 @@ afterEach(() => {
 })
 
 describe('application music player', () => {
+  it('persists the selected track without persisting playback state', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: 'Sign in to resume saving' })
+
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+    await act(() => Promise.resolve())
+
+    const stored = sessionStorage.getItem('openfray:session') ?? ''
+    expect(stored).toContain('"musicTrackId":"ancient-god"')
+    expect(stored).not.toContain('musicPlaying')
+    expect(stored).not.toContain('musicPosition')
+  })
+
+  it('clears a restored catalog ID that is no longer available', async () => {
+    const saved = recoverySnapshot()
+    saved.encounter.musicTrackId = 'removed-track'
+    const encoded = encodeSession(saved)
+    expect(encoded.status).toBe('ok')
+    if (encoded.status !== 'ok') return
+    sessionStorage.setItem('openfray:session', encoded.serialized)
+
+    render(<App />)
+
+    expect(
+      await screen.findByText('That track is unavailable. Choose another track or try again.'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Music track')).toHaveValue('')
+    await waitFor(() =>
+      expect(sessionStorage.getItem('openfray:session')).not.toContain('removed-track'),
+    )
+  })
+
   it('keeps playing while the Game Master visits the compendium', async () => {
     render(<App />)
     await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))

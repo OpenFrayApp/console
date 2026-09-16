@@ -107,6 +107,8 @@ export interface Encounter {
   /** Owner for row-level security; null for anonymous, ephemeral sessions. */
   ownerId: string | null
   name?: string
+  /** Stable catalog selection; playback remains device runtime state. */
+  musicTrackId?: string
   round: number
   /** Combat is started (round > 0) but held — the turn cursor is hidden until resumed. */
   paused?: boolean

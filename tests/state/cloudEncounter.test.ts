@@ -288,8 +288,8 @@ describe('saved fights', () => {
     expect(await listSavedFights()).toEqual({ status: 'failed' })
   })
 
-  it('saves the whole blob as a new row, so two saves are two things to come back to', async () => {
-    const enc = encounter()
+  it('saves the whole blob, including its selected track, as a new row', async () => {
+    const enc = encounter({ musicTrackId: 'ancient-god' })
     const { client, queries } = makeSupabaseStub()
     supa.client = client
     expect(await saveFight('Before the boss', enc, 'camp-1')).toBe('ok')
@@ -334,8 +334,8 @@ describe('saved fights', () => {
     expect(await saveFight('x', encounter(), null)).toBe('unavailable')
   })
 
-  it('reads one saved blob back by id', async () => {
-    const enc = encounter({ round: 5 })
+  it('reads one saved blob and its selected track back by id', async () => {
+    const enc = encounter({ round: 5, musicTrackId: 'ancient-god' })
     const { client, queries } = makeSupabaseStub({ data: { state: enc } })
     supa.client = client
     expect(await loadSavedFight('row-2')).toEqual(enc)

@@ -173,6 +173,7 @@ describe('templateFromBoard', () => {
     const template = templateFromBoard([monster(), monster(), quick()], '  Goblin   ambush  ')
     expect(template).toMatchObject({ v: 1, name: 'Goblin ambush' })
     expect(castSize(template)).toBe(3)
+    expect(JSON.stringify(template)).not.toContain('music')
   })
 })
 

@@ -22,6 +22,7 @@ const INITIAL_STATE: MusicPlayerSnapshot = {
 /** Keep the application-level native player alive while console views mount and unmount. */
 export function useMusicPlayer() {
   const controller = useRef<MusicController | null>(null)
+  const pendingRestore = useRef<string | null | undefined>(undefined)
   const [state, setState] = useState<MusicPlayerSnapshot>(() => ({
     ...INITIAL_STATE,
     volume: loadSettings().musicVolume,
@@ -36,6 +37,7 @@ export function useMusicPlayer() {
       onPlayed: trackMusicPlayed,
     })
     controller.current = player
+    if (pendingRestore.current !== undefined) player.restore(pendingRestore.current)
     setState(player.getSnapshot())
     const unsubscribe = player.subscribe(() => setState(player.getSnapshot()))
     return () => {
@@ -45,6 +47,12 @@ export function useMusicPlayer() {
     }
   }, [])
 
+  /** Restore a catalog selection without restoring playback. */
+  const restore = useCallback((trackId: string | null) => {
+    pendingRestore.current = trackId
+    controller.current?.restore(trackId)
+    return trackId === null || musicCatalog.some((track) => track.id === trackId)
+  }, [])
   /** Queue or switch the selected catalog track. */
   const select = useCallback((trackId: string | null) => controller.current?.select(trackId), [])
   /** Ask the browser to play the queued track. */
@@ -58,5 +66,5 @@ export function useMusicPlayer() {
     saveSettings({ musicVolume: next })
   }, [])
 
-  return { tracks: musicCatalog, state, select, play, pause, setVolume }
+  return { tracks: musicCatalog, state, restore, select, play, pause, setVolume }
 }

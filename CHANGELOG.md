@@ -25,6 +25,7 @@ published.
 ### Music
 
 - The tracker can queue, play, pause, loop, and switch between approved music tracks. Its volume stays on the device. ([#52](https://github.com/OpenFrayApp/console/issues/52))
+- Recovery copies and saved fights restore the selected track without starting playback. A removed track clears with an unavailable message. ([#53](https://github.com/OpenFrayApp/console/issues/53))
 
 ### Player view
 

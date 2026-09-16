@@ -85,6 +85,29 @@ describe('music controller', () => {
     expect(audio.play).not.toHaveBeenCalled()
   })
 
+  it('restores a catalog selection without restoring playback', () => {
+    const { audio, controller } = setup()
+
+    expect(controller.restore('ancient-god')).toBe(true)
+
+    expect(controller.getSnapshot()).toMatchObject({ selectedId: 'ancient-god', status: 'queued' })
+    expect(audio.src).toBe('')
+    expect(audio.play).not.toHaveBeenCalled()
+  })
+
+  it('clears a missing restored selection and explains that it is unavailable', () => {
+    const { audio, controller } = setup()
+
+    expect(controller.restore('removed-track')).toBe(false)
+
+    expect(controller.getSnapshot()).toMatchObject({
+      selectedId: null,
+      status: 'idle',
+      error: 'unavailable',
+    })
+    expect(audio.play).not.toHaveBeenCalled()
+  })
+
   it('plays the queued track on a continuous native loop', async () => {
     const { audio, controller, onPlayed } = setup()
     controller.select('ancient-god')
