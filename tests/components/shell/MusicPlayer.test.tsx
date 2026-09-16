@@ -61,6 +61,19 @@ describe('MusicPlayer', () => {
     expect(onPause).toHaveBeenCalledOnce()
   })
 
+  it('returns focus to the volume button when Escape closes its control', () => {
+    setup()
+    const trigger = screen.getByRole('button', { name: 'Music volume' })
+    fireEvent.click(trigger)
+    const volume = screen.getByRole('slider', { name: 'Music volume' })
+    volume.focus()
+
+    fireEvent.keyDown(volume, { key: 'Escape' })
+
+    expect(screen.queryByRole('slider', { name: 'Music volume' })).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it.each([
     ['loading', null, 'Loading music…', 'Pause music'],
     ['error', 'offline', 'Music needs a connection.', 'Play music'],

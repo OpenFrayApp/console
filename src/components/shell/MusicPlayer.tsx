@@ -77,6 +77,11 @@ export function MusicPlayer({
   const [volumeOpen, setVolumeOpen] = useState(false)
   const volumeRef = useRef<HTMLDivElement>(null)
   const closeVolume = useCallback(() => setVolumeOpen(false), [])
+  /** Close the volume popover and return keyboard focus to the button that opened it. */
+  const closeVolumeAndRestoreFocus = useCallback(() => {
+    setVolumeOpen(false)
+    volumeRef.current?.querySelector('button')?.focus()
+  }, [])
   useDismiss(volumeRef, volumeOpen, closeVolume)
   const active = state.status === 'loading' || state.status === 'playing'
   const message = statusMessage(state)
@@ -125,6 +130,11 @@ export function MusicPlayer({
           {volumeOpen && (
             <div
               className={`${popoverClass('roomy:w-20', 'right', 'above')} flex flex-col items-center gap-2 p-3`}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return
+                event.stopPropagation()
+                closeVolumeAndRestoreFocus()
+              }}
             >
               <label
                 htmlFor="music-volume"

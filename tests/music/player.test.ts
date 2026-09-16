@@ -61,14 +61,14 @@ class FakeAudio implements MusicAudio {
 }
 
 /** Build a controller around an observable fake media element. */
-function setup(online = true) {
+function setup(online: boolean | (() => boolean) = true) {
   const audio = new FakeAudio()
   const onPlayed = vi.fn()
   const controller = createMusicController({
     audio,
     tracks: [ancientGod, nextTrack],
     initialVolume: 0.7,
-    isOnline: () => online,
+    isOnline: () => (typeof online === 'function' ? online() : online),
     onPlayed,
   })
   return { audio, controller, onPlayed }
@@ -142,6 +142,24 @@ describe('music controller', () => {
     expect(audio.play).toHaveBeenCalledTimes(2)
     audio.emit('playing')
     expect(controller.getSnapshot()).toMatchObject({ selectedId: 'next-track', status: 'playing' })
+  })
+
+  it('stops the previous track when an offline switch cannot start the next one', async () => {
+    let online = true
+    const { audio, controller } = setup(() => online)
+    controller.select('ancient-god')
+    await controller.play()
+    audio.emit('playing')
+
+    online = false
+    controller.select('next-track')
+
+    expect(audio.pause).toHaveBeenCalledOnce()
+    expect(controller.getSnapshot()).toMatchObject({
+      selectedId: 'next-track',
+      status: 'error',
+      error: 'offline',
+    })
   })
 
   it('applies a clamped volume without restarting playback', () => {

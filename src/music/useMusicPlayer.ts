@@ -5,7 +5,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { trackMusicPlayed } from '../lib/analytics.ts'
 import { loadSettings, saveSettings } from '../state/settings.ts'
 import { musicCatalog } from './catalog.ts'
-import { createMusicController, type MusicController, type MusicPlayerSnapshot } from './player.ts'
+import {
+  createMusicController,
+  normalizeMusicVolume,
+  type MusicController,
+  type MusicPlayerSnapshot,
+} from './player.ts'
 
 const INITIAL_STATE: MusicPlayerSnapshot = {
   selectedId: null,
@@ -48,7 +53,7 @@ export function useMusicPlayer() {
   const pause = useCallback(() => controller.current?.pause(), [])
   /** Apply and retain a device-level volume preference. */
   const setVolume = useCallback((volume: number) => {
-    const next = Math.min(1, Math.max(0, volume))
+    const next = normalizeMusicVolume(volume)
     controller.current?.setVolume(next)
     saveSettings({ musicVolume: next })
   }, [])

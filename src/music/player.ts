@@ -47,8 +47,10 @@ interface MusicControllerOptions {
 }
 
 /** Keep a numeric volume inside the native media element's accepted range. */
-function clampVolume(volume: number): number {
-  return Math.min(1, Math.max(0, volume))
+export function normalizeMusicVolume(volume: unknown, fallback = 0.7): number {
+  return typeof volume === 'number' && Number.isFinite(volume)
+    ? Math.min(1, Math.max(0, volume))
+    : fallback
 }
 
 /** Own one native audio element and expose its durable UI state to React. */
@@ -64,12 +66,12 @@ export function createMusicController({
     selectedId: null,
     status: 'idle',
     error: null,
-    volume: clampVolume(initialVolume),
+    volume: normalizeMusicVolume(initialVolume),
   }
   let wantsPlayback = false
   let pendingPlayedId: string | null = null
   let loadedId: string | null = null
-  let request = 0
+  let playRequestGeneration = 0
   let destroyed = false
 
   audio.loop = true
@@ -134,7 +136,7 @@ export function createMusicController({
       return
     }
 
-    const thisRequest = ++request
+    const thisRequest = ++playRequestGeneration
     wantsPlayback = true
     pendingPlayedId = track.id
     if (loadedId !== track.id) {
@@ -145,7 +147,7 @@ export function createMusicController({
     try {
       await audio.play()
     } catch {
-      if (thisRequest !== request || destroyed) return
+      if (thisRequest !== playRequestGeneration || destroyed) return
       wantsPlayback = false
       pendingPlayedId = null
       update({ status: 'error', error: 'rejected' })
@@ -164,7 +166,7 @@ export function createMusicController({
     select: (trackId) => {
       const track = tracks.find((candidate) => candidate.id === trackId)
       const wasPlaying = wantsPlayback
-      request += 1
+      playRequestGeneration += 1
       pendingPlayedId = null
       if (!track) {
         wantsPlayback = false
@@ -173,6 +175,7 @@ export function createMusicController({
         return
       }
 
+      if (wasPlaying && loadedId !== track.id) audio.pause()
       update({ selectedId: track.id, status: wasPlaying ? 'loading' : 'queued', error: null })
       if (wasPlaying) void play()
     },
@@ -180,7 +183,7 @@ export function createMusicController({
     /** Pause by explicit request and prevent a later media event from resuming the UI state. */
     pause: () => {
       if (!snapshot.selectedId || destroyed) return
-      request += 1
+      playRequestGeneration += 1
       wantsPlayback = false
       pendingPlayedId = null
       audio.pause()
@@ -188,7 +191,7 @@ export function createMusicController({
     },
     /** Apply volume immediately without touching playback position or intent. */
     setVolume: (volume) => {
-      const next = clampVolume(volume)
+      const next = normalizeMusicVolume(volume)
       audio.volume = next
       update({ volume: next })
     },
@@ -196,7 +199,7 @@ export function createMusicController({
     destroy: () => {
       if (destroyed) return
       destroyed = true
-      request += 1
+      playRequestGeneration += 1
       wantsPlayback = false
       pendingPlayedId = null
       audio.removeEventListener('playing', onPlaying)

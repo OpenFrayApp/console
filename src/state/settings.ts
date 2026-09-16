@@ -5,6 +5,7 @@ import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
 import { sanitizeHotkeys } from './hotkeys.ts'
 import type { HotkeyCommandId } from './hotkeys.ts'
 import type { FieldVisibility, HpVisibility } from '../schema/combatant.ts'
+import { normalizeMusicVolume } from '../music/player.ts'
 
 /**
  * App preferences for every user (anonymous included), persisted in `localStorage`
@@ -167,10 +168,7 @@ export function loadSettings(): AppSettings {
     showHomebrew: data.showHomebrew !== false,
     // By name unless an explicit 'cr' is stored.
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
-    musicVolume:
-      typeof data.musicVolume === 'number' && Number.isFinite(data.musicVolume)
-        ? Math.min(1, Math.max(0, data.musicVolume))
-        : 0.7,
+    musicVolume: normalizeMusicVolume(data.musicVolume),
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
     // Anything but exactly four digits is no PIN at all.
