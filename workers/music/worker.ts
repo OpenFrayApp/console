@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { musicTrackIdFromPath } from '../../src/music/catalog.ts'
 import { curatedMusicCatalog } from './catalog.ts'
 
 interface MusicObjectRange {
@@ -35,7 +36,6 @@ export interface MusicWorkerEnvironment {
   MUSIC_RATE_LIMITER: MusicRateLimiter
 }
 
-const musicPath = /^\/console\/music\/([a-z0-9]+(?:-[a-z0-9]+)*)$/
 const cacheControl = 'public, max-age=31536000, immutable'
 
 /** Return a response that reveals no bucket or catalog internals. */
@@ -94,9 +94,9 @@ export async function handleMusicRequest(
     return plainResponse(405, 'Method not allowed.', { Allow: 'GET, HEAD' })
   }
 
-  const match = musicPath.exec(new URL(request.url).pathname)
-  if (!match) return plainResponse(404, 'Track not found.')
-  const track = curatedMusicCatalog[match[1] as keyof typeof curatedMusicCatalog]
+  const trackId = musicTrackIdFromPath(new URL(request.url).pathname)
+  if (!trackId) return plainResponse(404, 'Track not found.')
+  const track = curatedMusicCatalog[trackId as keyof typeof curatedMusicCatalog]
   if (!track) return plainResponse(404, 'Track not found.')
   if (!isAllowedPlaybackRequest(request)) return plainResponse(403, 'Playback refused.')
 
@@ -119,7 +119,13 @@ export async function handleMusicRequest(
   }
 
   const headers = mediaHeaders(object, track.contentType)
-  if (!('body' in object)) return new Response(null, { status: 412, headers })
+  if (!('body' in object)) {
+    headers.delete('Content-Length')
+    headers.delete('Content-Range')
+    const failedMutationCondition =
+      request.headers.has('If-Match') || request.headers.has('If-Unmodified-Since')
+    return new Response(null, { status: failedMutationCondition ? 412 : 304, headers })
+  }
   const status = object.range ? 206 : 200
   return new Response(request.method === 'HEAD' ? null : object.body, { status, headers })
 }

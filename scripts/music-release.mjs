@@ -10,11 +10,10 @@ import { spawnSync } from 'node:child_process'
 
 import { inspectMusicRelease } from './lib/musicRelease.ts'
 import { musicCatalog } from '../src/music/catalog.ts'
-import { curatedMusicCatalog } from '../workers/music/catalog.ts'
+import { curatedMusicCatalog, MUSIC_RELEASE_BUDGET_BYTES } from '../workers/music/catalog.ts'
 
 const bucket = process.env.OPENFRAY_MUSIC_BUCKET ?? 'openfray-music'
 const config = resolve('wrangler.music.jsonc')
-const releaseBudget = 8 * 1024 * 1024
 
 /** Print command usage and stop before any remote action. */
 function usage() {
@@ -23,7 +22,7 @@ function usage() {
   npm run music:check -- <track-id> <local-ogg>
   npm run music:upload -- <track-id> <local-ogg>
   npm run music:verify -- <track-id>
-  npm run music:rollback -- <track-id> <object-key>`)
+  npm run music:delete -- <track-id> <object-key>`)
   process.exitCode = 2
 }
 
@@ -96,7 +95,9 @@ async function assertRemoteAbsent(track) {
 /** Print an OGG encode's release metadata before catalog approval. */
 async function fingerprint(path) {
   const bytes = await readFile(path)
-  if (bytes.byteLength > releaseBudget) throw new Error('The encode exceeds the release budget.')
+  if (bytes.byteLength > MUSIC_RELEASE_BUDGET_BYTES) {
+    throw new Error('The encode exceeds the release budget.')
+  }
   if (bytes.subarray(0, 4).toString() !== 'OggS') throw new Error('The file is not an Ogg encode.')
   console.log(
     JSON.stringify(
@@ -134,11 +135,11 @@ async function upload(trackId, path) {
   await verifyRemote(trackId)
 }
 
-/** Delete only the exact approved object key after an explicit rollback confirmation. */
-function rollback(trackId, confirmedKey) {
+/** Delete only the exact approved object key after an explicit confirmation. */
+function deleteObject(trackId, confirmedKey) {
   const track = curatedMusicCatalog[trackId]
   if (!track || confirmedKey !== track.objectKey) {
-    throw new Error('Rollback requires the approved track ID and exact object key.')
+    throw new Error('Deletion requires the approved track ID and exact object key.')
   }
   const result = wrangler(['r2', 'object', 'delete', `${bucket}/${track.objectKey}`, '--remote'], {
     stdio: 'inherit',
@@ -153,7 +154,7 @@ try {
     console.log(JSON.stringify(await inspect(first, resolve(second)), null, 2))
   } else if (command === 'upload' && first && second) await upload(first, resolve(second))
   else if (command === 'verify' && first && !second) await verifyRemote(first)
-  else if (command === 'rollback' && first && second) rollback(first, second)
+  else if (command === 'delete' && first && second) deleteObject(first, second)
   else usage()
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error))

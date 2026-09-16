@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { ANCIENT_GOD_TRACK_ID } from '../../src/music/catalog.ts'
+
 export interface CuratedMusicTrack {
-  id: string
   objectKey: string
   contentType: 'audio/ogg'
   maxBytes: number
@@ -17,14 +18,17 @@ export interface CuratedMusicTrack {
 
 export type CuratedMusicCatalog = Readonly<Record<string, CuratedMusicTrack>>
 
+export const MUSIC_RELEASE_BUDGET_BYTES = 8 * 1024 * 1024
+
+const ancientGodSha256 = 'd4a1d5259ad94cba75522439c454a14e0a1ed298820460f532f0697317ceace5'
+
 export const curatedMusicCatalog = {
-  'ancient-god': {
-    id: 'ancient-god',
-    objectKey: 'tracks/ancient-god.ogg',
+  [ANCIENT_GOD_TRACK_ID]: {
+    objectKey: `tracks/${ANCIENT_GOD_TRACK_ID}/${ancientGodSha256}.ogg`,
     contentType: 'audio/ogg',
-    maxBytes: 8 * 1024 * 1024,
+    maxBytes: MUSIC_RELEASE_BUDGET_BYTES,
     bytes: 2314611,
-    sha256: 'd4a1d5259ad94cba75522439c454a14e0a1ed298820460f532f0697317ceace5',
+    sha256: ancientGodSha256,
     rights: {
       consoleUse: true,
       transcoding: true,

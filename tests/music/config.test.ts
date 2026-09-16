@@ -1,9 +1,17 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-const config = JSON.parse(
+/** Parse the comment-free Wrangler JSONC used by this repository. */
+function parseWranglerConfig(source: string): Record<string, unknown> {
+  return JSON.parse(source.replace(/,\s*([}\]])/g, '$1')) as Record<string, unknown>
+}
+
+const config = parseWranglerConfig(
   readFileSync(resolve(import.meta.dirname, '../../wrangler.music.jsonc'), 'utf8'),
 )
 

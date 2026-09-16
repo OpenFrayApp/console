@@ -28,8 +28,10 @@
     "music:check": "node scripts/music-release.mjs check",
     "music:upload": "node scripts/music-release.mjs upload",
     "music:verify": "node scripts/music-release.mjs verify",
-    "music:rollback": "node scripts/music-release.mjs rollback",
+    "music:delete": "node scripts/music-release.mjs delete",
     "music:deploy": "wrangler deploy --config wrangler.music.jsonc",
+    "music:deployments": "wrangler deployments list --config wrangler.music.jsonc",
+    "music:rollback": "wrangler rollback --config wrangler.music.jsonc",
     "test": "vitest run && npm run test:browser",
     "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts",
     "test:accessibility": "playwright install chromium && vitest run --config vitest.browser.config.ts tests/accessibility/accessibility.browser.test.ts",
@@ -72,6 +74,6 @@
     "vite": "^6.0.0",
     "vitest": "^4.1.11",
     "workerd": "^1.20260901.1",
-    "wrangler": "^4.132.0"
+    "wrangler": "4.132.0"
   }
 }

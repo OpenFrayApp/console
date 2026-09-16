@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Nicola Mustone
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { handleMusicRequest, type MusicWorkerEnvironment } from '../../workers/music/worker.ts'
@@ -5,7 +8,7 @@ import { handleMusicRequest, type MusicWorkerEnvironment } from '../../workers/m
 const bytes = new TextEncoder().encode('0123456789')
 
 /** Build an R2 object response with production-shaped metadata. */
-function object(range?: { offset: number; length: number }, contentType = 'audio/ogg') {
+function r2MusicObject(range?: { offset: number; length: number }, contentType = 'audio/ogg') {
   const selected = range ? bytes.slice(range.offset, range.offset + range.length) : bytes
   return {
     body: new Blob([selected]).stream(),
@@ -13,6 +16,7 @@ function object(range?: { offset: number; length: number }, contentType = 'audio
     range,
     httpEtag: '"ancient-god-etag"',
     httpMetadata: { contentType },
+    /** Copy the stored media metadata into a response. */
     writeHttpMetadata(headers: Headers) {
       headers.set('Content-Type', contentType)
     },
@@ -21,7 +25,10 @@ function object(range?: { offset: number; length: number }, contentType = 'audio
 
 /** Build Worker bindings whose object read can be inspected and controlled. */
 function environment(
-  result: ReturnType<typeof object> | null = object(),
+  result:
+    | ReturnType<typeof r2MusicObject>
+    | Omit<ReturnType<typeof r2MusicObject>, 'body'>
+    | null = r2MusicObject(),
 ): MusicWorkerEnvironment & { get: ReturnType<typeof vi.fn> } {
   const get = vi.fn(async () => result)
   return {
@@ -42,10 +49,13 @@ describe('music delivery Worker', () => {
 
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('0123456789')
-    expect(env.get).toHaveBeenCalledWith('tracks/ancient-god.ogg', {
-      onlyIf: expect.any(Headers),
-      range: expect.any(Headers),
-    })
+    expect(env.get).toHaveBeenCalledWith(
+      'tracks/ancient-god/d4a1d5259ad94cba75522439c454a14e0a1ed298820460f532f0697317ceace5.ogg',
+      {
+        onlyIf: expect.any(Headers),
+        range: expect.any(Headers),
+      },
+    )
     expect(response.headers.get('Content-Type')).toBe('audio/ogg')
     expect(response.headers.get('Content-Length')).toBe('10')
     expect(response.headers.get('Accept-Ranges')).toBe('bytes')
@@ -68,7 +78,7 @@ describe('music delivery Worker', () => {
   })
 
   it('returns the requested byte range with media range metadata', async () => {
-    const env = environment(object({ offset: 2, length: 4 }))
+    const env = environment(r2MusicObject({ offset: 2, length: 4 }))
 
     const response = await handleMusicRequest(
       new Request('https://openfray.app/console/music/ancient-god', {
@@ -103,11 +113,31 @@ describe('music delivery Worker', () => {
     )
     const wrongType = await handleMusicRequest(
       new Request('https://openfray.app/console/music/ancient-god'),
-      environment(object(undefined, 'text/plain')),
+      environment(r2MusicObject(undefined, 'text/plain')),
     )
 
     expect(missing.status).toBe(404)
     expect(wrongType.status).toBe(404)
+  })
+
+  it.each([
+    ['If-None-Match', '"ancient-god-etag"', 304],
+    ['If-Modified-Since', 'Wed, 21 Oct 2015 07:28:00 GMT', 304],
+    ['If-Match', '"other-etag"', 412],
+    ['If-Unmodified-Since', 'Wed, 21 Oct 2015 07:28:00 GMT', 412],
+  ])('returns the correct status for a failed %s condition', async (name, value, status) => {
+    const metadata: Partial<ReturnType<typeof r2MusicObject>> = { ...r2MusicObject() }
+    delete metadata.body
+    const response = await handleMusicRequest(
+      new Request('https://openfray.app/console/music/ancient-god', {
+        headers: { [name]: value },
+      }),
+      environment(metadata as Omit<ReturnType<typeof r2MusicObject>, 'body'>),
+    )
+
+    expect(response.status).toBe(status)
+    expect(response.headers.get('ETag')).toBe('"ancient-god-etag"')
+    expect(response.headers.get('Content-Length')).toBeNull()
   })
 
   it('limits abusive clients and rejects explicit cross-site hotlinks', async () => {

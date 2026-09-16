@@ -47,10 +47,10 @@ Create an Ogg Vorbis encode, then print its immutable release metadata:
 npm run music:fingerprint -- local/music-encodes/track.ogg
 ```
 
-Add the stable ID and title to `src/music/catalog.ts`. Add the object key, byte count, SHA-256,
-release budget, content type, and rights decisions to `workers/music/catalog.ts`. Use a new
-stable ID and object key for different music. Never reuse an ID or overwrite an existing
-object.
+Define the stable ID, title, and route in `src/music/catalog.ts`. Reference that ID from
+`workers/music/catalog.ts`, then add the versioned object key, byte count, SHA-256, release
+budget, content type, and rights decisions. Use a new stable ID for different music. Never
+reassign an ID or overwrite an existing object.
 
 Verify the encode before any upload:
 
@@ -95,20 +95,29 @@ continue to work.
 
 ## Replace or roll back a release
 
-A replacement is new music. Give it a new stable ID and versioned object key, upload it, and
-deploy the catalog change. A new ID creates a new URL, so an old cached track cannot replace it.
-Do not replace bytes behind an existing ID.
+A new encode of the same track keeps its stable ID and receives a new object key containing its
+SHA-256. Upload the new object, deploy the mapping, and retain the previous object until the
+release is verified. Different music receives a new stable ID.
 
-If Cloudflare cached a failed response for the new URL, open **Caching > Configuration > Purge
-Cache > Custom Purge**. Purge only `https://openfray.app/console/music/TRACK_ID`, then repeat the
-full and range checks.
+The stable route can retain its previous cached response after an encode changes. Open
+**Caching > Configuration > Purge Cache > Custom Purge**. Purge only
+`https://openfray.app/console/music/TRACK_ID`, then repeat the full and range checks. Never
+overwrite a versioned object.
 
-To roll back, deploy the previous Worker catalog first. Confirm the old track plays, then delete
-the unused new object with its exact key:
+To roll back, list the Worker deployments in Cloudflare and copy the previous version ID. Roll
+back so the stable route maps to the retained object:
 
 ```bash
-npm run music:rollback -- TRACK_ID tracks/TRACK_ID.ogg
+npm run music:deployments
+npm run music:rollback -- VERSION_ID
 ```
 
-Do not delete an object referenced by the deployed catalog. If a current track fails, roll back
-the Worker deployment before removing its object.
+Purge the stable route and confirm the old track plays. Then delete the unused new object with
+its exact key:
+
+```bash
+npm run music:delete -- TRACK_ID tracks/TRACK_ID/SHA256.ogg
+```
+
+Do not delete an object referenced by the deployed Worker. Roll back and verify the route before
+removing its replacement object.
