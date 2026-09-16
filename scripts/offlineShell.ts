@@ -18,6 +18,15 @@ async function files(directory: string, prefix = ''): Promise<string[]> {
   return nested.flat().sort()
 }
 
+/** Decide whether a deployment file belongs to the required offline application shell. */
+export function isRequiredOfflineAsset(path: string): boolean {
+  return (
+    !['sw.js', 'shell-manifest.json'].includes(path) &&
+    !path.endsWith('.map') &&
+    !path.startsWith('music/')
+  )
+}
+
 /** Emit a worker whose install verifies every required asset against this production build. */
 export function offlineShell(): Plugin {
   let config: ResolvedConfig
@@ -31,9 +40,7 @@ export function offlineShell(): Plugin {
     /** Hash the emitted deployment and compile its self-contained worker. */
     async closeBundle() {
       const directory = resolve(config.root, config.build.outDir)
-      const paths = (await files(directory)).filter(
-        (path) => !['sw.js', 'shell-manifest.json'].includes(path) && !path.endsWith('.map'),
-      )
+      const paths = (await files(directory)).filter(isRequiredOfflineAsset)
       const assets = await Promise.all(
         paths.map(async (path) => ({
           url: '/console/' + path,
