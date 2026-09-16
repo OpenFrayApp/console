@@ -262,6 +262,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // device-local preference, independent of authored encounter recovery.
   const [theme, toggleTheme] = useTheme()
   const music = useMusicPlayer()
+  const restoreMusic = music.restore
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   // Which content libraries the compendium/picker show. A device-local preference
@@ -414,13 +415,36 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     [ownPresets, enabledLibraries],
   )
 
+  /** Load an encounter and restore only a catalog selection from its music state. */
+  const loadEncounter = useCallback(
+    (restored: Encounter) => {
+      const trackId = restored.musicTrackId ?? null
+      const available = restoreMusic(trackId)
+      dispatch({
+        type: 'load',
+        encounter:
+          available || trackId === null ? restored : { ...restored, musicTrackId: undefined },
+      })
+    },
+    [restoreMusic],
+  )
+
+  /** Queue a track and retain its stable catalog ID with the encounter. */
+  const selectMusic = (trackId: string | null) => {
+    music.select(trackId)
+    dispatch({ type: 'setMusicTrack', trackId })
+  }
+
   /** Put a validated recovery snapshot onto the working board. */
-  const applyRecovery = useCallback((snapshot: SessionSnapshot) => {
-    dispatch({ type: 'load', encounter: snapshot.encounter })
-    setView(snapshot.view)
-    setSelectedId(snapshot.selectedId)
-    setActiveCampaignId(snapshot.activeCampaignId ?? null)
-  }, [])
+  const applyRecovery = useCallback(
+    (snapshot: SessionSnapshot) => {
+      loadEncounter(snapshot.encounter)
+      setView(snapshot.view)
+      setSelectedId(snapshot.selectedId)
+      setActiveCampaignId(snapshot.activeCampaignId ?? null)
+    },
+    [loadEncounter],
+  )
 
   useEffect(() => {
     if (user) setAuthOpen(false)
@@ -493,7 +517,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       if (!active) return
       if (result.snapshot) applyRecovery(result.snapshot)
       else if (result.clearWorkingBoard) {
-        dispatch({ type: 'load', encounter: emptyEncounter() })
+        loadEncounter(emptyEncounter())
         setSelectedId(null)
         setActiveCampaignId(null)
       }
@@ -507,7 +531,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return () => {
       active = false
     }
-  }, [applyRecovery, userId, authLoading, identityExpired, lifecycle])
+  }, [applyRecovery, loadEncounter, userId, authLoading, identityExpired, lifecycle])
 
   // Start recovery before the browser's next paint. The working board has already changed,
   // and the lifecycle keeps it responsive while device and cloud adapters continue.
@@ -819,7 +843,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const handleRestoreFight = async (id: string): Promise<boolean> => {
     const saved = await loadSavedFight(id)
     if (!saved) return false
-    dispatch({ type: 'load', encounter: saved })
+    loadEncounter(saved)
     setSelectedId(null)
     // The campaign travels with it, so a fight comes back under the house rules it was
     // fought under rather than whichever campaign happens to be active tonight.
@@ -1794,7 +1818,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       <MusicPlayer
                         tracks={music.tracks}
                         state={music.state}
-                        onSelect={music.select}
+                        onSelect={selectMusic}
                         onPlay={music.play}
                         onPause={music.pause}
                         onVolume={music.setVolume}

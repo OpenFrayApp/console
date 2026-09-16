@@ -28,13 +28,14 @@ describe('session persistence', () => {
     expect(loadSession()).toEqual({ status: 'empty', snapshot: null })
   })
 
-  it('round-trips a canonical saved snapshot', () => {
+  it('round-trips a canonical saved snapshot with its music selection', () => {
     const value = recoverySnapshot('local', { theme: 'light', view: 'compendium' })
+    value.encounter.musicTrackId = 'ancient-god'
     expect(saveSession(value)).toEqual({ status: 'saved' })
     expect(loadSession()).toEqual({ status: 'loaded', snapshot: value })
     expect(JSON.parse(sessionStorage.getItem('openfray:session') ?? '{}')).toMatchObject({
       kind: 'session',
-      schemaVersion: 3,
+      schemaVersion: 4,
       payload: value,
     })
   })
@@ -91,7 +92,7 @@ describe('session persistence', () => {
 
     expect(loadSession()).toEqual({ status: 'loaded', snapshot: recoverySnapshot() })
     expect(exportRecoveryCopy('migrated')?.serialized).toBe(legacy)
-    expect(exportRecoveryCopy('current')?.serialized).toContain('"schemaVersion":3')
+    expect(exportRecoveryCopy('current')?.serialized).toContain('"schemaVersion":4')
   })
 
   it('allows explicit replacement and deletion of a future copy', () => {

@@ -31,6 +31,7 @@ export interface MusicAudio {
 export interface MusicController {
   getSnapshot(): MusicPlayerSnapshot
   subscribe(listener: () => void): () => void
+  restore(trackId: string | null): boolean
   select(trackId: string | null): void
   play(): Promise<void>
   pause(): void
@@ -161,6 +162,24 @@ export function createMusicController({
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
+    },
+    /** Restore only a catalog selection, leaving playback stopped at the beginning. */
+    restore: (trackId) => {
+      const track = tracks.find((candidate) => candidate.id === trackId)
+      playRequestGeneration += 1
+      wantsPlayback = false
+      pendingPlayedId = null
+      releaseSource()
+      if (!track) {
+        update({
+          selectedId: null,
+          status: 'idle',
+          error: trackId === null ? null : 'unavailable',
+        })
+        return trackId === null
+      }
+      update({ selectedId: track.id, status: 'queued', error: null })
+      return true
     },
     /** Queue a stopped selection, or switch immediately when playback is active. */
     select: (trackId) => {
