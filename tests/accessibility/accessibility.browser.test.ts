@@ -96,6 +96,30 @@ describe('core keyboard journey', () => {
 })
 
 describe('reflow and user text settings', () => {
+  it.each([
+    ['swipe', 390, 844],
+    ['split', 1133, 744],
+    ['wide', 1280, 720],
+  ] as const)('keeps the music player operable in the %s shell', async (_shell, width, height) => {
+    await renderConsole(width, height)
+
+    const player = screen.getByRole('group', { name: 'Music player' })
+    const bounds = player.getBoundingClientRect()
+    expect(player).toBeVisible()
+    expect(bounds.left).toBeGreaterThanOrEqual(0)
+    expect(bounds.right).toBeLessThanOrEqual(innerWidth)
+    expect(screen.getByRole('button', { name: 'Music volume' })).toBeVisible()
+  })
+
+  it('moves the complete music group beneath the board actions when the row cannot fit', async () => {
+    await renderConsole(320, 720)
+
+    const save = screen.getByRole('button', { name: 'Save this encounter' }).getBoundingClientRect()
+    const player = screen.getByRole('group', { name: 'Music player' }).getBoundingClientRect()
+    expect(player.top).toBeGreaterThanOrEqual(save.bottom)
+    expect(player.right).toBeLessThanOrEqual(innerWidth)
+  })
+
   it('keeps a core task available at 320 CSS pixels', async () => {
     await renderConsole(320, 720)
     expect(hasPageOverflow()).toBe(false)

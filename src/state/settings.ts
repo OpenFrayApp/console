@@ -88,6 +88,8 @@ export interface AppSettings {
   showHomebrew: boolean
   /** How the compendium sorts creatures and spells. Defaults to by name. */
   librarySort: LibrarySort
+  /** The native music player's device-level volume, from silent (0) to full (1). */
+  musicVolume: number
   /** What the shared player view reveals about a creature. */
   playerView: PlayerViewSettings
   /**
@@ -165,6 +167,10 @@ export function loadSettings(): AppSettings {
     showHomebrew: data.showHomebrew !== false,
     // By name unless an explicit 'cr' is stored.
     librarySort: data.librarySort === 'cr' ? 'cr' : 'name',
+    musicVolume:
+      typeof data.musicVolume === 'number' && Number.isFinite(data.musicVolume)
+        ? Math.min(1, Math.max(0, data.musicVolume))
+        : 0.7,
     playerView: readPlayerView(data.playerView),
     playerViewCode: typeof data.playerViewCode === 'string' ? data.playerViewCode : null,
     // Anything but exactly four digits is no PIN at all.

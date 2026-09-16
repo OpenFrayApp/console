@@ -163,6 +163,8 @@ import { SharePanel } from './components/share/SharePanel.tsx'
 import { SignUpPage } from './components/account/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/log/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
+import { MusicPlayer } from './components/shell/MusicPlayer.tsx'
+import { useMusicPlayer } from './music/useMusicPlayer.ts'
 
 /** A player rolls their own initiative; monsters and quick adds are auto-rolled. */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
@@ -259,6 +261,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Theme is shared with the marketing site (and the player view) through its own
   // device-local preference, independent of authored encounter recovery.
   const [theme, toggleTheme] = useTheme()
+  const music = useMusicPlayer()
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   // Which content libraries the compendium/picker show. A device-local preference
@@ -1767,25 +1770,37 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             ) : (
               <EncounterConsole
                 boardActions={
-                  <>
-                    <SaveFightButton
-                      canSave={encounter.combatants.length > 0}
-                      signedIn={!!user}
-                      onSave={handleSaveFight}
-                      onSignIn={() => setAuthOpen(true)}
-                    />
-                    <ShareEncounterButton
-                      canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
-                      signedIn={!!user}
-                      defaultByline={displayName ?? shareByline}
-                      defaultLicense={shareLicense ?? 'unstated'}
-                      restricted={restricted.names}
-                      canDropRestricted={restricted.someRemain}
-                      allowReserved={bylineGranted}
-                      onShare={handleShareEncounter}
-                      onSignIn={() => setAuthOpen(true)}
-                    />
-                  </>
+                  <div className="flex w-full flex-wrap items-start gap-2">
+                    <div className="flex gap-1">
+                      <SaveFightButton
+                        canSave={encounter.combatants.length > 0}
+                        signedIn={!!user}
+                        onSave={handleSaveFight}
+                        onSignIn={() => setAuthOpen(true)}
+                      />
+                      <ShareEncounterButton
+                        canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
+                        signedIn={!!user}
+                        defaultByline={displayName ?? shareByline}
+                        defaultLicense={shareLicense ?? 'unstated'}
+                        restricted={restricted.names}
+                        canDropRestricted={restricted.someRemain}
+                        allowReserved={bylineGranted}
+                        onShare={handleShareEncounter}
+                        onSignIn={() => setAuthOpen(true)}
+                      />
+                    </div>
+                    <div className="ml-auto min-w-0">
+                      <MusicPlayer
+                        tracks={music.tracks}
+                        state={music.state}
+                        onSelect={music.select}
+                        onPlay={music.play}
+                        onPause={music.pause}
+                        onVolume={music.setVolume}
+                      />
+                    </div>
+                  </div>
                 }
                 encounter={encounter}
                 dispatch={dispatch}
