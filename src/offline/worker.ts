@@ -38,6 +38,7 @@ export function installOfflineShell(
   const marker = '/console/__validated-shell__'
   const approved = '/console/__approved-shell__'
   const home = '/console/index.html'
+  const music = '/console/music/'
 
   /** Decode bounded cache metadata without trusting its TypeScript shape. */
   async function readManifest(cache: Cache, key: string): Promise<ShellManifest | null> {
@@ -100,6 +101,8 @@ export function installOfflineShell(
 
   /** Populate a new cache atomically from hash-verified deployment assets. */
   async function install(): Promise<void> {
+    if (manifest.assets.some((asset) => asset.url.startsWith(music)))
+      throw new Error('Lazy media cannot be a shell asset')
     const cache = await scope.caches.open(name)
     if (await complete(cache, manifest)) return
     try {
@@ -258,6 +261,7 @@ export function installOfflineShell(
   scope.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url)
     if (event.request.method !== 'GET' || url.origin !== scope.location.origin) return
+    if (url.pathname.startsWith(music)) return
     if (url.pathname === '/console/recover.html' || url.pathname === '/console/recover.js') return
     if (
       event.request.mode === 'navigate' &&

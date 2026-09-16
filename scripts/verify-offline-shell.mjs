@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os'
 import { resolve, join } from 'node:path'
 import { build } from 'vite'
 import { chromium } from 'playwright'
+import { musicCatalog } from '../src/music/catalog.ts'
 
 // The production build uses a synthetic backend; no journey can contact a real provider.
 process.env.VITE_SUPABASE_URL = 'https://offline.openfray.invalid'
@@ -19,6 +20,12 @@ const directory = resolve('dist/console')
 const manifest = JSON.parse(await readFile(join(directory, 'shell-manifest.json'), 'utf8'))
 const originalWorker = await readFile(join(directory, 'sw.js'), 'utf8')
 const originalHtml = await readFile(join(directory, 'index.html'), 'utf8')
+const catalogAssets = await Promise.all(
+  musicCatalog.map(async (track) => ({
+    track,
+    bytes: await readFile(join(directory, track.src.slice('/console/'.length))),
+  })),
+)
 /** Hash deployment bytes independently of the build plugin. */
 function hash(value) {
   return createHash('sha256').update(value).digest('hex')
@@ -36,7 +43,11 @@ assert(manifest.assets.some((asset) => asset.url.startsWith('/console/compendium
 assert(
   !manifest.assets.some((asset) => !asset.url.startsWith('/console/') || asset.url.includes('?')),
 )
-console.log('PASS production asset hashes and required shell assets')
+for (const { track, bytes } of catalogAssets) {
+  assert(!manifest.assets.some((asset) => asset.url === track.src))
+  assert.equal(bytes.subarray(0, 4).toString('ascii'), 'OggS')
+}
+console.log('PASS production asset hashes and required shell assets exclude lazy music')
 
 const fixture = await build({
   configFile: false,
@@ -57,6 +68,7 @@ let deployment = 'a'
 let broken = false
 let connected = true
 let allowIdentity = true
+let musicRequests = 0
 const htmlB = originalHtml
   .replace('<html', '<html data-shell-version="b"')
   .replaceAll(manifest.version, 'journey-b')
@@ -90,6 +102,10 @@ const server = createServer(async (request, response) => {
     } else if (path === '/fixture.js') {
       response.writeHead(200, { ...headers, 'Content-Type': 'text/javascript' })
       response.end(fixtureCode)
+    } else if (musicCatalog.some((track) => track.src === path)) {
+      musicRequests += 1
+      response.writeHead(200, { ...headers, 'Content-Type': 'audio/ogg' })
+      response.end(catalogAssets.find(({ track }) => track.src === path).bytes)
     } else if (path === '/console/sw.js') {
       response.writeHead(200, { ...headers, 'Content-Type': 'text/javascript' })
       response.end(
@@ -208,6 +224,7 @@ try {
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready
   })
+  assert.equal(musicRequests, 0)
   await page.goto(origin + '/fixture.html')
   await visible(page, 'Fixture ready')
   allowIdentity = false
@@ -219,14 +236,38 @@ try {
   await page.goto(origin + '/console/')
   await visible(page, 'Offline recovery journey')
   assert(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
-  console.log('PASS signed-in device recovery after offline browser restart')
+  const offlineMusic = await page.evaluate(async (src) => {
+    try {
+      const response = await fetch(src)
+      return { kind: 'response', status: response.status }
+    } catch {
+      return { kind: 'network-error' }
+    }
+  }, musicCatalog[0].src)
+  assert.deepEqual(offlineMusic, { kind: 'network-error' })
+  assert(await page.getByRole('button', { name: 'd20', exact: true }).isEnabled())
+  assert.equal(musicRequests, 0)
+  console.log('PASS unavailable music leaves the recovered encounter usable')
 
   await setConnected(true)
+  const lazyMusicHeader = await page.evaluate(async (src) => {
+    const response = await fetch(src)
+    return {
+      contentType: response.headers.get('content-type'),
+      header: Array.from(new Uint8Array(await response.arrayBuffer()).subarray(0, 4)),
+    }
+  }, musicCatalog[0].src)
+  assert.equal(lazyMusicHeader.contentType, 'audio/ogg')
+  assert.deepEqual(lazyMusicHeader.header, Array.from(Buffer.from('OggS')))
+  assert.equal(musicRequests, 1)
+  console.log('PASS production catalog track loads lazily from the console origin')
+
   deployment = 'b'
   await page.evaluate(async () => {
     await (await navigator.serviceWorker.getRegistration()).update()
   })
   await visible(page, 'A console update is available.')
+  assert.equal(musicRequests, 1)
   assert.equal(await page.locator('html').getAttribute('data-shell-version'), null)
   await page.getByRole('button', { name: 'Review update', exact: true }).click()
   await mkdir('local/offline-evidence', { recursive: true })

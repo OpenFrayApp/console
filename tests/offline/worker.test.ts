@@ -10,6 +10,7 @@ function browser() {
   const stores = new Map<string, Map<string, Response>>()
   const network = new Map<string, { body: string; status?: number }>()
   const skipped: string[] = []
+  const requested: string[] = []
   let clientVersion = 'previous'
   let consent = true
   let cacheRead: (() => Promise<void>) | undefined
@@ -46,6 +47,7 @@ function browser() {
         addEventListener: (type: string, listener: (event: unknown) => void) =>
           listeners.set(type, listener),
         fetch: async (url: string) => {
+          requested.push(url)
           const value = network.get(url)
           return new Response(value?.body ?? 'missing', {
             status: value?.status ?? (value ? 200 : 404),
@@ -132,12 +134,13 @@ function browser() {
     }
   }
   /** Publish deterministic deployment bytes and hashes. */
-  function deploy(version: string) {
+  function deploy(version: string, includeMusic = false) {
     const bodies = [
       ['/console/index.html', `<html>${version}</html>`],
       [`/console/assets/${version}.js`, `console.log('${version}')`],
       ['/console/compendium/index.json', JSON.stringify({ version })],
     ]
+    if (includeMusic) bodies.push(['/console/music/ancient-god.ogg', 'lazy music'])
     for (const [url, body] of bodies) network.set(url, { body })
     return worker({
       kind: 'application-shell',
@@ -153,6 +156,7 @@ function browser() {
     deploy,
     stores,
     network,
+    requested,
     skipped,
     /** Model the requesting document declining update consent. */
     setConsent: (confirmed: boolean) => {
@@ -308,6 +312,30 @@ it('rejects a forged completion marker rather than approving an incomplete shell
   expect((await worker.fetch('/console/', true))?.status).toBe(503)
 })
 
+it('rejects a manifest that tries to turn lazy music into a required shell asset', async () => {
+  const host = browser()
+  const worker = host.deploy('current', true)
+
+  await expect(worker.install()).rejects.toThrow('Lazy media cannot be a shell asset')
+  expect(host.requested).toEqual([])
+})
+
+it('installs the verified shell without requesting lazy music and leaves media on the network', async () => {
+  const host = browser()
+  host.network.set('/console/music/ancient-god.ogg', { body: 'lazy music' })
+  const worker = host.deploy('current')
+
+  await worker.install()
+
+  expect(host.requested).toEqual([
+    '/console/index.html',
+    '/console/assets/current.js',
+    '/console/compendium/index.json',
+  ])
+  expect(await worker.fetch('/console/music/ancient-god.ogg')).toBeUndefined()
+  expect(host.requested).not.toContain('/console/music/ancient-god.ogg')
+})
+
 it('does not intercept private routes, runtime responses, or non-static query URLs', async () => {
   const host = browser()
   const worker = host.deploy('current')
@@ -317,6 +345,7 @@ it('does not intercept private routes, runtime responses, or non-static query UR
     '/console/p/private',
     '/s/private',
     '/console/assets/current.js?token=secret',
+    '/console/music/ancient-god.ogg',
   ]) {
     expect(await worker.fetch(path)).toBeUndefined()
   }
