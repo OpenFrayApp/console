@@ -53,6 +53,7 @@ export function offlineShell(): Plugin {
       const source = await readFile(resolve(config.root, 'src/offline/worker.ts'), 'utf8')
       const version = createHash('sha256')
         .update(source)
+        .update(MUSIC_PATH_PREFIX)
         .update(JSON.stringify(assets))
         .digest('hex')
         .slice(0, 20)
