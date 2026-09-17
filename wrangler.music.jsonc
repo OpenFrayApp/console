@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "openfray-music",
+  "main": "workers/music/worker.ts",
+  "compatibility_date": "2026-08-25",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "openfray.app/console/music/*",
+      "zone_name": "openfray.app",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MUSIC_BUCKET",
+      "bucket_name": "openfray-music",
+    },
+  ],
+  "ratelimits": [
+    {
+      "name": "MUSIC_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 120,
+        "period": 60,
+      },
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}
