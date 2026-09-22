@@ -28,6 +28,15 @@ Add these repository secrets so unattended health and failure jobs can use them:
 
 The authenticated webhook receives only an event name and the `openfray-recovery` service label. It receives no authored content, account identifiers, share codes, object keys, database addresses, or credentials.
 
+## Keep staging active
+
+`Supabase staging keep-alive` runs a read-only query every Wednesday at 06:37 UTC. It also supports manual runs.
+It uses the existing `staging` environment’s `SUPABASE_DB_URL` secret and `SUPABASE_PROJECT_REF` variable.
+The connection must identify that project; a production repository-secret fallback is rejected.
+
+Resume a paused project in the Supabase dashboard before running the workflow. A query cannot resume it.
+Weekly scheduling leaves little margin before the inactivity cutoff. Run it manually after resuming, and check failed or delayed runs.
+
 ## Run a drill
 
 1. Confirm the latest `Supabase backup` run passed every job.
@@ -67,5 +76,9 @@ When any restore, integrity, isolation, deletion, or monitoring check fails:
 4. Record the failing phase and the operator.
 5. Fix the backup or restore path forward.
 6. Run the complete drill again before relying on a newer recovery point.
+
+A scheduled `Recovery drill` failure is a backup-health failure; restores run only through manual dispatch.
+If export reports missing `recovery_deletions` or `share_identities`, verify the source connection and deploy the recovery-ledger migration through the database-authority workflow.
+Keep the integrity check enabled. Create and verify a fresh backup after the migration before attempting a restore.
 
 The scheduled health job sends `backup_stale` when no valid encrypted object is less than 24 hours old. A failed drill sends `restore_failed`. Delivery failure also fails the monitoring job.

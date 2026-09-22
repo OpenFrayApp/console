@@ -10,6 +10,7 @@ on:
     paths:
       - '.github/workflows/backup.yml'
       - '.github/workflows/recovery.yml'
+      - '.github/workflows/staging-keepalive.yml'
       - 'docs/recovery.md'
       - 'scripts/attest-recovery-restore.mjs'
       - 'scripts/backup-supabase.sh'
@@ -29,6 +30,7 @@ on:
       - 'tests/scripts/backup.test.ts'
       - 'tests/scripts/databaseBoundary.test.ts'
       - 'tests/scripts/recovery.test.ts'
+      - 'tests/scripts/stagingKeepalive.test.ts'
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
@@ -58,7 +60,7 @@ jobs:
           version: 2.116.0
       - run: npm ci
       - run: supabase start
-      - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts tests/scripts/recoveryMonitor.test.ts
+      - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts tests/scripts/recoveryMonitor.test.ts tests/scripts/stagingKeepalive.test.ts
       - run: npm run db:boundary
       - name: Prove concurrent revocation
         run: |

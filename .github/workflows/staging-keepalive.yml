@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Nicola Mustone
+name: Supabase staging keep-alive
+
+permissions: {}
+
+on:
+  schedule:
+    - cron: '37 6 * * 3'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: staging
+    steps:
+      - name: Query the staging database
+        env:
+          PGDATABASE: ${{ secrets.SUPABASE_DB_URL }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          PGCONNECT_TIMEOUT: '15'
+          PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=15000'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PROJECT_REF" =~ ^[a-z]{20}$ ]] || { echo 'Missing staging project reference.' >&2; exit 1; }
+          # Environment secrets can fall back to repository secrets. Reject another project.
+          node --input-type=module <<'JS'
+          const ref = process.env.PROJECT_REF;
+          let url;
+          try {
+            url = new URL(process.env.PGDATABASE);
+          } catch {
+            console.error('Missing or invalid staging database connection.');
+            process.exit(1);
+          }
+          const direct = url.hostname === `db.${ref}.supabase.co`;
+          const pooler = url.hostname.endsWith('.pooler.supabase.com') &&
+            url.username.endsWith(`.${ref}`);
+          if (!['postgres:', 'postgresql:'].includes(url.protocol) || (!direct && !pooler)) {
+            console.error('The database connection must belong to the staging project.');
+            process.exit(1);
+          }
+          JS
+          for attempt in 1 2 3; do
+            if psql --dbname="$PGDATABASE" --no-psqlrc --set=ON_ERROR_STOP=1 --tuples-only --no-align \
+              --command='SELECT 1' >/dev/null 2>&1; then
+              echo 'Staging keep-alive query succeeded.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Staging query failed. Check the connection secret and resume the project if paused.' >&2
+          exit 1
