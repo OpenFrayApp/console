@@ -53,7 +53,8 @@ file_sha256() {
 # Return the encrypted creation time carried inside a backup dump.
 backup_dump_created_at() {
   local dump="$1" created_at
-  created_at="$(gzip -dc "$dump" | awk '/^-- openfray-backup-created-at: / { print $3; exit }')"
+  # Consume the stream fully so pipefail does not treat gzip's SIGPIPE as corruption.
+  created_at="$(gzip -dc "$dump" | awk '/^-- openfray-backup-created-at: / && !found { print $3; found = 1 }')"
   [[ "$created_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
   printf '%s\n' "$created_at"
 }
@@ -63,8 +64,8 @@ backup_dump_count() {
   local dump="$1" relation="$2" quoted
   quoted="\"${relation/./\".\"}\""
   gzip -dc "$dump" | awk -v relation="$quoted" '
-    /^COPY / { inblock = index($0, relation) > 0; count = 0; next }
-    inblock && $0 == "\\." { print count; found = 1; exit }
+    /^COPY / { inblock = !found && $2 == relation; count = 0; next }
+    inblock && $0 == "\\." { print count; found = 1; inblock = 0; next }
     inblock { count++ }
     END { if (!found) exit 1 }
   '
