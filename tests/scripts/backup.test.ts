@@ -121,6 +121,46 @@ function run(script: string, environment: NodeJS.ProcessEnv, args: string[] = []
   })
 }
 
+describe('backup dump readers', () => {
+  it('still rejects a dump without the recovery ledger', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'openfray-backup-missing-'))
+    const dump = join(directory, 'missing.sql.gz')
+    writeFileSync(dump, gzipSync(validDump().replaceAll('recovery_deletions', 'missing_ledger')))
+    const result = spawnSync(
+      'bash',
+      [
+        '-c',
+        'set -euo pipefail; source "$1"; verify_backup_dump "$2"',
+        'bash',
+        join(repository, 'scripts/lib/backup-integrity.sh'),
+        dump,
+      ],
+      { encoding: 'utf8' },
+    )
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('dump is missing: recovery_deletions')
+  })
+
+  it('consumes large streams when reading timestamps and early COPY blocks', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'openfray-backup-stream-'))
+    const dump = join(directory, 'large.sql.gz')
+    writeFileSync(dump, gzipSync(validDump() + '-- trailing data\n'.repeat(100_000)))
+    const result = spawnSync(
+      'bash',
+      [
+        '-c',
+        'set -euo pipefail; source "$1"; backup_dump_created_at "$2"; backup_dump_count "$2" public.campaigns',
+        'bash',
+        join(repository, 'scripts/lib/backup-integrity.sh'),
+        dump,
+      ],
+      { encoding: 'utf8', env: process.env, argv0: 'bash', cwd: repository },
+    )
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stdout.trim().split('\n')).toEqual([expect.stringMatching(/^\d{4}-/), '1'])
+  })
+})
+
 describe('encrypted database backup', () => {
   it('fails before export when encryption is missing or invalid', () => {
     const directory = mkdtempSync(join(tmpdir(), 'openfray-backup-'))
