@@ -97,6 +97,22 @@ export async function startLiveView(
   }
 }
 
+/** Resume only a still-authorized owner capability, without rotating or recreating it. */
+export async function resumeLiveView(active: ActiveLiveView): Promise<StartLiveViewResult> {
+  if (!supabase) return { status: 'unavailable' }
+  try {
+    const capabilityHash = await hashLiveViewCapability(active.capability)
+    if (capabilityHash !== active.capabilityHash) return { status: 'unauthorized' }
+    const { data, error } = await supabase.rpc('live_view_topic_owned', {
+      want_topic: `player:${capabilityHash}:lobby`,
+    })
+    if (error) return { status: 'failed' }
+    return data === true ? active : { status: 'unauthorized' }
+  } catch {
+    return { status: 'failed' }
+  }
+}
+
 /** Revoke the matching capability without letting a delayed stop revoke a rotation. */
 export async function stopLiveView(capability: string): Promise<boolean> {
   if (!supabase) return false
