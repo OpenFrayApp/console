@@ -13,6 +13,7 @@ import {
   type LoadedEncounter,
 } from './cloudEncounter.ts'
 import { IndexedDbRecovery } from './indexedDbRecovery.ts'
+import { browserWriterIdentity } from './writerIdentity.ts'
 import { classifyCopies, encounterHash, type RecoveryLineage } from './reconciliation.ts'
 import {
   loadSession,
@@ -144,7 +145,7 @@ export class EncounterLifecycle {
   private cloudId: string | null = null
   private cloudRevision = 0
   private cloudWriterId: string | null = null
-  private readonly clientId: string
+  private readonly clientId: Promise<string>
   private cloudWritable = false
   private cloudIdentityExpired = false
   private cloudQueue: Promise<void> = Promise.resolve()
@@ -160,9 +161,12 @@ export class EncounterLifecycle {
   private readonly statusListeners = new Set<(status: LifecycleSaveStatus) => void>()
 
   /** Start device recovery immediately and retain the adapters for later identity changes. */
-  constructor(adapters: EncounterLifecycleAdapters, clientId: string = crypto.randomUUID()) {
+  constructor(
+    adapters: EncounterLifecycleAdapters,
+    clientId: string | Promise<string> = crypto.randomUUID(),
+  ) {
     this.adapters = adapters
-    this.clientId = clientId
+    this.clientId = Promise.resolve(clientId)
     this.restorePromise = this.restoreOnce()
   }
 
@@ -281,7 +285,7 @@ export class EncounterLifecycle {
   /** Resolve the active identity, then reconcile its recovery copy with the cloud copy. */
   async identify(ownerId: string | null): Promise<LifecycleRestore> {
     const generation = ++this.identityGeneration
-    const startup = await this.restore()
+    const [startup, clientId] = await Promise.all([this.restore(), this.clientId])
     if (generation !== this.identityGeneration) return startup
 
     const previousOwnerId = this.ownerId
@@ -336,7 +340,7 @@ export class EncounterLifecycle {
     }
     if (cloud.status === 'empty') {
       this.cloudWritable = true
-      this.cloudWriterId = this.clientId
+      this.cloudWriterId = clientId
       return recovery
         ? { ownerId, snapshot: recovery }
         : { ownerId, snapshot: null, clearWorkingBoard: true }
@@ -474,7 +478,9 @@ export class EncounterLifecycle {
 
   /** Acquire cloud authority after reconciliation has selected one working branch. */
   private async acquireWriter(id: string, generation: number): Promise<void> {
-    const lease = await this.adapters.cloud.acquire(id, this.clientId)
+    const clientId = await this.clientId
+    if (generation !== this.identityGeneration) return
+    const lease = await this.adapters.cloud.acquire(id, clientId)
     if (generation !== this.identityGeneration) return
     if (lease.status === 'acquired') {
       this.cloudWritable = true
@@ -591,7 +597,9 @@ export class EncounterLifecycle {
     if (!this.ownerId || !this.cloudId || !this.latestSnapshot) return false
     const ownerId = this.ownerId
     const identityGeneration = this.identityGeneration
-    const lease = await this.adapters.cloud.takeover(this.cloudId, this.clientId)
+    const clientId = await this.clientId
+    if (identityGeneration !== this.identityGeneration || ownerId !== this.ownerId) return false
+    const lease = await this.adapters.cloud.takeover(this.cloudId, clientId)
     if (identityGeneration !== this.identityGeneration || ownerId !== this.ownerId) return false
     if (lease.status !== 'acquired') {
       this.publishStatus(
@@ -738,34 +746,37 @@ export class EncounterLifecycle {
 /** Create the browser lifecycle with IndexedDB, session, Supabase, and system-clock adapters. */
 export function createBrowserEncounterLifecycle(): EncounterLifecycle {
   const device = new IndexedDbRecovery()
-  return new EncounterLifecycle({
-    device,
-    session: { load: loadSession, save: saveSession },
-    cloud: {
-      load: loadCloudEncounter,
-      acquire: acquireCloudWriter,
-      takeover: takeOverCloudWriter,
-      save: saveCloudEncounter,
-    },
-    clock: { now: () => new Date() },
-    network: {
-      online: () => navigator.onLine,
-      /** Observe browser connectivity while a lifecycle status consumer is mounted. */
-      subscribe(listener) {
-        window.addEventListener('online', listener)
-        window.addEventListener('offline', listener)
-        return () => {
-          window.removeEventListener('online', listener)
-          window.removeEventListener('offline', listener)
-        }
+  return new EncounterLifecycle(
+    {
+      device,
+      session: { load: loadSession, save: saveSession },
+      cloud: {
+        load: loadCloudEncounter,
+        acquire: acquireCloudWriter,
+        takeover: takeOverCloudWriter,
+        save: saveCloudEncounter,
+      },
+      clock: { now: () => new Date() },
+      network: {
+        online: () => navigator.onLine,
+        /** Observe browser connectivity while a lifecycle status consumer is mounted. */
+        subscribe(listener) {
+          window.addEventListener('online', listener)
+          window.addEventListener('offline', listener)
+          return () => {
+            window.removeEventListener('online', listener)
+            window.removeEventListener('offline', listener)
+          }
+        },
+      },
+      scheduler: {
+        /** Schedule one deferred cloud write and return its cancellation handle. */
+        after(delay, task) {
+          const handle = window.setTimeout(task, delay)
+          return () => window.clearTimeout(handle)
+        },
       },
     },
-    scheduler: {
-      /** Schedule one deferred cloud write and return its cancellation handle. */
-      after(delay, task) {
-        const handle = window.setTimeout(task, delay)
-        return () => window.clearTimeout(handle)
-      },
-    },
-  })
+    browserWriterIdentity(),
+  )
 }
