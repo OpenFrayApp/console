@@ -34,10 +34,21 @@ beforeEach(() => {
     join(directory, 'psql'),
     `#!/usr/bin/env node
 const fs = require('node:fs');
-fs.appendFileSync(process.env.TEST_QUERY_LOG, JSON.stringify({args: process.argv.slice(2), options: process.env.PGOPTIONS}) + '\\n');
+fs.appendFileSync(process.env.TEST_QUERY_LOG, JSON.stringify({
+  args: process.argv.slice(2),
+  options: process.env.PGOPTIONS,
+  connection: {
+    host: process.env.PGHOST,
+    port: process.env.PGPORT,
+    user: process.env.PGUSER,
+    database: process.env.PGDATABASE,
+    sslmode: process.env.PGSSLMODE,
+    hasPassword: Boolean(process.env.PGPASSWORD),
+  },
+}) + '\\n');
 if (process.env.TEST_FAIL === 'yes') { console.error('MUST_NOT_APPEAR'); process.exit(1); }
 const query = process.argv.at(-1);
-if (!query.startsWith('select ')) process.exit(2);
+if (!query.startsWith("set default_transaction_read_only=on; set statement_timeout='10s'; select ")) process.exit(2);
 console.log(query.includes('to_regclass') ? process.env.TEST_CATALOG : process.env.TEST_HISTORY);
 `,
     { mode: 0o700 },
@@ -85,13 +96,29 @@ describe('database promotion command', () => {
     const calls = readFileSync(join(directory, 'queries.jsonl'), 'utf8')
       .trim()
       .split('\n')
-      .map((line) => JSON.parse(line) as { args: string[]; options: string })
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            args: string[]
+            options?: string
+            connection: Record<string, string | boolean>
+          },
+      )
     expect(calls).toHaveLength(2)
     for (const call of calls) {
       expect(call.args).toContain('-X')
-      expect(call.args.at(-1)).toMatch(/^select /)
-      expect(call.options).toContain('default_transaction_read_only=on')
-      expect(call.options).toContain('statement_timeout=10000')
+      expect(call.args.at(-1)).toMatch(
+        /^set default_transaction_read_only=on; set statement_timeout='10s'; select /,
+      )
+      expect(call.options).toBeUndefined()
+      expect(call.connection).toEqual({
+        host: '127.0.0.1',
+        port: '5432',
+        user: 'user',
+        database: 'postgres',
+        sslmode: 'prefer',
+        hasPassword: true,
+      })
     }
     expect(JSON.stringify(calls)).not.toContain('MUST_NOT_APPEAR')
     expect(result.output).not.toContain('MUST_NOT_APPEAR')
