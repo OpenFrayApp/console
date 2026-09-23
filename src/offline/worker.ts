@@ -85,7 +85,9 @@ export function installOfflineShell(
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15_000)
     try {
-      const response = await scope.fetch(url, {
+      // Pages redirects HTML filenames; request canonical paths but retain manifest cache keys.
+      const path = url === home ? '/console/' : url.replace(/\.html$/, '')
+      const response = await scope.fetch(path, {
         cache: 'no-store',
         credentials: 'omit',
         redirect: 'error',
@@ -258,7 +260,12 @@ export function installOfflineShell(
   scope.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url)
     if (event.request.method !== 'GET' || url.origin !== scope.location.origin) return
-    if (url.pathname === '/console/recover.html' || url.pathname === '/console/recover.js') return
+    if (
+      url.pathname === '/console/recover' ||
+      url.pathname === '/console/recover.html' ||
+      url.pathname === '/console/recover.js'
+    )
+      return
     if (
       event.request.mode === 'navigate' &&
       (url.pathname === '/console/' || url.pathname === home)

@@ -10,6 +10,7 @@ function browser() {
   const stores = new Map<string, Map<string, Response>>()
   const network = new Map<string, { body: string; status?: number }>()
   const skipped: string[] = []
+  const requested: string[] = []
   let clientVersion = 'previous'
   let consent = true
   let cacheRead: (() => Promise<void>) | undefined
@@ -46,6 +47,7 @@ function browser() {
         addEventListener: (type: string, listener: (event: unknown) => void) =>
           listeners.set(type, listener),
         fetch: async (url: string) => {
+          requested.push(url)
           const value = network.get(url)
           return new Response(value?.body ?? 'missing', {
             status: value?.status ?? (value ? 200 : 404),
@@ -135,10 +137,13 @@ function browser() {
   function deploy(version: string) {
     const bodies = [
       ['/console/index.html', `<html>${version}</html>`],
+      ['/console/recover.html', '<html>Recovery</html>'],
       [`/console/assets/${version}.js`, `console.log('${version}')`],
       ['/console/compendium/index.json', JSON.stringify({ version })],
     ]
     for (const [url, body] of bodies) network.set(url, { body })
+    network.set('/console/', { body: `<html>${version}</html>` })
+    network.set('/console/recover', { body: '<html>Recovery</html>' })
     return worker({
       kind: 'application-shell',
       schemaVersion: 1,
@@ -154,6 +159,7 @@ function browser() {
     stores,
     network,
     skipped,
+    requested,
     /** Model the requesting document declining update consent. */
     setConsent: (confirmed: boolean) => {
       consent = confirmed
@@ -172,6 +178,20 @@ function browser() {
     },
   }
 }
+
+it('fetches canonical Pages HTML paths while retaining the manifest cache keys', async () => {
+  const host = browser()
+  const worker = host.deploy('next')
+  host.network.set('/console/index.html', { body: '', status: 308 })
+  host.network.set('/console/recover.html', { body: '', status: 308 })
+  await worker.install()
+  expect(host.requested).toContain('/console/')
+  expect(host.requested).toContain('/console/recover')
+  expect(host.requested).not.toContain('/console/index.html')
+  expect(host.requested).not.toContain('/console/recover.html')
+  expect(await worker.fetch('/console/recover', true)).toBeUndefined()
+  expect(await (await worker.fetch('/console/', true))?.text()).toBe('<html>next</html>')
+})
 
 it.each([404, 200])(
   'rejects missing or wrong-version install bytes (%s), retaining the previous shell',

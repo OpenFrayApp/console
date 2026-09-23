@@ -142,6 +142,30 @@ export function compareManualEvidence(expectations, evidence) {
   })
 }
 
+/** Refuse untracked histories and missing provider references before hosted migrations. */
+export function assertDatabasePromotion(expected, remote, environment, expectations, evidence) {
+  if (!['staging', 'production'].includes(environment)) {
+    throw new Error('A named hosted environment is required.')
+  }
+  if (
+    !Array.isArray(expected) ||
+    expected.length === 0 ||
+    !Array.isArray(remote) ||
+    [...expected, ...remote].some((version) => !/^\d{14}$/.test(version)) ||
+    new Set(expected).size !== expected.length ||
+    new Set(remote).size !== remote.length ||
+    remote.some((version, index) => version !== expected[index]) ||
+    (environment === 'production' && remote.length === 0)
+  ) {
+    throw new Error(
+      'Hosted migration history needs reviewed baseline reconciliation before promotion.',
+    )
+  }
+  if (compareManualEvidence(expectations, evidence).some(({ result }) => result !== 'passed')) {
+    throw new Error('Required provider evidence is missing or invalid. No migrations were applied.')
+  }
+}
+
 /** Build the immutable, privacy-safe deployment attestation for AC-1. */
 export function buildDatabaseAttestation(input) {
   const checks = {

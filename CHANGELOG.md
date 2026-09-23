@@ -24,12 +24,17 @@ published.
 
 ### Player view
 
+- Player boards keep updating after initiative and other dice rolls enter the shared log.
+- Reloading the GM tab resumes authorized sharing on the same player link.
 - The player view labels its connection as **Connecting**, **Live**, **Reconnecting**,
   **Connection lost**, or **Access ended**. During a reconnect it shows the age of the last
   update for 30 seconds, then covers the old board until a fresh update arrives.
 
 ### Recovery
 
+- Offline setup and repair work with Cloudflare Pages’ HTML redirects.
+- Saving elsewhere stays visible during device saves, so the Game Master can take over cloud saving.
+- Reloading the GM tab keeps its cloud-saving identity in browsers with Web Locks. Other tabs still need an explicit takeover.
 - A prepared console reopens signed-in device recovery offline, including the bundled compendium.
 - Console updates wait for confirmation and a verified recovery checkpoint before reloading. Failed installations retain the previous shell. ([#38](https://github.com/OpenFrayApp/console/issues/38))
 - When device recovery and cloud copies contain different changes, the console shows both

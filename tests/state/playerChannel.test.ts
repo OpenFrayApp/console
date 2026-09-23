@@ -6,6 +6,7 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Encounter } from '../../src/schema/encounter.ts'
 import { playerBoard } from '../../src/combat/playerView.ts'
+import { roll } from '../../src/dice/roll.ts'
 import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
 import {
   INITIAL_PLAYER_PROTOCOL_STATE,
@@ -124,6 +125,33 @@ describe('useBoardBroadcast — owner publication', () => {
 
     expect(channels[0].sends).toHaveLength(before + 1)
     expect(channels[0].sends.at(-1)?.payload).toMatchObject({ messageType: 'board' })
+  })
+
+  it('keeps broadcasting past the freshness deadline after a real roll enters the log', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const initial = encounter(3)
+    const { rerender } = renderHook(
+      ({ board }) => useBoardBroadcast(session, board, DEFAULT_PLAYER_VIEW),
+      { initialProps: { board: initial } },
+    )
+    await flushChannelSetup()
+    act(() => {
+      channels[0].ready()
+      vi.advanceTimersByTime(250)
+    })
+    const before = channels[0].sends.length
+    const result = roll('1d20', { kind: 'check' })
+    rerender({
+      board: {
+        ...initial,
+        log: [{ id: 'initiative', round: 3, category: 'roll', message: 'Initiative', result }],
+      },
+    })
+    act(() => void vi.advanceTimersByTime(40_250))
+    expect(channels[0].sends).toHaveLength(before + 5)
+    expect(channels[0].sends.at(-1)?.payload).toMatchObject({ messageType: 'board' })
+    expect(JSON.stringify(channels[0].sends)).not.toContain(result.rollId)
   })
 
   it('coalesces a burst of viewer presence joins into one bounded reply', async () => {

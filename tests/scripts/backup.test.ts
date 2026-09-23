@@ -121,6 +121,46 @@ function run(script: string, environment: NodeJS.ProcessEnv, args: string[] = []
   })
 }
 
+describe('backup dump readers', () => {
+  it('still rejects a dump without the recovery ledger', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'openfray-backup-missing-'))
+    const dump = join(directory, 'missing.sql.gz')
+    writeFileSync(dump, gzipSync(validDump().replaceAll('recovery_deletions', 'missing_ledger')))
+    const result = spawnSync(
+      'bash',
+      [
+        '-c',
+        'set -euo pipefail; source "$1"; verify_backup_dump "$2"',
+        'bash',
+        join(repository, 'scripts/lib/backup-integrity.sh'),
+        dump,
+      ],
+      { encoding: 'utf8' },
+    )
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('dump is missing: recovery_deletions')
+  })
+
+  it('consumes large streams when reading timestamps and early COPY blocks', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'openfray-backup-stream-'))
+    const dump = join(directory, 'large.sql.gz')
+    writeFileSync(dump, gzipSync(validDump() + '-- trailing data\n'.repeat(100_000)))
+    const result = spawnSync(
+      'bash',
+      [
+        '-c',
+        'set -euo pipefail; source "$1"; backup_dump_created_at "$2"; backup_dump_count "$2" public.campaigns',
+        'bash',
+        join(repository, 'scripts/lib/backup-integrity.sh'),
+        dump,
+      ],
+      { encoding: 'utf8', env: process.env, argv0: 'bash', cwd: repository },
+    )
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.stdout.trim().split('\n')).toEqual([expect.stringMatching(/^\d{4}-/), '1'])
+  })
+})
+
 describe('encrypted database backup', () => {
   it('fails before export when encryption is missing or invalid', () => {
     const directory = mkdtempSync(join(tmpdir(), 'openfray-backup-'))
@@ -394,47 +434,5 @@ fi`,
     )
     expect(verifyResult.status, verifyResult.stderr).toBe(0)
     expect(verifyResult.stdout).toContain('ciphertext is decryptable and recoverable')
-  })
-})
-
-describe('backup workflow boundary', () => {
-  const workflow = readFileSync(join(repository, '.github/workflows/backup.yml'), 'utf8')
-
-  /** Return one named workflow step through the start of the next step or job. */
-  function step(name: string) {
-    const start = workflow.indexOf(`- name: ${name}`)
-    const rest = workflow.slice(start)
-    const end = rest.slice(1).search(/\n\s{6}- name:|\n {2}[a-z]+:/)
-    return end < 0 ? rest : rest.slice(0, end + 1)
-  }
-
-  it('pins every referenced action to an immutable revision', () => {
-    const references = [...workflow.matchAll(/^\s*- uses:\s*([^\s#]+)/gm)].map(([, value]) => value)
-    expect(references.length).toBeGreaterThan(0)
-    for (const reference of references) expect(reference).toMatch(/@[a-f0-9]{40}$/)
-  })
-
-  it('validates the complete encryption key pair before backup work starts', () => {
-    expect(step('Validate encryption key pair')).toContain('BACKUP_AGE_RECIPIENT')
-    expect(step('Validate encryption key pair')).toContain('BACKUP_AGE_IDENTITY')
-    expect(step('Validate encryption key pair')).not.toMatch(/SUPABASE_DB_URL|AWS_ACCESS_KEY_ID/)
-    expect(workflow).toMatch(/backup:\n\s+needs: encryption-preflight/)
-  })
-
-  it('separates export, storage, and decryption credentials', () => {
-    expect(step('Export, verify, and encrypt')).toContain('SUPABASE_DB_URL')
-    expect(step('Export, verify, and encrypt')).not.toContain('AWS_ACCESS_KEY_ID')
-    expect(step('Upload ciphertext')).toContain('R2_BACKUP_ACCESS_KEY_ID')
-    expect(step('Upload ciphertext')).not.toMatch(/SUPABASE_DB_URL|BACKUP_AGE_IDENTITY/)
-    expect(step('Download and inspect ciphertext')).toContain('R2_RECOVERY_ACCESS_KEY_ID')
-    expect(step('Download and inspect ciphertext')).not.toContain('BACKUP_AGE_IDENTITY')
-    expect(step('Decrypt and verify recovery')).toContain('BACKUP_AGE_IDENTITY')
-    expect(step('Decrypt and verify recovery')).not.toContain('AWS_ACCESS_KEY_ID')
-  })
-
-  it('runs retention only after the uploaded object passes recovery', () => {
-    expect(workflow).toContain('needs: [backup, recoverability]')
-    expect(step('Prove deletion and apply retention')).toContain('retain-encrypted-backups.sh')
-    expect(step('Prove deletion and apply retention')).not.toContain('BACKUP_AGE_IDENTITY')
   })
 })

@@ -12,15 +12,10 @@ on:
       - '.github/workflows/database-authority.yml'
       - 'supabase/**'
       - 'src/types/database.ts'
-      - 'scripts/generate-database-types.mjs'
-      - 'scripts/lib/database-boundary.mjs'
-      - 'scripts/lib/supabase-authority.mjs'
-      - 'scripts/verify-database-boundary.mjs'
-      - 'scripts/verify-staging-boundary-evidence.mjs'
-      - 'scripts/verify-supabase-authority.mjs'
+      - 'scripts/**'
       - 'tests/database/**'
-      - 'tests/scripts/databaseBoundary.test.ts'
-      - 'tests/scripts/supabaseAuthority.test.ts'
+      - 'tests/scripts/**'
+      - 'docs/recovery.md'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
@@ -51,6 +46,14 @@ jobs:
       - run: supabase start
       - run: npm run db:verify
       - run: npm run db:boundary
+      - run: npx vitest run tests/database/migrations.test.ts tests/scripts/backup.test.ts tests/scripts/databaseBoundary.test.ts tests/scripts/recovery.test.ts tests/scripts/recoveryMonitor.test.ts
+      - name: Prove concurrent revocation
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-concurrency.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-concurrency.env"
+          set +a
+          RECOVERY_TARGET_DB_URL="$DB_URL" npm run db:recovery-concurrency
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() }}
         with:
@@ -105,8 +108,6 @@ jobs:
             "$AUTHORIZED_STAGING_PROJECT_REF" \
             "$DATABASE_APPROVER" \
             "${{ github.workflow }}:${{ inputs.staging_attestation_run_id }}"
-      - name: Apply forward migrations
-        run: supabase db push --db-url "$SUPABASE_DB_URL"
       - name: Record manual provider evidence
         env:
           AUTH_OAUTH_EVIDENCE: ${{ vars.AUTH_OAUTH_EVIDENCE }}
@@ -125,6 +126,10 @@ jobs:
               {id: "report-ingress", result: "passed", evidence: $ingress},
               {id: "report-webhooks", result: "passed", evidence: $webhooks}
             ]}' > .artifacts/supabase/manual-evidence.json
+      - name: Check database promotion prerequisites
+        run: node scripts/check-database-promotion.mjs "${{ inputs.environment }}" .artifacts/supabase/manual-evidence.json
+      - name: Apply forward migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
       - name: Verify and attest the hosted deployment
         run: |
           npm run db:verify -- \

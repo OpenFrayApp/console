@@ -130,7 +130,13 @@ import {
   type PlayerViewSettings,
 } from './state/settings.ts'
 import { useBoardBroadcast } from './state/playerChannel.ts'
-import { startLiveView, stopLiveView, type ActiveLiveView } from './state/liveViewAuthority.ts'
+import {
+  startLiveView,
+  stopLiveView,
+  resumeLiveView,
+  type ActiveLiveView,
+} from './state/liveViewAuthority.ts'
+import { rememberLiveView, loadLiveView, forgetLiveView } from './state/liveViewRecovery.ts'
 import { randomPlayerCode } from './state/playerCode.ts'
 import { AddPcForm } from './components/add/AddPcForm.tsx'
 import { AddPcPicker } from './components/add/AddPcPicker.tsx'
@@ -337,10 +343,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setPlayerBackdropState(id)
     saveSettings({ playerViewBackdrop: id })
   }
-  // A live session starts with fresh owner authorization. Reloading rotates the link instead
-  // of reviving a bearer-only channel from persisted UI state.
   const [sharing, setSharing] = useState(false)
-  const [liveViewSession, setLiveViewSession] = useState<ActiveLiveView | null>(null)
+  const [liveViewSession, setLiveViewSession] = useState<
+    (ActiveLiveView & { ownerId: string }) | null
+  >(null)
+  const sharingRevision = useRef(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // End-of-combat recap + the "all enemies defeated" prompt (fired once per defeat).
   const [recap, setRecap] = useState<Recap | null>(null)
@@ -486,7 +493,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       }
     }
     let active = true
-    void lifecycle.identify(userId).then((result) => {
+    const revision = sharingRevision.current
+    void lifecycle.identify(userId).then(async (result) => {
       if (!active) return
       if (result.snapshot) applyRecovery(result.snapshot)
       else if (result.clearWorkingBoard) {
@@ -500,6 +508,18 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       // this device happened to mint while anonymous.
       if (result.playerCode) setPlayerCode(result.playerCode)
       setBoardReady(true)
+      const writable = lifecycle.writableEncounter()
+      if (!userId || writable?.ownerId !== userId || !result.playerCode) return
+      const remembered = loadLiveView(userId, writable.id, result.playerCode)
+      if (!remembered) return
+      const resumed = await resumeLiveView(remembered)
+      if (!active || revision !== sharingRevision.current) return
+      if (resumed.status === 'ok') {
+        setLiveViewSession({ ...resumed, ownerId: userId })
+        setSharing(true)
+      } else if (resumed.status === 'unauthorized') {
+        forgetLiveView()
+      }
     })
     return () => {
       active = false
@@ -571,7 +591,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Share the filtered board while an authenticated owner capability is active. Realtime
   // relays the board without storing it; the database stores only the capability hash.
   useBoardBroadcast(
-    sharing ? liveViewSession : null,
+    sharing && !authLoading && !identityExpired && liveViewSession?.ownerId === userId
+      ? liveViewSession
+      : null,
     encounter,
     playerView,
     sharedRecap,
@@ -585,7 +607,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Signing out clears the account-owned player view after AuthProvider revokes it. A fresh
   // readable code avoids carrying the previous account’s link name into another session.
   useOpenRequest(userId, (previous) => {
-    if (!previous || userId) return
+    sharingRevision.current += 1
+    if (!previous || previous === userId) return
+    forgetLiveView()
     setSharing(false)
     setLiveViewSession(null)
     const code = randomPlayerCode()
@@ -595,10 +619,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
   /** Start or revoke the authenticated owner capability behind the player view. */
   const toggleSharing = async () => {
+    const revision = ++sharingRevision.current
     if (sharing) {
       const active = liveViewSession
       if (!active || !(await stopLiveView(active.capability))) return
+      if (revision !== sharingRevision.current) return
       track(EVENTS.playerViewStopped)
+      forgetLiveView()
       setSharing(false)
       setLiveViewSession(null)
       return
@@ -613,12 +640,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       saveSettings({ playerViewCode: code })
     }
     const id = await lifecycle.ensureCloudEncounter(encounter)
-    if (!id) return
+    if (!id || revision !== sharingRevision.current) return
     const claimed = await claimPlayerCode(id, code)
-    if (claimed !== 'ok') return
+    if (claimed !== 'ok' || revision !== sharingRevision.current) return
     const active = await startLiveView(id, code)
-    if (active.status !== 'ok') return
-    setLiveViewSession(active)
+    if (active.status !== 'ok' || revision !== sharingRevision.current) return
+    rememberLiveView(user.id, id, code, active)
+    setLiveViewSession({ ...active, ownerId: user.id })
     setSharing(true)
     track(EVENTS.playerViewShared)
   }
@@ -629,18 +657,23 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
    * leaves the current link working rather than clearing it.
    */
   const claimShareCode = async (code: string): Promise<ClaimResult> => {
+    const revision = ++sharingRevision.current
     // The code rides on the encounter row, and a GM who has just signed in may not have
     // one yet because autosave is debounced. The lifecycle serializes this insert with
     // background persistence so the two paths cannot create duplicate rows.
     const cloudId = await lifecycle.ensureCloudEncounter(encounter)
-    if (!cloudId) return 'failed'
+    if (!cloudId || revision !== sharingRevision.current) return 'failed'
     const result = await claimPlayerCode(cloudId, code)
+    if (revision !== sharingRevision.current) return 'failed'
     if (result === 'ok') {
       track(EVENTS.playerViewNamed)
       setPlayerCode(code)
       if (sharing) {
         const rotated = await startLiveView(cloudId, code, undefined, liveViewSession)
-        if (rotated.status === 'ok') setLiveViewSession(rotated)
+        if (rotated.status === 'ok' && userId && revision === sharingRevision.current) {
+          rememberLiveView(userId, cloudId, code, rotated)
+          setLiveViewSession({ ...rotated, ownerId: userId })
+        }
       }
     }
     return result
