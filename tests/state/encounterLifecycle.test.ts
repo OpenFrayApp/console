@@ -614,6 +614,7 @@ describe('encounter lifecycle', () => {
 
     await lifecycle.identify('owner-a')
     expect(lifecycle.saveStatus()).toEqual({ kind: 'read-only' })
+    expect(lifecycle.writableEncounter()).toBeNull()
     await lifecycle.commit(snapshot('local-next'))
     expect(lifecycle.saveStatus()).toEqual({ kind: 'read-only' })
     await lifecycle.commit(snapshot('local-next'))
@@ -623,6 +624,7 @@ describe('encounter lifecycle', () => {
 
     await expect(lifecycle.takeOver()).resolves.toBe(true)
     expect(calls).toContain('cloud:takeover')
+    expect(lifecycle.writableEncounter()).toEqual({ ownerId: 'owner-a', id: 'cloud-row' })
     expect(cloudWrites).toMatchObject([
       { id: 'cloud-row', revision: 7, writerId: 'writer-a', encounter: encounter('local-next') },
     ])
@@ -639,6 +641,7 @@ describe('encounter lifecycle', () => {
     await lifecycle.commit(snapshot('before-expiry'))
 
     lifecycle.expireIdentity()
+    expect(lifecycle.writableEncounter()).toBeNull()
     await flushCloud()
     await lifecycle.commit(snapshot('after-expiry'))
     await flushCloud()
