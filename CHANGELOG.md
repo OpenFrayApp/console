@@ -30,6 +30,7 @@ published.
 
 ### Recovery
 
+- Saving elsewhere stays visible during device saves, so the Game Master can take over cloud saving.
 - Offline setup and repair work with Cloudflare Pages’ HTML redirects.
 - A prepared console reopens signed-in device recovery offline, including the bundled compendium.
 - Console updates wait for confirmation and a verified recovery checkpoint before reloading. Failed installations retain the previous shell. ([#38](https://github.com/OpenFrayApp/console/issues/38))

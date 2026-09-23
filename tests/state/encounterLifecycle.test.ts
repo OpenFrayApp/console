@@ -575,6 +575,10 @@ describe('encounter lifecycle', () => {
     await lifecycle.identify('owner-a')
     expect(lifecycle.saveStatus()).toEqual({ kind: 'read-only' })
     await lifecycle.commit(snapshot('local-next'))
+    expect(lifecycle.saveStatus()).toEqual({ kind: 'read-only' })
+    await lifecycle.commit(snapshot('local-next'))
+    expect(lifecycle.saveStatus()).toEqual({ kind: 'read-only' })
+    await expect(lifecycle.ensureCloudEncounter(encounter('local-next'))).resolves.toBeNull()
     expect(cloudWrites).toEqual([])
 
     await expect(lifecycle.takeOver()).resolves.toBe(true)
