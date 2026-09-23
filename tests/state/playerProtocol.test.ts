@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from 'vitest'
 import { playerBoard } from '../../src/combat/playerView.ts'
+import { roll } from '../../src/dice/roll.ts'
+import { emptyEncounter } from '../../src/state/encounter.ts'
 import { DEFAULT_PLAYER_VIEW } from '../../src/state/settings.ts'
 import {
   CURRENT_PLAYER_PROTOCOL_VERSION,
@@ -55,6 +57,33 @@ function boardEnvelope(sequence = 0, senderId = 'gm-session', sentAt = 1_900_000
     sentAt,
   ).envelope
 }
+
+it.each(['check', 'attack', 'save', 'damage', 'raw'] as const)(
+  'shares real %s rolls without their internal recovery identity',
+  (kind) => {
+    const result = roll('1d20', { kind })
+    const projected = playerBoard(
+      {
+        ...emptyEncounter(),
+        round: 1,
+        log: [{ id: 'synthetic-roll', round: 1, category: 'roll', message: 'Roll', result }],
+      },
+      DEFAULT_PLAYER_VIEW,
+    )
+    const sent = sendGameMasterMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'gm-session',
+      { type: 'board', board: projected },
+      1_900_000_000_000,
+    )
+    expect(result.rollId).toBeTruthy()
+    expect(projected.log[0].result).not.toHaveProperty('rollId')
+    expect(projected.log[0].result?.total).toBe(result.total)
+    expect(
+      receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', sent.envelope).status,
+    ).toBe('accepted')
+  },
+)
 
 describe('live-view authority and traffic budgets', () => {
   it('rotates forward and lets only the matching capability revoke the session', () => {
