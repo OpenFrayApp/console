@@ -6,7 +6,7 @@ import type { RollResult } from '../dice/roll.ts'
 import type { SessionSnapshot } from '../state/persistence.ts'
 
 export const SESSION_KIND = 'session'
-export const CURRENT_SESSION_SCHEMA_VERSION = 4
+export const CURRENT_SESSION_SCHEMA_VERSION = 3
 export const MAX_SESSION_BYTES = 1_048_576
 
 const ability = v.picklist(['str', 'dex', 'con', 'int', 'wis', 'cha'])
@@ -385,7 +385,6 @@ const encounter = v.strictObject({
   encounterId: v.string(),
   ownerId: v.nullable(v.string()),
   name: v.optional(v.string()),
-  musicTrackId: v.optional(v.string()),
   round: nonNegativeInteger,
   paused: v.optional(v.boolean()),
   activeIndex: nonNegativeInteger,
@@ -407,18 +406,6 @@ const currentEnvelope = v.object({
   kind: v.literal(SESSION_KIND),
   schemaVersion: v.literal(CURRENT_SESSION_SCHEMA_VERSION),
   payload: sessionSnapshot,
-})
-const legacyEnvelopeV3 = v.object({
-  kind: v.literal(SESSION_KIND),
-  schemaVersion: v.literal(3),
-  payload: v.object({
-    encounter: v.omit(encounter, ['musicTrackId']),
-    theme: v.picklist(['dark', 'light']),
-    view: v.picklist(['encounter', 'compendium']),
-    selectedId: v.nullable(v.string()),
-    activeCampaignId: v.optional(v.nullable(v.string())),
-    sharing: v.optional(v.boolean()),
-  }),
 })
 const oldDieGroup = v.strictObject({
   sides: number,
@@ -544,7 +531,7 @@ type CompatibleRollResult = v.InferOutput<typeof compatibleRollResult>
 type LegacyGameLogEntryV2 = v.InferOutput<typeof legacyGameLogEntryV2>
 
 export type SessionDecodeResult =
-  | { status: 'ok'; snapshot: SessionSnapshot; canonical: string; migratedFrom?: 1 | 2 | 3 }
+  | { status: 'ok'; snapshot: SessionSnapshot; canonical: string; migratedFrom?: 1 | 2 }
   | { status: 'unsupported'; schemaVersion?: number }
   | { status: 'invalid'; reason: 'too-large' | 'json' | 'envelope' | 'payload' | 'semantic' }
 
@@ -738,10 +725,7 @@ function canonical(snapshot: ParsedSessionSnapshot): string | null {
 }
 
 /** Finish one decoded payload only after semantic and canonical-output validation. */
-function finishDecoded(
-  snapshot: ParsedSessionSnapshot,
-  migratedFrom?: 1 | 2 | 3,
-): SessionDecodeResult {
+function finishDecoded(snapshot: ParsedSessionSnapshot, migratedFrom?: 1 | 2): SessionDecodeResult {
   const repaired = repairSnapshot(snapshot)
   if (!isSemanticallyValid(repaired)) return { status: 'invalid', reason: 'semantic' }
   const serialized = canonical(repaired)
@@ -770,11 +754,6 @@ export function decodeSession(serialized: string): SessionDecodeResult {
   if (record.kind === SESSION_KIND && typeof record.schemaVersion === 'number') {
     if (record.schemaVersion > CURRENT_SESSION_SCHEMA_VERSION) {
       return { status: 'unsupported', schemaVersion: record.schemaVersion }
-    }
-    if (record.schemaVersion === 3) {
-      const parsed = v.safeParse(legacyEnvelopeV3, input)
-      if (!parsed.success) return { status: 'invalid', reason: 'payload' }
-      return finishDecoded(parsed.output.payload, 3)
     }
     if (record.schemaVersion !== CURRENT_SESSION_SCHEMA_VERSION) {
       return { status: 'invalid', reason: 'envelope' }

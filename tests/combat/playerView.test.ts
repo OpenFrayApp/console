@@ -899,18 +899,6 @@ describe('playerBoard — hiding a creature`s rolls', () => {
   })
 })
 
-describe('music privacy boundary', () => {
-  it('never includes the Game Master’s selected track in the player board', () => {
-    const shared = playerBoard(
-      encounter({ musicTrackId: 'ancient-god' }),
-      DEFAULT_PLAYER_VIEW,
-    ) as unknown as Record<string, unknown>
-
-    expect(shared.musicTrackId).toBeUndefined()
-    expect(JSON.stringify(shared)).not.toContain('ancient-god')
-  })
-})
-
 describe('campaign and Game Master identity', () => {
   it('travels only what its own setting shares', () => {
     const both = playerBoard(encounter(), view({ campaignName: 'shown', gmName: 'shown' }), null, {

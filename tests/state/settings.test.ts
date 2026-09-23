@@ -44,17 +44,6 @@ describe('app settings (localStorage)', () => {
     expect(loadSettings().enabledLibraries).toEqual(['srd-5.1'])
     expect(loadSettings().librarySort).toBe('cr')
   })
-
-  it('defaults, clamps, and retains the device music volume', () => {
-    expect(loadSettings().musicVolume).toBe(0.7)
-    saveSettings({ musicVolume: 0.35 })
-    expect(loadSettings().musicVolume).toBe(0.35)
-
-    localStorage.setItem('openfray-settings', JSON.stringify({ musicVolume: 4 }))
-    expect(loadSettings().musicVolume).toBe(1)
-    localStorage.setItem('openfray-settings', JSON.stringify({ musicVolume: 'loud' }))
-    expect(loadSettings().musicVolume).toBe(0.7)
-  })
 })
 
 describe('player-view settings', () => {

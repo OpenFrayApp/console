@@ -111,7 +111,6 @@ describe('the live-view protocol envelope', () => {
     expect(received).toMatchObject({ status: 'accepted', message: { type: 'board', board } })
     if (received.status !== 'accepted') return
     expect(received.canonical).toBe(JSON.stringify(sent.envelope))
-    expect(received.canonical).not.toContain('music')
   })
 
   it('gives each role only the message types it may emit', () => {
