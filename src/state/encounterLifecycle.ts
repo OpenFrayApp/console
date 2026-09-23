@@ -642,6 +642,19 @@ export class EncounterLifecycle {
     )
   }
 
+  /** Identify the reconciled cloud encounter only while this tab holds its write authority. */
+  writableEncounter(): { ownerId: string; id: string } | null {
+    if (
+      !this.ownerId ||
+      !this.cloudId ||
+      !this.cloudWritable ||
+      this.cloudIdentityExpired ||
+      this.pendingConflict
+    )
+      return null
+    return { ownerId: this.ownerId, id: this.cloudId }
+  }
+
   /** Ensure the working encounter has a current cloud row and return its owner-scoped id. */
   async ensureCloudEncounter(encounter: Encounter): Promise<string | null> {
     if (!this.ownerId || !this.cloudWritable) return null

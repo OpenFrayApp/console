@@ -10,6 +10,7 @@ import {
   mintLiveViewCapability,
   startLiveView,
   stopLiveView,
+  resumeLiveView,
 } from '../../src/state/liveViewAuthority.ts'
 import { makeSupabaseStub } from './supabaseMock.ts'
 
@@ -58,6 +59,47 @@ describe('live-view capabilities', () => {
 })
 
 describe('live-view authority adapter', () => {
+  it('checks existing owner authority on reload without minting or rotating a capability', async () => {
+    const capability = mintLiveViewCapability(new Uint8Array(32).fill(4))
+    const capabilityHash = await hashLiveViewCapability(capability)
+    const active = { status: 'ok' as const, capability, capabilityHash, generation: 2 }
+    const { client, rpcs } = makeSupabaseStub({ data: true, error: null })
+    supa.client = client
+    await expect(resumeLiveView(active)).resolves.toEqual(active)
+    expect(rpcs).toEqual([
+      { fn: 'live_view_topic_owned', args: { want_topic: `player:${capabilityHash}:lobby` } },
+    ])
+  })
+
+  it('never recreates a revoked or rotated capability and rejects corrupt hashes', async () => {
+    const capability = mintLiveViewCapability(new Uint8Array(32).fill(4))
+    const active = {
+      status: 'ok' as const,
+      capability,
+      capabilityHash: await hashLiveViewCapability(capability),
+      generation: 2,
+    }
+    const { client, rpcs } = makeSupabaseStub({ data: false, error: null })
+    supa.client = client
+    await expect(resumeLiveView(active)).resolves.toEqual({ status: 'unauthorized' })
+    await expect(resumeLiveView({ ...active, capabilityHash: 'a'.repeat(64) })).resolves.toEqual({
+      status: 'unauthorized',
+    })
+    expect(rpcs).toHaveLength(1)
+  })
+
+  it('keeps transient authorization-check failures distinct from revocation', async () => {
+    const capability = mintLiveViewCapability(new Uint8Array(32).fill(4))
+    const active = {
+      status: 'ok' as const,
+      capability,
+      capabilityHash: await hashLiveViewCapability(capability),
+      generation: 2,
+    }
+    supa.client = makeSupabaseStub({ data: null, error: { message: 'offline' } }).client
+    await expect(resumeLiveView(active)).resolves.toEqual({ status: 'failed' })
+  })
+
   it('starts an owner session with only the capability hash and encounter id', async () => {
     const { client, rpcs } = makeSupabaseStub({ data: 3, error: null })
     supa.client = client

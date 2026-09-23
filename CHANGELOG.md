@@ -24,6 +24,7 @@ published.
 
 ### Player view
 
+- Reloading the GM tab resumes authorized sharing on the same player link.
 - Player boards keep updating after initiative and other dice rolls enter the shared log.
 - The player view labels its connection as **Connecting**, **Live**, **Reconnecting**,
   **Connection lost**, or **Access ended**. During a reconnect it shows the age of the last
