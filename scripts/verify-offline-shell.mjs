@@ -115,19 +115,26 @@ const server = createServer(async (request, response) => {
               .replaceAll(htmlHash, hash(htmlB))
               .replaceAll(imageHash, hash(imageB)),
       )
-    } else if (broken && path === '/console/index.html') {
+    } else if (path === '/console/index.html' || path === '/console/recover.html') {
+      response.writeHead(308, {
+        ...headers,
+        Location: path === '/console/index.html' ? '/console/' : '/console/recover',
+      })
+      response.end()
+    } else if (broken && path === '/console/') {
       response.writeHead(503)
       response.end('Interrupted deployment')
-    } else if (path === '/console/' || path === '/console/index.html') {
+    } else if (path === '/console/') {
       response.writeHead(200, { ...headers, 'Content-Type': 'text/html' })
       response.end(deployment === 'a' ? originalHtml : htmlB)
     } else if (path === '/console/og-image.png' && deployment !== 'a') {
       response.writeHead(200, { ...headers, 'Content-Type': 'image/png' })
       response.end(imageB)
     } else if (path.startsWith('/console/')) {
-      const file = resolve(directory, '.' + path.slice('/console'.length))
+      const assetPath = path === '/console/recover' ? '/console/recover.html' : path
+      const file = resolve(directory, '.' + assetPath.slice('/console'.length))
       if (!file.startsWith(directory + '/')) throw new Error('Outside fixture root')
-      const type = path.endsWith('.html')
+      const type = assetPath.endsWith('.html')
         ? 'text/html'
         : path.endsWith('.js')
           ? 'text/javascript'
