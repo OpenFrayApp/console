@@ -17,20 +17,41 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 /** Read migration metadata through the same protected connection used by db push. */
 function readHistory(databaseUrl) {
   hostedDatabaseArgs(databaseUrl)
+  const database = new URL(databaseUrl)
+  const connection = {
+    PGHOST: database.hostname,
+    PGPORT: database.port || '5432',
+    PGUSER: decodeURIComponent(database.username),
+    PGPASSWORD: decodeURIComponent(database.password),
+    PGDATABASE: decodeURIComponent(database.pathname.slice(1)),
+    PGSSLMODE: database.searchParams.get('sslmode') || 'prefer',
+  }
   /** Execute a bounded, read-only query without printing provider diagnostics. */
   function query(sql) {
     try {
-      return execFileSync('psql', ['-X', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          PGDATABASE: databaseUrl,
-          PGCONNECT_TIMEOUT: '15',
-          PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=10000',
+      return execFileSync(
+        'psql',
+        [
+          '-X',
+          '-A',
+          '-t',
+          '-q',
+          '-v',
+          'ON_ERROR_STOP=1',
+          '-c',
+          `set default_transaction_read_only=on; set statement_timeout='10s'; ${sql}`,
+        ],
+        {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: {
+            ...process.env,
+            ...connection,
+            PGCONNECT_TIMEOUT: '15',
+          },
+          timeout: 30_000,
         },
-        timeout: 30_000,
-      }).trim()
+      ).trim()
     } catch {
       throw new Error('Cannot read hosted migration history. No migrations were applied.')
     }
