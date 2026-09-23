@@ -137,7 +137,18 @@ function foeRow(c: Combatant, settings: PlayerViewSettings): PlayerRow {
  * state the table watched happen.
  */
 function rollWithoutArithmetic(result: RollResult): RollResult {
-  return { ...result, dice: [], modifier: 0, modifiers: [] }
+  return {
+    formula: result.formula,
+    dice: [],
+    modifier: 0,
+    modifiers: [],
+    total: result.total,
+    advantageState: result.advantageState,
+    kind: result.kind,
+    crit: result.crit,
+    fumble: result.fumble,
+    ...(result.damageType ? { damageType: result.damageType } : {}),
+  }
 }
 
 /**

@@ -29,6 +29,7 @@ published.
 
 ### Player view
 
+- Player boards keep updating after initiative and other dice rolls enter the shared log.
 - The player view labels its connection as **Connecting**, **Live**, **Reconnecting**,
   **Connection lost**, or **Access ended**. During a reconnect it shows the age of the last
   update for 30 seconds, then covers the old board until a fresh update arrives.
