@@ -1,71 +1,37 @@
 # Database recovery
 
-The recovery drill restores one encrypted backup into an ephemeral local Supabase project. It never writes to staging or production. A failed check abandons the local target.
+Hosted recovery points use Supabase-managed backups. Check each project's backup status, retention, and available restore points in Supabase before relying on them. Point-in-time recovery is a separate setting.
 
-## Recovery controls
+The console has no scheduled R2 backup, retention, recovery-health, or restore-drill workflow. Existing encrypted objects and their decryption keys remain available for a separately reviewed recovery operation.
 
-Migration `20260911000000_recovery_deletion_ledger.sql` records account deletion and share revocation before the active row disappears. Client roles and the service role cannot read the ledger or run its replay function. A revoked share code cannot be reused.
+## Deletion and access safeguards
 
-The drill reads the current ledger through a protected database connection after restoring the backup. It replays every recorded account and share deletion. It also clears restored live-view sessions and writer leases. This prevents a recovery point created before a deletion from making that account, share, or live authority active again.
+The tracked migration `20260911000000_recovery_deletion_ledger.sql` records account deletion and share revocation before the active row disappears. Client roles and the service role cannot read the ledger or run its replay function. Revoked share codes cannot be reused.
 
-The encrypted backup contains an authenticated creation time, public schema definitions, grants, policies, and data. It contains data from `auth.users` and `auth.identities` without replacing the provider-owned auth schema. Auth sessions and refresh tokens stay outside the recovery point. Provider-owned default privileges remain those of the ephemeral target.
+A provider backup does not establish that a restore preserves later deletions. A restore can also bring back live-view sessions and writer leases. Verify these boundaries before making a restored database available.
 
-## Configure the protected environment
+The `Database authority` workflow keeps the local migration, recovery-tool, hostile-boundary, and concurrent-revocation tests. These checks do not constitute a hosted restore drill.
 
-Create a GitHub environment named `recovery` with required reviewer approval. Set `RECOVERY_OPERATOR` to the role or person responsible for the drill.
+## Before a hosted restore
 
-Add these environment secrets:
+1. Confirm the target project, restore point, expected data loss, and operator authorization.
+2. Preserve the current deletion ledger outside the restore target through an approved protected connection.
+3. If the current ledger is unavailable, stop and establish how later deletions will remain enforced.
+4. Plan deletion replay, live-view revocation, writer-lease cleanup, and authentication-session handling before reopening access.
+5. Follow the [Supabase recovery documentation](https://supabase.com/docs/guides/platform/backups) for the selected backup format and restore method.
+6. Verify schema, grants, tenant isolation, authentication, and deleted-account and revoked-share behavior before reopening access.
+7. Record the restore point, elapsed time, verification results, and decision to reopen or abandon the target.
 
-- `BACKUP_AGE_IDENTITY`: The private identity for current encrypted backups.
-- `RECOVERY_SOURCE_DB_URL`: A read-capable production connection used only to export the deletion ledger.
+Supabase backup availability does not prove these checks passed. Deleting a Supabase project also deletes its provider-managed backups.
 
-Add these repository secrets so unattended health and failure jobs can use them:
+## Existing encrypted backups
 
-- `R2_BUCKET` and `R2_ENDPOINT`: The private backup bucket and endpoint.
-- `R2_RECOVERY_ACCESS_KEY_ID` and `R2_RECOVERY_SECRET_ACCESS_KEY`: Object read-only credentials.
-- `RECOVERY_MONITOR_WEBHOOK`: The deployed Supabase `recovery-monitor` Edge Function endpoint.
-- `RECOVERY_MONITOR_TOKEN`: A separate random bearer token shared only with the recovery-monitor endpoint.
+The scripts under `scripts/` remain available for manual inspection and recovery of the existing encrypted backup format. `restore-supabase.sh` accepts only a guarded local target, reads the current deletion ledger, replays deletions, and checks database boundaries.
 
-The authenticated webhook receives only an event name and the `openfray-recovery` service label. It receives no authored content, account identifiers, share codes, object keys, database addresses, or credentials.
+These tools do not accept Supabase physical backups. The legacy restore tool rejects encrypted backups older than 24 hours and dumps without the deletion ledger. Older retained objects need a separately reviewed recovery procedure; do not bypass these checks to claim a passing restore.
 
-## Run a drill
+Keep the encrypted objects and matching decryption keys until their retention decision is approved. The upload, retention, and notification scripts have no scheduled caller. Their credentials and deployed notification function require separate retirement review.
 
-1. Confirm the latest `Supabase backup` run passed every job.
-2. Copy its exact encrypted object key from the upload step.
-3. Open the `Recovery drill` workflow and choose **Run workflow**.
-4. Enter the object key. Supply the recorded SHA-256 digest only for an older object without digest metadata.
-5. Approve the protected `recovery` environment.
-6. Download the `recovery-drill-attestation` artifact after the run passes.
-7. Record the workflow run, operator, elapsed time, recovery-point age, and abandonment decision in the operational record.
+## Failed verification
 
-Use a backup created after the recovery-ledger migration. The restore rejects an older dump that lacks the ledger.
-
-## What the drill verifies
-
-The workflow has an eight-hour timeout and rejects a backup older than 24 hours. The encrypted creation time must match the object key and stored metadata. It checks:
-
-- Exact backed-up and restored row counts before deletion replay.
-- Deleted-account and revoked-share fixtures after replay.
-- Cleared live-view sessions and writer leases.
-- Tenant isolation, authentication relationships, and an authenticated synthetic-user request through the isolated Auth service.
-- Row-Level Security, policies, grants, and restricted function execution.
-- Critical recovery, account, sharing, and encounter functions.
-- Encounter JSON and its latest recovery revision.
-- The hourly backup-freshness monitor and a content-free restore-failure signal.
-
-The attestation contains counts and pass or fail states. It contains no authored rows, account identifiers, share codes, object keys, database addresses, or secrets.
-
-## Failure and abandonment
-
-The isolated target is always abandoned after the drill. Never promote it or route traffic to it.
-
-When any restore, integrity, isolation, deletion, or monitoring check fails:
-
-1. Leave production unchanged.
-2. Keep the last verified encrypted recovery point.
-3. Retain the failed workflow logs and its abandonment attestation.
-4. Record the failing phase and the operator.
-5. Fix the backup or restore path forward.
-6. Run the complete drill again before relying on a newer recovery point.
-
-The scheduled health job sends `backup_stale` when no valid encrypted object is less than 24 hours old. A failed drill sends `restore_failed`. Delivery failure also fails the monitoring job.
+Keep the restored target unavailable when any deletion, isolation, authentication, or integrity check fails. Retain the available recovery point and privacy-safe failure evidence. Correct the recovery procedure and repeat verification before reopening access.
