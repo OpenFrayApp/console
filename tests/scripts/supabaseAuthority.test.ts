@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 import * as authority from '../../scripts/lib/supabase-authority.mjs'
 
 const {
+  assertDatabasePromotion,
   buildDatabaseAttestation,
   canonicalSchemaDump,
   compareHostedConfig,
@@ -105,6 +106,57 @@ describe('Supabase authority evidence', () => {
       { id: 'oauth', result: 'passed', evidence: 'release/AC-1/oauth-review.md' },
       { id: 'webhooks', result: 'missing', evidence: null },
     ])
+  })
+
+  it('blocks untracked production histories before any migration can run', () => {
+    const expected = ['20260901000000', '20260901000100']
+    for (const remote of [[], ['20260923025303'], [expected[1]], [...expected].reverse()]) {
+      expect(() => assertDatabasePromotion(expected, remote, 'production', [], null)).toThrow()
+    }
+    expect(() =>
+      assertDatabasePromotion(expected, [expected[0]], 'production', [], null),
+    ).not.toThrow()
+    expect(() => assertDatabasePromotion(expected, [], 'staging', [], null)).not.toThrow()
+    expect(() => assertDatabasePromotion(expected, expected, 'production', [], null)).not.toThrow()
+  })
+
+  it('requires provider evidence before applying migrations, without accepting secret values', () => {
+    const versions = ['20260901000000']
+    const expectations = [{ id: 'report-ingress' }]
+    for (const evidence of [
+      null,
+      { checks: [] },
+      { checks: [{ id: 'report-ingress', result: 'passed', evidence: 'MUST_NOT_APPEAR' }] },
+    ]) {
+      expect(() =>
+        assertDatabasePromotion(versions, versions, 'production', expectations, evidence),
+      ).toThrow(/provider evidence/)
+      try {
+        assertDatabasePromotion(versions, versions, 'production', expectations, evidence)
+      } catch (error) {
+        expect(String(error)).not.toContain('MUST_NOT_APPEAR')
+      }
+    }
+    expect(() =>
+      assertDatabasePromotion(versions, versions, 'production', expectations, {
+        checks: [
+          {
+            id: 'report-ingress',
+            result: 'passed',
+            evidence: 'github:issue/OpenFrayApp/console/30#review',
+          },
+        ],
+      }),
+    ).not.toThrow()
+  })
+
+  it('validates history and provider references before the hosted write step', () => {
+    const evidence = authorityWorkflow.indexOf('- name: Record manual provider evidence')
+    const preflight = authorityWorkflow.indexOf('- name: Check database promotion prerequisites')
+    const push = authorityWorkflow.indexOf('- name: Apply forward migrations')
+    expect(evidence).toBeGreaterThan(-1)
+    expect(preflight).toBeGreaterThan(evidence)
+    expect(push).toBeGreaterThan(preflight)
   })
 
   it('accepts only credentialed PostgreSQL URLs for hosted database commands', () => {
