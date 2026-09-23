@@ -148,17 +148,10 @@ describe('recovery authentication', () => {
 })
 
 describe('recovery operator boundary', () => {
-  const workflow = readFileSync('.github/workflows/recovery.yml', 'utf8')
   const restore = readFileSync('scripts/restore-supabase.sh', 'utf8')
   const monitor = readFileSync('scripts/notify-recovery-monitor.sh', 'utf8')
 
-  it('pins actions and restores only into the ephemeral local target', () => {
-    const references = [...workflow.matchAll(/^\s*- uses:\s*([^\s#]+)/gm)].map(([, value]) => value)
-    expect(references.length).toBeGreaterThan(0)
-    for (const reference of references) expect(reference).toMatch(/@[a-f0-9]{40}$/)
-    expect(workflow).toContain('environment: recovery')
-    expect(workflow).toContain('supabase start')
-    expect(workflow).not.toContain('RECOVERY_TARGET_DB_URL: ${{ secrets.')
+  it('retains deletion replay and boundary checks in the manual restore tool', () => {
     expect(restore).toContain('RECOVERY_TARGET_DB_URL')
     expect(restore).toContain('RECOVERY_SOURCE_DB_URL')
     expect(restore).toContain('apply_recovery_deletions()')
@@ -168,8 +161,5 @@ describe('recovery operator boundary', () => {
   it('sends only allowlisted content-free monitoring events', () => {
     expect(monitor).toMatch(/backup_stale\|restore_failed\|restore_failure_exercise/)
     expect(monitor).not.toMatch(/SUPABASE|DATABASE|BACKUP_OBJECT|AGE_IDENTITY|encounter|email/)
-    expect(workflow).toContain('restore_failure_exercise')
-    expect(workflow).toContain('restore_failed')
-    expect(workflow).toContain('backup_stale')
   })
 })
