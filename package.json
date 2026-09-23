@@ -25,7 +25,7 @@
     "validate:fixtures": "node scripts/validate-hardening-fixtures.mjs",
     "benchmark:compendium": "npm run build && node scripts/benchmark-compendium-search.mjs",
     "test": "vitest run && npm run test:browser",
-    "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts",
+    "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts && node scripts/verify-writer-identity.mjs",
     "test:accessibility": "playwright install chromium && vitest run --config vitest.browser.config.ts tests/accessibility/accessibility.browser.test.ts",
     "test:offline": "npm run typecheck && playwright install chromium && node scripts/verify-offline-shell.mjs",
     "test:watch": "vitest"

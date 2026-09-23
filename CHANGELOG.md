@@ -30,6 +30,7 @@ published.
 
 ### Recovery
 
+- Reloading the GM tab keeps its cloud-saving identity in browsers with Web Locks. Other tabs still need an explicit takeover.
 - Saving elsewhere stays visible during device saves, so the Game Master can take over cloud saving.
 - Offline setup and repair work with Cloudflare Pages’ HTML redirects.
 - A prepared console reopens signed-in device recovery offline, including the bundled compendium.

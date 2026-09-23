@@ -26,6 +26,7 @@ import { encounterHash, type RecoveryLineage } from '../../src/state/reconciliat
 
 /** Build deterministic lifecycle adapters and expose their observed calls. */
 function harness(options: {
+  clientId?: string | Promise<string>
   latest?: { ownerId: string; snapshot: SessionSnapshot } | null
   byOwner?: Record<string, SessionSnapshot>
   anonymous?: SessionLoadResult
@@ -185,7 +186,7 @@ function harness(options: {
         },
       },
     },
-    'writer-a',
+    options.clientId ?? 'writer-a',
   )
   return {
     lifecycle,
@@ -549,6 +550,26 @@ describe('encounter lifecycle', () => {
 
     await expect(lifecycle.ensureCloudEncounter(encounter('owner-b'))).resolves.toBe('owner-b-row')
     expect(lifecycle.saveStatus()).toEqual({ kind: 'saved' })
+  })
+
+  it('waits for the guarded tab identity before enabling cloud writes', async () => {
+    let resolveIdentity!: (id: string) => void
+    const clientId = new Promise<string>((resolve) => {
+      resolveIdentity = resolve
+    })
+    const { lifecycle, cloudWrites, flushCloud } = harness({
+      clientId,
+      cloud: { status: 'empty' },
+    })
+    const identifying = lifecycle.identify('owner-a')
+    await lifecycle.commit(snapshot('waiting'))
+    await flushCloud()
+    expect(cloudWrites).toEqual([])
+    resolveIdentity('guarded-tab')
+    await identifying
+    await lifecycle.commit(snapshot('ready'))
+    await flushCloud()
+    expect(cloudWrites).toMatchObject([{ writerId: 'guarded-tab' }])
   })
 
   it('keeps a second client read-only until explicit takeover checkpoints and saves', async () => {
