@@ -135,10 +135,13 @@ function browser() {
   function deploy(version: string) {
     const bodies = [
       ['/console/index.html', `<html>${version}</html>`],
+      ['/console/recover.html', '<html>Recovery</html>'],
       [`/console/assets/${version}.js`, `console.log('${version}')`],
       ['/console/compendium/index.json', JSON.stringify({ version })],
     ]
     for (const [url, body] of bodies) network.set(url, { body })
+    network.set('/console/', { body: `<html>${version}</html>` })
+    network.set('/console/recover', { body: '<html>Recovery</html>' })
     return worker({
       kind: 'application-shell',
       schemaVersion: 1,
@@ -172,6 +175,16 @@ function browser() {
     },
   }
 }
+
+it('fetches canonical Pages HTML paths while retaining the manifest cache keys', async () => {
+  const host = browser()
+  const worker = host.deploy('next')
+  host.network.set('/console/index.html', { body: '', status: 308 })
+  host.network.set('/console/recover.html', { body: '', status: 308 })
+  await worker.install()
+  expect(await worker.fetch('/console/recover', true)).toBeUndefined()
+  expect(await (await worker.fetch('/console/', true))?.text()).toBe('<html>next</html>')
+})
 
 it.each([404, 200])(
   'rejects missing or wrong-version install bytes (%s), retaining the previous shell',
