@@ -169,8 +169,6 @@ import { SharePanel } from './components/share/SharePanel.tsx'
 import { SignUpPage } from './components/account/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/log/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
-import { MusicPlayer } from './components/shell/MusicPlayer.tsx'
-import { useMusicPlayer } from './music/useMusicPlayer.ts'
 
 /** A player rolls their own initiative; monsters and quick adds are auto-rolled. */
 const isPlayer = (c: Combatant): boolean => c.isPC && c.kind !== 'quick'
@@ -267,8 +265,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Theme is shared with the marketing site (and the player view) through its own
   // device-local preference, independent of authored encounter recovery.
   const [theme, toggleTheme] = useTheme()
-  const music = useMusicPlayer()
-  const restoreMusic = music.restore
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   // Which content libraries the compendium/picker show. A device-local preference
@@ -422,36 +418,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     [ownPresets, enabledLibraries],
   )
 
-  /** Load an encounter and restore only a catalog selection from its music state. */
-  const loadEncounter = useCallback(
-    (restored: Encounter) => {
-      const trackId = restored.musicTrackId ?? null
-      const available = restoreMusic(trackId)
-      dispatch({
-        type: 'load',
-        encounter:
-          available || trackId === null ? restored : { ...restored, musicTrackId: undefined },
-      })
-    },
-    [restoreMusic],
-  )
-
-  /** Queue a track and retain its stable catalog ID with the encounter. */
-  const selectMusic = (trackId: string | null) => {
-    music.select(trackId)
-    dispatch({ type: 'setMusicTrack', trackId })
-  }
-
   /** Put a validated recovery snapshot onto the working board. */
-  const applyRecovery = useCallback(
-    (snapshot: SessionSnapshot) => {
-      loadEncounter(snapshot.encounter)
-      setView(snapshot.view)
-      setSelectedId(snapshot.selectedId)
-      setActiveCampaignId(snapshot.activeCampaignId ?? null)
-    },
-    [loadEncounter],
-  )
+  const applyRecovery = useCallback((snapshot: SessionSnapshot) => {
+    dispatch({ type: 'load', encounter: snapshot.encounter })
+    setView(snapshot.view)
+    setSelectedId(snapshot.selectedId)
+    setActiveCampaignId(snapshot.activeCampaignId ?? null)
+  }, [])
 
   useEffect(() => {
     if (user) setAuthOpen(false)
@@ -525,7 +498,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       if (!active) return
       if (result.snapshot) applyRecovery(result.snapshot)
       else if (result.clearWorkingBoard) {
-        loadEncounter(emptyEncounter())
+        dispatch({ type: 'load', encounter: emptyEncounter() })
         setSelectedId(null)
         setActiveCampaignId(null)
       }
@@ -551,7 +524,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return () => {
       active = false
     }
-  }, [applyRecovery, loadEncounter, userId, authLoading, identityExpired, lifecycle])
+  }, [applyRecovery, userId, authLoading, identityExpired, lifecycle])
 
   // Start recovery before the browser's next paint. The working board has already changed,
   // and the lifecycle keeps it responsive while device and cloud adapters continue.
@@ -876,7 +849,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const handleRestoreFight = async (id: string): Promise<boolean> => {
     const saved = await loadSavedFight(id)
     if (!saved) return false
-    loadEncounter(saved)
+    dispatch({ type: 'load', encounter: saved })
     setSelectedId(null)
     // The campaign travels with it, so a fight comes back under the house rules it was
     // fought under rather than whichever campaign happens to be active tonight.
@@ -1827,37 +1800,25 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             ) : (
               <EncounterConsole
                 boardActions={
-                  <div className="flex w-full flex-wrap items-start gap-2">
-                    <div className="flex gap-1">
-                      <SaveFightButton
-                        canSave={encounter.combatants.length > 0}
-                        signedIn={!!user}
-                        onSave={handleSaveFight}
-                        onSignIn={() => setAuthOpen(true)}
-                      />
-                      <ShareEncounterButton
-                        canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
-                        signedIn={!!user}
-                        defaultByline={displayName ?? shareByline}
-                        defaultLicense={shareLicense ?? 'unstated'}
-                        restricted={restricted.names}
-                        canDropRestricted={restricted.someRemain}
-                        allowReserved={bylineGranted}
-                        onShare={handleShareEncounter}
-                        onSignIn={() => setAuthOpen(true)}
-                      />
-                    </div>
-                    <div className="ml-auto min-w-0">
-                      <MusicPlayer
-                        tracks={music.tracks}
-                        state={music.state}
-                        onSelect={selectMusic}
-                        onPlay={music.play}
-                        onPause={music.pause}
-                        onVolume={music.setVolume}
-                      />
-                    </div>
-                  </div>
+                  <>
+                    <SaveFightButton
+                      canSave={encounter.combatants.length > 0}
+                      signedIn={!!user}
+                      onSave={handleSaveFight}
+                      onSignIn={() => setAuthOpen(true)}
+                    />
+                    <ShareEncounterButton
+                      canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
+                      signedIn={!!user}
+                      defaultByline={displayName ?? shareByline}
+                      defaultLicense={shareLicense ?? 'unstated'}
+                      restricted={restricted.names}
+                      canDropRestricted={restricted.someRemain}
+                      allowReserved={bylineGranted}
+                      onShare={handleShareEncounter}
+                      onSignIn={() => setAuthOpen(true)}
+                    />
+                  </>
                 }
                 encounter={encounter}
                 dispatch={dispatch}

@@ -22,11 +22,6 @@ published.
 
 - A first search loads creatures from the libraries that are turned on, while keeping every spell reference available. ([#41](https://github.com/OpenFrayApp/console/issues/41))
 
-### Music
-
-- The tracker can queue, play, pause, loop, and switch between approved music tracks. Its volume stays on the device. ([#52](https://github.com/OpenFrayApp/console/issues/52))
-- Recovery copies and saved fights restore the selected track without starting playback. A removed track clears with an unavailable message. ([#53](https://github.com/OpenFrayApp/console/issues/53))
-
 ### Player view
 
 - Player boards keep updating after initiative and other dice rolls enter the shared log.

@@ -29,8 +29,7 @@ Without them the app runs anonymous-only and the header shows no sign-in button.
 
 `npm test` runs the Vitest suite. `npm run build` type-checks and builds the app
 into `dist/console` with `/console/` as its base path; the parent repo's assembly
-step copies that into the deployed site. Music releases use the separate private-R2
-procedure in [docs/music-delivery.md](./docs/music-delivery.md).
+step copies that into the deployed site.
 
 ## Before contributing
 

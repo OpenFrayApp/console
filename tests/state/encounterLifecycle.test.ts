@@ -339,25 +339,6 @@ describe('encounter lifecycle', () => {
     expect(lifecycle.saveStatus()).toEqual({ kind: 'saved' })
   })
 
-  it('restores the selected track from the signed-in cloud copy', async () => {
-    const cloudEncounter = encounter('cloud-copy')
-    cloudEncounter.musicTrackId = 'ancient-god'
-    const { lifecycle } = harness({
-      cloud: {
-        status: 'loaded',
-        id: 'cloud-row',
-        encounter: cloudEncounter,
-        playerCode: null,
-        revision: 7,
-        updatedAt: '2026-09-02T10:10:12.000Z',
-      },
-    })
-
-    const result = await lifecycle.identify('owner-a')
-
-    expect(result.snapshot?.encounter.musicTrackId).toBe('ancient-god')
-  })
-
   it('opens newer device work automatically only with proven cloud ancestry', async () => {
     const recovered = snapshot('device-descendant')
     const cloudEncounter = encounter('cloud-ancestor')

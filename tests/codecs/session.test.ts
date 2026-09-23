@@ -59,40 +59,6 @@ describe('session codec', () => {
     expect(decoded.canonical).toBe(encoded.serialized)
   })
 
-  it('round-trips the selected catalog track without accepting playback state', () => {
-    const selected = snapshot()
-    selected.encounter.musicTrackId = 'ancient-god'
-
-    const encoded = encodeSession(selected)
-    expect(encoded.status).toBe('ok')
-    if (encoded.status !== 'ok') return
-    expect(decodeSession(encoded.serialized)).toMatchObject({ status: 'ok', snapshot: selected })
-
-    expect(
-      encodeSession({
-        ...selected,
-        encounter: { ...selected.encounter, musicPlaying: true, musicPosition: 42 },
-      }),
-    ).toMatchObject({ status: 'invalid', reason: 'payload' })
-  })
-
-  it('migrates a v3 session without music to the current envelope', () => {
-    const legacy = JSON.stringify({
-      kind: 'session',
-      schemaVersion: 3,
-      payload: snapshot(),
-    })
-    const decoded = decodeSession(legacy)
-
-    expect(decoded.status).toBe('ok')
-    if (decoded.status !== 'ok') return
-    expect(decoded.migratedFrom).toBe(3)
-    expect(decoded.snapshot.encounter.musicTrackId).toBeUndefined()
-    expect(JSON.parse(decoded.canonical)).toMatchObject({
-      schemaVersion: CURRENT_SESSION_SCHEMA_VERSION,
-    })
-  })
-
   it('migrates v2 deterministically to the current envelope', () => {
     const legacy = JSON.stringify({ version: 2, snapshot: snapshot() })
     const first = decodeSession(legacy)

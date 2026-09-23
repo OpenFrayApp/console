@@ -44,8 +44,6 @@ export type EncounterAction =
   | { type: 'renameLog'; from: string; to: string }
   /** Wipe the game log. */
   | { type: 'clearLog' }
-  /** Persist only the stable catalog selection, never live playback state. */
-  | { type: 'setMusicTrack'; trackId: string | null }
   /** Attribute damage dealt to its source (for the recap MVP). Damage *taken* is
    *  captured automatically from any HP drop, so this records the dealer only. */
   | { type: 'recordDamage'; sourceId: string; amount: number }
@@ -446,9 +444,6 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
 
     case 'clearLog':
       return { ...state, log: [], fightLogStart: 0 }
-
-    case 'setMusicTrack':
-      return { ...state, musicTrackId: action.trackId ?? undefined }
 
     // A long rest restores all player characters and friendly NPCs to full HP
     // (setCurrentHp also clears death saves and wakes the unconscious); foes are

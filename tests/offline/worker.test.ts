@@ -134,14 +134,13 @@ function browser() {
     }
   }
   /** Publish deterministic deployment bytes and hashes. */
-  function deploy(version: string, includeMusic = false) {
+  function deploy(version: string) {
     const bodies = [
       ['/console/index.html', `<html>${version}</html>`],
       ['/console/recover.html', '<html>Recovery</html>'],
       [`/console/assets/${version}.js`, `console.log('${version}')`],
       ['/console/compendium/index.json', JSON.stringify({ version })],
     ]
-    if (includeMusic) bodies.push(['/console/music/ancient-god.ogg', 'lazy music'])
     for (const [url, body] of bodies) network.set(url, { body })
     network.set('/console/', { body: `<html>${version}</html>` })
     network.set('/console/recover', { body: '<html>Recovery</html>' })
@@ -159,8 +158,8 @@ function browser() {
     deploy,
     stores,
     network,
-    requested,
     skipped,
+    requested,
     /** Model the requesting document declining update consent. */
     setConsent: (confirmed: boolean) => {
       consent = confirmed
@@ -327,31 +326,6 @@ it('rejects a forged completion marker rather than approving an incomplete shell
   )
   expect(await worker.activate()).toEqual({ status: 'incomplete' })
   expect((await worker.fetch('/console/', true))?.status).toBe(503)
-})
-
-it('rejects a manifest that tries to turn lazy music into a required shell asset', async () => {
-  const host = browser()
-  const worker = host.deploy('current', true)
-
-  await expect(worker.install()).rejects.toThrow('Lazy media cannot be a shell asset')
-  expect(host.requested).toEqual([])
-})
-
-it('installs the verified shell without requesting lazy music and leaves media on the network', async () => {
-  const host = browser()
-  host.network.set('/console/music/ancient-god.ogg', { body: 'lazy music' })
-  const worker = host.deploy('current')
-
-  await worker.install()
-
-  expect(host.requested).toEqual([
-    '/console/',
-    '/console/recover',
-    '/console/assets/current.js',
-    '/console/compendium/index.json',
-  ])
-  expect(await worker.fetch('/console/music/ancient-god.ogg')).toBeUndefined()
-  expect(host.requested).not.toContain('/console/music/ancient-god.ogg')
 })
 
 it('does not intercept private routes, runtime responses, or non-static query URLs', async () => {
