@@ -502,7 +502,8 @@ export class EncounterLifecycle {
         device: { snapshot, activeAt: savedAt },
       }
     }
-    this.publishStatus({ kind: 'saving' })
+    // A device checkpoint must keep the cloud writer's takeover control available.
+    if (this.status.kind !== 'read-only') this.publishStatus({ kind: 'saving' })
 
     let resolveWrite: (result: SessionWriteResult) => void = () => undefined
     const recovery = new Promise<SessionWriteResult>((resolve) => {
