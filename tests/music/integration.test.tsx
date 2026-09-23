@@ -43,7 +43,31 @@ afterEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   FakeAudio.instances.length = 0
+  vi.restoreAllMocks()
 })
+
+/** Put one quick-add foe on the board. */
+function addFoe(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+  fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: 'Bandit' } })
+  fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+}
+
+/** Confirm the initiative prompt and begin combat. */
+function startCombat(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+}
+
+/** Reduce the selected foe to 0 hit points through the stat-block editor. */
+function defeatFoe(container: HTMLElement): void {
+  const statBlock = container.querySelectorAll('section')[1]
+  fireEvent.click(statBlock.querySelector('button[title^="Set hit points"]') as HTMLElement)
+  const input = statBlock.querySelector('input.w-14') as HTMLInputElement
+  fireEvent.change(input, { target: { value: '0' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+}
 
 describe('application music player', () => {
   it('persists the selected track without persisting playback state', async () => {
@@ -76,6 +100,118 @@ describe('application music player', () => {
     await waitFor(() =>
       expect(sessionStorage.getItem('openfray:session')).not.toContain('removed-track'),
     )
+  })
+
+  it('starts, pauses, and resumes music with combat while respecting a manual pause', async () => {
+    render(<App />)
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    const audio = FakeAudio.instances[0]
+    addFoe()
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+
+    startCombat()
+    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
+    audio.dispatchEvent(new Event('playing'))
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    expect(audio.pause).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }))
+    await waitFor(() => expect(audio.play).toHaveBeenCalledTimes(2))
+
+    audio.dispatchEvent(new Event('playing'))
+    fireEvent.click(screen.getByRole('button', { name: 'Pause music' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }))
+    await Promise.resolve()
+    expect(audio.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps music playing through a combat pause when configured', async () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ pauseMusicWithCombat: false }))
+    render(<App />)
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    const audio = FakeAudio.instances[0]
+    addFoe()
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+    startCombat()
+    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
+    audio.dispatchEvent(new Event('playing'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+
+    expect(audio.pause).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Pause music' })).toBeInTheDocument()
+  })
+
+  it('does not let rejected playback block combat', async () => {
+    render(<App />)
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    const audio = FakeAudio.instances[0]
+    audio.play.mockRejectedValueOnce(new Error('gesture required'))
+    addFoe()
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+
+    startCombat()
+
+    expect(screen.getByRole('heading', { name: /Round 1/ })).toBeInTheDocument()
+    expect(
+      await screen.findByText('Playback was blocked. Press Play to try again.'),
+    ).toBeInTheDocument()
+  })
+
+  it('changes nothing when ending combat is canceled', async () => {
+    const { container } = render(<App />)
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    const audio = FakeAudio.instances[0]
+    addFoe()
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+    startCombat()
+    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
+    audio.dispatchEvent(new Event('playing'))
+    audio.currentTime = 42
+    defeatFoe(container)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Keep fighting' }))
+
+    expect(audio.pause).not.toHaveBeenCalled()
+    expect(audio.currentTime).toBe(42)
+    expect(screen.getByRole('button', { name: 'Pause music' })).toBeInTheDocument()
+  })
+
+  it('stops and rewinds music when ending combat is confirmed', async () => {
+    const { container } = render(<App />)
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    const audio = FakeAudio.instances[0]
+    addFoe()
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+    startCombat()
+    await waitFor(() => expect(audio.play).toHaveBeenCalledOnce())
+    audio.dispatchEvent(new Event('playing'))
+    audio.currentTime = 42
+    defeatFoe(container)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'End combat' }))
+
+    expect(audio.pause).toHaveBeenCalledOnce()
+    expect(audio.currentTime).toBe(0)
+    expect(screen.getByRole('button', { name: 'Play music' })).toBeInTheDocument()
+  })
+
+  it('stops music and clears its selection with the board', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<App />)
+    await waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    const audio = FakeAudio.instances[0]
+    addFoe()
+    fireEvent.change(screen.getByLabelText('Music track'), { target: { value: 'ancient-god' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Play music' }))
+    audio.dispatchEvent(new Event('playing'))
+    audio.currentTime = 42
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove everyone and clear the log' }))
+
+    expect(audio.pause).toHaveBeenCalled()
+    expect(audio.currentTime).toBe(0)
+    expect(screen.getByLabelText('Music track')).toHaveValue('')
   })
 
   it('keeps playing while the Game Master visits the compendium', async () => {

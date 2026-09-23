@@ -55,6 +55,15 @@ describe('app settings (localStorage)', () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ musicVolume: 'loud' }))
     expect(loadSettings().musicVolume).toBe(0.7)
   })
+
+  it('pauses music with combat by default and retains an opt-out', () => {
+    expect(loadSettings().pauseMusicWithCombat).toBe(true)
+    saveSettings({ pauseMusicWithCombat: false })
+    expect(loadSettings().pauseMusicWithCombat).toBe(false)
+
+    localStorage.setItem('openfray-settings', JSON.stringify({ pauseMusicWithCombat: 'no' }))
+    expect(loadSettings().pauseMusicWithCombat).toBe(true)
+  })
 })
 
 describe('player-view settings', () => {

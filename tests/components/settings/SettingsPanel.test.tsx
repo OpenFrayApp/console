@@ -16,6 +16,7 @@ function renderPanel(
     showHomebrew?: boolean
     librarySort?: 'name' | 'cr'
     playerView?: PlayerViewSettings
+    pauseMusicWithCombat?: boolean
     hotkeys?: Partial<Record<HotkeyCommandId, string | null>>
   } = {},
 ) {
@@ -23,6 +24,7 @@ function renderPanel(
   const onSetShowHomebrew = vi.fn()
   const onSetLibrarySort = vi.fn()
   const onSetPlayerView = vi.fn()
+  const onSetPauseMusicWithCombat = vi.fn()
   const onSetHotkeys = vi.fn()
   render(
     <SettingsPanel
@@ -35,6 +37,8 @@ function renderPanel(
       onSetLibrarySort={onSetLibrarySort}
       playerView={over.playerView ?? DEFAULT_PLAYER_VIEW}
       onSetPlayerView={onSetPlayerView}
+      pauseMusicWithCombat={over.pauseMusicWithCombat ?? true}
+      onSetPauseMusicWithCombat={onSetPauseMusicWithCombat}
       hotkeys={over.hotkeys ?? {}}
       onSetHotkeys={onSetHotkeys}
     />,
@@ -44,6 +48,7 @@ function renderPanel(
     onSetShowHomebrew,
     onSetLibrarySort,
     onSetPlayerView,
+    onSetPauseMusicWithCombat,
     onSetHotkeys,
   }
 }
@@ -154,6 +159,17 @@ describe('SettingsPanel', () => {
     const { onSetLibrarySort } = renderPanel()
     fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'cr' } })
     expect(onSetLibrarySort).toHaveBeenCalledWith('cr')
+  })
+
+  it('lets music continue through a combat pause', () => {
+    const { onSetPauseMusicWithCombat } = renderPanel()
+    openTab('Music')
+    const checkbox = screen.getByLabelText('Pause with fight')
+    expect(checkbox).toBeChecked()
+
+    fireEvent.click(checkbox)
+
+    expect(onSetPauseMusicWithCombat).toHaveBeenCalledWith(false)
   })
 
   it('links to the importer extension on the Chrome Web Store', () => {

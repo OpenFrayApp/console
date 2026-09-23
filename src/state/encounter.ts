@@ -501,6 +501,7 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
         activeIndex: 0,
         paused: false,
         combatants: [],
+        musicTrackId: undefined,
         log: [],
         fightLogStart: 0,
       }

@@ -35,6 +35,16 @@ export interface MusicController {
   select(trackId: string | null): void
   play(): Promise<void>
   pause(): void
+  /** Start selected music for a new fight without restarting active playback. */
+  startCombat(): void
+  /** Pause an active request and remember that combat caused the pause. */
+  pauseForCombat(): void
+  /** Resume only the request that the current combat pause interrupted. */
+  resumeForCombat(): void
+  /** Stop and rewind playback while keeping the selected track queued. */
+  endCombat(): void
+  /** Stop playback and remove the selected track for a cleared board. */
+  clearBoard(): void
   setVolume(volume: number): void
   destroy(): void
 }
@@ -70,6 +80,7 @@ export function createMusicController({
     volume: normalizeMusicVolume(initialVolume),
   }
   let wantsPlayback = false
+  let pausedByCombat = false
   let pendingPlayedId: string | null = null
   let loadedId: string | null = null
   let playRequestGeneration = 0
@@ -98,6 +109,23 @@ export function createMusicController({
     audio.load()
   }
 
+  /** Cancel the current play request and record whether combat caused it. */
+  const cancelPlayback = (causedByCombat = false) => {
+    playRequestGeneration += 1
+    wantsPlayback = false
+    pausedByCombat = causedByCombat
+    pendingPlayedId = null
+  }
+
+  /** Rewind loaded media without assuming the browser has seekable data. */
+  const rewind = () => {
+    try {
+      audio.currentTime = 0
+    } catch {
+      // A media element without seekable data is already at its beginning.
+    }
+  }
+
   /** Mark native playback as started and emit analytics once for this play request. */
   const onPlaying = () => {
     if (!wantsPlayback || destroyed) return
@@ -117,6 +145,7 @@ export function createMusicController({
   const onError = () => {
     if (destroyed) return
     wantsPlayback = false
+    pausedByCombat = false
     pendingPlayedId = null
     loadedId = null
     update({ status: 'error', error: isOnline() ? 'unavailable' : 'offline' })
@@ -130,7 +159,9 @@ export function createMusicController({
   /** Request playback of the current selection without throwing into a combat action. */
   const play = async (): Promise<void> => {
     const track = selectedTrack()
+    pausedByCombat = false
     if (!track || destroyed) return
+    if (wantsPlayback && loadedId === track.id) return
     if (!isOnline()) {
       wantsPlayback = false
       update({ status: 'error', error: 'offline' })
@@ -168,6 +199,7 @@ export function createMusicController({
       const track = tracks.find((candidate) => candidate.id === trackId)
       playRequestGeneration += 1
       wantsPlayback = false
+      pausedByCombat = false
       pendingPlayedId = null
       releaseSource()
       if (!track) {
@@ -185,6 +217,7 @@ export function createMusicController({
     select: (trackId) => {
       const track = tracks.find((candidate) => candidate.id === trackId)
       const wasPlaying = wantsPlayback
+      pausedByCombat = false
       playRequestGeneration += 1
       pendingPlayedId = null
       if (!track) {
@@ -201,12 +234,45 @@ export function createMusicController({
     play,
     /** Pause by explicit request and prevent a later media event from resuming the UI state. */
     pause: () => {
+      pausedByCombat = false
       if (!snapshot.selectedId || destroyed) return
-      playRequestGeneration += 1
-      wantsPlayback = false
-      pendingPlayedId = null
+      cancelPlayback()
       audio.pause()
       update({ status: 'paused', error: null })
+    },
+    /** Start selected music for a new fight without restarting active playback. */
+    startCombat: () => {
+      pausedByCombat = false
+      void play()
+    },
+    /** Pause an active request and remember that combat caused the pause. */
+    pauseForCombat: () => {
+      if (!wantsPlayback || !snapshot.selectedId || destroyed) return
+      cancelPlayback(true)
+      audio.pause()
+      update({ status: 'paused', error: null })
+    },
+    /** Resume only the request that the current combat pause interrupted. */
+    resumeForCombat: () => {
+      if (!pausedByCombat || destroyed) return
+      pausedByCombat = false
+      void play()
+    },
+    /** Stop and rewind playback while keeping the selected track queued. */
+    endCombat: () => {
+      if (destroyed) return
+      cancelPlayback()
+      if (loadedId) audio.pause()
+      rewind()
+      update({ status: snapshot.selectedId ? 'queued' : 'idle', error: null })
+    },
+    /** Stop playback and remove the selected track for a cleared board. */
+    clearBoard: () => {
+      if (destroyed) return
+      cancelPlayback()
+      rewind()
+      releaseSource()
+      update({ selectedId: null, status: 'idle', error: null })
     },
     /** Apply volume immediately without touching playback position or intent. */
     setVolume: (volume) => {
@@ -220,6 +286,7 @@ export function createMusicController({
       destroyed = true
       playRequestGeneration += 1
       wantsPlayback = false
+      pausedByCombat = false
       pendingPlayedId = null
       audio.removeEventListener('playing', onPlaying)
       audio.removeEventListener('waiting', onWaiting)

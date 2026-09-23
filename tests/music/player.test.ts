@@ -123,6 +123,87 @@ describe('music controller', () => {
     expect(onPlayed).toHaveBeenCalledWith('ancient-god')
   })
 
+  it('starts queued music for combat without restarting active playback', async () => {
+    const { audio, controller } = setup()
+    controller.select('ancient-god')
+
+    controller.startCombat()
+    await Promise.resolve()
+    audio.emit('playing')
+    controller.startCombat()
+    await Promise.resolve()
+
+    expect(audio.play).toHaveBeenCalledOnce()
+    expect(controller.getSnapshot().status).toBe('playing')
+  })
+
+  it('starts combat silently when no track is selected', async () => {
+    const { audio, controller } = setup()
+
+    controller.startCombat()
+    await Promise.resolve()
+
+    expect(audio.play).not.toHaveBeenCalled()
+  })
+
+  it('resumes only music paused by combat', async () => {
+    const { audio, controller } = setup()
+    controller.select('ancient-god')
+    controller.startCombat()
+    await Promise.resolve()
+    audio.emit('playing')
+
+    controller.pauseForCombat()
+    controller.resumeForCombat()
+    await Promise.resolve()
+    expect(audio.play).toHaveBeenCalledTimes(2)
+
+    audio.emit('playing')
+    controller.pause()
+    controller.resumeForCombat()
+    await Promise.resolve()
+    expect(audio.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('starts a new fight after a manual music pause', async () => {
+    const { audio, controller } = setup()
+    controller.select('ancient-god')
+    await controller.play()
+    audio.emit('playing')
+    controller.pause()
+
+    controller.startCombat()
+    await Promise.resolve()
+
+    expect(audio.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('stops and rewinds music when combat ends', async () => {
+    const { audio, controller } = setup()
+    controller.select('ancient-god')
+    await controller.play()
+    audio.emit('playing')
+    audio.currentTime = 42
+
+    controller.endCombat()
+
+    expect(audio.pause).toHaveBeenCalledOnce()
+    expect(audio.currentTime).toBe(0)
+    expect(controller.getSnapshot()).toMatchObject({ selectedId: 'ancient-god', status: 'queued' })
+  })
+
+  it('clears the queued selection with the board', async () => {
+    const { audio, controller } = setup()
+    controller.select('ancient-god')
+    await controller.play()
+    audio.currentTime = 42
+
+    controller.clearBoard()
+
+    expect(audio.currentTime).toBe(0)
+    expect(controller.getSnapshot()).toMatchObject({ selectedId: null, status: 'idle' })
+  })
+
   it('pauses manually and leaves a later selection queued', async () => {
     const { audio, controller } = setup()
     controller.select('ancient-god')
