@@ -10,6 +10,7 @@ function browser() {
   const stores = new Map<string, Map<string, Response>>()
   const network = new Map<string, { body: string; status?: number }>()
   const skipped: string[] = []
+  const requested: string[] = []
   let clientVersion = 'previous'
   let consent = true
   let cacheRead: (() => Promise<void>) | undefined
@@ -46,6 +47,7 @@ function browser() {
         addEventListener: (type: string, listener: (event: unknown) => void) =>
           listeners.set(type, listener),
         fetch: async (url: string) => {
+          requested.push(url)
           const value = network.get(url)
           return new Response(value?.body ?? 'missing', {
             status: value?.status ?? (value ? 200 : 404),
@@ -157,6 +159,7 @@ function browser() {
     stores,
     network,
     skipped,
+    requested,
     /** Model the requesting document declining update consent. */
     setConsent: (confirmed: boolean) => {
       consent = confirmed
