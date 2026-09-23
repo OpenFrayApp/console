@@ -37,6 +37,7 @@ published.
 
 - Offline setup and repair work with Cloudflare Pages’ HTML redirects.
 - Saving elsewhere stays visible during device saves, so the Game Master can take over cloud saving.
+- Reloading the GM tab keeps its cloud-saving identity in browsers with Web Locks. Other tabs still need an explicit takeover.
 - A prepared console reopens signed-in device recovery offline, including the bundled compendium.
 - Console updates wait for confirmation and a verified recovery checkpoint before reloading. Failed installations retain the previous shell. ([#38](https://github.com/OpenFrayApp/console/issues/38))
 - When device recovery and cloud copies contain different changes, the console shows both

@@ -33,7 +33,7 @@
     "music:deployments": "wrangler deployments list --config wrangler.music.jsonc",
     "music:rollback": "wrangler rollback --config wrangler.music.jsonc",
     "test": "vitest run && npm run test:browser",
-    "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts",
+    "test:browser": "playwright install chromium && vitest run --config vitest.browser.config.ts && node scripts/verify-writer-identity.mjs",
     "test:accessibility": "playwright install chromium && vitest run --config vitest.browser.config.ts tests/accessibility/accessibility.browser.test.ts",
     "test:offline": "npm run typecheck && playwright install chromium && node scripts/verify-offline-shell.mjs",
     "test:watch": "vitest"
