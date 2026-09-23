@@ -108,8 +108,6 @@ jobs:
             "$AUTHORIZED_STAGING_PROJECT_REF" \
             "$DATABASE_APPROVER" \
             "${{ github.workflow }}:${{ inputs.staging_attestation_run_id }}"
-      - name: Apply forward migrations
-        run: supabase db push --db-url "$SUPABASE_DB_URL"
       - name: Record manual provider evidence
         env:
           AUTH_OAUTH_EVIDENCE: ${{ vars.AUTH_OAUTH_EVIDENCE }}
@@ -128,6 +126,10 @@ jobs:
               {id: "report-ingress", result: "passed", evidence: $ingress},
               {id: "report-webhooks", result: "passed", evidence: $webhooks}
             ]}' > .artifacts/supabase/manual-evidence.json
+      - name: Check database promotion prerequisites
+        run: node scripts/check-database-promotion.mjs "${{ inputs.environment }}" .artifacts/supabase/manual-evidence.json
+      - name: Apply forward migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
       - name: Verify and attest the hosted deployment
         run: |
           npm run db:verify -- \
