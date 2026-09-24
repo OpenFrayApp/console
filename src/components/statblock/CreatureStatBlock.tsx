@@ -5,7 +5,7 @@ import { abilityMod, type Speeds } from '../../schema/primitives.ts'
 import { speedLines } from '../../combat/speed.ts'
 import type { Action } from '../../schema/action.ts'
 import type { Creature, SpellRef } from '../../schema/creature.ts'
-import type { Concentration, HitPoints } from '../../schema/combatant.ts'
+import type { Concentration, HitPoints, MonsterCombatant } from '../../schema/combatant.ts'
 import { hpTierOf } from '../../combat/resources.ts'
 import { isAutoLabel } from '../../combat/combatant.ts'
 import { useCampaignRules } from '../../state/campaignRules.ts'
@@ -49,6 +49,7 @@ export function CreatureStatBlock({
   liveSpeed,
   concentration,
   label,
+  autoLabel,
   onRename,
   onHpInput,
   onTempInput,
@@ -84,6 +85,7 @@ export function CreatureStatBlock({
   concentration?: Concentration | null
   /** The combatant's display name (shown in the tracker); defaults to the creature name. */
   label?: string
+  autoLabel?: MonsterCombatant['autoLabel']
   /** Rename the combatant's tracker label. */
   onRename?: (label: string) => void
   /** Edit current HP from a raw input ("12", "+5", "-3"). */
@@ -174,7 +176,9 @@ export function CreatureStatBlock({
       <StatHeader
         name={displayName}
         onRename={onRename}
-        originalName={label && !isAutoLabel(label, creature.name) ? creature.name : undefined}
+        originalName={
+          label && !isAutoLabel(label, creature.name, autoLabel) ? creature.name : undefined
+        }
         subtitle={
           <>
             {[creature.size, titleCase(creature.type)].filter(Boolean).join(' ')}

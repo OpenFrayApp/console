@@ -179,7 +179,36 @@ describe('Encounter flow', () => {
     const row = within(tracker).getByText('Goblin 2').closest('[data-combatant-row]') as HTMLElement
     const init = Number(row.querySelector('.w-7')?.textContent)
     expect(init).toBeGreaterThan(0) // Goblin's +2 init mod → d20+2, always ≥ 3
+    expect(within(tracker).getByText('Goblin 1')).toBeInTheDocument()
+    expect(screen.getByText('Goblin 2: initiative')).toBeInTheDocument()
   })
+
+  it.each([
+    ['roman', 'Goblin I', 'Goblin II', 'Goblin III'],
+    ['letters', 'Goblin A', 'Goblin B', 'Goblin C'],
+  ])(
+    'uses persisted %s labels and preserves survivors after removal',
+    async (style, first, second, third) => {
+      localStorage.setItem('openfray-settings', JSON.stringify({ creatureLabelStyle: style }))
+      try {
+        const { container } = render(<App />)
+        await addGoblin()
+        const tracker = container.querySelector('section') as HTMLElement
+        expect(within(tracker).getByText('Goblin')).toBeInTheDocument()
+        const picker = screen.getByLabelText('Search creatures').parentElement as HTMLElement
+        fireEvent.click(within(picker).getByText('Goblin'))
+        expect(within(tracker).getByText(first)).toBeInTheDocument()
+        expect(within(tracker).getByText(second)).toBeInTheDocument()
+        expect(screen.queryByText('(Goblin)')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: `Remove ${first}` }))
+        expect(within(tracker).getByText(second)).toBeInTheDocument()
+        fireEvent.click(within(picker).getByText('Goblin'))
+        expect(within(tracker).getByText(third)).toBeInTheDocument()
+      } finally {
+        localStorage.removeItem('openfray-settings')
+      }
+    },
+  )
 
   it('logs a quick roll', () => {
     render(<App />)

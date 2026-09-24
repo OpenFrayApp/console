@@ -22,6 +22,7 @@ function renderPanel(
   const onSetEnabledLibraries = vi.fn()
   const onSetShowHomebrew = vi.fn()
   const onSetLibrarySort = vi.fn()
+  const onSetCreatureLabelStyle = vi.fn()
   const onSetPlayerView = vi.fn()
   const onSetHotkeys = vi.fn()
   render(
@@ -31,6 +32,8 @@ function renderPanel(
       onSetEnabledLibraries={onSetEnabledLibraries}
       showHomebrew={over.showHomebrew ?? true}
       onSetShowHomebrew={onSetShowHomebrew}
+      creatureLabelStyle="numeric"
+      onSetCreatureLabelStyle={onSetCreatureLabelStyle}
       librarySort={over.librarySort ?? 'name'}
       onSetLibrarySort={onSetLibrarySort}
       playerView={over.playerView ?? DEFAULT_PLAYER_VIEW}
@@ -43,6 +46,7 @@ function renderPanel(
     onSetEnabledLibraries,
     onSetShowHomebrew,
     onSetLibrarySort,
+    onSetCreatureLabelStyle,
     onSetPlayerView,
     onSetHotkeys,
   }
@@ -50,6 +54,19 @@ function renderPanel(
 
 /** Open one of the settings tabs by its label. */
 const openTab = (label: string) => fireEvent.click(screen.getByRole('tab', { name: label }))
+
+describe('SettingsPanel — creature labels', () => {
+  it('offers numeric, Roman, and letter labels in the tracker settings', () => {
+    const { onSetCreatureLabelStyle } = renderPanel()
+    openTab('Tracker')
+    const select = screen.getByLabelText('Creature labels')
+    expect((select as HTMLSelectElement).value).toBe('numeric')
+    fireEvent.change(select, { target: { value: 'roman' } })
+    expect(onSetCreatureLabelStyle).toHaveBeenLastCalledWith('roman')
+    fireEvent.change(select, { target: { value: 'letters' } })
+    expect(onSetCreatureLabelStyle).toHaveBeenLastCalledWith('letters')
+  })
+})
 
 describe('SettingsPanel — the player view', () => {
   it('shows a creature`s rolls by default', () => {

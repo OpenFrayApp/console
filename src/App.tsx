@@ -16,14 +16,7 @@ import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
-import {
-  autoLabel,
-  instantiate,
-  isFoe,
-  nameOf,
-  resolveSelected,
-  trackerOrder,
-} from './combat/combatant.ts'
+import { instantiate, isFoe, nameOf, resolveSelected, trackerOrder } from './combat/combatant.ts'
 import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
@@ -283,6 +276,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setShowHomebrewState(value)
     saveSettings({ showHomebrew: value })
   }
+  const [creatureLabelStyle, setCreatureLabelStyle] = useState(
+    () => loadSettings().creatureLabelStyle,
+  )
+
   // How the compendium orders its list (by name, or by CR / spell level).
   const [librarySort, setLibrarySortState] = useState<LibrarySort>(() => loadSettings().librarySort)
   /** Set the compendium sort order and persist the choice to device-local settings. */
@@ -701,18 +698,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   /** Add the picked creature to the fight as a fresh combatant; duplicates get numbered labels. */
   const handlePick = (creature: Creature) => {
     track(EVENTS.creatureAdded)
-    const sameKind = encounter.combatants.filter(
-      (c) => !c.isPC && c.creatureId === creature.id,
-    ).length
-    const label = autoLabel(creature.name, sameKind)
     addCombatant(
       instantiate(creature, {
         combatantId: crypto.randomUUID(),
         initiative: 0,
-        label,
+        label: creature.name,
         // The campaign's HP method decides how this instance's max HP is rolled.
         maxHp: resolveMaxHp(creature, activeRules.hp),
       }),
+      true,
     )
   }
 
@@ -880,9 +874,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         creatures: [...library, ...customCreatures],
         hpMethod: activeRules.hp,
         existing: encounter.combatants,
+        labelStyle: creatureLabelStyle,
       },
     )
-    for (const c of combatants) addCombatant(c)
+    for (const c of combatants) addCombatant(c, true)
     if (combatants.length) {
       track(EVENTS.encounterCastAdded)
       setView('encounter')
@@ -1148,8 +1143,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Add a combatant to the encounter and select it. Mid-combat it rolls initiative
   // straight away (like Begin) so a reinforcement slots into the order instead of
   // sitting at 0; before combat, initiative waits for Begin to roll everyone together.
-  const addCombatant = (c: Combatant) => {
+  const addCombatant = (c: Combatant, labelCopies = false) => {
     let combatant = c
+    let initiativeRoll: NewLogEntry | undefined
     if (encounter.round > 0) {
       const { total, entry } = rollInit(nameOf(c), initMod(c), false, c.combatantId)
       combatant = { ...c, initiative: total }
@@ -1158,9 +1154,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       if (playerView.arrivals === 'hidden' && isFoe(combatant)) {
         combatant = { ...combatant, shared: 'hidden' }
       }
-      dispatch({ type: 'log', entry })
+      initiativeRoll = entry
     }
-    dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
+    dispatch({
+      type: 'add',
+      combatant,
+      initiativeRoll,
+      tiebreak: activeRules.initiativeTiebreak,
+      labelStyle: labelCopies ? creatureLabelStyle : undefined,
+    })
     setSelectedId(combatant.combatantId)
   }
 
@@ -1184,8 +1186,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         creatures: [...library, ...customCreatures],
         hpMethod: activeRules.hp,
         existing: encounter.combatants,
+        labelStyle: creatureLabelStyle,
       })
-      for (const c of combatants) addCombatant(c)
+      for (const c of combatants) addCombatant(c, true)
       track(EVENTS.encounterLinkAdded)
     })
     // Deliberately keyed on readiness alone: the cast is consumed the first time through.
@@ -1855,6 +1858,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onSetShowHomebrew={setShowHomebrew}
                 librarySort={librarySort}
                 onSetLibrarySort={setLibrarySort}
+                creatureLabelStyle={creatureLabelStyle}
+                onSetCreatureLabelStyle={(value) => {
+                  setCreatureLabelStyle(value)
+                  saveSettings({ creatureLabelStyle: value })
+                }}
                 playerView={playerView}
                 onSetPlayerView={setPlayerView}
                 hotkeys={hotkeys}

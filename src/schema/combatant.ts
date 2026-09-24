@@ -109,6 +109,8 @@ export interface MonsterCombatant extends CombatantBase {
   creature: Creature
   /** Disambiguates duplicates, e.g. `"Goblin (B)"`. */
   label: string
+  /** Generated label and ordinal; null marks a typed name with no generated ordinal. */
+  autoLabel?: { ordinal: number; label: string } | null
   slotsUsed: SlotsUsed
   /** Per-spell uses spent, keyed by spell ref (or name). At-will spells aren't tracked. */
   spellUsesSpent: Record<string, number>

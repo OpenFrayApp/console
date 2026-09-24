@@ -10,6 +10,18 @@ beforeEach(() => localStorage.clear())
 afterEach(() => localStorage.clear())
 
 describe('app settings (localStorage)', () => {
+  it('defaults creature labels to numeric and rejects unknown styles', () => {
+    expect(loadSettings().creatureLabelStyle).toBe('numeric')
+    localStorage.setItem('openfray-settings', JSON.stringify({ creatureLabelStyle: 'bogus' }))
+    expect(loadSettings().creatureLabelStyle).toBe('numeric')
+  })
+
+  it.each(['numeric', 'roman', 'letters'] as const)('persists %s creature labels', (style) => {
+    saveSettings({ creatureLabelStyle: style })
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().creatureLabelStyle).toBe(style)
+  })
+
   it('falls back to the default libraries when nothing is stored', () => {
     expect(loadSettings().enabledLibraries).toEqual(DEFAULT_ENABLED_LIBRARIES)
   })
