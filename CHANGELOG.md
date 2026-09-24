@@ -24,6 +24,7 @@ published.
 
 ### Compendium
 
+- Search creatures, spells, conditions, and saved characters from the header with a configurable ⌘K or Ctrl+K shortcut.
 - A first search loads creatures from the libraries that are turned on, while keeping every spell reference available. ([#41](https://github.com/OpenFrayApp/console/issues/41))
 
 ### Player view

@@ -150,6 +150,8 @@ import {
 } from './components/editors/customMonster.ts'
 import { AddQuickForm } from './components/add/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/resolve/CastSpellPanel.tsx'
+import { QuickSearch } from './components/search/QuickSearch.tsx'
+import { Button } from './components/ui/primitives.tsx'
 import { InitiativePrompt } from './components/tracker/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/resolve/MassSavePanel.tsx'
 import { RestControls } from './components/tracker/RestControls.tsx'
@@ -267,6 +269,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [theme, toggleTheme] = useTheme()
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
+  const [searchOpen, setSearchOpen] = useState(false)
   // Which content libraries the compendium/picker show. A device-local preference
   // for every user (anon included), persisted in localStorage like the theme.
   const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(
@@ -1506,6 +1509,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       setSettingsOpen(true)
     },
     showHotkeys: () => setHelpOpen(true),
+    openSearch: () => setSearchOpen(true),
   }
   useHotkeys(keymap, hotkeyHandlers)
 
@@ -1686,6 +1690,22 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
             )}
             <div className="ml-auto flex items-center gap-2 wide:gap-3 wide:pl-3">
+              <Button
+                onClick={() => {
+                  if (!document.querySelector('[role="dialog"], [role="menu"]')) setSearchOpen(true)
+                }}
+                aria-label="Search references"
+                title={
+                  hint('openSearch')
+                    ? `Search references (${hint('openSearch')})`
+                    : 'Search references'
+                }
+              >
+                Search
+                {hint('openSearch') && (
+                  <kbd className="search-key-hint ml-1.5 text-xs">{hint('openSearch')}</kbd>
+                )}
+              </Button>
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
               <div className="hidden split:block wide:block">
@@ -1739,6 +1759,28 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             onDownload={downloadRecovery}
           />
 
+          {searchOpen && (
+            <QuickSearch
+              key={user?.id ?? 'anonymous'}
+              enabledLibraries={enabledLibraries}
+              showHomebrew={showHomebrew}
+              customCreatures={customCreatures}
+              customSpells={customSpells}
+              characters={user ? rosterPcs : []}
+              combatants={encounter.combatants}
+              dispatch={dispatch}
+              onRoll={pushRoll}
+              onNote={pushNote}
+              round={encounter.round}
+              defaultCasterId={defaultCasterId}
+              onAddCreature={handlePick}
+              onAddCharacter={handleAddPcToEncounter}
+              onClose={() => {
+                setSearchOpen(false)
+                handleViewChange('encounter')
+              }}
+            />
+          )}
           {settingsOpen && (
             <SettingsPanel
               onClose={() => setSettingsOpen(false)}

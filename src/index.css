@@ -16,6 +16,16 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Shortcut hints stay visible on portrait tablets without changing the swipe shell. */
+.search-key-hint {
+  display: none;
+}
+@media (min-width: 37.5rem) and (min-height: 32rem) {
+  .search-key-hint {
+    display: inline;
+  }
+}
+
 /*
  * THE SHELL — one decision, three modes, exhaustive and non-overlapping. The console's
  * body, header, and footer all switch on the same three variants, so no width can mix

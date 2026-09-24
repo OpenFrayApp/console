@@ -181,6 +181,12 @@ describe('SettingsPanel', () => {
 })
 
 describe('SettingsPanel — the keyboard', () => {
+  it('explains when a previous binding already owns the search shortcut', () => {
+    renderPanel({ hotkeys: { nextTurn: 'ctrl+k' } })
+    openTab('Keyboard')
+    expect(screen.getByText(/Search references is unbound because/)).toBeVisible()
+  })
+
   it('lists every command with its current key', () => {
     renderPanel()
     openTab('Keyboard')

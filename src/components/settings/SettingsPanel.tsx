@@ -458,6 +458,12 @@ export function SettingsPanel({
               Every command the keyboard can run, with the key it answers to. Change captures your
               next keypress; keys the browser needs stay off limits.
             </p>
+            {keymap.openSearch === null && !('openSearch' in hotkeys) && (
+              <p className="mb-3 text-sm text-amber-700 dark:text-amber-400">
+                Search references is unbound because its default shortcut is already assigned.
+                Choose a shortcut below.
+              </p>
+            )}
             <div className="space-y-4">
               {HOTKEY_CATEGORIES.map((category) => (
                 <div key={category}>

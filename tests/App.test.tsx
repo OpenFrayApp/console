@@ -102,6 +102,29 @@ describe('App — when initiative reaches the log', () => {
 })
 
 describe('App — keyboard control', () => {
+  it('displays the rebound search shortcut and closes its reference back to the console', async () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: 'meta+u' } }))
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Search references' }).textContent).toContain('⌘+U')
+    fireEvent.click(screen.getByRole('button', { name: 'Show the compendium' }))
+    fireEvent.keyDown(document.body, { key: 'u', metaKey: true })
+    const search = screen.getByRole('combobox', { name: 'Search references' })
+    fireEvent.change(search, { target: { value: 'prone' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Prone/ }))
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeTruthy()
+  })
+
+  it('keeps the header button usable with search unbound and hides its hint', () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: null } }))
+    render(<App />)
+    const button = screen.getByRole('button', { name: 'Search references' })
+    expect(button.querySelector('kbd')).toBeNull()
+    fireEvent.click(button)
+    expect(screen.getByRole('combobox', { name: 'Search references' })).toBeTruthy()
+  })
+
   afterEach(() => {
     localStorage.clear()
     sessionStorage.clear()

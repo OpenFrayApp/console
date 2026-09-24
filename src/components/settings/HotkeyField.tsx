@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { chordOf, formatChord } from '../../state/hotkeys.ts'
 
-const GRAMMAR_NOTE = 'Use a key, alone or with Shift or Ctrl.'
+const GRAMMAR_NOTE = 'Use a key, alone or with Shift, Ctrl, or ⌘.'
 
 /**
  * One command's row in the Keyboard tab: the current chord, a Change button that

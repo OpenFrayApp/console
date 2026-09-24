@@ -79,6 +79,15 @@ describe('loadSrdCreatures', () => {
 })
 
 describe('loadLibraries', () => {
+  it('reports failed reference loads and retries them instead of caching an empty search', async () => {
+    const fetchMock = stubFetch('srd-creatures.json')
+    const srd = await freshSrd()
+    await expect(srd.loadLibraries(['srd-5.2'], { strict: true })).rejects.toThrow()
+    fetchMock.mockImplementation(async () => ({ json: async () => [{ id: 'recovered' }] }))
+    const result = await srd.loadLibraries(['srd-5.2'], { strict: true })
+    expect(result.creatures).toEqual([{ id: 'recovered' }])
+  })
+
   it('fetches only the named sources and shares their file cache with complete loads', async () => {
     const fetchMock = stubFetch()
     const srd = await freshSrd()

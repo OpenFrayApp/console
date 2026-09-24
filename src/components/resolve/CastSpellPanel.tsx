@@ -19,6 +19,7 @@ import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { LibraryPicker } from '../add/LibraryPicker.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { SpellCard } from '../statblock/SpellCard.tsx'
+import { Button } from '../ui/primitives.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnNote, OnRoll } from '../log/GameLog.tsx'
 import { spellLevelShort } from '../../compendium/format.ts'
@@ -67,6 +68,8 @@ export function CastSpellPanel({
   librarySort = 'name',
   openRequest,
   keyHint,
+  preparedSpell,
+  onClosed,
 }: {
   combatants: Combatant[]
   dispatch: (action: EncounterAction) => void
@@ -88,6 +91,9 @@ export function CastSpellPanel({
   openRequest?: number
   /** The keyboard chord, shown in the trigger's tooltip. */
   keyHint?: string
+  /** A search result stays read-only until the GM explicitly presses Cast. */
+  preparedSpell?: Spell
+  onClosed?: () => void
 }) {
   const [spells, setSpells] = useState<Spell[] | null>(null)
   const [spell, setSpell] = useState<Spell | null>(null)
@@ -103,6 +109,7 @@ export function CastSpellPanel({
   /** Drop the picked spell, returning to the Cast spell button. */
   const reset = () => {
     setSpell(null)
+    onClosed?.()
   }
 
   /** Start the chosen caster concentrating on the spell in hand, with its round timer. */
@@ -123,10 +130,51 @@ export function CastSpellPanel({
    * nothing to put on the board, which has taken hold the moment it's cast.
    */
   const pick = (s: Spell) => {
-    reset()
     setSpell(s)
     onNote(caster ? `${nameOf(caster)} casts ${s.name}` : `${s.name} is cast`, 'cast')
     if (s.concentration && landsOnCast(s)) concentrate(s)
+  }
+
+  const casterPicker = (
+    <select
+      value={caster ? casterId : ''}
+      onChange={(e) => setCasterId(e.target.value)}
+      aria-label="Caster"
+      className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+    >
+      <option value="">No caster (GM rolls)</option>
+      {CASTER_GROUPS.map(({ heading, members }) => {
+        const inGroup = combatants
+          .filter(members)
+          .sort((a, b) => nameOf(a).localeCompare(nameOf(b)))
+        return inGroup.length ? (
+          <optgroup key={heading} label={heading}>
+            {inGroup.map((c) => (
+              <option key={c.combatantId} value={c.combatantId}>
+                {nameOf(c)}
+              </option>
+            ))}
+          </optgroup>
+        ) : null
+      })}
+    </select>
+  )
+
+  if (!spell && preparedSpell) {
+    return (
+      <Modal title={preparedSpell.name} onClose={reset}>
+        <div className="space-y-3">
+          <SpellCard spell={preparedSpell} />
+          {casterPicker}
+          <Button onClick={() => pick(preparedSpell)} disabled={combatants.length === 0}>
+            Cast
+          </Button>
+          {combatants.length === 0 && (
+            <p className="text-sm text-slate-500">Add a combatant to cast this spell.</p>
+          )}
+        </div>
+      </Modal>
+    )
   }
 
   if (!spell) {
@@ -151,34 +199,7 @@ export function CastSpellPanel({
         onOpen={load}
         onPick={pick}
       >
-        <select
-          // Falls back to no caster when the prefilled one has left the board.
-          value={caster ? casterId : ''}
-          onChange={(e) => setCasterId(e.target.value)}
-          aria-label="Caster"
-          className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
-        >
-          <option value="">No caster (GM rolls)</option>
-          {/* Grouped and alphabetical, like the tracker beside it: initiative order is
-              what the board is for, and this is a list to find a name in. The two
-              groups split by disposition, not isPC, so a foe quick add sits with the
-              creatures — the same rule the tracker groups by. */}
-          {CASTER_GROUPS.map(({ heading, members }) => {
-            const inGroup = combatants
-              .filter(members)
-              .sort((a, b) => nameOf(a).localeCompare(nameOf(b)))
-            if (inGroup.length === 0) return null
-            return (
-              <optgroup key={heading} label={heading}>
-                {inGroup.map((c) => (
-                  <option key={c.combatantId} value={c.combatantId}>
-                    {nameOf(c)}
-                  </option>
-                ))}
-              </optgroup>
-            )
-          })}
-        </select>
+        {casterPicker}
       </LibraryPicker>
     )
   }

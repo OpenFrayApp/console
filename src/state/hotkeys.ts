@@ -3,8 +3,8 @@
 
 /**
  * The keyboard commands: what can be bound, the default chords, and the chord
- * grammar. A chord is one key, optionally with Shift and/or Ctrl; Meta and Alt
- * belong to the browser and the OS and are never consumed. Pure module — the
+ * grammar. A chord is one key, optionally with Shift, Ctrl, or Meta. Reserved
+ * browser and OS combinations stay untouched. Pure module — the
  * document listener lives in hooks/useHotkeys.ts, the rebinding UI in the
  * Settings panel's Keyboard tab.
  *
@@ -42,6 +42,7 @@ export type HotkeyCommandId =
   | 'focusDice'
   | 'openSettings'
   | 'showHotkeys'
+  | 'openSearch'
 
 /** One bindable command: its Settings/overlay label and where the list groups it. */
 export interface HotkeyCommand {
@@ -93,6 +94,7 @@ export const COMMANDS: readonly HotkeyCommand[] = [
   { id: 'focusDice', label: 'Focus the dice bar', category: 'Everywhere' },
   { id: 'openSettings', label: 'Settings', category: 'Everywhere' },
   { id: 'showHotkeys', label: 'Keyboard shortcuts', category: 'Everywhere' },
+  { id: 'openSearch', label: 'Search references', category: 'Everywhere' },
 ]
 
 export const DEFAULT_HOTKEYS: Record<HotkeyCommandId, string | null> = {
@@ -122,6 +124,10 @@ export const DEFAULT_HOTKEYS: Record<HotkeyCommandId, string | null> = {
   focusDice: '/',
   openSettings: ',',
   showHotkeys: '?',
+  openSearch:
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+      ? 'meta+k'
+      : 'ctrl+k',
 }
 
 // Enter and Space activate the focused control, Tab moves focus, and Escape
@@ -158,17 +164,22 @@ const RESERVED = new Set([
 
 /** Whether the browser keeps this chord for itself (never bindable, never resolved). */
 export function isReservedChord(chord: string): boolean {
-  return RESERVED.has(chord)
+  return (
+    RESERVED.has(chord) ||
+    (chord.startsWith('meta+') &&
+      (RESERVED.has(chord.replace('meta+', 'ctrl+')) ||
+        ['meta+a', 'meta+q', 'meta+h', 'meta+m', 'meta+shift+q'].includes(chord)))
+  )
 }
 
 /** The event's chord in canonical form, or null when it can't carry a command
- *  (Meta/Alt held, a bare modifier, or one of the unbindable keys). */
+ *  (Alt or combined Ctrl/Meta held, a bare modifier, or an unbindable key). */
 export function chordOf(e: KeyboardEvent): string | null {
-  if (e.metaKey || e.altKey) return null
+  if (e.altKey || (e.metaKey && e.ctrlKey)) return null
   const key = e.key
   if (key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta') return null
   if (UNBINDABLE.has(key)) return null
-  const ctrl = e.ctrlKey ? 'ctrl+' : ''
+  const ctrl = e.metaKey ? 'meta+' : e.ctrlKey ? 'ctrl+' : ''
   if (/^[a-zA-Z]$/.test(key)) {
     return `${ctrl}${e.shiftKey ? 'shift+' : ''}${key.toLowerCase()}`
   }
@@ -217,6 +228,10 @@ const KEY_NAMES: Record<string, string> = {
 export function formatChord(chord: string): string {
   let rest = chord
   const parts: string[] = []
+  if (rest.startsWith('meta+')) {
+    parts.push('⌘')
+    rest = rest.slice(5)
+  }
   if (rest.startsWith('ctrl+')) {
     parts.push('Ctrl')
     rest = rest.slice(5)
@@ -239,7 +254,7 @@ export function formatChord(chord: string): string {
 export function isValidChord(chord: string): boolean {
   if (typeof chord !== 'string' || chord.length === 0) return false
   let rest = chord
-  if (rest.startsWith('ctrl+')) rest = rest.slice(5)
+  if (rest.startsWith('ctrl+') || rest.startsWith('meta+')) rest = rest.slice(5)
   if (rest.startsWith('shift+') && rest.length > 6) {
     rest = rest.slice(6)
     // The shift prefix belongs to letters and named keys only.
