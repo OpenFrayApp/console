@@ -20,6 +20,38 @@ afterEach(() => {
 })
 
 it.each([
+  { width: 375, height: 812, labelVisible: false },
+  { width: 820, height: 1180, labelVisible: false },
+  { width: 1180, height: 820, labelVisible: false },
+  { width: 1279, height: 900, labelVisible: false },
+  { width: 1280, height: 900, labelVisible: true },
+  { width: 1800, height: 1000, labelVisible: true },
+  { width: 1280, height: 500, labelVisible: false },
+])(
+  'uses the shell search presentation at $width × $height',
+  async ({ width, height, labelVisible }) => {
+    await page.viewport(width, height)
+    render(createElement(App))
+    const trigger = screen.getByRole('button', { name: 'Search references' })
+    const label = screen.getByText('Search', { selector: 'span' })
+    expect(getComputedStyle(label).display !== 'none').toBe(labelVisible)
+    const hint = trigger.querySelector('kbd')
+    expect(hint).not.toBeNull()
+    expect(getComputedStyle(hint!).display !== 'none').toBe(labelVisible)
+    if (width === 1180) {
+      const add = screen.getByRole('button', { name: 'Add creature' })
+      const searchBox = trigger.getBoundingClientRect()
+      const addBox = add.getBoundingClientRect()
+      expect(searchBox.top + searchBox.height / 2).toBe(addBox.top + addBox.height / 2)
+    }
+    await userEvent.click(trigger)
+    expect(screen.getByRole('combobox', { name: 'Search references' })).toBeTruthy()
+    await userEvent.keyboard('{Escape}')
+    expect(document.activeElement).toBe(trigger)
+  },
+)
+
+it.each([
   { destination: 'Settings', dialog: 'Settings', close: 'Done', signedIn: false },
   { destination: 'Player view', dialog: 'Player view', close: null, signedIn: false },
   { destination: 'Profile', dialog: 'Account', close: 'Done', signedIn: true },

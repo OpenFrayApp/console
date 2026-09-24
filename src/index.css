@@ -16,16 +16,6 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Shortcut hints stay visible on portrait tablets without changing the swipe shell. */
-.search-key-hint {
-  display: none;
-}
-@media (min-width: 37.5rem) and (min-height: 32rem) {
-  .search-key-hint {
-    display: inline-flex;
-  }
-}
-
 /* The search row owns the focus boundary, keeping its input visually unboxed. */
 .quick-search-input:focus-within {
   box-shadow: inset 0 -2px 0 var(--color-indigo-500);

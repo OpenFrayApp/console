@@ -1705,9 +1705,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 }
               >
                 <SearchIcon className="h-4 w-4 shrink-0" />
-                <span className="search-key-hint">Search</span>
+                <span className="hidden wide:inline-flex">Search</span>
                 {hint('openSearch') && (
-                  <kbd className="search-key-hint ml-2 min-h-5 items-center justify-center rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-sm leading-none dark:border-slate-600 dark:bg-slate-800">
+                  <kbd className="ml-2 hidden min-h-5 items-center justify-center rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-sm leading-none wide:inline-flex dark:border-slate-600 dark:bg-slate-800">
                     {hint('openSearch')}
                   </kbd>
                 )}
