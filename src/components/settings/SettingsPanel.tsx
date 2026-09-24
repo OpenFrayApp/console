@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState } from 'react'
+import type { CreatureLabelStyle } from '../../combat/creatureLabels.ts'
 import {
   LIBRARIES,
   editionBadgeClass,
@@ -70,6 +71,7 @@ function ImporterLink({ href, children }: { href: string; children: string }) {
 /** The settings screen's tabs, in the order they're shown. */
 const TABS = [
   { key: 'libraries', label: 'Libraries' },
+  { key: 'tracker', label: 'Tracker' },
   { key: 'player-view', label: 'Player view' },
   { key: 'keyboard', label: 'Keyboard' },
   { key: 'importer', label: 'Importer' },
@@ -93,6 +95,8 @@ export function SettingsPanel({
   onSetShowHomebrew,
   librarySort,
   onSetLibrarySort,
+  creatureLabelStyle,
+  onSetCreatureLabelStyle,
   playerView,
   onSetPlayerView,
   hotkeys,
@@ -105,6 +109,8 @@ export function SettingsPanel({
   onSetShowHomebrew: (value: boolean) => void
   librarySort: LibrarySort
   onSetLibrarySort: (value: LibrarySort) => void
+  creatureLabelStyle: CreatureLabelStyle
+  onSetCreatureLabelStyle: (value: CreatureLabelStyle) => void
   playerView: PlayerViewSettings
   onSetPlayerView: (value: PlayerViewSettings) => void
   /** Keyboard chord overrides, laid over the defaults; null unbinds a command. */
@@ -151,7 +157,7 @@ export function SettingsPanel({
           <Button onClick={onClose}>Done</Button>
         </div>
 
-        <div role="tablist" aria-label="Settings" className="mb-4 flex gap-1">
+        <div role="tablist" aria-label="Settings" className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (
             <TabButton
               key={t.key}
@@ -255,6 +261,30 @@ export function SettingsPanel({
                 <option value="cr">Creature CR/Spell level</option>
               </select>
             </div>
+          </section>
+
+          <section
+            role="tabpanel"
+            aria-labelledby="settings-tab-tracker"
+            hidden={tab !== 'tracker'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
+            <SettingRow
+              id="creature-label-style"
+              label="Creature labels"
+              hint="Labels start with the second matching creature and stay unchanged afterward."
+            >
+              <select
+                id="creature-label-style"
+                value={creatureLabelStyle}
+                onChange={(e) => onSetCreatureLabelStyle(e.target.value as CreatureLabelStyle)}
+                className={SELECT}
+              >
+                <option value="numeric">Numeric</option>
+                <option value="roman">Roman numerals</option>
+                <option value="letters">Letters</option>
+              </select>
+            </SettingRow>
           </section>
 
           <section

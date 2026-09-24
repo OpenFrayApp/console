@@ -583,12 +583,21 @@ export function EncounterConsole({
                   liveSpeed={effectiveSpeeds(selected.creature.speed, selected.effects)}
                   concentration={selected.concentration}
                   label={selected.label}
+                  autoLabel={selected.autoLabel}
                   onRename={(label) => {
+                    if (label === selected.label) return
                     onRename(selected.label, label)
                     dispatch({
                       type: 'update',
                       id: selected.combatantId,
-                      update: (c) => (c.isPC ? c : { ...c, label }),
+                      update: (c) =>
+                        c.isPC
+                          ? c
+                          : {
+                              ...c,
+                              label,
+                              autoLabel: c.autoLabel ? { ...c.autoLabel, manual: true } : null,
+                            },
                     })
                   }}
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}

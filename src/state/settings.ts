@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import type { CreatureLabelStyle } from '../combat/creatureLabels.ts'
 import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
 import { sanitizeHotkeys } from './hotkeys.ts'
 import type { HotkeyCommandId } from './hotkeys.ts'
@@ -82,6 +83,8 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
 }
 
 export interface AppSettings {
+  /** Suffix style for newly added copies of a creature. */
+  creatureLabelStyle: CreatureLabelStyle
   /** Content library ids the compendium/picker show (see compendium/libraries.ts). */
   enabledLibraries: string[]
   /** Whether homebrew (custom) creations show in the compendium and pickers. On by default. */
@@ -160,6 +163,10 @@ function readPlayerView(value: unknown): PlayerViewSettings {
 export function loadSettings(): AppSettings {
   const data = read()
   return {
+    creatureLabelStyle:
+      data.creatureLabelStyle === 'roman' || data.creatureLabelStyle === 'letters'
+        ? data.creatureLabelStyle
+        : 'numeric',
     enabledLibraries: sanitizeEnabledLibraries(data.enabledLibraries),
     // On by default; only an explicit stored `false` hides homebrew.
     showHomebrew: data.showHomebrew !== false,
