@@ -67,9 +67,33 @@ export function canonicalGeneratedTypes(value) {
   throw new Error('Generated database types contain an incomplete public schema.')
 }
 
-/** Normalize a public-schema dump while excluding environment-owned webhook triggers. */
+/** Sort standalone pg_dump column declarations while retaining SQL literals and function bodies. */
+function canonicalTableColumns(value) {
+  const literals = []
+  const protectedSql = value.replace(
+    /'(?:''|\\.|[^'\\])*'|(\$(?:[A-Za-z_]\w*)?\$)[\s\S]*?\1/g,
+    (literal) => {
+      literals.push(literal)
+      return `\0${literals.length - 1}\0`
+    },
+  )
+  return protectedSql
+    .replace(
+      /^(CREATE TABLE (?:IF NOT EXISTS )?"public"\."(?:[^"]|"")*" \(\n)([\s\S]*?)(\n\);)/gm,
+      (statement, opening, body, closing) => {
+        const definitions = body.split('\n').map((line) => line.replace(/,$/, ''))
+        if (!definitions.every((line) => /^ {4}(?:"|CONSTRAINT )/.test(line))) return statement
+        const columns = definitions.filter((line) => line.startsWith('    "')).sort()
+        const constraints = definitions.filter((line) => !line.startsWith('    "'))
+        return opening + [...columns, ...constraints].join(',\n') + closing
+      },
+    )
+    .replace(/\0(\d+)\0/g, (_, index) => literals[Number(index)])
+}
+
+/** Compare named schema definitions while excluding environment-owned webhook triggers. */
 export function canonicalSchemaDump(value) {
-  return value
+  return canonicalTableColumns(value)
     .replace(
       /^\s*CREATE (?:OR REPLACE )?TRIGGER "(?:share-reports|takedown-notices)"[^\n]*\n/gm,
       '',
