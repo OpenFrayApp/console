@@ -23,6 +23,41 @@ function Harness({
 }
 
 describe('useHotkeys', () => {
+  it('preserves Select All and ordinary typing when search uses those keys', () => {
+    const openSearch = vi.fn()
+    const { getByLabelText, rerender } = render(
+      <Harness overrides={{ openSearch: 'ctrl+a', quickAdd: null }} handlers={{ openSearch }} />,
+    )
+    const input = getByLabelText('Typing surface')
+    expect(fireEvent.keyDown(input, { key: 'a', ctrlKey: true })).toBe(true)
+    expect(openSearch).not.toHaveBeenCalled()
+    fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true })
+    expect(openSearch).toHaveBeenCalledOnce()
+    rerender(<Harness overrides={{ openSearch: 'x' }} handlers={{ openSearch }} />)
+    fireEvent.keyDown(input, { key: 'x' })
+    expect(openSearch).toHaveBeenCalledOnce()
+  })
+
+  it('opens rebound search while typing, but not over a dialog or during composition', () => {
+    const openSearch = vi.fn()
+    const { getByLabelText, rerender } = render(
+      <Harness overrides={{ openSearch: 'meta+k' }} handlers={{ openSearch }} />,
+    )
+    const input = getByLabelText('Typing surface')
+    fireEvent.keyDown(input, { key: 'k', metaKey: true })
+    expect(openSearch).toHaveBeenCalledOnce()
+    fireEvent.keyDown(input, { key: 'k', metaKey: true, isComposing: true })
+    expect(openSearch).toHaveBeenCalledOnce()
+    input.setAttribute('role', 'dialog')
+    fireEvent.keyDown(input, { key: 'k', metaKey: true })
+    expect(openSearch).toHaveBeenCalledOnce()
+    input.removeAttribute('role')
+    rerender(<Harness overrides={{ openSearch: 'ctrl+q' }} handlers={{ openSearch }} />)
+    fireEvent.keyDown(input, { key: 'k', metaKey: true })
+    fireEvent.keyDown(input, { key: 'q', ctrlKey: true })
+    expect(openSearch).toHaveBeenCalledTimes(2)
+  })
+
   it('fires the bound handler and claims the event', () => {
     const nextTurn = vi.fn()
     render(<Harness handlers={{ nextTurn }} />)

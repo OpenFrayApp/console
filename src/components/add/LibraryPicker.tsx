@@ -3,20 +3,13 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Edition } from '../../schema/primitives.ts'
-import {
-  DEFAULT_ENABLED_LIBRARIES,
-  editionBadgeClass,
-  editionLabel,
-  inEnabledLibrary,
-  librarySource,
-  librarySourceBadgeClass,
-  libraryTag,
-} from '../../compendium/libraries.ts'
+import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary } from '../../compendium/libraries.ts'
 import { cx } from '../../lib/cx.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { popoverClass } from '../ui/popover.ts'
-import { Button, EntryBadges as Badges, type ButtonVariant } from '../ui/primitives.tsx'
+import { Button, type ButtonVariant } from '../ui/primitives.tsx'
+import { LibraryEntryBadges as EntryBadges } from '../ui/LibraryEntryBadges.tsx'
 
 /** The least a picker needs of a creature or spell: a label and its badges. */
 export interface LibraryEntry {
@@ -24,32 +17,6 @@ export interface LibraryEntry {
   name: string
   source: string
   edition?: Edition
-}
-
-/** True for a user-created entry (a `custom:` id) rather than a library one. */
-const isCustom = (e: LibraryEntry): boolean => e.id.startsWith('custom:')
-
-/** Custom / source / edition badges for one row, in the order the compendium uses. */
-function EntryBadges({ entry, showEdition }: { entry: LibraryEntry; showEdition: boolean }) {
-  // A custom entry carries its own edition and no source badge; a library entry
-  // takes both from its library.
-  const source = isCustom(entry) ? undefined : librarySource(entry.source)
-  const edition = showEdition
-    ? isCustom(entry)
-      ? entry.edition
-      : libraryTag(entry.source)
-    : undefined
-  return (
-    <>
-      <Badges
-        custom={isCustom(entry)}
-        source={source}
-        sourceTone={librarySourceBadgeClass(entry.source)}
-        edition={edition && editionLabel(edition)}
-        editionTone={edition && editionBadgeClass(edition)}
-      />
-    </>
-  )
 }
 
 /**

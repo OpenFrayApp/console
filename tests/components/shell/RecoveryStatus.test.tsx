@@ -2,21 +2,51 @@
 // Copyright (C) 2026 Nicola Mustone
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installNavigationWarning } from '../../../src/state/encounterLifecycle.ts'
 import { downloadRecoveryCopy } from '../../../src/state/recoveryDownload.ts'
 import { RecoveryStatus } from '../../../src/components/shell/RecoveryStatus.tsx'
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 describe('RecoveryStatus', () => {
-  it.each(['saving', 'saved', 'offline'] as const)('labels the %s durability state', (kind) => {
+  it.each([
+    ['saving', 'Saving', 'bg-amber-500'],
+    ['saved', 'Saved', 'bg-emerald-500'],
+    ['offline', 'Offline', 'bg-slate-400'],
+    ['sign-in', 'Sign in to resume saving', 'bg-slate-400'],
+    ['read-only', 'Saving elsewhere', 'bg-amber-500'],
+    ['conflict', 'Copies need attention', 'bg-red-500'],
+  ] as const)('shows only a colored dot for %s until hovered', (kind, label, color) => {
     render(<RecoveryStatus status={{ kind }} onRetry={vi.fn()} onDownload={vi.fn()} />)
 
-    expect(
-      screen.getByText({ saving: 'Saving', saved: 'Saved', offline: 'Offline' }[kind]),
-    ).toBeVisible()
+    const dot = screen.getByRole('button', { name: label })
+    expect(dot).toHaveTextContent('')
+    expect(dot.firstElementChild).toHaveClass(color)
+    expect(dot).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('status')).toHaveTextContent(label)
+    expect(screen.queryByText(label, { selector: 'p' })).toBeNull()
+    fireEvent.mouseEnter(dot)
+    expect(screen.getByText(label, { selector: 'p' })).toBeVisible()
+    fireEvent.mouseLeave(dot)
+    expect(dot).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('reveals the message on focus or tap and dismisses on Escape or outside press', () => {
+    render(<RecoveryStatus status={{ kind: 'saved' }} onRetry={vi.fn()} onDownload={vi.fn()} />)
+    const dot = screen.getByRole('button', { name: 'Saved' })
+    fireEvent.focus(dot)
+    expect(screen.getByText('Saved', { selector: 'p' })).toBeVisible()
+    fireEvent.keyDown(dot, { key: 'Escape' })
+    expect(dot).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(dot)
+    expect(dot).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.pointerDown(document.body)
+    expect(dot).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('offers retry and recovery download without hiding the failed state', () => {
@@ -30,8 +60,14 @@ describe('RecoveryStatus', () => {
       />,
     )
 
-    expect(screen.getByText('Save failed')).toBeVisible()
+    const dot = screen.getByRole('button', { name: 'Save failed' })
+    expect(dot.firstElementChild).toHaveClass('bg-red-500')
+    expect(screen.queryByRole('button', { name: 'Retry saving' })).toBeNull()
+    fireEvent.click(dot)
+    expect(screen.getByText('Save failed', { selector: 'p' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Retry saving' }))
+    expect(dot).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(dot)
     fireEvent.click(screen.getByRole('button', { name: 'Download recovery copy' }))
     expect(retry).toHaveBeenCalledOnce()
     expect(download).toHaveBeenCalledOnce()
@@ -86,7 +122,8 @@ describe('RecoveryStatus', () => {
       />,
     )
 
-    expect(screen.getByText('Saving elsewhere')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Saving elsewhere' }))
+    expect(screen.getByText('Saving elsewhere', { selector: 'p' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Take over saving' }))
     expect(takeOver).toHaveBeenCalledOnce()
   })
@@ -102,6 +139,7 @@ describe('RecoveryStatus', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Copies need attention' }))
     fireEvent.click(screen.getByRole('button', { name: 'Resolve copies' }))
     expect(resolve).toHaveBeenCalledOnce()
   })
@@ -118,6 +156,8 @@ describe('RecoveryStatus', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign in to resume saving' }))
+    expect(signIn).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(signIn).toHaveBeenCalledOnce()
   })
 })

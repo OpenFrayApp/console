@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth, type OAuthProvider } from '../../auth/useAuth.ts'
 import { Wordmark } from '../shell/Wordmark.tsx'
 import { track, EVENTS, type EventName } from '../../lib/analytics.ts'
@@ -65,35 +65,6 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className:
   },
 ]
 
-const BENEFITS: { title: string; body: string; icon: ReactNode }[] = [
-  {
-    title: 'Saved and synced',
-    body: 'Your encounter is saved as you play and follows you to your other devices. Close the laptop mid-round, pick it up next week.',
-    icon: <path d="M21 12a9 9 0 1 1-6.219-8.56M21 3v6h-6" />,
-  },
-  {
-    title: 'Custom creatures',
-    body: 'Build the creatures the books leave out, in a full stat-block editor, and keep them in your own library.',
-    icon: (
-      <path d="m14.5 17.5 4 4M11 3 8 6m0 0L3 11l3 3 5-5M8 6l3 3m6.5 1.5L21 7l-4-4-3.5 3.5m4 4-9 9-3-3 9-9" />
-    ),
-  },
-  {
-    title: 'Campaigns',
-    body: "Set your table's house rules once — critical hit damage, surprise, creature hit points — and they apply to every encounter.",
-    icon: (
-      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    ),
-  },
-  {
-    title: 'Your characters, kept',
-    body: 'Build each player character once, then drop them into any encounter. No retyping the party every week.',
-    icon: (
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-    ),
-  },
-]
-
 /**
  * The dedicated sign-in page. Signing in with a provider for the first time creates
  * the account automatically; the provider redirect carries the user away and back.
@@ -102,25 +73,10 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
   const { signInWithProvider } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<OAuthProvider | null>(null)
-  /**
-   * Whether the terms have been accepted. Creating an account is what accepts them, and this
-   * is where that happens, so it is asked before the handoff rather than after: past this
-   * button the next screen belongs to Google or Discord, and there is no moment left to ask.
-   */
-  const [agreed, setAgreed] = useState(false)
-  const agreeRef = useRef<HTMLInputElement>(null)
 
   /** Begin the provider's OAuth redirect; a failed handoff shows the error and re-enables. */
   const start = async (provider: OAuthProvider) => {
     if (busy) return
-    // Refused here rather than by a greyed-out button: a control that does nothing and says
-    // nothing leaves somebody hunting for what they missed. This names it and puts the cursor
-    // on it.
-    if (!agreed) {
-      setError('Accept the terms first, and this will take you to sign in.')
-      agreeRef.current?.focus()
-      return
-    }
     track(SIGN_IN_EVENT[provider])
     setError(null)
     setBusy(provider)
@@ -140,13 +96,13 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
       aria-label="Sign in"
       className="fixed inset-0 z-50 overflow-auto bg-white dark:bg-slate-950"
     >
-      <div className="mx-auto flex min-h-full max-w-5xl flex-col px-6 py-8">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto flex min-h-full max-w-3xl flex-col px-6 py-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div>
               <Wordmark
                 h1
-                className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:w-[28rem] lg:shrink-0 lg:pr-4"
+                className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
                 wordClassName="text-xl font-semibold tracking-tight"
               />
             </div>
@@ -154,84 +110,41 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
           <Button onClick={onClose}>Back to the console</Button>
         </div>
 
-        <div className="mt-10 grid flex-1 items-start gap-10 lg:grid-cols-[1fr_24rem]">
+        <div className="mx-auto mt-10 w-full max-w-md">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Sign in to keep your game
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Sign in
             </h2>
-            <p className="mt-2 max-w-xl text-slate-600 dark:text-slate-400">
-              OpenFray works without an account: the built-in creatures, your players, the dice, and
-              the whole tracker. Signing in saves what you build so it's still there next session.
+            <p className="mt-2 text-slate-600 dark:text-slate-400">
+              Sign in to save your encounters, characters, and custom creatures.
             </p>
-            <p className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
-              <span className="font-semibold">The console is free, and always will be.</span> No
-              ads, no paywall, no paid tier.
-            </p>
-            <ul className="mt-8 grid gap-5 sm:grid-cols-2">
-              {BENEFITS.map((b) => (
-                <li key={b.title} className="flex gap-3">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mt-0.5 h-6 w-6 shrink-0 text-indigo-600 dark:text-indigo-400"
-                    aria-hidden="true"
-                  >
-                    {b.icon}
-                  </svg>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{b.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{b.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Sign in</h3>
-            {/* Above the buttons, not below them in small print: it is a condition of pressing
-              one, and it reads as one where it sits. */}
-            <label
-              htmlFor="accept-terms"
-              className="mt-4 flex cursor-pointer items-start gap-2.5 text-sm text-slate-700 dark:text-slate-200"
+          <div className="mt-6">
+            <p
+              id="sign-in-terms"
+              className="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
             >
-              <input
-                ref={agreeRef}
-                id="accept-terms"
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => {
-                  setAgreed(e.target.checked)
-                  if (e.target.checked) setError(null)
-                }}
-                className="tap-area mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400 accent-indigo-600 dark:border-slate-600"
-              />
-              <span>
-                I agree to the{' '}
-                <a
-                  href="/terms"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-indigo-600 underline dark:text-indigo-400"
-                >
-                  Terms of Service
-                </a>{' '}
-                and the{' '}
-                <a
-                  href="/privacy"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-indigo-600 underline dark:text-indigo-400"
-                >
-                  Privacy Policy
-                </a>
-                . You must be 13 or older.
-              </span>
-            </label>
+              By continuing with Google or Discord, you agree to the{' '}
+              <a
+                href="/terms/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-indigo-600 underline dark:text-indigo-400"
+              >
+                Terms of Service
+              </a>
+              . Our{' '}
+              <a
+                href="/privacy/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-indigo-600 underline dark:text-indigo-400"
+              >
+                Privacy Policy
+              </a>{' '}
+              explains how we handle your personal data.
+            </p>
             <div className="mt-4 space-y-3">
               {PROVIDERS.map((p) => (
                 <button
@@ -239,17 +152,25 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
                   type="button"
                   onClick={() => start(p.id)}
                   disabled={busy !== null}
-                  className={`flex w-full items-center justify-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 ${p.className}`}
+                  aria-describedby="sign-in-terms"
+                  className={`tap flex w-full items-center justify-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 ${p.className}`}
                 >
                   {p.icon}
                   {busy === p.id ? 'Redirecting…' : p.label}
                 </button>
               ))}
-              {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+              {error && (
+                <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
+                  {error}
+                </p>
+              )}
             </div>
-            <p className="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
-              New here? Signing in creates your account for you. Nothing you've already done in this
-              tab is lost, and only you can see what you save.
+            <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+              First time here? Continuing creates a free account. Your current encounter stays on
+              the board.
+            </p>
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+              You must be at least 13 and meet your country’s minimum digital-consent age if higher.
             </p>
           </div>
         </div>

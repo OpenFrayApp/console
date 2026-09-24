@@ -34,6 +34,7 @@ import { makeSpellLinker } from '../../compendium/spelllinker.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { isRechargeable, rechargeStateOf, rollRecharge } from '../../combat/recharge.ts'
 import { acOf, isFoe, resolveSelected, trackerOrder } from '../../combat/combatant.ts'
+import type { TrackerColors } from '../../state/settings.ts'
 import { heldBack } from '../../combat/playerView.ts'
 import { rollWithEffects } from '../../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
@@ -98,6 +99,7 @@ export function EncounterConsole({
   hpEditRequest,
   concentrateRequest,
   keyHints,
+  trackerColors,
 }: {
   /**
    * What the board as a whole can do — saving it, handing it out. Rendered in the tracker's
@@ -106,6 +108,7 @@ export function EncounterConsole({
    */
   boardActions?: ReactNode
   encounter: Encounter
+  trackerColors?: TrackerColors
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
   /** Rolls the shared player view withholds — a creature's recharge and escape saves. */
@@ -371,6 +374,7 @@ export function EncounterConsole({
     <CombatantRow
       key={c.combatantId}
       combatant={c}
+      trackerColors={trackerColors}
       active={running && c.combatantId === activeId}
       selected={c.combatantId === selected?.combatantId}
       onSelect={() => {
@@ -583,12 +587,21 @@ export function EncounterConsole({
                   liveSpeed={effectiveSpeeds(selected.creature.speed, selected.effects)}
                   concentration={selected.concentration}
                   label={selected.label}
+                  autoLabel={selected.autoLabel}
                   onRename={(label) => {
+                    if (label === selected.label) return
                     onRename(selected.label, label)
                     dispatch({
                       type: 'update',
                       id: selected.combatantId,
-                      update: (c) => (c.isPC ? c : { ...c, label }),
+                      update: (c) =>
+                        c.isPC
+                          ? c
+                          : {
+                              ...c,
+                              label,
+                              autoLabel: c.autoLabel ? { ...c.autoLabel, manual: true } : null,
+                            },
                     })
                   }}
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}
@@ -724,7 +737,7 @@ export function EncounterConsole({
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 split:border-t-0 split:pt-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col pt-4 split:pt-0">
           <div className="mb-1 flex items-center justify-between">
             <h3 className={COLUMN_HEADING}>Game log</h3>
             {encounter.log.length > 0 && (

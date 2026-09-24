@@ -15,7 +15,7 @@ import { Button, IconButton } from '../ui/primitives.tsx'
  * What a Game Master can do with the board as a whole: keep it, and hand it out.
  *
  * Both sit in the tracker's bottom corner rather than the header, because they are about
- * the board rather than about the app — the same reason the broom and the skull sit with
+ * the board rather than about the app — the same reason the broom and the trash can sit with
  * it. Their cards open upward; there is nothing below them.
  *
  * Neither one lists anything. A saved fight is read in the compendium, under Encounters,

@@ -80,6 +80,34 @@ async function addCreature(name: string) {
 }
 
 describe('Encounter flow', () => {
+  it('applies and persists tracker color changes immediately and resets them', async () => {
+    localStorage.removeItem('openfray-settings')
+    try {
+      const { container } = render(<App />)
+      await addGoblin()
+      fireEvent.click(screen.getByRole('button', { name: 'Settings and more' }))
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
+      fireEvent.click(screen.getByRole('tab', { name: 'Tracker' }))
+      fireEvent.change(within(screen.getByRole('tabpanel')).getByLabelText('Creature color'), {
+        target: { value: '#123456' },
+      })
+      const row = container.querySelector('[data-combatant-row]') as HTMLElement
+      expect(row).toHaveStyle({ borderLeftColor: '#123456' })
+      expect(JSON.parse(localStorage.getItem('openfray-settings')!).trackerColors).toEqual({
+        creature: '#123456',
+        ally: null,
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Reset creature color' }))
+      expect(row.style.borderLeftColor).toBe('')
+      expect(JSON.parse(localStorage.getItem('openfray-settings')!).trackerColors).toEqual({
+        creature: null,
+        ally: null,
+      })
+    } finally {
+      localStorage.removeItem('openfray-settings')
+    }
+  })
+
   it('starts empty with Begin disabled', () => {
     render(<App />)
     expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
@@ -179,6 +207,64 @@ describe('Encounter flow', () => {
     const row = within(tracker).getByText('Goblin 2').closest('[data-combatant-row]') as HTMLElement
     const init = Number(row.querySelector('.w-7')?.textContent)
     expect(init).toBeGreaterThan(0) // Goblin's +2 init mod → d20+2, always ≥ 3
+    expect(within(tracker).getByText('Goblin 1')).toBeInTheDocument()
+    expect(screen.getByText('Goblin 2: initiative')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['roman', 'Goblin I', 'Goblin II', 'Goblin III'],
+    ['letters', 'Goblin A', 'Goblin B', 'Goblin C'],
+  ])(
+    'uses persisted %s labels and preserves survivors after removal',
+    async (style, first, second, third) => {
+      localStorage.setItem('openfray-settings', JSON.stringify({ creatureLabelStyle: style }))
+      try {
+        const { container } = render(<App />)
+        await addGoblin()
+        const tracker = container.querySelector('section') as HTMLElement
+        expect(within(tracker).getByText('Goblin')).toBeInTheDocument()
+        const picker = screen.getByLabelText('Search creatures').parentElement as HTMLElement
+        fireEvent.click(within(picker).getByText('Goblin'))
+        expect(within(tracker).getByText(first)).toBeInTheDocument()
+        expect(within(tracker).getByText(second)).toBeInTheDocument()
+        expect(screen.queryByText('(Goblin)')).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: `Remove ${first}` }))
+        expect(within(tracker).getByText(second)).toBeInTheDocument()
+        fireEvent.click(within(picker).getByText('Goblin'))
+        expect(within(tracker).getByText(third)).toBeInTheDocument()
+      } finally {
+        localStorage.removeItem('openfray-settings')
+      }
+    },
+  )
+
+  it('keeps automatic labeling after accepting an unchanged name', async () => {
+    const { container } = render(<App />)
+    await addGoblin()
+    fireEvent.click(screen.getByTitle('Rename — changes how it appears in the tracker'))
+    fireEvent.keyDown(screen.getByDisplayValue('Goblin'), { key: 'Enter' })
+    const picker = screen.getByLabelText('Search creatures').parentElement as HTMLElement
+    fireEvent.click(within(picker).getByText('Goblin'))
+    const tracker = container.querySelector('section') as HTMLElement
+    expect(within(tracker).getByText('Goblin 1')).toBeInTheDocument()
+    expect(within(tracker).getByText('Goblin 2')).toBeInTheDocument()
+  })
+
+  it('treats a name explicitly restored to its former automatic label as a manual name', async () => {
+    render(<App />)
+    await addGoblin()
+    const picker = screen.getByLabelText('Search creatures').parentElement as HTMLElement
+    fireEvent.click(within(picker).getByText('Goblin'))
+    for (const [from, to] of [
+      ['Goblin 2', 'Snik'],
+      ['Snik', 'Goblin 2'],
+    ]) {
+      fireEvent.click(screen.getByTitle('Rename — changes how it appears in the tracker'))
+      const input = screen.getByDisplayValue(from)
+      fireEvent.change(input, { target: { value: to } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+    }
+    expect(screen.getByText('(Goblin)')).toBeInTheDocument()
   })
 
   it('logs a quick roll', () => {

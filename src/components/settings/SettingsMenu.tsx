@@ -30,7 +30,7 @@ function GearIcon() {
 }
 
 /** Sliders icon — the Settings panel, distinct from the gear that opens this menu. */
-function SlidersIcon() {
+export function SlidersIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -79,7 +79,7 @@ function KeyboardIcon() {
 }
 
 /** Question mark in a circle — the handbook. */
-function HelpIcon() {
+export function HelpIcon() {
   return (
     <svg
       viewBox="0 0 24 24"

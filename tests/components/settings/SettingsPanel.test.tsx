@@ -3,15 +3,22 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { SettingsPanel } from '../../../src/components/settings/SettingsPanel.tsx'
-import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../../src/state/settings.ts'
+import {
+  DEFAULT_PLAYER_VIEW,
+  DEFAULT_TRACKER_COLORS,
+  type TrackerColors,
+  type PlayerViewSettings,
+} from '../../../src/state/settings.ts'
 import type { HotkeyCommandId } from '../../../src/state/hotkeys.ts'
 
 afterEach(cleanup)
 
+/** Render the settings panel with callbacks for each preference. */
 function renderPanel(
   over: {
+    trackerColors?: TrackerColors
     enabledLibraries?: string[]
     showHomebrew?: boolean
     librarySort?: 'name' | 'cr'
@@ -22,6 +29,8 @@ function renderPanel(
   const onSetEnabledLibraries = vi.fn()
   const onSetShowHomebrew = vi.fn()
   const onSetLibrarySort = vi.fn()
+  const onSetCreatureLabelStyle = vi.fn()
+  const onSetTrackerColors = vi.fn()
   const onSetPlayerView = vi.fn()
   const onSetHotkeys = vi.fn()
   render(
@@ -31,6 +40,10 @@ function renderPanel(
       onSetEnabledLibraries={onSetEnabledLibraries}
       showHomebrew={over.showHomebrew ?? true}
       onSetShowHomebrew={onSetShowHomebrew}
+      trackerColors={over.trackerColors ?? DEFAULT_TRACKER_COLORS}
+      onSetTrackerColors={onSetTrackerColors}
+      creatureLabelStyle="numeric"
+      onSetCreatureLabelStyle={onSetCreatureLabelStyle}
       librarySort={over.librarySort ?? 'name'}
       onSetLibrarySort={onSetLibrarySort}
       playerView={over.playerView ?? DEFAULT_PLAYER_VIEW}
@@ -43,6 +56,8 @@ function renderPanel(
     onSetEnabledLibraries,
     onSetShowHomebrew,
     onSetLibrarySort,
+    onSetCreatureLabelStyle,
+    onSetTrackerColors,
     onSetPlayerView,
     onSetHotkeys,
   }
@@ -51,7 +66,88 @@ function renderPanel(
 /** Open one of the settings tabs by its label. */
 const openTab = (label: string) => fireEvent.click(screen.getByRole('tab', { name: label }))
 
+describe('SettingsPanel — tracker colors', () => {
+  it('offers labeled native color pickers and preserves the other marker', () => {
+    const { onSetTrackerColors } = renderPanel({
+      trackerColors: { creature: '#123456', ally: '#abcdef' },
+    })
+    openTab('Tracker')
+    const panel = within(screen.getByRole('tabpanel'))
+    const creature = panel.getByLabelText('Creature color')
+    const ally = panel.getByLabelText('Ally color')
+    expect(creature).toHaveAttribute('type', 'color')
+    expect(creature).toHaveValue('#123456')
+    expect(ally).toHaveValue('#abcdef')
+    fireEvent.change(creature, { target: { value: '#654321' } })
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#654321', ally: '#abcdef' })
+    fireEvent.change(ally, { target: { value: '#fedcba' } })
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#123456', ally: '#fedcba' })
+    fireEvent.click(screen.getByRole('button', { name: 'Reset creature color' }))
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: null, ally: '#abcdef' })
+    fireEvent.click(screen.getByRole('button', { name: 'Reset ally color' }))
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#123456', ally: null })
+  })
+
+  it('shows default swatches and disables reset until a color is chosen', () => {
+    renderPanel()
+    openTab('Tracker')
+    const panel = within(screen.getByRole('tabpanel'))
+    expect(panel.getByLabelText('Creature color')).toHaveValue('#ff637e')
+    expect(panel.getByLabelText('Ally color')).toHaveValue('#00bcff')
+    expect(screen.getByRole('button', { name: 'Reset creature color' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset ally color' })).toBeDisabled()
+  })
+})
+
+describe('SettingsPanel — creature labels', () => {
+  it('offers numeric, Roman, and letter labels in the tracker settings', () => {
+    const { onSetCreatureLabelStyle } = renderPanel()
+    openTab('Tracker')
+    const select = screen.getByLabelText('Creature labels')
+    expect((select as HTMLSelectElement).value).toBe('numeric')
+    fireEvent.change(select, { target: { value: 'roman' } })
+    expect(onSetCreatureLabelStyle).toHaveBeenLastCalledWith('roman')
+    fireEvent.change(select, { target: { value: 'letters' } })
+    expect(onSetCreatureLabelStyle).toHaveBeenLastCalledWith('letters')
+  })
+})
+
 describe('SettingsPanel — the player view', () => {
+  it('follows tracker colors by default and writes player-view overrides only', () => {
+    const { onSetPlayerView, onSetTrackerColors } = renderPanel({
+      trackerColors: { creature: '#123456', ally: '#abcdef' },
+    })
+    openTab('Player view')
+    const panel = within(screen.getByRole('tabpanel'))
+    expect(panel.getByLabelText('Creature color')).toHaveValue('#123456')
+    expect(panel.getByLabelText('Ally color')).toHaveValue('#abcdef')
+    expect(panel.getAllByText('Follows Tracker')).toHaveLength(2)
+    expect(panel.getByRole('button', { name: 'Reset creature color' })).toBeDisabled()
+    fireEvent.change(panel.getByLabelText('Creature color'), { target: { value: '#654321' } })
+    expect(onSetPlayerView).toHaveBeenLastCalledWith({
+      ...DEFAULT_PLAYER_VIEW,
+      colors: { creature: '#654321', ally: null },
+    })
+    expect(onSetTrackerColors).not.toHaveBeenCalled()
+  })
+
+  it('resets one player-view override to follow Tracker without changing the other', () => {
+    const playerView = { ...DEFAULT_PLAYER_VIEW, colors: { creature: '#654321', ally: '#fedcba' } }
+    const { onSetPlayerView } = renderPanel({
+      playerView,
+      trackerColors: { creature: '#123456', ally: '#abcdef' },
+    })
+    openTab('Player view')
+    const panel = within(screen.getByRole('tabpanel'))
+    expect(panel.getByLabelText('Creature color')).toHaveValue('#654321')
+    expect(panel.getAllByText('Custom player-view color')).toHaveLength(2)
+    fireEvent.click(panel.getByRole('button', { name: 'Reset creature color' }))
+    expect(onSetPlayerView).toHaveBeenLastCalledWith({
+      ...playerView,
+      colors: { creature: null, ally: '#fedcba' },
+    })
+  })
+
   it('shows a creature`s rolls by default', () => {
     renderPanel()
     openTab('Player view')
@@ -68,9 +164,11 @@ describe('SettingsPanel — the player view', () => {
   it('keeps the rolls description behind its ? until asked', () => {
     renderPanel()
     openTab('Player view')
-    // Nothing spelled out until the GM asks; the first hinted row is Creature rolls.
     expect(screen.queryByText(/keeps whether it hit or saved/)).toBeNull()
-    fireEvent.mouseEnter(screen.getAllByRole('button', { name: 'What this does' })[0])
+    const label = screen.getByText('Creature rolls', { selector: 'label' })
+    fireEvent.mouseEnter(
+      within(label.parentElement!).getByRole('button', { name: 'What this does' }),
+    )
     expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
   })
 
@@ -181,6 +279,12 @@ describe('SettingsPanel', () => {
 })
 
 describe('SettingsPanel — the keyboard', () => {
+  it('explains when a previous binding already owns the search shortcut', () => {
+    renderPanel({ hotkeys: { nextTurn: 'ctrl+k' } })
+    openTab('Keyboard')
+    expect(screen.getByText(/Search references is unbound because/)).toBeVisible()
+  })
+
   it('lists every command with its current key', () => {
     renderPanel()
     openTab('Keyboard')

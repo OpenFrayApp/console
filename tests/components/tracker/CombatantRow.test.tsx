@@ -22,6 +22,34 @@ function pc(overrides: Partial<PlayerCharacter> = {}): PlayerCharacter {
 afterEach(cleanup)
 
 describe('CombatantRow', () => {
+  it('keeps theme-aware default marker colors', () => {
+    const { container, rerender } = render(<CombatantRow combatant={monster()} />)
+    const row = container.querySelector('[data-combatant-row]')!
+    expect(row).toHaveClass('border-l-rose-400', 'dark:border-l-rose-500')
+    expect((row as HTMLElement).style.borderLeftColor).toBe('')
+    rerender(<CombatantRow combatant={pc()} />)
+    expect(row).toHaveClass('border-l-sky-400', 'dark:border-l-sky-500')
+  })
+
+  it('updates markers immediately, follows allegiance, and resets without changing row states', () => {
+    const trackerColors = { creature: '#123456', ally: '#abcdef' }
+    const { container, rerender } = render(
+      <CombatantRow combatant={monster()} trackerColors={trackerColors} active selected />,
+    )
+    const row = container.querySelector('[data-combatant-row]')!
+    expect(row).toHaveStyle({ borderLeftColor: '#123456' })
+    expect(row).toHaveAttribute('aria-current', 'true')
+    expect(row).toHaveClass('bg-indigo-50', 'ring-2')
+    rerender(<CombatantRow combatant={monster({ side: 'friend' })} trackerColors={trackerColors} />)
+    expect(row).toHaveStyle({ borderLeftColor: '#abcdef' })
+    rerender(
+      <CombatantRow combatant={pc()} trackerColors={{ ...trackerColors, ally: '#654321' }} />,
+    )
+    expect(row).toHaveStyle({ borderLeftColor: '#654321' })
+    rerender(<CombatantRow combatant={pc()} />)
+    expect((row as HTMLElement).style.borderLeftColor).toBe('')
+  })
+
   it('shows the name, HP, and AC', () => {
     render(<CombatantRow combatant={monster()} />)
     expect(screen.getByText('Goblin (A)')).toBeInTheDocument()

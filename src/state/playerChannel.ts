@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase.ts'
 import { uid } from '../lib/uid.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { PlayerViewSettings } from './settings.ts'
+import { DEFAULT_TRACKER_COLORS, type TrackerColors } from '../schema/trackerColors.ts'
 import { playerBoard, type PlayerBoard, type PlayerRecap } from '../combat/playerView.ts'
 import {
   INITIAL_PLAYER_FRESHNESS_STATE,
@@ -79,6 +80,7 @@ export function useBoardBroadcast(
   gm?: string,
   pin: string | null = null,
   background?: string,
+  trackerColors: TrackerColors = DEFAULT_TRACKER_COLORS,
 ): void {
   const channel = useRef<RealtimeChannel | null>(null)
   const latest = useRef<PlayerBoard | null>(null)
@@ -177,7 +179,13 @@ export function useBoardBroadcast(
       latest.current = null
       return
     }
-    const board = playerBoard(encounter, settings, recap, { campaign, gm, background })
+    const board = playerBoard(
+      encounter,
+      settings,
+      recap,
+      { campaign, gm, background },
+      trackerColors,
+    )
     latest.current = board
     const handle = setTimeout(() => {
       if (!channel.current) return
@@ -187,7 +195,7 @@ export function useBoardBroadcast(
       })
     }, SEND_DEBOUNCE_MS)
     return () => clearTimeout(handle)
-  }, [session, encounter, settings, recap, campaign, gm, background])
+  }, [session, encounter, settings, recap, campaign, gm, background, trackerColors])
 }
 
 export type PlayerLinkStatus =

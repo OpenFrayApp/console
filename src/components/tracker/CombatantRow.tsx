@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useRef } from 'react'
+import { DEFAULT_TRACKER_COLORS, type TrackerColors } from '../../state/settings.ts'
 import type { Combatant } from '../../schema/combatant.ts'
 import { effectiveMaxHp, hpTier } from '../../combat/resources.ts'
 import { acOf, isFoe, nameOf } from '../../combat/combatant.ts'
@@ -18,6 +19,7 @@ export type ReorderDirection = 'earlier' | 'later'
 
 interface CombatantRowProps {
   combatant: Combatant
+  trackerColors?: TrackerColors
   /** Whose turn it is (the initiative cursor). */
   active?: boolean
   /** The row the GM has selected to inspect in the detail panel. */
@@ -54,6 +56,7 @@ interface CombatantRowProps {
  */
 export function CombatantRow({
   combatant,
+  trackerColors = DEFAULT_TRACKER_COLORS,
   active = false,
   selected = false,
   onSelect,
@@ -80,6 +83,10 @@ export function CombatantRow({
       ref={rowRef}
       aria-current={active ? 'true' : undefined}
       data-combatant-row=""
+      style={{
+        borderLeftColor:
+          (isFoe(combatant) ? trackerColors.creature : trackerColors.ally) ?? undefined,
+      }}
       onClick={onSelect}
       // The whole list is the drop zone; each row reports when the drag hovers it so
       // the parent can move the dragged row here as a live preview.

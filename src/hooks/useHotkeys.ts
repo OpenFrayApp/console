@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useEffect, useRef } from 'react'
-import { chordOf, commandForChord, COMMANDS } from '../state/hotkeys.ts'
+import { chordOf, commandForChord, COMMANDS, isReservedChord } from '../state/hotkeys.ts'
 import type { HotkeyCommandId } from '../state/hotkeys.ts'
 import { track, EVENTS } from '../lib/analytics.ts'
 
@@ -19,7 +19,7 @@ function isTypingSurface(target: EventTarget | null): boolean {
 /**
  * The console's keyboard commands: one document-level keydown that maps chords to
  * the App's own handlers. It stands down while the GM is typing, while any dialog
- * or menu is open, and for every Meta/Alt combination; an unbound Ctrl chord falls
+ * or menu is open, except search may open while typing. An unbound chord falls
  * through to the browser untouched.
  */
 export function useHotkeys(
@@ -36,15 +36,21 @@ export function useHotkeys(
   useEffect(() => {
     /** Route one keydown to its command, if the board should hear it. */
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return
+      if (e.defaultPrevented || e.isComposing) return
       const chord = chordOf(e)
-      if (chord === null) return
-      if (isTypingSurface(e.target)) return
+      if (chord === null || isReservedChord(chord)) return
       // A dialog or menu owns the keyboard while it's up. Popovers autofocus an
       // input, so the typing guard covers them.
       if (document.querySelector('[role="dialog"], [role="menu"]')) return
       const command = commandForChord(bindingsRef.current, chord)
       if (command === null) return
+      if (isTypingSurface(e.target)) {
+        if (command !== 'openSearch') return
+        // Rebound letters and editing keys still belong to the text field.
+        if (!(e.ctrlKey || e.metaKey) && !/^F\d+$/.test(e.key)) return
+        if (/^(?:ctrl|meta)\+(?:shift\+)?(?:a|Arrow\w+|Home|End|Backspace|Delete)$/.test(chord))
+          return
+      }
       if (e.repeat && !REPEATING.has(command)) return
       const handler = handlersRef.current[command]
       if (!handler) return

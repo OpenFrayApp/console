@@ -9,7 +9,52 @@ import { DEFAULT_ENABLED_LIBRARIES } from '../../src/compendium/libraries.ts'
 beforeEach(() => localStorage.clear())
 afterEach(() => localStorage.clear())
 
+describe('tracker colors', () => {
+  it('uses theme defaults for new and existing preferences', () => {
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+  })
+
+  it('persists colors independently of other settings and restores defaults', () => {
+    saveSettings({ trackerColors: { creature: '#123456', ally: '#ABCDEF' } })
+    saveSettings({ creatureLabelStyle: 'roman' })
+    expect(loadSettings().trackerColors).toEqual({ creature: '#123456', ally: '#ABCDEF' })
+    saveSettings({ trackerColors: { creature: null, ally: null } })
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+    expect(loadSettings().creatureLabelStyle).toBe('roman')
+  })
+
+  it.each(['red', '#abc', '#12345678', 'var(--color)', '', 42, {}, null])(
+    'rejects an invalid stored color %j without losing the valid color',
+    (creature) => {
+      localStorage.setItem(
+        'openfray-settings',
+        JSON.stringify({ trackerColors: { creature, ally: '#123456' } }),
+      )
+      expect(loadSettings().trackerColors).toEqual({ creature: null, ally: '#123456' })
+    },
+  )
+
+  it.each([null, [], 'bad', 42])('handles malformed stored preferences %j', (trackerColors) => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ trackerColors }))
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+  })
+})
+
 describe('app settings (localStorage)', () => {
+  it('defaults creature labels to numeric and rejects unknown styles', () => {
+    expect(loadSettings().creatureLabelStyle).toBe('numeric')
+    localStorage.setItem('openfray-settings', JSON.stringify({ creatureLabelStyle: 'bogus' }))
+    expect(loadSettings().creatureLabelStyle).toBe('numeric')
+  })
+
+  it.each(['numeric', 'roman', 'letters'] as const)('persists %s creature labels', (style) => {
+    saveSettings({ creatureLabelStyle: style })
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().creatureLabelStyle).toBe(style)
+  })
+
   it('falls back to the default libraries when nothing is stored', () => {
     expect(loadSettings().enabledLibraries).toEqual(DEFAULT_ENABLED_LIBRARIES)
   })
@@ -47,6 +92,23 @@ describe('app settings (localStorage)', () => {
 })
 
 describe('player-view settings', () => {
+  it('persists player-view overrides separately and defaults missing or invalid colors to inheritance', () => {
+    expect(loadSettings().playerView.colors).toEqual({ creature: null, ally: null })
+    saveSettings({ trackerColors: { creature: '#123456', ally: '#abcdef' } })
+    saveSettings({
+      playerView: { ...DEFAULT_PLAYER_VIEW, colors: { creature: '#654321', ally: null } },
+    })
+    expect(loadSettings().playerView.colors).toEqual({ creature: '#654321', ally: null })
+    expect(loadSettings().trackerColors).toEqual({ creature: '#123456', ally: '#abcdef' })
+    localStorage.setItem(
+      'openfray-settings',
+      JSON.stringify({
+        playerView: { colors: { creature: 'url(https://example.com)', ally: '#123456' } },
+      }),
+    )
+    expect(loadSettings().playerView.colors).toEqual({ creature: null, ally: '#123456' })
+  })
+
   it('holds a creature to a wound word and keeps its armor class off the screen', () => {
     expect(loadSettings().playerView).toEqual(DEFAULT_PLAYER_VIEW)
   })

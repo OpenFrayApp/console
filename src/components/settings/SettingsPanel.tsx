@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { useState } from 'react'
+import type { CreatureLabelStyle } from '../../combat/creatureLabels.ts'
 import {
   LIBRARIES,
   editionBadgeClass,
@@ -9,9 +10,15 @@ import {
   librarySourceBadgeClass,
 } from '../../compendium/libraries.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
-import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../../state/settings.ts'
+import {
+  type TrackerColors,
+  type LibrarySort,
+  type PlayerLogScope,
+  type PlayerViewSettings,
+} from '../../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../../schema/combatant.ts'
 import { Badge, Button, CUSTOM_TONE, TabButton } from '../ui/primitives.tsx'
+import { TrackerColorFields } from './TrackerColorFields.tsx'
 import { HotkeyField } from './HotkeyField.tsx'
 import { SettingRow } from './SettingRow.tsx'
 import {
@@ -70,6 +77,7 @@ function ImporterLink({ href, children }: { href: string; children: string }) {
 /** The settings screen's tabs, in the order they're shown. */
 const TABS = [
   { key: 'libraries', label: 'Libraries' },
+  { key: 'tracker', label: 'Tracker' },
   { key: 'player-view', label: 'Player view' },
   { key: 'keyboard', label: 'Keyboard' },
   { key: 'importer', label: 'Importer' },
@@ -93,6 +101,10 @@ export function SettingsPanel({
   onSetShowHomebrew,
   librarySort,
   onSetLibrarySort,
+  creatureLabelStyle,
+  onSetCreatureLabelStyle,
+  trackerColors,
+  onSetTrackerColors,
   playerView,
   onSetPlayerView,
   hotkeys,
@@ -105,6 +117,10 @@ export function SettingsPanel({
   onSetShowHomebrew: (value: boolean) => void
   librarySort: LibrarySort
   onSetLibrarySort: (value: LibrarySort) => void
+  trackerColors: TrackerColors
+  onSetTrackerColors: (value: TrackerColors) => void
+  creatureLabelStyle: CreatureLabelStyle
+  onSetCreatureLabelStyle: (value: CreatureLabelStyle) => void
   playerView: PlayerViewSettings
   onSetPlayerView: (value: PlayerViewSettings) => void
   /** Keyboard chord overrides, laid over the defaults; null unbinds a command. */
@@ -151,7 +167,7 @@ export function SettingsPanel({
           <Button onClick={onClose}>Done</Button>
         </div>
 
-        <div role="tablist" aria-label="Settings" className="mb-4 flex gap-1">
+        <div role="tablist" aria-label="Settings" className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (
             <TabButton
               key={t.key}
@@ -259,6 +275,33 @@ export function SettingsPanel({
 
           <section
             role="tabpanel"
+            aria-labelledby="settings-tab-tracker"
+            hidden={tab !== 'tracker'}
+            className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          >
+            <SettingRow
+              id="creature-label-style"
+              label="Creature labels"
+              hint="Labels start with the second matching creature and stay unchanged afterward."
+            >
+              <select
+                id="creature-label-style"
+                value={creatureLabelStyle}
+                onChange={(e) => onSetCreatureLabelStyle(e.target.value as CreatureLabelStyle)}
+                className={SELECT}
+              >
+                <option value="numeric">Numeric</option>
+                <option value="roman">Roman numerals</option>
+                <option value="letters">Letters</option>
+              </select>
+            </SettingRow>
+            <div className="mt-3">
+              <TrackerColorFields colors={trackerColors} onChange={onSetTrackerColors} />
+            </div>
+          </section>
+
+          <section
+            role="tabpanel"
             aria-labelledby="settings-tab-player-view"
             hidden={tab !== 'player-view'}
             className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
@@ -268,6 +311,11 @@ export function SettingsPanel({
               Their own characters always show in full.
             </p>
             <div className="space-y-3">
+              <TrackerColorFields
+                colors={playerView.colors}
+                inherited={trackerColors}
+                onChange={(colors) => onSetPlayerView({ ...playerView, colors })}
+              />
               <SettingRow id="player-view-hp" label="Creature hit points">
                 <select
                   id="player-view-hp"
@@ -458,6 +506,12 @@ export function SettingsPanel({
               Every command the keyboard can run, with the key it answers to. Change captures your
               next keypress; keys the browser needs stay off limits.
             </p>
+            {keymap.openSearch === null && !('openSearch' in hotkeys) && (
+              <p className="mb-3 text-sm text-amber-700 dark:text-amber-400">
+                Search references is unbound because its default shortcut is already assigned.
+                Choose a shortcut below.
+              </p>
+            )}
             <div className="space-y-4">
               {HOTKEY_CATEGORIES.map((category) => (
                 <div key={category}>

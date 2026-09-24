@@ -81,6 +81,23 @@ describe('PlayerView — before a board arrives', () => {
 })
 
 describe('PlayerView — live', () => {
+  it('renders received marker colors and restores theme defaults on the next board', () => {
+    link.status = 'live'
+    link.board = board({ colors: { creature: '#123456', ally: '#abcdef' } })
+    const { rerender } = render(<PlayerView code="x" />)
+    const ally = screen.getByText('Thalia').closest('li')!
+    const foe = document.querySelector('li[aria-current="true"]')!
+    expect(ally).toHaveStyle({ borderLeftColor: '#abcdef' })
+    expect(foe).toHaveStyle({ borderLeftColor: '#123456' })
+    expect(foe).toHaveClass('bg-indigo-50')
+    link.board = board()
+    rerender(<PlayerView code="x" />)
+    expect((ally as HTMLElement).style.borderLeftColor).toBe('')
+    expect(ally).toHaveClass('border-l-sky-400', 'dark:border-l-sky-500')
+    expect((foe as HTMLElement).style.borderLeftColor).toBe('')
+    expect(foe).toHaveClass('border-l-rose-400', 'dark:border-l-rose-500')
+  })
+
   it('shows the round, whose turn it is, and the tracker', () => {
     link.status = 'live'
     link.board = board()

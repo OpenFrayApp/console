@@ -7,6 +7,7 @@ import type { InitiativeTiebreak } from '../schema/campaign.ts'
 import type { Edition } from '../schema/primitives.ts'
 import { beginEncounter, nextTurn, previousTurn, sortByInitiative } from '../combat/initiative.ts'
 import { isFoe, nameOf } from '../combat/combatant.ts'
+import { appendLabeledCreature, type CreatureLabelStyle } from '../combat/creatureLabels.ts'
 import { counterOf, endsOnRoll, survivesLongRest } from '../combat/effects.ts'
 import { clampLevel, exhaustionLevel, withExhaustion } from '../combat/exhaustion.ts'
 import { effectiveMaxHp, setCurrentHp } from '../combat/resources.ts'
@@ -31,7 +32,13 @@ export type EncounterAction =
   | { type: 'nextTurn' }
   /** Step back to the previous turn — a mis-click correction, not an undo of its ticks. */
   | { type: 'prevTurn' }
-  | { type: 'add'; combatant: Combatant; tiebreak?: InitiativeTiebreak }
+  | {
+      type: 'add'
+      combatant: Combatant
+      tiebreak?: InitiativeTiebreak
+      labelStyle?: CreatureLabelStyle
+      initiativeRoll?: NewLogEntry
+    }
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; update: (c: Combatant) => Combatant }
   /** End `id`'s concentration and clear the effects it was sustaining, board-wide. */
@@ -334,8 +341,22 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
 
     case 'add': {
       const keepActive = activeId(state)
-      const combatants = sortByInitiative([...state.combatants, action.combatant], action.tiebreak)
-      return { ...state, combatants, activeIndex: indexOfId(combatants, keepActive) }
+      const additions = action.labelStyle
+        ? appendLabeledCreature(state.combatants, action.combatant, action.labelStyle)
+        : [...state.combatants, action.combatant]
+      const combatants = sortByInitiative(additions, action.tiebreak)
+      const next = { ...state, combatants, activeIndex: indexOfId(combatants, keepActive) }
+      const added = additions[additions.length - 1]
+      return action.initiativeRoll
+        ? withLogs(next, [
+            {
+              ...action.initiativeRoll,
+              message: action.initiativeRoll.message.replace(nameOf(action.combatant), () =>
+                nameOf(added),
+              ),
+            },
+          ])
+        : next
     }
 
     case 'remove': {

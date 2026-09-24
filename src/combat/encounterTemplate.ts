@@ -10,7 +10,8 @@ import {
   type TemplateEntry,
 } from '../schema/encounterTemplate.ts'
 import { projectCreature } from '../schema/creatureInput.ts'
-import { autoLabel, instantiate, isAutoLabel, isFoe } from './combatant.ts'
+import { instantiate, isAutoLabel, isFoe } from './combatant.ts'
+import { appendLabeledCreature, type CreatureLabelStyle } from './creatureLabels.ts'
 import { resolveMaxHp } from './hp.ts'
 import { bylineShapeError } from '../lib/byline.ts'
 import { isContentLicense, mayCopy } from '../schema/license.ts'
@@ -65,7 +66,9 @@ export function templateEntries(combatants: readonly Combatant[]): TemplateEntry
     const monster: MonsterCombatant = c
     const key = `m|${monster.creatureId}|${side}|${monster.inLair ? 'lair' : ''}`
     const found = entries.get(key)
-    const typed = isAutoLabel(monster.label, monster.creature.name) ? null : monster.label
+    const typed = isAutoLabel(monster.label, monster.creature.name, monster.autoLabel)
+      ? null
+      : monster.label
     if (found) {
       found.count += 1
       if (typed) found.labels = [...(found.labels ?? []), typed]
@@ -187,7 +190,11 @@ export function castSummary(combatants: readonly Combatant[]): CastLine[] {
   for (const c of combatants) {
     const side = sideOf(c)
     const kind: CastLine['kind'] = !c.isPC ? 'creature' : c.kind === 'quick' ? 'quick' : 'party'
-    const name = c.isPC ? c.name : isAutoLabel(c.label, c.creature.name) ? c.creature.name : c.label
+    const name = c.isPC
+      ? c.name
+      : isAutoLabel(c.label, c.creature.name, c.autoLabel)
+        ? c.creature.name
+        : c.label
     const key = `${kind}|${name}|${side}`
     const found = lines.get(key)
     if (found) found.count += 1
@@ -235,17 +242,13 @@ export function templateToCombatants(
   opts: {
     creatures: readonly Creature[]
     hpMethod: HpMethod
+    labelStyle?: CreatureLabelStyle
     existing?: readonly Combatant[]
   },
 ): { combatants: Combatant[]; missing: string[] } {
   const library = new Map(opts.creatures.map((c) => [c.id, c]))
-  const onBoard = new Map<string, number>()
-  for (const c of opts.existing ?? []) {
-    if (c.isPC) continue
-    onBoard.set(c.creatureId, (onBoard.get(c.creatureId) ?? 0) + 1)
-  }
-
-  const combatants: Combatant[] = []
+  const existing = opts.existing ?? []
+  let combatants: Combatant[] = []
   const missing: string[] = []
   for (const entry of template.entries) {
     if (combatants.length >= LIMITS.combatants) break
@@ -264,19 +267,22 @@ export function templateToCombatants(
       continue
     }
     for (let i = 0; i < count && combatants.length < LIMITS.combatants; i++) {
-      const already = onBoard.get(creature.id) ?? 0
-      onBoard.set(creature.id, already + 1)
       const monster = instantiate(creature, {
         combatantId: crypto.randomUUID(),
         initiative: 0,
-        label: entry.labels?.[i] ?? autoLabel(creature.name, already),
+        label: entry.labels?.[i] ?? creature.name,
         maxHp: resolveMaxHp(creature, opts.hpMethod),
       })
-      combatants.push({
-        ...monster,
-        side: entry.side,
-        ...(entry.inLair ? { inLair: true } : {}),
-      })
+      combatants = appendLabeledCreature(
+        [...existing, ...combatants],
+        {
+          ...monster,
+          ...(entry.labels?.[i] != null ? { autoLabel: null } : {}),
+          side: entry.side,
+          ...(entry.inLair ? { inLair: true } : {}),
+        },
+        opts.labelStyle ?? 'numeric',
+      ).slice(existing.length)
     }
   }
   return { combatants, missing }

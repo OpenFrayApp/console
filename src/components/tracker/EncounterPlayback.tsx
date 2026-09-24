@@ -91,17 +91,14 @@ const BroomIcon = () => (
     strokeLinejoin="round"
     aria-hidden="true"
   >
-    {/* handle */}
-    <path d="M20 4 12 12" />
-    {/* bristle head (bound at the top, flaring to the sweeping edge) */}
-    <path d="M9.5 9.5 14.5 14.5 8 21 2.5 15.5Z" />
-    {/* bristle lines */}
-    <path d="M11 11 5 17" />
-    <path d="M12.5 12.5 6.5 18.5" />
+    <path d="m21 3-9 9" />
+    <path d="m10 10 4 4-2 2-4-4Z" />
+    <path d="M8 12c-3 1-4 4-5 7l2 2c3-1 6-2 7-5" />
+    <path d="m8 16-3 5m5-3-2 2" />
   </svg>
 )
-/** Skull icon (clear everyone from the board). */
-const SkullIcon = () => (
+/** Trash icon (clear everyone from the board). */
+const TrashIcon = () => (
   <svg
     viewBox="0 0 24 24"
     className="h-4 w-4"
@@ -112,19 +109,13 @@ const SkullIcon = () => (
     strokeLinejoin="round"
     aria-hidden="true"
   >
-    {/* cranium + jaw */}
-    <path d="M12 2.5c-4.4 0-7.5 3-7.5 7 0 2.4 1.1 4.2 2.8 5.3v2.4c0 .7.6 1.3 1.3 1.3h6.8c.7 0 1.3-.6 1.3-1.3v-2.4c1.7-1.1 2.8-2.9 2.8-5.3 0-4-3.1-7-7.5-7Z" />
-    {/* eye sockets */}
-    <circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none" />
-    <circle cx="15" cy="10" r="1.6" fill="currentColor" stroke="none" />
-    {/* nose + teeth */}
-    <path d="M12 12.5v1.5" />
-    <path d="M9.5 18.5v-2M12 18.5v-2M14.5 18.5v-2" />
+    <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    <path d="M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" />
   </svg>
 )
 
 /**
- * Out-of-combat board cleanup: a skull (remove every combatant, ending the encounter)
+ * Out-of-combat board cleanup: a trash can (remove every combatant, ending the encounter)
  * and a broom (remove only foes, keep the party). Both are hidden during combat — the
  * round counter takes their place — so they never fire mid-fight.
  */
@@ -165,7 +156,7 @@ export function EncounterCleanup({
         onClick={clearAll}
         className={`${ICON_BTN} ${grey}`}
       >
-        <SkullIcon />
+        <TrashIcon />
       </button>
       <button
         type="button"

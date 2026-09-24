@@ -24,15 +24,24 @@ const COMPENDIUM = `${import.meta.env.BASE_URL}compendium`
 /** Each file fetched at most once, however many callers ask for it. */
 const files = new Map<string, Promise<unknown[]>>()
 
-/** Fetch one compendium JSON file; any failure yields an empty list, never a throw. */
-const fetchList = <T>(file: string): Promise<T[]> => {
-  const cached = files.get(file)
-  if (cached) return cached as Promise<T[]>
-  const pending = fetch(`${COMPENDIUM}/${file}`)
-    .then((r) => r.json() as Promise<unknown[]>)
-    .catch(() => [])
-  files.set(file, pending)
-  return pending as Promise<T[]>
+/** Cache successful files; strict callers can report failures and retry them. */
+const fetchList = <T>(file: string, strict = false): Promise<T[]> => {
+  let pending = files.get(file)
+  if (!pending) {
+    pending = fetch(`${COMPENDIUM}/${file}`)
+      .then(async (r) => {
+        if (r.ok === false) throw new Error(`Compendium request failed: ${r.status}`)
+        const data: unknown = await r.json()
+        if (!Array.isArray(data)) throw new Error('Expected a compendium list')
+        return data
+      })
+      .catch((error: unknown) => {
+        files.delete(file)
+        throw error
+      })
+    files.set(file, pending)
+  }
+  return (strict ? pending : pending.catch(() => [])) as Promise<T[]>
 }
 
 /** Fetch and merge creatures from every library that ships them; cached after the first call. */
@@ -65,7 +74,10 @@ export function loadSrdSpells(): Promise<Spell[]> {
  * The per-file cache is shared with the full loaders above, so a page that later opens the
  * console re-uses whatever this already fetched.
  */
-export function loadLibraries(sources: readonly string[]): Promise<{
+export function loadLibraries(
+  sources: readonly string[],
+  { strict = false }: { strict?: boolean } = {},
+): Promise<{
   creatures: Creature[]
   spells: Spell[]
 }> {
@@ -73,9 +85,13 @@ export function loadLibraries(sources: readonly string[]): Promise<{
   const libraries = LIBRARIES.filter((l) => wanted.has(l.id))
   return Promise.all([
     Promise.all(
-      libraries.filter((l) => l.creaturesFile).map((l) => fetchList<Creature>(l.creaturesFile!)),
+      libraries
+        .filter((l) => l.creaturesFile)
+        .map((l) => fetchList<Creature>(l.creaturesFile!, strict)),
     ),
-    Promise.all(libraries.filter((l) => l.spellsFile).map((l) => fetchList<Spell>(l.spellsFile!))),
+    Promise.all(
+      libraries.filter((l) => l.spellsFile).map((l) => fetchList<Spell>(l.spellsFile!, strict)),
+    ),
   ]).then(([creatureLists, spellLists]) => ({
     creatures: creatureLists.flat(),
     spells: spellLists.flat(),

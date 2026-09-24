@@ -43,6 +43,29 @@ describe('AccountControl (anonymous)', () => {
     expect(value.signOut).toHaveBeenCalledTimes(1)
   })
 
+  it('opens the existing profile on a navigation request and keeps it gated to signed-in users', () => {
+    const value = authState({ user: { email: 'gm@openfray.app' } as User })
+    const onSignIn = vi.fn()
+    const { rerender } = render(
+      <AuthContext.Provider value={value}>
+        <AccountControl onSignIn={onSignIn} openRequest={0} />
+      </AuthContext.Provider>,
+    )
+    expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
+    rerender(
+      <AuthContext.Provider value={value}>
+        <AccountControl onSignIn={onSignIn} openRequest={1} />
+      </AuthContext.Provider>,
+    )
+    expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument()
+    rerender(
+      <AuthContext.Provider value={authState()}>
+        <AccountControl onSignIn={onSignIn} openRequest={1} />
+      </AuthContext.Provider>,
+    )
+    expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
+  })
+
   it('opens the account settings panel from the menu', () => {
     renderControl({ user: { email: 'dm@openfray.app' } as unknown as User })
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))

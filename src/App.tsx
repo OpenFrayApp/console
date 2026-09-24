@@ -4,6 +4,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useReducer,
@@ -15,14 +16,7 @@ import type { Creature } from './schema/creature.ts'
 import type { Spell } from './schema/spell.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from './schema/combatant.ts'
 import type { Effect } from './schema/effect.ts'
-import {
-  autoLabel,
-  instantiate,
-  isFoe,
-  nameOf,
-  resolveSelected,
-  trackerOrder,
-} from './combat/combatant.ts'
+import { instantiate, isFoe, nameOf, resolveSelected, trackerOrder } from './combat/combatant.ts'
 import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
@@ -150,22 +144,28 @@ import {
 } from './components/editors/customMonster.ts'
 import { AddQuickForm } from './components/add/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/resolve/CastSpellPanel.tsx'
+import { QuickSearch } from './components/search/QuickSearch.tsx'
+import { SearchIcon } from './components/icons/SearchIcon.tsx'
+import { Button } from './components/ui/primitives.tsx'
+import { DialogFocus } from './components/ui/DialogFocus.tsx'
 import { InitiativePrompt } from './components/tracker/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/resolve/MassSavePanel.tsx'
 import { RestControls } from './components/tracker/RestControls.tsx'
 import { QuickRoll } from './components/resolve/QuickRoll.tsx'
 import { CampaignPicker } from './components/shell/CampaignPicker.tsx'
-import { AccountControl } from './components/account/AccountControl.tsx'
+import { AccountControl, UserIcon } from './components/account/AccountControl.tsx'
 import { SharedLinksPage } from './components/share/SharedLinksPage.tsx'
 import { CombatTimers } from './components/tracker/CombatTimers.tsx'
 import { CombatDifficulty } from './components/tracker/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/settings/SettingsPanel.tsx'
-import { SettingsMenu } from './components/settings/SettingsMenu.tsx'
+import { SettingsMenu, SlidersIcon, HelpIcon } from './components/settings/SettingsMenu.tsx'
 import { MobileNav, type MobileTab } from './components/shell/MobileNav.tsx'
 import { Wordmark } from './components/shell/Wordmark.tsx'
 import { LegalLinks } from './components/shell/LegalLinks.tsx'
-import { SharePanel } from './components/share/SharePanel.tsx'
+import { SharePanel, CastIcon } from './components/share/SharePanel.tsx'
+import { BookIcon } from './components/icons/BookIcon.tsx'
+import { ShareIcon } from './components/icons/ShareIcon.tsx'
 import { SignUpPage } from './components/account/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/log/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
@@ -189,24 +189,6 @@ function SwordIcon() {
       <path d="m13 19 6-6" />
       <path d="m16 16 4 4" />
       <path d="m19 21 2-2" />
-    </svg>
-  )
-}
-
-/** Open-book icon (compendium side of the view toggle). */
-function BookIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-    >
-      <path d="M12 7v14" />
-      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
     </svg>
   )
 }
@@ -267,6 +249,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [theme, toggleTheme] = useTheme()
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [profileRequest, setProfileRequest] = useState(0)
+  const [playerViewRequest, setPlayerViewRequest] = useState(0)
+  /** Close quick search and open an existing destination without resetting the board view. */
+  const navigateFromSearch = (open: () => void) => {
+    setSearchOpen(false)
+    open()
+  }
+  const searchTriggerId = useId()
   // Which content libraries the compendium/picker show. A device-local preference
   // for every user (anon included), persisted in localStorage like the theme.
   const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(
@@ -285,6 +276,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setShowHomebrewState(value)
     saveSettings({ showHomebrew: value })
   }
+  const [trackerColors, setTrackerColors] = useState(() => loadSettings().trackerColors)
+  const [creatureLabelStyle, setCreatureLabelStyle] = useState(
+    () => loadSettings().creatureLabelStyle,
+  )
+
   // How the compendium orders its list (by name, or by CR / spell level).
   const [librarySort, setLibrarySortState] = useState<LibrarySort>(() => loadSettings().librarySort)
   /** Set the compendium sort order and persist the choice to device-local settings. */
@@ -378,6 +374,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     shareLicense,
     setDisplayName,
     loading: authLoading,
+    configured: authConfigured,
     identityExpired,
   } = useAuth()
   const userId = user?.id ?? null
@@ -602,6 +599,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     user ? (displayName ?? undefined) : undefined,
     playerPin,
     playerBackdrop ?? undefined,
+    trackerColors,
   )
 
   // Signing out clears the account-owned player view after AuthProvider revokes it. A fresh
@@ -702,18 +700,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   /** Add the picked creature to the fight as a fresh combatant; duplicates get numbered labels. */
   const handlePick = (creature: Creature) => {
     track(EVENTS.creatureAdded)
-    const sameKind = encounter.combatants.filter(
-      (c) => !c.isPC && c.creatureId === creature.id,
-    ).length
-    const label = autoLabel(creature.name, sameKind)
     addCombatant(
       instantiate(creature, {
         combatantId: crypto.randomUUID(),
         initiative: 0,
-        label,
+        label: creature.name,
         // The campaign's HP method decides how this instance's max HP is rolled.
         maxHp: resolveMaxHp(creature, activeRules.hp),
       }),
+      true,
     )
   }
 
@@ -881,9 +876,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         creatures: [...library, ...customCreatures],
         hpMethod: activeRules.hp,
         existing: encounter.combatants,
+        labelStyle: creatureLabelStyle,
       },
     )
-    for (const c of combatants) addCombatant(c)
+    for (const c of combatants) addCombatant(c, true)
     if (combatants.length) {
       track(EVENTS.encounterCastAdded)
       setView('encounter')
@@ -1149,8 +1145,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Add a combatant to the encounter and select it. Mid-combat it rolls initiative
   // straight away (like Begin) so a reinforcement slots into the order instead of
   // sitting at 0; before combat, initiative waits for Begin to roll everyone together.
-  const addCombatant = (c: Combatant) => {
+  const addCombatant = (c: Combatant, labelCopies = false) => {
     let combatant = c
+    let initiativeRoll: NewLogEntry | undefined
     if (encounter.round > 0) {
       const { total, entry } = rollInit(nameOf(c), initMod(c), false, c.combatantId)
       combatant = { ...c, initiative: total }
@@ -1159,9 +1156,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       if (playerView.arrivals === 'hidden' && isFoe(combatant)) {
         combatant = { ...combatant, shared: 'hidden' }
       }
-      dispatch({ type: 'log', entry })
+      initiativeRoll = entry
     }
-    dispatch({ type: 'add', combatant, tiebreak: activeRules.initiativeTiebreak })
+    dispatch({
+      type: 'add',
+      combatant,
+      initiativeRoll,
+      tiebreak: activeRules.initiativeTiebreak,
+      labelStyle: labelCopies ? creatureLabelStyle : undefined,
+    })
     setSelectedId(combatant.combatantId)
   }
 
@@ -1185,8 +1188,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         creatures: [...library, ...customCreatures],
         hpMethod: activeRules.hp,
         existing: encounter.combatants,
+        labelStyle: creatureLabelStyle,
       })
-      for (const c of combatants) addCombatant(c)
+      for (const c of combatants) addCombatant(c, true)
       track(EVENTS.encounterLinkAdded)
     })
     // Deliberately keyed on readiness alone: the cast is consumed the first time through.
@@ -1506,6 +1510,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       setSettingsOpen(true)
     },
     showHotkeys: () => setHelpOpen(true),
+    openSearch: () => setSearchOpen(true),
   }
   useHotkeys(keymap, hotkeyHandlers)
 
@@ -1686,20 +1691,34 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
             )}
             <div className="ml-auto flex items-center gap-2 wide:gap-3 wide:pl-3">
+              <Button
+                onClick={() => {
+                  if (!document.querySelector('[role="dialog"], [role="menu"]')) setSearchOpen(true)
+                }}
+                className="flex h-9 shrink-0 items-center gap-2 text-slate-500 dark:text-slate-400"
+                id={searchTriggerId}
+                aria-label="Search references"
+                title={
+                  hint('openSearch')
+                    ? `Search references (${hint('openSearch')})`
+                    : 'Search references'
+                }
+              >
+                <SearchIcon className="h-4 w-4 shrink-0" />
+                <span className="hidden wide:inline-flex">Search</span>
+                {hint('openSearch') && (
+                  <kbd className="ml-2 hidden min-h-5 items-center justify-center rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-sm leading-none wide:inline-flex dark:border-slate-600 dark:bg-slate-800">
+                    {hint('openSearch')}
+                  </kbd>
+                )}
+              </Button>
               {/* The view toggle sits out the phone layout — the bottom bar owns the
               switch to the compendium there. */}
               <div className="hidden split:block wide:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
-              <RecoveryStatus
-                status={saveStatus}
-                onRetry={() => void lifecycle.retry()}
-                onDownload={downloadRecovery}
-                onSignIn={() => setAuthOpen(true)}
-                onTakeOver={() => void lifecycle.takeOver()}
-                onResolveCopies={() => setCopyConflictOpen(true)}
-              />
               <AccountControl
+                openRequest={profileRequest}
                 onSignIn={() => setAuthOpen(true)}
                 allowReserved={bylineGranted}
                 onOpenShares={() => {
@@ -1708,6 +1727,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 }}
               />
               <SharePanel
+                openRequest={playerViewRequest}
                 code={playerCode}
                 capability={liveViewSession?.capability ?? null}
                 sharing={sharing}
@@ -1731,6 +1751,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   setSettingsOpen(true)
                 }}
               />
+              <RecoveryStatus
+                status={saveStatus}
+                onRetry={() => void lifecycle.retry()}
+                onDownload={downloadRecovery}
+                onSignIn={() => setAuthOpen(true)}
+                onTakeOver={() => void lifecycle.takeOver()}
+                onResolveCopies={() => setCopyConflictOpen(true)}
+              />
             </div>
           </header>
           <ApplicationUpdate
@@ -1739,23 +1767,118 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             onDownload={downloadRecovery}
           />
 
-          {settingsOpen && (
-            <SettingsPanel
-              onClose={() => setSettingsOpen(false)}
+          {searchOpen && (
+            <QuickSearch
+              key={user?.id ?? 'anonymous'}
               enabledLibraries={enabledLibraries}
-              onSetEnabledLibraries={setEnabledLibraries}
               showHomebrew={showHomebrew}
-              onSetShowHomebrew={setShowHomebrew}
-              librarySort={librarySort}
-              onSetLibrarySort={setLibrarySort}
-              playerView={playerView}
-              onSetPlayerView={setPlayerView}
-              hotkeys={hotkeys}
-              onSetHotkeys={(value) => {
-                track(EVENTS.keybindingChanged)
-                setHotkeys(value)
+              customCreatures={customCreatures}
+              customSpells={customSpells}
+              characters={user ? rosterPcs : []}
+              navigation={[
+                {
+                  id: 'compendium',
+                  name: 'Compendium',
+                  icon: <BookIcon />,
+                  onSelect: () => navigateFromSearch(() => handleViewChange('compendium')),
+                },
+                {
+                  id: 'handbook',
+                  name: 'Handbook',
+                  icon: <HelpIcon />,
+                  href: '/docs/',
+                  onSelect: () => navigateFromSearch(() => track(EVENTS.docsOpened)),
+                },
+                {
+                  id: 'player-view',
+                  name: 'Player view',
+                  icon: <CastIcon />,
+                  onSelect: () => navigateFromSearch(() => setPlayerViewRequest((n) => n + 1)),
+                },
+                {
+                  id: 'settings',
+                  name: 'Settings',
+                  icon: <SlidersIcon />,
+                  onSelect: () =>
+                    navigateFromSearch(() => {
+                      track(EVENTS.settingsOpened)
+                      setSettingsOpen(true)
+                    }),
+                },
+                ...(!authLoading && user
+                  ? [
+                      {
+                        id: 'profile',
+                        name: 'Profile',
+                        icon: <UserIcon />,
+                        onSelect: () => navigateFromSearch(() => setProfileRequest((n) => n + 1)),
+                      },
+                      {
+                        id: 'shared-links',
+                        name: 'Shared links',
+                        icon: <ShareIcon />,
+                        onSelect: () =>
+                          navigateFromSearch(() => {
+                            refreshShares()
+                            setShowShares(true)
+                          }),
+                      },
+                    ]
+                  : !authLoading && authConfigured
+                    ? [
+                        {
+                          id: 'sign-in',
+                          name: 'Sign in',
+                          icon: <UserIcon />,
+                          onSelect: () => navigateFromSearch(() => setAuthOpen(true)),
+                        },
+                      ]
+                    : []),
+              ]}
+              combatants={encounter.combatants}
+              dispatch={dispatch}
+              onRoll={pushRoll}
+              onNote={pushNote}
+              round={encounter.round}
+              defaultCasterId={defaultCasterId}
+              onAddCreature={handlePick}
+              onAddCharacter={handleAddPcToEncounter}
+              onClose={() => {
+                setSearchOpen(false)
+                handleViewChange('encounter')
+                queueMicrotask(() => document.getElementById(searchTriggerId)?.focus())
               }}
             />
+          )}
+          {settingsOpen && (
+            <DialogFocus>
+              <SettingsPanel
+                onClose={() => setSettingsOpen(false)}
+                enabledLibraries={enabledLibraries}
+                onSetEnabledLibraries={setEnabledLibraries}
+                showHomebrew={showHomebrew}
+                onSetShowHomebrew={setShowHomebrew}
+                librarySort={librarySort}
+                onSetLibrarySort={setLibrarySort}
+                trackerColors={trackerColors}
+                onSetTrackerColors={(value) => {
+                  setTrackerColors(value)
+                  saveSettings({ trackerColors: value })
+                }}
+                creatureLabelStyle={creatureLabelStyle}
+                onSetCreatureLabelStyle={(value) => {
+                  setCreatureLabelStyle(value)
+                  saveSettings({ creatureLabelStyle: value })
+                }}
+                playerView={playerView}
+                onSetPlayerView={setPlayerView}
+                hotkeys={hotkeys}
+                onSetHotkeys={(value) => {
+                  track(EVENTS.keybindingChanged)
+                  setHotkeys(value)
+                }}
+              />
+            </DialogFocus>
           )}
 
           <main className="min-h-0 flex-1 overflow-hidden">
@@ -1799,6 +1922,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
             ) : (
               <EncounterConsole
+                trackerColors={trackerColors}
                 boardActions={
                   <>
                     <SaveFightButton
@@ -1869,7 +1993,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           )}
 
-          {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
+          {authOpen && (
+            <DialogFocus>
+              <SignUpPage onClose={() => setAuthOpen(false)} />
+            </DialogFocus>
+          )}
 
           {activeCopyConflict && copyConflictOpen && (
             <ReconciliationDialog
@@ -1932,11 +2060,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
           {/* Over the app, like Account and Settings: an account screen rather than a third
           view, and deliberately not persisted — a reload returns to the board. */}
           {showShares && (
-            <SharedLinksPage
-              shares={myShares}
-              onUnpublish={handleUnpublish}
-              onClose={() => setShowShares(false)}
-            />
+            <DialogFocus>
+              <SharedLinksPage
+                shares={myShares}
+                onUnpublish={handleUnpublish}
+                onClose={() => setShowShares(false)}
+              />
+            </DialogFocus>
           )}
 
           {initPrompt && (

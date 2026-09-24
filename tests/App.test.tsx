@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from '../src/App.tsx'
 
 afterEach(() => {
@@ -31,7 +31,11 @@ describe('App', () => {
   it('writes a committed board action without waiting for a debounce timer', async () => {
     sessionStorage.clear()
     render(<App />)
-    await screen.findByRole('button', { name: 'Sign in to resume saving' })
+    const saveStatus = await screen.findByRole('button', { name: 'Sign in to resume saving' })
+    const settings = screen.getByRole('button', { name: 'Settings and more' })
+    expect(
+      settings.compareDocumentPosition(saveStatus) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     sessionStorage.clear()
 
     addFoe('Bandit')
@@ -102,6 +106,60 @@ describe('App — when initiative reaches the log', () => {
 })
 
 describe('App — keyboard control', () => {
+  it('navigates from empty search without returning to the encounter or starting player sharing', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
+    expect(screen.queryByRole('combobox', { name: 'Search references' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show the compendium' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Settings' }))
+    const settings = screen.getByRole('dialog', { name: 'Settings' })
+    await waitFor(() => expect(settings.contains(document.activeElement)).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Player view' }))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Start sharing' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Show the compendium' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  it('displays the rebound search shortcut and closes its reference back to the console', async () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: 'meta+u' } }))
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Search references' }).textContent).toContain('⌘+U')
+    fireEvent.click(screen.getByRole('button', { name: 'Show the compendium' }))
+    fireEvent.keyDown(document.body, { key: 'u', metaKey: true })
+    const search = screen.getByRole('combobox', { name: 'Search references' })
+    fireEvent.change(search, { target: { value: 'prone' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Prone/ }))
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeTruthy()
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Search references' }),
+      ),
+    )
+  })
+
+  it('keeps the header button usable with search unbound and hides its hint', () => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: null } }))
+    render(<App />)
+    const button = screen.getByRole('button', { name: 'Search references' })
+    expect(button.querySelector('kbd')).toBeNull()
+    fireEvent.click(button)
+    expect(screen.getByRole('combobox', { name: 'Search references' })).toBeTruthy()
+  })
+
   afterEach(() => {
     localStorage.clear()
     sessionStorage.clear()

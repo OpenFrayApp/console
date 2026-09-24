@@ -12,13 +12,7 @@ afterEach(() => {
   delete window.fathom
 })
 
-/** Capture the Fathom events a click emits; track() no-ops without this. */
-function stubFathom() {
-  const trackEvent = vi.fn()
-  window.fathom = { trackEvent }
-  return trackEvent
-}
-
+/** Render the sign-in screen with isolated authentication actions. */
 function renderPage(overrides: Partial<AuthState> = {}) {
   const value: AuthState = {
     user: null,
@@ -34,100 +28,88 @@ function renderPage(overrides: Partial<AuthState> = {}) {
     setShareLicense: vi.fn(async () => ({ error: null })),
     ...overrides,
   }
+  const onClose = vi.fn()
   render(
     <AuthContext.Provider value={value}>
-      <SignUpPage onClose={vi.fn()} />
+      <SignUpPage onClose={onClose} />
     </AuthContext.Provider>,
   )
-  return value
-}
-
-/** Tick the box, which every sign-in now has to pass through. */
-function acceptTerms() {
-  fireEvent.click(screen.getByLabelText(/I agree to the/))
+  return { ...value, onClose }
 }
 
 describe('SignUpPage', () => {
-  // Each provider in its own render: the first click disables both buttons (a
-  // real handoff redirects away), so they can't be exercised in one mount.
-  it('starts a Discord OAuth sign-in and records it as Discord', async () => {
-    const trackEvent = stubFathom()
-    const value = renderPage()
-    acceptTerms()
-    fireEvent.click(screen.getByRole('button', { name: /Continue with Discord/ }))
-    await waitFor(() => expect(value.signInWithProvider).toHaveBeenCalledWith('discord'))
-    expect(trackEvent).toHaveBeenCalledWith('Sign-in started: Discord')
-  })
-
-  it('starts a Google OAuth sign-in and records it as Google', async () => {
-    const trackEvent = stubFathom()
-    const value = renderPage()
-    acceptTerms()
-    fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
-    await waitFor(() => expect(value.signInWithProvider).toHaveBeenCalledWith('google'))
-    expect(trackEvent).toHaveBeenCalledWith('Sign-in started: Google')
-  })
-
-  it('records one event per sign-in, so the two names add up to the total', async () => {
-    const trackEvent = stubFathom()
-    renderPage()
-    acceptTerms()
-    fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
-    await waitFor(() => expect(trackEvent).toHaveBeenCalledTimes(1))
-  })
-
-  it('surfaces a provider handoff error', async () => {
-    renderPage({ signInWithProvider: vi.fn(async () => ({ error: 'Provider is not enabled' })) })
-    acceptTerms()
-    fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
-    await waitFor(() => expect(screen.getByText('Provider is not enabled')).toBeInTheDocument())
-  })
-
-  describe('accepting the terms', () => {
-    // Creating an account is what accepts them, and this page is the last moment to ask:
-    // the next screen belongs to the provider.
-    it('does not hand anyone to a provider until the box is ticked', async () => {
-      const trackEvent = stubFathom()
+  it.each(['Google', 'Discord'] as const)(
+    'starts %s immediately without a checkbox',
+    async (provider) => {
+      const trackEvent = vi.fn()
+      window.fathom = { trackEvent }
       const value = renderPage()
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
-      await waitFor(() => expect(screen.getByText(/Accept the terms first/)).toBeInTheDocument())
-      expect(value.signInWithProvider).not.toHaveBeenCalled()
-      // Not counted either: a refused click is not a sign-in that was started.
-      expect(trackEvent).not.toHaveBeenCalled()
-    })
-
-    it('puts the cursor on the box it is asking about', () => {
-      renderPage()
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Discord/ }))
-      expect(document.activeElement).toBe(screen.getByLabelText(/I agree to the/))
-    })
-
-    it('goes through once it is ticked, and drops the refusal', async () => {
-      const value = renderPage()
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
-      await waitFor(() => expect(screen.getByText(/Accept the terms first/)).toBeInTheDocument())
-
-      acceptTerms()
-      expect(screen.queryByText(/Accept the terms first/)).toBeNull()
-      fireEvent.click(screen.getByRole('button', { name: /Continue with Google/ }))
-      await waitFor(() => expect(value.signInWithProvider).toHaveBeenCalledWith('google'))
-    })
-
-    it('starts unticked on every visit, so nothing is accepted on somebody`s behalf', () => {
-      renderPage()
-      expect(screen.getByLabelText(/I agree to the/)).not.toBeChecked()
-    })
-
-    it('links both documents, and says the age', () => {
-      renderPage()
-      const terms = screen.getByRole('link', { name: 'Terms of Service' })
-      expect(terms).toHaveAttribute('href', '/terms')
-      expect(terms).toHaveAttribute('target', '_blank')
-      expect(screen.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute(
-        'href',
-        '/privacy',
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: `Continue with ${provider}` }))
+      await waitFor(() =>
+        expect(value.signInWithProvider).toHaveBeenCalledWith(provider.toLowerCase()),
       )
-      expect(screen.getByText(/13 or older/)).toBeInTheDocument()
-    })
+      expect(trackEvent).toHaveBeenCalledExactlyOnceWith(`Sign-in started: ${provider}`)
+      expect(screen.getByRole('button', { name: 'Redirecting…' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /Continue with/ })).toBeDisabled()
+      fireEvent.click(screen.getByRole('button', { name: /Continue with/ }))
+      expect(value.signInWithProvider).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('shows the agreement notice for both provider buttons and links both documents', () => {
+    renderPage()
+    for (const provider of ['Google', 'Discord']) {
+      expect(
+        screen.getByRole('button', { name: `Continue with ${provider}` }),
+      ).toHaveAccessibleDescription(
+        /^By continuing with Google or Discord, you agree to the Terms of Service\s*\. Our Privacy Policy explains how we handle your personal data\.$/,
+      )
+    }
+    for (const [name, href] of [
+      ['Terms of Service', '/terms/'],
+      ['Privacy Policy', '/privacy/'],
+    ]) {
+      const link = screen.getByRole('link', { name })
+      expect(link).toHaveAttribute('href', href)
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noreferrer')
+    }
+    expect(
+      screen.getByText(
+        'You must be at least 13 and meet your country’s minimum digital-consent age if higher.',
+      ),
+    ).toBeInTheDocument()
+    const firstTime = screen.getByText(/Continuing creates a free account/)
+    expect(firstTime).toBeInTheDocument()
+    for (const provider of ['Google', 'Discord']) {
+      const button = screen.getByRole('button', { name: `Continue with ${provider}` })
+      expect(
+        button.compareDocumentPosition(firstTime) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    }
+  })
+
+  it('announces a failed handoff and allows retrying with the other provider', async () => {
+    const signInWithProvider = vi
+      .fn()
+      .mockResolvedValueOnce({ error: 'Provider is not enabled' })
+      .mockResolvedValueOnce({ error: null })
+    renderPage({ signInWithProvider })
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Provider is not enabled'),
+    )
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Discord' }))
+    await waitFor(() => expect(signInWithProvider).toHaveBeenLastCalledWith('discord'))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('returns to the console without starting authentication', () => {
+    const value = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
+    expect(value.onClose).toHaveBeenCalledOnce()
+    expect(value.signInWithProvider).not.toHaveBeenCalled()
   })
 })

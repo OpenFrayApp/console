@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import {
+  DEFAULT_TRACKER_COLORS,
+  readTrackerColors,
+  type TrackerColors,
+} from '../schema/trackerColors.ts'
+export { DEFAULT_TRACKER_COLORS, type TrackerColors } from '../schema/trackerColors.ts'
+
+import type { CreatureLabelStyle } from '../combat/creatureLabels.ts'
 import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
 import { sanitizeHotkeys } from './hotkeys.ts'
 import type { HotkeyCommandId } from './hotkeys.ts'
@@ -22,6 +30,8 @@ export type LibrarySort = 'name' | 'cr'
  * creature's hit points to a wound word and keep its armor class off the screen.
  */
 export interface PlayerViewSettings {
+  /** Marker overrides; each null value follows the corresponding GM tracker color. */
+  colors: TrackerColors
   hp: HpVisibility
   ac: FieldVisibility
   /**
@@ -69,6 +79,7 @@ export interface PlayerViewSettings {
 export type PlayerLogScope = 'fight' | 'session'
 
 export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
+  colors: DEFAULT_TRACKER_COLORS,
   hp: 'bloodied',
   ac: 'hidden',
   rolls: 'shown',
@@ -82,6 +93,10 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
 }
 
 export interface AppSettings {
+  /** Colors of creature and ally side markers in the GM's tracker. */
+  trackerColors: TrackerColors
+  /** Suffix style for newly added copies of a creature. */
+  creatureLabelStyle: CreatureLabelStyle
   /** Content library ids the compendium/picker show (see compendium/libraries.ts). */
   enabledLibraries: string[]
   /** Whether homebrew (custom) creations show in the compendium and pickers. On by default. */
@@ -133,6 +148,7 @@ const HP_VISIBILITY: HpVisibility[] = ['exact', 'bloodied', 'hidden']
 function readPlayerView(value: unknown): PlayerViewSettings {
   const data = (value ?? {}) as Record<string, unknown>
   return {
+    colors: readTrackerColors(data.colors),
     hp: HP_VISIBILITY.includes(data.hp as HpVisibility)
       ? (data.hp as HpVisibility)
       : DEFAULT_PLAYER_VIEW.hp,
@@ -160,6 +176,11 @@ function readPlayerView(value: unknown): PlayerViewSettings {
 export function loadSettings(): AppSettings {
   const data = read()
   return {
+    trackerColors: readTrackerColors(data.trackerColors),
+    creatureLabelStyle:
+      data.creatureLabelStyle === 'roman' || data.creatureLabelStyle === 'letters'
+        ? data.creatureLabelStyle
+        : 'numeric',
     enabledLibraries: sanitizeEnabledLibraries(data.enabledLibraries),
     // On by default; only an explicit stored `false` hides homebrew.
     showHomebrew: data.showHomebrew !== false,

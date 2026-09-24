@@ -58,8 +58,11 @@ describe('chordOf', () => {
     expect(chordOf(key('Delete', { shift: true }))).toBe('shift+Delete')
   })
 
-  it('refuses Meta and Alt, bare modifiers, and the unbindable keys', () => {
-    expect(chordOf(key('n', { meta: true }))).toBeNull()
+  it('captures Meta while refusing Alt, combined modifiers, and unbindable keys', () => {
+    expect(chordOf(key('k', { meta: true }))).toBe('meta+k')
+    expect(chordOf(key('k', { meta: true, ctrl: true }))).toBeNull()
+    expect(isReservedChord('meta+n')).toBe(true)
+    expect(isValidChord('meta+k')).toBe(true)
     expect(chordOf(key('n', { alt: true }))).toBeNull()
     expect(chordOf(key('Shift', { shift: true }))).toBeNull()
     expect(chordOf(key('Control', { ctrl: true }))).toBeNull()
@@ -72,6 +75,7 @@ describe('chordOf', () => {
 
 describe('formatChord', () => {
   it('names the keys pressed', () => {
+    expect(formatChord('meta+k')).toBe('⌘+K')
     expect(formatChord('n')).toBe('N')
     expect(formatChord('shift+n')).toBe('Shift+N')
     expect(formatChord('ctrl+a')).toBe('Ctrl+A')

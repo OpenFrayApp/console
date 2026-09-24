@@ -283,6 +283,7 @@ export function PlayerView({
                         <PlayerRow
                           key={row.id}
                           row={row}
+                          colors={boardVisible.colors}
                           active={row.id === boardVisible.activeId}
                         />
                       ))}

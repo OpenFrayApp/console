@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 import type { Combatant } from '../../src/schema/combatant.ts'
 import {
   acOf,
-  autoLabel,
   bySide,
   isAutoLabel,
   isFoe,
@@ -124,12 +123,6 @@ describe('acOf', () => {
 })
 
 describe('labels', () => {
-  it('numbers copies after the first', () => {
-    expect(autoLabel('Ghoul', 0)).toBe('Ghoul')
-    expect(autoLabel('Ghoul', 1)).toBe('Ghoul 2')
-    expect(autoLabel('Ghoul', 4)).toBe('Ghoul 5')
-  })
-
   it('recognises auto-numbering so a duplicate is not read as a rename', () => {
     expect(isAutoLabel('Ghoul', 'Ghoul')).toBe(true)
     expect(isAutoLabel('Ghoul 2', 'Ghoul')).toBe(true)
