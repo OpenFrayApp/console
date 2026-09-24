@@ -67,8 +67,8 @@ describe('SignUpPage', () => {
       )
     }
     for (const [name, href] of [
-      ['Terms of Service', '/terms'],
-      ['Privacy Policy', '/privacy'],
+      ['Terms of Service', '/terms/'],
+      ['Privacy Policy', '/privacy/'],
     ]) {
       const link = screen.getByRole('link', { name })
       expect(link).toHaveAttribute('href', href)

@@ -127,7 +127,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
             >
               By continuing with Google or Discord, you agree to the{' '}
               <a
-                href="/terms"
+                href="/terms/"
                 target="_blank"
                 rel="noreferrer"
                 className="font-medium text-indigo-600 underline dark:text-indigo-400"
@@ -136,7 +136,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
               </a>
               . Our{' '}
               <a
-                href="/privacy"
+                href="/privacy/"
                 target="_blank"
                 rel="noreferrer"
                 className="font-medium text-indigo-600 underline dark:text-indigo-400"
