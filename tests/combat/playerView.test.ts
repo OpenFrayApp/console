@@ -116,6 +116,38 @@ function entry(overrides: Partial<GameLogEntry> = {}): GameLogEntry {
   return { id: '1-0', round: 1, category: 'turn', message: 'Round 1', ...overrides }
 }
 
+describe('playerBoard — marker colors', () => {
+  it('omits colors when both markers use theme defaults', () => {
+    expect(playerBoard(encounter(), view())).not.toHaveProperty('colors')
+  })
+
+  it('follows each tracker color until explicitly overridden', () => {
+    const tracker = { creature: '#123456', ally: '#abcdef' }
+    expect(playerBoard(encounter(), view(), null, {}, tracker).colors).toEqual(tracker)
+    const settings = view({ colors: { creature: '#654321', ally: null } })
+    expect(playerBoard(encounter(), settings, null, {}, tracker).colors).toEqual({
+      creature: '#654321',
+      ally: '#abcdef',
+    })
+    expect(
+      playerBoard(encounter(), settings, null, {}, { creature: '#111111', ally: '#222222' }).colors,
+    ).toEqual({ creature: '#654321', ally: '#222222' })
+    expect(playerBoard(encounter(), view(), null, {}, tracker).colors).toEqual(tracker)
+  })
+
+  it('shares colors without revealing hidden creature data or unshared settings', () => {
+    const board = playerBoard(
+      encounter({ combatants: [monster()] }),
+      view({ colors: { creature: '#123456', ally: null } }),
+    )
+    expect(board.colors).toEqual({ creature: '#123456', ally: null })
+    expect(board.rows[0]).not.toHaveProperty('ac')
+    expect(board.rows[0].hp).toEqual({ kind: 'tier', tier: 'healthy' })
+    expect(board).not.toHaveProperty('settings')
+    expect(board.rows[0]).not.toHaveProperty('creature')
+  })
+})
+
 describe('playerBoard — what a creature gives away', () => {
   it('reports a wound word instead of a number by default', () => {
     const board = playerBoard(

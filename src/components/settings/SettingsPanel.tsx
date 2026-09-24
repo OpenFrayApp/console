@@ -11,7 +11,6 @@ import {
 } from '../../compendium/libraries.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import {
-  DEFAULT_TRACKER_COLORS,
   type TrackerColors,
   type LibrarySort,
   type PlayerLogScope,
@@ -19,6 +18,7 @@ import {
 } from '../../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../../schema/combatant.ts'
 import { Badge, Button, CUSTOM_TONE, TabButton } from '../ui/primitives.tsx'
+import { TrackerColorFields } from './TrackerColorFields.tsx'
 import { HotkeyField } from './HotkeyField.tsx'
 import { SettingRow } from './SettingRow.tsx'
 import {
@@ -295,41 +295,8 @@ export function SettingsPanel({
                 <option value="letters">Letters</option>
               </select>
             </SettingRow>
-            <div className="mt-3 space-y-3">
-              <SettingRow
-                id="tracker-creature-color"
-                label="Creature color"
-                hint="The side marker for creatures opposing the party."
-              >
-                <input
-                  id="tracker-creature-color"
-                  type="color"
-                  value={trackerColors.creature ?? '#ff637e'}
-                  onChange={(e) =>
-                    onSetTrackerColors({ ...trackerColors, creature: e.target.value })
-                  }
-                  className="tap h-8 w-12 cursor-pointer rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
-                />
-              </SettingRow>
-              <SettingRow
-                id="tracker-ally-color"
-                label="Ally color"
-                hint="The side marker for player characters and allied creatures."
-              >
-                <input
-                  id="tracker-ally-color"
-                  type="color"
-                  value={trackerColors.ally ?? '#00bcff'}
-                  onChange={(e) => onSetTrackerColors({ ...trackerColors, ally: e.target.value })}
-                  className="tap h-8 w-12 cursor-pointer rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
-                />
-              </SettingRow>
-              <Button
-                onClick={() => onSetTrackerColors({ ...DEFAULT_TRACKER_COLORS })}
-                disabled={trackerColors.creature === null && trackerColors.ally === null}
-              >
-                Reset colors
-              </Button>
+            <div className="mt-3">
+              <TrackerColorFields colors={trackerColors} onChange={onSetTrackerColors} />
             </div>
           </section>
 
@@ -344,6 +311,11 @@ export function SettingsPanel({
               Their own characters always show in full.
             </p>
             <div className="space-y-3">
+              <TrackerColorFields
+                colors={playerView.colors}
+                inherited={trackerColors}
+                onChange={(colors) => onSetPlayerView({ ...playerView, colors })}
+              />
               <SettingRow id="player-view-hp" label="Creature hit points">
                 <select
                   id="player-view-hp"

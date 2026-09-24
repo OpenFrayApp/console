@@ -86,16 +86,18 @@ describe('Encounter flow', () => {
       const { container } = render(<App />)
       await addGoblin()
       fireEvent.click(screen.getByRole('button', { name: 'Settings and more' }))
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Settings', exact: true }))
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
       fireEvent.click(screen.getByRole('tab', { name: 'Tracker' }))
-      fireEvent.change(screen.getByLabelText('Creature color'), { target: { value: '#123456' } })
+      fireEvent.change(within(screen.getByRole('tabpanel')).getByLabelText('Creature color'), {
+        target: { value: '#123456' },
+      })
       const row = container.querySelector('[data-combatant-row]') as HTMLElement
       expect(row).toHaveStyle({ borderLeftColor: '#123456' })
       expect(JSON.parse(localStorage.getItem('openfray-settings')!).trackerColors).toEqual({
         creature: '#123456',
         ally: null,
       })
-      fireEvent.click(screen.getByRole('button', { name: 'Reset colors' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Reset creature color' }))
       expect(row.style.borderLeftColor).toBe('')
       expect(JSON.parse(localStorage.getItem('openfray-settings')!).trackerColors).toEqual({
         creature: null,

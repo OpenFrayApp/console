@@ -5,6 +5,11 @@ import type { Combatant } from '../schema/combatant.ts'
 import type { Encounter, GameLogEntry } from '../schema/encounter.ts'
 import type { RollResult } from '../dice/roll.ts'
 import type { PlayerViewSettings } from '../state/settings.ts'
+import {
+  DEFAULT_TRACKER_COLORS,
+  resolveTrackerColors,
+  type TrackerColors,
+} from '../schema/trackerColors.ts'
 import type { PlayerBoard, PlayerHp, PlayerRecap, PlayerRow } from '../schema/playerBoard.ts'
 import { effectiveMaxHp, hpTier } from './resources.ts'
 import { isStable } from './deathsaves.ts'
@@ -185,6 +190,7 @@ export function playerBoard(
   recap: PlayerRecap | null = null,
   /** The campaign and GM names (each gated by its own setting) and the campaign's backdrop. */
   identity: { campaign?: string; gm?: string; background?: string } = {},
+  trackerColors: TrackerColors = DEFAULT_TRACKER_COLORS,
 ): PlayerBoard {
   const active = encounter.combatants[encounter.activeIndex]
   const running = encounter.round > 0 && encounter.paused !== true
@@ -203,8 +209,10 @@ export function playerBoard(
       .map((c) => c.combatantId),
   )
   const hideRolls = settings.rolls === 'hidden'
+  const colors = resolveTrackerColors(settings.colors, trackerColors)
 
   return {
+    ...(colors.creature !== null || colors.ally !== null ? { colors } : {}),
     round: encounter.round,
     paused: encounter.paused === true,
     activeId: running && active ? active.combatantId : null,

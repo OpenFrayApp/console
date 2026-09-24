@@ -92,6 +92,23 @@ describe('app settings (localStorage)', () => {
 })
 
 describe('player-view settings', () => {
+  it('persists player-view overrides separately and defaults missing or invalid colors to inheritance', () => {
+    expect(loadSettings().playerView.colors).toEqual({ creature: null, ally: null })
+    saveSettings({ trackerColors: { creature: '#123456', ally: '#abcdef' } })
+    saveSettings({
+      playerView: { ...DEFAULT_PLAYER_VIEW, colors: { creature: '#654321', ally: null } },
+    })
+    expect(loadSettings().playerView.colors).toEqual({ creature: '#654321', ally: null })
+    expect(loadSettings().trackerColors).toEqual({ creature: '#123456', ally: '#abcdef' })
+    localStorage.setItem(
+      'openfray-settings',
+      JSON.stringify({
+        playerView: { colors: { creature: 'url(https://example.com)', ally: '#123456' } },
+      }),
+    )
+    expect(loadSettings().playerView.colors).toEqual({ creature: null, ally: '#123456' })
+  })
+
   it('holds a creature to a wound word and keeps its armor class off the screen', () => {
     expect(loadSettings().playerView).toEqual(DEFAULT_PLAYER_VIEW)
   })

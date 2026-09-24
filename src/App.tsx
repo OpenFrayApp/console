@@ -599,6 +599,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     user ? (displayName ?? undefined) : undefined,
     playerPin,
     playerBackdrop ?? undefined,
+    trackerColors,
   )
 
   // Signing out clears the account-owned player view after AuthProvider revokes it. A fresh

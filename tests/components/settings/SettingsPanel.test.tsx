@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { SettingsPanel } from '../../../src/components/settings/SettingsPanel.tsx'
 import {
   DEFAULT_PLAYER_VIEW,
@@ -72,8 +72,9 @@ describe('SettingsPanel — tracker colors', () => {
       trackerColors: { creature: '#123456', ally: '#abcdef' },
     })
     openTab('Tracker')
-    const creature = screen.getByLabelText('Creature color')
-    const ally = screen.getByLabelText('Ally color')
+    const panel = within(screen.getByRole('tabpanel'))
+    const creature = panel.getByLabelText('Creature color')
+    const ally = panel.getByLabelText('Ally color')
     expect(creature).toHaveAttribute('type', 'color')
     expect(creature).toHaveValue('#123456')
     expect(ally).toHaveValue('#abcdef')
@@ -81,16 +82,20 @@ describe('SettingsPanel — tracker colors', () => {
     expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#654321', ally: '#abcdef' })
     fireEvent.change(ally, { target: { value: '#fedcba' } })
     expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#123456', ally: '#fedcba' })
-    fireEvent.click(screen.getByRole('button', { name: 'Reset colors' }))
-    expect(onSetTrackerColors).toHaveBeenLastCalledWith(DEFAULT_TRACKER_COLORS)
+    fireEvent.click(screen.getByRole('button', { name: 'Reset creature color' }))
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: null, ally: '#abcdef' })
+    fireEvent.click(screen.getByRole('button', { name: 'Reset ally color' }))
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#123456', ally: null })
   })
 
   it('shows default swatches and disables reset until a color is chosen', () => {
     renderPanel()
     openTab('Tracker')
-    expect(screen.getByLabelText('Creature color')).toHaveValue('#ff637e')
-    expect(screen.getByLabelText('Ally color')).toHaveValue('#00bcff')
-    expect(screen.getByRole('button', { name: 'Reset colors' })).toBeDisabled()
+    const panel = within(screen.getByRole('tabpanel'))
+    expect(panel.getByLabelText('Creature color')).toHaveValue('#ff637e')
+    expect(panel.getByLabelText('Ally color')).toHaveValue('#00bcff')
+    expect(screen.getByRole('button', { name: 'Reset creature color' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset ally color' })).toBeDisabled()
   })
 })
 
@@ -108,6 +113,41 @@ describe('SettingsPanel — creature labels', () => {
 })
 
 describe('SettingsPanel — the player view', () => {
+  it('follows tracker colors by default and writes player-view overrides only', () => {
+    const { onSetPlayerView, onSetTrackerColors } = renderPanel({
+      trackerColors: { creature: '#123456', ally: '#abcdef' },
+    })
+    openTab('Player view')
+    const panel = within(screen.getByRole('tabpanel'))
+    expect(panel.getByLabelText('Creature color')).toHaveValue('#123456')
+    expect(panel.getByLabelText('Ally color')).toHaveValue('#abcdef')
+    expect(panel.getAllByText('Follows Tracker')).toHaveLength(2)
+    expect(panel.getByRole('button', { name: 'Reset creature color' })).toBeDisabled()
+    fireEvent.change(panel.getByLabelText('Creature color'), { target: { value: '#654321' } })
+    expect(onSetPlayerView).toHaveBeenLastCalledWith({
+      ...DEFAULT_PLAYER_VIEW,
+      colors: { creature: '#654321', ally: null },
+    })
+    expect(onSetTrackerColors).not.toHaveBeenCalled()
+  })
+
+  it('resets one player-view override to follow Tracker without changing the other', () => {
+    const playerView = { ...DEFAULT_PLAYER_VIEW, colors: { creature: '#654321', ally: '#fedcba' } }
+    const { onSetPlayerView } = renderPanel({
+      playerView,
+      trackerColors: { creature: '#123456', ally: '#abcdef' },
+    })
+    openTab('Player view')
+    const panel = within(screen.getByRole('tabpanel'))
+    expect(panel.getByLabelText('Creature color')).toHaveValue('#654321')
+    expect(panel.getAllByText('Custom player-view color')).toHaveLength(2)
+    fireEvent.click(panel.getByRole('button', { name: 'Reset creature color' }))
+    expect(onSetPlayerView).toHaveBeenLastCalledWith({
+      ...playerView,
+      colors: { creature: null, ally: '#fedcba' },
+    })
+  })
+
   it('shows a creature`s rolls by default', () => {
     renderPanel()
     openTab('Player view')
@@ -124,9 +164,11 @@ describe('SettingsPanel — the player view', () => {
   it('keeps the rolls description behind its ? until asked', () => {
     renderPanel()
     openTab('Player view')
-    // Nothing spelled out until the GM asks; the first hinted row is Creature rolls.
     expect(screen.queryByText(/keeps whether it hit or saved/)).toBeNull()
-    fireEvent.mouseEnter(screen.getAllByRole('button', { name: 'What this does' })[0])
+    const label = screen.getByText('Creature rolls', { selector: 'label' })
+    fireEvent.mouseEnter(
+      within(label.parentElement!).getByRole('button', { name: 'What this does' }),
+    )
     expect(screen.getByText(/keeps whether it hit or saved/)).toBeInTheDocument()
   })
 

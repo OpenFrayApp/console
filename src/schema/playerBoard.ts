@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import * as v from 'valibot'
+import { trackerColorsSchema } from './trackerColors.ts'
 import { DAMAGE_TYPES, type DamageType } from './primitives.ts'
 
 const finiteNumber = v.pipe(v.number(), v.check<number>(Number.isFinite))
@@ -137,6 +138,7 @@ export const playerBoardSchema = v.strictObject({
   campaign: v.optional(text),
   gm: v.optional(text),
   background: v.optional(text),
+  colors: v.optional(trackerColorsSchema),
 })
 
 export type PlayerHp = v.InferOutput<typeof playerHpSchema>

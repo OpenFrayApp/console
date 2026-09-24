@@ -3,6 +3,7 @@
 
 import type { PlayerRow as Row } from '../../combat/playerView.ts'
 import { cx } from '../../lib/cx.ts'
+import { DEFAULT_TRACKER_COLORS, type TrackerColors } from '../../schema/trackerColors.ts'
 import { DeathSavePips } from '../tracker/DeathSaveControls.tsx'
 import { hpToneFor, TIER_LABEL } from '../ui/hpTone.ts'
 
@@ -30,11 +31,20 @@ function Health({ hp }: { hp: Row['hp'] }) {
  * a Combatant, because a Combatant carries the whole stat block and that is exactly
  * what never reaches this screen.
  */
-export function PlayerRow({ row, active }: { row: Row; active: boolean }) {
+export function PlayerRow({
+  row,
+  active,
+  colors = DEFAULT_TRACKER_COLORS,
+}: {
+  row: Row
+  active: boolean
+  colors?: TrackerColors
+}) {
   const dead = row.status === 'dead'
   return (
     <li
       aria-current={active ? 'true' : undefined}
+      style={{ borderLeftColor: (row.isFoe ? colors.creature : colors.ally) ?? undefined }}
       className={cx(
         'flex items-center gap-3 rounded-lg border border-l-4 px-3 py-2',
         row.isFoe

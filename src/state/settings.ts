@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import {
+  DEFAULT_TRACKER_COLORS,
+  readTrackerColors,
+  type TrackerColors,
+} from '../schema/trackerColors.ts'
+export { DEFAULT_TRACKER_COLORS, type TrackerColors } from '../schema/trackerColors.ts'
+
 import type { CreatureLabelStyle } from '../combat/creatureLabels.ts'
 import { sanitizeEnabledLibraries } from '../compendium/libraries.ts'
 import { sanitizeHotkeys } from './hotkeys.ts'
@@ -23,6 +30,8 @@ export type LibrarySort = 'name' | 'cr'
  * creature's hit points to a wound word and keep its armor class off the screen.
  */
 export interface PlayerViewSettings {
+  /** Marker overrides; each null value follows the corresponding GM tracker color. */
+  colors: TrackerColors
   hp: HpVisibility
   ac: FieldVisibility
   /**
@@ -70,6 +79,7 @@ export interface PlayerViewSettings {
 export type PlayerLogScope = 'fight' | 'session'
 
 export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
+  colors: DEFAULT_TRACKER_COLORS,
   hp: 'bloodied',
   ac: 'hidden',
   rolls: 'shown',
@@ -80,25 +90,6 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   arrivals: 'shown',
   campaignName: 'hidden',
   gmName: 'hidden',
-}
-
-/** Device-local tracker marker overrides; null keeps the theme's default color. */
-export interface TrackerColors {
-  creature: string | null
-  ally: string | null
-}
-
-export const DEFAULT_TRACKER_COLORS: TrackerColors = { creature: null, ally: null }
-
-/** Accept only opaque six-digit hex colors produced by the native color picker. */
-function readColor(value: unknown): string | null {
-  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : null
-}
-
-/** Restore each marker independently when stored preferences are missing or invalid. */
-function readTrackerColors(value: unknown): TrackerColors {
-  const data = (value ?? {}) as Record<string, unknown>
-  return { creature: readColor(data.creature), ally: readColor(data.ally) }
 }
 
 export interface AppSettings {
@@ -157,6 +148,7 @@ const HP_VISIBILITY: HpVisibility[] = ['exact', 'bloodied', 'hidden']
 function readPlayerView(value: unknown): PlayerViewSettings {
   const data = (value ?? {}) as Record<string, unknown>
   return {
+    colors: readTrackerColors(data.colors),
     hp: HP_VISIBILITY.includes(data.hp as HpVisibility)
       ? (data.hp as HpVisibility)
       : DEFAULT_PLAYER_VIEW.hp,

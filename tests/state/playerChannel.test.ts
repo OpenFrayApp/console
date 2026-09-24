@@ -83,6 +83,63 @@ async function flushChannelSetup(): Promise<void> {
 }
 
 describe('useBoardBroadcast — owner publication', () => {
+  it('broadcasts tracker changes and player overrides without reopening the channel', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const board = encounter(3)
+    const { rerender } = renderHook(
+      ({ tracker, settings }) =>
+        useBoardBroadcast(
+          session,
+          board,
+          settings,
+          null,
+          undefined,
+          undefined,
+          null,
+          undefined,
+          tracker,
+        ),
+      {
+        initialProps: {
+          tracker: { creature: '#123456', ally: '#abcdef' },
+          settings: DEFAULT_PLAYER_VIEW,
+        },
+      },
+    )
+    await flushChannelSetup()
+    act(() => {
+      channels[0].ready()
+      vi.advanceTimersByTime(250)
+    })
+    expect(channels[0].sends.at(-1)?.payload).toMatchObject({
+      payload: { colors: { creature: '#123456', ally: '#abcdef' } },
+    })
+    const initialCount = channels.length
+    rerender({
+      tracker: { creature: '#111111', ally: '#222222' },
+      settings: { ...DEFAULT_PLAYER_VIEW, colors: { creature: '#654321', ally: null } },
+    })
+    act(() => void vi.advanceTimersByTime(250))
+    expect(channels[0].sends.at(-1)?.payload).toMatchObject({
+      payload: { colors: { creature: '#654321', ally: '#222222' } },
+    })
+    rerender({
+      tracker: { creature: '#333333', ally: '#444444' },
+      settings: { ...DEFAULT_PLAYER_VIEW, colors: { creature: '#654321', ally: null } },
+    })
+    act(() => void vi.advanceTimersByTime(250))
+    expect(channels[0].sends.at(-1)?.payload).toMatchObject({
+      payload: { colors: { creature: '#654321', ally: '#444444' } },
+    })
+    rerender({ tracker: { creature: '#333333', ally: '#444444' }, settings: DEFAULT_PLAYER_VIEW })
+    act(() => void vi.advanceTimersByTime(250))
+    expect(channels[0].sends.at(-1)?.payload).toMatchObject({
+      payload: { colors: { creature: '#333333', ally: '#444444' } },
+    })
+    expect(channels).toHaveLength(initialCount)
+  })
+
   it('opens no channel without an active owner capability', () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
