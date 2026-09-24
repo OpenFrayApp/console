@@ -4,12 +4,14 @@
 import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../../auth/useAuth.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { AccountPanel } from './AccountPanel.tsx'
+import { DialogFocus } from '../ui/DialogFocus.tsx'
 import { popoverClass } from '../ui/popover.ts'
 import { Button } from '../ui/primitives.tsx'
 
 /** User-silhouette icon (the account menu button). */
-function UserIcon() {
+export function UserIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -41,8 +43,11 @@ export function AccountControl({
   onSignIn,
   onOpenShares,
   allowReserved = false,
+  openRequest,
 }: {
   onSignIn: () => void
+  /** Open the existing profile panel from quick navigation. */
+  openRequest?: number
   /** Whether this account may publish under a reserved name; the profile field honours it. */
   allowReserved?: boolean
   /** Open the shared-links screen. It is a screen rather than a dialog because it is
@@ -52,6 +57,10 @@ export function AccountControl({
   const { user, loading, configured, signOut } = useAuth()
   const [accountOpen, setAccountOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  useOpenRequest(openRequest, () => {
+    setMenuOpen(false)
+    setAccountOpen(true)
+  })
   const menuRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   useDismiss(menuRef, menuOpen, closeMenu)
@@ -112,7 +121,9 @@ export function AccountControl({
           </div>
         )}
         {accountOpen && (
-          <AccountPanel onClose={() => setAccountOpen(false)} allowReserved={allowReserved} />
+          <DialogFocus>
+            <AccountPanel onClose={() => setAccountOpen(false)} allowReserved={allowReserved} />
+          </DialogFocus>
         )}
       </div>
     )

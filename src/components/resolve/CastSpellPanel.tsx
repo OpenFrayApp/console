@@ -19,7 +19,7 @@ import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { LibraryPicker } from '../add/LibraryPicker.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { SpellCard } from '../statblock/SpellCard.tsx'
-import { Button } from '../ui/primitives.tsx'
+import { Button, Select } from '../ui/primitives.tsx'
 import { SpellResolution } from './SpellResolution.tsx'
 import type { OnNote, OnRoll } from '../log/GameLog.tsx'
 import { spellLevelShort } from '../../compendium/format.ts'
@@ -136,11 +136,11 @@ export function CastSpellPanel({
   }
 
   const casterPicker = (
-    <select
+    <Select
       value={caster ? casterId : ''}
       onChange={(e) => setCasterId(e.target.value)}
       aria-label="Caster"
-      className="mb-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+      className={preparedSpell ? 'min-w-0 w-56' : 'mb-1.5 w-full'}
     >
       <option value="">No caster (GM rolls)</option>
       {CASTER_GROUPS.map(({ heading, members }) => {
@@ -157,23 +157,20 @@ export function CastSpellPanel({
           </optgroup>
         ) : null
       })}
-    </select>
+    </Select>
   )
 
   if (!spell && preparedSpell) {
     return (
-      <Modal title={preparedSpell.name} onClose={reset}>
+      <Modal title={preparedSpell.name} onClose={reset} size="lg" showTitle={false}>
         <div className="space-y-3">
           <SpellCard spell={preparedSpell} />
-          {casterPicker}
-          <Button onClick={() => pick(preparedSpell)} disabled={combatants.length === 0}>
-            Cast
-          </Button>
-          {combatants.length === 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Add a combatant to cast this spell.
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            {casterPicker}
+            <Button variant="primary" onClick={() => pick(preparedSpell)}>
+              Cast
+            </Button>
+          </div>
         </div>
       </Modal>
     )

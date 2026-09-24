@@ -22,8 +22,16 @@
 }
 @media (min-width: 37.5rem) and (min-height: 32rem) {
   .search-key-hint {
-    display: inline;
+    display: inline-flex;
   }
+}
+
+/* The search row owns the focus boundary, keeping its input visually unboxed. */
+.quick-search-input:focus-within {
+  box-shadow: inset 0 -2px 0 var(--color-indigo-500);
+}
+.quick-search-input input:focus-visible {
+  outline: none;
 }
 
 /*
@@ -188,6 +196,11 @@ body,
 
 /* Keep authored boundaries legible when Windows replaces the app's color palette. */
 @media (forced-colors: active) {
+  .quick-search-input:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
   :where(button, input, select, textarea, [role='button']) {
     border-color: ButtonText;
   }

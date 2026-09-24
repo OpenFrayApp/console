@@ -23,7 +23,7 @@ export interface SearchReferences {
   showHomebrew: boolean
 }
 
-/** Find ten name matches across references, preserving each template's independent identity. */
+/** Find all name matches across references, preserving each template's independent identity. */
 export function searchReferences(
   query: string,
   data: SearchReferences,
@@ -60,5 +60,5 @@ export function searchReferences(
         a.kind.localeCompare(b.kind) ||
         a.entry.id.localeCompare(b.entry.id),
     )
-  return { matches: matches.slice(0, 10), total: matches.length }
+  return { matches, total: matches.length }
 }

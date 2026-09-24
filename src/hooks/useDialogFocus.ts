@@ -3,6 +3,8 @@
 
 import { useLayoutEffect, type RefObject } from 'react'
 
+const focusScopes: RefObject<HTMLElement | null>[] = []
+
 /** Whether a control is reachable, including inside nested collapsible reference sections. */
 function isVisibleControl(element: HTMLElement): boolean {
   if (element.tabIndex < 0 || element.matches(':disabled')) return false
@@ -22,6 +24,7 @@ function isVisibleControl(element: HTMLElement): boolean {
 export function useDialogFocus(root: RefObject<HTMLElement | null>): void {
   useLayoutEffect(() => {
     const previous = document.activeElement
+    focusScopes.push(root)
     /** List the dialog's currently visible native and custom keyboard stops. */
     const controls = () =>
       Array.from(
@@ -31,11 +34,16 @@ export function useDialogFocus(root: RefObject<HTMLElement | null>): void {
       ).filter(isVisibleControl)
     /** Recover focus after an action replaces the currently focused control. */
     const retainFocus = () => {
-      if (root.current && !root.current.contains(document.activeElement)) controls()[0]?.focus()
+      if (
+        focusScopes.at(-1) === root &&
+        root.current &&
+        !root.current.contains(document.activeElement)
+      )
+        controls()[0]?.focus()
     }
     /** Wrap Tab at the dialog boundaries while preserving native tab order within them. */
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return
+      if (event.key !== 'Tab' || focusScopes.at(-1) !== root) return
       const stops = controls()
       const first = stops[0],
         last = stops.at(-1)
@@ -55,7 +63,9 @@ export function useDialogFocus(root: RefObject<HTMLElement | null>): void {
       observer.disconnect()
       document.removeEventListener('focusin', retainFocus)
       document.removeEventListener('keydown', onKeyDown)
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus()
+      const topmost = focusScopes.at(-1) === root
+      focusScopes.splice(focusScopes.indexOf(root), 1)
+      if (topmost && previous instanceof HTMLElement && previous.isConnected) previous.focus()
     }
   }, [root])
 }

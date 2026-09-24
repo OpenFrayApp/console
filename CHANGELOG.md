@@ -25,6 +25,8 @@ published.
 ### Compendium
 
 - Search creatures, spells, conditions, and saved characters from the header with a configurable ⌘K or Ctrl+K shortcut.
+- Quick search includes navigation shortcuts, scrolls through every match, and opens wider references with one title.
+- Spells found through search can be cast as the GM in an empty encounter.
 - A first search loads creatures from the libraries that are turned on, while keeping every spell reference available. ([#41](https://github.com/OpenFrayApp/console/issues/41))
 
 ### Player view

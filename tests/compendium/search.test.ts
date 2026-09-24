@@ -27,7 +27,7 @@ it('ranks exact names before prefixes and substrings, respecting libraries and h
   expect(result.total).toBe(3)
 })
 
-it('offers conditions, caps results at ten, and leaves a blank query empty', () => {
+it('offers conditions, preserves every match, and leaves a blank query empty', () => {
   const data = {
     creatures: Array.from({ length: 12 }, (_, i) =>
       creature({ id: `g:${i}`, name: `Goblin ${i}` }),
@@ -37,7 +37,7 @@ it('offers conditions, caps results at ten, and leaves a blank query empty', () 
     enabledLibraries: ['srd-5.2'],
     showHomebrew: true,
   }
-  expect(searchReferences('goblin', data).matches).toHaveLength(10)
+  expect(searchReferences('goblin', data).matches).toHaveLength(12)
   expect(searchReferences('goblin', data).total).toBe(12)
   expect(searchReferences('prone', data).matches.map((r) => r.kind)).toEqual(['condition'])
   expect(searchReferences('  ', data)).toEqual({ matches: [], total: 0 })

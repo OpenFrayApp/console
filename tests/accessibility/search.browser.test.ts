@@ -37,6 +37,10 @@ it('tabs through a character’s collapsible reference and keeps focus inside', 
       onAddCharacter: vi.fn(),
     }),
   )
+  await userEvent.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
+  await userEvent.tab()
+  expect(document.activeElement).toBe(screen.getByRole('combobox'))
   await userEvent.fill(screen.getByRole('combobox'), 'thalia')
   await userEvent.keyboard('{Enter}')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
@@ -50,6 +54,45 @@ it('tabs through a character’s collapsible reference and keeps focus inside', 
   await userEvent.keyboard('{Enter}')
   await userEvent.tab()
   expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Notes' }))
+})
+
+it('scrolls to matches beyond the first ten while keeping the search field visible', async () => {
+  await page.viewport(390, 844)
+  render(
+    createElement(QuickSearch, {
+      enabledLibraries: [],
+      showHomebrew: true,
+      customCreatures: [],
+      customSpells: Array.from({ length: 30 }, (_, i) =>
+        spell({ id: `custom:${i}`, name: `Reference ${String(i + 1).padStart(2, '0')}` }),
+      ),
+      characters: [],
+      combatants: [],
+      dispatch: vi.fn(),
+      onRoll: vi.fn(),
+      onNote: vi.fn(),
+      onClose: vi.fn(),
+      onAddCreature: vi.fn(),
+      onAddCharacter: vi.fn(),
+    }),
+  )
+  const input = screen.getByRole('combobox')
+  await userEvent.fill(input, 'Reference')
+  expect(screen.getAllByRole('option')).toHaveLength(30)
+  const list = screen.getByRole('listbox')
+  expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
+  await userEvent.keyboard('{ArrowUp}')
+  const last = screen.getByRole('option', { name: /Reference 30/ })
+  expect(input).toHaveAttribute('aria-activedescendant', last.id)
+  await expect
+    .poll(() => {
+      const row = last.getBoundingClientRect(),
+        box = list.getBoundingClientRect()
+      return row.top >= box.top && row.bottom <= box.bottom + 1
+    })
+    .toBe(true)
+  expect(input.getBoundingClientRect().top).toBeGreaterThanOrEqual(0)
+  expect(screen.queryByText(/Refine your search/)).toBeNull()
 })
 
 it('keeps focus in the casting dialog after explicit confirmation', async () => {

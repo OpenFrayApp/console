@@ -18,11 +18,12 @@ import { ICON } from '../icons/icon.ts'
 import { OpenIcon } from '../icons/OpenIcon.tsx'
 import { FieldHint } from '../ui/FieldHint.tsx'
 import { Modal } from '../ui/Modal.tsx'
+import { DialogFocus } from '../ui/DialogFocus.tsx'
 import { PinInput } from '../ui/PinInput.tsx'
 import { Button, IconButton, LinkButton } from '../ui/primitives.tsx'
 
 /** Cast icon — the board sent to the table's screens. */
-function CastIcon() {
+export function CastIcon() {
   return (
     <svg {...ICON} className="h-5 w-5">
       <path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
@@ -46,6 +47,8 @@ const SECTION = 'border-t border-slate-200 pt-3 dark:border-slate-800'
 const SECTION_LABEL = 'text-xs font-medium text-slate-700 dark:text-slate-200'
 
 interface SharePanelProps {
+  /** Open the existing player-view controls from quick navigation. */
+  openRequest?: number
   /** The current share code, or null before one exists. */
   code: string | null
   /** The active high-entropy capability included only in the copied URL fragment. */
@@ -73,6 +76,7 @@ interface SharePanelProps {
  * because that is a preference for every fight, not a decision made while sharing one.
  */
 export function SharePanel({
+  openRequest,
   code,
   capability,
   sharing,
@@ -85,6 +89,7 @@ export function SharePanel({
   onSetBackdrop,
 }: SharePanelProps) {
   const [open, setOpen] = useState(false)
+  useOpenRequest(openRequest, () => setOpen(true))
   const [draft, setDraft] = useState(code ?? '')
   useOpenRequest(code, () => setDraft(code ?? ''))
   const [message, setMessage] = useState<string | null>(null)
@@ -151,172 +156,174 @@ export function SharePanel({
       </IconButton>
 
       {open && (
-        <Modal
-          title="Player view"
-          subtitle="A read-only screen with the turn order and the game log. Anyone with the link can watch, so share it with your table and not the internet."
-          onClose={() => setOpen(false)}
-        >
-          <div className="space-y-3">
-            <div>
-              <Button variant={sharing ? 'danger' : 'primary'} onClick={onToggleShare}>
-                {sharing ? 'Stop sharing' : 'Start sharing'}
-              </Button>
-            </div>
+        <DialogFocus>
+          <Modal
+            title="Player view"
+            subtitle="A read-only screen with the turn order and the game log. Anyone with the link can watch, so share it with your table and not the internet."
+            onClose={() => setOpen(false)}
+          >
+            <div className="space-y-3">
+              <div>
+                <Button variant={sharing ? 'danger' : 'primary'} onClick={onToggleShare}>
+                  {sharing ? 'Stop sharing' : 'Start sharing'}
+                </Button>
+              </div>
 
-            {url && (
-              <div className={SECTION}>
-                <span className="mb-1 flex items-center gap-1.5">
-                  <label htmlFor="share-code" className={SECTION_LABEL}>
-                    Link
-                  </label>
-                  {onClaim && (
-                    <FieldHint>
-                      Name it anything in letters, numbers and hyphens. It stays yours between
-                      sessions.
-                    </FieldHint>
-                  )}
-                </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex min-w-0 flex-1 items-center gap-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
-                    <span className="shrink-0">{playerViewPrefix()}</span>
-                    {onClaim ? (
-                      <input
-                        id="share-code"
-                        aria-label="Link name"
-                        value={draft}
-                        placeholder={code ?? 'tuesday-game'}
-                        onChange={(e) => {
-                          setDraft(filterPlayerCodeInput(e.target.value))
-                          setMessage(null)
-                        }}
-                        className="tap-y min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-900 focus:outline-none dark:text-slate-100"
-                      />
-                    ) : (
-                      <span className="truncate text-slate-700 dark:text-slate-200">{code}</span>
+              {url && (
+                <div className={SECTION}>
+                  <span className="mb-1 flex items-center gap-1.5">
+                    <label htmlFor="share-code" className={SECTION_LABEL}>
+                      Link
+                    </label>
+                    {onClaim && (
+                      <FieldHint>
+                        Name it anything in letters, numbers and hyphens. It stays yours between
+                        sessions.
+                      </FieldHint>
                     )}
                   </span>
-                  {onClaim && draft !== code && (
-                    <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
-                      Save
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="flex min-w-0 flex-1 items-center gap-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                      <span className="shrink-0">{playerViewPrefix()}</span>
+                      {onClaim ? (
+                        <input
+                          id="share-code"
+                          aria-label="Link name"
+                          value={draft}
+                          placeholder={code ?? 'tuesday-game'}
+                          onChange={(e) => {
+                            setDraft(filterPlayerCodeInput(e.target.value))
+                            setMessage(null)
+                          }}
+                          className="tap-y min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-900 focus:outline-none dark:text-slate-100"
+                        />
+                      ) : (
+                        <span className="truncate text-slate-700 dark:text-slate-200">{code}</span>
+                      )}
+                    </span>
+                    {onClaim && draft !== code && (
+                      <Button size="sm" variant="secondary" onClick={claim} disabled={claiming}>
+                        Save
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => copy(url)}
+                      aria-label={copied ? 'Copied' : 'Copy the link'}
+                      title={copied ? 'Copied' : 'Copy the link'}
+                      className="inline-flex items-center justify-center px-1.5"
+                    >
+                      {copied ? <CheckIcon /> : <CopyIcon />}
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={() => copy(url)}
-                    aria-label={copied ? 'Copied' : 'Copy the link'}
-                    title={copied ? 'Copied' : 'Copy the link'}
-                    className="inline-flex items-center justify-center px-1.5"
-                  >
-                    {copied ? <CheckIcon /> : <CopyIcon />}
-                  </Button>
-                  <LinkButton
-                    size="sm"
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Open the player view in a new tab"
-                    title="Open the player view in a new tab"
-                    className="inline-flex items-center justify-center px-1.5"
-                  >
-                    <OpenIcon />
-                  </LinkButton>
+                    <LinkButton
+                      size="sm"
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="Open the player view in a new tab"
+                      title="Open the player view in a new tab"
+                      className="inline-flex items-center justify-center px-1.5"
+                    >
+                      <OpenIcon />
+                    </LinkButton>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {onSetPin && (
-              <div className={SECTION}>
-                <span className="mb-1 flex items-center gap-1.5">
-                  <span className={SECTION_LABEL}>PIN</span>
-                  <FieldHint>
-                    Locks the view: players type the four digits before the board shows. Empty boxes
-                    leave the link open.
-                  </FieldHint>
-                </span>
-                <div className="flex items-center gap-2">
-                  <PinInput value={pinDraft} onChange={editPin} />
-                  {pin && (
-                    <Button size="sm" variant="quiet" onClick={() => editPin('')}>
-                      Remove
-                    </Button>
-                  )}
+              {onSetPin && (
+                <div className={SECTION}>
+                  <span className="mb-1 flex items-center gap-1.5">
+                    <span className={SECTION_LABEL}>PIN</span>
+                    <FieldHint>
+                      Locks the view: players type the four digits before the board shows. Empty
+                      boxes leave the link open.
+                    </FieldHint>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <PinInput value={pinDraft} onChange={editPin} />
+                    {pin && (
+                      <Button size="sm" variant="quiet" onClick={() => editPin('')}>
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {onSetBackdrop && (
-              <div className={SECTION}>
-                <span className="mb-1 flex items-center gap-1.5">
-                  <span className={SECTION_LABEL}>Backdrop</span>
-                  <FieldHint>
-                    Sits dimmed behind the table’s screen, in the art each theme gets. Change it
-                    whenever the scene does.
-                  </FieldHint>
-                </span>
-                <div
-                  className="flex flex-wrap items-center gap-2"
-                  role="radiogroup"
-                  aria-label="Backdrop"
-                >
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={backdrop === null}
-                    onClick={() => onSetBackdrop(null)}
-                    className={`flex aspect-video w-24 items-center justify-center rounded border text-xs ${
-                      backdrop === null
-                        ? 'border-indigo-500 text-indigo-600 ring-1 ring-indigo-500 dark:text-indigo-400'
-                        : 'border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                    }`}
+              {onSetBackdrop && (
+                <div className={SECTION}>
+                  <span className="mb-1 flex items-center gap-1.5">
+                    <span className={SECTION_LABEL}>Backdrop</span>
+                    <FieldHint>
+                      Sits dimmed behind the table’s screen, in the art each theme gets. Change it
+                      whenever the scene does.
+                    </FieldHint>
+                  </span>
+                  <div
+                    className="flex flex-wrap items-center gap-2"
+                    role="radiogroup"
+                    aria-label="Backdrop"
                   >
-                    None
-                  </button>
-                  {CAMPAIGN_BACKGROUNDS.map((b) => (
                     <button
-                      key={b.id}
                       type="button"
                       role="radio"
-                      aria-checked={backdrop === b.id}
-                      aria-label={b.label}
-                      title={b.label}
-                      onClick={() => onSetBackdrop(b.id)}
-                      className={`relative aspect-video w-24 overflow-hidden rounded border ${
-                        backdrop === b.id
-                          ? 'border-indigo-500 ring-1 ring-indigo-500'
-                          : 'border-slate-300 dark:border-slate-700'
+                      aria-checked={backdrop === null}
+                      onClick={() => onSetBackdrop(null)}
+                      className={`flex aspect-video w-24 items-center justify-center rounded border text-xs ${
+                        backdrop === null
+                          ? 'border-indigo-500 text-indigo-600 ring-1 ring-indigo-500 dark:text-indigo-400'
+                          : 'border-slate-300 text-slate-500 dark:border-slate-700 dark:text-slate-400'
                       }`}
                     >
-                      <span
-                        aria-hidden
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
-                      />
+                      None
                     </button>
-                  ))}
+                    {CAMPAIGN_BACKGROUNDS.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={backdrop === b.id}
+                        aria-label={b.label}
+                        title={b.label}
+                        onClick={() => onSetBackdrop(b.id)}
+                        className={`relative aspect-video w-24 overflow-hidden rounded border ${
+                          backdrop === b.id
+                            ? 'border-indigo-500 ring-1 ring-indigo-500'
+                            : 'border-slate-300 dark:border-slate-700'
+                        }`}
+                      >
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 bg-cover bg-center"
+                          style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${b.file})` }}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {!onClaim && (
-              <p className={`${SECTION} text-xs text-slate-600 dark:text-slate-400`}>
-                <button
-                  type="button"
-                  onClick={onSignIn}
-                  className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Sign in
-                </button>{' '}
-                to start a player view.
-              </p>
-            )}
+              {!onClaim && (
+                <p className={`${SECTION} text-xs text-slate-600 dark:text-slate-400`}>
+                  <button
+                    type="button"
+                    onClick={onSignIn}
+                    className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                  >
+                    Sign in
+                  </button>{' '}
+                  to start a player view.
+                </p>
+              )}
 
-            {message && (
-              <p className="text-xs text-slate-700 dark:text-slate-200" role="status">
-                {message}
-              </p>
-            )}
-          </div>
-        </Modal>
+              {message && (
+                <p className="text-xs text-slate-700 dark:text-slate-200" role="status">
+                  {message}
+                </p>
+              )}
+            </div>
+          </Modal>
+        </DialogFocus>
       )}
     </>
   )

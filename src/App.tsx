@@ -152,23 +152,27 @@ import {
 import { AddQuickForm } from './components/add/AddQuickForm.tsx'
 import { CastSpellPanel } from './components/resolve/CastSpellPanel.tsx'
 import { QuickSearch } from './components/search/QuickSearch.tsx'
+import { SearchIcon } from './components/icons/SearchIcon.tsx'
 import { Button } from './components/ui/primitives.tsx'
+import { DialogFocus } from './components/ui/DialogFocus.tsx'
 import { InitiativePrompt } from './components/tracker/InitiativePrompt.tsx'
 import { MassSavePanel } from './components/resolve/MassSavePanel.tsx'
 import { RestControls } from './components/tracker/RestControls.tsx'
 import { QuickRoll } from './components/resolve/QuickRoll.tsx'
 import { CampaignPicker } from './components/shell/CampaignPicker.tsx'
-import { AccountControl } from './components/account/AccountControl.tsx'
+import { AccountControl, UserIcon } from './components/account/AccountControl.tsx'
 import { SharedLinksPage } from './components/share/SharedLinksPage.tsx'
 import { CombatTimers } from './components/tracker/CombatTimers.tsx'
 import { CombatDifficulty } from './components/tracker/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/settings/SettingsPanel.tsx'
-import { SettingsMenu } from './components/settings/SettingsMenu.tsx'
+import { SettingsMenu, SlidersIcon, HelpIcon } from './components/settings/SettingsMenu.tsx'
 import { MobileNav, type MobileTab } from './components/shell/MobileNav.tsx'
 import { Wordmark } from './components/shell/Wordmark.tsx'
 import { LegalLinks } from './components/shell/LegalLinks.tsx'
-import { SharePanel } from './components/share/SharePanel.tsx'
+import { SharePanel, CastIcon } from './components/share/SharePanel.tsx'
+import { BookIcon } from './components/icons/BookIcon.tsx'
+import { ShareIcon } from './components/icons/ShareIcon.tsx'
 import { SignUpPage } from './components/account/SignUpPage.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/log/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
@@ -192,24 +196,6 @@ function SwordIcon() {
       <path d="m13 19 6-6" />
       <path d="m16 16 4 4" />
       <path d="m19 21 2-2" />
-    </svg>
-  )
-}
-
-/** Open-book icon (compendium side of the view toggle). */
-function BookIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5"
-    >
-      <path d="M12 7v14" />
-      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
     </svg>
   )
 }
@@ -271,6 +257,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [profileRequest, setProfileRequest] = useState(0)
+  const [playerViewRequest, setPlayerViewRequest] = useState(0)
+  /** Close quick search and open an existing destination without resetting the board view. */
+  const navigateFromSearch = (open: () => void) => {
+    setSearchOpen(false)
+    open()
+  }
   const searchTriggerId = useId()
   // Which content libraries the compendium/picker show. A device-local preference
   // for every user (anon included), persisted in localStorage like the theme.
@@ -383,6 +376,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     shareLicense,
     setDisplayName,
     loading: authLoading,
+    configured: authConfigured,
     identityExpired,
   } = useAuth()
   const userId = user?.id ?? null
@@ -1696,6 +1690,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onClick={() => {
                   if (!document.querySelector('[role="dialog"], [role="menu"]')) setSearchOpen(true)
                 }}
+                className="flex h-9 shrink-0 items-center gap-2 text-slate-500 dark:text-slate-400"
                 id={searchTriggerId}
                 aria-label="Search references"
                 title={
@@ -1704,9 +1699,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                     : 'Search references'
                 }
               >
-                Search
+                <SearchIcon className="h-4 w-4 shrink-0" />
+                <span className="search-key-hint">Search</span>
                 {hint('openSearch') && (
-                  <kbd className="search-key-hint ml-1.5 text-xs">{hint('openSearch')}</kbd>
+                  <kbd className="search-key-hint ml-2 min-h-5 items-center justify-center rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-sm leading-none dark:border-slate-600 dark:bg-slate-800">
+                    {hint('openSearch')}
+                  </kbd>
                 )}
               </Button>
               {/* The view toggle sits out the phone layout — the bottom bar owns the
@@ -1723,6 +1721,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onResolveCopies={() => setCopyConflictOpen(true)}
               />
               <AccountControl
+                openRequest={profileRequest}
                 onSignIn={() => setAuthOpen(true)}
                 allowReserved={bylineGranted}
                 onOpenShares={() => {
@@ -1731,6 +1730,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 }}
               />
               <SharePanel
+                openRequest={playerViewRequest}
                 code={playerCode}
                 capability={liveViewSession?.capability ?? null}
                 sharing={sharing}
@@ -1770,6 +1770,66 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               customCreatures={customCreatures}
               customSpells={customSpells}
               characters={user ? rosterPcs : []}
+              navigation={[
+                {
+                  id: 'compendium',
+                  name: 'Compendium',
+                  icon: <BookIcon />,
+                  onSelect: () => navigateFromSearch(() => handleViewChange('compendium')),
+                },
+                {
+                  id: 'handbook',
+                  name: 'Handbook',
+                  icon: <HelpIcon />,
+                  href: '/docs/',
+                  onSelect: () => navigateFromSearch(() => track(EVENTS.docsOpened)),
+                },
+                {
+                  id: 'player-view',
+                  name: 'Player view',
+                  icon: <CastIcon />,
+                  onSelect: () => navigateFromSearch(() => setPlayerViewRequest((n) => n + 1)),
+                },
+                {
+                  id: 'settings',
+                  name: 'Settings',
+                  icon: <SlidersIcon />,
+                  onSelect: () =>
+                    navigateFromSearch(() => {
+                      track(EVENTS.settingsOpened)
+                      setSettingsOpen(true)
+                    }),
+                },
+                ...(!authLoading && user
+                  ? [
+                      {
+                        id: 'profile',
+                        name: 'Profile',
+                        icon: <UserIcon />,
+                        onSelect: () => navigateFromSearch(() => setProfileRequest((n) => n + 1)),
+                      },
+                      {
+                        id: 'shared-links',
+                        name: 'Shared links',
+                        icon: <ShareIcon />,
+                        onSelect: () =>
+                          navigateFromSearch(() => {
+                            refreshShares()
+                            setShowShares(true)
+                          }),
+                      },
+                    ]
+                  : !authLoading && authConfigured
+                    ? [
+                        {
+                          id: 'sign-in',
+                          name: 'Sign in',
+                          icon: <UserIcon />,
+                          onSelect: () => navigateFromSearch(() => setAuthOpen(true)),
+                        },
+                      ]
+                    : []),
+              ]}
               combatants={encounter.combatants}
               dispatch={dispatch}
               onRoll={pushRoll}
@@ -1786,22 +1846,24 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           )}
           {settingsOpen && (
-            <SettingsPanel
-              onClose={() => setSettingsOpen(false)}
-              enabledLibraries={enabledLibraries}
-              onSetEnabledLibraries={setEnabledLibraries}
-              showHomebrew={showHomebrew}
-              onSetShowHomebrew={setShowHomebrew}
-              librarySort={librarySort}
-              onSetLibrarySort={setLibrarySort}
-              playerView={playerView}
-              onSetPlayerView={setPlayerView}
-              hotkeys={hotkeys}
-              onSetHotkeys={(value) => {
-                track(EVENTS.keybindingChanged)
-                setHotkeys(value)
-              }}
-            />
+            <DialogFocus>
+              <SettingsPanel
+                onClose={() => setSettingsOpen(false)}
+                enabledLibraries={enabledLibraries}
+                onSetEnabledLibraries={setEnabledLibraries}
+                showHomebrew={showHomebrew}
+                onSetShowHomebrew={setShowHomebrew}
+                librarySort={librarySort}
+                onSetLibrarySort={setLibrarySort}
+                playerView={playerView}
+                onSetPlayerView={setPlayerView}
+                hotkeys={hotkeys}
+                onSetHotkeys={(value) => {
+                  track(EVENTS.keybindingChanged)
+                  setHotkeys(value)
+                }}
+              />
+            </DialogFocus>
           )}
 
           <main className="min-h-0 flex-1 overflow-hidden">
@@ -1915,7 +1977,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           )}
 
-          {authOpen && <SignUpPage onClose={() => setAuthOpen(false)} />}
+          {authOpen && (
+            <DialogFocus>
+              <SignUpPage onClose={() => setAuthOpen(false)} />
+            </DialogFocus>
+          )}
 
           {activeCopyConflict && copyConflictOpen && (
             <ReconciliationDialog
@@ -1978,11 +2044,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
           {/* Over the app, like Account and Settings: an account screen rather than a third
           view, and deliberately not persisted — a reload returns to the board. */}
           {showShares && (
-            <SharedLinksPage
-              shares={myShares}
-              onUnpublish={handleUnpublish}
-              onClose={() => setShowShares(false)}
-            />
+            <DialogFocus>
+              <SharedLinksPage
+                shares={myShares}
+                onUnpublish={handleUnpublish}
+                onClose={() => setShowShares(false)}
+              />
+            </DialogFocus>
           )}
 
           {initPrompt && (

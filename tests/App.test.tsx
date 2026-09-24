@@ -102,6 +102,32 @@ describe('App — when initiative reaches the log', () => {
 })
 
 describe('App — keyboard control', () => {
+  it('navigates from empty search without returning to the encounter or starting player sharing', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
+    expect(screen.queryByRole('combobox', { name: 'Search references' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show the compendium' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Settings' }))
+    const settings = screen.getByRole('dialog', { name: 'Settings' })
+    await waitFor(() => expect(settings.contains(document.activeElement)).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Player view' }))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Start sharing' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Show the compendium' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
   it('displays the rebound search shortcut and closes its reference back to the console', async () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: 'meta+u' } }))
     render(<App />)
