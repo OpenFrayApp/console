@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { useCallback, useId, useRef, useState } from 'react'
 import type { LifecycleSaveStatus } from '../../state/encounterLifecycle.ts'
+import { useDismiss } from '../../hooks/useDismiss.ts'
 
 const LABEL = {
   saving: 'Saving',
@@ -23,7 +25,10 @@ const DOT = {
   conflict: 'bg-red-500',
 } as const
 
-/** Show whether the working board is recoverable and expose recovery actions on failure. */
+const ACTION =
+  'tap-y cursor-pointer text-left font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white'
+
+/** Show a compact save-status dot with its message and recovery actions on demand. */
 export function RecoveryStatus({
   status,
   onRetry,
@@ -39,88 +44,79 @@ export function RecoveryStatus({
   onTakeOver?: () => void
   onResolveCopies?: () => void
 }) {
-  if (status.kind === 'failed') {
-    return (
-      <div
-        className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs"
-        role="status"
-      >
-        <span className="flex items-center gap-1.5 font-medium text-red-700 dark:text-red-300">
-          <span className={`h-2 w-2 rounded-full ${DOT.failed}`} aria-hidden="true" />
-          {LABEL.failed}
-        </span>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="tap-area font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
-        >
-          Retry saving
-        </button>
-        <button
-          type="button"
-          onClick={onDownload}
-          className="tap-area font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
-        >
-          Download recovery copy
-        </button>
-      </div>
-    )
-  }
-
-  if (status.kind === 'conflict' && onResolveCopies) {
-    return (
-      <button
-        type="button"
-        onClick={onResolveCopies}
-        className="tap-area flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-900 dark:text-red-300 dark:hover:text-red-100"
-      >
-        <span className={`h-2 w-2 rounded-full ${DOT.conflict}`} aria-hidden="true" />
-        Resolve copies
-      </button>
-    )
-  }
-
-  if (status.kind === 'read-only' && onTakeOver) {
-    return (
-      <div
-        className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs"
-        role="status"
-      >
-        <span className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-300">
-          <span className={`h-2 w-2 rounded-full ${DOT['read-only']}`} aria-hidden="true" />
-          {LABEL['read-only']}
-        </span>
-        <button
-          type="button"
-          onClick={onTakeOver}
-          className="tap-area font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-950 dark:text-slate-200 dark:decoration-slate-600 dark:hover:text-white"
-        >
-          Take over saving
-        </button>
-      </div>
-    )
-  }
-
-  if (status.kind === 'sign-in' && onSignIn) {
-    return (
-      <button
-        type="button"
-        onClick={onSignIn}
-        className="tap-area flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
-      >
-        <span className={`h-2 w-2 rounded-full ${DOT['sign-in']}`} aria-hidden="true" />
-        {LABEL['sign-in']}
-      </button>
-    )
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const panelId = useId()
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(ref, open, close)
+  const label = LABEL[status.kind]
+  /** Close the status popover before handing off to a recovery action. */
+  const runAction = (action: () => void) => {
+    close()
+    action()
   }
 
   return (
-    <span
-      className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
-      role="status"
+    <div
+      ref={ref}
+      className="relative flex shrink-0 items-center"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => {
+        if (!ref.current?.contains(document.activeElement)) close()
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) close()
+      }}
     >
-      <span className={`h-2 w-2 rounded-full ${DOT[status.kind]}`} aria-hidden="true" />
-      {LABEL[status.kind]}
-    </span>
+      <span className="sr-only" role="status">
+        {label}
+      </span>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        className="tap inline-flex h-9 w-4 shrink-0 items-center justify-center rounded"
+      >
+        <span className={`h-2 w-2 rounded-full ${DOT[status.kind]}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          id={panelId}
+          className="absolute right-0 top-full z-[60] w-max max-w-[calc(100vw-2rem)] pt-2"
+        >
+          <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            <p className="font-medium">{label}</p>
+            {status.kind === 'failed' && (
+              <>
+                <button type="button" onClick={() => runAction(onRetry)} className={ACTION}>
+                  Retry saving
+                </button>
+                <button type="button" onClick={() => runAction(onDownload)} className={ACTION}>
+                  Download recovery copy
+                </button>
+              </>
+            )}
+            {status.kind === 'conflict' && onResolveCopies && (
+              <button type="button" onClick={() => runAction(onResolveCopies)} className={ACTION}>
+                Resolve copies
+              </button>
+            )}
+            {status.kind === 'read-only' && onTakeOver && (
+              <button type="button" onClick={() => runAction(onTakeOver)} className={ACTION}>
+                Take over saving
+              </button>
+            )}
+            {status.kind === 'sign-in' && onSignIn && (
+              <button type="button" onClick={() => runAction(onSignIn)} className={ACTION}>
+                Sign in
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

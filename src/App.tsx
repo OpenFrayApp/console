@@ -1712,14 +1712,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               <div className="hidden split:block wide:block">
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
-              <RecoveryStatus
-                status={saveStatus}
-                onRetry={() => void lifecycle.retry()}
-                onDownload={downloadRecovery}
-                onSignIn={() => setAuthOpen(true)}
-                onTakeOver={() => void lifecycle.takeOver()}
-                onResolveCopies={() => setCopyConflictOpen(true)}
-              />
               <AccountControl
                 openRequest={profileRequest}
                 onSignIn={() => setAuthOpen(true)}
@@ -1753,6 +1745,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   track(EVENTS.settingsOpened)
                   setSettingsOpen(true)
                 }}
+              />
+              <RecoveryStatus
+                status={saveStatus}
+                onRetry={() => void lifecycle.retry()}
+                onDownload={downloadRecovery}
+                onSignIn={() => setAuthOpen(true)}
+                onTakeOver={() => void lifecycle.takeOver()}
+                onResolveCopies={() => setCopyConflictOpen(true)}
               />
             </div>
           </header>

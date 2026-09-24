@@ -724,7 +724,7 @@ export function EncounterConsole({
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-slate-200 pt-4 dark:border-slate-800 split:border-t-0 split:pt-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col pt-4 split:pt-0">
           <div className="mb-1 flex items-center justify-between">
             <h3 className={COLUMN_HEADING}>Game log</h3>
             {encounter.log.length > 0 && (

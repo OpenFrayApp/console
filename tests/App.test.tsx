@@ -31,7 +31,11 @@ describe('App', () => {
   it('writes a committed board action without waiting for a debounce timer', async () => {
     sessionStorage.clear()
     render(<App />)
-    await screen.findByRole('button', { name: 'Sign in to resume saving' })
+    const saveStatus = await screen.findByRole('button', { name: 'Sign in to resume saving' })
+    const settings = screen.getByRole('button', { name: 'Settings and more' })
+    expect(
+      settings.compareDocumentPosition(saveStatus) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     sessionStorage.clear()
 
     addFoe('Bandit')

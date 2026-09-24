@@ -14,6 +14,14 @@ published.
 
 ## Unreleased
 
+### Header
+
+- Save status appears as a colored dot after Settings; hover, focus, or tap it for its message and recovery actions.
+
+### Tracker
+
+- Board cleanup uses a trash can and a redrawn broom; the game log heading separates it from the controls without a border.
+
 ### Account
 
 - Sign in directly with Google or Discord from a simpler page, with the Terms notice beside the buttons and no checkbox.
