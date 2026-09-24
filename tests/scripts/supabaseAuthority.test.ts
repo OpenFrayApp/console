@@ -74,6 +74,41 @@ describe('Supabase authority evidence', () => {
     }
   })
 
+  it('compares named table columns independently of legacy addition order', () => {
+    const first = `CREATE TABLE IF NOT EXISTS "public"."players" (
+    "id" uuid NOT NULL,
+    "name" text,
+    "data" jsonb DEFAULT '{"a": 1, "b": 2}'::jsonb NOT NULL,
+    CONSTRAINT "valid" CHECK ((length("name") > 0))
+);`
+    const reordered = first
+      .replace('    "name" text,\n', '')
+      .replace('    CONSTRAINT', '    "name" text,\n    CONSTRAINT')
+    expect(canonicalSchemaDump(first)).toBe(canonicalSchemaDump(reordered))
+    for (const changed of [
+      reordered.replace('"name" text', '"name" integer'),
+      reordered.replace('"name" text', '"label" text'),
+      reordered.replace('"name" text', '"name" text NOT NULL'),
+      reordered.replace('"a": 1', '"a": 2'),
+      reordered.replace('> 0', '> 1'),
+      `${reordered}\nGRANT SELECT ON public.players TO anon;`,
+    ])
+      expect(canonicalSchemaDump(first)).not.toBe(canonicalSchemaDump(changed))
+  })
+
+  it('retains column ordering inside function bodies and SQL string literals', () => {
+    const table = `CREATE TABLE "public"."players" (
+    "id" uuid,
+    "name" text
+);`
+    const reversed = table.replace('"id" uuid,\n    "name" text', '"name" text,\n    "id" uuid')
+    for (const quote of ['$$', '$body$', "'"]) {
+      expect(canonicalSchemaDump(`SELECT ${quote}${table}${quote};`)).not.toBe(
+        canonicalSchemaDump(`SELECT ${quote}${reversed}${quote};`),
+      )
+    }
+  })
+
   it('reports only expected non-secret hosted fields when configuration drifts', () => {
     const comparison = compareHostedConfig(
       { database: { ssl_enforced: true }, realtime: { private_only: false } },
