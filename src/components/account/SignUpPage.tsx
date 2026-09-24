@@ -170,7 +170,7 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
               the board.
             </p>
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-              You must be 13 or older.
+              You must be at least 13 and meet your country’s minimum digital-consent age if higher.
             </p>
           </div>
         </div>

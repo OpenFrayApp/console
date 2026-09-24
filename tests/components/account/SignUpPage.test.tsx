@@ -75,7 +75,11 @@ describe('SignUpPage', () => {
       expect(link).toHaveAttribute('target', '_blank')
       expect(link).toHaveAttribute('rel', 'noreferrer')
     }
-    expect(screen.getByText(/13 or older/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'You must be at least 13 and meet your country’s minimum digital-consent age if higher.',
+      ),
+    ).toBeInTheDocument()
     const firstTime = screen.getByText(/Continuing creates a free account/)
     expect(firstTime).toBeInTheDocument()
     for (const provider of ['Google', 'Discord']) {
