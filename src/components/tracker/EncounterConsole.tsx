@@ -585,11 +585,19 @@ export function EncounterConsole({
                   label={selected.label}
                   autoLabel={selected.autoLabel}
                   onRename={(label) => {
+                    if (label === selected.label) return
                     onRename(selected.label, label)
                     dispatch({
                       type: 'update',
                       id: selected.combatantId,
-                      update: (c) => (c.isPC ? c : { ...c, label, autoLabel: c.autoLabel ?? null }),
+                      update: (c) =>
+                        c.isPC
+                          ? c
+                          : {
+                              ...c,
+                              label,
+                              autoLabel: c.autoLabel ? { ...c.autoLabel, manual: true } : null,
+                            },
                     })
                   }}
                   onHpInput={(raw) => applyHpInput(selected, raw, false)}

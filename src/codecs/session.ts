@@ -242,6 +242,15 @@ const monsterCombatant = v.strictObject({
   creatureId: v.string(),
   creature,
   label: v.string(),
+  autoLabel: v.optional(
+    v.nullable(
+      v.strictObject({
+        ordinal: v.pipe(integer, v.minValue(1), v.maxValue(Number.MAX_SAFE_INTEGER)),
+        label: v.string(),
+        manual: v.optional(v.literal(true)),
+      }),
+    ),
+  ),
   slotsUsed: numericRecord,
   spellUsesSpent: numericRecord,
   actionUsesSpent: v.optional(numericRecord),

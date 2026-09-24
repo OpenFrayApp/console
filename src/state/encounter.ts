@@ -348,7 +348,14 @@ export function encounterReducer(state: Encounter, action: EncounterAction): Enc
       const next = { ...state, combatants, activeIndex: indexOfId(combatants, keepActive) }
       const added = additions[additions.length - 1]
       return action.initiativeRoll
-        ? withLogs(next, [{ ...action.initiativeRoll, message: `${nameOf(added)}: initiative` }])
+        ? withLogs(next, [
+            {
+              ...action.initiativeRoll,
+              message: action.initiativeRoll.message.replace(nameOf(action.combatant), () =>
+                nameOf(added),
+              ),
+            },
+          ])
         : next
     }
 

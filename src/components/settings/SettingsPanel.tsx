@@ -272,7 +272,7 @@ export function SettingsPanel({
             <SettingRow
               id="creature-label-style"
               label="Creature labels"
-              hint="Labels start when a second matching creature is added. Existing labels stay unchanged."
+              hint="Labels start with the second matching creature and stay unchanged afterward."
             >
               <select
                 id="creature-label-style"

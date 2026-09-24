@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { describe, expect, it } from 'vitest'
+import { decodeSession, encodeSession } from '../../src/codecs/session.ts'
 import { instantiate, isAutoLabel, nameOf } from '../../src/combat/combatant.ts'
 import { creatureSuffix, type CreatureLabelStyle } from '../../src/combat/creatureLabels.ts'
 import { templateEntries, templateToCombatants } from '../../src/combat/encounterTemplate.ts'
@@ -36,6 +37,17 @@ function add(
   })
 }
 
+/** Restore an encounter through the codec used by session, device, and cloud recovery. */
+function roundTrip(encounter: Encounter): Encounter {
+  const encoded = encodeSession({ encounter, theme: 'dark', view: 'encounter', selectedId: null })
+  expect(encoded.status).toBe('ok')
+  if (encoded.status !== 'ok') throw new Error('Session encoding failed')
+  const decoded = decodeSession(encoded.serialized)
+  expect(decoded.status).toBe('ok')
+  if (decoded.status !== 'ok') throw new Error('Session decoding failed')
+  return decoded.snapshot.encounter
+}
+
 /** Read board labels in addition order without depending on initiative sorting. */
 function names(state: Encounter): string[] {
   return [...state.combatants]
@@ -60,9 +72,17 @@ describe('creature labels', () => {
   it('keeps gaps and allocates above surviving ordinals after removal and reload', () => {
     let state = add(add(add(emptyEncounter(), 'a'), 'b'), 'c')
     state = encounterReducer(state, { type: 'remove', id: 'b' })
-    state = add(JSON.parse(JSON.stringify(state)), 'd')
+    state = add(roundTrip(state), 'd')
     expect(names(state)).toEqual(['Goblin 1', 'Goblin 3', 'Goblin 4'])
   })
+
+  it.each(['numeric', 'roman', 'letters'] as const)(
+    'round-trips %s labels through the session codec',
+    (style) => {
+      const state = add(add(emptyEncounter(), 'a', style), 'b', style)
+      expect(roundTrip(state)).toEqual(state)
+    },
+  )
 
   it('keeps old labels when styles change and remembers ambiguous Roman ordinals', () => {
     let state = add(add(emptyEncounter(), 'a', 'roman'), 'b', 'roman')
@@ -105,6 +125,7 @@ describe('creature labels', () => {
     )
     expect(combatants.map(nameOf)).toEqual(['Goblin 2', 'Goblin 3'])
     expect(templateEntries(combatants)[0].labels).toEqual(['Goblin 2'])
+    expect(roundTrip({ ...emptyEncounter(), combatants }).combatants).toEqual(combatants)
   })
 
   it('preserves a typed numeric name on a previously unlabeled creature', () => {
@@ -117,6 +138,20 @@ describe('creature labels', () => {
     state = add(state, 'b')
     expect(names(state)).toEqual(['Goblin 9', 'Goblin 2'])
     expect(templateEntries(state.combatants)[0].labels).toEqual(['Goblin 9'])
+  })
+
+  it('retains manual ownership and ordinal even when a typed name matches its former label', () => {
+    let state = add(add(emptyEncounter(), 'a', 'letters'), 'b', 'letters')
+    state = encounterReducer(state, {
+      type: 'update',
+      id: 'b',
+      update: (c) =>
+        c.isPC ? c : { ...c, autoLabel: { ordinal: 2, label: 'Goblin B', manual: true } },
+    })
+    state = roundTrip(state)
+    expect(templateEntries(state.combatants)[0].labels).toEqual(['Goblin B'])
+    state = add(state, 'c', 'numeric')
+    expect(names(state)).toEqual(['Goblin A', 'Goblin B', 'Goblin 3'])
   })
 
   it('reserves a manually typed suffix before labeling the first copy', () => {

@@ -111,7 +111,7 @@ export function isAutoLabel(
   creatureName: string,
   generated?: MonsterCombatant['autoLabel'],
 ): boolean {
-  if (generated === null) return false
+  if (generated === null || generated?.manual) return false
   if (generated) return label === generated.label
   if (label === creatureName) return true
   const escaped = creatureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
