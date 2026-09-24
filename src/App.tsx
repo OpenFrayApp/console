@@ -4,6 +4,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useReducer,
@@ -270,6 +271,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   const [searchOpen, setSearchOpen] = useState(false)
+  const searchTriggerId = useId()
   // Which content libraries the compendium/picker show. A device-local preference
   // for every user (anon included), persisted in localStorage like the theme.
   const [enabledLibraries, setEnabledLibrariesState] = useState<string[]>(
@@ -1694,6 +1696,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onClick={() => {
                   if (!document.querySelector('[role="dialog"], [role="menu"]')) setSearchOpen(true)
                 }}
+                id={searchTriggerId}
                 aria-label="Search references"
                 title={
                   hint('openSearch')
@@ -1778,6 +1781,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               onClose={() => {
                 setSearchOpen(false)
                 handleViewChange('encounter')
+                queueMicrotask(() => document.getElementById(searchTriggerId)?.focus())
               }}
             />
           )}

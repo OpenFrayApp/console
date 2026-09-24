@@ -170,7 +170,9 @@ export function CastSpellPanel({
             Cast
           </Button>
           {combatants.length === 0 && (
-            <p className="text-sm text-slate-500">Add a combatant to cast this spell.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Add a combatant to cast this spell.
+            </p>
           )}
         </div>
       </Modal>

@@ -17,6 +17,7 @@ import { loadLibraries } from '../../compendium/srd.ts'
 import { searchReferences, type ReferenceResult } from '../../compendium/search.ts'
 import { resolveCondition } from '../../compendium/conditions.ts'
 import { editionLabel, libraryTag, librarySource } from '../../compendium/libraries.ts'
+import { useDialogFocus } from '../../hooks/useDialogFocus.ts'
 import { useCampaignEdition } from '../../state/campaignRules.ts'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
@@ -57,7 +58,6 @@ export function QuickSearch({
   const [library, setLibrary] = useState<{ creatures: Creature[]; spells: Spell[] } | null>(null)
   const [failed, setFailed] = useState(false)
   const [retry, setRetry] = useState(0)
-  const previousFocus = useRef(document.activeElement)
   const root = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   const id = useId()
@@ -78,27 +78,11 @@ export function QuickSearch({
     }
   }, [enabledLibraries, retry])
 
+  useDialogFocus(root)
   useLayoutEffect(() => {
     if (!selected) input.current?.focus()
     else root.current?.querySelector<HTMLButtonElement>('button')?.focus()
   }, [selected])
-  useLayoutEffect(() => {
-    const previous = previousFocus.current
-    /** Keep focus inside the current reference, including after its casting surface changes. */
-    const retainFocus = () => {
-      if (!root.current?.contains(document.activeElement)) {
-        root.current?.querySelector<HTMLElement>('input, button:not(:disabled), select')?.focus()
-      }
-    }
-    const observer = new MutationObserver(retainFocus)
-    if (root.current) observer.observe(root.current, { childList: true, subtree: true })
-    document.addEventListener('focusin', retainFocus)
-    return () => {
-      observer.disconnect()
-      document.removeEventListener('focusin', retainFocus)
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus()
-    }
-  }, [])
 
   const results = useMemo(
     () =>
@@ -117,29 +101,7 @@ export function QuickSearch({
   }, [index, results])
 
   return (
-    <div
-      ref={root}
-      onKeyDown={(event) => {
-        if (event.key !== 'Tab') return
-        const controls = Array.from(
-          root.current?.querySelectorAll<HTMLElement>(
-            'button, input, select, textarea, a[href], [tabindex="0"]',
-          ) ?? [],
-        ).filter((el) => !el.closest('[hidden]') && !el.matches(':disabled, [tabindex="-1"]'))
-        const first = controls[0],
-          last = controls.at(-1)
-        if (
-          event.shiftKey &&
-          (document.activeElement === first || !root.current?.contains(document.activeElement))
-        ) {
-          event.preventDefault()
-          last?.focus()
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault()
-          first?.focus()
-        }
-      }}
-    >
+    <div ref={root}>
       {selected?.kind === 'spell' ? (
         <CastSpellPanel {...casting} preparedSpell={selected.entry} onClosed={onClose} />
       ) : selected ? (

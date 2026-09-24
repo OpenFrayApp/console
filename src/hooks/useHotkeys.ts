@@ -44,7 +44,13 @@ export function useHotkeys(
       if (document.querySelector('[role="dialog"], [role="menu"]')) return
       const command = commandForChord(bindingsRef.current, chord)
       if (command === null) return
-      if (isTypingSurface(e.target) && command !== 'openSearch') return
+      if (isTypingSurface(e.target)) {
+        if (command !== 'openSearch') return
+        // Rebound letters and editing keys still belong to the text field.
+        if (!(e.ctrlKey || e.metaKey) && !/^F\d+$/.test(e.key)) return
+        if (/^(?:ctrl|meta)\+(?:shift\+)?(?:a|Arrow\w+|Home|End|Backspace|Delete)$/.test(chord))
+          return
+      }
       if (e.repeat && !REPEATING.has(command)) return
       const handler = handlersRef.current[command]
       if (!handler) return

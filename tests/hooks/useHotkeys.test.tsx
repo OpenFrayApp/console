@@ -23,6 +23,21 @@ function Harness({
 }
 
 describe('useHotkeys', () => {
+  it('preserves Select All and ordinary typing when search uses those keys', () => {
+    const openSearch = vi.fn()
+    const { getByLabelText, rerender } = render(
+      <Harness overrides={{ openSearch: 'ctrl+a', quickAdd: null }} handlers={{ openSearch }} />,
+    )
+    const input = getByLabelText('Typing surface')
+    expect(fireEvent.keyDown(input, { key: 'a', ctrlKey: true })).toBe(true)
+    expect(openSearch).not.toHaveBeenCalled()
+    fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true })
+    expect(openSearch).toHaveBeenCalledOnce()
+    rerender(<Harness overrides={{ openSearch: 'x' }} handlers={{ openSearch }} />)
+    fireEvent.keyDown(input, { key: 'x' })
+    expect(openSearch).toHaveBeenCalledOnce()
+  })
+
   it('opens rebound search while typing, but not over a dialog or during composition', () => {
     const openSearch = vi.fn()
     const { getByLabelText, rerender } = render(
