@@ -10,7 +10,13 @@ import {
   librarySourceBadgeClass,
 } from '../../compendium/libraries.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
-import type { LibrarySort, PlayerLogScope, PlayerViewSettings } from '../../state/settings.ts'
+import {
+  DEFAULT_TRACKER_COLORS,
+  type TrackerColors,
+  type LibrarySort,
+  type PlayerLogScope,
+  type PlayerViewSettings,
+} from '../../state/settings.ts'
 import type { FieldVisibility, HpVisibility } from '../../schema/combatant.ts'
 import { Badge, Button, CUSTOM_TONE, TabButton } from '../ui/primitives.tsx'
 import { HotkeyField } from './HotkeyField.tsx'
@@ -97,6 +103,8 @@ export function SettingsPanel({
   onSetLibrarySort,
   creatureLabelStyle,
   onSetCreatureLabelStyle,
+  trackerColors,
+  onSetTrackerColors,
   playerView,
   onSetPlayerView,
   hotkeys,
@@ -109,6 +117,8 @@ export function SettingsPanel({
   onSetShowHomebrew: (value: boolean) => void
   librarySort: LibrarySort
   onSetLibrarySort: (value: LibrarySort) => void
+  trackerColors: TrackerColors
+  onSetTrackerColors: (value: TrackerColors) => void
   creatureLabelStyle: CreatureLabelStyle
   onSetCreatureLabelStyle: (value: CreatureLabelStyle) => void
   playerView: PlayerViewSettings
@@ -285,6 +295,42 @@ export function SettingsPanel({
                 <option value="letters">Letters</option>
               </select>
             </SettingRow>
+            <div className="mt-3 space-y-3">
+              <SettingRow
+                id="tracker-creature-color"
+                label="Creature color"
+                hint="The side marker for creatures opposing the party."
+              >
+                <input
+                  id="tracker-creature-color"
+                  type="color"
+                  value={trackerColors.creature ?? '#ff637e'}
+                  onChange={(e) =>
+                    onSetTrackerColors({ ...trackerColors, creature: e.target.value })
+                  }
+                  className="tap h-8 w-12 cursor-pointer rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+                />
+              </SettingRow>
+              <SettingRow
+                id="tracker-ally-color"
+                label="Ally color"
+                hint="The side marker for player characters and allied creatures."
+              >
+                <input
+                  id="tracker-ally-color"
+                  type="color"
+                  value={trackerColors.ally ?? '#00bcff'}
+                  onChange={(e) => onSetTrackerColors({ ...trackerColors, ally: e.target.value })}
+                  className="tap h-8 w-12 cursor-pointer rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+                />
+              </SettingRow>
+              <Button
+                onClick={() => onSetTrackerColors({ ...DEFAULT_TRACKER_COLORS })}
+                disabled={trackerColors.creature === null && trackerColors.ally === null}
+              >
+                Reset colors
+              </Button>
+            </div>
           </section>
 
           <section

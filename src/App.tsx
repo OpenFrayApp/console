@@ -276,6 +276,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setShowHomebrewState(value)
     saveSettings({ showHomebrew: value })
   }
+  const [trackerColors, setTrackerColors] = useState(() => loadSettings().trackerColors)
   const [creatureLabelStyle, setCreatureLabelStyle] = useState(
     () => loadSettings().creatureLabelStyle,
   )
@@ -1858,6 +1859,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onSetShowHomebrew={setShowHomebrew}
                 librarySort={librarySort}
                 onSetLibrarySort={setLibrarySort}
+                trackerColors={trackerColors}
+                onSetTrackerColors={(value) => {
+                  setTrackerColors(value)
+                  saveSettings({ trackerColors: value })
+                }}
                 creatureLabelStyle={creatureLabelStyle}
                 onSetCreatureLabelStyle={(value) => {
                   setCreatureLabelStyle(value)
@@ -1915,6 +1921,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
             ) : (
               <EncounterConsole
+                trackerColors={trackerColors}
                 boardActions={
                   <>
                     <SaveFightButton

@@ -9,6 +9,39 @@ import { DEFAULT_ENABLED_LIBRARIES } from '../../src/compendium/libraries.ts'
 beforeEach(() => localStorage.clear())
 afterEach(() => localStorage.clear())
 
+describe('tracker colors', () => {
+  it('uses theme defaults for new and existing preferences', () => {
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+  })
+
+  it('persists colors independently of other settings and restores defaults', () => {
+    saveSettings({ trackerColors: { creature: '#123456', ally: '#ABCDEF' } })
+    saveSettings({ creatureLabelStyle: 'roman' })
+    expect(loadSettings().trackerColors).toEqual({ creature: '#123456', ally: '#ABCDEF' })
+    saveSettings({ trackerColors: { creature: null, ally: null } })
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+    expect(loadSettings().creatureLabelStyle).toBe('roman')
+  })
+
+  it.each(['red', '#abc', '#12345678', 'var(--color)', '', 42, {}, null])(
+    'rejects an invalid stored color %j without losing the valid color',
+    (creature) => {
+      localStorage.setItem(
+        'openfray-settings',
+        JSON.stringify({ trackerColors: { creature, ally: '#123456' } }),
+      )
+      expect(loadSettings().trackerColors).toEqual({ creature: null, ally: '#123456' })
+    },
+  )
+
+  it.each([null, [], 'bad', 42])('handles malformed stored preferences %j', (trackerColors) => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ trackerColors }))
+    expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
+  })
+})
+
 describe('app settings (localStorage)', () => {
   it('defaults creature labels to numeric and rejects unknown styles', () => {
     expect(loadSettings().creatureLabelStyle).toBe('numeric')

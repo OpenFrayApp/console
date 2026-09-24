@@ -34,6 +34,7 @@ import { makeSpellLinker } from '../../compendium/spelllinker.ts'
 import { SpellLinkContext } from '../statblock/spellLinkContext.ts'
 import { isRechargeable, rechargeStateOf, rollRecharge } from '../../combat/recharge.ts'
 import { acOf, isFoe, resolveSelected, trackerOrder } from '../../combat/combatant.ts'
+import type { TrackerColors } from '../../state/settings.ts'
 import { heldBack } from '../../combat/playerView.ts'
 import { rollWithEffects } from '../../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
@@ -98,6 +99,7 @@ export function EncounterConsole({
   hpEditRequest,
   concentrateRequest,
   keyHints,
+  trackerColors,
 }: {
   /**
    * What the board as a whole can do — saving it, handing it out. Rendered in the tracker's
@@ -106,6 +108,7 @@ export function EncounterConsole({
    */
   boardActions?: ReactNode
   encounter: Encounter
+  trackerColors?: TrackerColors
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
   /** Rolls the shared player view withholds — a creature's recharge and escape saves. */
@@ -371,6 +374,7 @@ export function EncounterConsole({
     <CombatantRow
       key={c.combatantId}
       combatant={c}
+      trackerColors={trackerColors}
       active={running && c.combatantId === activeId}
       selected={c.combatantId === selected?.combatantId}
       onSelect={() => {

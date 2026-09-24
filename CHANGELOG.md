@@ -20,6 +20,7 @@ published.
 
 ### Tracker
 
+- Choose creature and ally marker colors in Tracker settings, or reset them to the theme defaults. ([#77](https://github.com/OpenFrayApp/console/issues/77))
 - Choose numeric, Roman numeral, or letter labels for repeated creatures; labels start with the second copy and stay stable after removals. ([#75](https://github.com/OpenFrayApp/console/issues/75))
 - Board cleanup uses a trash can and a redrawn broom; the game log heading separates it from the controls without a border.
 

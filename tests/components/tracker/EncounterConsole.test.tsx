@@ -80,6 +80,32 @@ async function addCreature(name: string) {
 }
 
 describe('Encounter flow', () => {
+  it('applies and persists tracker color changes immediately and resets them', async () => {
+    localStorage.removeItem('openfray-settings')
+    try {
+      const { container } = render(<App />)
+      await addGoblin()
+      fireEvent.click(screen.getByRole('button', { name: 'Settings and more' }))
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Settings', exact: true }))
+      fireEvent.click(screen.getByRole('tab', { name: 'Tracker' }))
+      fireEvent.change(screen.getByLabelText('Creature color'), { target: { value: '#123456' } })
+      const row = container.querySelector('[data-combatant-row]') as HTMLElement
+      expect(row).toHaveStyle({ borderLeftColor: '#123456' })
+      expect(JSON.parse(localStorage.getItem('openfray-settings')!).trackerColors).toEqual({
+        creature: '#123456',
+        ally: null,
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Reset colors' }))
+      expect(row.style.borderLeftColor).toBe('')
+      expect(JSON.parse(localStorage.getItem('openfray-settings')!).trackerColors).toEqual({
+        creature: null,
+        ally: null,
+      })
+    } finally {
+      localStorage.removeItem('openfray-settings')
+    }
+  })
+
   it('starts empty with Begin disabled', () => {
     render(<App />)
     expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()

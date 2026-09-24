@@ -82,7 +82,28 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   gmName: 'hidden',
 }
 
+/** Device-local tracker marker overrides; null keeps the theme's default color. */
+export interface TrackerColors {
+  creature: string | null
+  ally: string | null
+}
+
+export const DEFAULT_TRACKER_COLORS: TrackerColors = { creature: null, ally: null }
+
+/** Accept only opaque six-digit hex colors produced by the native color picker. */
+function readColor(value: unknown): string | null {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : null
+}
+
+/** Restore each marker independently when stored preferences are missing or invalid. */
+function readTrackerColors(value: unknown): TrackerColors {
+  const data = (value ?? {}) as Record<string, unknown>
+  return { creature: readColor(data.creature), ally: readColor(data.ally) }
+}
+
 export interface AppSettings {
+  /** Colors of creature and ally side markers in the GM's tracker. */
+  trackerColors: TrackerColors
   /** Suffix style for newly added copies of a creature. */
   creatureLabelStyle: CreatureLabelStyle
   /** Content library ids the compendium/picker show (see compendium/libraries.ts). */
@@ -163,6 +184,7 @@ function readPlayerView(value: unknown): PlayerViewSettings {
 export function loadSettings(): AppSettings {
   const data = read()
   return {
+    trackerColors: readTrackerColors(data.trackerColors),
     creatureLabelStyle:
       data.creatureLabelStyle === 'roman' || data.creatureLabelStyle === 'letters'
         ? data.creatureLabelStyle

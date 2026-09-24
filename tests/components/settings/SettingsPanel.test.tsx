@@ -5,13 +5,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { SettingsPanel } from '../../../src/components/settings/SettingsPanel.tsx'
-import { DEFAULT_PLAYER_VIEW, type PlayerViewSettings } from '../../../src/state/settings.ts'
+import {
+  DEFAULT_PLAYER_VIEW,
+  DEFAULT_TRACKER_COLORS,
+  type TrackerColors,
+  type PlayerViewSettings,
+} from '../../../src/state/settings.ts'
 import type { HotkeyCommandId } from '../../../src/state/hotkeys.ts'
 
 afterEach(cleanup)
 
+/** Render the settings panel with callbacks for each preference. */
 function renderPanel(
   over: {
+    trackerColors?: TrackerColors
     enabledLibraries?: string[]
     showHomebrew?: boolean
     librarySort?: 'name' | 'cr'
@@ -23,6 +30,7 @@ function renderPanel(
   const onSetShowHomebrew = vi.fn()
   const onSetLibrarySort = vi.fn()
   const onSetCreatureLabelStyle = vi.fn()
+  const onSetTrackerColors = vi.fn()
   const onSetPlayerView = vi.fn()
   const onSetHotkeys = vi.fn()
   render(
@@ -32,6 +40,8 @@ function renderPanel(
       onSetEnabledLibraries={onSetEnabledLibraries}
       showHomebrew={over.showHomebrew ?? true}
       onSetShowHomebrew={onSetShowHomebrew}
+      trackerColors={over.trackerColors ?? DEFAULT_TRACKER_COLORS}
+      onSetTrackerColors={onSetTrackerColors}
       creatureLabelStyle="numeric"
       onSetCreatureLabelStyle={onSetCreatureLabelStyle}
       librarySort={over.librarySort ?? 'name'}
@@ -47,6 +57,7 @@ function renderPanel(
     onSetShowHomebrew,
     onSetLibrarySort,
     onSetCreatureLabelStyle,
+    onSetTrackerColors,
     onSetPlayerView,
     onSetHotkeys,
   }
@@ -54,6 +65,34 @@ function renderPanel(
 
 /** Open one of the settings tabs by its label. */
 const openTab = (label: string) => fireEvent.click(screen.getByRole('tab', { name: label }))
+
+describe('SettingsPanel — tracker colors', () => {
+  it('offers labeled native color pickers and preserves the other marker', () => {
+    const { onSetTrackerColors } = renderPanel({
+      trackerColors: { creature: '#123456', ally: '#abcdef' },
+    })
+    openTab('Tracker')
+    const creature = screen.getByLabelText('Creature color')
+    const ally = screen.getByLabelText('Ally color')
+    expect(creature).toHaveAttribute('type', 'color')
+    expect(creature).toHaveValue('#123456')
+    expect(ally).toHaveValue('#abcdef')
+    fireEvent.change(creature, { target: { value: '#654321' } })
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#654321', ally: '#abcdef' })
+    fireEvent.change(ally, { target: { value: '#fedcba' } })
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith({ creature: '#123456', ally: '#fedcba' })
+    fireEvent.click(screen.getByRole('button', { name: 'Reset colors' }))
+    expect(onSetTrackerColors).toHaveBeenLastCalledWith(DEFAULT_TRACKER_COLORS)
+  })
+
+  it('shows default swatches and disables reset until a color is chosen', () => {
+    renderPanel()
+    openTab('Tracker')
+    expect(screen.getByLabelText('Creature color')).toHaveValue('#ff637e')
+    expect(screen.getByLabelText('Ally color')).toHaveValue('#00bcff')
+    expect(screen.getByRole('button', { name: 'Reset colors' })).toBeDisabled()
+  })
+})
 
 describe('SettingsPanel — creature labels', () => {
   it('offers numeric, Roman, and letter labels in the tracker settings', () => {
