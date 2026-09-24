@@ -14,6 +14,10 @@ published.
 
 ## Unreleased
 
+### Account
+
+- Sign in directly with Google or Discord from a simpler page, with the Terms notice beside the buttons and no checkbox.
+
 ### Accessibility
 
 - Keyboard focus has a consistent visible outline, initiative rows can be reordered with arrow keys, and repeated touch controls meet a 44 CSS pixel target. ([#42](https://github.com/OpenFrayApp/console/issues/42))
