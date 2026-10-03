@@ -14,7 +14,6 @@ import { ThemeToggle } from '../icons/ThemeToggle.tsx'
 import { COLUMN_HEADING } from '../ui/headings.ts'
 import { PinInput } from '../ui/PinInput.tsx'
 import { backgroundEntry } from '../../lib/backgrounds.ts'
-import { SharingDiagnostics } from '../shell/SharingDiagnostics.tsx'
 
 /**
  * The screen at a shared link: the initiative order and the game log, and nothing
@@ -224,7 +223,6 @@ export function PlayerView({
         {/* A forced theme is the backdrop's call; a toggle would fight it. */}
         {!forced && <ThemeToggle theme={theme} onToggle={toggleTheme} />}
       </header>
-      <SharingDiagnostics role="player" />
 
       <div className="isolate relative flex min-h-0 flex-1 flex-col">
         {backdrop && (
