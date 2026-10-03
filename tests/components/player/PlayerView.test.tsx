@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import type { PlayerBoard } from '../../../src/combat/playerView.ts'
 import type { PlayerLinkStatus } from '../../../src/state/playerChannel.ts'
 import { PlayerView } from '../../../src/components/player/PlayerView.tsx'
@@ -81,6 +81,64 @@ describe('PlayerView — before a board arrives', () => {
 })
 
 describe('PlayerView — live', () => {
+  it('moves a dead creature below the turn order and restores its place when revived', () => {
+    link.status = 'live'
+    const current = board({ activeId: 'p' })
+    link.board = current
+    const { rerender } = render(<PlayerView code="x" />)
+    expect(screen.queryByRole('heading', { name: 'Dead' })).toBeNull()
+
+    link.board = {
+      ...current,
+      rows: current.rows.map((row) => (row.id === 'm' ? { ...row, status: 'dead' } : row)),
+    }
+    rerender(<PlayerView code="x" />)
+    expect(screen.getByRole('heading', { name: 'Dead' })).toBeInTheDocument()
+    const turnOrder = screen.getByRole('list', { name: 'Turn order' })
+    const dead = screen.getByRole('list', { name: 'Dead' })
+    expect(within(turnOrder).getByText('Thalia')).toBeInTheDocument()
+    expect(within(turnOrder).queryByText('Ogre')).toBeNull()
+    expect(within(dead).getByText('Ogre')).toBeInTheDocument()
+    expect(turnOrder.compareDocumentPosition(dead) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(dead).queryByRole('listitem', { current: true })).toBeNull()
+
+    link.board = current
+    rerender(<PlayerView code="x" />)
+    expect(screen.queryByRole('heading', { name: 'Dead' })).toBeNull()
+    expect(
+      within(screen.getByRole('list', { name: 'Turn order' }))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent),
+    ).toEqual([expect.stringContaining('Thalia'), expect.stringContaining('Ogre')])
+  })
+
+  it('keeps unconscious creatures in turn order and omits an empty dead section', () => {
+    link.status = 'live'
+    const current = board()
+    link.board = {
+      ...current,
+      rows: current.rows.map((row) => ({ ...row, status: 'unconscious' })),
+    }
+    render(<PlayerView code="x" />)
+    expect(
+      within(screen.getAllByText('Ogre').at(-1)!.closest('ul')!).getAllByRole('listitem'),
+    ).toHaveLength(2)
+    expect(screen.queryByRole('heading', { name: 'Dead' })).toBeNull()
+  })
+
+  it('renders an all-dead board without calling it an empty board', () => {
+    link.status = 'live'
+    const current = board({ activeId: null })
+    link.board = { ...current, rows: current.rows.map((row) => ({ ...row, status: 'dead' })) }
+    render(<PlayerView code="x" />)
+    expect(screen.getByRole('heading', { name: 'Dead' })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('list', { name: 'Dead' })).getAllByRole('listitem'),
+    ).toHaveLength(2)
+    expect(screen.queryByText('Nobody is on the board yet.')).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Turn order' })).toBeNull()
+  })
+
   it('renders received marker colors and restores theme defaults on the next board', () => {
     link.status = 'live'
     link.board = board({ colors: { creature: '#123456', ally: '#abcdef' } })

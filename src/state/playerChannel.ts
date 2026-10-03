@@ -24,12 +24,12 @@ import {
   type PlayerProtocolState,
 } from './playerProtocol.ts'
 import { liveViewTopics, type ActiveLiveView } from './liveViewAuthority.ts'
+import { startSharingHeartbeat } from './sharingHeartbeat.ts'
 
 const EVENT = 'player-view-protocol'
 const HELLO_TIMEOUT_MS = 4000
 const PIN_TRY_TIMEOUT_MS = 2000
 const SEND_DEBOUNCE_MS = 250
-const BOARD_HEARTBEAT_MS = 10_000
 const FRESHNESS_TICK_MS = 1_000
 
 /** Send one bounded Game Master message on an owner-authorized private channel. */
@@ -94,7 +94,7 @@ export function useBoardBroadcast(
     const client = supabase
     let cancelled = false
     let responseTimer: ReturnType<typeof setTimeout> | undefined
-    let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+    let stopHeartbeat: (() => void) | undefined
     const open: RealtimeChannel[] = []
     const publicationChannels: RealtimeChannel[] = []
     sending.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
@@ -150,7 +150,7 @@ export function useBoardBroadcast(
         void boardTarget.track({ role: 'gm' })
         sendBoard(boardTarget)
       })
-      heartbeatTimer = setInterval(() => sendBoard(boardTarget), BOARD_HEARTBEAT_MS)
+      stopHeartbeat = startSharingHeartbeat(() => sendBoard(boardTarget))
 
       const joins = client.channel(topics.join, privateChannelConfig('gm-joins'))
       open.push(joins)
@@ -161,7 +161,7 @@ export function useBoardBroadcast(
     return () => {
       cancelled = true
       clearTimeout(responseTimer)
-      clearInterval(heartbeatTimer)
+      stopHeartbeat?.()
       if (activeSession.current?.capability !== session.capability) {
         for (const target of publicationChannels) {
           sending.current = sendGameMasterTraffic(target, sending.current, senderId.current, {
@@ -256,7 +256,7 @@ export function usePlayerBoard(
     !playerViewAvailable() ? 'unavailable' : null,
   )
   const [pinRejected, setPinRejected] = useState(false)
-  const [observedAt, setObservedAt] = useState(Date.now())
+  const [observedAt, setObservedAt] = useState(() => performance.now())
   const receiving = useRef<PlayerProtocolState>({ ...INITIAL_PLAYER_PROTOCOL_STATE })
   const senderId = useRef(uid())
 
@@ -272,7 +272,7 @@ export function usePlayerBoard(
       const received = receivePlayerMessage(receiving.current, 'viewer', payload)
       if (received.status !== 'accepted' || received.message.type === 'hello') return
       receiving.current = received.state
-      const now = Date.now()
+      const now = performance.now()
       const next = applyPlayerFreshnessMessage(freshnessRef.current, received, now)
       if (received.message.type === 'locked') {
         setStandby('locked')
@@ -303,7 +303,7 @@ export function usePlayerBoard(
   useEffect(() => {
     if (!supabase || !capability) return
     const timer = setInterval(() => {
-      const now = Date.now()
+      const now = performance.now()
       setObservedAt(now)
       updateFreshness(refreshPlayerFreshness(freshnessRef.current, now))
     }, FRESHNESS_TICK_MS)
@@ -321,7 +321,7 @@ export function usePlayerBoard(
     const reconnect = () => {
       clearTimeout(waiting)
       setStandby(null)
-      updateFreshness(markPlayerConnectionLost(freshnessRef.current, Date.now()))
+      updateFreshness(markPlayerConnectionLost(freshnessRef.current, performance.now()))
     }
 
     /** End this capability immediately after confirmed closure or authorization failure. */

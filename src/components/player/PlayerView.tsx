@@ -175,7 +175,9 @@ export function PlayerView({
     pin.length === 4 ? pin : null,
   )
   const boardVisible = status !== 'connection-lost' && status !== 'ended' ? board : null
-  const turn = boardVisible?.rows.find((r) => r.id === boardVisible.activeId)?.name
+  const living = boardVisible?.rows.filter((row) => row.status !== 'dead') ?? []
+  const dead = boardVisible?.rows.filter((row) => row.status === 'dead') ?? []
+  const turn = living.find((row) => row.id === boardVisible?.activeId)?.name
   const entry = backgroundEntry(boardVisible?.background)
   // A backdrop decides the mode: its art was treated for one theme, and it wears it.
   const forced = entry?.theme ?? null
@@ -258,6 +260,7 @@ export function PlayerView({
                   <div className={ground}>
                     <CombatTimers
                       stats={boardVisible.timers}
+                      timeSource="monotonic"
                       round={boardVisible.round}
                       running={boardVisible.round > 0 && !boardVisible.paused}
                     />
@@ -278,16 +281,40 @@ export function PlayerView({
                       Nobody is on the board yet.
                     </p>
                   ) : (
-                    <ul className="space-y-1.5">
-                      {boardVisible.rows.map((row) => (
-                        <PlayerRow
-                          key={row.id}
-                          row={row}
-                          colors={boardVisible.colors}
-                          active={row.id === boardVisible.activeId}
-                        />
-                      ))}
-                    </ul>
+                    <>
+                      {living.length > 0 && (
+                        <ul aria-label="Turn order" className="space-y-1.5">
+                          {living.map((row) => (
+                            <PlayerRow
+                              key={row.id}
+                              row={row}
+                              colors={boardVisible.colors}
+                              active={row.id === boardVisible.activeId}
+                            />
+                          ))}
+                        </ul>
+                      )}
+                      {dead.length > 0 && (
+                        <section className="mt-4" aria-labelledby="player-dead-heading">
+                          <h3
+                            id="player-dead-heading"
+                            className={`${PANE_HEADING} ${ground} inline-block`}
+                          >
+                            Dead
+                          </h3>
+                          <ul aria-labelledby="player-dead-heading" className="space-y-1.5">
+                            {dead.map((row) => (
+                              <PlayerRow
+                                key={row.id}
+                                row={row}
+                                colors={boardVisible.colors}
+                                active={false}
+                              />
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+                    </>
                   )}
                 </section>
 

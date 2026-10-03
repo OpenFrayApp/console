@@ -22,6 +22,19 @@ import {
 import { makeRealtimeStub } from './supabaseMock.ts'
 
 const supa = vi.hoisted(() => ({ client: null as unknown }))
+const topicRequests = vi.hoisted(() => ({ pending: [] as Promise<unknown>[] }))
+
+vi.mock('../../src/state/liveViewAuthority.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../src/state/liveViewAuthority.ts')>()
+  return {
+    ...original,
+    liveViewTopics: (...args: Parameters<typeof original.liveViewTopics>) => {
+      const pending = original.liveViewTopics(...args)
+      topicRequests.pending.push(pending)
+      return pending
+    },
+  }
+})
 
 vi.mock('../../src/lib/supabase.ts', () => ({
   get supabase() {
@@ -38,6 +51,7 @@ const session: ActiveLiveView = {
 }
 
 beforeEach(() => {
+  topicRequests.pending = []
   vi.useFakeTimers()
 })
 
@@ -77,12 +91,68 @@ function ownerMessage(
 /** Let capability hashing and channel setup finish. */
 async function flushChannelSetup(): Promise<void> {
   await act(async () => {
-    await liveViewTopics(capability, null)
-    await Promise.resolve()
+    await Promise.all(topicRequests.pending)
+    topicRequests.pending = []
   })
 }
 
 describe('useBoardBroadcast — owner publication', () => {
+  it('keeps the viewer Live when the hidden GM main-thread heartbeat stalls for 60 seconds', async () => {
+    const workers: {
+      onmessage: ((event: MessageEvent) => void) | null
+      terminate: ReturnType<typeof vi.fn>
+    }[] = []
+    vi.stubGlobal(
+      'Worker',
+      class {
+        onmessage = null
+        terminate = vi.fn()
+        postMessage = vi.fn()
+        constructor() {
+          workers.push(this)
+        }
+      },
+    )
+    const interval = globalThis.setInterval
+    const intervals = vi
+      .spyOn(globalThis, 'setInterval')
+      .mockImplementation((callback, delay, ...args) =>
+        interval(delay === 10_000 ? () => {} : callback, delay, ...args),
+      )
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    try {
+      const publisher = renderHook(() =>
+        useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW),
+      )
+      await flushChannelSetup()
+      const viewer = renderHook(() => usePlayerBoard('code', capability))
+      await flushChannelSetup()
+      act(() => {
+        channels[0].ready()
+        channels[2].ready()
+        const initial = channels[0].sends.at(-1)!
+        channels[2].emit(initial.event, initial.payload)
+      })
+      for (let elapsed = 10_000; elapsed <= 60_000; elapsed += 10_000) {
+        await act(async () => {
+          vi.advanceTimersByTime(10_000)
+          workers[0]?.onmessage?.(new MessageEvent('message', { data: 'tick' }))
+          const latest = channels[0].sends.at(-1)!
+          channels[2].emit(latest.event, latest.payload)
+        })
+        expect(viewer.result.current.status).toBe('live')
+      }
+      publisher.unmount()
+      expect(workers[0].terminate).toHaveBeenCalledOnce()
+      await act(async () => void vi.advanceTimersByTime(30_000))
+      expect(viewer.result.current.status).toBe('connection-lost')
+    } finally {
+      intervals.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('broadcasts tracker changes and player overrides without reopening the channel', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
@@ -317,6 +387,133 @@ describe('useBoardBroadcast — owner publication', () => {
 })
 
 describe('usePlayerBoard — read-only viewer', () => {
+  it('restores a temporarily stale board after a new validated update arrives', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    renderHook(() => useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW))
+    await flushChannelSetup()
+    const viewer = renderHook(() => usePlayerBoard('secret-shared-code', capability))
+    await flushChannelSetup()
+    await act(async () => {
+      channels[0].ready()
+      channels[2].ready()
+      const initial = channels[0].sends[0]
+      channels[2].emit(initial.event, initial.payload)
+    })
+    await act(async () => void vi.advanceTimersByTime(40_000))
+    expect(viewer.result.current.status).toBe('connection-lost')
+    await act(async () => {
+      const latest = channels[0].sends.at(-1)!
+      channels[2].emit(latest.event, latest.payload)
+    })
+    expect(viewer.result.current.status).toBe('live')
+  })
+
+  it('keeps an idle player view Live through owner heartbeats and covers it only when they stop', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const publisher = renderHook(() =>
+      useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW),
+    )
+    await flushChannelSetup()
+    const viewer = renderHook(() => usePlayerBoard('code', capability))
+    await flushChannelSetup()
+    let delivered = 0
+    act(() => {
+      channels[0].ready()
+      channels[2].ready()
+      channels[2].presence = { gm: [{ role: 'gm' }] }
+      channels[2].emitPresence('sync')
+      for (const message of channels[0].sends.slice(delivered)) {
+        channels[2].emit(message.event, message.payload)
+      }
+      delivered = channels[0].sends.length
+    })
+    for (let heartbeat = 0; heartbeat < 30; heartbeat += 1) {
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+        for (const message of channels[0].sends.slice(delivered)) {
+          channels[2].emit(message.event, message.payload)
+        }
+        delivered = channels[0].sends.length
+      })
+      expect(viewer.result.current).toMatchObject({ status: 'live', board: { round: 3 } })
+    }
+    publisher.unmount()
+    act(() => void vi.advanceTimersByTime(30_000))
+    expect(viewer.result.current.status).toBe('connection-lost')
+  })
+
+  it.each([0, -60_000, 60_000, -604_800_000, 604_800_000])(
+    'receives the same board locally and remotely with a publisher clock offset of %i ms',
+    async (offset) => {
+      const { client, channels } = makeRealtimeStub()
+      supa.client = client
+      const viewerTime = 1_900_000_000_000
+      vi.setSystemTime(viewerTime + offset)
+      renderHook(() => useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW))
+      await flushChannelSetup()
+      act(() => channels[0].ready())
+      const published = channels[0].sends[0]
+
+      const local = renderHook(() => usePlayerBoard('code', capability))
+      await flushChannelSetup()
+      act(() => {
+        channels[2].ready()
+        channels[2].emit(published.event, published.payload)
+      })
+      expect(local.result.current).toMatchObject({ status: 'live', board: { round: 3 } })
+      local.unmount()
+
+      vi.setSystemTime(viewerTime)
+      const remote = renderHook(() => usePlayerBoard('code', capability))
+      await flushChannelSetup()
+      act(() => {
+        channels[4].ready()
+        channels[4].emit(published.event, published.payload)
+      })
+      expect(remote.result.current).toMatchObject({ status: 'live', board: { round: 3 } })
+
+      act(() => void vi.advanceTimersByTime(30_000))
+      expect(remote.result.current.status).toBe('connection-lost')
+      act(() => {
+        channels[4].emit(published.event, published.payload)
+      })
+      expect(remote.result.current.status).toBe('connection-lost')
+      act(() => {
+        const heartbeat = channels[0].sends.at(-1)!
+        channels[4].emit(heartbeat.event, heartbeat.payload)
+      })
+      expect(remote.result.current).toMatchObject({ status: 'live', board: { round: 3 } })
+    },
+  )
+
+  it.each([-604_800_000, 604_800_000])(
+    'measures connection inactivity independently of a viewer clock adjustment of %i ms',
+    async (adjustment) => {
+      const { client, channels } = makeRealtimeStub()
+      supa.client = client
+      const { result } = renderHook(() => usePlayerBoard('code', capability))
+      await flushChannelSetup()
+      act(() => {
+        channels[0].ready()
+        channels[0].emit(
+          'player-view-protocol',
+          ownerMessage(0, { type: 'board', board: playerBoard(encounter(2), DEFAULT_PLAYER_VIEW) }),
+        )
+        channels[0].status('TIMED_OUT')
+        vi.advanceTimersByTime(10_000)
+      })
+      expect(result.current).toMatchObject({ status: 'reconnecting', lastUpdateAgeSeconds: 10 })
+
+      vi.setSystemTime(Date.now() + adjustment)
+      act(() => void vi.advanceTimersByTime(10_000))
+      expect(result.current).toMatchObject({ status: 'reconnecting', lastUpdateAgeSeconds: 20 })
+      act(() => void vi.advanceTimersByTime(10_000))
+      expect(result.current.status).toBe('connection-lost')
+    },
+  )
+
   it('ends access without a capability and opens no guessable code channel', () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
@@ -463,7 +660,7 @@ describe('usePlayerBoard — read-only viewer', () => {
     expect(result.current).toMatchObject({ status: 'ended', board: null })
   })
 
-  it('does not let delayed traffic restore a lost board', async () => {
+  it('does not let duplicate or reordered traffic restore a lost board', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
     const { result } = renderHook(() => usePlayerBoard('code', capability))
@@ -472,7 +669,7 @@ describe('usePlayerBoard — read-only viewer', () => {
     act(() =>
       channels[0].emit(
         'player-view-protocol',
-        ownerMessage(0, { type: 'board', board: playerBoard(encounter(2), DEFAULT_PLAYER_VIEW) }),
+        ownerMessage(4, { type: 'board', board: playerBoard(encounter(2), DEFAULT_PLAYER_VIEW) }),
       ),
     )
     act(() => {
@@ -480,19 +677,20 @@ describe('usePlayerBoard — read-only viewer', () => {
       vi.advanceTimersByTime(30_001)
     })
 
-    act(() =>
-      channels[0].emit(
-        'player-view-protocol',
-        ownerMessage(
-          1,
-          { type: 'board', board: playerBoard(encounter(9), DEFAULT_PLAYER_VIEW) },
-          'gm-session',
-          Date.now() - 30_001,
+    for (const sequence of [4, 3]) {
+      act(() =>
+        channels[0].emit(
+          'player-view-protocol',
+          ownerMessage(
+            sequence,
+            { type: 'board', board: playerBoard(encounter(9), DEFAULT_PLAYER_VIEW) },
+            'gm-session',
+            Date.now() - 30_001,
+          ),
         ),
-      ),
-    )
-
-    expect(result.current).toMatchObject({ status: 'connection-lost', board: { round: 2 } })
+      )
+      expect(result.current).toMatchObject({ status: 'connection-lost', board: { round: 2 } })
+    }
   })
 
   it('opens the PIN gate only after a validated owner lock message', async () => {

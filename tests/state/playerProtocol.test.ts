@@ -172,6 +172,62 @@ describe('the live-view protocol envelope', () => {
 })
 
 describe('live-view freshness', () => {
+  it.each([-60_000, 60_000])(
+    'rebases a running timer with sender clock offset %i ms without mutating the payload',
+    (offset) => {
+      const sentAt = 1_900_000_000_000 + offset
+      const shared = { ...board, timers: { activeMs: 20_000, runningSince: sentAt - 10_000 } }
+      const sent = sendGameMasterMessage(
+        INITIAL_PLAYER_PROTOCOL_STATE,
+        'gm',
+        { type: 'board', board: shared },
+        sentAt,
+      )
+      const received = receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', sent.envelope)
+      const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, received, 1234)
+      expect(live.board?.timers).toEqual({ activeMs: 30_000, runningSince: 1234 })
+      expect(shared.timers).toEqual({ activeMs: 20_000, runningSince: sentAt - 10_000 })
+      expect(sent.envelope.payload).toMatchObject({ timers: shared.timers })
+    },
+  )
+
+  it('leaves a paused timer frozen independently of sender and receiver clocks', () => {
+    const sent = sendGameMasterMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'gm',
+      {
+        type: 'board',
+        board: {
+          ...board,
+          paused: true,
+          timers: { activeMs: 90_000, runningSince: null },
+        },
+      },
+      1_900_000_000_000,
+    )
+    const received = receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', sent.envelope)
+    const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, received, 1234)
+    expect(live.board?.timers).toEqual({ activeMs: 90_000, runningSince: null })
+  })
+
+  it.each([-604_800_000, -60_000, 60_000, 604_800_000])(
+    'accepts an ordered board with a sender clock offset of %i ms',
+    (offset) => {
+      const now = 1_900_000_000_000
+      const received = receivePlayerMessage(
+        INITIAL_PLAYER_PROTOCOL_STATE,
+        'viewer',
+        boardEnvelope(0, 'gm-session', now + offset),
+      )
+      expect(received.status).toBe('accepted')
+      expect(applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, received, now)).toEqual({
+        status: 'live',
+        board,
+        lastAcceptedAt: now,
+      })
+    },
+  )
+
   it('restores Live only from a validated fresh board', () => {
     const now = 1_900_000_000_000
     const valid = receivePlayerMessage(
@@ -195,6 +251,20 @@ describe('live-view freshness', () => {
     })
   })
 
+  it('renews connection activity when an unchanged board arrives with a newer sequence', () => {
+    const now = 1_900_000_000_000
+    const initial = receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', boardEnvelope(0))
+    const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, initial, now)
+    const lost = refreshPlayerFreshness(live, now + LIVE_VIEW_FRESHNESS_GRACE_MS)
+    expect(lost.status).toBe('connection-lost')
+
+    const heartbeat = receivePlayerMessage(initial.state, 'viewer', boardEnvelope(1))
+    const restored = applyPlayerFreshnessMessage(lost, heartbeat, now + 60_000)
+    expect(restored).toEqual({ status: 'live', board, lastAcceptedAt: now + 60_000 })
+    expect(refreshPlayerFreshness(restored, now + 89_999).status).toBe('live')
+    expect(refreshPlayerFreshness(restored, now + 90_000).status).toBe('connection-lost')
+  })
+
   it('keeps the last board visible for 30 seconds, then marks it as lost', () => {
     const now = 1_900_000_000_000
     const accepted = receivePlayerMessage(
@@ -215,7 +285,7 @@ describe('live-view freshness', () => {
     })
   })
 
-  it('does not let delayed, duplicated, or unsupported traffic restore Live', () => {
+  it('does not let reordered, duplicated, or unsupported traffic restore Live', () => {
     const now = 1_900_000_000_000
     const accepted = receivePlayerMessage(
       INITIAL_PLAYER_PROTOCOL_STATE,
@@ -229,8 +299,8 @@ describe('live-view freshness', () => {
       now + LIVE_VIEW_FRESHNESS_GRACE_MS + 1,
     )
 
-    const delayed = receivePlayerMessage(accepted.state, 'viewer', {
-      ...boardEnvelope(5, 'gm-session', now - LIVE_VIEW_FRESHNESS_GRACE_MS - 1),
+    const reordered = receivePlayerMessage(accepted.state, 'viewer', {
+      ...boardEnvelope(3, 'gm-session', now - LIVE_VIEW_FRESHNESS_GRACE_MS - 1),
     })
     const duplicated = receivePlayerMessage(accepted.state, 'viewer', boardEnvelope(4))
     const unsupported = receivePlayerMessage(accepted.state, 'viewer', {
@@ -238,7 +308,7 @@ describe('live-view freshness', () => {
       protocolVersion: CURRENT_PLAYER_PROTOCOL_VERSION + 1,
     })
 
-    expect(applyPlayerFreshnessMessage(lost, delayed, now)).toBe(lost)
+    expect(applyPlayerFreshnessMessage(lost, reordered, now)).toBe(lost)
     expect(applyPlayerFreshnessMessage(lost, duplicated, now)).toBe(lost)
     expect(applyPlayerFreshnessMessage(lost, unsupported, now)).toBe(lost)
   })

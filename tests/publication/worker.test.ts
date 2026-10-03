@@ -66,7 +66,7 @@ describe('publication contract in workerd', () => {
         `  compatibilityDate = "2026-07-01"\n` +
         `);\n`,
     )
-    const child = spawn(process.execPath, [WORKERD_BIN, 'serve', 'config.capnp'], {
+    const child = spawn(WORKERD_BIN, ['serve', 'config.capnp'], {
       cwd: directory,
       stdio: 'ignore',
     })
