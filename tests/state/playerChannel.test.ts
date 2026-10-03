@@ -14,10 +14,6 @@ import {
 } from '../../src/state/playerProtocol.ts'
 import { useBoardBroadcast, usePlayerBoard } from '../../src/state/playerChannel.ts'
 import {
-  clearSharingDiagnostics,
-  sharingDiagnosticsReport,
-} from '../../src/state/sharingDiagnostics.ts'
-import {
   LIVE_VIEW_CAPABILITY_BYTES,
   liveViewTopics,
   mintLiveViewCapability,
@@ -43,16 +39,12 @@ const session: ActiveLiveView = {
 
 beforeEach(() => {
   vi.useFakeTimers()
-  history.replaceState(null, '', '/')
-  clearSharingDiagnostics()
 })
 
 afterEach(() => {
   vi.useRealTimers()
   cleanup()
   supa.client = null
-  history.replaceState(null, '', '/')
-  clearSharingDiagnostics()
 })
 
 /** Build one minimal encounter for the live-view adapter. */
@@ -381,8 +373,7 @@ describe('useBoardBroadcast — owner publication', () => {
 })
 
 describe('usePlayerBoard — read-only viewer', () => {
-  it('captures send acknowledgements and a receive gap during temporary loss without private link data', async () => {
-    history.replaceState(null, '', '/?sharingDiagnostics=1')
+  it('restores a temporarily stale board after a new validated update arrives', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
     renderHook(() => useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW))
@@ -402,29 +393,6 @@ describe('usePlayerBoard — read-only viewer', () => {
       channels[2].emit(latest.event, latest.payload)
     })
     expect(viewer.result.current.status).toBe('live')
-    const serialized = sharingDiagnosticsReport()
-    const report = JSON.parse(serialized)
-    expect(report.events).toContainEqual(
-      expect.objectContaining({ event: 'send-result', role: 'gm', status: 'ok' }),
-    )
-    expect(report.events).toContainEqual(
-      expect.objectContaining({ event: 'heartbeat-tick', role: 'gm', gapMs: 10_000 }),
-    )
-    expect(report.events).toContainEqual(
-      expect.objectContaining({ event: 'receive-accepted', role: 'player', gapMs: 40_000 }),
-    )
-    expect(report.events).toContainEqual(
-      expect.objectContaining({
-        event: 'freshness-change',
-        status: 'connection-lost',
-        ageMs: 30_000,
-      }),
-    )
-    expect(serialized).not.toContain(capability)
-    expect(serialized).not.toContain('secret-shared-code')
-    expect(serialized).not.toContain(
-      (channels[0].sends[0].payload as { senderId: string }).senderId,
-    )
   })
 
   it('keeps an idle player view Live through owner heartbeats and covers it only when they stop', async () => {

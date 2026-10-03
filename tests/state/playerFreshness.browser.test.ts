@@ -78,6 +78,27 @@ afterEach(async () => {
 })
 
 describe('player-view reconnect browser journey', () => {
+  it('ignores the retired sharing diagnostics query parameter', async () => {
+    const originalUrl = location.href
+    const optedIn = new URL(originalUrl)
+    optedIn.searchParams.set('sharingDiagnostics', '1')
+    history.replaceState(null, '', optedIn)
+    const { client } = makeRealtimeStub()
+    supa.client = client
+    try {
+      render(createElement(PlayerView, { code: 'browser', capability }))
+      await act(async () => {
+        await liveViewTopics(capability, null)
+        await Promise.resolve()
+      })
+      expect(screen.queryByText('Sharing diagnostics (staging)')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Copy diagnostics' })).toBeNull()
+      expect(screen.queryByRole('textbox', { name: 'Sharing diagnostics report' })).toBeNull()
+    } finally {
+      history.replaceState(null, '', originalUrl)
+    }
+  })
+
   it.each([-60_000, 60_000])(
     'shows the GM elapsed timer with a sender clock offset of %i ms',
     async (offset) => {

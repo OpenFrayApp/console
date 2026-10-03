@@ -24,7 +24,6 @@ import {
   type PlayerProtocolState,
 } from './playerProtocol.ts'
 import { liveViewTopics, type ActiveLiveView } from './liveViewAuthority.ts'
-import { recordSharingDiagnostic, recordSharingResult } from './sharingDiagnostics.ts'
 import { startSharingHeartbeat } from './sharingHeartbeat.ts'
 
 const EVENT = 'player-view-protocol'
@@ -42,28 +41,9 @@ function sendGameMasterTraffic(
 ): PlayerProtocolState {
   try {
     const sent = sendGameMasterMessage(state, senderId, message, Date.now())
-    recordSharingDiagnostic({
-      event: 'send-attempt',
-      role: 'gm',
-      messageType: message.type,
-      sequence: sent.envelope.sequence,
-    })
-    recordSharingResult(channel.send({ type: 'broadcast', event: EVENT, payload: sent.envelope }), {
-      event: 'send-result',
-      role: 'gm',
-      messageType: message.type,
-      sequence: sent.envelope.sequence,
-    })
+    void channel.send({ type: 'broadcast', event: EVENT, payload: sent.envelope })
     return sent.state
   } catch (error) {
-    recordSharingDiagnostic({
-      event: 'send-blocked',
-      role: 'gm',
-      status:
-        error instanceof TypeError || error instanceof RangeError
-          ? 'validation-or-budget'
-          : 'error',
-    })
     if (error instanceof TypeError || error instanceof RangeError) return state
     throw error
   }
@@ -117,7 +97,6 @@ export function useBoardBroadcast(
     let stopHeartbeat: (() => void) | undefined
     const open: RealtimeChannel[] = []
     const publicationChannels: RealtimeChannel[] = []
-    recordSharingDiagnostic({ event: 'publisher-open', role: 'gm' })
     sending.current = { ...INITIAL_PLAYER_PROTOCOL_STATE }
     senderId.current = uid()
 
@@ -161,41 +140,25 @@ export function useBoardBroadcast(
         open.push(lobby)
         publicationChannels.push(lobby)
         lobby.subscribe((status) => {
-          recordSharingDiagnostic({ event: 'channel-status', role: 'gm', channel: 'lobby', status })
-          if (status !== 'SUBSCRIBED' || !lobby) return
-          recordSharingResult(lobby.track({ role: 'gm' }), {
-            event: 'presence-track-result',
-            role: 'gm',
-            channel: 'lobby',
-          })
+          if (status !== 'SUBSCRIBED') return
+          void lobby?.track({ role: 'gm' })
           sendLocked()
         })
       }
       boardTarget.subscribe((status) => {
-        recordSharingDiagnostic({ event: 'channel-status', role: 'gm', channel: 'board', status })
         if (status !== 'SUBSCRIBED') return
-        recordSharingResult(boardTarget.track({ role: 'gm' }), {
-          event: 'presence-track-result',
-          role: 'gm',
-          channel: 'board',
-        })
+        void boardTarget.track({ role: 'gm' })
         sendBoard(boardTarget)
       })
-      stopHeartbeat = startSharingHeartbeat(() => {
-        recordSharingDiagnostic({ event: 'heartbeat-tick', role: 'gm' })
-        sendBoard(boardTarget)
-      })
+      stopHeartbeat = startSharingHeartbeat(() => sendBoard(boardTarget))
 
       const joins = client.channel(topics.join, privateChannelConfig('gm-joins'))
       open.push(joins)
       joins.on('presence', { event: 'join' }, queueResponse)
-      joins.subscribe((status) =>
-        recordSharingDiagnostic({ event: 'channel-status', role: 'gm', channel: 'join', status }),
-      )
+      joins.subscribe()
     })
 
     return () => {
-      recordSharingDiagnostic({ event: 'publisher-close', role: 'gm' })
       cancelled = true
       clearTimeout(responseTimer)
       stopHeartbeat?.()
@@ -299,17 +262,6 @@ export function usePlayerBoard(
 
   /** Keep event callbacks and rendered freshness on the same pure state transition. */
   const updateFreshness = useCallback((next: PlayerFreshnessState) => {
-    if (next.status !== freshnessRef.current.status) {
-      recordSharingDiagnostic({
-        event: 'freshness-change',
-        role: 'player',
-        status: next.status,
-        ageMs:
-          freshnessRef.current.lastAcceptedAt === null
-            ? undefined
-            : performance.now() - freshnessRef.current.lastAcceptedAt,
-      })
-    }
     freshnessRef.current = next
     setFreshness(next)
   }, [])
@@ -318,21 +270,7 @@ export function usePlayerBoard(
   const applyPayload = useCallback(
     (payload: unknown) => {
       const received = receivePlayerMessage(receiving.current, 'viewer', payload)
-      if (received.status !== 'accepted') {
-        recordSharingDiagnostic({
-          event: 'receive-rejected',
-          role: 'player',
-          status: received.reason,
-        })
-        return
-      }
-      recordSharingDiagnostic({
-        event: 'receive-accepted',
-        role: 'player',
-        messageType: received.message.type,
-        sequence: received.envelope.sequence,
-      })
-      if (received.message.type === 'hello') return
+      if (received.status !== 'accepted' || received.message.type === 'hello') return
       receiving.current = received.state
       const now = performance.now()
       const next = applyPlayerFreshnessMessage(freshnessRef.current, received, now)
@@ -377,7 +315,6 @@ export function usePlayerBoard(
     const client = supabase
     let cancelled = false
     const targets: RealtimeChannel[] = []
-    recordSharingDiagnostic({ event: 'subscription-open', role: 'player', channel: 'lobby' })
     let waiting: ReturnType<typeof setTimeout> | undefined
 
     /** Keep a recent board during transport recovery and cover one that cannot be trusted. */
@@ -395,14 +332,7 @@ export function usePlayerBoard(
     }
 
     /** Apply one subscription status without treating a transient timeout as revocation. */
-    const applySubscription = (state: string, channel: 'lobby' | 'join', error?: Error) => {
-      recordSharingDiagnostic({
-        event: 'channel-status',
-        role: 'player',
-        channel,
-        status: state,
-        authorizationFailed: authorizationFailed(error),
-      })
+    const applySubscription = (state: string, error?: Error) => {
       if (state === 'CLOSED' || authorizationFailed(error)) {
         endAccess()
       } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT') {
@@ -418,21 +348,13 @@ export function usePlayerBoard(
         if (!cancelled) applyPayload(payload)
       })
       joined.on('presence', { event: 'sync' }, () => {
-        if (cancelled) return
-        const ownerPresent = gameMasterPresent(joined)
-        recordSharingDiagnostic({
-          event: 'presence-sync',
-          role: 'player',
-          channel: 'lobby',
-          ownerPresent,
-        })
-        if (ownerPresent) return
+        if (cancelled || gameMasterPresent(joined)) return
         if (freshnessRef.current.board) reconnect()
         else setStandby('waiting')
       })
       joined.subscribe((state, error) => {
         if (cancelled) return
-        applySubscription(state, 'lobby', error)
+        applySubscription(state, error)
         if (state !== 'SUBSCRIBED') return
         waiting = setTimeout(() => {
           if (freshnessRef.current.status === 'connecting') setStandby('waiting')
@@ -443,20 +365,14 @@ export function usePlayerBoard(
       targets.push(arrivals)
       arrivals.subscribe((state, error) => {
         if (cancelled) return
-        applySubscription(state, 'join', error)
-        if (state === 'SUBSCRIBED')
-          recordSharingResult(arrivals.track({ role: 'viewer' }), {
-            event: 'presence-track-result',
-            role: 'player',
-            channel: 'join',
-          })
+        applySubscription(state, error)
+        if (state === 'SUBSCRIBED') void arrivals.track({ role: 'viewer' })
       })
     })
 
     return () => {
       cancelled = true
       clearTimeout(waiting)
-      recordSharingDiagnostic({ event: 'subscription-close', role: 'player', channel: 'lobby' })
       for (const target of targets) void client.removeChannel(target)
     }
   }, [code, capability, applyPayload, updateFreshness])
@@ -485,12 +401,6 @@ export function usePlayerBoard(
       })
       joined.subscribe((state) => {
         if (cancelled) return
-        recordSharingDiagnostic({
-          event: 'channel-status',
-          role: 'player',
-          channel: 'pin',
-          status: state,
-        })
         if (state === 'CLOSED') {
           updateFreshness(endPlayerAccess())
           setStandby(null)

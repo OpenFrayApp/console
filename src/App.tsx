@@ -76,7 +76,6 @@ import { loadSrdCreatures } from './compendium/srd.ts'
 import { SaveFightButton, ShareEncounterButton } from './components/shell/EncounterActions.tsx'
 import { RecoveryStatus } from './components/shell/RecoveryStatus.tsx'
 import { ApplicationUpdate } from './components/shell/ApplicationUpdate.tsx'
-import { SharingDiagnostics } from './components/shell/SharingDiagnostics.tsx'
 import { ReconciliationDialog } from './components/shell/ReconciliationDialog.tsx'
 import { downloadRecoveryCopy } from './state/recoveryDownload.ts'
 import {
@@ -1767,7 +1766,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             ready={boardReady && !resolvingCopies}
             onDownload={downloadRecovery}
           />
-          <SharingDiagnostics role="gm" />
 
           {searchOpen && (
             <QuickSearch
