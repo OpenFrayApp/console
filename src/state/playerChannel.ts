@@ -25,12 +25,12 @@ import {
 } from './playerProtocol.ts'
 import { liveViewTopics, type ActiveLiveView } from './liveViewAuthority.ts'
 import { recordSharingDiagnostic, recordSharingResult } from './sharingDiagnostics.ts'
+import { startSharingHeartbeat } from './sharingHeartbeat.ts'
 
 const EVENT = 'player-view-protocol'
 const HELLO_TIMEOUT_MS = 4000
 const PIN_TRY_TIMEOUT_MS = 2000
 const SEND_DEBOUNCE_MS = 250
-const BOARD_HEARTBEAT_MS = 10_000
 const FRESHNESS_TICK_MS = 1_000
 
 /** Send one bounded Game Master message on an owner-authorized private channel. */
@@ -114,7 +114,7 @@ export function useBoardBroadcast(
     const client = supabase
     let cancelled = false
     let responseTimer: ReturnType<typeof setTimeout> | undefined
-    let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+    let stopHeartbeat: (() => void) | undefined
     const open: RealtimeChannel[] = []
     const publicationChannels: RealtimeChannel[] = []
     recordSharingDiagnostic({ event: 'publisher-open', role: 'gm' })
@@ -181,10 +181,10 @@ export function useBoardBroadcast(
         })
         sendBoard(boardTarget)
       })
-      heartbeatTimer = setInterval(() => {
+      stopHeartbeat = startSharingHeartbeat(() => {
         recordSharingDiagnostic({ event: 'heartbeat-tick', role: 'gm' })
         sendBoard(boardTarget)
-      }, BOARD_HEARTBEAT_MS)
+      })
 
       const joins = client.channel(topics.join, privateChannelConfig('gm-joins'))
       open.push(joins)
@@ -198,7 +198,7 @@ export function useBoardBroadcast(
       recordSharingDiagnostic({ event: 'publisher-close', role: 'gm' })
       cancelled = true
       clearTimeout(responseTimer)
-      clearInterval(heartbeatTimer)
+      stopHeartbeat?.()
       if (activeSession.current?.capability !== session.capability) {
         for (const target of publicationChannels) {
           sending.current = sendGameMasterTraffic(target, sending.current, senderId.current, {
