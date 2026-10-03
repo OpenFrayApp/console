@@ -91,6 +91,62 @@ async function flushChannelSetup(): Promise<void> {
 }
 
 describe('useBoardBroadcast — owner publication', () => {
+  it('keeps the viewer Live when the hidden GM main-thread heartbeat stalls for 60 seconds', async () => {
+    const workers: {
+      onmessage: ((event: MessageEvent) => void) | null
+      terminate: ReturnType<typeof vi.fn>
+    }[] = []
+    vi.stubGlobal(
+      'Worker',
+      class {
+        onmessage = null
+        terminate = vi.fn()
+        postMessage = vi.fn()
+        constructor() {
+          workers.push(this)
+        }
+      },
+    )
+    const interval = globalThis.setInterval
+    const intervals = vi
+      .spyOn(globalThis, 'setInterval')
+      .mockImplementation((callback, delay, ...args) =>
+        interval(delay === 10_000 ? () => {} : callback, delay, ...args),
+      )
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    try {
+      const publisher = renderHook(() =>
+        useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW),
+      )
+      await flushChannelSetup()
+      const viewer = renderHook(() => usePlayerBoard('code', capability))
+      await flushChannelSetup()
+      act(() => {
+        channels[0].ready()
+        channels[2].ready()
+        const initial = channels[0].sends.at(-1)!
+        channels[2].emit(initial.event, initial.payload)
+      })
+      for (let elapsed = 10_000; elapsed <= 60_000; elapsed += 10_000) {
+        await act(async () => {
+          vi.advanceTimersByTime(10_000)
+          workers[0]?.onmessage?.(new MessageEvent('message', { data: 'tick' }))
+          const latest = channels[0].sends.at(-1)!
+          channels[2].emit(latest.event, latest.payload)
+        })
+        expect(viewer.result.current.status).toBe('live')
+      }
+      publisher.unmount()
+      expect(workers[0].terminate).toHaveBeenCalledOnce()
+      await act(async () => void vi.advanceTimersByTime(30_000))
+      expect(viewer.result.current.status).toBe('connection-lost')
+    } finally {
+      intervals.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('broadcasts tracker changes and player overrides without reopening the channel', async () => {
     const { client, channels } = makeRealtimeStub()
     supa.client = client
