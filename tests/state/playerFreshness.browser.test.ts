@@ -102,10 +102,10 @@ describe('player-view reconnect browser journey', () => {
     expect(screen.getByText('Connection lost')).not.toBeNull()
     expect(screen.queryAllByText('Thalia')).toHaveLength(0)
 
-    act(() => channels[0].emit('player-view-protocol', ownerBoard(1, Date.now() - 30_001)))
+    act(() => channels[0].emit('player-view-protocol', ownerBoard(0, Date.now() - 30_001)))
     expect(screen.getByText('Connection lost')).not.toBeNull()
 
-    act(() => channels[0].emit('player-view-protocol', ownerBoard(2)))
+    act(() => channels[0].emit('player-view-protocol', ownerBoard(1, Date.now() - 604_800_000)))
     expect(screen.getByText('Live')).not.toBeNull()
     expect(screen.getAllByText('Thalia')).toHaveLength(2)
   })
