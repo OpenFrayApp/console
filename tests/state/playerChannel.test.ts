@@ -22,6 +22,19 @@ import {
 import { makeRealtimeStub } from './supabaseMock.ts'
 
 const supa = vi.hoisted(() => ({ client: null as unknown }))
+const topicRequests = vi.hoisted(() => ({ pending: [] as Promise<unknown>[] }))
+
+vi.mock('../../src/state/liveViewAuthority.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../src/state/liveViewAuthority.ts')>()
+  return {
+    ...original,
+    liveViewTopics: (...args: Parameters<typeof original.liveViewTopics>) => {
+      const pending = original.liveViewTopics(...args)
+      topicRequests.pending.push(pending)
+      return pending
+    },
+  }
+})
 
 vi.mock('../../src/lib/supabase.ts', () => ({
   get supabase() {
@@ -38,6 +51,7 @@ const session: ActiveLiveView = {
 }
 
 beforeEach(() => {
+  topicRequests.pending = []
   vi.useFakeTimers()
 })
 
@@ -77,8 +91,8 @@ function ownerMessage(
 /** Let capability hashing and channel setup finish. */
 async function flushChannelSetup(): Promise<void> {
   await act(async () => {
-    await liveViewTopics(capability, null)
-    await Promise.resolve()
+    await Promise.all(topicRequests.pending)
+    topicRequests.pending = []
   })
 }
 
