@@ -10,7 +10,6 @@ export const MAX_PLAYER_MESSAGE_BYTES = 240_000
 export const MAX_PLAYER_PAYLOAD_BYTES = 239_000
 export const MAX_PLAYER_SENDERS = 100
 export const LIVE_VIEW_FRESHNESS_GRACE_MS = 30_000
-export const LIVE_VIEW_CLOCK_SKEW_MS = 5_000
 
 export interface ActiveLiveView {
   status: 'ok'
@@ -187,6 +186,7 @@ export type PlayerFreshnessStatus =
 export interface PlayerFreshnessState {
   status: PlayerFreshnessStatus
   board: PlayerBoard | null
+  /** Receiver-local elapsed time of the last validated board; never a sender timestamp. */
   lastAcceptedAt: number | null
 }
 
@@ -196,7 +196,7 @@ export const INITIAL_PLAYER_FRESHNESS_STATE: PlayerFreshnessState = {
   lastAcceptedAt: null,
 }
 
-/** Apply only validated, current owner traffic to the player-view freshness state. */
+/** Mark connection activity when a validated, ordered owner board arrives. */
 export function applyPlayerFreshnessMessage(
   state: PlayerFreshnessState,
   received: PlayerProtocolReceive,
@@ -208,8 +208,6 @@ export function applyPlayerFreshnessMessage(
   }
   if (received.message.type === 'locked') return INITIAL_PLAYER_FRESHNESS_STATE
   if (received.message.type !== 'board') return state
-  const age = receivedAt - received.envelope.sentAt
-  if (age > LIVE_VIEW_FRESHNESS_GRACE_MS || age < -LIVE_VIEW_CLOCK_SKEW_MS) return state
   return { status: 'live', board: received.message.board, lastAcceptedAt: receivedAt }
 }
 

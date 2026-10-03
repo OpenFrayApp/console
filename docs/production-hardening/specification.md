@@ -58,8 +58,8 @@ A combined release-verification interface runs the applicable checks and emits i
 25. As a player, I want only the Game Master's configured projection, so that private notes and mechanics never leave the Game Master's browser.
 26. As a player, I want the view to distinguish **Connecting**, **Live**, **Reconnecting**, **Connection lost**, and **Access ended**, so that stale information is never presented as current.
 27. As a player, I want the age of the last update during reconnection, so that I can judge whether the displayed board is still useful.
-28. As a player, I want stale content covered after 30 seconds, so that old hit points do not look live.
-29. As a player, I want only a validated fresh payload to restore **Live** status, so that malformed traffic cannot revive the board.
+28. As a player, I want the board covered after 30 seconds without a validated update, so that a disconnected view does not look live.
+29. As a player, I want only a validated, ordered payload to restore **Live** status, so that malformed or replayed traffic cannot revive the board.
 30. As a Game Master, I want only my authenticated session to publish live state, so that viewers cannot impersonate me.
 31. As a Game Master, I want stopping or rotating a live share to invalidate its prior capability, so that former recipients lose access promptly.
 32. As a share recipient, I want malformed or unsupported shared content to fall back safely, so that hostile data cannot break the route.
@@ -195,8 +195,9 @@ A combined release-verification interface runs the applicable checks and emits i
 ### RC: runtime continuity
 
 - **RC-1:** Player sharing uses **Connecting**, **Live**, **Reconnecting**, **Connection lost**, and **Access ended** states.
-- Every live payload is validated. The player view tracks the last accepted update and displays its age during a 30-second grace period.
-- Content older than 30 seconds never appears current. Only a validated fresh board restores **Live**.
+- Every live payload is validated and ordered by sender sequence. The player view measures time since its last accepted update using a receiver-local monotonic clock.
+- After 30 seconds without an accepted board update, the board is covered. Only a validated, ordered board restores **Live**, including an unchanged board heartbeat.
+- Sender timestamps never determine connection status. Device clocks need not agree.
 - Confirmed sharing termination and authorization failure end access immediately.
 - **RC-2:** A service worker caches a versioned application shell and required static assets for controlled offline reopening.
 - A new client never activates during an active fight. The interface announces an available version and reloads only from a validated checkpoint after confirmation.
