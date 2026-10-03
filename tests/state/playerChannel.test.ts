@@ -14,6 +14,10 @@ import {
 } from '../../src/state/playerProtocol.ts'
 import { useBoardBroadcast, usePlayerBoard } from '../../src/state/playerChannel.ts'
 import {
+  clearSharingDiagnostics,
+  sharingDiagnosticsReport,
+} from '../../src/state/sharingDiagnostics.ts'
+import {
   LIVE_VIEW_CAPABILITY_BYTES,
   liveViewTopics,
   mintLiveViewCapability,
@@ -39,12 +43,16 @@ const session: ActiveLiveView = {
 
 beforeEach(() => {
   vi.useFakeTimers()
+  history.replaceState(null, '', '/')
+  clearSharingDiagnostics()
 })
 
 afterEach(() => {
   vi.useRealTimers()
   cleanup()
   supa.client = null
+  history.replaceState(null, '', '/')
+  clearSharingDiagnostics()
 })
 
 /** Build one minimal encounter for the live-view adapter. */
@@ -317,6 +325,87 @@ describe('useBoardBroadcast — owner publication', () => {
 })
 
 describe('usePlayerBoard — read-only viewer', () => {
+  it('captures send acknowledgements and a receive gap during temporary loss without private link data', async () => {
+    history.replaceState(null, '', '/?sharingDiagnostics=1')
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    renderHook(() => useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW))
+    await flushChannelSetup()
+    const viewer = renderHook(() => usePlayerBoard('secret-shared-code', capability))
+    await flushChannelSetup()
+    await act(async () => {
+      channels[0].ready()
+      channels[2].ready()
+      const initial = channels[0].sends[0]
+      channels[2].emit(initial.event, initial.payload)
+    })
+    await act(async () => void vi.advanceTimersByTime(40_000))
+    expect(viewer.result.current.status).toBe('connection-lost')
+    await act(async () => {
+      const latest = channels[0].sends.at(-1)!
+      channels[2].emit(latest.event, latest.payload)
+    })
+    expect(viewer.result.current.status).toBe('live')
+    const serialized = sharingDiagnosticsReport()
+    const report = JSON.parse(serialized)
+    expect(report.events).toContainEqual(
+      expect.objectContaining({ event: 'send-result', role: 'gm', status: 'ok' }),
+    )
+    expect(report.events).toContainEqual(
+      expect.objectContaining({ event: 'heartbeat-tick', role: 'gm', gapMs: 10_000 }),
+    )
+    expect(report.events).toContainEqual(
+      expect.objectContaining({ event: 'receive-accepted', role: 'player', gapMs: 40_000 }),
+    )
+    expect(report.events).toContainEqual(
+      expect.objectContaining({
+        event: 'freshness-change',
+        status: 'connection-lost',
+        ageMs: 30_000,
+      }),
+    )
+    expect(serialized).not.toContain(capability)
+    expect(serialized).not.toContain('secret-shared-code')
+    expect(serialized).not.toContain(
+      (channels[0].sends[0].payload as { senderId: string }).senderId,
+    )
+  })
+
+  it('keeps an idle player view Live through owner heartbeats and covers it only when they stop', async () => {
+    const { client, channels } = makeRealtimeStub()
+    supa.client = client
+    const publisher = renderHook(() =>
+      useBoardBroadcast(session, encounter(3), DEFAULT_PLAYER_VIEW),
+    )
+    await flushChannelSetup()
+    const viewer = renderHook(() => usePlayerBoard('code', capability))
+    await flushChannelSetup()
+    let delivered = 0
+    act(() => {
+      channels[0].ready()
+      channels[2].ready()
+      channels[2].presence = { gm: [{ role: 'gm' }] }
+      channels[2].emitPresence('sync')
+      for (const message of channels[0].sends.slice(delivered)) {
+        channels[2].emit(message.event, message.payload)
+      }
+      delivered = channels[0].sends.length
+    })
+    for (let heartbeat = 0; heartbeat < 30; heartbeat += 1) {
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+        for (const message of channels[0].sends.slice(delivered)) {
+          channels[2].emit(message.event, message.payload)
+        }
+        delivered = channels[0].sends.length
+      })
+      expect(viewer.result.current).toMatchObject({ status: 'live', board: { round: 3 } })
+    }
+    publisher.unmount()
+    act(() => void vi.advanceTimersByTime(30_000))
+    expect(viewer.result.current.status).toBe('connection-lost')
+  })
+
   it.each([0, -60_000, 60_000, -604_800_000, 604_800_000])(
     'receives the same board locally and remotely with a publisher clock offset of %i ms',
     async (offset) => {
