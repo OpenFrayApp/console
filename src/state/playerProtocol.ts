@@ -3,6 +3,7 @@
 
 import * as v from 'valibot'
 import { playerBoardSchema, type PlayerBoard } from '../schema/playerBoard.ts'
+import { activeMillis } from '../combat/recap.ts'
 
 export const PLAYER_PROTOCOL_KIND = 'player-view'
 export const CURRENT_PLAYER_PROTOCOL_VERSION = 1
@@ -196,6 +197,19 @@ export const INITIAL_PLAYER_FRESHNESS_STATE: PlayerFreshnessState = {
   lastAcceptedAt: null,
 }
 
+/** Rebase the sender's elapsed combat duration onto the viewer's monotonic clock. */
+function receivedPlayerBoard(board: PlayerBoard, sentAt: number, receivedAt: number): PlayerBoard {
+  if (!board.timers) return board
+  return {
+    ...board,
+    timers: {
+      activeMs: Math.max(0, activeMillis(board.timers, sentAt)),
+      runningSince:
+        board.timers.runningSince !== null && board.round > 0 && !board.paused ? receivedAt : null,
+    },
+  }
+}
+
 /** Mark connection activity when a validated, ordered owner board arrives. */
 export function applyPlayerFreshnessMessage(
   state: PlayerFreshnessState,
@@ -208,7 +222,11 @@ export function applyPlayerFreshnessMessage(
   }
   if (received.message.type === 'locked') return INITIAL_PLAYER_FRESHNESS_STATE
   if (received.message.type !== 'board') return state
-  return { status: 'live', board: received.message.board, lastAcceptedAt: receivedAt }
+  return {
+    status: 'live',
+    board: receivedPlayerBoard(received.message.board, received.envelope.sentAt, receivedAt),
+    lastAcceptedAt: receivedAt,
+  }
 }
 
 /** Move a formerly live player view into its bounded reconnection grace period. */

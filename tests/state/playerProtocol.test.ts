@@ -172,6 +172,44 @@ describe('the live-view protocol envelope', () => {
 })
 
 describe('live-view freshness', () => {
+  it.each([-60_000, 60_000])(
+    'rebases a running timer with sender clock offset %i ms without mutating the payload',
+    (offset) => {
+      const sentAt = 1_900_000_000_000 + offset
+      const shared = { ...board, timers: { activeMs: 20_000, runningSince: sentAt - 10_000 } }
+      const sent = sendGameMasterMessage(
+        INITIAL_PLAYER_PROTOCOL_STATE,
+        'gm',
+        { type: 'board', board: shared },
+        sentAt,
+      )
+      const received = receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', sent.envelope)
+      const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, received, 1234)
+      expect(live.board?.timers).toEqual({ activeMs: 30_000, runningSince: 1234 })
+      expect(shared.timers).toEqual({ activeMs: 20_000, runningSince: sentAt - 10_000 })
+      expect(sent.envelope.payload).toMatchObject({ timers: shared.timers })
+    },
+  )
+
+  it('leaves a paused timer frozen independently of sender and receiver clocks', () => {
+    const sent = sendGameMasterMessage(
+      INITIAL_PLAYER_PROTOCOL_STATE,
+      'gm',
+      {
+        type: 'board',
+        board: {
+          ...board,
+          paused: true,
+          timers: { activeMs: 90_000, runningSince: null },
+        },
+      },
+      1_900_000_000_000,
+    )
+    const received = receivePlayerMessage(INITIAL_PLAYER_PROTOCOL_STATE, 'viewer', sent.envelope)
+    const live = applyPlayerFreshnessMessage(INITIAL_PLAYER_FRESHNESS_STATE, received, 1234)
+    expect(live.board?.timers).toEqual({ activeMs: 90_000, runningSince: null })
+  })
+
   it.each([-604_800_000, -60_000, 60_000, 604_800_000])(
     'accepts an ordered board with a sender clock offset of %i ms',
     (offset) => {

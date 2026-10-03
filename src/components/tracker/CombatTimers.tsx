@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { CombatClock } from '../../schema/encounter.ts'
 import { activeMillis } from '../../combat/recap.ts'
 
@@ -45,19 +45,26 @@ export function CombatTimers({
   stats,
   round,
   running,
+  timeSource = 'wall',
 }: {
   stats: CombatClock
   round: number
   /** Combat is started and not paused — drives the 1s tick. */
   running: boolean
+  /** Shared player clocks are rebased to elapsed time; the GM's clock uses wall time. */
+  timeSource?: 'wall' | 'monotonic'
 }) {
-  const [now, setNow] = useState(() => Date.now())
+  const readNow = useCallback(
+    () => (timeSource === 'monotonic' ? performance.now() : Date.now()),
+    [timeSource],
+  )
+  const [now, setNow] = useState(readNow)
   useEffect(() => {
+    setNow(readNow())
     if (!running) return
-    setNow(Date.now())
-    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    const id = window.setInterval(() => setNow(readNow()), 1000)
     return () => window.clearInterval(id)
-  }, [running])
+  }, [running, readNow, stats.activeMs, stats.runningSince])
 
   return (
     <div className="flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400">
