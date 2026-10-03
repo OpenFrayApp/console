@@ -78,6 +78,50 @@ afterEach(async () => {
 })
 
 describe('player-view reconnect browser journey', () => {
+  it.each([-60_000, 60_000])(
+    'shows the GM elapsed timer with a sender clock offset of %i ms',
+    async (offset) => {
+      vi.setSystemTime(1_900_000_000_000)
+      const senderNow = Date.now() + offset
+      const { client, channels } = makeRealtimeStub()
+      supa.client = client
+      render(createElement(PlayerView, { code: 'browser', capability }))
+      await act(async () => {
+        await liveViewTopics(capability, null)
+        await Promise.resolve()
+      })
+      const running = { ...board, timers: { activeMs: 20_000, runningSince: senderNow - 10_000 } }
+      act(() => {
+        channels[0].ready()
+        channels[0].emit('player-view-protocol', ownerBoard(0, senderNow, running))
+      })
+      const real = screen.getByTitle('Real elapsed time (excludes pauses)')
+      expect(real.textContent).toBe('Real 0:30')
+      act(() => void vi.advanceTimersByTime(5_000))
+      expect(real.textContent).toBe('Real 0:35')
+
+      vi.setSystemTime(Date.now() + 60_000)
+      act(() => void vi.advanceTimersByTime(1_000))
+      expect(real.textContent).toBe('Real 0:36')
+      act(() =>
+        channels[0].emit('player-view-protocol', ownerBoard(1, senderNow + 10_000, running)),
+      )
+      expect(real.textContent).toBe('Real 0:40')
+
+      const paused = { ...board, paused: true, timers: { activeMs: 40_000, runningSince: null } }
+      act(() => channels[0].emit('player-view-protocol', ownerBoard(2, senderNow + 10_000, paused)))
+      act(() => void vi.advanceTimersByTime(5_000))
+      expect(real.textContent).toBe('Real 0:40')
+      const resumed = { ...board, timers: { activeMs: 40_000, runningSince: senderNow + 15_000 } }
+      act(() =>
+        channels[0].emit('player-view-protocol', ownerBoard(3, senderNow + 15_000, resumed)),
+      )
+      expect(real.textContent).toBe('Real 0:40')
+      act(() => void vi.advanceTimersByTime(5_000))
+      expect(real.textContent).toBe('Real 0:45')
+    },
+  )
+
   it.each([390, 1024])(
     'moves dead creatures below the turn order at %i px and restores them when revived',
     async (width) => {

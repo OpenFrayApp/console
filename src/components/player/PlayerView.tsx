@@ -260,6 +260,7 @@ export function PlayerView({
                   <div className={ground}>
                     <CombatTimers
                       stats={boardVisible.timers}
+                      timeSource="monotonic"
                       round={boardVisible.round}
                       running={boardVisible.round > 0 && !boardVisible.paused}
                     />
