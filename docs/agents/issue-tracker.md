@@ -16,8 +16,7 @@ Infer the repository from the current clone when ownership is clear.
 ## Label every new issue
 
 Before creating an issue, read the shared
-[triage labels](https://github.com/OpenFrayApp/openfray/blob/main/docs/agents/triage-labels.md)
-(local workspace: `/Users/nico/GitHub/openfray/openfray-app/docs/agents/triage-labels.md`).
+[triage labels](https://github.com/OpenFrayApp/openfray/blob/main/docs/agents/triage-labels.md).
 Then select labels:
 
 1. Check available labels with `gh label list --repo OpenFrayApp/console`.
