@@ -31,6 +31,7 @@ function rememberInvitation(): void {
 export function useTutorialEntry({
   ready,
   invitationAvailable,
+  invitationAvailabilityRevision = 0,
   boardEmpty,
   inCombat,
   enabledLibraries,
@@ -39,6 +40,8 @@ export function useTutorialEntry({
 }: {
   ready: boolean
   invitationAvailable: boolean
+  /** Recheck child-owned popovers after their existing close callbacks. */
+  invitationAvailabilityRevision?: number
   boardEmpty: boolean
   inCombat: boolean
   enabledLibraries: string[]
@@ -95,7 +98,16 @@ export function useTutorialEntry({
     setInvited(true)
     rememberInvitation()
     setSurface('welcome')
-  }, [ready, invitationAvailable, boardEmpty, inCombat, effectiveSuppression, invited, surface])
+  }, [
+    ready,
+    invitationAvailable,
+    invitationAvailabilityRevision,
+    boardEmpty,
+    inCombat,
+    effectiveSuppression,
+    invited,
+    surface,
+  ])
 
   /** Start at the introduction only after checking the current board and libraries. */
   const launch = () => {

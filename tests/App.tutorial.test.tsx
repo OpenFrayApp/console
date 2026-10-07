@@ -258,6 +258,41 @@ it('does not cover a real add form opened while identity is still resolving', as
   expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
 })
 
+it('resumes a deferred welcome after Escape cancels Quick add without changing board or recovery', async () => {
+  const app = render(
+    <AuthContext.Provider value={authState({ loading: true })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+  const name = screen.getByLabelText('Quick add name')
+  act(() => name.focus())
+  fireEvent.change(name, { target: { value: 'Uncommitted draft' } })
+  app.rerender(
+    <AuthContext.Provider value={authState()}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await act(() => Promise.resolve())
+  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+  expect(document.activeElement).toBe(name)
+  expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+  const recovery = sessionStorage.getItem('openfray:session')
+  expect(recovery).not.toBeNull()
+
+  fireEvent.keyDown(name, { key: 'Escape' })
+
+  await screen.findByRole('dialog', { name: 'Learn the console' })
+  expect(screen.queryByLabelText('Quick add name')).toBeNull()
+  expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+  expect(loadSettings().tutorialSuppression).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+  expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+  expect(screen.queryByText('Uncommitted draft')).toBeNull()
+  expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
+  expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+})
+
 it('invites after identity resolves and opens an introductory guide without changing the board', async () => {
   const app = render(
     <AuthContext.Provider value={authState({ loading: true })}>
