@@ -74,7 +74,7 @@ export function AddQuickForm({
   return (
     <div className="relative" ref={ref}>
       <Button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close() : setOpen(true))}
         title={keyHint ? `Quick add (${keyHint})` : undefined}
         className={hideTrigger ? 'hidden' : undefined}
       >

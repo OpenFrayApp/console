@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import App from '../src/App.tsx'
 import { AuthContext } from '../src/auth/useAuth.ts'
+import type { User } from '@supabase/supabase-js'
 import { authState } from './fixtures.ts'
 import { loadSettings, saveSettings } from '../src/state/settings.ts'
 
@@ -258,40 +259,137 @@ it('does not cover a real add form opened while identity is still resolving', as
   expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
 })
 
-it('resumes a deferred welcome after Escape cancels Quick add without changing board or recovery', async () => {
-  const app = render(
-    <AuthContext.Provider value={authState({ loading: true })}>
-      <App />
-    </AuthContext.Provider>,
-  )
-  fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
-  const name = screen.getByLabelText('Quick add name')
-  act(() => name.focus())
-  fireEvent.change(name, { target: { value: 'Uncommitted draft' } })
-  app.rerender(
-    <AuthContext.Provider value={authState()}>
-      <App />
-    </AuthContext.Provider>,
-  )
-  await act(() => Promise.resolve())
-  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
-  expect(document.activeElement).toBe(name)
-  expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
-  const recovery = sessionStorage.getItem('openfray:session')
-  expect(recovery).not.toBeNull()
+it.each(['Escape', 'trigger'] as const)(
+  'resumes a deferred welcome after %s cancels Quick add without changing board or recovery',
+  async (route) => {
+    const app = render(
+      <AuthContext.Provider value={authState({ loading: true })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+    const name = screen.getByLabelText('Quick add name')
+    act(() => name.focus())
+    fireEvent.change(name, { target: { value: 'Uncommitted draft' } })
+    app.rerender(
+      <AuthContext.Provider value={authState()}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await act(() => Promise.resolve())
+    expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+    expect(document.activeElement).toBe(name)
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+    const recovery = sessionStorage.getItem('openfray:session')
+    expect(recovery).not.toBeNull()
 
-  fireEvent.keyDown(name, { key: 'Escape' })
+    if (route === 'Escape') fireEvent.keyDown(name, { key: 'Escape' })
+    else fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
 
-  await screen.findByRole('dialog', { name: 'Learn the console' })
-  expect(screen.queryByLabelText('Quick add name')).toBeNull()
-  expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
-  expect(loadSettings().tutorialSuppression).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
-  expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
-  expect(screen.queryByText('Uncommitted draft')).toBeNull()
-  expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
-  expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
-})
+    await screen.findByRole('dialog', { name: 'Learn the console' })
+    expect(screen.queryByLabelText('Quick add name')).toBeNull()
+    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+    expect(loadSettings().tutorialSuppression).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+    expect(screen.queryByText('Uncommitted draft')).toBeNull()
+    expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
+    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+  },
+)
+
+it.each(
+  ['menu', 'Quick add'].flatMap((surface) =>
+    ['trigger', 'Escape', 'outside'].map((route) => ({ surface, route })),
+  ),
+)(
+  'resumes a deferred welcome when $route cancels the swipe Add $surface',
+  async ({ surface, route }) => {
+    const app = render(
+      <AuthContext.Provider value={authState({ loading: true })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    const trigger = screen.getByRole('button', { name: 'Add to the encounter' })
+    fireEvent.click(trigger)
+    if (surface === 'Quick add') {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Quick add' }))
+      const name = screen.getByLabelText('Quick add name')
+      act(() => name.focus())
+      fireEvent.change(name, { target: { value: 'Uncommitted draft' } })
+    }
+    app.rerender(
+      <AuthContext.Provider value={authState()}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await act(() => Promise.resolve())
+    expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+    const recovery = sessionStorage.getItem('openfray:session')
+    expect(recovery).not.toBeNull()
+
+    if (route === 'Escape') fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+    else if (route === 'outside') fireEvent.pointerDown(document.body)
+    else fireEvent.click(trigger)
+
+    await screen.findByRole('dialog', { name: 'Learn the console' })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.queryByLabelText('Quick add name')).toBeNull()
+    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+    expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
+    expect(loadSettings().tutorialSuppression).toBeNull()
+    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+  },
+)
+
+it.each(
+  [
+    { control: 'Add PC', field: 'PC name', signedIn: false },
+    { control: 'Add PC', field: 'Search your characters', signedIn: true },
+    { control: 'Add creature', field: 'Search creatures', signedIn: false },
+  ].flatMap((surface) => ['Escape', 'trigger', 'outside'].map((route) => ({ ...surface, route }))),
+)(
+  'resumes a deferred welcome after $route cancels $field',
+  async ({ control, field, signedIn, route }) => {
+    const user = signedIn ? ({ id: 'tutorial-add-owner' } as User) : null
+    const app = render(
+      <AuthContext.Provider value={authState({ loading: true, user })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: control }))
+    const input = screen.getByLabelText(field)
+    act(() => input.focus())
+    fireEvent.change(input, { target: { value: 'Uncommitted draft' } })
+    app.rerender(
+      <AuthContext.Provider value={authState({ user })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await screen.findByRole('button', {
+      name: signedIn ? 'Save failed' : 'Sign in to resume saving',
+    })
+    expect(document.activeElement).toBe(input)
+    expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+    const recovery = sessionStorage.getItem('openfray:session')
+    expect(recovery).not.toBeNull()
+
+    if (route === 'Escape') fireEvent.keyDown(input, { key: 'Escape' })
+    else if (route === 'outside') fireEvent.pointerDown(document.body)
+    else fireEvent.click(screen.getByRole('button', { name: control }))
+
+    await screen.findByRole('dialog', { name: 'Learn the console' })
+    expect(screen.queryByLabelText(field)).toBeNull()
+    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+    expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
+    expect(loadSettings().tutorialSuppression).toBeNull()
+    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+  },
+)
 
 it('invites after identity resolves and opens an introductory guide without changing the board', async () => {
   const app = render(

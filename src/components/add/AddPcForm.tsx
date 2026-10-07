@@ -109,7 +109,7 @@ export function AddPcForm({
   return (
     <div className="relative" ref={ref}>
       <Button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close() : setOpen(true))}
         title={keyHint ? `Add PC (${keyHint})` : undefined}
         className={hideTrigger ? 'hidden' : undefined}
       >

@@ -322,6 +322,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [hpEditRequest, setHpEditRequest] = useState(0)
   const [quickAddRequest, setQuickAddRequest] = useState(0)
   const [tutorialAvailabilityRevision, setTutorialAvailabilityRevision] = useState(0)
+  /** Recheck a deferred invitation after an add surface closes without a board change. */
+  const recheckTutorialAvailability = useCallback(() => {
+    setTutorialAvailabilityRevision((revision) => revision + 1)
+  }, [])
   const [addPcRequest, setAddPcRequest] = useState(0)
   const [addCreatureRequest, setAddCreatureRequest] = useState(0)
   const [shortRestRequest, setShortRestRequest] = useState(0)
@@ -1615,10 +1619,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const addQuick = (o: AddOpts = {}) => (
     <AddQuickForm
       {...o}
-      onClosed={() => {
-        o.onClosed?.()
-        setTutorialAvailabilityRevision((revision) => revision + 1)
-      }}
+      onClosed={o.onClosed ?? recheckTutorialAvailability}
       openRequest={quickAddRequest}
       keyHint={hint('quickAdd')}
       onAdd={(c) => {
@@ -1631,6 +1632,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     user ? (
       <AddPcPicker
         {...o}
+        onClosed={o.onClosed ?? recheckTutorialAvailability}
         openRequest={addPcRequest}
         keyHint={hint('addPc')}
         rosterPcs={rosterPcs}
@@ -1641,6 +1643,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     ) : (
       <AddPcForm
         {...o}
+        onClosed={o.onClosed ?? recheckTutorialAvailability}
         openRequest={addPcRequest}
         keyHint={hint('addPc')}
         onAdd={(c) => {
@@ -1652,6 +1655,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const addCreature = (o: AddOpts = {}) => (
     <AddCreaturePicker
       {...o}
+      onClosed={o.onClosed ?? recheckTutorialAvailability}
       openRequest={addCreatureRequest}
       keyHint={hint('addCreature')}
       onPick={handlePick}
@@ -1665,6 +1669,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     <>
       <div className="w-full roomy:hidden">
         <AddMenu
+          onClosed={recheckTutorialAvailability}
           items={[
             {
               key: 'quick',

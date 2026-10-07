@@ -141,7 +141,7 @@ export function LibraryPicker<T extends LibraryEntry>({
       <Button
         variant={variant}
         className={cx(grow && 'narrow:w-full', hideTrigger && 'hidden')}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close() : setOpen(true))}
         disabled={disabled}
         title={triggerTitle}
       >

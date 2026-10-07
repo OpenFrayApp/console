@@ -6,7 +6,7 @@ import { createElement } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { commands, page, userEvent } from 'vitest/browser'
 import App from '../../src/App.tsx'
-import { loadSettings } from '../../src/state/settings.ts'
+import { loadSettings, saveSettings } from '../../src/state/settings.ts'
 import { AuthContext } from '../../src/auth/useAuth.ts'
 import { authState } from '../fixtures.ts'
 import '../../src/index.css'
@@ -91,13 +91,27 @@ it.each(layouts.flatMap((layout) => ['light', 'dark'].map((theme) => ({ ...layou
   },
 )
 
-it.each([
-  { width: 375, height: 812 },
-  { width: 1180, height: 820 },
-  { width: 1440, height: 900 },
-])(
-  'resumes a deferred welcome after Quick add Escape at $width × $height',
-  async ({ width, height }) => {
+it.each(
+  [
+    { width: 375, height: 812 },
+    { width: 1180, height: 820 },
+    { width: 1440, height: 900 },
+  ].flatMap((viewport) =>
+    [
+      { control: 'Quick add', field: 'Quick add name' },
+      { control: 'Add PC', field: 'PC name' },
+      { control: 'Add creature', field: 'Search creatures' },
+    ].flatMap((surface) =>
+      ['Escape', 'trigger', 'pointer trigger', 'outside'].map((route) => ({
+        ...viewport,
+        ...surface,
+        route,
+      })),
+    ),
+  ),
+)(
+  'resumes a deferred welcome after $route cancels $control at $width × $height',
+  async ({ width, height, control, field, route }) => {
     await page.viewport(width, height)
     const app = render(
       createElement(
@@ -108,11 +122,11 @@ it.each([
     )
     if (width <= 1024) {
       await userEvent.click(screen.getByRole('button', { name: 'Add to the encounter' }))
-      await userEvent.click(screen.getByRole('menuitem', { name: 'Quick add' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: control }))
     } else {
-      await userEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+      await userEvent.click(screen.getByRole('button', { name: control }))
     }
-    const name = screen.getByLabelText('Quick add name')
+    const name = screen.getByLabelText(field)
     await userEvent.type(name, 'Uncommitted draft')
     app.rerender(createElement(AuthContext.Provider, { value: authState() }, createElement(App)))
     await screen.findByRole('button', { name: 'Sign in to resume saving' })
@@ -121,12 +135,25 @@ it.each([
     const recovery = sessionStorage.getItem('openfray:session')
     expect(recovery).not.toBeNull()
 
-    await userEvent.keyboard('{Escape}')
+    if (route === 'Escape') await userEvent.keyboard('{Escape}')
+    else if (route === 'outside') await userEvent.click(document.body, { position: { x: 5, y: 5 } })
+    else {
+      const trigger = screen.getByRole('button', {
+        name: width <= 1024 ? 'Add to the encounter' : control,
+      })
+      if (route === 'pointer trigger') await userEvent.click(trigger)
+      else {
+        await userEvent.tab({ shift: true })
+        expect(document.activeElement).toBe(trigger)
+        await userEvent.keyboard('{Enter}')
+      }
+    }
 
     const welcome = await screen.findByRole('dialog', { name: 'Learn the console' })
     expectContained(welcome)
     await expect.poll(() => welcome.contains(document.activeElement)).toBe(true)
-    expect(screen.queryByLabelText('Quick add name')).toBeNull()
+    expect(screen.queryByLabelText(field)).toBeNull()
+    expect(screen.queryByRole('menu')).toBeNull()
     expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
     expect(loadSettings().tutorialSuppression).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Not now' }))
@@ -135,6 +162,29 @@ it.each([
     expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
   },
 )
+
+it('keeps swipe Add trigger cancellation closed when invitations are suppressed', async () => {
+  await page.viewport(375, 812)
+  await touchCommands.emulateTouch(true)
+  saveSettings({ tutorialSuppression: 'completed' })
+  render(createElement(App))
+  await screen.findByRole('button', { name: 'Sign in to resume saving' })
+  const trigger = screen.getByRole('button', { name: 'Add to the encounter' })
+  await userEvent.click(trigger)
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Quick add' }))
+  await userEvent.type(screen.getByLabelText('Quick add name'), 'Uncommitted draft')
+  const recovery = sessionStorage.getItem('openfray:session')
+
+  await userEvent.click(trigger)
+
+  expect(screen.queryByLabelText('Quick add name')).toBeNull()
+  expect(screen.queryByRole('menu')).toBeNull()
+  expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+  expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+  await userEvent.click(trigger)
+  expect(screen.getByRole('menuitem', { name: 'Quick add' })).toBeTruthy()
+})
 
 it('blocks background focus and pointer actions while the introductory guide is open', async () => {
   await page.viewport(1440, 900)
