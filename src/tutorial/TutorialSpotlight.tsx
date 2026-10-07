@@ -29,7 +29,8 @@ function taskTargets(task: SetupTask, ogreId?: string): HTMLElement[] {
   if (task === 'end-prompt') return find('[role="dialog"][aria-label="End combat?"]')
   if (task === 'death-save')
     return [...find('[data-tutorial="death-save"]'), ...find('[aria-label="Next turn"]')]
-  if (task === 'turn') return find('[aria-label="Next turn"]')
+  if (task === 'turn' || task === 'ogre-turn' || task === 'mage-turn')
+    return find('[aria-label="Next turn"]')
   if (task === 'spell') {
     const modal = find('[role="dialog"]').filter((node) =>
       ['Mage casts Fireball', 'Mage · Fireball'].includes(node.getAttribute('aria-label') ?? ''),
@@ -281,6 +282,12 @@ export function TutorialSpotlight({
     const resize = () => {
       revealed = null
       refresh()
+      const focused = document.activeElement
+      if (
+        focused instanceof HTMLElement &&
+        taskTargets(taskRef.current, ogreId).some((node) => node.contains(focused))
+      )
+        focused.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
     }
     /** Return escaped programmatic focus to the current task. */
     const containFocus = () => refresh()

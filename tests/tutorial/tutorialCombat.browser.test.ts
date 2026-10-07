@@ -68,22 +68,28 @@ it.each([
     renderTutorial()
     await startPracticeFight(controls)
     const hp = screen.getByRole('button', { name: '68' })
+    if (width === 844)
+      expect(screen.queryByRole('navigation', { name: 'Console screens' })).toBeNull()
     await expectUsable(hp)
     if (width === 844) {
-      const tracker = screen.getByRole('main')
-      await userEvent.wheel(tracker, { delta: { y: -500 } })
-      await expect
-        .poll(() => hp.getBoundingClientRect().top > tracker.getBoundingClientRect().bottom)
-        .toBe(true)
-      await userEvent.wheel(tracker, { delta: { y: 500 } })
-      await expect
-        .poll(() => hp.getBoundingClientRect().bottom <= tracker.getBoundingClientRect().bottom)
-        .toBe(true)
+      let scroller = hp.parentElement
+      while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY))
+        scroller = scroller.parentElement
+      expect(scroller).not.toBeNull()
+      const position = scroller!.scrollTop
+      await userEvent.wheel(scroller!, { delta: { y: -500 } })
+      await expect.poll(() => tutorialControlIsReachable(hp)).toBe(false)
+      await userEvent.wheel(scroller!, { delta: { y: position } })
+      await expectUsable(hp)
     }
     await userEvent.click(hp)
     const field = screen.getByRole('textbox', { name: 'Hit points for Ogre' })
     await userEvent.fill(field, '-3')
     await userEvent.keyboard('{Enter}')
+    const next = screen.getByRole('button', { name: 'Next turn' })
+    await expectUsable(next)
+    expect(screen.getByRole('heading', { name: 'Step 7. Start the Ogre’s turn' })).toBeTruthy()
+    await userEvent.click(next)
     const javelin = await screen.findByRole('button', { name: 'Javelin.' })
     await expectUsable(javelin)
     await userEvent.click(screen.getByRole('button', { name: 'Greatclub.' }), { force: true })
@@ -143,8 +149,12 @@ it.each([
     await expectUsable(apply)
     await userEvent.click(apply)
     expect(screen.getByText(/Prone applied/)).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Step 10. Start the Mage’s turn' })).toBeTruthy()
+    await expectUsable(screen.getByRole('button', { name: 'Next turn' }))
     await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
     await userEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
+    if (width === 844)
+      expect(screen.getByRole('navigation', { name: 'Console screens' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Prone' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Search references' }))
     expect(screen.getByRole('combobox', { name: 'Search references' })).toBeTruthy()
@@ -161,6 +171,7 @@ it.each(['Javelin', 'Apply effect'])(
     await userEvent.click(screen.getByRole('button', { name: '68' }))
     await userEvent.fill(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), '-3')
     await userEvent.keyboard('{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Next turn' }))
     if (task === 'Apply effect') {
       const javelin = screen.getByRole('button', { name: 'Javelin.' })
       await expectUsable(javelin)

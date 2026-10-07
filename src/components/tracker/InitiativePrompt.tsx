@@ -5,7 +5,7 @@ import { useRef, useState } from 'react'
 import type { Combatant } from '../../schema/combatant.ts'
 import { isFoe, nameOf } from '../../combat/combatant.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
-import { isManualInitiative } from '../../tutorial/practiceValues.ts'
+import { isManualInitiative, practiceInitiative } from '../../tutorial/practiceValues.ts'
 import { Button } from '../ui/primitives.tsx'
 
 /** A rostered PC — quick adds don't count (they arrive pre-rolled like monsters). */
@@ -39,6 +39,7 @@ function Row({
   onValue,
   onToggle,
   autoFocus,
+  practice,
 }: {
   combatant: Combatant
   value: string
@@ -46,6 +47,7 @@ function Row({
   onValue: (v: string) => void
   onToggle: () => void
   autoFocus: boolean
+  practice: boolean
 }) {
   const name = nameOf(combatant)
   return (
@@ -54,15 +56,19 @@ function Row({
       <input
         autoFocus={autoFocus}
         value={value}
-        onChange={(e) => onValue(e.target.value)}
+        readOnly={practice && !isPlayer(combatant)}
+        onChange={(e) => {
+          if (!practice || isPlayer(combatant)) onValue(e.target.value)
+        }}
         inputMode="numeric"
-        placeholder={isPlayer(combatant) ? 'roll' : ''}
+        placeholder={isPlayer(combatant) ? (practice ? '20' : 'roll') : ''}
         aria-label={`Initiative for ${name}`}
         className="tap-y w-16 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm dark:border-slate-700 dark:bg-slate-900"
       />
       <button
         type="button"
         onClick={onToggle}
+        disabled={practice}
         aria-pressed={surprised}
         aria-label={`Mark ${name} surprised`}
         title="Surprised"
@@ -116,7 +122,13 @@ export function InitiativePrompt({
 
   /** Start combat with the entered values and the surprised set. */
   const submit = () => {
-    if (requireManual && !combatants.every((c) => isManualInitiative(values[c.combatantId] ?? '')))
+    if (
+      requireManual &&
+      !combatants.every((c) => {
+        const value = values[c.combatantId] ?? ''
+        return isManualInitiative(value) && Number(value) === practiceInitiative(c)
+      })
+    )
       return
     onStart({ values, surprised: [...surprised] })
   }
@@ -141,6 +153,7 @@ export function InitiativePrompt({
               onValue={(v) => setValue(c.combatantId, v)}
               onToggle={() => toggle(c.combatantId)}
               autoFocus={startIndex === 0 && i === 0}
+              practice={requireManual}
             />
           ))}
         </ul>
@@ -181,11 +194,16 @@ export function InitiativePrompt({
           </button>
         </div>
         <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-          {requireManual
-            ? 'Enter a whole-number initiative for every combatant before starting the tutorial fight. '
-            : 'Creatures are rolled for you. Type what each player rolled, or leave a box empty and OpenFray rolls for them. '}
-          Click <span className="text-amber-600 dark:text-amber-400">⚠</span> beside a name to mark
-          that character surprised.
+          {requireManual ? (
+            'Enter 20 for your player character. The other values are practice presets: Ogre 18, Mage 16, and your ally 14.'
+          ) : (
+            <>
+              Creatures are rolled for you. Type what each player rolled, or leave a box empty and
+              OpenFray rolls for them. Click{' '}
+              <span className="text-amber-600 dark:text-amber-400">⚠</span> beside a name to mark
+              that character surprised.
+            </>
+          )}
         </p>
         <div className="flex flex-col gap-4 sm:flex-row">
           {column(allies, 'Players and allies', 0)}

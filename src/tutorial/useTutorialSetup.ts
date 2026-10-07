@@ -19,6 +19,8 @@ export type SetupTask =
   | 'initiative'
   | 'ready'
   | 'damage'
+  | 'ogre-turn'
+  | 'mage-turn'
   | 'attack'
   | 'prone'
   | 'death-save'
@@ -49,7 +51,15 @@ export function useTutorialSetup({
   endPromptOpen?: boolean
 }) {
   const [combatTask, setCombatTask] = useState<
-    'damage' | 'attack' | 'prone' | 'spell' | 'turn' | 'death-save' | 'ready'
+    | 'damage'
+    | 'ogre-turn'
+    | 'attack'
+    | 'prone'
+    | 'mage-turn'
+    | 'spell'
+    | 'turn'
+    | 'death-save'
+    | 'ready'
   >('damage')
   const [turnBaseline, setTurnBaseline] = useState<{ round: number; id?: string } | null>(null)
   const [deathSaveBaseline, setDeathSaveBaseline] = useState<string | null>(null)
@@ -116,6 +126,16 @@ export function useTutorialSetup({
       setCombatTask(dyingAlly && encounter.round > 0 ? 'death-save' : 'ready')
     }
   }, [active, combatTask, turnBaseline, encounter, dyingAlly, deathSaveTally])
+  useEffect(() => {
+    if (!active || (combatTask !== 'ogre-turn' && combatTask !== 'mage-turn')) return
+    if (encounter.round === 0) {
+      setCombatTask('ready')
+      return
+    }
+    const expectedId = combatTask === 'ogre-turn' ? ogreId : mageId
+    if (encounter.combatants[encounter.activeIndex]?.combatantId === expectedId)
+      setCombatTask(combatTask === 'ogre-turn' ? 'attack' : 'spell')
+  }, [active, combatTask, encounter, ogreId, mageId])
   const task: SetupTask =
     encounter.round > 0 || combatStarted
       ? recapOpen
@@ -165,7 +185,7 @@ export function useTutorialSetup({
     /** Accept the prescribed damage committed against the Ogre. */
     recordDamage: (id: string, damage: number) => {
       if (active && combatTask === 'damage' && id === ogreId && damage === 3)
-        setCombatTask('attack')
+        setCombatTask('ogre-turn')
     },
     /** Accept a settled Ogre Javelin outcome against the practice character. */
     recordAttack: (sourceId: string, actionId: string, result: CompletedAttack) => {
@@ -191,7 +211,7 @@ export function useTutorialSetup({
         id === ogreId &&
         effects.some((e) => e.icon === 'condition' && e.name === 'Prone')
       )
-        setCombatTask('spell')
+        setCombatTask('mage-turn')
     },
     /** Accept a settled Mage Fireball against exactly the practice ally and Ogre. */
     recordSpell: (sourceId: string, spellId: string, result: CompletedSave) => {

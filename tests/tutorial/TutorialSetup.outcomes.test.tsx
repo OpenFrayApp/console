@@ -65,6 +65,7 @@ it.each(['attack pending', 'damage applied', 'Prone applied'])(
       { initialProps: initial },
     )
     act(() => hook.result.current.setup.recordDamage('ogre', 3))
+    hook.rerender({ ...initial, encounter: { ...encounter, activeIndex: 3 } })
     if (operation !== 'attack pending') {
       act(() =>
         hook.result.current.setup.recordAttack(
@@ -118,6 +119,10 @@ it.each(['attack pending', 'damage applied', 'Prone applied'])(
     )
     if (operation === 'damage applied')
       expect(screen.getByText(/player character is down.*Choose Apply effect/)).toBeInTheDocument()
+    else if (operation === 'Prone applied')
+      expect(
+        screen.getByRole('heading', { name: 'Step 14. Clear the practice board' }),
+      ).toBeInTheDocument()
     else
       expect(
         within(screen.getByRole('dialog', { name: 'Tutorial introduction' })).getByRole('status')

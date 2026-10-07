@@ -61,6 +61,7 @@ async function reachFireball(hp: number, attackDamage?: number) {
   fireEvent.click(screen.getByRole('button', { name: String(hp) }))
   controls.fill(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), '-3')
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), { key: 'Enter' })
+  fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Javelin.' }))
   fireEvent.click(
     within(screen.getByRole('dialog', { name: 'Ogre · Javelin' })).getByRole('button', {
@@ -74,7 +75,10 @@ async function reachFireball(hp: number, attackDamage?: number) {
   fireEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
   fireEvent.click(screen.getByRole('button', { name: 'Prone' }))
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
-  expect(screen.getByText(/Prone applied.*Fireball/)).toBeInTheDocument()
+  expect(
+    screen.getByRole('heading', { name: 'Step 10. Start the Mage’s turn' }),
+  ).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
   fireEvent.click(await screen.findByRole('button', { name: /^Fireball/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Cast' }))
 }
@@ -89,7 +93,7 @@ it.each([
     renderTutorial()
     await reachFireball(hp)
     const dialog = screen.getByRole('dialog', { name: 'Mage · Fireball' })
-    expect(screen.getByText(/friendly fire.*Mage’s allied Ogre/)).toBeInTheDocument()
+    expect(screen.getByText(/catching its own Ogre in the blast/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Rowan' }))
     expect(screen.getByRole('button', { name: 'Roll saves' })).toBeDisabled()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Robin' }))
@@ -216,7 +220,9 @@ it.each(
       expect(screen.getByText(/fight ended.*Done.*Combat recap/)).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Next turn' })).toBeNull()
       fireEvent.click(screen.getByRole('button', { name: 'Done' }))
-      expect(screen.getByText(/fight already ended/)).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Step 14. Clear the practice board' }),
+      ).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Next turn' })).toBeNull()
     }
     expect(screen.queryByText('Tutorial complete')).toBeNull()

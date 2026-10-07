@@ -7,38 +7,68 @@ import { Button } from '../components/ui/primitives.tsx'
 import type { TutorialEntryController } from './useTutorialEntry.ts'
 import type { TutorialSetupController, SetupTask } from './useTutorialSetup.ts'
 
+const titles: Record<SetupTask, string> = {
+  pc: 'Step 1. Add a player character to the board',
+  'roster-create': 'Step 1. Create your practice character',
+  'roster-add': 'Step 1. Put your character on the board',
+  quick: 'Step 2. Add an ally',
+  mage: 'Step 3. Add the Mage',
+  ogre: 'Step 4. Add the Ogre',
+  begin: 'Step 5. Set the turn order',
+  initiative: 'Step 5. Set the turn order',
+  damage: 'Step 6. Record your player’s hit',
+  'ogre-turn': 'Step 7. Start the Ogre’s turn',
+  attack: 'Step 8. Resolve the Ogre’s Javelin',
+  prone: 'Step 9. Record the Ogre’s fall',
+  'mage-turn': 'Step 10. Start the Mage’s turn',
+  spell: 'Step 11. Cast the Mage’s Fireball',
+  turn: 'Step 12. Advance the fight',
+  'death-save': 'Step 12. Resolve your ally’s death save',
+  ready: 'Step 13. End the practice fight',
+  stop: 'Step 13. End the practice fight',
+  recap: 'Review the ended fight',
+  'end-prompt': 'Choose whether to keep fighting',
+  clear: 'Step 14. Clear the practice board',
+  complete: 'Tutorial complete',
+}
+
 const instructions: Record<SetupTask, string> = {
-  pc: 'Choose a name in Add PC. Enter 30 hit points and armor class 12, then Add.',
+  pc: 'Click Add PC to put a player character on the board. Choose a name, enter 30 hit points and armor class 12, then click Add.',
   'roster-create':
-    'Choose Create character. Choose a name, enter 30 hit points and armor class 12, then create your character. No class or level is required. This new character stays in your roster after clearing the board; existing characters stay untouched.',
+    'Choose Create character. Choose a name, enter 30 hit points and armor class 12, then create your character. This practice character stays in your roster after clearing the board.',
   'roster-add':
-    'Choose Add to encounter for your new character. The board receives a snapshot; the character stays in your roster.',
+    'Choose Add to encounter for your new character. This puts a copy on the board; the character stays in your roster.',
   quick:
-    'Choose Quick add. Choose a name, enter 30 hit points and armor class 12, and set Side to Friend, then Add.',
-  mage: 'Choose Add creature. Search for Mage and add it from the selected Basic Rules library.',
-  ogre: 'Search for Ogre in Add creature and add it from the same Basic Rules library.',
-  begin: 'Choose Begin to enter initiative for all four combatants.',
+    'Your character has an ally in this fight. Click Quick add, choose a name, enter 30 hit points and armor class 12, and set Side to Friend. Click Add.',
+  mage: 'The Mage and Ogre are your opponents. Click Add creature, search for Mage, and add it from the selected Basic Rules library.',
+  ogre: 'Add the Mage’s companion. Search for Ogre in Add creature and add it from the same Basic Rules library.',
+  begin:
+    'Click Begin to set the turn order. Your player character acts first, followed by the Ogre, Mage, and your ally.',
   initiative:
-    'Enter a whole-number initiative manually for each of the four combatants, then Start combat. Normally OpenFray rolls for creatures and quick adds while you enter player characters’ rolls.',
+    'Enter 20 for your player character, then click Start combat. Ogre 18, Mage 16, and your ally 14 are practice presets, so this story always follows the same order. Normally, OpenFray rolls for creatures and quick adds while you enter your players’ rolls.',
   damage:
-    'Your fight has started. Record 3 damage against the Ogre: choose its hit points in the tracker, type -3, then press Enter. This records a player’s roll made outside the console.',
+    'Your player character hits the Ogre for 3 damage, rolled at the table. Record 3 damage against the Ogre: click its hit points in the tracker, type -3, then press Enter.',
+  'ogre-turn':
+    'Your player’s hit is recorded. Click Next turn at the top of the tracker to move the turn marker to the Ogre.',
   attack:
-    'Damage recorded. Choose Javelin in the Ogre’s stat block, target your player character, then Roll attack. Apply the normal damage on a hit. On a miss, Close without applying damage. Resolve any concentration check before continuing.',
+    'The Ogre throws a javelin at your player character. Choose Javelin in its stat block, target your player character, then Roll attack. Apply the damage on a hit. On a miss, Close without applying damage.',
   prone:
-    'Choose Apply effect for the Ogre, select Prone, then Apply. Applying it after the attack leaves that attack’s roll unchanged.',
+    'The Ogre trips over rubble after throwing its javelin. Choose Apply effect for the Ogre, select Prone, then Apply to record its fall.',
+  'mage-turn':
+    'Prone applied. The Ogre’s turn is finished. Click Next turn to move the turn marker to the Mage.',
+  spell:
+    'The Mage aims Fireball at your ally, catching its own Ogre in the blast. Choose Fireball in the Mage’s stat block, then Cast. Target your allied quick add and Ogre. Roll saves, record your ally’s table-side Save or Fail, then Apply damage. The Ogre rolls normally.',
+  turn: 'Fireball resolved and damage applied. Choose Next turn to advance the initiative marker. Dead creatures are skipped; unconscious player characters and quick adds still take turns for death saves.',
+  'death-save':
+    'Your ally is unconscious and still takes turns for death saves. Record its actual result with Save or Fail, or use Roll death save. Use Next turn to continue. Recovery, stabilization, and death keep their real consequences.',
+  ready: 'Turn advanced.',
+  stop: 'Turn advanced. Choose Stop to end the fight and open its recap. Pause only holds the fight; everyone and the game log stay on the board.',
   recap:
     'The fight ended. Choose Done in the Combat recap to return to the lesson. Everyone and the log stay on the board.',
   'end-prompt':
     'Every foe is down. Choose Keep fighting to continue, or End combat and dismiss the recap. The lesson keeps all committed results.',
-  spell:
-    'Prone applied. Choose Fireball in the Mage’s stat block, then Cast. Target only your allied quick add and Ogre: intentional friendly fire against the Mage’s allied Ogre. Roll saves, record your quick add’s externally made Save or Fail, then Apply damage. The Ogre rolls normally; successful saves take half damage. Keep any defeat.',
-  'death-save':
-    'Your allied quick add is unconscious and still takes turns for death saves. Record its actual result with Save or Fail, or use Roll death save when needed. Use Next turn to continue normally. Recovery, stabilization, and death all keep their real consequences; Exit tutorial remains available.',
-  turn: 'Fireball resolved and damage applied. Choose Next turn to advance the initiative marker. Dead creatures are skipped; unconscious player characters and quick adds still take turns for death saves.',
-  ready: 'Turn advanced.',
-  stop: 'Turn advanced. Choose Stop to end the fight and open its recap. Pause only holds the fight; everyone and the game log stay on the board.',
   clear:
-    'The fight already ended. Choose the trash control, Remove everyone and clear the log. Your browser opens a confirmation: confirm to remove everyone and the game log. Cancel leaves cleanup pending; you can retry or Exit tutorial. Roster characters and other saved references stay untouched.',
+    'The fight ended. Choose the trash control, Remove everyone and clear the log. Your browser opens a confirmation: confirm to remove everyone and the game log. Cancel leaves cleanup pending; you can retry or Exit tutorial. Roster characters and other saved references stay untouched.',
   complete: 'Everyone and the game log are cleared.',
 }
 
@@ -66,23 +96,26 @@ export function TutorialSetup({
         data-tutorial-guide
         className="fixed inset-x-2 bottom-2 z-[70] mx-auto max-h-[38dvh] max-w-xl overflow-y-auto rounded-lg border border-indigo-400 bg-white p-3 text-slate-900 shadow-xl short:flex short:max-w-none short:items-center short:gap-3 dark:bg-slate-900 dark:text-slate-100"
       >
-        <p role="status" className="text-sm short:flex-1">
-          {setup.task === 'prone' && setup.attackResult && (
-            <>
-              {setup.attackResult.outcome === 'miss'
-                ? 'The attack missed. No damage was applied. '
-                : `${setup.attackResult.outcome === 'crit' ? 'Critical hit' : 'Hit'}: ${setup.attackResult.damage} damage applied. ${setup.pcDefeated ? 'Your player character is down; the committed result stays on the board. ' : ''}`}
-            </>
-          )}
-          {setup.task === 'pc' && setup.signedIn
-            ? 'Choose Add PC, then Create a character to create a new roster entry. Existing characters stay untouched.'
-            : instructions[setup.task]}
-        </p>
-        <p className="mt-1 text-xs text-slate-500 short:hidden">
-          Tutorial examples use{' '}
-          {setup.library === 'srd-5.2' ? 'Basic Rules 2024' : 'Basic Rules 2014'}. Your library and
-          campaign choices stay unchanged.
-        </p>
+        <div className="short:flex-1">
+          <h2 className="mb-1 text-sm font-semibold">{titles[setup.task]}</h2>
+          <p role="status" className="text-sm">
+            {setup.task === 'prone' && setup.attackResult && (
+              <>
+                {setup.attackResult.outcome === 'miss'
+                  ? 'The attack missed. No damage was applied. '
+                  : `${setup.attackResult.outcome === 'crit' ? 'Critical hit' : 'Hit'}: ${setup.attackResult.damage} damage applied. ${setup.pcDefeated ? 'Your player character is down; the committed result stays on the board. ' : ''}`}
+              </>
+            )}
+            {setup.task === 'pc' && setup.signedIn
+              ? 'Click Add PC, then Create a character to make your practice player character. Existing characters stay untouched.'
+              : instructions[setup.task]}
+          </p>
+          <p className="mt-1 text-xs text-slate-500 short:hidden">
+            Tutorial examples use{' '}
+            {setup.library === 'srd-5.2' ? 'Basic Rules 2024' : 'Basic Rules 2014'}. Your library
+            and campaign choices stay unchanged.
+          </p>
+        </div>
         <Button className="mt-2 short:mt-0 short:shrink-0" onClick={controller.requestExit}>
           Exit tutorial
         </Button>

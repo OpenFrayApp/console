@@ -17,30 +17,30 @@ const combatants: Combatant[] = [
 const initial = { p1: '', m1: '14' }
 
 describe('InitiativePrompt', () => {
-  it('explains required manual initiative and starts only after every combatant has a whole-number entry', () => {
+  it('labels practice presets and requires the player value that establishes the story order', () => {
     const onStart = vi.fn()
+    const ogre = monster({ combatantId: 'm1', label: 'Ogre', creatureId: 'srd-5.2:ogre' })
     render(
       <InitiativePrompt
         requireManual
-        combatants={combatants}
-        initial={{ p1: '', m1: '' }}
+        combatants={[combatants[0], ogre]}
+        initial={{ p1: '', m1: '18' }}
         onStart={onStart}
         onCancel={() => {}}
       />,
     )
-    expect(
-      screen.getByText(/Enter a whole-number initiative for every combatant/),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/practice presets/i)).toBeInTheDocument()
     expect(screen.queryByText(/leave a box empty and OpenFray rolls/)).toBeNull()
-    fireEvent.change(screen.getByLabelText('Initiative for Thalia'), { target: { value: '17' } })
+    expect(screen.getByLabelText('Initiative for Ogre')).toHaveAttribute('readonly')
+    expect(screen.getByRole('button', { name: 'Mark Ogre surprised' })).toBeDisabled()
+    for (const value of ['', 'no dice', '1.5', '17']) {
+      fireEvent.change(screen.getByLabelText('Initiative for Thalia'), { target: { value } })
+      fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+      expect(onStart).not.toHaveBeenCalled()
+    }
+    fireEvent.change(screen.getByLabelText('Initiative for Thalia'), { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-    expect(onStart).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('Initiative for Goblin A'), { target: { value: '1.5' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-    expect(onStart).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('Initiative for Goblin A'), { target: { value: '-2' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-    expect(onStart).toHaveBeenCalledWith({ values: { p1: '17', m1: '-2' }, surprised: [] })
+    expect(onStart).toHaveBeenCalledWith({ values: { p1: '20', m1: '18' }, surprised: [] })
   })
 
   it('preserves normal blank-roll instructions and accepts an empty player initiative', () => {

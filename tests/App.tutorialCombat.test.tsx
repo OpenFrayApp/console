@@ -58,7 +58,8 @@ it('records only the prescribed outside roll through real Ogre hit points before
     target: { value: '-3' },
   })
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), { key: 'Enter' })
-  expect(screen.getByText(/Javelin.*player character/)).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Step 7. Start the Ogre’s turn' })).toBeInTheDocument()
+  expect(screen.queryByText(/concentration check/)).toBeNull()
   expect(screen.getByRole('button', { name: '65' })).toBeInTheDocument()
   await waitFor(() => expect(sessionStorage.getItem('openfray:session')).toContain('"current":65'))
 })
@@ -81,6 +82,7 @@ async function openJavelin(initialHp = 68) {
     target: { value: '-3' },
   })
   fireEvent.keyDown(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), { key: 'Enter' })
+  fireEvent.click(screen.getByRole('button', { name: 'Next turn' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Javelin.' }))
 }
 

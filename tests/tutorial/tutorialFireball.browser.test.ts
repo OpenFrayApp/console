@@ -75,6 +75,7 @@ it.each([
     await userEvent.click(screen.getByRole('button', { name: library === 'srd-5.2' ? '68' : '59' }))
     await userEvent.fill(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), '-3')
     await userEvent.keyboard('{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Next turn' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Javelin.' }))
     const attack = screen.getByRole('dialog', { name: 'Ogre · Javelin' })
     await userEvent.click(within(attack).getByRole('button', { name: 'Rowan' }))
@@ -83,6 +84,9 @@ it.each([
     await userEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
     await userEvent.click(screen.getByRole('button', { name: 'Prone' }))
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(screen.getByRole('heading', { name: 'Step 10. Start the Mage’s turn' })).toBeTruthy()
+    await expectUsable(screen.getByRole('button', { name: 'Next turn' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Next turn' }))
     const fireball = await screen.findByRole('button', { name: /^Fireball/ })
     await expectUsable(fireball)
     if (width === 1440) {
@@ -124,11 +128,14 @@ it.each([
       expect((document.activeElement as HTMLElement).closest('[inert]')).toBeNull()
     }
     if (width === 1440) {
-      await page.viewport(844, 390)
       const apply = screen.getByRole('button', { name: 'Apply damage' })
       // Keyboard traversal is ordinary user navigation of a scrolled resolution panel.
       for (let index = 0; index < 12 && document.activeElement !== apply; index++)
         await userEvent.tab()
+      expect(document.activeElement).toBe(apply)
+      await expectUsable(apply)
+      await page.viewport(844, 390)
+      await expect.poll(() => document.activeElement).toBe(apply)
       await expectUsable(apply)
     }
     await userEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
@@ -156,6 +163,7 @@ it('finishes exceptional dying-ally turns, automatic recap, and native cleanup o
   await userEvent.click(screen.getByRole('button', { name: '68' }))
   await userEvent.fill(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), '-3')
   await userEvent.keyboard('{Enter}')
+  await userEvent.click(screen.getByRole('button', { name: 'Next turn' }))
   await userEvent.click(await screen.findByRole('button', { name: 'Javelin.' }))
   await userEvent.click(
     within(screen.getByRole('dialog', { name: 'Ogre · Javelin' })).getByRole('button', {
@@ -168,6 +176,7 @@ it('finishes exceptional dying-ally turns, automatic recap, and native cleanup o
   await userEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
   await userEvent.click(screen.getByRole('button', { name: 'Prone' }))
   await userEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Next turn' }))
   const fireball = screen.getByRole('button', { name: /^Fireball/ })
   await expectUsable(fireball)
   await userEvent.click(fireball)
@@ -200,7 +209,7 @@ it('finishes exceptional dying-ally turns, automatic recap, and native cleanup o
   await expectUsable(done)
   await userEvent.click(done)
   expect(screen.queryByRole('button', { name: 'Next turn' })).toBeNull()
-  expect(screen.getByText(/fight already ended/)).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Step 14. Clear the practice board' })).toBeTruthy()
   const trash = screen.getByRole('button', { name: 'Remove everyone and clear the log' })
   await expectUsable(trash)
   await touch.confirmBoardClear(false)

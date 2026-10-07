@@ -129,7 +129,9 @@ it.each(['srd-5.2', 'srd-5.1'])(
       target: { value: 'tutorial' },
     })
     fireEvent.click(screen.getByRole('option', { name: 'Start tutorial' }))
-    expect(screen.getByText(/Choose a name in Add PC/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Step 1. Add a player character to the board' }),
+    ).toBeInTheDocument()
   },
 )
 
@@ -187,6 +189,7 @@ it.each(['google', 'discord'])(
     await resolvePracticeFight(controls)
     expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
     const complete = await clearPracticeFight()
+    expect(within(complete).getByRole('button', { name: 'Sign in' })).toHaveClass('bg-indigo-600')
     fireEvent.click(within(complete).getByRole('button', { name: 'Sign in' }))
     const entry = screen.getByRole('dialog', { name: 'Sign in' })
     expect(within(entry).queryByText(/current encounter stays/)).toBeNull()

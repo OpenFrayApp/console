@@ -130,7 +130,11 @@ export function TutorialEntry({
             )}
             {surface === 'complete' && (
               <>
-                {!signedIn && authConfigured && <Button onClick={onSignIn}>Sign in</Button>}
+                {!signedIn && authConfigured && (
+                  <Button variant="primary" onClick={onSignIn}>
+                    Sign in
+                  </Button>
+                )}
                 <Button onClick={() => controller.dismiss()}>
                   {signedIn ? 'Back to the console' : 'Continue without an account'}
                 </Button>

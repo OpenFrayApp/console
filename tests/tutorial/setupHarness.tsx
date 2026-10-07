@@ -64,11 +64,7 @@ export async function startPracticeFight(
     await controls.click(await screen.findByRole('button', { name: new RegExp(`^${name} `) }))
   }
   await controls.click(screen.getByRole('button', { name: 'Begin' }))
-  for (const [index, name] of ['Rowan', 'Robin', 'Mage', 'Ogre'].entries())
-    await controls.fill(
-      screen.getByRole('textbox', { name: `Initiative for ${name}` }),
-      String(20 - index),
-    )
+  await controls.fill(screen.getByRole('textbox', { name: 'Initiative for Rowan' }), '20')
   await controls.click(screen.getByRole('button', { name: 'Start combat' }))
 }
 
@@ -86,6 +82,7 @@ export async function resolvePracticeFight(
   const hp = screen.getByRole('textbox', { name: 'Hit points for Ogre' })
   await controls.fill(hp, '-3')
   await controls.enter(hp)
+  await controls.click(screen.getByRole('button', { name: 'Next turn' }))
   await controls.click(await screen.findByRole('button', { name: 'Javelin.' }))
   await controls.click(
     within(screen.getByRole('dialog', { name: 'Ogre · Javelin' })).getByRole('button', {
@@ -97,6 +94,7 @@ export async function resolvePracticeFight(
   await controls.click(screen.getByRole('button', { name: 'Apply effect' }))
   await controls.click(screen.getByRole('button', { name: 'Prone' }))
   await controls.click(screen.getByRole('button', { name: 'Apply' }))
+  await controls.click(screen.getByRole('button', { name: 'Next turn' }))
   await controls.click(await screen.findByRole('button', { name: /^Fireball/ }))
   await controls.click(screen.getByRole('button', { name: 'Cast' }))
   const dialog = screen.getByRole('dialog', { name: 'Mage · Fireball' })

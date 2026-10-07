@@ -84,14 +84,19 @@ function Tab({
 export function MobileNav({
   active,
   onSelect,
+  className,
 }: {
   active: MobileTab
   onSelect: (tab: MobileTab) => void
+  className?: string
 }) {
   return (
     <nav
       aria-label="Console screens"
-      className="grid shrink-0 grid-cols-4 border-t border-slate-200 pb-[env(safe-area-inset-bottom)] dark:border-slate-800 split:hidden wide:hidden"
+      className={cx(
+        'grid shrink-0 grid-cols-4 border-t border-slate-200 pb-[env(safe-area-inset-bottom)] dark:border-slate-800 split:hidden wide:hidden',
+        className,
+      )}
     >
       <Tab
         icon={<RowsIcon />}

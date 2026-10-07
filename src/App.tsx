@@ -20,6 +20,7 @@ import { instantiate, isFoe, nameOf, resolveSelected, trackerOrder } from './com
 import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
+import { practiceInitiative } from './tutorial/practiceValues.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { saveBonus } from './combat/masssave.ts'
 import { saveEndsClears, saveEndsEffects } from './combat/saveEnds.ts'
@@ -1274,7 +1275,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         else
           rolled[id] = {
             category: 'note',
-            message: `${nameOf(c)}: initiative ${initiatives[id]}`,
+            message: `${nameOf(c)}: ${setup.active ? 'practice ' : ''}initiative ${initiatives[id]}`,
             sourceId: id,
           }
       }
@@ -1323,7 +1324,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     preRolled.current = {}
     for (const c of encounter.combatants) {
       // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
-      if (setup.active || c.status === 'dead' || isPlayer(c)) {
+      if (setup.active) {
+        initial[c.combatantId] = isPlayer(c) ? '' : String(practiceInitiative(c) ?? '')
+        continue
+      }
+      if (c.status === 'dead' || isPlayer(c)) {
         initial[c.combatantId] = c.status === 'dead' ? '0' : ''
         continue
       }
@@ -1457,7 +1462,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (setup.task === 'attack' || setup.task === 'prone') setSelectedId(setup.ogreId)
     if (setup.task === 'death-save' && setup.quickId) setSelectedId(setup.quickId)
     if (setup.task === 'spell' && setup.mageId) setSelectedId(setup.mageId)
-    if (['damage', 'turn', 'stop', 'clear'].includes(setup.task)) setMobilePane(0)
+    if (['damage', 'ogre-turn', 'mage-turn', 'turn', 'stop', 'clear'].includes(setup.task))
+      setMobilePane(0)
     else if (setup.task === 'attack' || setup.task === 'spell') setMobilePane(1)
     else if (setup.task === 'prone' || setup.task === 'death-save') setMobilePane(2)
   }, [setup.active, setup.task, setup.ogreId, setup.mageId, setup.quickId])
@@ -2289,7 +2295,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           </footer>
 
-          <MobileNav active={mobileTab} onSelect={showMobileTab} />
+          <MobileNav
+            active={mobileTab}
+            onSelect={showMobileTab}
+            className={
+              setup.active && tutorial.surface === 'introduction' ? 'short:hidden' : undefined
+            }
+          />
         </div>
         {tutorialAccountPreference.accountSyncError && (
           <p

@@ -75,7 +75,7 @@ function addPractice(control: string, label: string, name: string) {
 }
 
 it.each(['srd-5.2', 'srd-5.1'])(
-  'adds exactly the required %s snapshots and starts only with four valid manual initiatives',
+  'adds the required %s snapshots and starts with the prescribed practice turn order',
   async (library) => {
     saveSettings({ enabledLibraries: [library] })
     const settings = loadSettings()
@@ -95,21 +95,29 @@ it.each(['srd-5.2', 'srd-5.1'])(
     fireEvent.change(screen.getByLabelText('Search creatures'), { target: { value: 'Ogre' } })
     fireEvent.click(await screen.findByRole('button', { name: /^Ogre / }))
     fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
-    for (const name of ['Rowan', 'Robin', 'Mage', 'Ogre'])
-      expect(screen.getByLabelText(`Initiative for ${name}`)).toHaveValue('')
-    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-    expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeInTheDocument()
-    for (const [index, name] of ['Rowan', 'Robin', 'Mage', 'Ogre'].entries())
-      fireEvent.change(screen.getByLabelText(`Initiative for ${name}`), {
-        target: { value: String(20 - index) },
-      })
-    fireEvent.change(screen.getByLabelText('Initiative for Ogre'), { target: { value: 'no dice' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-    expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Initiative for Ogre'), { target: { value: '-2' } })
+    expect(
+      screen.getByText(/Normally, OpenFray rolls for creatures and quick adds/),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Initiative for Rowan')).toHaveValue('')
+    for (const [name, value] of [
+      ['Ogre', '18'],
+      ['Mage', '16'],
+      ['Robin', '14'],
+    ]) {
+      expect(screen.getByLabelText(`Initiative for ${name}`)).toHaveValue(value)
+      expect(screen.getByLabelText(`Initiative for ${name}`)).toHaveAttribute('readonly')
+    }
+    for (const value of ['', 'no dice', '17']) {
+      fireEvent.change(screen.getByLabelText('Initiative for Rowan'), { target: { value } })
+      fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+      expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeInTheDocument()
+    }
+    fireEvent.change(screen.getByLabelText('Initiative for Rowan'), { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
     expect(screen.queryByRole('dialog', { name: 'Roll initiative' })).toBeNull()
-    expect(screen.getByText(/Your fight has started/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Step 6. Record your player’s hit' }),
+    ).toBeInTheDocument()
     await waitFor(() => expect(sessionStorage.getItem('openfray:session')).toContain('"round":1'))
     const recovery = decodeSession(sessionStorage.getItem('openfray:session')!)
     expect(recovery.status).toBe('ok')
@@ -123,26 +131,32 @@ it.each(['srd-5.2', 'srd-5.1'])(
         initiative: 20,
       }),
       expect.objectContaining({
-        name: 'Robin',
-        kind: 'quick',
-        side: 'friend',
-        ac: 12,
-        hp: { current: 30, max: 30, temp: 0 },
-        initiative: 19,
+        creature: expect.objectContaining({ id: `${library}:ogre` }),
+        initiative: 18,
       }),
       expect.objectContaining({
         creature: expect.objectContaining({
           id: `${library}:mage`,
           edition: library === 'srd-5.2' ? '5.5' : '5.0',
         }),
-        initiative: 18,
+        initiative: 16,
       }),
       expect.objectContaining({
-        creature: expect.objectContaining({ id: `${library}:ogre` }),
-        initiative: -2,
+        name: 'Robin',
+        kind: 'quick',
+        side: 'friend',
+        ac: 12,
+        hp: { current: 30, max: 30, temp: 0 },
+        initiative: 14,
       }),
     ])
     expect(recovery.snapshot.encounter.log.some((entry) => entry.category === 'roll')).toBe(false)
+    expect(
+      recovery.snapshot.encounter.log.filter((entry) =>
+        entry.message.includes('practice initiative'),
+      ),
+    ).toHaveLength(4)
+    expect(recovery.snapshot.encounter.activeIndex).toBe(0)
     expect(loadSettings()).toEqual(settings)
     expect(screen.queryByText('Tutorial complete')).toBeNull()
   },
@@ -201,13 +215,13 @@ it('creates a NEW durable roster character through the signed-in path and leaves
     fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${name} `) }))
   }
   fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
-  for (const [index, name] of ['New adventurer', 'New friend', 'Mage', 'Ogre'].entries()) {
-    fireEvent.change(screen.getByLabelText(`Initiative for ${name}`), {
-      target: { value: String(20 - index) },
-    })
-  }
+  fireEvent.change(screen.getByLabelText('Initiative for New adventurer'), {
+    target: { value: '20' },
+  })
   fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-  expect(screen.getByText(/Your fight has started/)).toBeInTheDocument()
+  expect(
+    screen.getByRole('heading', { name: 'Step 6. Record your player’s hit' }),
+  ).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
   fireEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
   fireEvent.click(screen.getByRole('button', { name: 'Stop' }))

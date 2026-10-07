@@ -227,15 +227,36 @@ it.each([
     expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Start combat' }))
     expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeTruthy()
-    for (const [index, name] of ['Rowan', 'Robin', 'Mage', 'Ogre'].entries()) {
+    for (const [name, value] of [
+      ['Ogre', '18'],
+      ['Mage', '16'],
+      ['Robin', '14'],
+    ]) {
       const field = screen.getByRole('textbox', { name: `Initiative for ${name}` })
-      expect((field as HTMLInputElement).value).toBe('')
+      expect((field as HTMLInputElement).value).toBe(value)
+      expect((field as HTMLInputElement).readOnly).toBe(true)
       await expectUsable(field)
-      await userEvent.fill(field, String(20 - index))
     }
+    const player = screen.getByRole('textbox', { name: 'Initiative for Rowan' })
+    expect((player as HTMLInputElement).value).toBe('')
+    await userEvent.fill(player, '20')
+    await expect
+      .poll(() => {
+        const form = document
+          .querySelector<HTMLElement>('[data-tutorial="initiative"]')!
+          .getBoundingClientRect()
+        const shade = document
+          .querySelector<HTMLElement>('[data-tutorial-shade]')!
+          .getBoundingClientRect()
+        return (
+          Math.abs(shade.top - Math.max(0, form.top - 4)) < 1 &&
+          Math.abs(shade.bottom - Math.min(innerHeight, form.bottom + 4)) < 1
+        )
+      })
+      .toBe(true)
     await expectUsable(screen.getByRole('button', { name: 'Start combat' }))
     await userEvent.click(screen.getByRole('button', { name: 'Start combat' }))
-    expect(screen.getByText(/Your fight has started/)).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Step 6. Record your player’s hit' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
     await userEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
     expect(screen.getByRole('button', { name: 'Next turn' })).toBeTruthy()

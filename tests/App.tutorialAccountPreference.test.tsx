@@ -103,7 +103,7 @@ it.each(['dismissed', 'completed'] as const)(
     expect(loadSettings().tutorialSuppression).toBeNull()
     launchManually()
     expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
-    expect(screen.getByText(/Choose Add PC, then Create a character/)).toBeInTheDocument()
+    expect(screen.getByText(/Click Add PC, then Create a character/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
     fireEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
     expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
