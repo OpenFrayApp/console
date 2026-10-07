@@ -261,9 +261,10 @@ export function CombatantRow({
             {onHpInput ? (
               // Edit HP inline (damage/heal/set), like the stat block. Stop key events
               // from reaching the row so Enter commits the edit instead of selecting.
-              <span onKeyDown={(e) => e.stopPropagation()}>
+              <span data-tutorial-hp={combatant.combatantId} onKeyDown={(e) => e.stopPropagation()}>
                 <EditableField
                   initial=""
+                  ariaLabel={`Hit points for ${nameOf(combatant)}`}
                   onCommit={onHpInput}
                   title="Set hit points, or type +5 or -8"
                   inputMode="numeric"

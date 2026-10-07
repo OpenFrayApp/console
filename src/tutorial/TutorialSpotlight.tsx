@@ -18,11 +18,30 @@ function visible(element: HTMLElement): boolean {
 }
 
 /** Find the normal task surface, preferring its open form over a cancellation trigger. */
-function taskTargets(task: SetupTask): HTMLElement[] {
+function taskTargets(task: SetupTask, ogreId?: string): HTMLElement[] {
   /** Collect the visible instances of a normal task control. */
   const find = (selector: string) =>
     [...document.querySelectorAll<HTMLElement>(selector)].filter(visible)
   if (task === 'ready') return []
+  if (task === 'attack') {
+    const modal = find('[role="dialog"]').filter((node) =>
+      node.getAttribute('aria-label')?.endsWith(' · Javelin'),
+    )
+    return modal.length ? modal : find('[data-tutorial-action="Javelin"]')
+  }
+  if (task === 'prone') {
+    const modal = find('[role="dialog"]').filter((node) =>
+      node.getAttribute('aria-label')?.startsWith('Apply effect to '),
+    )
+    if (modal.length)
+      return modal.flatMap((node) => [
+        ...node.querySelectorAll<HTMLElement>(
+          '[data-tutorial-condition="Prone"], [data-tutorial="effect-apply"]',
+        ),
+      ])
+    return find('[data-tutorial="apply-effect"]')
+  }
+  if (task === 'damage') return find(`[data-tutorial-hp="${ogreId}"]`)
   if (task === 'initiative') return find('[data-tutorial="initiative"]')
   if (task === 'roster-create') {
     const modal = find('[role="dialog"][aria-label="New player character"]')
@@ -51,8 +70,10 @@ export function TutorialSpotlight({
   task,
   guideRef,
   onExit,
+  ogreId,
 }: {
   task: SetupTask
+  ogreId?: string
   onExit: () => void
   guideRef: RefObject<HTMLElement | null>
 }) {
@@ -78,7 +99,7 @@ export function TutorialSpotlight({
     /** Recompute visible targets after dialogs, sheets, scrolling, and shell changes. */
     const refresh = () => {
       restore()
-      const targets = taskTargets(taskRef.current)
+      const targets = taskTargets(taskRef.current, ogreId)
       const guide = guideRef.current
       // A departing dialog may restore focus before the new guide's ref is attached.
       if (guide) guide.inert = false
@@ -153,11 +174,20 @@ export function TutorialSpotlight({
       if (guideRef.current?.contains(target)) return
       if (
         !target.closest(CANCEL) &&
-        taskTargets(taskRef.current).some((node) => node.contains(target))
+        taskTargets(taskRef.current, ogreId).some((node) => node.contains(target))
       )
         return
       event.preventDefault()
       event.stopImmediatePropagation()
+    }
+    /** Allow scrolling a task's containing panel without enabling its other controls. */
+    const allowTaskScroll = (event: Event) => {
+      const target = event.target as HTMLElement
+      if (guideRef.current?.contains(target)) return
+      const targets = taskTargets(taskRef.current, ogreId)
+      const panel = target.closest('[role="dialog"]')
+      if (targets.some((node) => node.contains(target) || panel?.contains(node))) return
+      blockPointer(event)
     }
     /** Keep keyboard focus among task controls and Exit, blocking dismissal shortcuts. */
     const blockKey = (event: KeyboardEvent) => {
@@ -167,9 +197,20 @@ export function TutorialSpotlight({
         onExit()
         return
       }
-      if (event.key !== 'Tab') return
+      if (event.key !== 'Tab') {
+        const target = event.target as HTMLElement
+        if (
+          !guideRef.current?.contains(target) &&
+          (target.closest(CANCEL) ||
+            !taskTargets(taskRef.current, ogreId).some((node) => node.contains(target)))
+        ) {
+          event.preventDefault()
+          event.stopImmediatePropagation()
+        }
+        return
+      }
       const roots = [
-        ...taskTargets(taskRef.current),
+        ...taskTargets(taskRef.current, ogreId),
         ...(guideRef.current ? [guideRef.current] : []),
       ]
       const controls = roots
@@ -209,7 +250,7 @@ export function TutorialSpotlight({
     for (const event of ['pointerdown', 'click', 'dblclick'])
       document.addEventListener(event, blockPointer, true)
     for (const event of ['wheel', 'touchmove'])
-      document.addEventListener(event, blockPointer, { capture: true, passive: false })
+      document.addEventListener(event, allowTaskScroll, { capture: true, passive: false })
     window.addEventListener('keydown', blockKey, true)
     return () => {
       observer.disconnect()
@@ -222,10 +263,10 @@ export function TutorialSpotlight({
       for (const event of ['pointerdown', 'click', 'dblclick'])
         document.removeEventListener(event, blockPointer, true)
       for (const event of ['wheel', 'touchmove'])
-        document.removeEventListener(event, blockPointer, true)
+        document.removeEventListener(event, allowTaskScroll, true)
       window.removeEventListener('keydown', blockKey, true)
     }
-  }, [task, guideRef, onExit])
+  }, [task, guideRef, onExit, ogreId])
 
   return (
     <>

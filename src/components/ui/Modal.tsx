@@ -14,6 +14,8 @@ export function Modal({
   size = 'md',
   showTitle = true,
   header,
+  reserveTutorialSpace = false,
+  closeCompletesOperation = false,
 }: {
   title: ReactNode
   subtitle?: ReactNode
@@ -24,11 +26,18 @@ export function Modal({
   showTitle?: boolean
   /** Search places its input and close control in the header. */
   header?: ReactNode
+  reserveTutorialSpace?: boolean
+  closeCompletesOperation?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useDismiss(ref, true, onClose)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div
+      style={
+        reserveTutorialSpace ? { paddingBottom: 'calc(var(--tutorial-h, 0px) + 1rem)' } : undefined
+      }
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    >
       <div
         ref={ref}
         role="dialog"
@@ -39,7 +48,12 @@ export function Modal({
         {header ?? (
           <div className="mb-1 flex items-start justify-between gap-3">
             {showTitle && <h3 className="text-base font-semibold">{title}</h3>}
-            <Button variant="quiet" className="ml-auto" onClick={onClose}>
+            <Button
+              data-tutorial-cancel={closeCompletesOperation ? undefined : ''}
+              variant="quiet"
+              className="ml-auto"
+              onClick={onClose}
+            >
               Close
             </Button>
           </div>

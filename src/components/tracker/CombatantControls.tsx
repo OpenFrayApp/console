@@ -84,8 +84,12 @@ export function CombatantControls({
   onSavePreset,
   openEffectRequest,
   concentrateRequest,
+  tutorialProne,
+  onEffectsCommitted,
 }: {
   combatant: Combatant
+  tutorialProne?: boolean
+  onEffectsCommitted?: (id: string, effects: Effect[]) => void
   /** The rest of the board, to name whoever caused a source-relative effect. */
   combatants?: Combatant[]
   /** Current round, recorded when concentration starts. */
@@ -140,12 +144,14 @@ export function CombatantControls({
     combatant.isPC && combatant.status === 'unconscious' && !isStable(combatant)
 
   /** Append the applied effects in one update, so a bundle logs as one event. */
-  const addEffects = (applied: Effect[]) =>
+  const addEffects = (applied: Effect[]) => {
     dispatch({
       type: 'update',
       id,
       update: (c) => ({ ...c, effects: [...c.effects, ...applied] }),
     })
+    onEffectsCommitted?.(id, applied)
+  }
 
   /** Drop one effect from this combatant by id. */
   const removeEffect = (effectId: string) =>
@@ -220,6 +226,7 @@ export function CombatantControls({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <EffectModal
           name={name}
+          reserveTutorialSpace={tutorialProne}
           combatantId={id}
           combatants={combatants}
           effects={combatant.effects}

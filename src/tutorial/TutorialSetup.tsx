@@ -20,8 +20,14 @@ const instructions: Record<SetupTask, string> = {
   begin: 'Choose Begin to enter initiative for all four combatants.',
   initiative:
     'Enter a whole-number initiative manually for each of the four combatants, then Start combat. Normally OpenFray rolls for creatures and quick adds while you enter player characters’ rolls.',
+  damage:
+    'Your fight has started. Record 3 damage against the Ogre: choose its hit points in the tracker, type -3, then press Enter. This records a player’s roll made outside the console.',
+  attack:
+    'Damage recorded. Choose Javelin in the Ogre’s stat block, target your player character, then Roll attack. Apply the normal damage on a hit. On a miss, Close without applying damage. Resolve any concentration check before continuing.',
+  prone:
+    'Choose Apply effect for the Ogre, select Prone, then Apply. Applying it after the attack leaves that attack’s roll unchanged.',
   ready:
-    'Your fight has started. Guided combat lessons are coming later. Exit tutorial to keep exploring with this board.',
+    'Prone applied. Guided spell and cleanup lessons are coming later. Exit tutorial to keep exploring with this board.',
 }
 
 /** Explain the current real setup task without a separate form or an acknowledgement step. */
@@ -35,7 +41,12 @@ export function TutorialSetup({
   const guideRef = useRef<HTMLElement>(null)
   return (
     <>
-      <TutorialSpotlight onExit={controller.requestExit} task={setup.task} guideRef={guideRef} />
+      <TutorialSpotlight
+        onExit={controller.requestExit}
+        task={setup.task}
+        ogreId={setup.ogreId}
+        guideRef={guideRef}
+      />
       <section
         ref={guideRef}
         role="dialog"
@@ -44,6 +55,13 @@ export function TutorialSetup({
         className="fixed inset-x-2 bottom-2 z-[70] mx-auto max-h-[38dvh] max-w-xl overflow-y-auto rounded-lg border border-indigo-400 bg-white p-3 text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100"
       >
         <p role="status" className="text-sm">
+          {setup.task === 'prone' && setup.attackResult && (
+            <>
+              {setup.attackResult.outcome === 'miss'
+                ? 'The attack missed. No damage was applied. '
+                : `${setup.attackResult.outcome === 'crit' ? 'Critical hit' : 'Hit'}: ${setup.attackResult.damage} damage applied. ${setup.pcDefeated ? 'Your player character is down; the committed result stays on the board. ' : ''}`}
+            </>
+          )}
           {setup.task === 'pc' && setup.signedIn
             ? 'Choose Add PC, then Create a character to create a new roster entry. Existing characters stay untouched.'
             : instructions[setup.task]}

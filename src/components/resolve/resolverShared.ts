@@ -11,6 +11,13 @@ import type { RolledDamage } from '../../combat/damage.ts'
 import { signed } from '../../compendium/format.ts'
 import type { OnRoll } from '../log/GameLog.tsx'
 
+/** A settled attack, reported only after a miss closes or applied damage and concentration finish. */
+export interface CompletedAttack {
+  targetId: string
+  outcome: 'hit' | 'miss' | 'crit'
+  damage: number
+}
+
 /** The resolver's props — the dispatcher hands them whole to the branch it picks. */
 export interface ResolverProps {
   /** The acting creature. Absent for a casterless cast (the "Cast spell" panel),
@@ -40,6 +47,9 @@ export interface ResolverProps {
    * so the caller uses this to decide whether concentration begins at all.
    */
   onResolved?: (landed: boolean) => void
+  onCompleted?: (attack: CompletedAttack) => void
+  /** Restrict the active tutorial task without altering the action or its rolls. */
+  tutorialTargetId?: string
   onClose: () => void
 }
 

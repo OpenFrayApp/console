@@ -1445,6 +1445,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     initiativeOpen: initPrompt !== null,
     library: tutorial.library,
   })
+  useEffect(() => {
+    if (!setup.active || !setup.ogreId) return
+    if (setup.task === 'attack' || setup.task === 'prone') setSelectedId(setup.ogreId)
+    if (setup.task === 'damage') setMobilePane(0)
+    else if (setup.task === 'attack') setMobilePane(1)
+    else if (setup.task === 'prone') setMobilePane(2)
+  }, [setup.active, setup.task, setup.ogreId])
   const tutorialVisible = tutorial.surface !== null && !activeCopyConflict && !resolvingCopies
   const started = encounter.round > 0
   const paused = encounter.paused === true
@@ -2056,6 +2063,18 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   </>
                 }
                 encounter={encounter}
+                practiceDamage={
+                  setup.active && setup.task === 'damage' && setup.ogreId
+                    ? { id: setup.ogreId, amount: 3 }
+                    : undefined
+                }
+                onHpDamageCommitted={setup.recordDamage}
+                tutorialAttackTargetId={
+                  setup.active && setup.task === 'attack' ? setup.pcId : undefined
+                }
+                onAttackCompleted={setup.recordAttack}
+                tutorialProne={setup.active && setup.task === 'prone'}
+                onEffectsCommitted={setup.recordEffects}
                 dispatch={dispatch}
                 onRoll={pushRoll}
                 onGmRoll={pushGmRoll}

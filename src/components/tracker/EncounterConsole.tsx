@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isRollable, type Action } from '../../schema/action.ts'
 import type { Ability } from '../../schema/primitives.ts'
+import type { Effect } from '../../schema/effect.ts'
 import type { EffectPreset } from '../../schema/preset.ts'
 import type { Combatant, MonsterCombatant, PlayerCharacter } from '../../schema/combatant.ts'
 import type { Creature, SpellLevel, SpellRef } from '../../schema/creature.ts'
@@ -38,6 +39,7 @@ import type { TrackerColors } from '../../state/settings.ts'
 import { heldBack } from '../../combat/playerView.ts'
 import { rollWithEffects } from '../../combat/effectroll.ts'
 import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
+import type { CompletedAttack } from '../resolve/resolverShared.ts'
 import { ActionResolver } from '../resolve/ActionResolver.tsx'
 import { CombatantControls } from './CombatantControls.tsx'
 import { CombatantRow, type ReorderDirection } from './CombatantRow.tsx'
@@ -100,6 +102,12 @@ export function EncounterConsole({
   concentrateRequest,
   keyHints,
   trackerColors,
+  practiceDamage,
+  tutorialAttackTargetId,
+  onAttackCompleted,
+  tutorialProne,
+  onEffectsCommitted,
+  onHpDamageCommitted,
 }: {
   /**
    * What the board as a whole can do — saving it, handing it out. Rendered in the tracker's
@@ -108,6 +116,12 @@ export function EncounterConsole({
    */
   boardActions?: ReactNode
   encounter: Encounter
+  practiceDamage?: { id: string; amount: number }
+  tutorialAttackTargetId?: string
+  tutorialProne?: boolean
+  onEffectsCommitted?: (id: string, effects: Effect[]) => void
+  onAttackCompleted?: (sourceId: string, actionId: string, result: CompletedAttack) => void
+  onHpDamageCommitted?: (id: string, damage: number) => void
   trackerColors?: TrackerColors
   dispatch: (action: EncounterAction) => void
   onRoll: OnRoll
@@ -209,6 +223,9 @@ export function EncounterConsole({
   const applyHpInput = (c: Combatant, raw: string, isTemp: boolean) => {
     const parsed = parseHpInput(raw)
     if (!parsed) return
+    if (practiceDamage && !isTemp && c.combatantId === practiceDamage.id) {
+      if (!('delta' in parsed) || parsed.delta !== -practiceDamage.amount) return
+    }
     if (isTemp) {
       const next = 'delta' in parsed ? Math.max(0, c.hp.temp + parsed.delta) : parsed.set
       if (
@@ -244,12 +261,14 @@ export function EncounterConsole({
     if (damage > 0) {
       const dc = concentrationPromptDC(c, op(c), damage)
       if (dc != null) setConcPrompt({ id: c.combatantId, dc, damage })
+      else onHpDamageCommitted?.(c.combatantId, damage)
     }
   }
 
   /** Dismiss the concentration prompt; a failed save also ends the target's concentration. */
   const resolveConcentration = (broke = false) => {
     if (broke && concPrompt) dispatch({ type: 'endConcentration', id: concPrompt.id })
+    if (concPrompt) onHpDamageCommitted?.(concPrompt.id, concPrompt.damage)
     setConcPrompt(null)
   }
 
@@ -692,6 +711,8 @@ export function EncounterConsole({
               )}
               <CombatantControls
                 combatant={selected}
+                tutorialProne={tutorialProne}
+                onEffectsCommitted={onEffectsCommitted}
                 combatants={encounter.combatants}
                 round={encounter.round}
                 dispatch={dispatch}
@@ -764,6 +785,8 @@ export function EncounterConsole({
           combatants={combatants}
           dispatch={dispatch}
           onRoll={onRoll}
+          tutorialTargetId={tutorialAttackTargetId}
+          onCompleted={(result) => onAttackCompleted?.(selected.combatantId, actionFor.id, result)}
           onUse={() => consumeIfRechargeable(selected, actionFor)}
           onClose={() => setActionFor(null)}
         />

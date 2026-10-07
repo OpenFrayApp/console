@@ -10,6 +10,7 @@ import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
  */
 export function EditableField({
   initial,
+  ariaLabel,
   onCommit,
   title,
   inputClassName,
@@ -18,6 +19,7 @@ export function EditableField({
   children,
 }: {
   initial: string
+  ariaLabel?: string
   onCommit: (value: string) => void
   title: string
   inputClassName: string
@@ -43,6 +45,7 @@ export function EditableField({
     return (
       <input
         autoFocus
+        aria-label={ariaLabel}
         value={draft}
         inputMode={inputMode}
         onChange={(e) => setDraft(e.target.value)}
