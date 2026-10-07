@@ -8,6 +8,9 @@ import { useState } from 'react'
 import { loadSettings, saveSettings, type TutorialSuppression } from '../../src/state/settings.ts'
 import { TutorialEntry } from '../../src/tutorial/TutorialEntry.tsx'
 import { useTutorialEntry } from '../../src/tutorial/useTutorialEntry.ts'
+import { TutorialSetup } from '../../src/tutorial/TutorialSetup.tsx'
+import { useTutorialSetup } from '../../src/tutorial/useTutorialSetup.ts'
+import { emptyEncounter } from '../../src/state/encounter.ts'
 import { useTutorialAccountPreference } from '../../src/auth/useTutorialAccountPreference.ts'
 import type { Session, User } from '@supabase/supabase-js'
 import { AuthProvider } from '../../src/auth/AuthProvider.tsx'
@@ -112,15 +115,30 @@ function TutorialPreferenceConsole() {
     effectiveSuppression: preference.effectiveSuppression,
     onSuppress: suppress,
   })
+  const setup = useTutorialSetup({
+    active: tutorial.library !== null,
+    encounter: emptyEncounter(),
+    signedIn: !!auth.user,
+    initiativeOpen: false,
+    library: tutorial.library,
+  })
   return (
     <>
       <Probe />
       <output aria-label="Invitation preference">
         {preference.effectiveSuppression ?? 'none'}
       </output>
-      {preference.accountSyncError && <p role="alert">{preference.accountSyncError}</p>}
+      {preference.accountSyncError && (
+        <p role="alert" data-tutorial-guide>
+          {preference.accountSyncError}
+        </p>
+      )}
       <button onClick={tutorial.launch}>Restart tutorial</button>
-      <TutorialEntry controller={tutorial} />
+      {tutorial.surface === 'introduction' ? (
+        <TutorialSetup controller={tutorial} setup={setup} />
+      ) : (
+        <TutorialEntry controller={tutorial} />
+      )}
     </>
   )
 }

@@ -111,6 +111,7 @@ import {
   updateRosterPc,
 } from './state/cloudPlayers.ts'
 import { useAuth } from './auth/useAuth.ts'
+import { useTutorialAccountPreference } from './auth/useTutorialAccountPreference.ts'
 import { Compendium, type Tab as CompendiumTab } from './components/library/Compendium.tsx'
 import { EncounterConsole } from './components/tracker/EncounterConsole.tsx'
 import { RecapScreen, EndCombatPrompt } from './components/tracker/Recap.tsx'
@@ -403,6 +404,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setTutorialSuppression(reason)
     saveSettings({ tutorialSuppression: reason })
   }
+  const tutorialAccountPreference = useTutorialAccountPreference(tutorialSuppression)
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
   const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
@@ -1428,7 +1430,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     boardEmpty: encounter.combatants.length === 0,
     inCombat: encounter.round > 0,
     enabledLibraries,
-    effectiveSuppression: tutorialSuppression,
+    effectiveSuppression: tutorialAccountPreference.effectiveSuppression,
     onSuppress: suppressTutorial,
     onLaunch: () => {
       setView('encounter')
@@ -2235,6 +2237,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
           <MobileNav active={mobileTab} onSelect={showMobileTab} />
         </div>
+        {tutorialAccountPreference.accountSyncError && (
+          <p
+            role="alert"
+            data-tutorial-guide
+            className="pointer-events-none fixed inset-x-2 top-2 z-[70] mx-auto max-w-xl rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+          >
+            {tutorialAccountPreference.accountSyncError}
+          </p>
+        )}
         {tutorialVisible &&
           (tutorial.surface === 'introduction' ? (
             <TutorialSetup controller={tutorial} setup={setup} />

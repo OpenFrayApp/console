@@ -7,7 +7,9 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { commands, page, userEvent } from 'vitest/browser'
 import App from '../../src/App.tsx'
 import { loadSettings, saveSettings } from '../../src/state/settings.ts'
-import { AuthContext } from '../../src/auth/useAuth.ts'
+import { AuthContext, type AuthResult } from '../../src/auth/useAuth.ts'
+import { TUTORIAL_ACCOUNT_WRITE_ERROR } from '../../src/auth/tutorialAccountPreference.ts'
+import type { User } from '@supabase/supabase-js'
 import { authState } from '../fixtures.ts'
 import '../../src/index.css'
 
@@ -189,6 +191,61 @@ it('keeps swipe Add trigger cancellation closed when invitations are suppressed'
   await userEvent.click(trigger)
   expect(screen.getByRole('menuitem', { name: 'Quick add' })).toBeTruthy()
 })
+
+it.each([375, 1180, 1440])(
+  'keeps failed account sync readable outside restricted controls at width %s',
+  async (width) => {
+    await page.viewport(width, 900)
+    let fail!: (result: AuthResult) => void
+    const setTutorialSuppression = vi.fn(
+      () => new Promise<AuthResult>((resolve) => (fail = resolve)),
+    )
+    render(
+      createElement(
+        AuthContext.Provider,
+        {
+          value: authState({
+            user: { id: 'tutorial-alert-owner' } as User,
+            configured: true,
+            setTutorialSuppression,
+          }),
+        },
+        createElement(App),
+      ),
+    )
+    await screen.findByRole('dialog', { name: 'Learn the console' })
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Never show this again' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+    await expect.poll(() => setTutorialSuppression.mock.calls.length).toBe(1)
+    fail({ error: TUTORIAL_ACCOUNT_WRITE_ERROR })
+    const alert = await screen.findByRole('alert')
+    await expect.element(page.getByRole('alert')).toBeVisible()
+    expect(alert.textContent).toBe(TUTORIAL_ACCOUNT_WRITE_ERROR)
+    expectContained(alert)
+    await expect
+      .poll(() => {
+        for (let node: HTMLElement | null = alert; node; node = node.parentElement)
+          if (node.inert) return false
+        return true
+      })
+      .toBe(true)
+    await userEvent.tab()
+    expect([
+      screen.queryByRole('button', { name: 'Add PC' }),
+      screen.queryByRole('button', { name: 'Add to the encounter' }),
+      screen.getByRole('button', { name: 'Exit tutorial' }),
+    ]).toContain(document.activeElement)
+    await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
+    await expect.element(page.getByRole('alert')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
+    expect(loadSettings().tutorialSuppression).toBe('dismissed')
+    await userEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    await userEvent.click(screen.getByRole('option', { name: 'Start tutorial' }))
+    expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeTruthy()
+    await expect.element(page.getByRole('alert')).toBeVisible()
+    expect(setTutorialSuppression).toHaveBeenCalledTimes(1)
+  },
+)
 
 it('blocks background focus and pointer actions while the introductory guide is open', async () => {
   await page.viewport(1440, 900)
