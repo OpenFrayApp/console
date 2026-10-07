@@ -30,11 +30,17 @@ That is enough to run the console. Accounts and cloud saving need a Supabase
 project: copy [.env.example](./.env.example) to `.env` and fill in the two values.
 Without them the app runs anonymous-only and the header shows no sign-in button.
 
-`npm test` runs the Vitest suite. `npm run build` type-checks and builds the app
+`npm test` runs the Vitest unit/component suite, browser tests, and writer-identity verification. `npm run build` type-checks and builds the app
 into `dist/console` with `/console/` as its base path; the parent repo's assembly
 step copies that into the deployed site.
 
 ## Before contributing
+
+Use the shared
+[Contributing](https://github.com/OpenFrayApp/openfray/blob/main/CONTRIBUTING.md),
+[Verification commands](https://github.com/OpenFrayApp/openfray/blob/main/docs/development/verification.md),
+and [Repository file policy](https://github.com/OpenFrayApp/openfray/blob/main/docs/development/repository-files.md)
+for branch targets, check scope, and private local files.
 
 Read [AGENTS.md](./AGENTS.md). The one-line version: OpenFray is a fast scratchpad,
 not a system of record, and every change is measured against that.
