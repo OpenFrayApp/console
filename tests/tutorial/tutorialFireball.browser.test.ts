@@ -6,7 +6,7 @@ import { cleanup, screen, within } from '@testing-library/react'
 import { commands, page, userEvent } from 'vitest/browser'
 import { renderTutorial, startPracticeFight } from './setupHarness.tsx'
 import { saveSettings } from '../../src/state/settings.ts'
-import { enableNativeConfirmation } from './browserHarness.ts'
+import { enableNativeConfirmation, tutorialControlIsReachable } from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -45,24 +45,7 @@ const controls = {
 
 /** Observe actual pointer reachability without moving, scrolling, or focusing the target. */
 async function expectUsable(target: HTMLElement) {
-  await expect
-    .poll(() => {
-      const box = target.getBoundingClientRect()
-      const guide = screen
-        .getByRole('dialog', { name: 'Tutorial introduction' })
-        .getBoundingClientRect()
-      return (
-        box.width > 0 &&
-        box.left >= 0 &&
-        box.right <= innerWidth &&
-        box.top >= 0 &&
-        box.bottom <= guide.top &&
-        target.contains(
-          document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2),
-        )
-      )
-    })
-    .toBe(true)
+  await expect.poll(() => tutorialControlIsReachable(target)).toBe(true)
 }
 
 afterEach(async () => {

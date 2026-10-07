@@ -9,7 +9,7 @@ import type { RosterPc } from '../../src/schema/roster.ts'
 import { loadSettings, saveSettings } from '../../src/state/settings.ts'
 import { decodeSession } from '../../src/codecs/session.ts'
 import { renderTutorial, startPracticeFight, resolvePracticeFight } from './setupHarness.tsx'
-import { enableNativeConfirmation } from './browserHarness.ts'
+import { enableNativeConfirmation, tutorialControlIsReachable } from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -59,25 +59,7 @@ const controls = {
 
 /** Assert hit testing and visibility without scrolling, focusing, or moving the target. */
 async function expectReachable(target: HTMLElement, guided = true) {
-  await expect
-    .poll(() => {
-      const box = target.getBoundingClientRect()
-      const dock = guided
-        ? screen.getByRole('dialog', { name: 'Tutorial introduction' }).getBoundingClientRect().top
-        : innerHeight
-      return (
-        box.width > 0 &&
-        box.height > 0 &&
-        box.left >= 0 &&
-        box.right <= innerWidth &&
-        box.top >= 0 &&
-        box.bottom <= dock &&
-        target.contains(
-          document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2),
-        )
-      )
-    })
-    .toBe(true)
+  await expect.poll(() => tutorialControlIsReachable(target, guided)).toBe(true)
 }
 
 afterEach(async () => {
