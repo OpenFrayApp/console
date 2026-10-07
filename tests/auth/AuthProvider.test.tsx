@@ -378,6 +378,69 @@ describe('AuthProvider — tutorial account preference', () => {
     expect(latest.shareLicense).toBe('cc-by-4.0')
   })
 
+  it.each(['profile', 'license'] as const)(
+    'preserves confirmed suppression when a deferred %s write emits USER_UPDATED before returning',
+    async (preference) => {
+      vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'public-key')
+      const fetch = vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              id: 'gm@openfray.app',
+              user_metadata: { tutorial_suppression: 'completed' },
+            }),
+          ),
+      )
+      vi.stubGlobal('fetch', fetch)
+      const stub = makeAuthClient(
+        session('gm@openfray.app', {
+          display_name: 'Before',
+          share_license: 'cc-by-4.0',
+        }),
+      )
+      let finish!: (response: Awaited<ReturnType<typeof stub.auth.updateUser>>) => void
+      stub.auth.updateUser.mockImplementationOnce(async () => {
+        const response = await new Promise<Awaited<ReturnType<typeof stub.auth.updateUser>>>(
+          (resolve) => {
+            finish = resolve
+          },
+        )
+        stub.emit({ ...session('gm@openfray.app'), user: response.data.user }, 'USER_UPDATED')
+        return response
+      })
+      supa.client = stub.client
+      renderProvider()
+      await screen.findByText('gm@openfray.app')
+      const earlierWrite =
+        preference === 'profile'
+          ? latest.setDisplayName('Updated name')
+          : latest.setShareLicense('cc-by-sa-4.0')
+      await act(async () => {
+        expect(await latest.setTutorialSuppression('completed')).toEqual({ error: null })
+      })
+      expect(latest.tutorialSuppression).toBe('completed')
+      await act(async () => {
+        finish({
+          data: {
+            user: session('gm@openfray.app', {
+              display_name: preference === 'profile' ? 'Updated name' : 'Before',
+              share_license: preference === 'license' ? 'cc-by-sa-4.0' : 'cc-by-4.0',
+            }).user,
+          },
+          error: null,
+        })
+        expect(await earlierWrite).toEqual({ error: null })
+      })
+      expect(latest.displayName).toBe(preference === 'profile' ? 'Updated name' : 'Before')
+      expect(latest.shareLicense).toBe(preference === 'license' ? 'cc-by-sa-4.0' : 'cc-by-4.0')
+      expect(latest.tutorialSuppression).toBe('completed')
+      await expect(latest.setTutorialSuppression('dismissed')).resolves.toEqual({ error: null })
+      expect(latest.tutorialSuppression).toBe('completed')
+      expect(fetch).toHaveBeenCalledTimes(1)
+    },
+  )
+
   it('preserves a profile change made while suppression is being saved', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'public-key')
@@ -461,6 +524,49 @@ describe('AuthProvider — tutorial account preference', () => {
             : 'a@openfray.app',
       )
       expect(latest.tutorialSuppression).toBeNull()
+    },
+  )
+
+  it.each(['failed delete RPC', 'signOut without an auth event'] as const)(
+    'keeps a fresh tutorial setter usable after %s while fencing the captured callback',
+    async (termination) => {
+      vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'public-key')
+      const fetch = vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              id: 'gm@openfray.app',
+              user_metadata: { tutorial_suppression: 'completed' },
+            }),
+          ),
+      )
+      vi.stubGlobal('fetch', fetch)
+      const stub = makeAuthClient(session('gm@openfray.app'))
+      if (termination === 'failed delete RPC')
+        stub.rpc.mockResolvedValueOnce({ error: { message: 'deletion unavailable' } })
+      else stub.auth.signOut.mockResolvedValueOnce({ error: { message: 'sign-out unavailable' } })
+      supa.client = stub.client
+      renderProvider()
+      await screen.findByText('gm@openfray.app')
+      const capturedSetter = latest.setTutorialSuppression
+      await act(async () => {
+        if (termination === 'failed delete RPC')
+          expect(await latest.deleteAccount()).toEqual({ error: 'deletion unavailable' })
+        else await latest.signOut()
+      })
+      expect(latest.user?.id).toBe('gm@openfray.app')
+      expect(latest.identityExpired).toBe(false)
+      await expect(capturedSetter('dismissed')).resolves.toEqual({ error: expect.any(String) })
+      expect(fetch).not.toHaveBeenCalled()
+      await act(async () => {
+        expect(await latest.setTutorialSuppression('completed')).toEqual({ error: null })
+      })
+      expect(latest.tutorialSuppression).toBe('completed')
+      await expect(capturedSetter('dismissed')).resolves.toEqual({ error: expect.any(String) })
+      expect(latest.tutorialSuppression).toBe('completed')
+      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(stub.auth.updateUser).not.toHaveBeenCalled()
     },
   )
 

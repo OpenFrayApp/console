@@ -12,6 +12,16 @@ import {
 } from './tutorialAccountPreference.ts'
 import { AuthContext, type AuthResult, type OAuthProvider } from './useAuth.ts'
 
+/** Preserve confirmed tutorial suppression when publishing the same account's metadata. */
+function retainTutorialSuppression(user: User, previous: User | null): User {
+  const confirmed =
+    user.id === previous?.id
+      ? parseTutorialSuppression(previous.user_metadata?.tutorial_suppression)
+      : null
+  if (!confirmed || user.user_metadata?.tutorial_suppression === confirmed) return user
+  return { ...user, user_metadata: { ...user.user_metadata, tutorial_suppression: confirmed } }
+}
+
 /**
  * Tracks the Supabase auth session and exposes OAuth sign-in / sign-out / delete.
  * When Supabase isn't configured, it resolves immediately to the anonymous state
@@ -22,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Only "loading" if there's a session to look up; otherwise we're anon at once.
   const [loading, setLoading] = useState(Boolean(supabase))
   const [identityExpired, setIdentityExpired] = useState(false)
+  const [identityGeneration, setIdentityGeneration] = useState(0)
   const explicitSignOut = useRef(false)
   const identity = useRef<{ session: Session | null; generation: number }>({
     session: null,
@@ -32,9 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Invalidate pending tutorial writes before replacing or ending an identity. */
   const invalidatePreferenceWrites = useCallback(() => {
     identity.current.generation += 1
+    setIdentityGeneration(identity.current.generation)
     for (const controller of preferenceWrites.current) controller.abort()
     preferenceWrites.current.clear()
   }, [])
+
+  /** Publish profile results without discarding this identity's confirmed tutorial preference. */
+  const publishProfileUser = (updated: User) => {
+    const current = identity.current.session
+    if (!current || current.user.id !== updated.id) return
+    const next = retainTutorialSuppression(updated, current.user)
+    identity.current.session = { ...current, user: next }
+    setUser(next)
+  }
 
   useEffect(() => {
     if (!supabase) return
@@ -46,19 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const previous = identity.current.session
       const sameIdentity = previous?.user.id === session?.user.id
       if (!sameIdentity) invalidatePreferenceWrites()
-      const confirmed = sameIdentity
-        ? parseTutorialSuppression(previous?.user.user_metadata?.tutorial_suppression)
+      const next = session
+        ? { ...session, user: retainTutorialSuppression(session.user, previous?.user ?? null) }
         : null
-      const next =
-        session && confirmed
-          ? {
-              ...session,
-              user: {
-                ...session.user,
-                user_metadata: { ...session.user.user_metadata, tutorial_suppression: confirmed },
-              },
-            }
-          : session
       identity.current.session = next
       setUser(next?.user ?? null)
     }
@@ -140,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { display_name: trimmed || null },
     })
     if (error) return { error: error.message }
-    if (data.user) setUser(data.user)
+    if (data.user) publishProfileUser(data.user)
     return { error: null }
   }
 
@@ -158,11 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { share_license: license === 'unstated' ? null : license },
     })
     if (error) return { error: error.message }
-    if (data.user) setUser(data.user)
+    if (data.user) publishProfileUser(data.user)
     return { error: null }
   }
 
-  const identityGeneration = identity.current.generation
   /** Persist tutorial suppression without restoring a stale auth session or metadata. */
   const setTutorialSuppression = useCallback(
     async (reason: TutorialSuppression): Promise<AuthResult> => {
@@ -177,8 +187,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         !parseTutorialSuppression(reason)
       )
         return { error: TUTORIAL_ACCOUNT_WRITE_ERROR }
-      if (parseTutorialSuppression(captured.session.user.user_metadata?.tutorial_suppression))
+      if (parseTutorialSuppression(captured.session.user.user_metadata?.tutorial_suppression)) {
+        const confirmedUser = captured.session.user
+        setUser((current) =>
+          current && identity.current.generation === identityGeneration
+            ? retainTutorialSuppression(current, confirmedUser)
+            : current,
+        )
         return { error: null }
+      }
       const controller = new AbortController()
       preferenceWrites.current.add(controller)
       const result = await writeTutorialAccountPreference(
