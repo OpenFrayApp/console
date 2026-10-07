@@ -37,7 +37,7 @@ step copies that into the deployed site.
 ## Before contributing
 
 Use the shared
-[Contributor workflow](https://github.com/OpenFrayApp/openfray/blob/main/docs/development/contributor-workflow.md),
+[Contributing](https://github.com/OpenFrayApp/openfray/blob/main/CONTRIBUTING.md),
 [Verification commands](https://github.com/OpenFrayApp/openfray/blob/main/docs/development/verification.md),
 and [Repository file policy](https://github.com/OpenFrayApp/openfray/blob/main/docs/development/repository-files.md)
 for branch targets, check scope, and private local files.
