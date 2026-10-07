@@ -25,6 +25,15 @@ function taskTargets(task: SetupTask, ogreId?: string): HTMLElement[] {
   if (task === 'ready') return []
   if (task === 'recap') return find('[role="dialog"][aria-label="Combat recap"]')
   if (task === 'end-prompt') return find('[role="dialog"][aria-label="End combat?"]')
+  if (task === 'death-save')
+    return [...find('[data-tutorial="death-save"]'), ...find('[aria-label="Next turn"]')]
+  if (task === 'turn') return find('[aria-label="Next turn"]')
+  if (task === 'spell') {
+    const modal = find('[role="dialog"]').filter((node) =>
+      ['Mage casts Fireball', 'Mage · Fireball'].includes(node.getAttribute('aria-label') ?? ''),
+    )
+    return modal.length ? modal : find('[data-tutorial-spell$=":fireball"]')
+  }
   if (task === 'attack') {
     const modal = find('[role="dialog"]').filter((node) =>
       node.getAttribute('aria-label')?.endsWith(' · Javelin'),
@@ -141,7 +150,26 @@ export function TutorialSpotlight({
         }
       }
       const first = targets[0]
-      if (first && first !== revealed) {
+      let clipped = false
+      for (
+        let parent =
+          taskRef.current === 'spell' && !first?.matches('[role="dialog"]')
+            ? first?.parentElement
+            : null;
+        parent;
+        parent = parent.parentElement
+      ) {
+        if (
+          parent.scrollHeight <= parent.clientHeight ||
+          !/auto|scroll/.test(getComputedStyle(parent).overflowY)
+        )
+          continue
+        const box = first.getBoundingClientRect()
+        const panel = parent.getBoundingClientRect()
+        clipped = box.top < panel.top || box.bottom > panel.bottom
+        break
+      }
+      if (first && (first !== revealed || clipped)) {
         revealed = first
         first.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
       }
@@ -162,11 +190,17 @@ export function TutorialSpotlight({
         )
       } else setBounds(null)
       if (!allowed.some((node) => node.contains(document.activeElement))) {
-        const focus = targets
-          .flatMap((node) =>
-            node.matches(FOCUSABLE) ? [node] : [...node.querySelectorAll<HTMLElement>(FOCUSABLE)],
-          )
-          .find((node) => visible(node) && !node.closest(CANCEL) && !node.matches(':disabled'))
+        const cast =
+          taskRef.current === 'spell'
+            ? first?.querySelector<HTMLElement>('[data-tutorial="spell-cast"]')
+            : null
+        const focus =
+          cast ??
+          targets
+            .flatMap((node) =>
+              node.matches(FOCUSABLE) ? [node] : [...node.querySelectorAll<HTMLElement>(FOCUSABLE)],
+            )
+            .find((node) => visible(node) && !node.closest(CANCEL) && !node.matches(':disabled'))
         ;(focus ?? guide?.querySelector<HTMLElement>('button'))?.focus()
       }
     }
