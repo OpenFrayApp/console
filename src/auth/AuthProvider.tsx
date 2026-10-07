@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { isContentLicense, type ContentLicense } from '../schema/license.ts'
-import type { User } from '@supabase/supabase-js'
+import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
+import { parseTutorialSuppression, type TutorialSuppression } from '../state/settings.ts'
+import {
+  writeTutorialAccountPreference,
+  TUTORIAL_ACCOUNT_WRITE_ERROR,
+} from './tutorialAccountPreference.ts'
 import { AuthContext, type AuthResult, type OAuthProvider } from './useAuth.ts'
 
 /**
@@ -18,33 +23,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(Boolean(supabase))
   const [identityExpired, setIdentityExpired] = useState(false)
   const explicitSignOut = useRef(false)
+  const identity = useRef<{ session: Session | null; generation: number }>({
+    session: null,
+    generation: 0,
+  })
+  const preferenceWrites = useRef(new Set<AbortController>())
+
+  /** Invalidate pending tutorial writes before replacing or ending an identity. */
+  const invalidatePreferenceWrites = useCallback(() => {
+    identity.current.generation += 1
+    for (const controller of preferenceWrites.current) controller.abort()
+    preferenceWrites.current.clear()
+  }, [])
 
   useEffect(() => {
     if (!supabase) return
     let active = true
+    let authEventReceived = false
+    const currentIdentity = identity.current
+    /** Install auth identity while retaining confirmed suppression within the same session. */
+    const installSession = (session: Session | null) => {
+      const previous = identity.current.session
+      const sameIdentity = previous?.user.id === session?.user.id
+      if (!sameIdentity) invalidatePreferenceWrites()
+      const confirmed = sameIdentity
+        ? parseTutorialSuppression(previous?.user.user_metadata?.tutorial_suppression)
+        : null
+      const next =
+        session && confirmed
+          ? {
+              ...session,
+              user: {
+                ...session.user,
+                user_metadata: { ...session.user.user_metadata, tutorial_suppression: confirmed },
+              },
+            }
+          : session
+      identity.current.session = next
+      setUser(next?.user ?? null)
+    }
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
-        if (!active) return
-        setUser(data.session?.user ?? null)
+        if (!active || authEventReceived) return
+        installSession(data.session ?? null)
         if (error) setIdentityExpired(true)
         setLoading(false)
       })
       .catch(() => {
-        if (!active) return
+        if (!active || authEventReceived) return
         setIdentityExpired(true)
         setLoading(false)
       })
     // Fires on sign-in/out and token refresh, keeping `user` in sync across tabs.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active || event === 'INITIAL_SESSION') return
+      authEventReceived = true
+      if (event === 'SIGNED_OUT') invalidatePreferenceWrites()
       setIdentityExpired(event === 'SIGNED_OUT' && !explicitSignOut.current)
-      setUser(session?.user ?? null)
+      installSession(session)
+      setLoading(false)
     })
     return () => {
       active = false
+      invalidatePreferenceWrites()
+      currentIdentity.session = null
       sub.subscription.unsubscribe()
     }
-  }, [])
+  }, [invalidatePreferenceWrites])
 
   /** Start the OAuth redirect to the provider; the session lands when the browser returns. */
   const signInWithProvider = async (provider: OAuthProvider): Promise<AuthResult> => {
@@ -70,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     explicitSignOut.current = true
+    invalidatePreferenceWrites()
     try {
       await supabase.auth.signOut()
     } finally {
@@ -115,6 +162,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null }
   }
 
+  const identityGeneration = identity.current.generation
+  /** Persist tutorial suppression without restoring a stale auth session or metadata. */
+  const setTutorialSuppression = useCallback(
+    async (reason: TutorialSuppression): Promise<AuthResult> => {
+      const captured = identity.current
+      if (
+        !supabase ||
+        loading ||
+        identityExpired ||
+        !user?.id ||
+        captured.session?.user.id !== user.id ||
+        captured.generation !== identityGeneration ||
+        !parseTutorialSuppression(reason)
+      )
+        return { error: TUTORIAL_ACCOUNT_WRITE_ERROR }
+      if (parseTutorialSuppression(captured.session.user.user_metadata?.tutorial_suppression))
+        return { error: null }
+      const controller = new AbortController()
+      preferenceWrites.current.add(controller)
+      const result = await writeTutorialAccountPreference(
+        user.id,
+        captured.session.access_token,
+        reason,
+        controller.signal,
+      )
+      preferenceWrites.current.delete(controller)
+      if (
+        controller.signal.aborted ||
+        identity.current.generation !== identityGeneration ||
+        identity.current.session?.user.id !== user.id
+      )
+        return { error: TUTORIAL_ACCOUNT_WRITE_ERROR }
+      if (result.error) return result
+      setUser((current) => {
+        const session = identity.current.session
+        if (
+          !current ||
+          !session ||
+          current.id !== user.id ||
+          identity.current.generation !== identityGeneration
+        )
+          return current
+        const updated = {
+          ...current,
+          user_metadata: {
+            ...current.user_metadata,
+            tutorial_suppression:
+              parseTutorialSuppression(current.user_metadata?.tutorial_suppression) ?? reason,
+          },
+        }
+        identity.current.session = { ...session, user: updated }
+        return updated
+      })
+      return { error: null }
+    },
+    [user?.id, loading, identityExpired, identityGeneration],
+  )
+
   /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
@@ -123,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // and auth row. On success we sign out — the session is already invalid.
     explicitSignOut.current = true
     try {
+      invalidatePreferenceWrites()
       const { error } = await supabase.rpc('delete_account')
       if (error) return { error: error.message }
       await supabase.auth.signOut()
@@ -150,6 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         shareLicense: isContentLicense(user?.user_metadata?.share_license)
           ? user.user_metadata.share_license
           : null,
+        tutorialSuppression: parseTutorialSuppression(user?.user_metadata?.tutorial_suppression),
         loading,
         identityExpired,
         configured: Boolean(supabase),
@@ -158,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deleteAccount,
         setDisplayName,
         setShareLicense,
+        setTutorialSuppression,
       }}
     >
       {children}
