@@ -6,7 +6,7 @@ import type { PlayerCharacter } from '../../schema/combatant.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseNonNegativeInt as num } from '../../lib/form.ts'
-import { popoverClass } from '../ui/popover.ts'
+import { popoverClass, tutorialPopoverStyle } from '../ui/popover.ts'
 import { hasPracticeValues } from '../../tutorial/practiceValues.ts'
 import { Button, Field, Select } from '../ui/primitives.tsx'
 
@@ -85,15 +85,7 @@ export function AddQuickForm({
       </Button>
       {open && (
         <form
-          style={
-            practice
-              ? {
-                  maxHeight:
-                    'calc(100dvh - var(--header-h, 3.5rem) - var(--tutorial-h, 0px) - 1.5rem)',
-                  overflowY: 'auto',
-                }
-              : undefined
-          }
+          style={practice ? tutorialPopoverStyle : undefined}
           onSubmit={submit}
           className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}
         >

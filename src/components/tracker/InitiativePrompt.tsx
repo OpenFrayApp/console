@@ -181,10 +181,11 @@ export function InitiativePrompt({
           </button>
         </div>
         <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
-          Creatures are rolled for you. Type what each player rolled, or leave a box empty and
-          OpenFray rolls for them. Click{' '}
-          <span className="text-amber-600 dark:text-amber-400">⚠</span> beside a name to mark that
-          character surprised.
+          {requireManual
+            ? 'Enter a whole-number initiative for every combatant before starting the tutorial fight. '
+            : 'Creatures are rolled for you. Type what each player rolled, or leave a box empty and OpenFray rolls for them. '}
+          Click <span className="text-amber-600 dark:text-amber-400">⚠</span> beside a name to mark
+          that character surprised.
         </p>
         <div className="flex flex-col gap-4 sm:flex-row">
           {column(allies, 'Players and allies', 0)}

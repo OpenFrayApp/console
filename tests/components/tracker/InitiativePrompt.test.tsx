@@ -17,6 +17,48 @@ const combatants: Combatant[] = [
 const initial = { p1: '', m1: '14' }
 
 describe('InitiativePrompt', () => {
+  it('explains required manual initiative and starts only after every combatant has a whole-number entry', () => {
+    const onStart = vi.fn()
+    render(
+      <InitiativePrompt
+        requireManual
+        combatants={combatants}
+        initial={{ p1: '', m1: '' }}
+        onStart={onStart}
+        onCancel={() => {}}
+      />,
+    )
+    expect(
+      screen.getByText(/Enter a whole-number initiative for every combatant/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/leave a box empty and OpenFray rolls/)).toBeNull()
+    fireEvent.change(screen.getByLabelText('Initiative for Thalia'), { target: { value: '17' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+    expect(onStart).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Initiative for Goblin A'), { target: { value: '1.5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+    expect(onStart).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Initiative for Goblin A'), { target: { value: '-2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+    expect(onStart).toHaveBeenCalledWith({ values: { p1: '17', m1: '-2' }, surprised: [] })
+  })
+
+  it('preserves normal blank-roll instructions and accepts an empty player initiative', () => {
+    const onStart = vi.fn()
+    render(
+      <InitiativePrompt
+        combatants={combatants}
+        initial={initial}
+        onStart={onStart}
+        onCancel={() => {}}
+      />,
+    )
+    expect(screen.getByText(/leave a box empty and OpenFray rolls for them/)).toBeInTheDocument()
+    expect(screen.queryByText(/Enter a whole-number initiative for every combatant/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
+    expect(onStart).toHaveBeenCalledWith({ values: { p1: '', m1: '14' }, surprised: [] })
+  })
+
   it('lists every combatant with its pre-filled initiative', () => {
     render(
       <InitiativePrompt

@@ -162,10 +162,12 @@ export function useTutorialSetup({
     fightEnded: combatStarted && encounter.round === 0,
     attackResult,
     pcDefeated: encounter.combatants.find((c) => c.combatantId === pcId)?.status !== 'active',
+    /** Accept the prescribed damage committed against the Ogre. */
     recordDamage: (id: string, damage: number) => {
       if (active && combatTask === 'damage' && id === ogreId && damage === 3)
         setCombatTask('attack')
     },
+    /** Accept a settled Ogre Javelin outcome against the practice character. */
     recordAttack: (sourceId: string, actionId: string, result: CompletedAttack) => {
       const ogre = encounter.combatants.find((c) => c.combatantId === ogreId)
       const javelin = ogre && !ogre.isPC && ogre.creature.actions?.find((a) => a.name === 'Javelin')
@@ -181,6 +183,7 @@ export function useTutorialSetup({
         setCombatTask('prone')
       }
     },
+    /** Accept Prone committed to the Ogre after its attack. */
     recordEffects: (id: string, effects: Effect[]) => {
       if (
         active &&
@@ -190,6 +193,7 @@ export function useTutorialSetup({
       )
         setCombatTask('spell')
     },
+    /** Accept a settled Mage Fireball against exactly the practice ally and Ogre. */
     recordSpell: (sourceId: string, spellId: string, result: CompletedSave) => {
       if (
         !active ||
@@ -209,6 +213,7 @@ export function useTutorialSetup({
       setCombatTask(encounter.round > 0 ? 'turn' : 'ready')
     },
     recordCreatedPc: setCreatedPcId,
+    /** Begin the new-character roster path without selecting an existing character. */
     startRosterCreation: () => setRosterCreating(true),
   }
 }

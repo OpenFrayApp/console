@@ -7,7 +7,7 @@ import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary } from '../../compendium/li
 import { cx } from '../../lib/cx.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
-import { popoverClass } from '../ui/popover.ts'
+import { popoverClass, tutorialPopoverStyle } from '../ui/popover.ts'
 import { Button, type ButtonVariant } from '../ui/primitives.tsx'
 import { LibraryEntryBadges as EntryBadges } from '../ui/LibraryEntryBadges.tsx'
 
@@ -157,15 +157,7 @@ export function LibraryPicker<T extends LibraryEntry>({
       </Button>
       {open && (
         <div
-          style={
-            locked
-              ? {
-                  maxHeight:
-                    'calc(100dvh - var(--header-h, 3.5rem) - var(--tutorial-h, 0px) - 1.5rem)',
-                  overflowY: 'auto',
-                }
-              : undefined
-          }
+          style={locked ? tutorialPopoverStyle : undefined}
           className={`${popoverClass('roomy:w-72', align)} p-2`}
         >
           {children}

@@ -148,7 +148,9 @@ export function useTutorialEntry({
     launch,
     dismiss,
     onSuppress,
+    /** Ask whether the guide should be offered again without leaving the current task. */
     requestExit: () => setSurface('exit'),
+    /** Return from exit confirmation to the unchanged tutorial task. */
     cancelExit: () => setSurface('introduction'),
   }
 }

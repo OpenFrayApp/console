@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import type { CSSProperties } from 'react'
 import { cx } from '../../lib/cx.ts'
+
+export const tutorialPopoverStyle: CSSProperties = {
+  maxHeight: 'calc(100dvh - var(--header-h, 3.5rem) - var(--tutorial-h, 0px) - 1.5rem)',
+  overflowY: 'auto',
+}
 
 /**
  * The card a header control drops open — every picker, menu, and panel that hangs off a

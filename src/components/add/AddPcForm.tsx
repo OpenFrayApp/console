@@ -12,7 +12,7 @@ import {
   parseNonNegativeInt as num,
   parseSignedInt,
 } from '../../lib/form.ts'
-import { popoverClass } from '../ui/popover.ts'
+import { popoverClass, tutorialPopoverStyle } from '../ui/popover.ts'
 import { LABEL } from '../ui/fieldStyles.ts'
 import { hasPracticeValues } from '../../tutorial/practiceValues.ts'
 import { Button, Field } from '../ui/primitives.tsx'
@@ -120,15 +120,7 @@ export function AddPcForm({
       </Button>
       {open && (
         <form
-          style={
-            practice
-              ? {
-                  maxHeight:
-                    'calc(100dvh - var(--header-h, 3.5rem) - var(--tutorial-h, 0px) - 1.5rem)',
-                  overflowY: 'auto',
-                }
-              : undefined
-          }
+          style={practice ? tutorialPopoverStyle : undefined}
           onSubmit={submit}
           {...NO_AUTOFILL}
           className={`${popoverClass('roomy:w-72')} space-y-2 p-2 roomy:max-h-[70dvh] roomy:overflow-auto`}
