@@ -8,6 +8,7 @@ import type { User } from '@supabase/supabase-js'
 import App from '../src/App.tsx'
 import { AuthContext } from '../src/auth/useAuth.ts'
 import * as cloudEncounter from '../src/state/cloudEncounter.ts'
+import * as srd from '../src/compendium/srd.ts'
 import { IndexedDbRecovery } from '../src/state/indexedDbRecovery.ts'
 import { saveSession } from '../src/state/persistence.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
@@ -30,6 +31,26 @@ function deferred<T>() {
   })
   return { promise, resolve }
 }
+
+it('waits for a real shared-link cast to populate the board without inviting over it', async () => {
+  const library = deferred<Awaited<ReturnType<typeof srd.loadSrdCreatures>>>()
+  vi.spyOn(srd, 'loadSrdCreatures').mockReturnValue(library.promise)
+  render(
+    <App
+      stagedCast={{
+        v: 1,
+        name: 'Guard post',
+        entries: [{ quick: { name: 'Shared guard', maxHp: 30, ac: 12 }, count: 1, side: 'foe' }],
+      }}
+    />,
+  )
+  await act(() => Promise.resolve())
+  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+  await act(async () => library.resolve([]))
+  expect(await screen.findByRole('button', { name: 'Remove Shared guard' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+  expect(sessionStorage.getItem('openfray:session')).toContain('Shared guard')
+})
 
 it('waits for actual device recovery and never invites over a recovered board', async () => {
   const recovery = recoverySnapshot('recovered')

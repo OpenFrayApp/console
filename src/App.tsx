@@ -1193,6 +1193,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
    * re-renders follow.
    */
   const pendingCast = useRef(stagedCast)
+  const [stagedCastLoading, setStagedCastLoading] = useState(Boolean(stagedCast))
   useEffect(() => {
     if (!boardReady || !pendingCast.current) return
     const template = pendingCast.current
@@ -1205,6 +1206,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         labelStyle: creatureLabelStyle,
       })
       for (const c of combatants) addCombatant(c, true)
+      setStagedCastLoading(false)
       track(EVENTS.encounterLinkAdded)
     })
     // Deliberately keyed on readiness alone: the cast is consumed the first time through.
@@ -1401,7 +1403,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       !authLoading &&
       !identityExpired &&
       !activeCopyConflict &&
-      !resolvingCopies,
+      !resolvingCopies &&
+      !stagedCastLoading,
     invitationAvailable:
       !settingsOpen &&
       !searchOpen &&
