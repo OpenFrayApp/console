@@ -189,6 +189,14 @@ export function TutorialSpotlight({
       const targets = taskTargets(taskRef.current, ogreId)
       const panel = target.closest('[role="dialog"]')
       if (targets.some((node) => node.contains(target) || panel?.contains(node))) return
+      for (let node: HTMLElement | null = target; node; node = node.parentElement) {
+        if (
+          node.scrollHeight > node.clientHeight &&
+          /auto|scroll/.test(getComputedStyle(node).overflowY) &&
+          targets.some((task) => node!.contains(task))
+        )
+          return
+      }
       blockPointer(event)
     }
     /** Keep keyboard focus among task controls and Exit, blocking dismissal shortcuts. */

@@ -84,6 +84,17 @@ it.each([
     await startPracticeFight(controls)
     const hp = screen.getByRole('button', { name: '68' })
     await expectUsable(hp)
+    if (width === 844) {
+      const tracker = screen.getByRole('main')
+      await userEvent.wheel(tracker, { delta: { y: -500 } })
+      await expect
+        .poll(() => hp.getBoundingClientRect().top > tracker.getBoundingClientRect().bottom)
+        .toBe(true)
+      await userEvent.wheel(tracker, { delta: { y: 500 } })
+      await expect
+        .poll(() => hp.getBoundingClientRect().bottom <= tracker.getBoundingClientRect().bottom)
+        .toBe(true)
+    }
     await userEvent.click(hp)
     const field = screen.getByRole('textbox', { name: 'Hit points for Ogre' })
     await userEvent.fill(field, '-3')
