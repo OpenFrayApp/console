@@ -70,6 +70,9 @@ export function AddMenu({ items, onClosed }: { items: AddMenuItem[]; onClosed?: 
               key={item.key}
               type="button"
               role="menuitem"
+              data-tutorial-add={
+                item.key === 'pc' ? 'pc' : item.key === 'quick' ? 'quick' : 'creature'
+              }
               onClick={() => {
                 setOpen(false)
                 setActiveKey(item.key)

@@ -160,6 +160,8 @@ import { CombatDifficulty } from './components/tracker/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/settings/SettingsPanel.tsx'
 import { useTutorialEntry } from './tutorial/useTutorialEntry.ts'
+import { useTutorialSetup } from './tutorial/useTutorialSetup.ts'
+import { TutorialSetup } from './tutorial/TutorialSetup.tsx'
 import { TutorialEntry } from './tutorial/TutorialEntry.tsx'
 import type { TutorialSuppression } from './state/settings.ts'
 import { SettingsMenu, SlidersIcon, HelpIcon } from './components/settings/SettingsMenu.tsx'
@@ -809,6 +811,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const handleCreatePc = (pc: RosterPc) => {
     setRosterPcs((prev) => [pc, ...prev])
     saveRosterPc(pc)
+    if (setup.active) setup.recordCreatedPc(pc.id)
   }
 
   /** Swap the edited character into the roster and persist the change to the account. */
@@ -834,6 +837,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
   // Header "Add PC → create": send a signed-in user to the compendium's Characters tab.
   const openRosterCreate = () => {
+    if (setup.active) setup.startRosterCreation()
     setCompendiumTab('characters')
     setView('compendium')
   }
@@ -1313,7 +1317,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     preRolled.current = {}
     for (const c of encounter.combatants) {
       // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
-      if (c.status === 'dead' || isPlayer(c)) {
+      if (setup.active || c.status === 'dead' || isPlayer(c)) {
         initial[c.combatantId] = c.status === 'dead' ? '0' : ''
         continue
       }
@@ -1426,8 +1430,19 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     enabledLibraries,
     effectiveSuppression: tutorialSuppression,
     onSuppress: suppressTutorial,
+    onLaunch: () => {
+      setView('encounter')
+      setMobilePane(0)
+    },
   })
 
+  const setup = useTutorialSetup({
+    active: tutorial.library !== null,
+    encounter,
+    signedIn: !!user,
+    initiativeOpen: initPrompt !== null,
+    library: tutorial.library,
+  })
   const tutorialVisible = tutorial.surface !== null && !activeCopyConflict && !resolvingCopies
   const started = encounter.round > 0
   const paused = encounter.paused === true
@@ -1561,7 +1576,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     showHotkeys: () => setHelpOpen(true),
     openSearch: () => setSearchOpen(true),
   }
-  useHotkeys(keymap, hotkeyHandlers)
+  useHotkeys(keymap, setup.active ? {} : hotkeyHandlers)
 
   /** The chord a command answers to, for its control's tooltip; undefined when unbound. */
   const hint = (id: HotkeyCommandId): string | undefined => {
@@ -1618,8 +1633,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   type AddOpts = { autoOpen?: boolean; hideTrigger?: boolean; onClosed?: () => void }
   const addQuick = (o: AddOpts = {}) => (
     <AddQuickForm
+      key={setup.active ? 'AddQuickForm-' + setup.task : 'AddQuickForm'}
       {...o}
       onClosed={o.onClosed ?? recheckTutorialAvailability}
+      practice={setup.active && setup.task === 'quick'}
       openRequest={quickAddRequest}
       keyHint={hint('quickAdd')}
       onAdd={(c) => {
@@ -1631,8 +1648,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const addPc = (o: AddOpts = {}) =>
     user ? (
       <AddPcPicker
+        key={setup.active ? 'AddPcPicker-' + setup.task : 'AddPcPicker'}
         {...o}
         onClosed={o.onClosed ?? recheckTutorialAvailability}
+        practice={setup.active && setup.task === 'pc'}
         openRequest={addPcRequest}
         keyHint={hint('addPc')}
         rosterPcs={rosterPcs}
@@ -1642,8 +1661,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       />
     ) : (
       <AddPcForm
+        key={setup.active ? 'AddPcForm-' + setup.task : 'AddPcForm'}
         {...o}
         onClosed={o.onClosed ?? recheckTutorialAvailability}
+        practice={setup.active && setup.task === 'pc'}
         openRequest={addPcRequest}
         keyHint={hint('addPc')}
         onAdd={(c) => {
@@ -1654,6 +1675,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     )
   const addCreature = (o: AddOpts = {}) => (
     <AddCreaturePicker
+      key={setup.active ? 'AddCreaturePicker-' + setup.task : 'AddCreaturePicker'}
+      requiredCreature={
+        setup.active && (setup.task === 'mage' || setup.task === 'ogre')
+          ? {
+              name: setup.task === 'mage' ? 'Mage' : 'Ogre',
+              edition: setup.library === 'srd-5.2' ? '5.5' : '5.0',
+            }
+          : undefined
+      }
       {...o}
       onClosed={o.onClosed ?? recheckTutorialAvailability}
       openRequest={addCreatureRequest}
@@ -1669,6 +1699,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     <>
       <div className="w-full roomy:hidden">
         <AddMenu
+          key={setup.active ? 'AddMenu-' + setup.task : 'AddMenu'}
           onClosed={recheckTutorialAvailability}
           items={[
             {
@@ -1701,7 +1732,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
         <div
-          inert={tutorialVisible}
+          data-console-root
+          inert={tutorialVisible && tutorial.surface !== 'introduction'}
+          style={
+            setup.active && tutorial.surface === 'introduction'
+              ? { paddingBottom: 'var(--tutorial-h, 10rem)' }
+              : undefined
+          }
           className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
         >
           {/* The header wraps at every width and its buttons never break their labels:
@@ -1966,6 +2003,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   onCreateCampaign={handleCreateCampaign}
                   onUpdateCampaign={handleUpdateCampaign}
                   onDeleteCampaign={handleDeleteCampaign}
+                  practicePc={
+                    setup.active && (setup.task === 'roster-create' || setup.task === 'roster-add')
+                  }
+                  practicePcId={setup.createdPcId}
                   rosterPcs={rosterPcs}
                   onCreatePc={handleCreatePc}
                   onUpdatePc={handleUpdatePc}
@@ -2141,6 +2182,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             <InitiativePrompt
               combatants={encounter.combatants}
               initial={initPrompt}
+              requireManual={setup.active}
               onStart={startCombat}
               onCancel={() => setInitPrompt(null)}
             />
@@ -2193,7 +2235,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
           <MobileNav active={mobileTab} onSelect={showMobileTab} />
         </div>
-        {tutorialVisible && <TutorialEntry controller={tutorial} />}
+        {tutorialVisible &&
+          (tutorial.surface === 'introduction' ? (
+            <TutorialSetup controller={tutorial} setup={setup} />
+          ) : (
+            <TutorialEntry controller={tutorial} />
+          ))}
       </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>
   )

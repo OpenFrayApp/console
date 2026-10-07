@@ -26,7 +26,9 @@ export function AddCreaturePicker({
   keyHint,
   onClosed,
   hideTrigger = false,
+  requiredCreature,
 }: {
+  requiredCreature?: { name: string; edition: '5.5' | '5.0' }
   onPick: (c: Creature) => void
   customCreatures?: Creature[]
   enabledLibraries?: string[]
@@ -62,15 +64,26 @@ export function AddCreaturePicker({
       align={align}
       placeholder="Search creatures…"
       searchLabel="Search creatures"
-      entries={creatures}
-      custom={customCreatures}
+      entries={
+        requiredCreature
+          ? (creatures?.filter(
+              (c) =>
+                c.name === requiredCreature.name &&
+                c.source === (requiredCreature.edition === '5.5' ? 'srd-5.2' : 'srd-5.1') &&
+                c.edition === requiredCreature.edition,
+            ) ?? null)
+          : creatures
+      }
+      locked={!!requiredCreature}
+      tutorialTarget="creature"
+      custom={requiredCreature ? [] : customCreatures}
       enabledLibraries={enabledLibraries}
       showHomebrew={showHomebrew}
       sortKey={librarySort === 'cr' ? (c) => c.cr ?? 0 : undefined}
       meta={(c) => `CR ${formatCr(c.cr)}`}
       onOpen={load}
       onPick={onPick}
-      closeOnPick={closeOnPick}
+      closeOnPick={requiredCreature ? true : closeOnPick}
       autoOpen={autoOpen}
       openRequest={openRequest}
       triggerTitle={keyHint ? `Add creature (${keyHint})` : undefined}
