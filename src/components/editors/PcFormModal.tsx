@@ -381,6 +381,7 @@ export function PcFormModal({
     <FormModal
       title={editing ? 'Edit player character' : 'New player character'}
       maxWidth="max-w-xl"
+      reserveTutorialSpace={practice}
       onClose={onClose}
     >
       <div

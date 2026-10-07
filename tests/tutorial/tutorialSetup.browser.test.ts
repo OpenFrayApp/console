@@ -222,3 +222,26 @@ it('keeps Exit available when a target disappears and recovers with the newly vi
   await expectUsable(screen.getByRole('textbox', { name: 'PC name' }))
   expect(screen.queryByText(/The task control is not visible yet/)).toBeNull()
 })
+
+it.each(
+  [
+    { width: 375, height: 812, padding: '16px' },
+    { width: 1440, height: 900, padding: '32px' },
+  ].flatMap((viewport) => [false, true].map((afterExit) => ({ ...viewport, afterExit }))),
+)(
+  'preserves ordinary responsive FormModal bottom padding at $width × $height afterExit=$afterExit',
+  async ({ width, height, padding, afterExit }) => {
+    await page.viewport(width, height)
+    renderTutorial({ id: 'ordinary-modal-owner' } as User)
+    if (afterExit) {
+      await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
+    } else await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+    await openAdd('Add PC')
+    await userEvent.click(screen.getByRole('button', { name: 'Create a character…' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Create character' }))
+    const modal = screen.getByRole('dialog', { name: 'New player character' })
+    expect(getComputedStyle(modal.parentElement!).paddingBottom).toBe(padding)
+  },
+)

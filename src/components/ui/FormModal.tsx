@@ -15,6 +15,7 @@ export function FormModal({
   maxWidth,
   onClose,
   onSubmit,
+  reserveTutorialSpace = false,
   children,
 }: {
   title: ReactNode
@@ -25,12 +26,16 @@ export function FormModal({
   onClose: () => void
   /** When set the panel is a `<form>` submitting here; without it, a plain `<div>`. */
   onSubmit?: (e: FormEvent) => void
+  /** Keep the active tutorial dock clear without changing ordinary dialog padding. */
+  reserveTutorialSpace?: boolean
   children: ReactNode
 }) {
   const Panel = onSubmit ? 'form' : 'div'
   return (
     <div
-      style={{ paddingBottom: 'calc(var(--tutorial-h) + 1rem)' }}
+      style={
+        reserveTutorialSpace ? { paddingBottom: 'calc(var(--tutorial-h, 0px) + 1rem)' } : undefined
+      }
       className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
       onClick={onClose}
     >
