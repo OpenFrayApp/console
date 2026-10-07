@@ -6,6 +6,7 @@ import { cleanup, screen, within } from '@testing-library/react'
 import { commands, page, userEvent } from 'vitest/browser'
 import { renderTutorial, startPracticeFight } from './setupHarness.tsx'
 import { saveSettings } from '../../src/state/settings.ts'
+import { enableNativeConfirmation } from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -32,7 +33,10 @@ vi.mock('../../src/dice/roll.ts', async (original) => {
       }),
   }
 })
-const touch = commands as typeof commands & { emulateTouch(enabled: boolean): Promise<void> }
+const touch = commands as typeof commands & {
+  emulateTouch(enabled: boolean): Promise<void>
+  confirmBoardClear(accept: boolean): Promise<{ type: string; message: string }>
+}
 const controls = {
   click: (element: HTMLElement) => userEvent.click(element),
   fill: (element: HTMLElement, value: string) => userEvent.fill(element, value),
@@ -63,6 +67,7 @@ async function expectUsable(target: HTMLElement) {
 
 afterEach(async () => {
   cleanup()
+  vi.restoreAllMocks()
   sessionStorage.clear()
   localStorage.clear()
   document.documentElement.classList.remove('dark')
@@ -159,7 +164,8 @@ it.each([
   },
 )
 
-it('keeps exceptional dying-ally controls, real turn navigation, and automatic recap reachable on swipe', async () => {
+it('finishes exceptional dying-ally turns, automatic recap, and native cleanup on swipe', async () => {
+  enableNativeConfirmation()
   await page.viewport(375, 812)
   await touch.emulateTouch(true)
   renderTutorial()
@@ -212,6 +218,14 @@ it('keeps exceptional dying-ally controls, real turn navigation, and automatic r
   await userEvent.click(done)
   expect(screen.queryByRole('button', { name: 'Next turn' })).toBeNull()
   expect(screen.getByText(/fight already ended/)).toBeTruthy()
-  await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
+  const trash = screen.getByRole('button', { name: 'Remove everyone and clear the log' })
+  await expectUsable(trash)
+  await touch.confirmBoardClear(false)
+  expect(screen.queryByRole('dialog', { name: 'Tutorial complete' })).toBeNull()
+  await expectUsable(trash)
+  await touch.confirmBoardClear(true)
+  const complete = await screen.findByRole('dialog', { name: 'Tutorial complete' })
+  await userEvent.click(
+    within(complete).getByRole('button', { name: 'Continue without an account' }),
+  )
 })
