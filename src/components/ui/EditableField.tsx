@@ -51,7 +51,10 @@ export function EditableField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') commit()
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commit()
+          }
           if (e.key === 'Escape') setEditing(false)
         }}
         className={`tap-y ${inputClassName}`}

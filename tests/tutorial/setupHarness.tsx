@@ -9,10 +9,14 @@ import type { User } from '@supabase/supabase-js'
 
 /** Render the real console with external identity supplied at its public boundary. */
 export function renderTutorial(user: User | null = null) {
+  const container = document.createElement('div')
+  container.style.height = '100%'
+  document.body.append(container)
   return render(
     <AuthContext.Provider value={authState({ user })}>
       <App />
     </AuthContext.Provider>,
+    { container },
   )
 }
 

@@ -245,6 +245,7 @@ export function EffectModal({
   combatants = [],
   effects,
   onApply,
+  onApplied,
   onRemove,
   onSetExhaustion,
   presets = [],
@@ -263,6 +264,8 @@ export function EffectModal({
   effects: Effect[]
   /** Commit every staged effect in one go — one board update, one log line per bundle. */
   onApply: (effects: Effect[]) => void
+  /** Report newly committed effects after all draft changes and modal closure are scheduled. */
+  onApplied?: (effects: Effect[]) => void
   onRemove: (id: string) => void
   /** Set the Exhaustion level, which lands through its own action rather than as parts. */
   onSetExhaustion: (level: number) => void
@@ -370,6 +373,7 @@ export function EffectModal({
     // edition gives it, which is a different job from minting the staged parts.
     if (draft.exhaustion !== currentExhaustion) onSetExhaustion(draft.exhaustion)
     setOpen(false)
+    onApplied?.(minted)
   }
 
   // Enter is the dialog's Save/Apply key; buttons and textareas keep their own.

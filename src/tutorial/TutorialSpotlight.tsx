@@ -23,6 +23,8 @@ function taskTargets(task: SetupTask, ogreId?: string): HTMLElement[] {
   const find = (selector: string) =>
     [...document.querySelectorAll<HTMLElement>(selector)].filter(visible)
   if (task === 'ready') return []
+  if (task === 'recap') return find('[role="dialog"][aria-label="Combat recap"]')
+  if (task === 'end-prompt') return find('[role="dialog"][aria-label="End combat?"]')
   if (task === 'attack') {
     const modal = find('[role="dialog"]').filter((node) =>
       node.getAttribute('aria-label')?.endsWith(' · Javelin'),

@@ -269,7 +269,12 @@ export function AttackResolver({
   if (conc && attack) {
     const tgt = attack.target
     return (
-      <Modal title={title} onClose={onClose} reserveTutorialSpace={!!tutorialTargetId}>
+      <Modal
+        title={title}
+        onClose={onClose}
+        reserveTutorialSpace={!!tutorialTargetId}
+        restrictDismiss={!!tutorialTargetId}
+      >
         <p className="mb-2 text-sm">
           <span className="font-medium">{nameOf(tgt)}</span> took {conc.damage} damage while
           concentrating.
@@ -311,6 +316,7 @@ export function AttackResolver({
       subtitle={metaLine(action)}
       onClose={finish}
       reserveTutorialSpace={!!tutorialTargetId}
+      restrictDismiss={!!tutorialTargetId}
       closeCompletesOperation={!!attack && !hit}
     >
       <fieldset className="mb-3">

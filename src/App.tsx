@@ -1444,6 +1444,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     signedIn: !!user,
     initiativeOpen: initPrompt !== null,
     library: tutorial.library,
+    recapOpen: recap !== null,
+    endPromptOpen: endPrompt,
   })
   useEffect(() => {
     if (!setup.active || !setup.ogreId) return
@@ -2070,10 +2072,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 }
                 onHpDamageCommitted={setup.recordDamage}
                 tutorialAttackTargetId={
-                  setup.active && setup.task === 'attack' ? setup.pcId : undefined
+                  setup.active && setup.combatTask === 'attack' ? setup.pcId : undefined
                 }
                 onAttackCompleted={setup.recordAttack}
-                tutorialProne={setup.active && setup.task === 'prone'}
+                tutorialProne={setup.active && setup.combatTask === 'prone'}
                 onEffectsCommitted={setup.recordEffects}
                 dispatch={dispatch}
                 onRoll={pushRoll}
@@ -2139,9 +2141,19 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
           )}
 
           {endPrompt && (
-            <EndCombatPrompt onConfirm={endCombat} onCancel={() => setEndPrompt(false)} />
+            <EndCombatPrompt
+              reserveTutorialSpace={setup.active}
+              onConfirm={endCombat}
+              onCancel={() => setEndPrompt(false)}
+            />
           )}
-          {recap && <RecapScreen recap={recap} onClose={() => setRecap(null)} />}
+          {recap && (
+            <RecapScreen
+              reserveTutorialSpace={setup.active}
+              recap={recap}
+              onClose={() => setRecap(null)}
+            />
+          )}
 
           {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
           on-board copy's character fields (HP and combat state stay put). */}

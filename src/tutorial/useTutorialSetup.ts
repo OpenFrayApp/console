@@ -20,6 +20,8 @@ export type SetupTask =
   | 'damage'
   | 'attack'
   | 'prone'
+  | 'recap'
+  | 'end-prompt'
 
 /** Observe committed setup on the working board, retaining only the newly created roster identity. */
 export function useTutorialSetup({
@@ -28,12 +30,16 @@ export function useTutorialSetup({
   signedIn,
   initiativeOpen,
   library,
+  recapOpen = false,
+  endPromptOpen = false,
 }: {
   active: boolean
   encounter: Encounter
   signedIn: boolean
   initiativeOpen: boolean
   library: TutorialLibrary | null
+  recapOpen?: boolean
+  endPromptOpen?: boolean
 }) {
   const [combatTask, setCombatTask] = useState<'damage' | 'attack' | 'prone' | 'ready'>('damage')
   const [attackResult, setAttackResult] = useState<CompletedAttack | null>(null)
@@ -58,7 +64,11 @@ export function useTutorialSetup({
   }, [active, encounter.round])
   const task: SetupTask =
     encounter.round > 0 || combatStarted
-      ? combatTask
+      ? recapOpen
+        ? 'recap'
+        : endPromptOpen
+          ? 'end-prompt'
+          : combatTask
       : encounter.combatants.length === 0
         ? signedIn && rosterCreating
           ? createdPcId
@@ -77,6 +87,7 @@ export function useTutorialSetup({
   return {
     active,
     task,
+    combatTask,
     library,
     signedIn,
     createdPcId,

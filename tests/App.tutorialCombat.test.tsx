@@ -6,6 +6,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, screen, within, waitFor } from '@testing-library/react'
 import creatures2024 from '../public/compendium/srd-creatures.json'
 import creatures2014 from '../public/compendium/srd-2014-creatures.json'
+import type { User } from '@supabase/supabase-js'
+import { saveSettings } from '../src/state/settings.ts'
 import { renderTutorial, startPracticeFight } from './tutorial/setupHarness.tsx'
 
 vi.mock('../src/compendium/srd.ts', async (original) => ({
@@ -73,8 +75,8 @@ vi.mock('../src/dice/roll.ts', async (original) => {
 })
 
 /** Record the outside roll through the tracker and open the prescribed normal attack. */
-async function openJavelin() {
-  fireEvent.click(screen.getByRole('button', { name: '68' }))
+async function openJavelin(initialHp = 68) {
+  fireEvent.click(screen.getByRole('button', { name: String(initialHp) }))
   fireEvent.change(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), {
     target: { value: '-3' },
   })
@@ -223,5 +225,29 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Prone' }))
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
     expect(screen.getByText(/Prone applied/)).toBeInTheDocument()
+  },
+)
+
+it.each([
+  { library: 'srd-5.2', hp: 68, signedIn: true },
+  { library: 'srd-5.1', hp: 59, signedIn: false },
+])(
+  'continues the real $library setup and new-roster identity path with signedIn=$signedIn',
+  async ({ library, hp, signedIn }) => {
+    saveSettings({ enabledLibraries: [library] })
+    dice.natural = 10
+    renderTutorial(signedIn ? ({ id: 'combat-owner' } as User) : null)
+    await startPracticeFight(controls, signedIn)
+    await openJavelin(hp)
+    const dialog = screen.getByRole('dialog', { name: 'Ogre · Javelin' })
+    expect(within(dialog).getByText(/\+6 to hit.*2d6\+4 piercing/)).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Rowan' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to Rowan' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Prone' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(screen.getByText(/Prone applied/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '14' })).toBeInTheDocument()
   },
 )

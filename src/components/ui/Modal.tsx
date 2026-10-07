@@ -15,6 +15,7 @@ export function Modal({
   showTitle = true,
   header,
   reserveTutorialSpace = false,
+  restrictDismiss = false,
   closeCompletesOperation = false,
 }: {
   title: ReactNode
@@ -27,10 +28,12 @@ export function Modal({
   /** Search places its input and close control in the header. */
   header?: ReactNode
   reserveTutorialSpace?: boolean
+  /** Leave outside-click and Escape cancellation to the active tutorial guide. */
+  restrictDismiss?: boolean
   closeCompletesOperation?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  useDismiss(ref, true, onClose)
+  useDismiss(ref, !restrictDismiss, onClose)
   return (
     <div
       style={

@@ -150,7 +150,6 @@ export function CombatantControls({
       id,
       update: (c) => ({ ...c, effects: [...c.effects, ...applied] }),
     })
-    onEffectsCommitted?.(id, applied)
   }
 
   /** Drop one effect from this combatant by id. */
@@ -232,6 +231,7 @@ export function CombatantControls({
           effects={combatant.effects}
           openRequest={openEffectRequest}
           onApply={addEffects}
+          onApplied={(effects) => onEffectsCommitted?.(id, effects)}
           onRemove={removeEffect}
           onSetExhaustion={setExhaustion}
           presets={presets}
