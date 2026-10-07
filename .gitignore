@@ -76,3 +76,16 @@ local/
 .cache/
 .tmp/
 
+# Private workspace state and generated artifacts.
+.dev.vars
+.dev.vars.*
+.wrangler/
+.claude/
+/docs/marketing/
+/.agents/product-marketing.md
+/.agents/product-marketing-context.md
+/.agents/listening-sources.md
+/.agents/loops/
+/.agents/advisors/
+.shotlist/
+

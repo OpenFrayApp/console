@@ -116,7 +116,7 @@ export interface Senses {
 /**
  * Origin of a piece of content. Specific enough to drive licensing/attribution,
  * e.g. `'srd-5.2'`, `'srd-5.1'`, `'kobold-press-tob'`, `'custom'`.
- * See CREDITS.md, and local/docs/content-licensing.md (maintainer notes).
+ * See CREDITS.md and the parent repo's docs/development/content-licensing.md.
  */
 export type ContentSource = string
 
