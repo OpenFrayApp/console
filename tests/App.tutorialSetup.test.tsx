@@ -222,3 +222,100 @@ it('creates a NEW durable roster character through the signed-in path and leaves
     expect.objectContaining({ name: 'New adventurer', maxHp: 30, ac: 12 }),
   ])
 })
+
+/** Launch manually through the real search and Settings controls. */
+function launchFromSettings() {
+  fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Settings' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+}
+
+it.each(
+  [false, true].flatMap((signedIn) =>
+    ['Creatures', 'Characters'].map((tab) => ({ signedIn, tab })),
+  ),
+)(
+  'starts with Add PC when launched from $tab with signedIn=$signedIn',
+  async ({ signedIn, tab }) => {
+    renderTutorial(signedIn ? ({ id: `launch-owner-${tab}` } as User) : null)
+    fireEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
+    fireEvent.click(screen.getByRole('tab', { name: tab }))
+    launchFromSettings()
+    expect(screen.queryByRole('tab', { name: tab })).toBeNull()
+    expect(screen.queryByText(/stays in your roster after clearing/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
+    if (signedIn) {
+      fireEvent.click(screen.getByRole('button', { name: 'Create a character…' }))
+      expect(screen.getByText(/stays in your roster after clearing/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Create character' }))
+    }
+    expect(screen.getByLabelText('PC name')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Launched adventurer' } })
+    fireEvent.change(screen.getByLabelText('AC'), { target: { value: '12' } })
+    fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '30' } })
+    fireEvent.click(screen.getByRole('button', { name: signedIn ? 'Create PC' : 'Add' }))
+    if (signedIn) fireEvent.click(screen.getByRole('button', { name: 'Add to encounter' }))
+    expect(screen.getByRole('button', { name: 'Remove Launched adventurer' })).toBeInTheDocument()
+    expect(screen.getByText(/Quick add.*Friend/)).toBeInTheDocument()
+    await waitFor(() =>
+      expect(sessionStorage.getItem('openfray:session')).toContain('Launched adventurer'),
+    )
+  },
+)
+
+it.each(['library', 'board'])(
+  'keeps the current Characters route when the %s prerequisite blocks launch',
+  async (prerequisite) => {
+    if (prerequisite === 'library') saveSettings({ enabledLibraries: ['kobold-press-tob3'] })
+    renderTutorial()
+    fireEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+    if (prerequisite === 'board') {
+      addPractice('Quick add', 'Quick add name', 'Keep this guard')
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Characters' }))
+    const settings = loadSettings()
+    launchFromSettings()
+    expect(screen.getByRole('dialog', { name: 'Before starting the tutorial' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
+    expect(screen.getByRole('tab', { name: 'Characters' })).toHaveAttribute('aria-selected', 'true')
+    expect(loadSettings()).toEqual(settings)
+    if (prerequisite === 'board') {
+      await waitFor(() =>
+        expect(sessionStorage.getItem('openfray:session')).toContain('Keep this guard'),
+      )
+    }
+  },
+)
+
+it.each(['Controls', 'Stat block'])(
+  'returns to Tracker when launched from the swipe %s screen',
+  async (pane) => {
+    renderTutorial()
+    fireEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+    fireEvent.click(screen.getByRole('button', { name: pane }))
+    expect(screen.getByRole('button', { name: pane })).toHaveAttribute('aria-current', 'page')
+    launchFromSettings()
+    expect(screen.getByRole('button', { name: 'Tracker' })).toHaveAttribute('aria-current', 'page')
+    addPractice('Add PC', 'PC name', 'Rowan')
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    addPractice('Quick add', 'Quick add name', 'Robin')
+    fireEvent.change(screen.getByLabelText('Side'), { target: { value: 'friend' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    for (const name of ['Mage', 'Ogre']) {
+      fireEvent.click(screen.getByRole('button', { name: 'Add creature' }))
+      fireEvent.change(screen.getByLabelText('Search creatures'), { target: { value: name } })
+      fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${name} `) }))
+    }
+    expect(screen.getByRole('button', { name: 'Tracker' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
+    expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(sessionStorage.getItem('openfray:session')).toContain('srd-5.2:ogre'),
+    )
+  },
+)

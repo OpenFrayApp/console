@@ -21,26 +21,28 @@ export function useTutorialSetup({
   active,
   encounter,
   signedIn,
-  view,
   initiativeOpen,
   library,
 }: {
   active: boolean
   encounter: Encounter
   signedIn: boolean
-  view: string
   initiativeOpen: boolean
   library: TutorialLibrary | null
 }) {
+  const [rosterCreating, setRosterCreating] = useState(false)
   const [createdPcId, setCreatedPcId] = useState<string | null>(null)
   useEffect(() => {
-    if (!active) setCreatedPcId(null)
+    if (!active) {
+      setCreatedPcId(null)
+      setRosterCreating(false)
+    }
   }, [active])
   const task: SetupTask =
     encounter.round > 0
       ? 'ready'
       : encounter.combatants.length === 0
-        ? signedIn && view === 'compendium'
+        ? signedIn && rosterCreating
           ? createdPcId
             ? 'roster-add'
             : 'roster-create'
@@ -54,7 +56,15 @@ export function useTutorialSetup({
               : initiativeOpen
                 ? 'initiative'
                 : 'begin'
-  return { active, task, library, signedIn, createdPcId, recordCreatedPc: setCreatedPcId }
+  return {
+    active,
+    task,
+    library,
+    signedIn,
+    createdPcId,
+    recordCreatedPc: setCreatedPcId,
+    startRosterCreation: () => setRosterCreating(true),
+  }
 }
 
 export type TutorialSetupController = ReturnType<typeof useTutorialSetup>

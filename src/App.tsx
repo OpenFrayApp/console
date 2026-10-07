@@ -837,6 +837,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
   // Header "Add PC → create": send a signed-in user to the compendium's Characters tab.
   const openRosterCreate = () => {
+    if (setup.active) setup.startRosterCreation()
     setCompendiumTab('characters')
     setView('compendium')
   }
@@ -1429,13 +1430,16 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     enabledLibraries,
     effectiveSuppression: tutorialSuppression,
     onSuppress: suppressTutorial,
+    onLaunch: () => {
+      setView('encounter')
+      setMobilePane(0)
+    },
   })
 
   const setup = useTutorialSetup({
     active: tutorial.library !== null,
     encounter,
     signedIn: !!user,
-    view,
     initiativeOpen: initPrompt !== null,
     library: tutorial.library,
   })

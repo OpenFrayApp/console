@@ -33,6 +33,13 @@ async function openAdd(name: string) {
   }
 }
 
+/** Launch through the normal search and Settings route from the current screen. */
+async function launchFromSettings() {
+  await userEvent.click(screen.getByRole('button', { name: 'Search references' }))
+  await userEvent.click(screen.getByRole('option', { name: 'Settings' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+}
+
 /** Check a real interactive target is on screen and outside the instruction dock. */
 async function expectUsable(target: HTMLElement) {
   target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
@@ -161,16 +168,28 @@ it.each([
 )
 
 it.each([
-  { width: 375, height: 812, library: 'srd-5.2' },
-  { width: 1180, height: 820, library: 'srd-5.1' },
-  { width: 1440, height: 900, library: 'srd-5.2' },
+  { width: 375, height: 812, library: 'srd-5.2', initialScreen: 'Tracker' },
+  { width: 1180, height: 820, library: 'srd-5.1', initialScreen: 'Tracker' },
+  { width: 1440, height: 900, library: 'srd-5.2', initialScreen: 'Tracker' },
+  { width: 375, height: 812, library: 'srd-5.2', initialScreen: 'Controls' },
+  { width: 375, height: 812, library: 'srd-5.2', initialScreen: 'Stat block' },
 ])(
-  'starts the real $library fight through library loading and manual initiative at $width × $height',
-  async ({ width, height, library }) => {
+  'starts the real $library fight from $initialScreen through manual initiative at $width × $height',
+  async ({ width, height, library, initialScreen }) => {
     await page.viewport(width, height)
     saveSettings({ enabledLibraries: [library] })
     renderTutorial()
-    await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
+    if (initialScreen !== 'Tracker') {
+      await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+      await userEvent.click(screen.getByRole('button', { name: initialScreen }))
+      await expect
+        .poll(() => {
+          const box = screen.getByRole('button', { name: 'Begin' }).getBoundingClientRect()
+          return box.right <= 0 || box.left >= innerWidth
+        })
+        .toBe(true)
+      await launchFromSettings()
+    } else await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
     await openAdd('Add PC')
     await userEvent.fill(screen.getByRole('textbox', { name: 'PC name' }), 'Rowan')
     await userEvent.fill(screen.getByRole('textbox', { name: 'AC' }), '12')
@@ -189,7 +208,15 @@ it.each([
       await expectUsable(pick)
       await userEvent.click(pick)
     }
-    await userEvent.click(screen.getByRole('button', { name: 'Begin' }))
+    const begin = screen.getByRole('button', { name: 'Begin' })
+    await expect
+      .poll(() => {
+        const box = begin.getBoundingClientRect()
+        return box.left >= 0 && box.right <= innerWidth
+      })
+      .toBe(true)
+    expect(innerWidth).toBe(width)
+    await userEvent.click(begin)
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }), { force: true })
     expect(screen.getByRole('dialog', { name: 'Roll initiative' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Start combat' }))
@@ -243,5 +270,46 @@ it.each(
     await userEvent.click(screen.getByRole('button', { name: 'Create character' }))
     const modal = screen.getByRole('dialog', { name: 'New player character' })
     expect(getComputedStyle(modal.parentElement!).paddingBottom).toBe(padding)
+  },
+)
+
+it.each(
+  [
+    { width: 375, height: 812 },
+    { width: 1440, height: 900 },
+  ].flatMap((viewport) =>
+    [false, true].flatMap((signedIn) =>
+      ['Creatures', 'Characters'].map((tab) => ({ ...viewport, signedIn, tab })),
+    ),
+  ),
+)(
+  'launches from $tab through Add PC with signedIn=$signedIn at $width × $height',
+  async ({ width, height, signedIn, tab }) => {
+    await page.viewport(width, height)
+    renderTutorial(signedIn ? ({ id: 'compendium-launch-owner' } as User) : null)
+    await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Search references' }))
+    await userEvent.click(screen.getByRole('option', { name: 'Compendium' }))
+    await userEvent.click(screen.getByRole('tab', { name: tab }))
+    await launchFromSettings()
+    expect(screen.queryByRole('tab', { name: tab })).toBeNull()
+    expect(screen.queryByText(/stays in your roster after clearing/)).toBeNull()
+    await openAdd('Add PC')
+    if (signedIn) {
+      await userEvent.click(screen.getByRole('button', { name: 'Create a character…' }))
+      const create = await screen.findByRole('button', { name: 'Create character' })
+      await expectUsable(create)
+      await userEvent.click(create)
+    }
+    const name = screen.getByRole('textbox', { name: 'PC name' })
+    await expectUsable(name)
+    await userEvent.fill(name, 'Launched adventurer')
+    await userEvent.fill(screen.getByRole('textbox', { name: 'AC' }), '12')
+    await userEvent.fill(screen.getByRole('textbox', { name: 'Max HP' }), '30')
+    await userEvent.click(screen.getByRole('button', { name: signedIn ? 'Create PC' : 'Add' }))
+    if (signedIn) await userEvent.click(screen.getByRole('button', { name: 'Add to encounter' }))
+    expect(screen.getByRole('button', { name: 'Remove Launched adventurer' })).toBeTruthy()
+    expect(screen.getByText(/Quick add.*Friend/)).toBeTruthy()
+    expect(innerWidth).toBe(width)
   },
 )

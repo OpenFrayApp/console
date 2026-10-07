@@ -37,6 +37,7 @@ export function useTutorialEntry({
   enabledLibraries,
   effectiveSuppression,
   onSuppress,
+  onLaunch,
 }: {
   ready: boolean
   invitationAvailable: boolean
@@ -49,6 +50,8 @@ export function useTutorialEntry({
   effectiveSuppression: TutorialSuppression | null
   /** Apply locally first; account persistence may follow in the background. */
   onSuppress: (reason: TutorialSuppression) => void
+  /** Reveal normal setup controls only after launch prerequisites pass. */
+  onLaunch?: () => void
 }) {
   const [invited, setInvited] = useState(wasInvited)
   const [surface, setSurface] = useState<TutorialSurface>(null)
@@ -116,6 +119,7 @@ export function useTutorialEntry({
       setPrerequisiteMessage(prerequisite)
       setSurface('prerequisite')
     } else {
+      onLaunch?.()
       setLibrary(availableLibrary)
       setSurface('introduction')
     }
