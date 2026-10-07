@@ -12,6 +12,10 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
   const descriptionId = useId()
   const [neverShow, setNeverShow] = useState(false)
   const { surface, library, prerequisite } = controller
+  /** Record the welcome choice independently of starting or postponing. */
+  const rememberWelcomeChoice = () => {
+    if (neverShow) controller.onSuppress('dismissed')
+  }
   if (!surface) return null
   const title =
     surface === 'welcome'
@@ -36,7 +40,10 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
             event.stopPropagation()
             if (surface === 'exit') controller.cancelExit()
             else if (surface === 'introduction') controller.requestExit()
-            else controller.dismiss()
+            else {
+              if (surface === 'welcome') rememberWelcomeChoice()
+              controller.dismiss()
+            }
           }}
           className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
         >
@@ -54,10 +61,7 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
                     type="checkbox"
                     className="h-4 w-4 accent-indigo-600"
                     checked={neverShow}
-                    onChange={(event) => {
-                      setNeverShow(event.target.checked)
-                      if (event.target.checked) controller.onSuppress('dismissed')
-                    }}
+                    onChange={(event) => setNeverShow(event.target.checked)}
                   />
                   Never show this again
                 </label>
@@ -86,10 +90,23 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
           <div className="mt-5 flex flex-wrap gap-2">
             {surface === 'welcome' && (
               <>
-                <Button variant="primary" onClick={controller.launch}>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    rememberWelcomeChoice()
+                    controller.launch()
+                  }}
+                >
                   Start tutorial
                 </Button>
-                <Button onClick={() => controller.dismiss()}>Not now</Button>
+                <Button
+                  onClick={() => {
+                    rememberWelcomeChoice()
+                    controller.dismiss()
+                  }}
+                >
+                  Not now
+                </Button>
               </>
             )}
             {surface === 'prerequisite' && (

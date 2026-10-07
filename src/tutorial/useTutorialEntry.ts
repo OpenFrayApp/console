@@ -50,13 +50,14 @@ export function useTutorialEntry({
   const [invited, setInvited] = useState(wasInvited)
   const [surface, setSurface] = useState<TutorialSurface>(null)
   const [library, setLibrary] = useState<TutorialLibrary | null>(null)
+  const [prerequisiteMessage, setPrerequisiteMessage] = useState<string | null>(null)
   const availableLibrary = enabledLibraries.includes('srd-5.2')
     ? 'srd-5.2'
     : enabledLibraries.includes('srd-5.1')
       ? 'srd-5.1'
       : null
   const prerequisite = !ready
-    ? 'Wait for identity and working-board recovery to finish before starting the tutorial.'
+    ? 'Wait for identity and working-board recovery to finish, then start the tutorial again.'
     : !boardEmpty || inCombat
       ? 'Stop the fight and clear the board through the normal controls before starting the tutorial. Your board stays unchanged.'
       : !availableLibrary
@@ -93,8 +94,10 @@ export function useTutorialEntry({
   /** Start at the introduction only after checking the current board and libraries. */
   const launch = () => {
     latchInvitation()
-    if (prerequisite) setSurface('prerequisite')
-    else {
+    if (prerequisite) {
+      setPrerequisiteMessage(prerequisite)
+      setSurface('prerequisite')
+    } else {
       setLibrary(availableLibrary)
       setSurface('introduction')
     }
@@ -111,7 +114,7 @@ export function useTutorialEntry({
   return {
     surface,
     library,
-    prerequisite,
+    prerequisite: prerequisiteMessage,
     launch,
     dismiss,
     onSuppress,

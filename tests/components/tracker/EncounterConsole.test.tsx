@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import type { Creature } from '../../../src/schema/creature.ts'
 import type { MonsterCombatant } from '../../../src/schema/combatant.ts'
 import { monster as baseMonster, pc } from '../../fixtures.ts'
+import { saveSettings } from '../../../src/state/settings.ts'
 
 vi.mock('../../../src/compendium/srd.ts', () => ({
   loadSrdCreatures: () =>
@@ -49,11 +50,18 @@ vi.mock('../../../src/compendium/srd.ts', () => ({
 const { default: App } = await import('../../../src/App.tsx')
 const { EncounterConsole } = await import('../../../src/components/tracker/EncounterConsole.tsx')
 
+/** Exercise returning-user combat controls without a newcomer invitation. */
+function renderApp() {
+  saveSettings({ tutorialSuppression: 'dismissed' })
+  return render(<App />)
+}
+
 // Clear sessionStorage too: recovery writes during longer tests would otherwise restore
 // stale combatants and log entries into the next test's fresh App.
 afterEach(() => {
   cleanup()
   sessionStorage.clear()
+  localStorage.clear()
 })
 
 const begin = () => screen.getByRole('button', { name: 'Begin' })
@@ -83,7 +91,7 @@ describe('Encounter flow', () => {
   it('applies and persists tracker color changes immediately and resets them', async () => {
     localStorage.removeItem('openfray-settings')
     try {
-      const { container } = render(<App />)
+      const { container } = renderApp()
       await addGoblin()
       fireEvent.click(screen.getByRole('button', { name: 'Settings and more' }))
       fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }))
@@ -109,13 +117,13 @@ describe('Encounter flow', () => {
   })
 
   it('starts empty with Begin disabled', () => {
-    render(<App />)
+    renderApp()
     expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
     expect(begin()).toBeDisabled()
   })
 
   it('adds a creature and runs the playback controls', async () => {
-    render(<App />)
+    renderApp()
     await addGoblin()
 
     expect(screen.getAllByText('Goblin').length).toBeGreaterThan(0)
@@ -133,7 +141,7 @@ describe('Encounter flow', () => {
   })
 
   it('Next turn moves the selection to the active combatant', async () => {
-    const { container } = render(<App />)
+    const { container } = renderApp()
     await addCreature('Goblin')
     await addCreature('Ogre')
     beginCombat()
@@ -150,7 +158,7 @@ describe('Encounter flow', () => {
   })
 
   it('reorders adjacent turns with arrow keys and keeps focus on the moved row', async () => {
-    render(<App />)
+    renderApp()
     await addCreature('Goblin')
     await addCreature('Ogre')
     beginCombat()
@@ -172,7 +180,7 @@ describe('Encounter flow', () => {
   })
 
   it('using a reaction from the stat block spends the round’s reaction', async () => {
-    render(<App />)
+    renderApp()
     await addCreature('Ogre')
     beginCombat()
 
@@ -182,7 +190,7 @@ describe('Encounter flow', () => {
   })
 
   it('edits HP by clicking it in the stat block (+N / -N / set)', async () => {
-    const { container } = render(<App />)
+    const { container } = renderApp()
     await addGoblin()
     // The tracker row and the stat block both have an HP editor; target the stat block.
     const center = container.querySelectorAll('section')[1]
@@ -194,7 +202,7 @@ describe('Encounter flow', () => {
   })
 
   it('rolls initiative for a combatant added mid-combat', async () => {
-    const { container } = render(<App />)
+    const { container } = renderApp()
     await addGoblin()
     beginCombat()
     // A reinforcement joins mid-fight — it should roll initiative, not sit at 0. The
@@ -219,7 +227,7 @@ describe('Encounter flow', () => {
     async (style, first, second, third) => {
       localStorage.setItem('openfray-settings', JSON.stringify({ creatureLabelStyle: style }))
       try {
-        const { container } = render(<App />)
+        const { container } = renderApp()
         await addGoblin()
         const tracker = container.querySelector('section') as HTMLElement
         expect(within(tracker).getByText('Goblin')).toBeInTheDocument()
@@ -239,7 +247,7 @@ describe('Encounter flow', () => {
   )
 
   it('keeps automatic labeling after accepting an unchanged name', async () => {
-    const { container } = render(<App />)
+    const { container } = renderApp()
     await addGoblin()
     fireEvent.click(screen.getByTitle('Rename — changes how it appears in the tracker'))
     fireEvent.keyDown(screen.getByDisplayValue('Goblin'), { key: 'Enter' })
@@ -251,7 +259,7 @@ describe('Encounter flow', () => {
   })
 
   it('treats a name explicitly restored to its former automatic label as a manual name', async () => {
-    render(<App />)
+    renderApp()
     await addGoblin()
     const picker = screen.getByLabelText('Search creatures').parentElement as HTMLElement
     fireEvent.click(within(picker).getByText('Goblin'))
@@ -268,7 +276,7 @@ describe('Encounter flow', () => {
   })
 
   it('logs a quick roll', () => {
-    render(<App />)
+    renderApp()
     expect(screen.getByText('Nothing logged yet.')).toBeInTheDocument()
     // The dice bar renders twice (the footer, and the phone layout's Controls
     // screen); either instance logs the same roll.
@@ -278,7 +286,7 @@ describe('Encounter flow', () => {
   })
 
   it('applies an effect from the modal to a combatant', async () => {
-    render(<App />)
+    renderApp()
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
     fireEvent.click(screen.getByRole('button', { name: 'Prone' })) // condition chip in the modal
@@ -287,7 +295,7 @@ describe('Encounter flow', () => {
   })
 
   it('surfaces a save-ends effect with its DC and clears it when saved', async () => {
-    render(<App />)
+    renderApp()
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
     const dialog = screen.getByRole('dialog')
@@ -305,7 +313,7 @@ describe('Encounter flow', () => {
   })
 
   it('auto-rolls a monster save-ends effect at the end of its turn', async () => {
-    render(<App />)
+    renderApp()
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
     const dialog = screen.getByRole('dialog')
@@ -321,7 +329,7 @@ describe('Encounter flow', () => {
   })
 
   it('rolls a separate save for each condition, even at the same DC', async () => {
-    render(<App />)
+    renderApp()
     await addGoblin()
     fireEvent.click(screen.getByText('Apply effect'))
     const dialog = screen.getByRole('dialog')

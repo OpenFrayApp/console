@@ -7,6 +7,7 @@ import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { commands, page, userEvent } from 'vitest/browser'
 import App from '../../src/App.tsx'
+import { saveSettings } from '../../src/state/settings.ts'
 import { CombatantRow } from '../../src/components/tracker/CombatantRow.tsx'
 import { Button, Chip, IconButton, TabButton } from '../../src/components/ui/primitives.tsx'
 import '../../src/index.css'
@@ -37,6 +38,7 @@ async function resetBrowser(): Promise<void> {
 /** Render the console after setting the viewport used by its shell queries. */
 async function renderConsole(width: number, height: number): Promise<void> {
   await page.viewport(width, height)
+  saveSettings({ tutorialSuppression: 'dismissed' })
   render(createElement(App))
   await screen.findByRole('button', { name: width <= 1024 ? 'Add to the encounter' : 'Quick add' })
 }

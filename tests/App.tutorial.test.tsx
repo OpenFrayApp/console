@@ -140,6 +140,76 @@ it('reload removes the guide and every manual restart opens the introduction', a
   expect(loadSettings().tutorialSuppression).toBeNull()
 })
 
+it('explains pending readiness on manual entry and does not turn it into a silent launch', async () => {
+  const app = render(
+    <AuthContext.Provider value={authState({ loading: true })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  openSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  expect(screen.getByText(/Wait for identity and working-board recovery/)).toBeInTheDocument()
+  app.rerender(
+    <AuthContext.Provider value={authState()}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await act(() => Promise.resolve())
+  expect(screen.getByRole('dialog', { name: 'Before starting the tutorial' })).toBeInTheDocument()
+  expect(screen.getByText(/Wait for identity and working-board recovery/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
+  openSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
+})
+
+it('keeps console entry and exit usable when browser storage is unavailable', async () => {
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    throw new DOMException('Blocked', 'SecurityError')
+  })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Blocked', 'SecurityError')
+  })
+  const app = render(<App />)
+  await screen.findByRole('dialog', { name: 'Learn the console' })
+  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Never show again' }))
+  app.rerender(<App />)
+  await act(() => Promise.resolve())
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
+  openSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
+})
+
+it('persists the welcome checkbox when postponing and permits manual launch', async () => {
+  const app = render(<App />)
+  await screen.findByRole('dialog', { name: 'Learn the console' })
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Never show this again' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+  expect(loadSettings().tutorialSuppression).toBe('dismissed')
+  app.unmount()
+  sessionStorage.clear()
+  render(<App />)
+  await act(() => Promise.resolve())
+  expect(screen.queryByRole('dialog')).toBeNull()
+  openSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
+})
+
+it('lets the welcome checkbox be changed before postponing', async () => {
+  render(<App />)
+  await screen.findByRole('dialog', { name: 'Learn the console' })
+  const checkbox = screen.getByRole('checkbox', { name: 'Never show this again' })
+  fireEvent.click(checkbox)
+  fireEvent.click(checkbox)
+  fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+  expect(loadSettings().tutorialSuppression).toBeNull()
+})
+
 it('gives identity and recovery priority if readiness changes while the guide is open', async () => {
   const app = render(
     <AuthContext.Provider value={authState()}>
@@ -179,8 +249,8 @@ it('invites after identity resolves and opens an introductory guide without chan
   await screen.findByRole('dialog', { name: 'Learn the console' })
   expect(screen.getByText(/about five minutes/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('checkbox', { name: 'Never show this again' }))
-  expect(loadSettings().tutorialSuppression).toBe('dismissed')
   fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  expect(loadSettings().tutorialSuppression).toBe('dismissed')
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
   expect(screen.getByText(/Basic Rules 2024/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
