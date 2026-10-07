@@ -5,6 +5,13 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import App from '../src/App.tsx'
+import { saveSettings } from '../src/state/settings.ts'
+
+/** Render returning-user flows without the optional newcomer invitation. */
+function renderConsole() {
+  saveSettings({ tutorialSuppression: 'dismissed' })
+  return render(<App />)
+}
 
 afterEach(() => {
   cleanup()
@@ -21,7 +28,7 @@ function addFoe(name: string): void {
 
 describe('App', () => {
   it('shows the encounter console by default with view navigation', () => {
-    render(<App />)
+    renderConsole()
     expect(screen.getByRole('button', { name: 'Add creature' })).toBeInTheDocument()
     expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show the encounter' })).toBeInTheDocument()
@@ -30,7 +37,7 @@ describe('App', () => {
 
   it('writes a committed board action without waiting for a debounce timer', async () => {
     sessionStorage.clear()
-    render(<App />)
+    renderConsole()
     const saveStatus = await screen.findByRole('button', { name: 'Sign in to resume saving' })
     const settings = screen.getByRole('button', { name: 'Settings and more' })
     expect(
@@ -50,7 +57,7 @@ describe('App — when initiative reaches the log', () => {
   const logLines = () => Array.from(document.querySelectorAll('li')).map((li) => li.textContent)
 
   it('holds the roll until the fight starts, and drops it if Begin is abandoned', () => {
-    render(<App />)
+    renderConsole()
     addFoe('Bandit')
     // Opening the box pre-rolls the creature, but nothing is recorded yet: the Game
     // Master hasn't started a fight for it to belong to.
@@ -66,7 +73,7 @@ describe('App — when initiative reaches the log', () => {
       'openfray-settings',
       JSON.stringify({ playerView: { arrivals: 'hidden' } }),
     )
-    render(<App />)
+    renderConsole()
     addFoe('Bandit')
     fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
@@ -78,7 +85,7 @@ describe('App — when initiative reaches the log', () => {
   })
 
   it('records the rolls under the line that opens the fight', () => {
-    render(<App />)
+    renderConsole()
     addFoe('Bandit')
     fireEvent.click(screen.getByRole('button', { name: 'Begin' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start combat' }))
@@ -91,7 +98,7 @@ describe('App — when initiative reaches the log', () => {
   })
 
   it('logs an initiative the GM typed by hand, dice-free', () => {
-    render(<App />)
+    renderConsole()
     fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
     fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Thalia' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
@@ -107,7 +114,7 @@ describe('App — when initiative reaches the log', () => {
 
 describe('App — keyboard control', () => {
   it('navigates from empty search without returning to the encounter or starting player sharing', async () => {
-    render(<App />)
+    renderConsole()
     fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
     fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
     expect(screen.queryByRole('combobox', { name: 'Search references' })).toBeNull()
@@ -134,7 +141,7 @@ describe('App — keyboard control', () => {
 
   it('displays the rebound search shortcut and closes its reference back to the console', async () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: 'meta+u' } }))
-    render(<App />)
+    renderConsole()
     expect(screen.getByRole('button', { name: 'Search references' }).textContent).toContain('⌘+U')
     fireEvent.click(screen.getByRole('button', { name: 'Show the compendium' }))
     fireEvent.keyDown(document.body, { key: 'u', metaKey: true })
@@ -153,7 +160,7 @@ describe('App — keyboard control', () => {
 
   it('keeps the header button usable with search unbound and hides its hint', () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: null } }))
-    render(<App />)
+    renderConsole()
     const button = screen.getByRole('button', { name: 'Search references' })
     expect(button.querySelector('kbd')).toBeNull()
     fireEvent.click(button)
@@ -166,7 +173,7 @@ describe('App — keyboard control', () => {
   })
 
   it('opens Quick add on its chord and stays quiet while typing', () => {
-    render(<App />)
+    renderConsole()
     fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true })
     const name = screen.getByLabelText('Quick add name')
     expect(name).toBeInTheDocument()
@@ -176,7 +183,7 @@ describe('App — keyboard control', () => {
   })
 
   it('opens the cheat sheet on Shift+/ and closes it on Escape', () => {
-    render(<App />)
+    renderConsole()
     fireEvent.keyDown(document.body, { key: '?', shiftKey: true })
     expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'Escape' })
@@ -184,7 +191,7 @@ describe('App — keyboard control', () => {
   })
 
   it('advances the turn on n once the fight is running', () => {
-    render(<App />)
+    renderConsole()
     fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
     fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: 'Bandit' } })
     fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
@@ -199,7 +206,7 @@ describe('App — keyboard control', () => {
 
   it('honors a rebound chord from the stored settings', () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { quickAdd: 'x' } }))
-    render(<App />)
+    renderConsole()
     fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true })
     expect(screen.queryByLabelText('Quick add name')).toBeNull()
     fireEvent.keyDown(document.body, { key: 'x' })

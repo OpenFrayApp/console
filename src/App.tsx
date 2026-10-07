@@ -159,6 +159,9 @@ import { CombatTimers } from './components/tracker/CombatTimers.tsx'
 import { CombatDifficulty } from './components/tracker/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/settings/SettingsPanel.tsx'
+import { useTutorialEntry } from './tutorial/useTutorialEntry.ts'
+import { TutorialEntry } from './tutorial/TutorialEntry.tsx'
+import type { TutorialSuppression } from './state/settings.ts'
 import { SettingsMenu, SlidersIcon, HelpIcon } from './components/settings/SettingsMenu.tsx'
 import { MobileNav, type MobileTab } from './components/shell/MobileNav.tsx'
 import { Wordmark } from './components/shell/Wordmark.tsx'
@@ -384,6 +387,15 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
    * a shared link waits on this so hydration cannot replace it or persist half a board.
    */
   const [boardReady, setBoardReady] = useState(false)
+  const [settledIdentity, setSettledIdentity] = useState<string | null | undefined>(undefined)
+  const [tutorialSuppression, setTutorialSuppression] = useState(
+    () => loadSettings().tutorialSuppression,
+  )
+  /** Apply permanent device suppression immediately without persisting guide progress. */
+  const suppressTutorial = (reason: TutorialSuppression) => {
+    setTutorialSuppression(reason)
+    saveSettings({ tutorialSuppression: reason })
+  }
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
   const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
@@ -477,6 +489,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Recovery completes before identity-triggered cloud reconciliation. Offline failure keeps
   // the validated device copy on the working board.
   useEffect(() => {
+    setSettledIdentity(undefined)
     if (authLoading) return
     if (identityExpired) {
       let active = true
@@ -499,6 +512,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         setSelectedId(null)
         setActiveCampaignId(null)
       }
+      setSettledIdentity(userId)
       setCopyConflict(result.conflict ?? null)
       setCopyConflictOpen(Boolean(result.conflict))
       // A signed-in GM's chosen name follows the account, so it wins over whatever
@@ -1380,6 +1394,31 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return () => observer.disconnect()
   }, [])
 
+  const tutorial = useTutorialEntry({
+    ready:
+      boardReady &&
+      settledIdentity === userId &&
+      !authLoading &&
+      !identityExpired &&
+      !activeCopyConflict &&
+      !resolvingCopies,
+    invitationAvailable:
+      !settingsOpen &&
+      !searchOpen &&
+      !authOpen &&
+      !helpOpen &&
+      !initPrompt &&
+      !recap &&
+      !endPrompt &&
+      !showShares &&
+      !sharingCreature,
+    boardEmpty: encounter.combatants.length === 0,
+    inCombat: encounter.round > 0,
+    enabledLibraries,
+    effectiveSuppression: tutorialSuppression,
+    onSuppress: suppressTutorial,
+  })
+
   const started = encounter.round > 0
   const paused = encounter.paused === true
   // What the compact footer would actually draw: the fight's clock, the difficulty
@@ -1646,7 +1685,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   return (
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
-        <div className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div
+          inert={tutorial.surface !== null}
+          className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+        >
           {/* The header wraps at every width and its buttons never break their labels:
           a cluster that no longer fits drops to its own line whole, so every button
           keeps one size instead of squeezing onto two lines of text. */}
@@ -1805,6 +1847,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       setSettingsOpen(true)
                     }),
                 },
+                {
+                  id: 'tutorial',
+                  name: 'Start tutorial',
+                  searchable: true,
+                  icon: <HelpIcon />,
+                  onSelect: () => navigateFromSearch(tutorial.launch),
+                },
                 ...(!authLoading && user
                   ? [
                       {
@@ -1854,6 +1903,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             <DialogFocus>
               <SettingsPanel
                 onClose={() => setSettingsOpen(false)}
+                onStartTutorial={() => {
+                  setSettingsOpen(false)
+                  tutorial.launch()
+                }}
                 enabledLibraries={enabledLibraries}
                 onSetEnabledLibraries={setEnabledLibraries}
                 showHomebrew={showHomebrew}
@@ -2125,6 +2178,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
           <MobileNav active={mobileTab} onSelect={showMobileTab} />
         </div>
+        <TutorialEntry controller={tutorial} />
       </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>
   )

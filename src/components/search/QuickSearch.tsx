@@ -38,6 +38,8 @@ export interface SearchDestination {
   name: string
   icon: ReactNode
   href?: string
+  /** Also match this destination while typing a reference query. */
+  searchable?: boolean
   onSelect: () => void
 }
 
@@ -112,11 +114,19 @@ export function QuickSearch({
     [query, library, customCreatures, customSpells, characters, enabledLibraries, showHomebrew],
   )
   const destinations = useMemo(
-    () => [...navigation].sort((a, b) => a.name.localeCompare(b.name)),
-    [navigation],
+    () =>
+      navigation
+        .filter(
+          (destination) =>
+            !query.trim() ||
+            (destination.searchable &&
+              destination.name.toLowerCase().includes(query.trim().toLowerCase())),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [navigation, query],
   )
   const navigating = !query.trim()
-  const count = navigating ? destinations.length : results.matches.length
+  const count = destinations.length + results.matches.length
   const index = Math.min(active, Math.max(0, count - 1))
   useEffect(() => {
     root.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' })
@@ -210,9 +220,7 @@ export function QuickSearch({
                       )
                     } else if (event.key === 'Enter' && count > 0) {
                       event.preventDefault()
-                      if (navigating)
-                        root.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.click()
-                      else setSelected(results.matches[index])
+                      root.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.click()
                     }
                   }}
                 />
@@ -239,50 +247,49 @@ export function QuickSearch({
               aria-label={navigating ? 'Navigate to' : 'References'}
               className="max-h-[50dvh] overflow-y-auto"
             >
-              {navigating &&
-                destinations.map((destination, i) => {
-                  const props = {
-                    role: 'option',
-                    'aria-selected': i === index,
-                    id: `${id}-${i}`,
-                    tabIndex: -1,
-                    onClick: destination.onSelect,
-                    className: `tap flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm ${i === index ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`,
-                  }
-                  const content = (
-                    <>
-                      <span className="flex h-5 w-5 items-center justify-center text-slate-500 dark:text-slate-400">
-                        {destination.icon}
-                      </span>
-                      {destination.name}
-                    </>
-                  )
-                  return destination.href ? (
-                    <a
-                      key={destination.id}
-                      {...props}
-                      href={destination.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <button key={destination.id} {...props} type="button">
-                      {content}
-                    </button>
-                  )
-                })}
+              {destinations.map((destination, i) => {
+                const props = {
+                  role: 'option',
+                  'aria-selected': i === index,
+                  id: `${id}-${i}`,
+                  tabIndex: -1,
+                  onClick: destination.onSelect,
+                  className: `tap flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm ${i === index ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`,
+                }
+                const content = (
+                  <>
+                    <span className="flex h-5 w-5 items-center justify-center text-slate-500 dark:text-slate-400">
+                      {destination.icon}
+                    </span>
+                    {destination.name}
+                  </>
+                )
+                return destination.href ? (
+                  <a
+                    key={destination.id}
+                    {...props}
+                    href={destination.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <button key={destination.id} {...props} type="button">
+                    {content}
+                  </button>
+                )
+              })}
               {results.matches.map((result, i) => (
                 <button
                   type="button"
                   role="option"
-                  aria-selected={i === index}
-                  id={`${id}-${i}`}
+                  aria-selected={i + destinations.length === index}
+                  id={`${id}-${i + destinations.length}`}
                   key={`${result.kind}:${result.entry.id}`}
                   tabIndex={-1}
                   onClick={() => setSelected(result)}
-                  className={`tap flex w-full items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm ${i === index ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  className={`tap flex w-full items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm ${i + destinations.length === index ? 'bg-slate-100 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                 >
                   <span className="min-w-0 truncate">{result.entry.name}</span>
                   <span className="flex shrink-0 items-center gap-1.5">
@@ -301,7 +308,7 @@ export function QuickSearch({
                   ? 'Loading references…'
                   : failed
                     ? 'Search your saved references, or retry loading the libraries.'
-                    : !results.total
+                    : !results.total && !destinations.length
                       ? 'No matches. Try another name.'
                       : ''}
             </p>
