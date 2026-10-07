@@ -330,11 +330,16 @@ it('still shows truthful completion and continued console access if device prefe
   await startPracticeFight(controls)
   await resolvePracticeFight(controls)
   const original = Storage.prototype.setItem
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
-    if (key === 'openfray:settings') throw new Error('Storage unavailable')
+  const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+    this: Storage,
+    key,
+    value,
+  ) {
+    if (key === 'openfray-settings') throw new Error('Storage unavailable')
     return original.call(this, key, value)
   })
   const complete = await clearPracticeFight()
+  expect(storage).toHaveBeenCalledWith('openfray-settings', expect.stringContaining('completed'))
   fireEvent.click(within(complete).getByRole('button', { name: 'Continue without an account' }))
   expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
