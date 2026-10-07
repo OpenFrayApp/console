@@ -9,6 +9,30 @@ import { DEFAULT_ENABLED_LIBRARIES } from '../../src/compendium/libraries.ts'
 beforeEach(() => localStorage.clear())
 afterEach(() => localStorage.clear())
 
+describe('tutorial invitation preferences', () => {
+  it.each([null, [], 42, 'bad'])('handles a malformed settings document %j', (value) => {
+    localStorage.setItem('openfray-settings', JSON.stringify(value))
+    expect(loadSettings().tutorialSuppression).toBeNull()
+    saveSettings({ tutorialSuppression: 'dismissed' })
+    expect(loadSettings().tutorialSuppression).toBe('dismissed')
+  })
+
+  it.each([true, 'started', {}, 42])('rejects malformed suppression %j', (value) => {
+    localStorage.setItem('openfray-settings', JSON.stringify({ tutorialSuppression: value }))
+    expect(loadSettings().tutorialSuppression).toBeNull()
+  })
+
+  it('persists dismissal and completion independently of encounter recovery', () => {
+    expect(loadSettings().tutorialSuppression).toBeNull()
+    saveSettings({ tutorialSuppression: 'dismissed' })
+    saveSettings({ librarySort: 'cr' })
+    expect(loadSettings().tutorialSuppression).toBe('dismissed')
+    saveSettings({ tutorialSuppression: 'completed' })
+    expect(loadSettings().tutorialSuppression).toBe('completed')
+    expect(sessionStorage.getItem('openfray:session')).toBeNull()
+  })
+})
+
 describe('tracker colors', () => {
   it('uses theme defaults for new and existing preferences', () => {
     expect(loadSettings().trackerColors).toEqual({ creature: null, ally: null })
