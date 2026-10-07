@@ -30,6 +30,7 @@ export function FormModal({
   const Panel = onSubmit ? 'form' : 'div'
   return (
     <div
+      style={{ paddingBottom: 'calc(var(--tutorial-h) + 1rem)' }}
       className="fixed inset-0 z-40 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8"
       onClick={onClose}
     >

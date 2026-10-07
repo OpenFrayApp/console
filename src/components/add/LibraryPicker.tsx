@@ -53,7 +53,11 @@ export function LibraryPicker<T extends LibraryEntry>({
   grow = false,
   hideTrigger = false,
   triggerTitle,
+  locked = false,
+  tutorialTarget,
 }: {
+  locked?: boolean
+  tutorialTarget?: string
   label: string
   variant?: ButtonVariant
   disabled?: boolean
@@ -117,7 +121,7 @@ export function LibraryPicker<T extends LibraryEntry>({
     setPicked(null)
     onClosed?.()
   }, [onClosed])
-  useDismiss(ref, open, close)
+  useDismiss(ref, open && !locked, close)
 
   useEffect(() => {
     if (open) onOpen?.()
@@ -137,18 +141,33 @@ export function LibraryPicker<T extends LibraryEntry>({
     )
 
   return (
-    <div className={cx('relative', grow && 'narrow:flex-1')} ref={ref}>
+    <div
+      className={cx('relative', grow && 'narrow:flex-1')}
+      ref={ref}
+      data-tutorial={tutorialTarget}
+    >
       <Button
         variant={variant}
         className={cx(grow && 'narrow:w-full', hideTrigger && 'hidden')}
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={() => (open ? !locked && close() : setOpen(true))}
         disabled={disabled}
         title={triggerTitle}
       >
         {label}
       </Button>
       {open && (
-        <div className={`${popoverClass('roomy:w-72', align)} p-2`}>
+        <div
+          style={
+            locked
+              ? {
+                  maxHeight:
+                    'calc(100dvh - var(--header-h, 3.5rem) - var(--tutorial-h, 0px) - 1.5rem)',
+                  overflowY: 'auto',
+                }
+              : undefined
+          }
+          className={`${popoverClass('roomy:w-72', align)} p-2`}
+        >
           {children}
           <input
             autoFocus
@@ -183,7 +202,7 @@ export function LibraryPicker<T extends LibraryEntry>({
                         )
                       onPick(e)
                     }}
-                    className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="tap-y flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     {row ? (
                       row(e)

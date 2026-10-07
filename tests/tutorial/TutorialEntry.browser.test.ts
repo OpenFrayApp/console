@@ -66,7 +66,11 @@ it.each(layouts.flatMap((layout) => ['light', 'dark'].map((theme) => ({ ...layou
     const exit = screen.getByRole('button', { name: 'Exit tutorial' })
     expect(exit.getBoundingClientRect().height).toBeGreaterThanOrEqual(44)
     await userEvent.tab()
-    expect(guide.contains(document.activeElement)).toBe(true)
+    expect([
+      screen.queryByRole('button', { name: 'Add PC' }),
+      screen.queryByRole('button', { name: 'Add to the encounter' }),
+      screen.getByRole('button', { name: 'Exit tutorial' }),
+    ]).toContain(document.activeElement)
     await userEvent.keyboard('{Escape}')
     const confirmation = screen.getByRole('dialog', { name: 'Exit tutorial' })
     expectContained(confirmation)
@@ -192,14 +196,19 @@ it('blocks background focus and pointer actions while the introductory guide is 
   const backgroundSearch = screen.getByRole('button', { name: 'Search references' })
   await screen.findByRole('dialog', { name: 'Learn the console' })
   await userEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
-  const guide = screen.getByRole('dialog', { name: 'Tutorial introduction' })
   backgroundSearch.focus()
-  expect(guide.contains(document.activeElement)).toBe(true)
+  expect([
+    screen.getByRole('button', { name: 'Add PC' }),
+    screen.getByRole('button', { name: 'Exit tutorial' }),
+  ]).toContain(document.activeElement)
   await userEvent.click(document.body, { position: { x: 10, y: 10 } })
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeTruthy()
   await userEvent.keyboard('{Control>}k{/Control}')
   expect(screen.queryByRole('combobox', { name: 'Search references' })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
   await userEvent.click(screen.getByRole('button', { name: 'Return to tutorial' }))
-  expect(guide.contains(document.activeElement)).toBe(true)
+  expect([
+    screen.getByRole('button', { name: 'Add PC' }),
+    screen.getByRole('button', { name: 'Exit tutorial' }),
+  ]).toContain(document.activeElement)
 })

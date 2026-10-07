@@ -25,7 +25,7 @@ export function popoverClass(
     // three rows on a phone and changes as its clusters wrap, and a fixed offset put the
     // sheet over the button that opened it. The fallback is one row's worth.
     'swipe:inset-x-3 swipe:top-[calc(var(--header-h,3.5rem)+0.5rem)]',
-    'swipe:max-h-[calc(100dvh-var(--header-h,3.5rem)-1.5rem)] swipe:overflow-y-auto',
+    'swipe:max-h-[calc(100dvh-var(--header-h,3.5rem)-var(--tutorial-h,0px)-1.5rem)] swipe:overflow-y-auto',
     'roomy:absolute',
     // A trigger in the board's bottom corner has no room beneath it, so its card opens
     // upward. The phone sheet is unaffected: it is pinned under the header either way.

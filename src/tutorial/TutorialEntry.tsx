@@ -6,25 +6,23 @@ import { DialogFocus } from '../components/ui/DialogFocus.tsx'
 import { Button } from '../components/ui/primitives.tsx'
 import type { TutorialEntryController } from './useTutorialEntry.ts'
 
-/** Present the introductory entry boundary and reversible exit choices. */
+/** Present optional entry prerequisites and reversible exit choices. */
 export function TutorialEntry({ controller }: { controller: TutorialEntryController }) {
   const titleId = useId()
   const descriptionId = useId()
   const [neverShow, setNeverShow] = useState(false)
-  const { surface, library, prerequisite } = controller
+  const { surface, prerequisite } = controller
   /** Record the welcome choice independently of starting or postponing. */
   const rememberWelcomeChoice = () => {
     if (neverShow) controller.onSuppress('dismissed')
   }
-  if (!surface) return null
+  if (!surface || surface === 'introduction') return null
   const title =
     surface === 'welcome'
       ? 'Learn the console'
       : surface === 'exit'
         ? 'Exit tutorial'
-        : surface === 'prerequisite'
-          ? 'Before starting the tutorial'
-          : 'Tutorial introduction'
+        : 'Before starting the tutorial'
 
   return (
     <DialogFocus>
@@ -39,7 +37,6 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
             event.preventDefault()
             event.stopPropagation()
             if (surface === 'exit') controller.cancelExit()
-            else if (surface === 'introduction') controller.requestExit()
             else {
               if (surface === 'welcome') rememberWelcomeChoice()
               controller.dismiss()
@@ -54,7 +51,8 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
             {surface === 'welcome' && (
               <>
                 <p>
-                  The tutorial takes about five minutes. Start with an introduction to the console.
+                  The tutorial takes about five minutes. Use the console’s real controls to set up a
+                  practice fight. Your additions stay on the board if you exit.
                 </p>
                 <label className="tap-y flex cursor-pointer items-center gap-2">
                   <input
@@ -68,23 +66,6 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
               </>
             )}
             {surface === 'prerequisite' && <p>{prerequisite}</p>}
-            {surface === 'introduction' && (
-              <>
-                <p>
-                  The tracker holds your fight. The stat block shows the selected combatant.
-                  Controls holds dice and effects.
-                </p>
-                <p>
-                  Tutorial examples use{' '}
-                  {library === 'srd-5.2' ? 'Basic Rules 2024' : 'Basic Rules 2014'}. Your library
-                  and campaign choices stay unchanged.
-                </p>
-                <p>
-                  This is the introductory guide. Guided combat lessons are coming later. You can
-                  exit now and explore the console.
-                </p>
-              </>
-            )}
             {surface === 'exit' && <p>Offer the tutorial again another time?</p>}
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -111,9 +92,6 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
             )}
             {surface === 'prerequisite' && (
               <Button onClick={() => controller.dismiss()}>Back to the console</Button>
-            )}
-            {surface === 'introduction' && (
-              <Button onClick={controller.requestExit}>Exit tutorial</Button>
             )}
             {surface === 'exit' && (
               <>

@@ -14,6 +14,7 @@ import {
 } from '../../lib/form.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { LABEL } from '../ui/fieldStyles.ts'
+import { hasPracticeValues } from '../../tutorial/practiceValues.ts'
 import { Button, Field } from '../ui/primitives.tsx'
 
 /**
@@ -29,7 +30,9 @@ export function AddPcForm({
   onClosed,
   keyHint,
   hideTrigger = false,
+  practice = false,
 }: {
+  practice?: boolean
   onAdd: (pc: PlayerCharacter) => void
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
@@ -60,7 +63,7 @@ export function AddPcForm({
     setOpen(false)
     onClosed?.()
   }, [onClosed])
-  useDismiss(ref, open, close)
+  useDismiss(ref, open && !practice, close)
 
   /** Make an onChange handler that writes the input's value into the named draft field. */
   const set = (key: keyof typeof f) => (e: { target: { value: string } }) =>
@@ -69,7 +72,7 @@ export function AddPcForm({
   /** Build the PC from the fields and add it, then reset and close; blank name is a no-op. */
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!f.name.trim()) return
+    if (!f.name.trim() || (practice && !hasPracticeValues(f.hp, f.ac))) return
     const maxHp = Math.max(1, num(f.hp))
     const speed = parseSpeedInput(f.speed)
     onAdd({
@@ -107,9 +110,9 @@ export function AddPcForm({
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref} data-tutorial="pc">
       <Button
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={() => (open ? !practice && close() : setOpen(true))}
         title={keyHint ? `Add PC (${keyHint})` : undefined}
         className={hideTrigger ? 'hidden' : undefined}
       >
@@ -117,6 +120,15 @@ export function AddPcForm({
       </Button>
       {open && (
         <form
+          style={
+            practice
+              ? {
+                  maxHeight:
+                    'calc(100dvh - var(--header-h, 3.5rem) - var(--tutorial-h, 0px) - 1.5rem)',
+                  overflowY: 'auto',
+                }
+              : undefined
+          }
           onSubmit={submit}
           {...NO_AUTOFILL}
           className={`${popoverClass('roomy:w-72')} space-y-2 p-2 roomy:max-h-[70dvh] roomy:overflow-auto`}
@@ -213,6 +225,11 @@ export function AddPcForm({
               className="w-full"
             />
           </div>
+          {practice && (
+            <p role="status" className="text-sm text-slate-500">
+              Enter 30 hit points and armor class 12.
+            </p>
+          )}
           <Button variant="primary" type="submit" className="w-full">
             Add
           </Button>
