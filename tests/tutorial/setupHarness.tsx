@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import App from '../../src/App.tsx'
-import { AuthContext } from '../../src/auth/useAuth.ts'
+import { AuthContext, type AuthState } from '../../src/auth/useAuth.ts'
 import { authState } from '../fixtures.ts'
 import type { User } from '@supabase/supabase-js'
 
 /** Render the real console with external identity supplied at its public boundary. */
-export function renderTutorial(user: User | null = null) {
+export function renderTutorial(user: User | null = null, auth: Partial<AuthState> = {}) {
   const container = document.createElement('div')
   container.style.height = '100%'
   document.body.append(container)
   return render(
-    <AuthContext.Provider value={authState({ user })}>
+    <AuthContext.Provider value={authState({ user, ...auth })}>
       <App />
     </AuthContext.Provider>,
     { container },
@@ -28,8 +28,10 @@ export async function startPracticeFight(
     select: (element: HTMLElement, value: string) => unknown
   },
   signedIn = false,
+  manuallyLaunched = false,
 ) {
-  await controls.click(await screen.findByRole('button', { name: 'Start tutorial' }))
+  if (!manuallyLaunched)
+    await controls.click(await screen.findByRole('button', { name: 'Start tutorial' }))
   /** Open the visible desktop control or its swipe menu equivalent. */
   const openAdd = async (name: string) => {
     const button = screen.queryByRole('button', { name })
@@ -68,4 +70,45 @@ export async function startPracticeFight(
       String(20 - index),
     )
   await controls.click(screen.getByRole('button', { name: 'Start combat' }))
+}
+
+/** Resolve the practice actions through normal controls without replacing encounter transitions. */
+export async function resolvePracticeFight(
+  controls: {
+    click: (element: HTMLElement) => unknown
+    fill: (element: HTMLElement, value: string) => unknown
+    enter: (element: HTMLElement) => unknown
+  },
+  library = 'srd-5.2',
+  { miss = false, allySave = true }: { miss?: boolean; allySave?: boolean } = {},
+) {
+  await controls.click(screen.getByRole('button', { name: library === 'srd-5.2' ? '68' : '59' }))
+  const hp = screen.getByRole('textbox', { name: 'Hit points for Ogre' })
+  await controls.fill(hp, '-3')
+  await controls.enter(hp)
+  await controls.click(await screen.findByRole('button', { name: 'Javelin.' }))
+  await controls.click(
+    within(screen.getByRole('dialog', { name: 'Ogre · Javelin' })).getByRole('button', {
+      name: 'Rowan',
+    }),
+  )
+  await controls.click(screen.getByRole('button', { name: 'Roll attack' }))
+  await controls.click(screen.getByRole('button', { name: miss ? 'Close' : 'Apply to Rowan' }))
+  await controls.click(screen.getByRole('button', { name: 'Apply effect' }))
+  await controls.click(screen.getByRole('button', { name: 'Prone' }))
+  await controls.click(screen.getByRole('button', { name: 'Apply' }))
+  await controls.click(await screen.findByRole('button', { name: /^Fireball/ }))
+  await controls.click(screen.getByRole('button', { name: 'Cast' }))
+  const dialog = screen.getByRole('dialog', { name: 'Mage · Fireball' })
+  for (const name of ['Robin', 'Ogre'])
+    await controls.click(within(dialog).getByRole('button', { name }))
+  await controls.click(screen.getByRole('button', { name: 'Roll saves' }))
+  await controls.click(
+    within(screen.getByRole('textbox', { name: 'Damage to Robin' }).closest('li')!).getByRole(
+      'button',
+      { name: allySave ? 'Save' : 'Fail' },
+    ),
+  )
+  await controls.click(screen.getByRole('button', { name: 'Apply damage' }))
+  await controls.click(screen.getByRole('button', { name: 'Next turn' }))
 }

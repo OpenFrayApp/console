@@ -35,8 +35,11 @@ const instructions: Record<SetupTask, string> = {
   'death-save':
     'Your allied quick add is unconscious and still takes turns for death saves. Record its actual result with Save or Fail, or use Roll death save when needed. Use Next turn to continue normally. Recovery, stabilization, and death all keep their real consequences; Exit tutorial remains available.',
   turn: 'Fireball resolved and damage applied. Choose Next turn to advance the initiative marker. Dead creatures are skipped; unconscious player characters and quick adds still take turns for death saves.',
-  ready:
-    'Turn advanced. Guided cleanup is coming later. Exit tutorial to keep this board. The tutorial is not complete.',
+  ready: 'Turn advanced.',
+  stop: 'Turn advanced. Choose Stop to end the fight and open its recap. Pause only holds the fight; everyone and the game log stay on the board.',
+  clear:
+    'The fight already ended. Choose the trash control, Remove everyone and clear the log. Your browser opens a confirmation: confirm to remove everyone and the game log. Cancel leaves cleanup pending; you can retry or Exit tutorial. Roster characters and other saved references stay untouched.',
+  complete: 'Everyone and the game log are cleared.',
 }
 
 /** Explain the current real setup task without a separate form or an acknowledgement step. */
@@ -73,9 +76,7 @@ export function TutorialSetup({
           )}
           {setup.task === 'pc' && setup.signedIn
             ? 'Choose Add PC, then Create a character to create a new roster entry. Existing characters stay untouched.'
-            : setup.task === 'ready' && setup.fightEnded
-              ? 'The fight already ended. Guided cleanup is coming later. Exit tutorial to keep everyone and the log. The tutorial is not complete.'
-              : instructions[setup.task]}
+            : instructions[setup.task]}
         </p>
         <p className="mt-1 text-xs text-slate-500 short:hidden">
           Tutorial examples use{' '}

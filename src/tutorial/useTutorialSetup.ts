@@ -26,6 +26,9 @@ export type SetupTask =
   | 'turn'
   | 'recap'
   | 'end-prompt'
+  | 'stop'
+  | 'clear'
+  | 'complete'
 
 /** Observe committed setup on the working board, retaining only the newly created roster identity. */
 export function useTutorialSetup({
@@ -122,7 +125,13 @@ export function useTutorialSetup({
           : combatTask === 'death-save' &&
               encounter.combatants[encounter.activeIndex]?.combatantId !== quickId
             ? 'turn'
-            : combatTask
+            : combatTask === 'ready'
+              ? encounter.round > 0
+                ? 'stop'
+                : encounter.combatants.length === 0 && encounter.log.length === 0
+                  ? 'complete'
+                  : 'clear'
+              : combatTask
       : encounter.combatants.length === 0
         ? signedIn && rosterCreating
           ? createdPcId

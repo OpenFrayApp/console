@@ -69,7 +69,13 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className:
  * The dedicated sign-in page. Signing in with a provider for the first time creates
  * the account automatically; the provider redirect carries the user away and back.
  */
-export function SignUpPage({ onClose }: { onClose: () => void }) {
+export function SignUpPage({
+  onClose,
+  clearedTutorial = false,
+}: {
+  onClose: () => void
+  clearedTutorial?: boolean
+}) {
   const { signInWithProvider } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<OAuthProvider | null>(null)
@@ -166,8 +172,10 @@ export function SignUpPage({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-              First time here? Continuing creates a free account. Your current encounter stays on
-              the board.
+              First time here? Continuing creates a free account.
+              {clearedTutorial
+                ? ' Your tutorial board and game log have been cleared.'
+                : ' Your current encounter stays on the board.'}
             </p>
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
               You must be at least 13 and meet your country’s minimum digital-consent age if higher.

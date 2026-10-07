@@ -7,7 +7,17 @@ import { Button } from '../components/ui/primitives.tsx'
 import type { TutorialEntryController } from './useTutorialEntry.ts'
 
 /** Present optional entry prerequisites and reversible exit choices. */
-export function TutorialEntry({ controller }: { controller: TutorialEntryController }) {
+export function TutorialEntry({
+  controller,
+  signedIn,
+  authConfigured,
+  onSignIn,
+}: {
+  controller: TutorialEntryController
+  signedIn: boolean
+  authConfigured: boolean
+  onSignIn: () => void
+}) {
   const titleId = useId()
   const descriptionId = useId()
   const [neverShow, setNeverShow] = useState(false)
@@ -22,7 +32,9 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
       ? 'Learn the console'
       : surface === 'exit'
         ? 'Exit tutorial'
-        : 'Before starting the tutorial'
+        : surface === 'complete'
+          ? 'Tutorial complete'
+          : 'Before starting the tutorial'
 
   return (
     <DialogFocus>
@@ -65,6 +77,29 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
                 </label>
               </>
             )}
+            {surface === 'complete' && (
+              <>
+                <p>
+                  Everyone and the game log are cleared. You can restart the tutorial in Settings or
+                  search.
+                </p>
+                {signedIn ? (
+                  <p>
+                    Your practice character stays in your roster. Existing characters stay
+                    untouched.
+                  </p>
+                ) : authConfigured ? (
+                  <p>
+                    Sign in with Google or Discord if you want an account, or continue without one.
+                  </p>
+                ) : (
+                  <p>
+                    Signing in isn’t available on this copy of OpenFray. You can continue without an
+                    account.
+                  </p>
+                )}
+              </>
+            )}
             {surface === 'prerequisite' && <p>{prerequisite}</p>}
             {surface === 'exit' && <p>Offer the tutorial again another time?</p>}
           </div>
@@ -92,6 +127,14 @@ export function TutorialEntry({ controller }: { controller: TutorialEntryControl
             )}
             {surface === 'prerequisite' && (
               <Button onClick={() => controller.dismiss()}>Back to the console</Button>
+            )}
+            {surface === 'complete' && (
+              <>
+                {!signedIn && authConfigured && <Button onClick={onSignIn}>Sign in</Button>}
+                <Button onClick={() => controller.dismiss()}>
+                  {signedIn ? 'Back to the console' : 'Continue without an account'}
+                </Button>
+              </>
             )}
             {surface === 'exit' && (
               <>

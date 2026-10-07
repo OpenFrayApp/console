@@ -8,7 +8,7 @@ import creatures2024 from '../public/compendium/srd-creatures.json'
 import creatures2014 from '../public/compendium/srd-2014-creatures.json'
 import spells2024 from '../public/compendium/srd-spells.json'
 import spells2014 from '../public/compendium/srd-2014-spells.json'
-import { saveSettings } from '../src/state/settings.ts'
+import { loadSettings, saveSettings } from '../src/state/settings.ts'
 import { decodeSession } from '../src/codecs/session.ts'
 import { renderTutorial, startPracticeFight } from './tutorial/setupHarness.tsx'
 
@@ -230,6 +230,23 @@ it.each(
         outcome === 'recovered' ? 1 : 0,
       ])
       expect(encounter.log.some((entry) => entry.message.includes('Fireball'))).toBe(true)
+    })
+    if (outcome === 'recovered') {
+      fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    }
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove everyone and clear the log' }))
+    expect(loadSettings().tutorialSuppression).toBeNull()
+    confirm.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove everyone and clear the log' }))
+    expect(await screen.findByRole('dialog', { name: 'Tutorial complete' })).toBeInTheDocument()
+    expect(loadSettings().tutorialSuppression).toBe('completed')
+    await waitFor(() => {
+      const decoded = decodeSession(sessionStorage.getItem('openfray:session')!)
+      if (decoded.status !== 'ok') throw new Error('Expected recovery')
+      expect(decoded.snapshot.encounter.combatants).toEqual([])
+      expect(decoded.snapshot.encounter.log).toEqual([])
     })
   },
 )

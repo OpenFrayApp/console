@@ -22,7 +22,9 @@ function taskTargets(task: SetupTask, ogreId?: string): HTMLElement[] {
   /** Collect the visible instances of a normal task control. */
   const find = (selector: string) =>
     [...document.querySelectorAll<HTMLElement>(selector)].filter(visible)
-  if (task === 'ready') return []
+  if (task === 'ready' || task === 'complete') return []
+  if (task === 'stop') return find('[aria-label="Stop"]')
+  if (task === 'clear') return find('[aria-label="Remove everyone and clear the log"]')
   if (task === 'recap') return find('[role="dialog"][aria-label="Combat recap"]')
   if (task === 'end-prompt') return find('[role="dialog"][aria-label="End combat?"]')
   if (task === 'death-save')
@@ -115,7 +117,7 @@ export function TutorialSpotlight({
       // A departing dialog may restore focus before the new guide's ref is attached.
       if (guide) guide.inert = false
       const allowed = [...targets, ...(guide ? [guide] : [])]
-      const pending = taskRef.current !== 'ready' && targets.length === 0
+      const pending = !['ready', 'complete'].includes(taskRef.current) && targets.length === 0
       setMissing(pending)
       if (guide)
         document.body.style.setProperty(

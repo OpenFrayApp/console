@@ -137,7 +137,12 @@ function TutorialPreferenceConsole() {
       {tutorial.surface === 'introduction' ? (
         <TutorialSetup controller={tutorial} setup={setup} />
       ) : (
-        <TutorialEntry controller={tutorial} />
+        <TutorialEntry
+          controller={tutorial}
+          signedIn={!!auth.user}
+          authConfigured={auth.configured}
+          onSignIn={() => {}}
+        />
       )}
     </>
   )

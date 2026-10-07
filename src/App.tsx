@@ -390,6 +390,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   } = useAuth()
   const userId = user?.id ?? null
   const [authOpen, setAuthOpen] = useState(false)
+  const [tutorialSignIn, setTutorialSignIn] = useState(false)
   /**
    * Whether recovery and identity-triggered cloud reconciliation have settled. A cast from
    * a shared link waits on this so hydration cannot replace it or persist half a board.
@@ -445,7 +446,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   }, [])
 
   useEffect(() => {
-    if (user) setAuthOpen(false)
+    if (user) {
+      setAuthOpen(false)
+      setTutorialSignIn(false)
+    }
   }, [user])
 
   useEffect(() => lifecycle.subscribe(setSaveStatus), [lifecycle])
@@ -1407,16 +1411,17 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return () => observer.disconnect()
   }, [])
 
+  const tutorialReady =
+    boardReady &&
+    settledIdentity === userId &&
+    !authLoading &&
+    !identityExpired &&
+    !activeCopyConflict &&
+    !resolvingCopies &&
+    !stagedCastLoading
   const tutorial = useTutorialEntry({
     invitationAvailabilityRevision: tutorialAvailabilityRevision,
-    ready:
-      boardReady &&
-      settledIdentity === userId &&
-      !authLoading &&
-      !identityExpired &&
-      !activeCopyConflict &&
-      !resolvingCopies &&
-      !stagedCastLoading,
+    ready: tutorialReady,
     invitationAvailable:
       !settingsOpen &&
       !searchOpen &&
@@ -1452,10 +1457,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (setup.task === 'attack' || setup.task === 'prone') setSelectedId(setup.ogreId)
     if (setup.task === 'death-save' && setup.quickId) setSelectedId(setup.quickId)
     if (setup.task === 'spell' && setup.mageId) setSelectedId(setup.mageId)
-    if (setup.task === 'damage' || setup.task === 'turn') setMobilePane(0)
+    if (['damage', 'turn', 'stop', 'clear'].includes(setup.task)) setMobilePane(0)
     else if (setup.task === 'attack' || setup.task === 'spell') setMobilePane(1)
     else if (setup.task === 'prone' || setup.task === 'death-save') setMobilePane(2)
   }, [setup.active, setup.task, setup.ogreId, setup.mageId, setup.quickId])
+  useEffect(() => {
+    if (tutorialReady && tutorial.surface === 'introduction' && setup.task === 'complete')
+      tutorial.complete()
+  }, [tutorialReady, tutorial, setup.task])
   const tutorialVisible = tutorial.surface !== null && !activeCopyConflict && !resolvingCopies
   const started = encounter.round > 0
   const paused = encounter.paused === true
@@ -2135,7 +2144,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
           {authOpen && (
             <DialogFocus>
-              <SignUpPage onClose={() => setAuthOpen(false)} />
+              <SignUpPage
+                clearedTutorial={tutorialSignIn}
+                onClose={() => {
+                  setAuthOpen(false)
+                  setTutorialSignIn(false)
+                }}
+              />
             </DialogFocus>
           )}
 
@@ -2289,7 +2304,16 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
           (tutorial.surface === 'introduction' ? (
             <TutorialSetup controller={tutorial} setup={setup} />
           ) : (
-            <TutorialEntry controller={tutorial} />
+            <TutorialEntry
+              controller={tutorial}
+              signedIn={!!user}
+              authConfigured={authConfigured}
+              onSignIn={() => {
+                tutorial.dismiss()
+                setTutorialSignIn(true)
+                setAuthOpen(true)
+              }}
+            />
           ))}
       </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>

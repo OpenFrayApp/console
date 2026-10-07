@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import type { TutorialSuppression } from '../state/settings.ts'
 
-type TutorialSurface = 'welcome' | 'introduction' | 'exit' | 'prerequisite' | null
+type TutorialSurface = 'welcome' | 'introduction' | 'exit' | 'prerequisite' | 'complete' | null
 export type TutorialLibrary = 'srd-5.2' | 'srd-5.1'
 
 const INVITED_KEY = 'openfray:tutorial-invited'
@@ -133,7 +133,15 @@ export function useTutorialEntry({
     setLibrary(null)
   }
 
+  /** Record verified cleanup through the existing local-first preference contract. */
+  const complete = () => {
+    onSuppress('completed')
+    setLibrary(null)
+    setSurface('complete')
+  }
+
   return {
+    complete,
     surface,
     library,
     prerequisite: prerequisiteMessage,
