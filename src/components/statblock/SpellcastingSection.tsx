@@ -120,6 +120,7 @@ export function SpellcastingSection({
                   <button
                     key={spell.ref ?? spell.name}
                     type="button"
+                    data-tutorial-spell={spell.ref}
                     onClick={() => onCast(spell)}
                     onMouseEnter={(e) => showPreview(spell, e.currentTarget)}
                     onMouseLeave={closePreview}

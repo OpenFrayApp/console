@@ -104,6 +104,8 @@ export function EncounterConsole({
   trackerColors,
   practiceDamage,
   tutorialAttackTargetId,
+  tutorialSaveTargetIds,
+  onSpellCompleted,
   onAttackCompleted,
   tutorialProne,
   onEffectsCommitted,
@@ -117,6 +119,12 @@ export function EncounterConsole({
   boardActions?: ReactNode
   encounter: Encounter
   practiceDamage?: { id: string; amount: number }
+  tutorialSaveTargetIds?: string[]
+  onSpellCompleted?: (
+    sourceId: string,
+    spellId: string,
+    result: import('../resolve/resolverShared.ts').CompletedSave,
+  ) => void
   tutorialAttackTargetId?: string
   tutorialProne?: boolean
   onEffectsCommitted?: (id: string, effects: Effect[]) => void
@@ -794,6 +802,10 @@ export function EncounterConsole({
 
       {castingSpell && selected && !selected.isPC && (
         <SpellCastModal
+          tutorialSaveTargetIds={tutorialSaveTargetIds}
+          onCompleted={(result) =>
+            onSpellCompleted?.(selected.combatantId, castingSpell.ref ?? '', result)
+          }
           caster={selected}
           spellRef={castingSpell}
           spell={resolveSpell(castingSpell.ref)}

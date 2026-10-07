@@ -18,6 +18,11 @@ export interface CompletedAttack {
   damage: number
 }
 
+/** Applied save damage, reported after all concentration checks settle. */
+export interface CompletedSave {
+  targets: { targetId: string; result: 'save' | 'fail'; damage: number }[]
+}
+
 /** The resolver's props — the dispatcher hands them whole to the branch it picks. */
 export interface ResolverProps {
   /** The acting creature. Absent for a casterless cast (the "Cast spell" panel),
@@ -47,6 +52,8 @@ export interface ResolverProps {
    * so the caller uses this to decide whether concentration begins at all.
    */
   onResolved?: (landed: boolean) => void
+  onSaveCompleted?: (save: CompletedSave) => void
+  tutorialSaveTargetIds?: string[]
   onCompleted?: (attack: CompletedAttack) => void
   /** Restrict the active tutorial task without altering the action or its rolls. */
   tutorialTargetId?: string

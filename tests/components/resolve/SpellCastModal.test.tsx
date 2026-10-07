@@ -245,3 +245,28 @@ describe('SpellCastModal — when concentration begins', () => {
     expect(concentrationFrom(dispatch)).toMatchObject({ spell: 'Wall of Force', rounds: 100 })
   })
 })
+
+it('waits for the selected spell reference during guided casting without spending a use', () => {
+  const callbacks = {
+    dispatch: vi.fn(),
+    onRoll: vi.fn(),
+    onCast: vi.fn(),
+    onRestore: vi.fn(),
+    onClose: vi.fn(),
+  }
+  const props = {
+    caster: caster(),
+    spellRef: { name: 'poison wave' },
+    usesRemaining: 2,
+    combatants: [caster()],
+    tutorialSaveTargetIds: ['ally', 'ogre'],
+    ...callbacks,
+  }
+  const view = render(<SpellCastModal {...props} />)
+  expect(screen.getByRole('button', { name: 'Cast' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Cast' }))
+  expect(callbacks.onCast).not.toHaveBeenCalled()
+  expect(screen.getByText(/spell reference is not available yet/)).toBeInTheDocument()
+  view.rerender(<SpellCastModal {...props} spell={poisonWave()} />)
+  expect(screen.getByRole('button', { name: 'Cast' })).toBeEnabled()
+})

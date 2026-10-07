@@ -30,8 +30,13 @@ const instructions: Record<SetupTask, string> = {
     'The fight ended. Choose Done in the Combat recap to return to the lesson. Everyone and the log stay on the board.',
   'end-prompt':
     'Every foe is down. Choose Keep fighting to continue, or End combat and dismiss the recap. The lesson keeps all committed results.',
+  spell:
+    'Prone applied. Choose Fireball in the Mage’s stat block, then Cast. Target only your allied quick add and Ogre: intentional friendly fire against the Mage’s allied Ogre. Roll saves, record your quick add’s externally made Save or Fail, then Apply damage. The Ogre rolls normally; successful saves take half damage. Keep any defeat.',
+  'death-save':
+    'Your allied quick add is unconscious and still takes turns for death saves. Record its actual result with Save or Fail, or use Roll death save when needed. Use Next turn to continue normally. Recovery, stabilization, and death all keep their real consequences; Exit tutorial remains available.',
+  turn: 'Fireball resolved and damage applied. Choose Next turn to advance the initiative marker. Dead creatures are skipped; unconscious player characters and quick adds still take turns for death saves.',
   ready:
-    'Prone applied. Guided spell and cleanup lessons are coming later. Exit tutorial to keep exploring with this board.',
+    'Turn advanced. Guided cleanup is coming later. Exit tutorial to keep this board. The tutorial is not complete.',
 }
 
 /** Explain the current real setup task without a separate form or an acknowledgement step. */
@@ -68,7 +73,9 @@ export function TutorialSetup({
           )}
           {setup.task === 'pc' && setup.signedIn
             ? 'Choose Add PC, then Create a character to create a new roster entry. Existing characters stay untouched.'
-            : instructions[setup.task]}
+            : setup.task === 'ready' && setup.fightEnded
+              ? 'The fight already ended. Guided cleanup is coming later. Exit tutorial to keep everyone and the log. The tutorial is not complete.'
+              : instructions[setup.task]}
         </p>
         <p className="mt-1 text-xs text-slate-500 short:hidden">
           Tutorial examples use{' '}

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { isStable } from '../combat/deathsaves.ts'
 import { useEffect, useState } from 'react'
 import type { Effect } from '../schema/effect.ts'
-import type { CompletedAttack } from '../components/resolve/resolverShared.ts'
+import type { CompletedSave, CompletedAttack } from '../components/resolve/resolverShared.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import type { TutorialLibrary } from './useTutorialEntry.ts'
 
@@ -20,6 +21,9 @@ export type SetupTask =
   | 'damage'
   | 'attack'
   | 'prone'
+  | 'death-save'
+  | 'spell'
+  | 'turn'
   | 'recap'
   | 'end-prompt'
 
@@ -41,7 +45,18 @@ export function useTutorialSetup({
   recapOpen?: boolean
   endPromptOpen?: boolean
 }) {
-  const [combatTask, setCombatTask] = useState<'damage' | 'attack' | 'prone' | 'ready'>('damage')
+  const [combatTask, setCombatTask] = useState<
+    'damage' | 'attack' | 'prone' | 'spell' | 'turn' | 'death-save' | 'ready'
+  >('damage')
+  const [turnBaseline, setTurnBaseline] = useState<{ round: number; id?: string } | null>(null)
+  const [deathSaveBaseline, setDeathSaveBaseline] = useState<string | null>(null)
+  const [spellResult, setSpellResult] = useState<CompletedSave | null>(null)
+  const mageId = encounter.combatants.find(
+    (c) => !c.isPC && c.creatureId === `${library}:mage`,
+  )?.combatantId
+  const quickId = encounter.combatants.find(
+    (c) => c.isPC && c.kind === 'quick' && c.side === 'friend',
+  )?.combatantId
   const [attackResult, setAttackResult] = useState<CompletedAttack | null>(null)
   const [combatStarted, setCombatStarted] = useState(false)
   const ogreId = encounter.combatants.find(
@@ -58,17 +73,56 @@ export function useTutorialSetup({
       setCombatStarted(false)
       setCombatTask('damage')
       setAttackResult(null)
+      setSpellResult(null)
+      setTurnBaseline(null)
+      setDeathSaveBaseline(null)
       setCreatedPcId(null)
       setRosterCreating(false)
     }
   }, [active, encounter.round])
+  const quick = encounter.combatants.find((c) => c.combatantId === quickId)
+  const player = encounter.combatants.find((c) => c.combatantId === pcId)
+  const dyingAlly =
+    quick?.isPC &&
+    quick.status === 'unconscious' &&
+    !isStable(quick) &&
+    player?.isPC &&
+    (player.status === 'dead' || isStable(player))
+  const deathSaveTally = quick?.isPC
+    ? `${quick.deathSaves?.successes ?? 0}:${quick.deathSaves?.failures ?? 0}`
+    : null
+  useEffect(() => {
+    if (!active || combatTask !== 'death-save') return
+    if (!dyingAlly || encounter.round === 0) setCombatTask('ready')
+    else if (deathSaveTally !== deathSaveBaseline) {
+      setTurnBaseline({
+        round: encounter.round,
+        id: encounter.combatants[encounter.activeIndex]?.combatantId,
+      })
+      setCombatTask('turn')
+    }
+  }, [active, combatTask, dyingAlly, encounter, deathSaveTally, deathSaveBaseline])
+  useEffect(() => {
+    if (!active || combatTask !== 'turn' || !turnBaseline) return
+    if (
+      encounter.round === 0 ||
+      encounter.round !== turnBaseline.round ||
+      encounter.combatants[encounter.activeIndex]?.combatantId !== turnBaseline.id
+    ) {
+      setDeathSaveBaseline(deathSaveTally)
+      setCombatTask(dyingAlly && encounter.round > 0 ? 'death-save' : 'ready')
+    }
+  }, [active, combatTask, turnBaseline, encounter, dyingAlly, deathSaveTally])
   const task: SetupTask =
     encounter.round > 0 || combatStarted
       ? recapOpen
         ? 'recap'
         : endPromptOpen
           ? 'end-prompt'
-          : combatTask
+          : combatTask === 'death-save' &&
+              encounter.combatants[encounter.activeIndex]?.combatantId !== quickId
+            ? 'turn'
+            : combatTask
       : encounter.combatants.length === 0
         ? signedIn && rosterCreating
           ? createdPcId
@@ -93,6 +147,10 @@ export function useTutorialSetup({
     createdPcId,
     ogreId,
     pcId,
+    mageId,
+    quickId,
+    spellResult,
+    fightEnded: combatStarted && encounter.round === 0,
     attackResult,
     pcDefeated: encounter.combatants.find((c) => c.combatantId === pcId)?.status !== 'active',
     recordDamage: (id: string, damage: number) => {
@@ -121,7 +179,25 @@ export function useTutorialSetup({
         id === ogreId &&
         effects.some((e) => e.icon === 'condition' && e.name === 'Prone')
       )
-        setCombatTask('ready')
+        setCombatTask('spell')
+    },
+    recordSpell: (sourceId: string, spellId: string, result: CompletedSave) => {
+      if (
+        !active ||
+        combatTask !== 'spell' ||
+        sourceId !== mageId ||
+        spellId !== `${library}:fireball` ||
+        result.targets.length !== 2 ||
+        !result.targets.some((t) => t.targetId === quickId) ||
+        !result.targets.some((t) => t.targetId === ogreId)
+      )
+        return
+      setSpellResult(result)
+      setTurnBaseline({
+        round: encounter.round,
+        id: encounter.combatants[encounter.activeIndex]?.combatantId,
+      })
+      setCombatTask(encounter.round > 0 ? 'turn' : 'ready')
     },
     recordCreatedPc: setCreatedPcId,
     startRosterCreation: () => setRosterCreating(true),

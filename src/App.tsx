@@ -1450,10 +1450,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   useEffect(() => {
     if (!setup.active || !setup.ogreId) return
     if (setup.task === 'attack' || setup.task === 'prone') setSelectedId(setup.ogreId)
-    if (setup.task === 'damage') setMobilePane(0)
-    else if (setup.task === 'attack') setMobilePane(1)
-    else if (setup.task === 'prone') setMobilePane(2)
-  }, [setup.active, setup.task, setup.ogreId])
+    if (setup.task === 'death-save' && setup.quickId) setSelectedId(setup.quickId)
+    if (setup.task === 'spell' && setup.mageId) setSelectedId(setup.mageId)
+    if (setup.task === 'damage' || setup.task === 'turn') setMobilePane(0)
+    else if (setup.task === 'attack' || setup.task === 'spell') setMobilePane(1)
+    else if (setup.task === 'prone' || setup.task === 'death-save') setMobilePane(2)
+  }, [setup.active, setup.task, setup.ogreId, setup.mageId, setup.quickId])
   const tutorialVisible = tutorial.surface !== null && !activeCopyConflict && !resolvingCopies
   const started = encounter.round > 0
   const paused = encounter.paused === true
@@ -2074,6 +2076,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 tutorialAttackTargetId={
                   setup.active && setup.combatTask === 'attack' ? setup.pcId : undefined
                 }
+                tutorialSaveTargetIds={
+                  setup.active && setup.combatTask === 'spell' && setup.quickId && setup.ogreId
+                    ? [setup.quickId, setup.ogreId]
+                    : undefined
+                }
+                onSpellCompleted={setup.recordSpell}
                 onAttackCompleted={setup.recordAttack}
                 tutorialProne={setup.active && setup.combatTask === 'prone'}
                 onEffectsCommitted={setup.recordEffects}
