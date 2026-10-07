@@ -86,6 +86,12 @@ export function useTutorialEntry({
       surface
     )
       return
+    // Add popovers own their focused fields outside App's dialog state.
+    if (
+      document.querySelector('[role="dialog"], [role="menu"]') ||
+      document.activeElement?.matches('input, textarea, select, [contenteditable="true"]')
+    )
+      return
     setInvited(true)
     rememberInvitation()
     setSurface('welcome')

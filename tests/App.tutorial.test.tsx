@@ -234,6 +234,30 @@ it('gives identity and recovery priority if readiness changes while the guide is
   expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
 })
 
+it('does not cover a real add form opened while identity is still resolving', async () => {
+  const app = render(
+    <AuthContext.Provider value={authState({ loading: true })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+  const name = screen.getByLabelText('Quick add name')
+  act(() => name.focus())
+  fireEvent.change(name, { target: { value: 'Already adding' } })
+  app.rerender(
+    <AuthContext.Provider value={authState()}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await act(() => Promise.resolve())
+  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+  expect(screen.getByLabelText('Quick add name')).toHaveValue('Already adding')
+  fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '30' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+  expect(screen.getByRole('button', { name: 'Remove Already adding' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
+})
+
 it('invites after identity resolves and opens an introductory guide without changing the board', async () => {
   const app = render(
     <AuthContext.Provider value={authState({ loading: true })}>
