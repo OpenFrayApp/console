@@ -1419,6 +1419,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     onSuppress: suppressTutorial,
   })
 
+  const tutorialVisible = tutorial.surface !== null && !activeCopyConflict && !resolvingCopies
   const started = encounter.round > 0
   const paused = encounter.paused === true
   // What the compact footer would actually draw: the fight's clock, the difficulty
@@ -1686,7 +1687,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
         <div
-          inert={tutorial.surface !== null}
+          inert={tutorialVisible}
           className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
         >
           {/* The header wraps at every width and its buttons never break their labels:
@@ -2178,7 +2179,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
           <MobileNav active={mobileTab} onSelect={showMobileTab} />
         </div>
-        <TutorialEntry controller={tutorial} />
+        {tutorialVisible && <TutorialEntry controller={tutorial} />}
       </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>
   )

@@ -105,27 +105,36 @@ it('does not use historic board readiness while another identity reconciles', as
   await screen.findByRole('dialog', { name: 'Learn the console' })
 })
 
-it('leaves divergent empty-board copies and their reconciliation decision uncovered', async () => {
+it('gives a reconciliation decision priority over a pending manual entry explanation', async () => {
   const recovery = recoverySnapshot('device')
   const device = { ownerId: owner.id, snapshot: recovery, savedAt: '2026-09-02T10:00:00Z' }
   vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockResolvedValue(device)
   vi.spyOn(IndexedDbRecovery.prototype, 'load').mockResolvedValue(device)
   vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockResolvedValue(null)
   vi.spyOn(IndexedDbRecovery.prototype, 'save').mockResolvedValue({ status: 'saved' })
-  vi.spyOn(cloudEncounter, 'loadCloudEncounter').mockResolvedValue({
-    status: 'loaded',
-    id: 'cloud',
-    encounter: recoverySnapshot('cloud').encounter,
-    playerCode: null,
-    revision: null,
-    updatedAt: '2026-09-02T10:01:00Z',
-  })
+  const pendingCloud = deferred<cloudEncounter.LoadedEncounter>()
+  vi.spyOn(cloudEncounter, 'loadCloudEncounter').mockReturnValue(pendingCloud.promise)
   render(
     <AuthContext.Provider value={authState({ user: owner })}>
       <App />
     </AuthContext.Provider>,
   )
+  await act(() => Promise.resolve())
+  fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Start tutorial' }))
+  expect(screen.getByText(/Wait for identity and working-board recovery/)).toBeInTheDocument()
+  await act(async () =>
+    pendingCloud.resolve({
+      status: 'loaded',
+      id: 'cloud',
+      encounter: recoverySnapshot('cloud').encounter,
+      playerCode: null,
+      revision: null,
+      updatedAt: '2026-09-02T10:01:00Z',
+    }),
+  )
   await screen.findByRole('dialog', { name: 'Choose a board copy' })
+  expect(screen.queryByRole('dialog', { name: 'Before starting the tutorial' })).toBeNull()
   expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Close' }))
   await act(() => Promise.resolve())
