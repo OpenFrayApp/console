@@ -241,6 +241,11 @@ export function TutorialSpotlight({
       event.stopImmediatePropagation()
       controls[next].focus()
     }
+    /** Reveal the task again when a changed shell moves it within its scrolling panel. */
+    const resize = () => {
+      revealed = null
+      refresh()
+    }
     /** Return escaped programmatic focus to the current task. */
     const containFocus = () => refresh()
     const observer = new MutationObserver(() => {
@@ -254,7 +259,7 @@ export function TutorialSpotlight({
       attributeFilter: ['class', 'hidden', 'open'],
     })
     refresh()
-    window.addEventListener('resize', refresh)
+    window.addEventListener('resize', resize)
     document.addEventListener('scroll', refresh, true)
     document.addEventListener('focusin', containFocus)
     for (const event of ['pointerdown', 'click', 'dblclick'])
@@ -267,7 +272,7 @@ export function TutorialSpotlight({
       cancelAnimationFrame(frame)
       restore()
       document.body.style.removeProperty('--tutorial-h')
-      window.removeEventListener('resize', refresh)
+      window.removeEventListener('resize', resize)
       document.removeEventListener('scroll', refresh, true)
       document.removeEventListener('focusin', containFocus)
       for (const event of ['pointerdown', 'click', 'dblclick'])

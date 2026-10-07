@@ -40,8 +40,14 @@ async function launchFromSettings() {
   await userEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
 }
 
-/** Check a real interactive target is on screen and outside the instruction dock. */
+/** Check pane alignment before revealing a long form control above the instruction dock. */
 async function expectUsable(target: HTMLElement) {
+  await expect
+    .poll(() => {
+      const box = target.getBoundingClientRect()
+      return box.width > 0 && box.left >= 0 && box.right <= innerWidth
+    })
+    .toBe(true)
   target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   const box = target.getBoundingClientRect()
   const exit = screen.getByRole('button', { name: 'Exit tutorial' }).getBoundingClientRect()
