@@ -156,6 +156,7 @@ describe('recovery operator boundary', () => {
     expect(restore).toContain('RECOVERY_SOURCE_DB_URL')
     expect(restore).toContain('apply_recovery_deletions()')
     expect(restore).toContain('supabase/tests/database-boundary.sql')
+    expect(restore).toContain('supabase/snippets/quarantine-account-mail-recovery.sql')
   })
 
   it('sends only allowlisted content-free monitoring events', () => {

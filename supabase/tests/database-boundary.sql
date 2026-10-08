@@ -166,6 +166,26 @@ begin
   ) then raise exception 'CB-1: security-definer functions must not retain PUBLIC execution';
   end if;
 
+  if not exists (
+    select 1 from pg_trigger t where t.tgrelid='auth.users'::regclass
+      and t.tgname='queue_account_welcome' and t.tgenabled='O' and t.tgtype=5 and t.tgnargs=1
+      and t.tgfoid='account_mail.on_account_created()'::regprocedure
+  ) then raise exception 'CB-1: trusted welcome INSERT trigger is absent or changed'; end if;
+  if (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname='account_mail' and c.relkind='r' and c.relrowsecurity) <> 2
+    or exists (
+      select 1 from pg_namespace n cross join lateral aclexplode(n.nspacl) acl
+      where n.nspname='account_mail' and acl.grantee<>n.nspowner
+    ) or exists (
+      select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      cross join lateral aclexplode(c.relacl) acl
+      where n.nspname='account_mail' and acl.grantee<>c.relowner
+    ) or exists (
+      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+      where n.nspname='account_mail' and acl.grantee<>p.proowner
+    ) then raise exception 'CB-1: account mail must remain private and owner-only'; end if;
+
   if exists (
     with expected(signature, grantee) as (
       values
@@ -178,6 +198,9 @@ begin
         ('audit_recent(integer)', 'authenticated'),
         ('capabilities_of(uuid)', 'authenticated'),
         ('claim_encounter_writer(uuid,uuid)', 'authenticated'),
+        ('claim_account_mail()', 'service_role'),
+        ('prepare_account_mail(uuid,uuid,text)', 'service_role'),
+        ('finish_account_mail(uuid,uuid,text,uuid)', 'service_role'),
         ('delete_account()', 'authenticated'),
         ('deny_capability(uuid,text,text)', 'authenticated'),
         ('grant_role(uuid,text,text)', 'authenticated'),
@@ -288,6 +311,14 @@ begin
   delete from share_reports where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   execute 'set local role anon';
+  begin
+    perform public.claim_account_mail();
+    raise exception 'CB-1: anonymous caller claimed account mail' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform count(*) from account_mail.ledger;
+    raise exception 'CB-1: anonymous caller read account recipients' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
   perform share('missing-cb1-share');
   begin
     perform count(*) from campaigns;
@@ -590,6 +621,15 @@ begin
     false
   );
   execute 'set local role authenticated';
+  begin
+    perform public.claim_account_mail();
+    raise exception 'CB-1: account holder claimed account mail' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into account_mail.ledger(owner_id,event,template)
+      values ('33333333-3333-3333-3333-333333333333','welcome','openfray-welcome-v1');
+    raise exception 'CB-1: account holder enqueued arbitrary account mail' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
   if may('reports.read') then raise exception 'CB-1: a viewer gained report authority';
   end if;
   begin
@@ -697,7 +737,9 @@ begin
     end if;
   end loop;
 
-  if exists (select 1 from auth.users where id = '55555555-5555-5555-5555-555555555555')
+  if exists (select 1 from account_mail.ledger where owner_id='55555555-5555-5555-5555-555555555555')
+    or exists (select 1 from account_mail.queue q left join account_mail.ledger l on l.id=q.id where l.id is null)
+    or exists (select 1 from auth.users where id = '55555555-5555-5555-5555-555555555555')
     or exists (select 1 from audit_log where actor_id = '55555555-5555-5555-5555-555555555555')
     or exists (select 1 from takedown_notices where to_address = 'delete@example.test')
     or exists (select 1 from share_reports where reporter_id = '55555555-5555-5555-5555-555555555555')

@@ -255,11 +255,12 @@ describe('encrypted database backup', () => {
       .trim()
       .split('\n')
       .filter((call) => call !== '--version')
-    expect(dumpCalls).toHaveLength(2)
+    expect(dumpCalls).toHaveLength(3)
     expect(dumpCalls.every((call) => call.includes('--snapshot=00000003-0000001B-1'))).toBe(true)
     expect(dumpCalls[0]).toMatch(/--data-only .*--table=auth\.users .*--table=auth\.identities/)
     expect(dumpCalls[1]).toContain('--schema=public')
     expect(dumpCalls[1]).not.toContain('--no-privileges')
+    expect(dumpCalls[2]).toMatch(/--data-only .*--schema=account_mail/)
   })
 
   it('uploads immutable ciphertext, then applies retention only as a later stage', () => {

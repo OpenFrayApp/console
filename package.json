@@ -21,6 +21,7 @@
     "db:verify": "node scripts/verify-supabase-authority.mjs",
     "db:boundary": "node scripts/verify-database-boundary.mjs",
     "db:recovery-concurrency": "scripts/verify-share-code-concurrency.sh",
+    "db:mail-concurrency": "node scripts/verify-account-mail-concurrency.mjs",
     "validate:requirements": "node scripts/validate-requirements.mjs",
     "validate:fixtures": "node scripts/validate-hardening-fixtures.mjs",
     "benchmark:compendium": "npm run build && node scripts/benchmark-compendium-search.mjs",

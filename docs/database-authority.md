@@ -19,7 +19,7 @@ supabase start
 npm run db:verify
 ```
 
-The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized public schema. It writes `.artifacts/supabase/deployment-attestation.json`.
+The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized `public` and `account_mail` schemas. It writes `.artifacts/supabase/deployment-attestation.json`.
 
 Run the hostile database boundary suite against another fresh reset:
 
@@ -46,7 +46,7 @@ The forward migration adopts the existing hosted trigger without changing existi
 
 ## Function execution grants
 
-The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. Application functions grant no execution to `service_role`; the automatic RLS function remains owner-only.
+The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. The three [account-email worker RPCs](./account-email.md) grant execution only to `service_role`. Other application functions grant it no execution. The automatic RLS function remains owner-only.
 
 Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. Every future function migration must revoke `PUBLIC` and explicit API-role grants before granting its intended callers.
 
