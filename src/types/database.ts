@@ -620,21 +620,37 @@ export type Database = {
           saved_fights: number
         }[]
       }
-      accounts: {
-        Args: { limit_to?: number }
-        Returns: {
-          created_at: string
-          denials: string[]
-          display_name: string
-          email: string
-          full_name: string
-          id: string
-          last_sign_in_at: string
-          providers: string[]
-          roles: string[]
-          signed_in_with: string
-        }[]
-      }
+      accounts:
+        | {
+            Args: { limit_to?: number }
+            Returns: {
+              created_at: string
+              denials: string[]
+              display_name: string
+              email: string
+              full_name: string
+              id: string
+              last_sign_in_at: string
+              providers: string[]
+              roles: string[]
+              signed_in_with: string
+            }[]
+          }
+        | {
+            Args: { limit_to: number; who: string }
+            Returns: {
+              created_at: string
+              denials: string[]
+              display_name: string
+              email: string
+              full_name: string
+              id: string
+              last_sign_in_at: string
+              providers: string[]
+              roles: string[]
+              signed_in_with: string
+            }[]
+          }
       answer_reports: {
         Args: { decision: string; want: string }
         Returns: number
@@ -732,6 +748,30 @@ export type Database = {
           p_template_revision: string
         }
         Returns: number
+      }
+      published_share: {
+        Args: { want: string }
+        Returns: {
+          code: string
+          created_at: string
+          kind: string
+          name: string
+          owned: boolean
+          publisher_id: string
+          publisher_name: string
+        }[]
+      }
+      published_shares: {
+        Args: { before_at?: string; before_code?: string; search_for?: string }
+        Returns: {
+          code: string
+          created_at: string
+          kind: string
+          name: string
+          owned: boolean
+          publisher_id: string
+          publisher_name: string
+        }[]
       }
       reconcile_recovery_dependencies: {
         Args: { attach: boolean }

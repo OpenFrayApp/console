@@ -82,6 +82,72 @@ beforeAll(async () => {
   }
 }, 60_000)
 
+describe('existing admin read APIs', () => {
+  it('keeps account reads admin-gated and published metadata capability-gated without exposing publisher identity to moderators', async () => {
+    const owner = '66666666-1111-4111-8111-111111111111'
+    const admin = '66666666-2222-4222-8222-222222222222'
+    const moderator = '66666666-3333-4333-8333-333333333333'
+    await asOwner()
+    try {
+      await db.exec(`insert into auth.users(id,email) values
+        ('${owner}','owner@example.test'),('${admin}','admin@example.test'),('${moderator}','moderator@example.test');
+        insert into user_roles(owner_id,role) values ('${admin}','admin'),('${moderator}','moderator');
+        insert into shares(owner_id,code,kind,data) values ('${owner}','adminalign','encounter','{"name":"Read API fixture"}')`)
+      await as(owner)
+      expect(await value<number>("select count(*)::int from published_shares('adminalign')")).toBe(
+        0,
+      )
+      expect(await value<number>("select count(*)::int from published_share('adminalign')")).toBe(0)
+      expect(await value<number>(`select count(*)::int from accounts(1,'${admin}')`)).toBe(0)
+      await as(moderator)
+      expect(
+        (
+          await db.query(
+            "select name,publisher_id,publisher_name from published_share('adminalign')",
+          )
+        ).rows,
+      ).toEqual([{ name: 'Read API fixture', publisher_id: null, publisher_name: null }])
+      expect(await value<number>("select count(*)::int from published_shares('adminalign')")).toBe(
+        1,
+      )
+      expect(await value<number>(`select count(*)::int from accounts(1,'${owner}')`)).toBe(0)
+      await as(admin)
+      expect(await value<string>(`select id from accounts(1,'${owner}')`)).toBe(owner)
+      expect(await value<string>("select publisher_id from published_share('adminalign')")).toBe(
+        owner,
+      )
+      await asOwner()
+      await db.exec(
+        `insert into capability_denials(owner_id,capability) values ('${admin}','roles.grant'),('${moderator}','shares.read')`,
+      )
+      await as(admin)
+      expect(await value<number>('select count(*)::int from accounts()')).toBe(0)
+      expect(await value<number>(`select count(*)::int from accounts(1,'${owner}')`)).toBe(0)
+      expect(
+        await value<string | null>("select publisher_id from published_share('adminalign')"),
+      ).toBeNull()
+      await as(moderator)
+      expect(await value<number>("select count(*)::int from published_share('adminalign')")).toBe(0)
+      expect(await value<number>("select count(*)::int from published_shares('adminalign')")).toBe(
+        0,
+      )
+      await asOwner()
+      await db.exec('set role anon')
+      await expect(db.query("select * from published_share('adminalign')")).rejects.toThrow(
+        /permission denied/,
+      )
+      await expect(db.query(`select * from accounts(1,'${owner}')`)).rejects.toThrow(
+        /permission denied/,
+      )
+    } finally {
+      await asOwner()
+      await db.exec(
+        `delete from shares where code='adminalign'; delete from auth.users where id in ('${owner}','${admin}','${moderator}')`,
+      )
+    }
+  })
+})
+
 describe('security notice operator boundary', () => {
   it('checks live capabilities and denials before previewing or queuing affected accounts', async () => {
     const operator = '11111111-1111-4111-8111-111111111119'
@@ -296,7 +362,7 @@ describe('the tracked migration lineage', () => {
       'account_libraries():authenticated',
       'account_made(uuid,integer):authenticated',
       'account_overview(uuid):authenticated',
-      'accounts(integer):authenticated',
+      'accounts(integer,uuid):authenticated',
       'answer_reports(text,text):authenticated',
       'audit_recent(integer):authenticated',
       'capabilities_of(uuid):authenticated',
@@ -313,6 +379,8 @@ describe('the tracked migration lineage', () => {
       'may_use_reserved_byline():authenticated',
       'my_capabilities():authenticated',
       'preview_security_notice(uuid,text,uuid,uuid,uuid[]):authenticated',
+      'published_share(text):authenticated',
+      'published_shares(text,timestamp with time zone,text):authenticated',
       'reported_share(text):authenticated',
       'reports_for(text):authenticated',
       'reports_open():authenticated',

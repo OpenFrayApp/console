@@ -50,6 +50,18 @@ The tracked migrations remove inherited execution grants from named application 
 
 Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. Every future function migration must revoke `PUBLIC` and explicit API-role grants before granting its intended callers.
 
+## Existing admin read APIs
+
+`20261008143033_admin_read_api_alignment.sql` records the admin dashboard’s existing read functions.
+It preserves their signatures and capability checks without dropping hosted functions.
+`accounts(integer,uuid)` requires `roles.grant`; the account-list wrapper delegates as security invoker.
+`published_share` and `published_shares` require `shares.read` and return published metadata only.
+Publisher identity additionally requires `roles.grant`. Capability denials still apply.
+
+Only authenticated callers may execute these functions. Anonymous, service-role, and report-ingress
+execution is revoked explicitly. The hostile fixture checks their exact grants, the invoker wrapper,
+and denial of reads by ordinary accounts. The migration grants no direct table access.
+
 ## Report ingress
 
 Migration `20260910000000_report_ingress_boundary.sql` removes client execution from `report_share()` and creates the `report_ingress` role. The role can execute only `accept_share_report()`. It cannot read or write report rows directly, use application sequences, or execute another application function.

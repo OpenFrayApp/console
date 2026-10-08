@@ -186,6 +186,16 @@ begin
       where n.nspname='account_mail' and acl.grantee<>p.proowner
     ) then raise exception 'CB-1: account mail must remain private and owner-only'; end if;
 
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.oid='public.accounts(integer)'::regprocedure
+      and not p.prosecdef and p.proconfig=array['search_path=public']::text[]
+      and has_function_privilege('authenticated',p.oid,'EXECUTE')
+      and not has_function_privilege('anon',p.oid,'EXECUTE')
+      and not has_function_privilege('service_role',p.oid,'EXECUTE')
+      and not has_function_privilege('report_ingress',p.oid,'EXECUTE')
+  ) then raise exception 'CB-1: account-list invoker wrapper differs from its restricted contract'; end if;
+
   if exists (
     with expected(signature, grantee) as (
       values
@@ -193,7 +203,7 @@ begin
         ('account_libraries()', 'authenticated'),
         ('account_made(uuid,integer)', 'authenticated'),
         ('account_overview(uuid)', 'authenticated'),
-        ('accounts(integer)', 'authenticated'),
+        ('accounts(integer,uuid)', 'authenticated'),
         ('answer_reports(text,text)', 'authenticated'),
         ('audit_recent(integer)', 'authenticated'),
         ('capabilities_of(uuid)', 'authenticated'),
@@ -214,6 +224,8 @@ begin
         ('may_publish_more()', 'authenticated'),
         ('may_use_reserved_byline()', 'authenticated'),
         ('my_capabilities()', 'authenticated'),
+        ('published_share(text)', 'authenticated'),
+        ('published_shares(text,timestamp with time zone,text)', 'authenticated'),
         ('reported_share(text)', 'authenticated'),
         ('reports_for(text)', 'authenticated'),
         ('reports_open()', 'authenticated'),
@@ -658,6 +670,9 @@ begin
     or reports_open() <> 0
     or exists (select 1 from audit_recent())
     or exists (select 1 from accounts())
+    or exists (select 1 from accounts(1,'11111111-1111-1111-1111-111111111111'))
+    or exists (select 1 from published_share('cb1owner'))
+    or exists (select 1 from published_shares())
     or exists (select 1 from capabilities_of('11111111-1111-1111-1111-111111111111'))
     or exists (select 1 from reports_queue())
     or exists (select 1 from reports_for('cb1owner'))
