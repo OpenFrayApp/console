@@ -6,7 +6,7 @@ import { cleanup, screen, within } from '@testing-library/react'
 import { commands, page, userEvent } from 'vitest/browser'
 import { renderTutorial, startPracticeFight } from './setupHarness.tsx'
 import { saveSettings } from '../../src/state/settings.ts'
-import { tutorialControlIsReachable } from './browserHarness.ts'
+import { tutorialControlIsReachable, tutorialHintIsBelow } from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -92,6 +92,8 @@ it.each([
     await userEvent.click(next)
     const javelin = await screen.findByRole('button', { name: 'Javelin.' })
     await expectUsable(javelin)
+    if (width >= 1180)
+      await expect.poll(() => tutorialHintIsBelow(javelin.closest('p')!)).toBe(true)
     await userEvent.click(screen.getByRole('button', { name: 'Greatclub.' }), { force: true })
     expect(screen.queryByRole('dialog', { name: 'Ogre · Greatclub' })).toBeNull()
     await userEvent.click(javelin)

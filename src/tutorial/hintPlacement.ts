@@ -13,6 +13,7 @@ export function placeTutorialHint(
   viewport: HintBoundary,
   hint: { width: number; height: number },
   target: HintBoundary | null,
+  placement: 'beside' | 'below' = 'beside',
 ): { left: number; top: number; docked: boolean } {
   /** Keep horizontal placement within the safe viewport. */
   const clampX = (left: number) =>
@@ -27,12 +28,16 @@ export function placeTutorialHint(
     target.bottom > viewport.top &&
     target.top < viewport.bottom
   ) {
-    const candidates = [
-      { left: target.right + 12, top: clampY(target.top) },
-      { left: target.left - hint.width - 12, top: clampY(target.top) },
-      { left: clampX(target.left), top: target.bottom + 12 },
-      { left: clampX(target.left), top: target.top - hint.height - 12 },
-    ]
+    const below = { left: clampX(target.left), top: target.bottom + 12 }
+    const candidates =
+      placement === 'below'
+        ? [below]
+        : [
+            { left: target.right + 12, top: clampY(target.top) },
+            { left: target.left - hint.width - 12, top: clampY(target.top) },
+            below,
+            { left: clampX(target.left), top: target.top - hint.height - 12 },
+          ]
     const fit = candidates.find(
       (candidate) =>
         candidate.left >= viewport.left &&

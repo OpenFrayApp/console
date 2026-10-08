@@ -6,7 +6,11 @@ import { cleanup, screen, within } from '@testing-library/react'
 import { commands, page, userEvent } from 'vitest/browser'
 import { renderTutorial, startPracticeFight } from './setupHarness.tsx'
 import { saveSettings } from '../../src/state/settings.ts'
-import { enableNativeConfirmation, tutorialControlIsReachable } from './browserHarness.ts'
+import {
+  enableNativeConfirmation,
+  tutorialControlIsReachable,
+  tutorialHintIsBelow,
+} from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -89,6 +93,8 @@ it.each([
     await userEvent.click(screen.getByRole('button', { name: 'Next turn' }))
     const fireball = await screen.findByRole('button', { name: /^Fireball/ })
     await expectUsable(fireball)
+    if (width >= 1180)
+      await expect.poll(() => tutorialHintIsBelow(fireball.parentElement!)).toBe(true)
     if (width === 1440) {
       await page.viewport(375, 812)
       await touch.emulateTouch(true)

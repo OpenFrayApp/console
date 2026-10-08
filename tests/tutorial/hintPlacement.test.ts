@@ -52,6 +52,28 @@ it.each([
   ).toEqual(expected)
 })
 
+it('places a below-only hint under its action line even when the right side has room', () => {
+  expect(
+    placeTutorialHint(
+      { left: 8, top: 8, right: 1432, bottom: 892 },
+      { width: 384, height: 180 },
+      { left: 400, top: 100, right: 700, bottom: 180 },
+      'below',
+    ),
+  ).toEqual({ left: 400, top: 192, docked: false })
+})
+
+it('uses the reserved dock when a below-only hint cannot fit below its action', () => {
+  expect(
+    placeTutorialHint(
+      { left: 8, top: 8, right: 1432, bottom: 892 },
+      { width: 384, height: 180 },
+      { left: 400, top: 700, right: 700, bottom: 800 },
+      'below',
+    ),
+  ).toEqual({ left: 528, top: 712, docked: true })
+})
+
 it('respects a visual viewport shifted by a keyboard and safe-area insets', () => {
   expect(
     placeTutorialHint(

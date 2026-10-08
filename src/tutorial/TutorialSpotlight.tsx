@@ -268,6 +268,18 @@ export function TutorialSpotlight({
           safeViewport,
           guide.getBoundingClientRect(),
           targetBounds,
+          [
+            'pc',
+            'roster-create',
+            'roster-add',
+            'quick',
+            'mage',
+            'ogre',
+            'attack',
+            'spell',
+          ].includes(taskRef.current) && !first?.closest('[role="dialog"]')
+            ? 'below'
+            : 'beside',
         )
         guide.style.left = `${placement.left}px`
         guide.style.top = `${placement.top}px`

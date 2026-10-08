@@ -28,6 +28,18 @@ export function tutorialControlIsReachable(target: HTMLElement, guided = true): 
   )
 }
 
+/** Read whether a hint is directly beneath its action or contextual line. */
+export function tutorialHintIsBelow(target: HTMLElement): boolean {
+  const action = target.getBoundingClientRect()
+  const hint = screen.getByRole('dialog', { name: 'Tutorial introduction' }).getBoundingClientRect()
+  return (
+    hint.top >= action.bottom &&
+    hint.top - action.bottom < 24 &&
+    hint.left < action.right &&
+    hint.right > action.left
+  )
+}
+
 /** Replace only Vitest's always-false confirm shim with Chromium's genuine native confirmation. */
 export function enableNativeConfirmation() {
   const realm = document.createElement('iframe')

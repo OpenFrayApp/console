@@ -7,7 +7,7 @@ import { commands, page, userEvent } from 'vitest/browser'
 import type { User } from '@supabase/supabase-js'
 import { saveSettings } from '../../src/state/settings.ts'
 import { renderTutorial } from './setupHarness.tsx'
-import { tutorialControlIsReachable } from './browserHarness.ts'
+import { tutorialControlIsReachable, tutorialHintIsBelow } from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -53,7 +53,7 @@ async function expectUsable(target: HTMLElement) {
   await expect.poll(() => tutorialControlIsReachable(target)).toBe(true)
 }
 
-it('places the wide hint beside Add PC and follows the opened form', async () => {
+it('places the wide hint below Add PC and follows the opened form', async () => {
   await page.viewport(1440, 900)
   renderTutorial()
   await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
@@ -63,9 +63,9 @@ it('places the wide hint beside Add PC and follows the opened form', async () =>
       const hint = guide.getBoundingClientRect()
       const control = screen.getByRole('button', { name: 'Add PC' }).getBoundingClientRect()
       return (
-        hint.left >= control.right &&
-        hint.left - control.right < 24 &&
-        Math.abs(hint.top - control.top) < 24
+        hint.top >= control.bottom &&
+        hint.top - control.bottom < 24 &&
+        Math.abs(hint.left - control.left) < 24
       )
     })
     .toBe(true)
@@ -77,7 +77,7 @@ it('places the wide hint beside Add PC and follows the opened form', async () =>
         .closest('form')!
         .getBoundingClientRect()
       const hint = guide.getBoundingClientRect()
-      return hint.left >= form.right && hint.left - form.right < 24
+      return hint.top >= form.bottom && hint.top - form.bottom < 24
     })
     .toBe(true)
   const form = screen.getByRole('textbox', { name: 'PC name' }).closest('form')!
@@ -86,9 +86,30 @@ it('places the wide hint beside Add PC and follows the opened form', async () =>
     .poll(() => {
       const hint = guide.getBoundingClientRect()
       const context = form.getBoundingClientRect()
-      return hint.left >= context.right && hint.left - context.right < 24
+      return hint.top >= context.bottom && hint.top - context.bottom < 24
     })
     .toBe(true)
+  await userEvent.fill(screen.getByRole('textbox', { name: 'PC name' }), 'Rowan')
+  await userEvent.fill(screen.getByRole('textbox', { name: 'AC' }), '12')
+  await userEvent.fill(screen.getByRole('textbox', { name: 'Max HP' }), '30')
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+  await expect
+    .poll(() => tutorialHintIsBelow(screen.getByRole('button', { name: 'Quick add' })))
+    .toBe(true)
+  await openAdd('Quick add')
+  await userEvent.fill(screen.getByRole('textbox', { name: 'Quick add name' }), 'Robin')
+  await userEvent.fill(screen.getByRole('textbox', { name: 'AC' }), '12')
+  await userEvent.fill(screen.getByRole('textbox', { name: 'Max HP' }), '30')
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Side' }), 'friend')
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+  for (const creature of ['Mage', 'Ogre']) {
+    await expect
+      .poll(() => tutorialHintIsBelow(screen.getByRole('button', { name: 'Add creature' })))
+      .toBe(true)
+    await openAdd('Add creature')
+    await userEvent.fill(screen.getByRole('searchbox', { name: 'Search creatures' }), creature)
+    await userEvent.click(await screen.findByRole('button', { name: new RegExp(`^${creature} `) }))
+  }
 })
 
 it('lets keyboard users scroll constrained instructions while Exit stays visible', async () => {
