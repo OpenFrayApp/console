@@ -14,10 +14,24 @@ Sign-ins and linked providers update existing records and create no welcome even
 Missing or unusable addresses skip the welcome without rejecting account creation.
 
 `account_mail.ledger` has a unique `(event, owner_id)` identity. It pins
-`openfray-welcome-v1` and retains terminal state for the account’s lifetime.
+`openfray-welcome-v3` and retains terminal state for the account’s lifetime.
 `account_mail.queue` holds due work and temporary recipient snapshots.
 Both tables have RLS, no client policies, and no API-role schema or table grants.
 Do not add `account_mail` to PostgREST’s exposed schemas or Realtime publications.
+
+## Version cutover
+
+`20261008135619_account_mail_v3_cutover.sql` changes new welcome and legal jobs to v3.
+It keeps the original account-installation cutoff, legal dates, and confirmed security identities.
+Legacy terminal records remain valid. Existing queued work moves to `reconcile` with
+`template_cutover`, retaining its event identity and attempt count. Queue addresses and
+request hashes are removed. Interrupted attempts retain their uncertainty.
+
+Pause sending, scheduling, and legal registration, then wait for active invocations to finish.
+Apply the migration and deploy the admin’s v3 worker and deletion handler with reviewed mappings.
+The v3 worker refuses obsolete generic jobs; it never substitutes a newer template for them.
+Legal bodies declare no variables. Publication eligibility and worker date validation remain unchanged.
+Review quarantined work through a protected operator connection before any resume.
 
 ## Worker boundary
 
@@ -67,8 +81,8 @@ Known dates never send again, even after rollback or same-date wording edits.
 A repeated Git revision must carry the same legal dates and creates no second event.
 
 New dates create one publication and one account delivery per eligible recipient.
-A simultaneous Terms/Privacy change selects `openfray-legal-v1`; individual changes select
-`openfray-terms-v1` or `openfray-privacy-v1`. Each ledger entry pins its dates and template.
+A simultaneous Terms/Privacy change selects `openfray-legal-v3`; individual changes select
+`openfray-terms-v3` or `openfray-privacy-v3`. Each ledger entry pins its dates and template.
 Accounts must exist with a usable server-held address and creation time at or before publication.
 Later accounts receive no historical notices. The worker rechecks existence when claiming,
 and erasure prevents preparing a previously claimed job. Addresses are resolved at delivery.
@@ -137,7 +151,7 @@ successful erasure. Existing cleanup, cascading mail erasure, and recovery tombs
 remain in the same transaction. A failed deletion rolls back and attempts no mail.
 
 Only after a successful RPC does the handler attempt the reviewed hosted
-`openfray-deletion-v1` template. It uses the welcome path’s domain checks,
+`openfray-deletion-v3` template. It uses the welcome path’s domain checks,
 tracking restrictions, explicit mode, confirmed staging inbox, and pinned revision.
 The entire provider phase has a 15-second deadline and at most one send request.
 Missing addresses or mail configuration skip that attempt without blocking erasure.
