@@ -28,6 +28,9 @@ npm run db:boundary
 ```
 
 The suite exercises owner, other-tenant, anonymous, viewer, stale-writer, restricted-function, and service-role actors. It verifies Row-Level Security, grants, privileged functions, Realtime database-change exposure, and account deletion. The command writes `.artifacts/supabase/database-boundary-attestation.json`.
+On partitioned Realtime tables, synthetic messages use an existing managed partition.
+The fixture creates no partition and removes its rows in the same statement.
+An absent or unsupported managed partition blocks verification.
 
 Regenerate types only after a reviewed migration changes the public schema:
 

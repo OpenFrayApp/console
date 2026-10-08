@@ -1247,6 +1247,38 @@ describe('report-worker privileges', () => {
 })
 
 describe('hosted function grants', () => {
+  it('exercises Realtime permissions using an existing managed partition without creating a new one', async () => {
+    const hosted = new PGlite()
+    try {
+      await hosted.exec(
+        SUPABASE_STUB.replace(
+          'private boolean not null default true\n  );',
+          `private boolean not null default true,
+          inserted_at timestamp not null default now()
+        ) partition by range (inserted_at);
+        create table realtime.messages_fixture_old partition of realtime.messages
+          for values from ('2020-01-01') to ('2020-01-02');`,
+        ),
+      )
+      for (const migration of migrationFiles) {
+        await hosted.exec(readFileSync(`${migrationsDirectory}/${migration}`, 'utf8'))
+      }
+      await hosted.exec(readFileSync(here('../../supabase/tests/database-boundary.sql'), 'utf8'))
+      expect(
+        (await hosted.query('select count(*)::integer count from realtime.messages')).rows,
+      ).toEqual([{ count: 0 }])
+      expect(
+        (
+          await hosted.query(
+            "select c.relname from pg_inherits i join pg_class c on c.oid=i.inhrelid where i.inhparent='realtime.messages'::regclass",
+          )
+        ).rows,
+      ).toEqual([{ relname: 'messages_fixture_old' }])
+    } finally {
+      await hosted.close()
+    }
+  })
+
   it('enforces the hostile boundary after migrations inherit explicit API-role execution', async () => {
     const hosted = await new PGlite()
     try {

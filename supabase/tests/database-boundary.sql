@@ -9,7 +9,27 @@ declare
   insert_statement text;
   live_encounter uuid;
   other_live_encounter uuid;
+  realtime_insert text := 'insert into realtime.messages (topic,extension,event,private) values ($1,$2,$3,$4)';
+  realtime_fixture_time timestamptz := now();
 begin
+  -- Idle hosted branches can retain older managed partitions without a partition for today.
+  if exists (select 1 from pg_class where oid='realtime.messages'::regclass and relkind='p') then
+    if pg_get_partkeydef('realtime.messages'::regclass)<>'RANGE (inserted_at)' then
+      raise exception 'CB-3: unsupported managed Realtime partition key';
+    end if;
+    select max(start_at) into realtime_fixture_time from (
+      select substring(pg_get_expr(c.relpartbound,c.oid) from $bounds$FROM \('([^']+)'\)$bounds$)::timestamptz start_at
+      from pg_inherits i join pg_class c on c.oid=i.inhrelid
+      where i.inhparent='realtime.messages'::regclass
+    ) bounds where start_at<=now();
+    if realtime_fixture_time is null then
+      raise exception 'CB-3: Realtime fixture requires an existing managed messages partition';
+    end if;
+  end if;
+  if exists (select 1 from pg_attribute where attrelid='realtime.messages'::regclass
+    and attname='inserted_at' and not attisdropped) then
+    realtime_insert := 'insert into realtime.messages (topic,extension,event,private,inserted_at) values ($1,$2,$3,$4,$5)';
+  end if;
   if exists (
     select 1
     from pg_class c
@@ -414,10 +434,8 @@ begin
     raise exception 'CB-3: the encounter owner could not publish';
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
-  insert into realtime.messages (topic, extension, event, private)
-    values
-      ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true),
-      ('player:' || repeat('a', 64) || ':lobby', 'presence', 'cb3-fixture', true);
+  execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'broadcast', 'cb3-fixture', true, realtime_fixture_time;
+  execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'presence', 'cb3-fixture', true, realtime_fixture_time;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);
@@ -491,8 +509,7 @@ begin
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
   foreach owner_table in array array['broadcast', 'presence'] loop
     begin
-      insert into realtime.messages (topic, extension, event, private)
-        values ('player:' || repeat('a', 64) || ':lobby', owner_table, 'cb3-fixture', true);
+      execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', owner_table, 'cb3-fixture', true, realtime_fixture_time;
       raise exception 'CB-3: a non-owner published through Realtime' using errcode = 'OF007';
     exception
       when insufficient_privilege then null;
@@ -515,15 +532,13 @@ begin
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('c', 64) || ':lobby', false);
   begin
-    insert into realtime.messages (topic, extension, event, private)
-      values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-cross-fixture', true);
+    execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'broadcast', 'cb3-cross-fixture', true, realtime_fixture_time;
     raise exception 'CB-3: an owner published to a channel other than the requested topic'
       using errcode = 'OF009';
   exception
     when insufficient_privilege then null;
   end;
-  insert into realtime.messages (topic, extension, event, private)
-    values ('player:' || repeat('c', 64) || ':lobby', 'broadcast', 'cb3-other-fixture', true);
+  execute realtime_insert using 'player:' || repeat('c',64) || ':lobby', 'broadcast', 'cb3-other-fixture', true, realtime_fixture_time;
   execute 'reset role';
 
   execute 'set local role anon';
@@ -556,23 +571,20 @@ begin
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
   begin
-    insert into realtime.messages (topic, extension, event, private)
-      values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true);
+    execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'broadcast', 'cb3-fixture', true, realtime_fixture_time;
     raise exception 'CB-3: an anonymous viewer broadcast through Realtime' using errcode = 'OF008';
   exception
     when insufficient_privilege then null;
   end;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':join', false);
   begin
-    insert into realtime.messages (topic, extension, event, private)
-      values ('player:' || repeat('c', 64) || ':join', 'presence', 'cb3-cross-fixture', true);
+    execute realtime_insert using 'player:' || repeat('c',64) || ':join', 'presence', 'cb3-cross-fixture', true, realtime_fixture_time;
     raise exception 'CB-3: a viewer announced presence on another channel'
       using errcode = 'OF010';
   exception
     when insufficient_privilege then null;
   end;
-  insert into realtime.messages (topic, extension, event, private)
-    values ('player:' || repeat('a', 64) || ':join', 'presence', 'cb3-fixture', true);
+  execute realtime_insert using 'player:' || repeat('a',64) || ':join', 'presence', 'cb3-fixture', true, realtime_fixture_time;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);
