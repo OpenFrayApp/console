@@ -11,27 +11,29 @@
 
 .tutorial-confetti span {
   position: absolute;
-  top: -12px;
-  width: 6px;
-  height: 10px;
+  bottom: -12px;
   opacity: 0;
-  animation: tutorial-confetti-fall ease-out both;
+  animation: tutorial-confetti-burst linear both;
 }
 
-@keyframes tutorial-confetti-fall {
+@keyframes tutorial-confetti-burst {
   0% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-  10% {
     opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.15, 0.65, 0.35, 1);
   }
-  70% {
+  45% {
+    opacity: 1;
+    transform: translate3d(calc(var(--travel) * 0.55), calc(var(--rise) * -1), 0)
+      rotate(calc(var(--spin) * 0.5));
+    animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.35);
+  }
+  80% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate3d(var(--drift), 80dvh, 0) rotate(var(--spin));
+    transform: translate3d(var(--travel), 20dvh, 0) rotate(var(--spin));
   }
 }
 

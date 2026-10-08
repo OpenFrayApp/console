@@ -43,7 +43,24 @@ it.each([
     const burst = screen.getByTestId('tutorial-confetti')
     expect(getComputedStyle(burst).pointerEvents).toBe('none')
     const particles = [...burst.children] as HTMLElement[]
-    expect(particles).toHaveLength(32)
+    expect(particles).toHaveLength(144)
+    for (const index of [0, 72]) {
+      const particle = particles[index]
+      const animation = particle.getAnimations()[0]
+      animation.pause()
+      animation.currentTime = 0
+      const launch = particle.getBoundingClientRect()
+      expect(launch.top).toBeGreaterThanOrEqual(innerHeight - 12)
+      if (index === 0) expect(launch.left).toBeLessThanOrEqual(0)
+      else expect(launch.right).toBeGreaterThanOrEqual(innerWidth)
+      const duration = Number(animation.effect!.getComputedTiming().duration)
+      animation.currentTime = duration * 0.45
+      const peak = particle.getBoundingClientRect()
+      expect(peak.top).toBeLessThan(innerHeight * 0.6)
+      if (index === 0) expect(peak.left).toBeGreaterThan(launch.left + 20)
+      else expect(peak.right).toBeLessThan(launch.right - 20)
+      animation.play()
+    }
     expect(
       particles.every((particle) => getComputedStyle(particle).animationIterationCount === '1'),
     ).toBe(true)
