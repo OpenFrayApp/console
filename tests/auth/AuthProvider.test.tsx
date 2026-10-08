@@ -896,17 +896,20 @@ describe('AuthProvider with Supabase configured', () => {
     expect(stub.auth.signOut).not.toHaveBeenCalled()
   })
 
-  it('starts the OAuth redirect back to the app’s own path', async () => {
-    const stub = makeAuthClient(null)
-    supa.client = stub.client
-    renderProvider()
-    await screen.findByText('anonymous')
-    await expect(latest.signInWithProvider('discord')).resolves.toEqual({ error: null })
-    expect(stub.auth.signInWithOAuth).toHaveBeenCalledWith({
-      provider: 'discord',
-      options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
-    })
-  })
+  it.each(['google', 'discord', 'custom:patreon'] as const)(
+    'starts the %s OAuth redirect back to the app’s own path',
+    async (provider) => {
+      const stub = makeAuthClient(null)
+      supa.client = stub.client
+      renderProvider()
+      await screen.findByText('anonymous')
+      await expect(latest.signInWithProvider(provider)).resolves.toEqual({ error: null })
+      expect(stub.auth.signInWithOAuth).toHaveBeenCalledWith({
+        provider,
+        options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
+      })
+    },
+  )
 
   it('surfaces the provider handoff error message', async () => {
     const stub = makeAuthClient(null)

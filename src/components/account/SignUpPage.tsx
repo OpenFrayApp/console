@@ -47,6 +47,17 @@ function GoogleIcon() {
 const SIGN_IN_EVENT: Record<OAuthProvider, EventName> = {
   discord: EVENTS.signInDiscord,
   google: EVENTS.signInGoogle,
+  'custom:patreon': EVENTS.signInPatreon,
+}
+
+/** Patreon glyph for the sign-in button. */
+function PatreonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+      <path d="M0 0h4.5v24H0z" />
+      <circle cx="15" cy="9" r="9" />
+    </svg>
+  )
 }
 
 const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className: string }[] = [
@@ -55,6 +66,13 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode; className:
     label: 'Continue with Discord',
     icon: <DiscordIcon />,
     className: 'bg-[#5865F2] text-white hover:bg-[#4752c4]',
+  },
+  {
+    id: 'custom:patreon',
+    label: 'Continue with Patreon',
+    icon: <PatreonIcon />,
+    className:
+      'bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200',
   },
   {
     id: 'google',
@@ -131,7 +149,7 @@ export function SignUpPage({
               id="sign-in-terms"
               className="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
             >
-              By continuing with Google or Discord, you agree to the{' '}
+              By continuing with Google, Discord, or Patreon, you agree to the{' '}
               <a
                 href="/terms/"
                 target="_blank"

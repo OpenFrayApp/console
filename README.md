@@ -30,6 +30,9 @@ That is enough to run the console. Accounts and cloud saving need a Supabase
 project: copy [.env.example](./.env.example) to `.env` and fill in the two values.
 Without them the app runs anonymous-only and the header shows no sign-in button.
 
+For Patreon sign-in, deploy the UserInfo adapter and configure the custom provider
+as described in [Patreon sign-in](./docs/patreon-auth.md).
+
 `npm test` runs the Vitest unit/component suite, browser tests, and writer-identity verification. `npm run build` type-checks and builds the app
 into `dist/console` with `/console/` as its base path; the parent repo's assembly
 step copies that into the deployed site.
