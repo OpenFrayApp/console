@@ -109,6 +109,10 @@ it.each(['srd-5.2', 'srd-5.1'])(
     expect(await screen.findByRole('dialog', { name: 'Tutorial complete' })).toBeInTheDocument()
     expect(screen.getByTestId('tutorial-confetti')).toBeInTheDocument()
     expect(loadSettings().tutorialSuppression).toBe('completed')
+    expect(
+      screen.getByText(/To replay, choose Start tutorial in Settings or search/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Sign in is optional/)).toBeInTheDocument()
     await waitFor(() => {
       const decoded = decodeSession(sessionStorage.getItem('openfray:session')!)
       if (decoded.status !== 'ok') throw new Error('Expected recovery')

@@ -66,7 +66,8 @@ export function TutorialEntry({
               <>
                 <p>
                   The tutorial takes about five minutes. Use the console’s real controls to set up a
-                  practice fight. Your additions stay on the board if you exit.
+                  practice fight, record damage, and take turns. Exiting keeps your board and game
+                  log.
                 </p>
                 <label className="tap-y flex cursor-pointer items-center gap-2">
                   <input
@@ -82,8 +83,8 @@ export function TutorialEntry({
             {surface === 'complete' && (
               <>
                 <p>
-                  Everyone and the game log are cleared. You can restart the tutorial in Settings or
-                  search.
+                  Everyone and the game log are cleared. To replay, choose Start tutorial in
+                  Settings or search.
                 </p>
                 {signedIn ? (
                   <p>
@@ -92,7 +93,8 @@ export function TutorialEntry({
                   </p>
                 ) : authConfigured ? (
                   <p>
-                    Sign in with Google or Discord if you want an account, or continue without one.
+                    Sign in is optional. Choose Sign in to use Google or Discord, or Continue
+                    without an account.
                   </p>
                 ) : (
                   <p>
@@ -103,7 +105,16 @@ export function TutorialEntry({
               </>
             )}
             {surface === 'prerequisite' && <p>{prerequisite}</p>}
-            {surface === 'exit' && <p>Offer the tutorial again another time?</p>}
+            {surface === 'exit' && (
+              <>
+                <p>Offer the tutorial again another time?</p>
+                <p>
+                  Exiting keeps your board and game log. To replay, stop any running fight and clear
+                  the board through the normal controls, then choose Start tutorial in Settings or
+                  search.
+                </p>
+              </>
+            )}
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {surface === 'welcome' && (

@@ -51,7 +51,7 @@ afterEach(() => {
 it('guides the real anonymous Add PC and rejects incorrect practice values before committing', async () => {
   renderTutorial()
   fireEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
-  expect(screen.getByText(/Choose a name.*30 hit points.*armor class 12/)).toBeInTheDocument()
+  expect(screen.getByText(/Choose a name.*Max HP to 30.*AC to 12/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
   fireEvent.change(screen.getByLabelText('PC name'), { target: { value: 'Rowan' } })
   fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '29' } })

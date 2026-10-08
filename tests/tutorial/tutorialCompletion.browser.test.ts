@@ -57,9 +57,18 @@ const controls = {
   enter: () => userEvent.keyboard('{Enter}'),
 }
 
-/** Assert hit testing and visibility without scrolling, focusing, or moving the target. */
+/** Assert control reachability and readable hint geometry without moving either. */
 async function expectReachable(target: HTMLElement, guided = true) {
   await expect.poll(() => tutorialControlIsReachable(target, guided)).toBe(true)
+  const instructions = screen.queryByRole('region', { name: 'Tutorial instructions' })
+  if (instructions) {
+    expect(instructions.clientWidth).toBeGreaterThan(0)
+    expect(instructions.clientHeight).toBeGreaterThan(0)
+    expect(instructions.scrollWidth).toBeLessThanOrEqual(instructions.clientWidth + 1)
+    expect(Number.parseFloat(getComputedStyle(instructions).fontSize)).toBeGreaterThanOrEqual(14)
+    if (instructions.scrollHeight > instructions.clientHeight)
+      expect(getComputedStyle(instructions).overflowY).toBe('auto')
+  }
 }
 
 afterEach(async () => {

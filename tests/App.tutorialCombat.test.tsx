@@ -45,13 +45,17 @@ afterEach(() => {
 it('records only the prescribed outside roll through real Ogre hit points before the attack lesson', async () => {
   renderTutorial()
   await startPracticeFight(controls)
-  expect(screen.getByText(/Record.*3 damage.*Ogre/)).toBeInTheDocument()
+  expect(
+    screen.getByText(/player character hits the Ogre for 3 damage.*record the damage/),
+  ).toBeInTheDocument()
   for (const value of ['no dice', '-30', '3', '-2']) {
     fireEvent.click(screen.getByRole('button', { name: '68' }))
     const field = screen.getByRole('textbox', { name: 'Hit points for Ogre' })
     fireEvent.change(field, { target: { value } })
     fireEvent.keyDown(field, { key: 'Enter' })
-    expect(screen.getByText(/Record.*3 damage.*Ogre/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/player character hits the Ogre for 3 damage.*record the damage/),
+    ).toBeInTheDocument()
   }
   fireEvent.click(screen.getByRole('button', { name: '68' }))
   fireEvent.change(screen.getByRole('textbox', { name: 'Hit points for Ogre' }), {

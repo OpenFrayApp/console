@@ -93,7 +93,7 @@ it.each([
     renderTutorial()
     await reachFireball(hp)
     const dialog = screen.getByRole('dialog', { name: 'Mage · Fireball' })
-    expect(screen.getByText(/catching its own Ogre in the blast/)).toBeInTheDocument()
+    expect(screen.getByText(/Fireball catches your ally and its own Ogre/)).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Rowan' }))
     expect(screen.getByRole('button', { name: 'Roll saves' })).toBeDisabled()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Robin' }))

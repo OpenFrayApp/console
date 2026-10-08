@@ -405,6 +405,9 @@ it('invites after identity resolves and opens an introductory guide without chan
   )
   await screen.findByRole('dialog', { name: 'Learn the console' })
   expect(screen.getByText(/about five minutes/)).toBeInTheDocument()
+  expect(
+    screen.getByText(/set up a practice fight, record damage, and take turns/),
+  ).toBeInTheDocument()
   fireEvent.click(screen.getByRole('checkbox', { name: 'Never show this again' }))
   fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
   expect(loadSettings().tutorialSuppression).toBe('dismissed')
@@ -412,6 +415,10 @@ it('invites after identity resolves and opens an introductory guide without chan
   expect(screen.getByText(/Basic Rules 2024/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
   expect(screen.getByText('Offer the tutorial again another time?')).toBeInTheDocument()
+  expect(screen.getByText(/Exiting keeps your board and game log/)).toBeInTheDocument()
+  expect(
+    screen.getByText(/clear the board.*Start tutorial.*Settings or search/),
+  ).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Return to tutorial' }))
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
