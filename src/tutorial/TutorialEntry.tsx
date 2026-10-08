@@ -5,6 +5,7 @@ import { useId, useState } from 'react'
 import { DialogFocus } from '../components/ui/DialogFocus.tsx'
 import { Button } from '../components/ui/primitives.tsx'
 import type { TutorialEntryController } from './useTutorialEntry.ts'
+import { TutorialCelebration } from './TutorialCelebration.tsx'
 
 /** Present optional entry prerequisites and reversible exit choices. */
 export function TutorialEntry({
@@ -38,6 +39,7 @@ export function TutorialEntry({
 
   return (
     <DialogFocus>
+      {surface === 'complete' && <TutorialCelebration />}
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 text-slate-900 dark:text-slate-100">
         <section
           role="dialog"

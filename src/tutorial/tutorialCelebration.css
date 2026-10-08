@@ -1,0 +1,46 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Copyright (C) 2026 Nicola Mustone */
+
+.tutorial-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 51;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tutorial-confetti span {
+  position: absolute;
+  top: -12px;
+  width: 6px;
+  height: 10px;
+  opacity: 0;
+  animation: tutorial-confetti-fall ease-out both;
+}
+
+@keyframes tutorial-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift), 80dvh, 0) rotate(var(--spin));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-confetti {
+    display: none;
+  }
+
+  .tutorial-confetti span {
+    animation: none;
+  }
+}

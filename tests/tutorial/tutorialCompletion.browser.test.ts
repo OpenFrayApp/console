@@ -184,6 +184,9 @@ it.each([
     await expectReachable(trash)
     await browser.confirmBoardClear(true)
     const complete = await screen.findByRole('dialog', { name: 'Tutorial complete' })
+    const confetti = screen.getByTestId('tutorial-confetti')
+    expect(getComputedStyle(confetti).pointerEvents).toBe('none')
+    expect(confetti).toHaveAttribute('aria-hidden', 'true')
     expect(loadSettings().tutorialSuppression).toBe('completed')
     await expect
       .poll(() => {
@@ -206,8 +209,12 @@ it.each([
         existing,
         expect.objectContaining({ name: 'Rowan', maxHp: 30, ac: 12 }),
       ])
-    } else expect(within(complete).getByRole('button', { name: 'Sign in' })).toBeTruthy()
+    } else {
+      const signIn = within(complete).getByRole('button', { name: 'Sign in' })
+      await expectReachable(signIn, false)
+    }
     await userEvent.click(continueButton)
+    expect(screen.queryByTestId('tutorial-confetti')).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
   },
 )

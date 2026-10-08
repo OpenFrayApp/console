@@ -80,6 +80,7 @@ it.each(['srd-5.2', 'srd-5.1'])(
   async (library) => {
     saveSettings({ enabledLibraries: [library] })
     renderTutorial()
+    expect(screen.queryByTestId('tutorial-confetti')).toBeNull()
     await startPracticeFight(controls)
     await resolvePracticeFight(controls, library)
     expect(screen.getByText(/Choose Stop/)).toBeInTheDocument()
@@ -89,6 +90,7 @@ it.each(['srd-5.2', 'srd-5.1'])(
     fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
     expect(screen.getByRole('dialog', { name: 'Combat recap' })).toBeInTheDocument()
     expect(screen.queryByText('Tutorial complete')).toBeNull()
+    expect(screen.queryByTestId('tutorial-confetti')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.getByText(/browser.*confirmation.*Cancel/)).toBeInTheDocument()
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
@@ -97,6 +99,7 @@ it.each(['srd-5.2', 'srd-5.1'])(
       'Remove everyone from the board and clear the game log? This can’t be undone.',
     )
     expect(screen.queryByText('Tutorial complete')).toBeNull()
+    expect(screen.queryByTestId('tutorial-confetti')).toBeNull()
     expect(loadSettings().tutorialSuppression).toBeNull()
     expect(screen.getByRole('button', { name: 'Remove Rowan' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
@@ -104,6 +107,7 @@ it.each(['srd-5.2', 'srd-5.1'])(
     confirm.mockReturnValue(true)
     fireEvent.click(screen.getByRole('button', { name: 'Remove everyone and clear the log' }))
     expect(await screen.findByRole('dialog', { name: 'Tutorial complete' })).toBeInTheDocument()
+    expect(screen.getByTestId('tutorial-confetti')).toBeInTheDocument()
     expect(loadSettings().tutorialSuppression).toBe('completed')
     await waitFor(() => {
       const decoded = decodeSession(sessionStorage.getItem('openfray:session')!)
@@ -119,6 +123,7 @@ it.each(['srd-5.2', 'srd-5.1'])(
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Continue without an account' }))
     expect(screen.queryByRole('dialog', { name: 'Tutorial complete' })).toBeNull()
+    expect(screen.queryByTestId('tutorial-confetti')).toBeNull()
     cleanup()
     sessionStorage.clear()
     renderTutorial()
@@ -225,6 +230,7 @@ it.each([true, false])(
       await startPracticeFight(controls, false, true)
       await resolvePracticeFight(controls)
       const complete = await clearPracticeFight()
+      expect(screen.getByTestId('tutorial-confetti')).toBeInTheDocument()
       if (configured)
         expect(within(complete).getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
       else {
@@ -259,6 +265,7 @@ it.each([false, true])(
     expect(loadSettings().tutorialSuppression).toBe(permanent ? 'dismissed' : null)
     expect(screen.queryByRole('dialog', { name: 'Tutorial complete' })).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Sign in' })).toBeNull()
+    expect(screen.queryByTestId('tutorial-confetti')).toBeNull()
   },
 )
 
