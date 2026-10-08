@@ -720,6 +720,13 @@ begin
   );
   execute 'set local role authenticated';
   perform delete_account();
+  begin
+    perform delete_account();
+    raise exception 'CB-1: repeated account deletion reported success' using errcode = 'OF004';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'Account no longer exists' then raise; end if;
+  end;
   execute 'reset role';
 
   foreach owner_table in array array(

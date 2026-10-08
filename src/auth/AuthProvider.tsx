@@ -240,15 +240,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
-    // Self-delete can't use the admin API from the browser, so this calls a
-    // security-definer SQL function (delete_account) that erases the caller's data
-    // and auth row. On success we sign out — the session is already invalid.
     explicitSignOut.current = true
     try {
       invalidatePreferenceWrites()
-      const { error } = await supabase.rpc('delete_account')
-      if (error) return { error: error.message }
-      await supabase.auth.signOut()
+      const failure = {
+        error: 'Account deletion could not be confirmed. Check your account before trying again.',
+      }
+      const result = await supabase.functions
+        .invoke('account-delete', { body: {} })
+        .catch(() => null)
+      if (!result || result.error || result.data?.deleted !== true) return failure
+      identity.current.session = null
+      setUser(null)
+      setIdentityExpired(false)
+      // The account is already gone; a failed session cleanup cannot undo erasure.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
       return { error: null }
     } finally {
       explicitSignOut.current = false

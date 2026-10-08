@@ -89,6 +89,39 @@ the ledger. Existing `delete_account()` therefore erases both without another cl
 call. A deleted account cannot prepare a previously claimed job.
 Deletion cannot recall a provider request already in flight.
 
+## Deletion confirmation
+
+Issue #112 uses the admin-owned `account-delete` Edge Function. The console sends
+an empty object with its current session. The handler verifies that token with Auth,
+holds the trusted address in memory, and calls `delete_account()` with the caller’s
+JWT and anon key. It accepts no recipient, account ID, or template from the caller.
+No service-role key or admin deletion API selects the target.
+
+`20261008090545_account_deletion_single_winner.sql` locks the caller’s Auth row.
+An absent account fails, so concurrent requests and replays cannot both report
+successful erasure. Existing cleanup, cascading mail erasure, and recovery tombstones
+remain in the same transaction. A failed deletion rolls back and attempts no mail.
+
+Only after a successful RPC does the handler attempt the reviewed hosted
+`openfray-deletion-v1` template. It uses the welcome path’s domain checks,
+tracking restrictions, explicit mode, confirmed staging inbox, and pinned revision.
+The entire provider phase has a 15-second deadline and at most one send request.
+Missing addresses or mail configuration skip that attempt without blocking erasure.
+Mail rejection, timeout, or process interruption cannot undo the committed deletion.
+
+This confirmation bypasses the queue and ledger entirely. Its address, provider result,
+and retry state are never persisted or logged by the handler. There is no later retry.
+A process interruption or lost console response can leave deletion complete without
+confirmation. Check the account before retrying; an absent account cannot send again.
+The console treats `deleted: true` as success independently of mail delivery and
+clears its identity before local sign-out. The typed-email guard is unchanged.
+
+Application erasure does not recall existing provider delivery records, mailbox copies,
+or voluntarily submitted feedback. Replies reach `info@openfray.app` and do not
+create an account. Recovery keeps the existing identifier-only deletion tombstone,
+which contains no confirmation address or delivery retry record.
+The admin deployment guide documents the authorized staging-account and inbox checks.
+
 Run the focused tests, fresh schema/type verification, and hostile boundary suite:
 
 ```bash

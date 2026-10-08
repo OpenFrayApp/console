@@ -157,8 +157,62 @@ async function verifyLegalRegistration() {
   }
 }
 
+/** Prove overlapping authenticated erasures can produce only one successful deletion. */
+async function verifyAccountDeletion() {
+  query(
+    `insert into auth.users(id,email,created_at) values ('${fixture}','concurrency@example.test',now())`,
+  )
+  const first = spawn('psql', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+  const second = spawn('psql', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+  let output = '',
+    started = false
+  const timeout = setTimeout(() => {
+    first.kill()
+    second.kill()
+  }, 10000)
+  try {
+    const firstDone = new Promise((resolve, reject) => {
+      first.on('error', reject)
+      first.stdout.on('data', (data) => {
+        output += data
+        if (output.includes('erased') && !started) {
+          started = true
+          second.stdin.end(
+            `select set_config('request.jwt.claim.sub','${fixture}',false); set role authenticated; select public.delete_account();\n`,
+          )
+          setTimeout(() => first.stdin.end('commit;\n'), 100)
+        }
+      })
+      first.on('exit', (code) =>
+        code === 0 ? resolve() : reject(new Error('First erasure failed')),
+      )
+    })
+    const secondDone = new Promise((resolve, reject) => {
+      second.on('error', reject)
+      second.on('exit', (code) =>
+        code === 3 ? resolve() : reject(new Error('Repeated erasure reported success')),
+      )
+    })
+    first.stdin.write(
+      `begin; select set_config('request.jwt.claim.sub','${fixture}',true); set local role authenticated; select public.delete_account();\n\\echo erased\n`,
+    )
+    await Promise.all([firstDone, secondDone])
+    assert.equal(query(`select count(*) from auth.users where id='${fixture}'`), '0')
+    assert.equal(query(`select count(*) from account_mail.ledger where owner_id='${fixture}'`), '0')
+    console.log('Account deletion concurrent single success: passed')
+  } finally {
+    clearTimeout(timeout)
+    first.kill()
+    second.kill()
+    query(
+      `delete from auth.users where id='${fixture}'; delete from public.recovery_deletions where kind='account' and subject='${fixture}'`,
+    )
+  }
+}
+
 verify()
   .then(verifyLegalRegistration)
+  .then(verifyAccountDeletion)
   .catch(() => {
     console.error('Account mail concurrency verification failed')
     process.exitCode = 1

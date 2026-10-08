@@ -47,7 +47,7 @@ function session(email: string, metadata: Record<string, unknown> = {}): Session
   } as Session
 }
 
-/** Build a Supabase stub covering the auth calls and the delete-account RPC. */
+/** Build a Supabase stub covering auth, publication RPCs, and account deletion. */
 function makeAuthClient(initial: Session | null, initialError: AuthResponse['error'] = null) {
   const listeners: AuthListener[] = []
   const unsubscribe = vi.fn()
@@ -74,7 +74,13 @@ function makeAuthClient(initial: Session | null, initialError: AuthResponse['err
   /** Fire every registered auth listener with the next session, inside act. */
   const emit = (next: Session | null, event = 'TOKEN_REFRESHED') =>
     act(() => listeners.forEach((listener) => listener(event, next)))
-  return { client: { auth, rpc }, auth, rpc, unsubscribe, emit }
+  const invoke = vi.fn(
+    async (): Promise<{
+      data: { deleted: boolean } | null
+      error: { message: string } | null
+    }> => ({ data: { deleted: true }, error: null }),
+  )
+  return { client: { auth, rpc, functions: { invoke } }, auth, rpc, invoke, unsubscribe, emit }
 }
 
 let latest!: AuthState
@@ -550,7 +556,7 @@ describe('AuthProvider — tutorial account preference', () => {
     },
   )
 
-  it.each(['failed delete RPC', 'signOut without an auth event'] as const)(
+  it.each(['failed deletion handler', 'signOut without an auth event'] as const)(
     'keeps a fresh tutorial setter usable after %s while fencing the captured callback',
     async (termination) => {
       vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
@@ -566,16 +572,22 @@ describe('AuthProvider — tutorial account preference', () => {
       )
       vi.stubGlobal('fetch', fetch)
       const stub = makeAuthClient(session('gm@openfray.app'))
-      if (termination === 'failed delete RPC')
-        stub.rpc.mockResolvedValueOnce({ error: { message: 'deletion unavailable' } })
+      if (termination === 'failed deletion handler')
+        stub.invoke.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'deletion unavailable' },
+        })
       else stub.auth.signOut.mockResolvedValueOnce({ error: { message: 'sign-out unavailable' } })
       supa.client = stub.client
       renderProvider()
       await screen.findByText('gm@openfray.app')
       const capturedSetter = latest.setTutorialSuppression
       await act(async () => {
-        if (termination === 'failed delete RPC')
-          expect(await latest.deleteAccount()).toEqual({ error: 'deletion unavailable' })
+        if (termination === 'failed deletion handler')
+          expect(await latest.deleteAccount()).toEqual({
+            error:
+              'Account deletion could not be confirmed. Check your account before trying again.',
+          })
         else await latest.signOut()
       })
       expect(latest.user?.id).toBe('gm@openfray.app')
@@ -922,23 +934,59 @@ describe('AuthProvider with Supabase configured', () => {
     })
   })
 
-  it('deletes the account via the erasure RPC, then signs out', async () => {
+  it('uses the authenticated deletion handler without a recipient or target, then signs out locally', async () => {
     const stub = makeAuthClient(session('gm@openfray.app'))
     supa.client = stub.client
     renderProvider()
     await screen.findByText('gm@openfray.app')
     await expect(latest.deleteAccount()).resolves.toEqual({ error: null })
-    expect(stub.rpc).toHaveBeenCalledWith('delete_account')
+    expect(stub.invoke).toHaveBeenCalledWith('account-delete', { body: {} })
+    expect(stub.rpc).not.toHaveBeenCalled()
+    expect(stub.auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
     expect(stub.auth.signOut).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the session when the erasure RPC fails', async () => {
+  it('reports deletion success and clears identity even if local sign-out throws', async () => {
     const stub = makeAuthClient(session('gm@openfray.app'))
-    stub.rpc.mockResolvedValueOnce({ error: { message: 'denied' } })
+    stub.auth.signOut.mockRejectedValueOnce(new Error('session cleanup failed'))
     supa.client = stub.client
     renderProvider()
     await screen.findByText('gm@openfray.app')
-    await expect(latest.deleteAccount()).resolves.toEqual({ error: 'denied' })
+    await act(async () => {
+      expect(await latest.deleteAccount()).toEqual({ error: null })
+    })
+    expect(screen.getByText('anonymous')).toBeInTheDocument()
+    expect(latest.identityExpired).toBe(false)
+  })
+
+  it.each(['throws', 'unconfirmed'] as const)(
+    'preserves identity when deletion %s',
+    async (outcome) => {
+      const stub = makeAuthClient(session('gm@openfray.app'))
+      if (outcome === 'throws') stub.invoke.mockRejectedValueOnce(new Error('network unavailable'))
+      else stub.invoke.mockResolvedValueOnce({ data: { deleted: false }, error: null })
+      supa.client = stub.client
+      renderProvider()
+      await screen.findByText('gm@openfray.app')
+      await act(async () => {
+        expect(await latest.deleteAccount()).toEqual({
+          error: 'Account deletion could not be confirmed. Check your account before trying again.',
+        })
+      })
+      expect(screen.getByText('gm@openfray.app')).toBeInTheDocument()
+      expect(stub.auth.signOut).not.toHaveBeenCalled()
+    },
+  )
+
+  it('keeps the session when the deletion handler fails', async () => {
+    const stub = makeAuthClient(session('gm@openfray.app'))
+    stub.invoke.mockResolvedValueOnce({ data: null, error: { message: 'denied' } })
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+    await expect(latest.deleteAccount()).resolves.toEqual({
+      error: 'Account deletion could not be confirmed. Check your account before trying again.',
+    })
     expect(stub.auth.signOut).not.toHaveBeenCalled()
   })
 })

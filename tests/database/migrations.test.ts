@@ -619,6 +619,90 @@ describe('the tracked migration lineage', () => {
     })
   })
 
+  it('allows only one successful erasure and leaves no account mail recipient for a later attempt', async () => {
+    const owner = '12121212-1212-4212-8212-121212121212'
+    await asOwner()
+    await db.exec(`insert into auth.users (id,email) values ('${owner}', 'erase@example.test')`)
+    await as(owner)
+    await db.exec('select delete_account()')
+    await expect(db.exec('select delete_account()')).rejects.toThrow(/Account no longer exists/)
+    await asOwner()
+    expect(
+      await value<number>(
+        `select count(*)::int from account_mail.ledger where owner_id='${owner}'`,
+      ),
+    ).toBe(0)
+    expect(
+      await value<number>(
+        `select count(*)::int from account_mail.queue where recipient='erase@example.test'`,
+      ),
+    ).toBe(0)
+  })
+
+  it('erases queued welcomes and legal notices together while preserving recipient-free publication history', async () => {
+    const owner = '13131313-1313-4313-8313-131313131313'
+    const publication = '14141414-1414-4414-8414-141414141414'
+    await asOwner()
+    await db.exec(`
+      insert into auth.users (id,email) values ('${owner}', 'legal-erasure@example.test');
+      insert into account_mail.legal_publications (id,revision,published_at,terms_date,privacy_date,result)
+        values ('${publication}','${'e'.repeat(40)}',now(),'2026-01-01','2026-01-01','combined');
+      insert into account_mail.ledger(owner_id,event,template,publication_id,terms_date,privacy_date)
+        values ('${owner}','legal/${publication}','openfray-legal-v1','${publication}','2026-01-01','2026-01-01');
+      insert into account_mail.queue(id,recipient)
+        select id,'legal-erasure@example.test' from account_mail.ledger where owner_id='${owner}' and event<>'welcome';
+    `)
+    expect(
+      await value<number>(
+        `select count(*)::int from account_mail.ledger where owner_id='${owner}'`,
+      ),
+    ).toBe(2)
+    await as(owner)
+    await db.exec('select delete_account()')
+    await asOwner()
+    expect(
+      await value<number>(
+        `select count(*)::int from account_mail.ledger where owner_id='${owner}'`,
+      ),
+    ).toBe(0)
+    expect(
+      await value<number>(
+        `select count(*)::int from account_mail.queue where recipient='legal-erasure@example.test'`,
+      ),
+    ).toBe(0)
+    expect(
+      await value<number>(
+        `select count(*)::int from account_mail.legal_publications where id='${publication}'`,
+      ),
+    ).toBe(1)
+  })
+
+  it('rolls back a failed erasure and still permits deletion without a usable email', async () => {
+    const owner = '15151515-1515-4515-8515-151515151515'
+    await asOwner()
+    await db.exec(`
+      insert into auth.users(id,email) values ('${owner}',null);
+      insert into campaigns(owner_id,data) values ('${owner}','{}');
+      create function public.fail_erasure_fixture() returns trigger language plpgsql as $$
+        begin raise exception 'Fixture deletion failure'; end; $$;
+      create trigger fail_erasure_fixture before delete on campaigns for each row execute function public.fail_erasure_fixture();
+    `)
+    await as(owner)
+    await expect(db.exec('select delete_account()')).rejects.toThrow(/Fixture deletion failure/)
+    await asOwner()
+    expect(await value<number>(`select count(*)::int from auth.users where id='${owner}'`)).toBe(1)
+    expect(
+      await value<number>(`select count(*)::int from recovery_deletions where subject='${owner}'`),
+    ).toBe(0)
+    await db.exec(
+      'drop trigger fail_erasure_fixture on campaigns; drop function public.fail_erasure_fixture()',
+    )
+    await as(owner)
+    await db.exec('select delete_account()')
+    await asOwner()
+    expect(await value<number>(`select count(*)::int from auth.users where id='${owner}'`)).toBe(0)
+  })
+
   it('replays account deletion and share revocation without exposing the ledger', async () => {
     const owner = '33333333-3333-4333-8333-333333333333'
     const revokedOwner = '44444444-4444-4444-8444-444444444444'

@@ -1,0 +1,37 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- Copyright (C) 2026 Nicola Mustone
+
+/** Erase the authenticated caller exactly once, preserving owned-data and recovery cleanup. */
+create or replace function public.delete_account() returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  me uuid := auth.uid();
+  my_address text;
+begin
+  if me is null then
+    raise exception 'delete_account() needs a signed-in caller';
+  end if;
+
+  -- Serialize erasure on the account so concurrent handlers cannot both confirm success.
+  select email into my_address from auth.users where id = me for update;
+  if not found then
+    raise exception 'Account no longer exists';
+  end if;
+
+  delete from public.campaigns where owner_id = me;
+  delete from public.creatures where owner_id = me;
+  delete from public.effects where owner_id = me;
+  delete from public.encounters where owner_id = me;
+  delete from public.players where owner_id = me;
+  delete from public.shares where owner_id = me;
+  delete from public.spells where owner_id = me;
+  delete from public.byline_grants where owner_id = me;
+
+  if my_address is not null and to_regclass('public.takedown_notices') is not null then
+    delete from public.takedown_notices where to_address = my_address;
+  end if;
+  delete from auth.users where id = me;
+end;
+$$;
+revoke execute on function public.delete_account() from public, anon, service_role;
+grant execute on function public.delete_account() to authenticated;

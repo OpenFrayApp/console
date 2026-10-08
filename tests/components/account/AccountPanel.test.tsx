@@ -96,6 +96,18 @@ describe('AccountPanel', () => {
     expect(value.signOut).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps the panel open with the deletion failure and allows a confirmed retry', async () => {
+    const deleteAccount = vi.fn(async () => ({ error: 'Account deletion failed' }))
+    const { onClose } = renderPanel({ deleteAccount })
+    fireEvent.change(screen.getByLabelText('Confirm account email to delete'), {
+      target: { value: 'dm@openfray.app' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
+    await screen.findByText('Account deletion failed')
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Delete my account' })).toBeEnabled()
+  })
+
   it('gates delete behind typing the account email, then deletes', async () => {
     const { value, onClose } = renderPanel()
     const del = screen.getByRole('button', { name: 'Delete my account' })
