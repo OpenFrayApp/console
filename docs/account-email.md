@@ -2,7 +2,7 @@
 
 The console owns the account-email migration. The admin repo owns the server-only
 worker, React Email source, template publisher, and deployment procedure.
-This slice implements the welcome email in console issue #110.
+Welcome emails are defined in console issue #110; published legal-date notices in #111.
 
 ## Account creation
 
@@ -51,6 +51,36 @@ operator reconciliation resolves it. A lost in-flight attempt also preserves unc
 Jobs with only definitive failures become `failed` after rejection or retry exhaustion.
 The ledger retains only allowlisted failure categories, not provider response bodies.
 Terminal jobs drop the queue’s address and the recipient-derived request hash.
+
+## Legal publication
+
+`register_legal_publication(revision, published_at, terms, privacy, baseline)` is
+service-role-only. The admin handler verifies live metadata before invoking it.
+The parent deployment job separately verifies successful Pages production publication.
+Browser roles cannot register publications or read history, recipients, or sending state.
+
+A locked singleton serializes registration and baseline initialization. The first call
+requires explicit baseline approval and records both dates without queuing historical mail.
+Later registrations remember each document/date independently, including baseline dates.
+Known dates never send again, even after rollback or same-date wording edits.
+A repeated Git revision must carry the same legal dates and creates no second event.
+
+New dates create one publication and one account delivery per eligible recipient.
+A simultaneous Terms/Privacy change selects `openfray-legal-v1`; individual changes select
+`openfray-terms-v1` or `openfray-privacy-v1`. Each ledger entry pins its dates and template.
+Accounts must exist with a usable server-held address and creation time at or before publication.
+Later accounts receive no historical notices. The worker rechecks existence when claiming,
+and erasure prevents preparing a previously claimed job. Addresses are resolved at delivery.
+
+Legal deliveries use the existing private queue, claim fencing, request hashes, retries,
+and long-term acceptance ledger. Publication history contains no recipient identifiers
+and survives account erasure so future deployments cannot replay an old document date.
+Recovery must preserve this history alongside the queue and ledger. The quarantine
+snippet pauses registration until an operator reconciles dates published after the snapshot.
+Resume only after restoring those history entries and clearing `registration_paused`.
+A fresh baseline would discard replay protection and is not a recovery procedure. See the parent’s
+[legal publication procedure](https://github.com/OpenFrayApp/openfray/blob/main/docs/legal-publication.md)
+for the explicit baseline and activation gates.
 
 ## Erasure and verification
 

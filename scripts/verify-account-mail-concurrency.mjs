@@ -86,7 +86,80 @@ async function verify() {
   }
 }
 
-verify().catch(() => {
-  console.error('Account mail concurrency verification failed')
-  process.exitCode = 1
-})
+/** Prove concurrent registrations group both dates once under the publication-state lock. */
+async function verifyLegalRegistration() {
+  assert.equal(
+    query('select count(*) from account_mail.legal_publications'),
+    '0',
+    'Reset the local database before checking legal registration',
+  )
+  const publicationTime = query("select now()-interval '1 second'")
+  const today = query("select (now() at time zone 'UTC')::date")
+  const yesterday = query("select (now() at time zone 'UTC')::date-1")
+  query(
+    `insert into auth.users(id,email,created_at) values ('${fixture}','concurrency@example.test',now()-interval '1 year')`,
+  )
+  query(
+    `set role service_role; select public.register_legal_publication('${'a'.repeat(40)}','${publicationTime}','${yesterday}','${yesterday}',true)`,
+  )
+  const first = spawn('psql', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+  const second = spawn('psql', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+  let firstOutput = '',
+    secondOutput = '',
+    started = false
+  const timeout = setTimeout(() => {
+    first.kill()
+    second.kill()
+  }, 10000)
+  try {
+    const firstDone = new Promise((resolve, reject) => {
+      first.on('error', reject)
+      first.stdout.on('data', (data) => {
+        firstOutput += data
+        if (firstOutput.includes('locked') && !started) {
+          started = true
+          second.stdin.end(
+            `set role service_role; select public.register_legal_publication('${'c'.repeat(40)}','${publicationTime}','${today}','${today}',false);\n`,
+          )
+          // Keep the first registration uncommitted while the second session enters its RPC.
+          setTimeout(() => first.stdin.end('commit;\n'), 100)
+        }
+      })
+      first.on('exit', (code) =>
+        code === 0 ? resolve() : reject(new Error('First registration failed')),
+      )
+    })
+    const secondDone = new Promise((resolve, reject) => {
+      second.on('error', reject)
+      second.stdout.on('data', (data) => {
+        secondOutput += data
+      })
+      second.on('exit', (code) =>
+        code === 0 ? resolve() : reject(new Error('Second registration failed')),
+      )
+    })
+    first.stdin.write(
+      `begin; set local role service_role; select public.register_legal_publication('${'b'.repeat(40)}','${publicationTime}','${today}','${today}',false);\n\\echo locked\n`,
+    )
+    await Promise.all([firstDone, secondDone])
+    assert.match(firstOutput, /combined\nlocked/)
+    assert.match(secondOutput, /unchanged/)
+    assert.equal(query("select count(*) from account_mail.ledger where event<>'welcome'"), '1')
+    assert.equal(query('select count(*) from account_mail.legal_history'), '4')
+    console.log('Legal publication concurrent registration: passed')
+  } finally {
+    clearTimeout(timeout)
+    first.kill()
+    second.kill()
+    query(`delete from auth.users where id='${fixture}'; delete from public.recovery_deletions where kind='account' and subject='${fixture}';
+      delete from account_mail.legal_history; delete from account_mail.legal_publications;
+      update account_mail.legal_state set initialized=false`)
+  }
+}
+
+verify()
+  .then(verifyLegalRegistration)
+  .catch(() => {
+    console.error('Account mail concurrency verification failed')
+    process.exitCode = 1
+  })

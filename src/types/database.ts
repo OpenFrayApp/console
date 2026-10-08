@@ -670,8 +670,10 @@ export type Database = {
         Returns: {
           claim: string
           id: string
+          privacy_date: string
           recipient: string
           template: string
+          terms_date: string
         }[]
       }
       claim_encounter_writer: {
@@ -713,6 +715,16 @@ export type Database = {
       reconcile_recovery_dependencies: {
         Args: { attach: boolean }
         Returns: undefined
+      }
+      register_legal_publication: {
+        Args: {
+          p_baseline?: boolean
+          p_privacy: string
+          p_published_at: string
+          p_revision: string
+          p_terms: string
+        }
+        Returns: string
       }
       report_share: {
         Args: { note?: string; reply_to?: string; want: string; why: string }
