@@ -9,7 +9,8 @@ import type { Action } from '../../../src/schema/action.ts'
 import type { Spell } from '../../../src/schema/spell.ts'
 import { ActionResolver } from '../../../src/components/resolve/ActionResolver.tsx'
 import { exhaustionEffects } from '../../../src/combat/exhaustion.ts'
-import { monster as goblin } from '../../fixtures.ts'
+import * as dice from '../../../src/dice/roll.ts'
+import { monster as goblin, pc } from '../../fixtures.ts'
 
 /** The attacking goblin ('m', label 'Goblin'); overrides shape it into targets. */
 function monster(over: Partial<MonsterCombatant> = {}): MonsterCombatant {
@@ -364,5 +365,82 @@ describe('an attack-roll spell', () => {
     const effect = updates[updates.length - 1].update(target).effects.at(-1)
     expect(effect.name).toBe('Prone')
     expect(effect.source).toBe('cleric')
+  })
+})
+
+describe('completed attack observations', () => {
+  beforeEach(() => {
+    const actualRoll = dice.roll
+    vi.spyOn(dice, 'roll').mockImplementation((formula, ctx = {}) =>
+      actualRoll(formula, { ...ctx, rand: () => (ctx.kind === 'attack' ? 9 : 5) }),
+    )
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each(['Maintained', 'Broken'])(
+    'waits for the player’s %s concentration result and reports once after cleanup',
+    (choice) => {
+      const target = pc({ ac: 12, concentration: { spell: 'Bless', saveDc: 12, round: 1 } })
+      const dispatch = vi.fn()
+      const onCompleted = vi.fn()
+      const onClose = vi.fn()
+      const { unmount } = render(
+        <ActionResolver
+          attacker={monster()}
+          action={scimitar}
+          combatants={[monster(), target]}
+          dispatch={dispatch}
+          onRoll={vi.fn()}
+          onCompleted={onCompleted}
+          onClose={onClose}
+        />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      expect(onCompleted).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Apply to Thalia' }))
+      expect(screen.getByText('Concentration — DC 10')).toBeInTheDocument()
+      expect(onCompleted).not.toHaveBeenCalled()
+      expect(onClose).not.toHaveBeenCalled()
+      const damageUpdate = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update')
+      expect(damageUpdate.update(target).hp.current).toBe(22)
+      fireEvent.click(screen.getByRole('button', { name: choice }))
+      fireEvent.click(screen.getByRole('button', { name: choice }))
+      expect(onCompleted).toHaveBeenCalledExactlyOnceWith({
+        targetId: 'p1',
+        outcome: 'hit',
+        damage: 8,
+      })
+      expect(dispatch.mock.calls.filter(([action]) => action.type === 'log')).toHaveLength(1)
+      expect(dispatch.mock.calls.some(([action]) => action.type === 'endConcentration')).toBe(
+        choice === 'Broken',
+      )
+      unmount()
+      expect(onCompleted).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('does not complete an abandoned hit or an unresolved concentration prompt', () => {
+    const onCompleted = vi.fn()
+    const target = pc({ ac: 12, concentration: { spell: 'Bless', saveDc: 12, round: 1 } })
+    const { unmount } = render(
+      <ActionResolver
+        attacker={monster()}
+        action={scimitar}
+        combatants={[monster(), target]}
+        dispatch={vi.fn()}
+        onRoll={vi.fn()}
+        onCompleted={onCompleted}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onCompleted).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to Thalia' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    unmount()
+    expect(onCompleted).not.toHaveBeenCalled()
   })
 })

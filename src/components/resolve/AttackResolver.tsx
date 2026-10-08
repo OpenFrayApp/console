@@ -49,6 +49,8 @@ export function AttackResolver({
   spell,
   casterId,
   onResolved,
+  onCompleted,
+  tutorialTargetId,
   onClose,
 }: ResolverProps) {
   const { crit: critRule } = useCampaignRules()
@@ -79,6 +81,27 @@ export function AttackResolver({
   const [conc, setConc] = useState<{ dc: number; damage: number } | null>(null)
   const [note, setNote] = useState<string | null>(null)
 
+  const appliedDamage = useRef<number | null>(null)
+  const completed = useRef(false)
+
+  /** Close a settled operation once; abandoning a hit before Apply is not completion. */
+  const finish = () => {
+    flush()
+    if (
+      attack &&
+      !completed.current &&
+      (!attackHits(attack.result, attack.target) || appliedDamage.current !== null)
+    ) {
+      completed.current = true
+      onCompleted?.({
+        targetId: attack.target.combatantId,
+        outcome: attack.crit ? 'crit' : attackHits(attack.result, attack.target) ? 'hit' : 'miss',
+        damage: appliedDamage.current ?? 0,
+      })
+    }
+    onClose()
+  }
+
   const target = targets.find((t) => selected.has(t.combatantId)) ?? null
   // Who is behind this: the attacker when a creature rolls its own action, and the named
   // caster when a player casts and rolls their own dice — a player is never the
@@ -106,7 +129,7 @@ export function AttackResolver({
 
   /** Roll the effect-aware attack, decide hit/crit, pre-roll damage, and log one merged entry. */
   const doRoll = () => {
-    if (!target) return
+    if (!target || (tutorialTargetId && target.combatantId !== tutorialTargetId)) return
     track(EVENTS.attackRolled)
     const range = action.kind === 'ranged' ? 'ranged' : 'melee'
     const toHit = attacker ? (action.toHit ?? 0) : toNum(bonus)
@@ -129,6 +152,7 @@ export function AttackResolver({
     const crit = result.crit || autoCrit
     const components = rollDamageComponents(action, crit ? critRule : false)
     const dmg = damageAgainst(target, components)
+    appliedDamage.current = null
     setAttack({ result, applied, target, d20, damage: dmg, crit, autoCrit })
     setDamage(String(dmg.reduce((s, d) => s + d.amount, 0)))
     setConc(null)
@@ -152,6 +176,7 @@ export function AttackResolver({
   }
 
   const hit = attack ? attackHits(attack.result, attack.target) : false
+  const validDamage = /^\d+$/.test(damage.trim()) && Number.isSafeInteger(Number(damage))
 
   // A spell whose damage isn't all immediate (Acid Arrow) leaves the rest as a
   // reminder on what it hit, due at the end of that creature's next turn.
@@ -159,10 +184,11 @@ export function AttackResolver({
 
   /** Apply the edited damage to the target, then prompt a concentration check or close. */
   const apply = () => {
-    if (!attack) return
+    if (!attack || (tutorialTargetId && (!hit || !validDamage))) return
     flush()
     reportResolved()
     const amount = toNum(damage)
+    appliedDamage.current = amount
     const tgt = attack.target
     if (delayed && hit) {
       dispatch({
@@ -180,7 +206,7 @@ export function AttackResolver({
     dispatch({ type: 'update', id: tgt.combatantId, update: (c) => applyDamage(c, amount, opts) })
     if (attacker) dispatch({ type: 'recordDamage', sourceId: attacker.combatantId, amount })
     if (dc != null) setConc({ dc, damage: amount })
-    else onClose()
+    else finish()
   }
 
   /** Add the chosen condition to the attack's target, keyed to whoever acted as source. */
@@ -243,7 +269,12 @@ export function AttackResolver({
   if (conc && attack) {
     const tgt = attack.target
     return (
-      <Modal title={title} onClose={onClose}>
+      <Modal
+        title={title}
+        onClose={onClose}
+        reserveTutorialSpace={!!tutorialTargetId}
+        restrictDismiss={!!tutorialTargetId}
+      >
         <p className="mb-2 text-sm">
           <span className="font-medium">{nameOf(tgt)}</span> took {conc.damage} damage while
           concentrating.
@@ -251,10 +282,10 @@ export function AttackResolver({
         <ConcentrationPrompt
           dc={conc.dc}
           canRoll={!tgt.isPC}
-          onMaintain={onClose}
+          onMaintain={finish}
           onBreak={() => {
             dispatch({ type: 'endConcentration', id: tgt.combatantId })
-            onClose()
+            finish()
           }}
           onRoll={
             tgt.isPC
@@ -271,7 +302,7 @@ export function AttackResolver({
                     id: tgt.combatantId,
                     update: (c) => applyConcentrationResult(c, check.maintained),
                   })
-                  onClose()
+                  finish()
                 }
           }
         />
@@ -280,13 +311,21 @@ export function AttackResolver({
   }
 
   return (
-    <Modal title={title} subtitle={metaLine(action)} onClose={onClose}>
+    <Modal
+      title={title}
+      subtitle={metaLine(action)}
+      onClose={finish}
+      reserveTutorialSpace={!!tutorialTargetId}
+      restrictDismiss={!!tutorialTargetId}
+      closeCompletesOperation={!!attack && !hit}
+    >
       <fieldset className="mb-3">
         <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Target
         </legend>
         <TargetChips
           targets={targets}
+          allowedTargetId={tutorialTargetId}
           selected={selected}
           onToggle={(id) => setSelected(new Set([id]))}
         />
@@ -313,6 +352,7 @@ export function AttackResolver({
           {(['normal', 'advantage', 'disadvantage'] as const).map((mode) => (
             <button
               key={mode}
+              disabled={!!tutorialTargetId && mode !== 'normal'}
               type="button"
               onClick={() => setAdv(mode)}
               className={`px-3 py-1 capitalize ${
@@ -332,7 +372,7 @@ export function AttackResolver({
 
       <div className="flex items-center gap-3">
         {attack ? (
-          <Chip size="sm" onClick={doRoll}>
+          <Chip size="sm" onClick={doRoll} disabled={!!tutorialTargetId}>
             Reroll
           </Chip>
         ) : (
@@ -408,6 +448,7 @@ export function AttackResolver({
             <Button
               variant="danger"
               onClick={apply}
+              disabled={!!tutorialTargetId && (!hit || !validDamage)}
               className={hit ? undefined : 'opacity-40 transition-opacity hover:opacity-100'}
             >
               Apply to {nameOf(attack.target)}
@@ -440,13 +481,15 @@ export function AttackResolver({
 
       {attack && (
         <>
-          <ConditionChips
-            applied={conditionsOn(attack.target)}
-            onRemove={clearCondition}
-            onApply={applyCondition}
-            onExhaustion={applyExhaustion}
-            sourceName={caster ? nameOf(caster) : undefined}
-          />
+          <div data-tutorial-cancel={tutorialTargetId ? '' : undefined}>
+            <ConditionChips
+              applied={conditionsOn(attack.target)}
+              onRemove={clearCondition}
+              onApply={applyCondition}
+              onExhaustion={applyExhaustion}
+              sourceName={caster ? nameOf(caster) : undefined}
+            />
+          </div>
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}

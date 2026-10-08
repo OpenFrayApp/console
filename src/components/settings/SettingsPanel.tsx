@@ -109,8 +109,10 @@ export function SettingsPanel({
   onSetPlayerView,
   hotkeys,
   onSetHotkeys,
+  onStartTutorial,
 }: {
   onClose: () => void
+  onStartTutorial?: () => void
   enabledLibraries: string[]
   onSetEnabledLibraries: (ids: string[]) => void
   showHomebrew: boolean
@@ -166,6 +168,12 @@ export function SettingsPanel({
           </h1>
           <Button onClick={onClose}>Done</Button>
         </div>
+
+        {onStartTutorial && (
+          <div className="mb-4">
+            <Button onClick={onStartTutorial}>Start tutorial</Button>
+          </div>
+        )}
 
         <div role="tablist" aria-label="Settings" className="mb-4 flex flex-wrap gap-1">
           {TABS.map((t) => (

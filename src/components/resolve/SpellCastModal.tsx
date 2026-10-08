@@ -10,6 +10,7 @@ import { landsOnCast, spellAction, spellConcentration } from '../../combat/casti
 import { startConcentration } from '../../combat/concentration.ts'
 import { isSupportSpell } from '../../combat/spellEffects.ts'
 import { titleCase } from '../../compendium/format.ts'
+import type { CompletedSave } from './resolverShared.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { Modal } from '../ui/Modal.tsx'
@@ -40,6 +41,8 @@ export function SpellCastModal({
   onCast,
   onRestore,
   onClose,
+  tutorialSaveTargetIds,
+  onCompleted,
 }: {
   caster: MonsterCombatant
   spellRef: SpellRef
@@ -56,6 +59,8 @@ export function SpellCastModal({
   onCast: () => void
   /** Give back one spent use (when out of uses). */
   onRestore: () => void
+  tutorialSaveTargetIds?: string[]
+  onCompleted?: (save: CompletedSave) => void
   onClose: () => void
 }) {
   const [cast, setCast] = useState(false)
@@ -110,6 +115,8 @@ export function SpellCastModal({
         combatants={combatants}
         dispatch={dispatch}
         onRoll={onRoll}
+        tutorialSaveTargetIds={tutorialSaveTargetIds}
+        onSaveCompleted={onCompleted}
         defaultMagical
         spell={spell}
         onResolved={(landed) => {
@@ -122,11 +129,9 @@ export function SpellCastModal({
 
   return (
     <Modal
-      title={
-        <>
-          {caster.label} casts {spell?.name ?? titleCase(spellRef.name)}
-        </>
-      }
+      title={`${caster.label} casts ${spell?.name ?? titleCase(spellRef.name)}`}
+      reserveTutorialSpace={!!tutorialSaveTargetIds}
+      restrictDismiss={!!tutorialSaveTargetIds}
       subtitle={usageLabel}
       onClose={onClose}
     >
@@ -158,9 +163,19 @@ export function SpellCastModal({
         </div>
       ) : !cast ? (
         <div className="flex items-center gap-3">
-          <Button variant="primary" onClick={doCast} disabled={drained}>
+          <Button
+            data-tutorial="spell-cast"
+            variant="primary"
+            onClick={doCast}
+            disabled={drained || (!!tutorialSaveTargetIds && !action)}
+          >
             Cast
           </Button>
+          {tutorialSaveTargetIds && !action && (
+            <span role="status" className="text-sm text-slate-500 dark:text-slate-400">
+              The spell reference is not available yet. Wait for loading, or Exit tutorial.
+            </span>
+          )}
           {drained && (
             <span className="text-sm text-slate-500 dark:text-slate-400">
               No uses remaining ·{' '}

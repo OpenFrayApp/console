@@ -245,14 +245,17 @@ export function EffectModal({
   combatants = [],
   effects,
   onApply,
+  onApplied,
   onRemove,
   onSetExhaustion,
   presets = [],
   enabledLibraries,
   onSavePreset,
   openRequest,
+  reserveTutorialSpace = false,
 }: {
   name: string
+  reserveTutorialSpace?: boolean
   /** The creature being applied to — the turn picker's default, since "until the start
    *  of its next turn" is what most of the rules that name a turn actually say. */
   combatantId?: string
@@ -261,6 +264,8 @@ export function EffectModal({
   effects: Effect[]
   /** Commit every staged effect in one go — one board update, one log line per bundle. */
   onApply: (effects: Effect[]) => void
+  /** Report newly committed effects after all draft changes and modal closure are scheduled. */
+  onApplied?: (effects: Effect[]) => void
   onRemove: (id: string) => void
   /** Set the Exhaustion level, which lands through its own action rather than as parts. */
   onSetExhaustion: (level: number) => void
@@ -368,6 +373,7 @@ export function EffectModal({
     // edition gives it, which is a different job from minting the staged parts.
     if (draft.exhaustion !== currentExhaustion) onSetExhaustion(draft.exhaustion)
     setOpen(false)
+    onApplied?.(minted)
   }
 
   // Enter is the dialog's Save/Apply key; buttons and textareas keep their own.
@@ -410,17 +416,20 @@ export function EffectModal({
 
   return (
     <>
-      <Button size="sm" onClick={openModal}>
+      <Button data-tutorial="apply-effect" size="sm" onClick={openModal}>
         Apply effect
       </Button>
 
       {open && (
         <FormModal
           title={`Apply effect to ${name}`}
+          reserveTutorialSpace={reserveTutorialSpace}
           maxWidth="max-w-lg"
           onClose={() => setOpen(false)}
         >
-          <div className="max-h-[70vh] space-y-4 overflow-auto p-4">
+          <div
+            className={`${reserveTutorialSpace ? 'max-h-[calc(100dvh-var(--tutorial-h,0px)-10rem)]' : 'max-h-[70vh]'} space-y-4 overflow-auto p-4`}
+          >
             {presets.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
                 <LibraryPicker
@@ -606,6 +615,7 @@ export function EffectModal({
                   return active ? (
                     <button
                       key={c}
+                      data-tutorial-condition={c}
                       type="button"
                       aria-pressed
                       onClick={() => toggleCondition(c)}
@@ -614,7 +624,12 @@ export function EffectModal({
                       {c}
                     </button>
                   ) : (
-                    <Chip key={c} aria-pressed={false} onClick={() => toggleCondition(c)}>
+                    <Chip
+                      data-tutorial-condition={c}
+                      key={c}
+                      aria-pressed={false}
+                      onClick={() => toggleCondition(c)}
+                    >
                       {c}
                     </Chip>
                   )
@@ -781,7 +796,7 @@ export function EffectModal({
             >
               Cancel
             </button>
-            <Button variant="primary" onClick={apply}>
+            <Button data-tutorial="effect-apply" variant="primary" onClick={apply}>
               Apply
             </Button>
           </div>

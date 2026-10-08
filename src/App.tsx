@@ -20,6 +20,7 @@ import { instantiate, isFoe, nameOf, resolveSelected, trackerOrder } from './com
 import { abilityMod } from './schema/primitives.ts'
 import { resolveMaxHp } from './combat/hp.ts'
 import { beginEncounter, nextTurn } from './combat/initiative.ts'
+import { practiceInitiative } from './tutorial/practiceValues.ts'
 import { rechargeActions, rollRecharge } from './combat/recharge.ts'
 import { saveBonus } from './combat/masssave.ts'
 import { saveEndsClears, saveEndsEffects } from './combat/saveEnds.ts'
@@ -111,6 +112,7 @@ import {
   updateRosterPc,
 } from './state/cloudPlayers.ts'
 import { useAuth } from './auth/useAuth.ts'
+import { useTutorialAccountPreference } from './auth/useTutorialAccountPreference.ts'
 import { Compendium, type Tab as CompendiumTab } from './components/library/Compendium.tsx'
 import { EncounterConsole } from './components/tracker/EncounterConsole.tsx'
 import { RecapScreen, EndCombatPrompt } from './components/tracker/Recap.tsx'
@@ -159,6 +161,11 @@ import { CombatTimers } from './components/tracker/CombatTimers.tsx'
 import { CombatDifficulty } from './components/tracker/CombatDifficulty.tsx'
 import { assessEncounter } from './combat/difficulty.ts'
 import { SettingsPanel } from './components/settings/SettingsPanel.tsx'
+import { useTutorialEntry } from './tutorial/useTutorialEntry.ts'
+import { useTutorialSetup } from './tutorial/useTutorialSetup.ts'
+import { TutorialSetup } from './tutorial/TutorialSetup.tsx'
+import { TutorialEntry } from './tutorial/TutorialEntry.tsx'
+import type { TutorialSuppression } from './state/settings.ts'
 import { SettingsMenu, SlidersIcon, HelpIcon } from './components/settings/SettingsMenu.tsx'
 import { MobileNav, type MobileTab } from './components/shell/MobileNav.tsx'
 import { Wordmark } from './components/shell/Wordmark.tsx'
@@ -318,6 +325,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [effectRequest, setEffectRequest] = useState(0)
   const [hpEditRequest, setHpEditRequest] = useState(0)
   const [quickAddRequest, setQuickAddRequest] = useState(0)
+  const [tutorialAvailabilityRevision, setTutorialAvailabilityRevision] = useState(0)
+  /** Recheck a deferred invitation after an add surface closes without a board change. */
+  const recheckTutorialAvailability = useCallback(() => {
+    setTutorialAvailabilityRevision((revision) => revision + 1)
+  }, [])
   const [addPcRequest, setAddPcRequest] = useState(0)
   const [addCreatureRequest, setAddCreatureRequest] = useState(0)
   const [shortRestRequest, setShortRestRequest] = useState(0)
@@ -379,11 +391,22 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   } = useAuth()
   const userId = user?.id ?? null
   const [authOpen, setAuthOpen] = useState(false)
+  const [tutorialSignIn, setTutorialSignIn] = useState(false)
   /**
    * Whether recovery and identity-triggered cloud reconciliation have settled. A cast from
    * a shared link waits on this so hydration cannot replace it or persist half a board.
    */
   const [boardReady, setBoardReady] = useState(false)
+  const [settledIdentity, setSettledIdentity] = useState<string | null | undefined>(undefined)
+  const [tutorialSuppression, setTutorialSuppression] = useState(
+    () => loadSettings().tutorialSuppression,
+  )
+  /** Apply permanent device suppression immediately without persisting guide progress. */
+  const suppressTutorial = (reason: TutorialSuppression) => {
+    setTutorialSuppression(reason)
+    saveSettings({ tutorialSuppression: reason })
+  }
+  const tutorialAccountPreference = useTutorialAccountPreference(tutorialSuppression)
   const [customCreatures, setCustomCreatures] = useState<Creature[]>([])
   const [customSpells, setCustomSpells] = useState<Spell[]>([])
   const [ownPresets, setOwnPresets] = useState<EffectPreset[]>([])
@@ -424,7 +447,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   }, [])
 
   useEffect(() => {
-    if (user) setAuthOpen(false)
+    if (user) {
+      setAuthOpen(false)
+      setTutorialSignIn(false)
+    }
   }, [user])
 
   useEffect(() => lifecycle.subscribe(setSaveStatus), [lifecycle])
@@ -477,6 +503,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Recovery completes before identity-triggered cloud reconciliation. Offline failure keeps
   // the validated device copy on the working board.
   useEffect(() => {
+    setSettledIdentity(undefined)
     if (authLoading) return
     if (identityExpired) {
       let active = true
@@ -499,6 +526,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         setSelectedId(null)
         setActiveCampaignId(null)
       }
+      setSettledIdentity(userId)
       setCopyConflict(result.conflict ?? null)
       setCopyConflictOpen(Boolean(result.conflict))
       // A signed-in GM's chosen name follows the account, so it wins over whatever
@@ -790,6 +818,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const handleCreatePc = (pc: RosterPc) => {
     setRosterPcs((prev) => [pc, ...prev])
     saveRosterPc(pc)
+    if (setup.active) setup.recordCreatedPc(pc.id)
   }
 
   /** Swap the edited character into the roster and persist the change to the account. */
@@ -815,6 +844,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
   // Header "Add PC → create": send a signed-in user to the compendium's Characters tab.
   const openRosterCreate = () => {
+    if (setup.active) setup.startRosterCreation()
     setCompendiumTab('characters')
     setView('compendium')
   }
@@ -1179,6 +1209,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
    * re-renders follow.
    */
   const pendingCast = useRef(stagedCast)
+  const [stagedCastLoading, setStagedCastLoading] = useState(Boolean(stagedCast))
   useEffect(() => {
     if (!boardReady || !pendingCast.current) return
     const template = pendingCast.current
@@ -1191,6 +1222,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         labelStyle: creatureLabelStyle,
       })
       for (const c of combatants) addCombatant(c, true)
+      setStagedCastLoading(false)
       track(EVENTS.encounterLinkAdded)
     })
     // Deliberately keyed on readiness alone: the cast is consumed the first time through.
@@ -1243,7 +1275,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         else
           rolled[id] = {
             category: 'note',
-            message: `${nameOf(c)}: initiative ${initiatives[id]}`,
+            message: `${nameOf(c)}: ${setup.active ? 'practice ' : ''}initiative ${initiatives[id]}`,
             sourceId: id,
           }
       }
@@ -1292,6 +1324,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     preRolled.current = {}
     for (const c of encounter.combatants) {
       // Dead creatures stay dead at initiative 0 — never re-rolled into the order.
+      if (setup.active) {
+        initial[c.combatantId] = isPlayer(c) ? '' : String(practiceInitiative(c) ?? '')
+        continue
+      }
       if (c.status === 'dead' || isPlayer(c)) {
         initial[c.combatantId] = c.status === 'dead' ? '0' : ''
         continue
@@ -1380,6 +1416,62 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     return () => observer.disconnect()
   }, [])
 
+  const tutorialReady =
+    boardReady &&
+    settledIdentity === userId &&
+    !authLoading &&
+    !identityExpired &&
+    !activeCopyConflict &&
+    !resolvingCopies &&
+    !stagedCastLoading
+  const tutorial = useTutorialEntry({
+    invitationAvailabilityRevision: tutorialAvailabilityRevision,
+    ready: tutorialReady,
+    invitationAvailable:
+      !settingsOpen &&
+      !searchOpen &&
+      !authOpen &&
+      !helpOpen &&
+      !initPrompt &&
+      !recap &&
+      !endPrompt &&
+      !showShares &&
+      !sharingCreature,
+    boardEmpty: encounter.combatants.length === 0,
+    inCombat: encounter.round > 0,
+    enabledLibraries,
+    effectiveSuppression: tutorialAccountPreference.effectiveSuppression,
+    onSuppress: suppressTutorial,
+    onLaunch: () => {
+      setView('encounter')
+      setMobilePane(0)
+    },
+  })
+
+  const setup = useTutorialSetup({
+    active: tutorial.library !== null,
+    encounter,
+    signedIn: !!user,
+    initiativeOpen: initPrompt !== null,
+    library: tutorial.library,
+    recapOpen: recap !== null,
+    endPromptOpen: endPrompt,
+  })
+  useEffect(() => {
+    if (!setup.active || !setup.ogreId) return
+    if (setup.task === 'attack' || setup.task === 'prone') setSelectedId(setup.ogreId)
+    if (setup.task === 'death-save' && setup.quickId) setSelectedId(setup.quickId)
+    if (setup.task === 'spell' && setup.mageId) setSelectedId(setup.mageId)
+    if (['damage', 'ogre-turn', 'mage-turn', 'turn', 'stop', 'clear'].includes(setup.task))
+      setMobilePane(0)
+    else if (setup.task === 'attack' || setup.task === 'spell') setMobilePane(1)
+    else if (setup.task === 'prone' || setup.task === 'death-save') setMobilePane(2)
+  }, [setup.active, setup.task, setup.ogreId, setup.mageId, setup.quickId])
+  useEffect(() => {
+    if (tutorialReady && tutorial.surface === 'introduction' && setup.task === 'complete')
+      tutorial.complete()
+  }, [tutorialReady, tutorial, setup.task])
+  const tutorialVisible = tutorial.surface !== null && !activeCopyConflict && !resolvingCopies
   const started = encounter.round > 0
   const paused = encounter.paused === true
   // What the compact footer would actually draw: the fight's clock, the difficulty
@@ -1512,7 +1604,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     showHotkeys: () => setHelpOpen(true),
     openSearch: () => setSearchOpen(true),
   }
-  useHotkeys(keymap, hotkeyHandlers)
+  useHotkeys(keymap, setup.active ? {} : hotkeyHandlers)
 
   /** The chord a command answers to, for its control's tooltip; undefined when unbound. */
   const hint = (id: HotkeyCommandId): string | undefined => {
@@ -1569,7 +1661,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   type AddOpts = { autoOpen?: boolean; hideTrigger?: boolean; onClosed?: () => void }
   const addQuick = (o: AddOpts = {}) => (
     <AddQuickForm
+      key={setup.active ? 'AddQuickForm-' + setup.task : 'AddQuickForm'}
       {...o}
+      onClosed={o.onClosed ?? recheckTutorialAvailability}
+      practice={setup.active && setup.task === 'quick'}
       openRequest={quickAddRequest}
       keyHint={hint('quickAdd')}
       onAdd={(c) => {
@@ -1581,7 +1676,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const addPc = (o: AddOpts = {}) =>
     user ? (
       <AddPcPicker
+        key={setup.active ? 'AddPcPicker-' + setup.task : 'AddPcPicker'}
         {...o}
+        onClosed={o.onClosed ?? recheckTutorialAvailability}
+        practice={setup.active && setup.task === 'pc'}
         openRequest={addPcRequest}
         keyHint={hint('addPc')}
         rosterPcs={rosterPcs}
@@ -1591,7 +1689,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       />
     ) : (
       <AddPcForm
+        key={setup.active ? 'AddPcForm-' + setup.task : 'AddPcForm'}
         {...o}
+        onClosed={o.onClosed ?? recheckTutorialAvailability}
+        practice={setup.active && setup.task === 'pc'}
         openRequest={addPcRequest}
         keyHint={hint('addPc')}
         onAdd={(c) => {
@@ -1602,7 +1703,17 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     )
   const addCreature = (o: AddOpts = {}) => (
     <AddCreaturePicker
+      key={setup.active ? 'AddCreaturePicker-' + setup.task : 'AddCreaturePicker'}
+      requiredCreature={
+        setup.active && (setup.task === 'mage' || setup.task === 'ogre')
+          ? {
+              name: setup.task === 'mage' ? 'Mage' : 'Ogre',
+              edition: setup.library === 'srd-5.2' ? '5.5' : '5.0',
+            }
+          : undefined
+      }
       {...o}
+      onClosed={o.onClosed ?? recheckTutorialAvailability}
       openRequest={addCreatureRequest}
       keyHint={hint('addCreature')}
       onPick={handlePick}
@@ -1616,6 +1727,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     <>
       <div className="w-full roomy:hidden">
         <AddMenu
+          key={setup.active ? 'AddMenu-' + setup.task : 'AddMenu'}
+          onClosed={recheckTutorialAvailability}
           items={[
             {
               key: 'quick',
@@ -1646,7 +1759,16 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   return (
     <CampaignRulesContext.Provider value={activeRules}>
       <CampaignEditionContext.Provider value={activeEdition}>
-        <div className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div
+          data-console-root
+          inert={tutorialVisible && tutorial.surface !== 'introduction'}
+          style={
+            setup.active && tutorial.surface === 'introduction'
+              ? { paddingBottom: 'var(--tutorial-h, 10rem)' }
+              : undefined
+          }
+          className="flex h-full flex-col overflow-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+        >
           {/* The header wraps at every width and its buttons never break their labels:
           a cluster that no longer fits drops to its own line whole, so every button
           keeps one size instead of squeezing onto two lines of text. */}
@@ -1805,6 +1927,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       setSettingsOpen(true)
                     }),
                 },
+                {
+                  id: 'tutorial',
+                  name: 'Start tutorial',
+                  searchable: true,
+                  icon: <HelpIcon />,
+                  onSelect: () => navigateFromSearch(tutorial.launch),
+                },
                 ...(!authLoading && user
                   ? [
                       {
@@ -1854,6 +1983,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             <DialogFocus>
               <SettingsPanel
                 onClose={() => setSettingsOpen(false)}
+                onStartTutorial={() => {
+                  setSettingsOpen(false)
+                  tutorial.launch()
+                }}
                 enabledLibraries={enabledLibraries}
                 onSetEnabledLibraries={setEnabledLibraries}
                 showHomebrew={showHomebrew}
@@ -1898,6 +2031,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   onCreateCampaign={handleCreateCampaign}
                   onUpdateCampaign={handleUpdateCampaign}
                   onDeleteCampaign={handleDeleteCampaign}
+                  practicePc={
+                    setup.active && (setup.task === 'roster-create' || setup.task === 'roster-add')
+                  }
+                  practicePcId={setup.createdPcId}
                   rosterPcs={rosterPcs}
                   onCreatePc={handleCreatePc}
                   onUpdatePc={handleUpdatePc}
@@ -1945,6 +2082,24 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   </>
                 }
                 encounter={encounter}
+                practiceDamage={
+                  setup.active && setup.task === 'damage' && setup.ogreId
+                    ? { id: setup.ogreId, amount: 3 }
+                    : undefined
+                }
+                onHpDamageCommitted={setup.recordDamage}
+                tutorialAttackTargetId={
+                  setup.active && setup.combatTask === 'attack' ? setup.pcId : undefined
+                }
+                tutorialSaveTargetIds={
+                  setup.active && setup.combatTask === 'spell' && setup.quickId && setup.ogreId
+                    ? [setup.quickId, setup.ogreId]
+                    : undefined
+                }
+                onSpellCompleted={setup.recordSpell}
+                onAttackCompleted={setup.recordAttack}
+                tutorialProne={setup.active && setup.combatTask === 'prone'}
+                onEffectsCommitted={setup.recordEffects}
                 dispatch={dispatch}
                 onRoll={pushRoll}
                 onGmRoll={pushGmRoll}
@@ -1995,7 +2150,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
 
           {authOpen && (
             <DialogFocus>
-              <SignUpPage onClose={() => setAuthOpen(false)} />
+              <SignUpPage
+                clearedTutorial={tutorialSignIn}
+                onClose={() => {
+                  setAuthOpen(false)
+                  setTutorialSignIn(false)
+                }}
+              />
             </DialogFocus>
           )}
 
@@ -2009,9 +2170,19 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
           )}
 
           {endPrompt && (
-            <EndCombatPrompt onConfirm={endCombat} onCancel={() => setEndPrompt(false)} />
+            <EndCombatPrompt
+              reserveTutorialSpace={setup.active}
+              onConfirm={endCombat}
+              onCancel={() => setEndPrompt(false)}
+            />
           )}
-          {recap && <RecapScreen recap={recap} onClose={() => setRecap(null)} />}
+          {recap && (
+            <RecapScreen
+              reserveTutorialSpace={setup.active}
+              recap={recap}
+              onClose={() => setRecap(null)}
+            />
+          )}
 
           {/* Editing a roster-backed PC from the encounter: save to the DB and re-sync the
           on-board copy's character fields (HP and combat state stay put). */}
@@ -2073,6 +2244,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             <InitiativePrompt
               combatants={encounter.combatants}
               initial={initPrompt}
+              requireManual={setup.active}
               onStart={startCombat}
               onCancel={() => setInitPrompt(null)}
             />
@@ -2123,8 +2295,38 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           </footer>
 
-          <MobileNav active={mobileTab} onSelect={showMobileTab} />
+          <MobileNav
+            active={mobileTab}
+            onSelect={showMobileTab}
+            className={
+              setup.active && tutorial.surface === 'introduction' ? 'short:hidden' : undefined
+            }
+          />
         </div>
+        {tutorialAccountPreference.accountSyncError && (
+          <p
+            role="alert"
+            data-tutorial-guide
+            className="pointer-events-none fixed inset-x-2 top-2 z-[70] mx-auto max-w-xl rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+          >
+            {tutorialAccountPreference.accountSyncError}
+          </p>
+        )}
+        {tutorialVisible &&
+          (tutorial.surface === 'introduction' ? (
+            <TutorialSetup controller={tutorial} setup={setup} />
+          ) : (
+            <TutorialEntry
+              controller={tutorial}
+              signedIn={!!user}
+              authConfigured={authConfigured}
+              onSignIn={() => {
+                tutorial.dismiss()
+                setTutorialSignIn(true)
+                setAuthOpen(true)
+              }}
+            />
+          ))}
       </CampaignEditionContext.Provider>
     </CampaignRulesContext.Provider>
   )

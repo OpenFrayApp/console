@@ -23,25 +23,52 @@ export function useSwipePanes(pane: number, onPaneChange: (pane: number) => void
     return el != null && el.scrollWidth > el.clientWidth + 1
   }
 
-  // Scroll to the requested pane — instantly on mount (restoring a pane after a view
-  // switch), smoothly after (a tab tap or a row tap asking for another pane). A
-  // throttled tab can drop the smooth animation, so a guard lands it by force.
+  // Tab changes animate; restored views and changed strip geometry land immediately.
+  // A throttled tab can drop the smooth animation, so a guard lands it by force.
   useEffect(() => {
     const first = !mounted.current
     mounted.current = true
     const el = ref.current
-    if (!el || !isPaging()) return
-    const left = pane * el.clientWidth
-    if (Math.abs(el.scrollLeft - left) <= 1) return
-    target.current = left
-    el.scrollTo({ left, behavior: first ? 'auto' : 'smooth' })
-    const guard = window.setTimeout(() => {
-      if (target.current != null && Math.abs(el.scrollLeft - target.current) > 1) {
-        el.scrollLeft = target.current
-      }
+    if (!el) return
+    let width = el.clientWidth
+    let height = el.clientHeight
+    let scrollWidth = el.scrollWidth
+    let guard: number | undefined
+    /** Position the requested pane, replacing obsolete scroll and settle guards. */
+    const position = (behavior: ScrollBehavior) => {
+      window.clearTimeout(guard)
+      window.clearTimeout(settle.current)
       target.current = null
-    }, 500)
-    return () => window.clearTimeout(guard)
+      if (!isPaging()) return
+      const left = pane * el.clientWidth
+      if (Math.abs(el.scrollLeft - left) <= 1) return
+      target.current = left
+      el.scrollTo({ left, behavior })
+      guard = window.setTimeout(() => {
+        if (target.current != null && Math.abs(el.scrollLeft - target.current) > 1) {
+          el.scrollLeft = target.current
+        }
+        target.current = null
+      }, 500)
+    }
+    /** Reconcile changed geometry without mistaking layout-driven snapping for a swipe. */
+    const resize = () => {
+      if (width === el.clientWidth && height === el.clientHeight && scrollWidth === el.scrollWidth)
+        return
+      width = el.clientWidth
+      height = el.clientHeight
+      scrollWidth = el.scrollWidth
+      position('auto')
+    }
+    position(first ? 'auto' : 'smooth')
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize)
+    observer?.observe(el)
+    window.addEventListener('resize', resize)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', resize)
+      window.clearTimeout(guard)
+    }
   }, [pane])
 
   useEffect(() => () => window.clearTimeout(settle.current), [])

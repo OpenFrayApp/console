@@ -30,6 +30,14 @@ describe('useAuth outside an AuthProvider', () => {
     })
   })
 
+  it('keeps tutorial account persistence unavailable without losing the anonymous fallback', async () => {
+    const { result } = renderHook(() => useAuth())
+    expect(result.current.tutorialSuppression).toBeNull()
+    await expect(result.current.setTutorialSuppression('completed')).resolves.toEqual({
+      error: 'Accounts aren’t available on this copy of OpenFray.',
+    })
+  })
+
   it('treats sign-out as a harmless no-op', async () => {
     const { result } = renderHook(() => useAuth())
     await expect(result.current.signOut()).resolves.toBeUndefined()

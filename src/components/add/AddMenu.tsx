@@ -23,11 +23,15 @@ export interface AddMenuItem {
  * is the second step, so there is never a sheet on top of a sheet; when it closes,
  * the Add button comes back.
  */
-export function AddMenu({ items }: { items: AddMenuItem[] }) {
+export function AddMenu({ items, onClosed }: { items: AddMenuItem[]; onClosed?: () => void }) {
   const [open, setOpen] = useState(false)
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    setActiveKey(null)
+    onClosed?.()
+  }, [onClosed])
   // Only the menu itself dismisses on an outside click. Once an item is up, that
   // control owns dismissal and reports back through onClosed.
   useDismiss(ref, open && activeKey === null, close)
@@ -48,7 +52,11 @@ export function AddMenu({ items }: { items: AddMenuItem[] }) {
       <Button
         variant="primary"
         className="w-full"
-        onClick={() => (active ? setActiveKey(null) : setOpen((o) => !o))}
+        onPointerDown={(event) => {
+          // The child must not dismiss first and turn this click into a menu-open.
+          if (active) event.stopPropagation()
+        }}
+        onClick={() => (open || active ? close() : setOpen(true))}
         aria-label="Add to the encounter"
         aria-haspopup="menu"
         aria-expanded={open || active != null}
@@ -62,6 +70,9 @@ export function AddMenu({ items }: { items: AddMenuItem[] }) {
               key={item.key}
               type="button"
               role="menuitem"
+              data-tutorial-add={
+                item.key === 'pc' ? 'pc' : item.key === 'quick' ? 'quick' : 'creature'
+              }
               onClick={() => {
                 setOpen(false)
                 setActiveKey(item.key)
@@ -73,7 +84,7 @@ export function AddMenu({ items }: { items: AddMenuItem[] }) {
           ))}
         </div>
       )}
-      {active?.render(() => setActiveKey(null))}
+      {active?.render(close)}
     </div>
   )
 }

@@ -40,6 +40,7 @@ import { Modal } from '../ui/Modal.tsx'
 import { TargetChips } from './TargetChips.tsx'
 import { ConditionChips, DamagePill, DamageTypeSelect, NaturalRoll } from './rollPieces.tsx'
 import {
+  type CompletedSave,
   conditionsOn,
   damageEntries,
   isCondition,
@@ -80,6 +81,8 @@ export function SaveResolver({
   spell,
   casterId,
   onResolved,
+  onSaveCompleted,
+  tutorialSaveTargetIds,
   onClose,
 }: {
   attacker?: MonsterCombatant
@@ -91,9 +94,21 @@ export function SaveResolver({
   defaultMagical?: boolean
   spell?: Spell
   casterId?: string
+  onSaveCompleted?: (save: CompletedSave) => void
+  tutorialSaveTargetIds?: string[]
   onResolved?: (anyFailed: boolean) => void
   onClose: () => void
 }) {
+  const completion = useRef<CompletedSave | null>(null)
+  const completed = useRef(false)
+  /** Report only applied damage with settled concentration, never abandoned drafts. */
+  const finish = () => {
+    if (completion.current && !completed.current) {
+      completed.current = true
+      onSaveCompleted?.(completion.current)
+    }
+    onClose()
+  }
   const edition = useCampaignEdition()
   const save = action?.save ?? null
   // An action with damage but no save deals automatic area damage — no save roll.
@@ -146,6 +161,10 @@ export function SaveResolver({
       : action.name
     : 'Group save'
   const selectedTargets = targets.filter((t) => selected.has(t.combatantId))
+  const exactTargets =
+    !tutorialSaveTargetIds ||
+    (selected.size === tutorialSaveTargetIds.length &&
+      tutorialSaveTargetIds.every((id) => selected.has(id)))
 
   /** Toggle a target in the selection. */
   const toggle = (id: string) =>
@@ -234,6 +253,7 @@ export function SaveResolver({
 
   /** Roll damage once and each monster's save; PC rows wait on the GM; no-save rows auto-fail. */
   const rollSaves = () => {
+    if (tutorialSaveTargetIds && (!exactTargets || resolved)) return
     track(action ? EVENTS.saveRolled : EVENTS.groupSaveRolled)
     if (action) {
       const components = rollDamageComponents(action, false)
@@ -301,6 +321,15 @@ export function SaveResolver({
 
   /** Apply each resolved row's damage, then queue concentration prompts or close. */
   const apply = () => {
+    if (
+      tutorialSaveTargetIds &&
+      (!resolved ||
+        !exactTargets ||
+        selectedTargets.some((c) => !rows[c.combatantId]?.result) ||
+        completion.current)
+    )
+      return
+    const settled: CompletedSave = { targets: [] }
     flush()
     reportResolved()
     const prompts: { combatant: Combatant; dc: number; damage: number }[] = []
@@ -318,13 +347,15 @@ export function SaveResolver({
         })
       }
       const amount = toNum(damageValue(c))
+      settled.targets.push({ targetId: c.combatantId, result: row.result, damage: amount })
       const promptDc = concentrationPromptDC(c, applyDamage(c, amount), amount)
       if (promptDc != null) prompts.push({ combatant: c, dc: promptDc, damage: amount })
       dispatch({ type: 'update', id: c.combatantId, update: (cc) => applyDamage(cc, amount) })
       if (attacker) dispatch({ type: 'recordDamage', sourceId: attacker.combatantId, amount })
     }
+    completion.current = settled
     if (prompts.length > 0) setPending(prompts)
-    else onClose()
+    else finish()
   }
 
   // Enter is the dialog's Save/Apply key; buttons and textareas keep their own.
@@ -420,14 +451,20 @@ export function SaveResolver({
     if (broke) dispatch({ type: 'endConcentration', id: combatantId })
     setPending((prev) => {
       const next = prev.filter((p) => p.combatant.combatantId !== combatantId)
-      if (next.length === 0) onClose()
+      if (next.length === 0) finish()
       return next
     })
   }
 
   if (pending.length > 0) {
     return (
-      <Modal title={title} subtitle="Concentration checks" onClose={onClose}>
+      <Modal
+        title={title}
+        subtitle="Concentration checks"
+        onClose={onClose}
+        reserveTutorialSpace={!!tutorialSaveTargetIds}
+        restrictDismiss={!!tutorialSaveTargetIds}
+      >
         <ul className="space-y-2">
           {pending.map((p) => (
             <li
@@ -462,7 +499,13 @@ export function SaveResolver({
   }
 
   return (
-    <Modal title={title} subtitle={action ? metaLine(action) : undefined} onClose={onClose}>
+    <Modal
+      title={title}
+      subtitle={action ? metaLine(action) : undefined}
+      onClose={onClose}
+      reserveTutorialSpace={!!tutorialSaveTargetIds}
+      restrictDismiss={!!tutorialSaveTargetIds}
+    >
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         {noSave ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
@@ -493,6 +536,7 @@ export function SaveResolver({
               <Field
                 value={dc}
                 onChange={(e) => setDc(e.target.value)}
+                disabled={!!tutorialSaveTargetIds}
                 aria-label="Save DC"
                 inputMode="numeric"
                 className="w-14"
@@ -501,6 +545,7 @@ export function SaveResolver({
             <Select
               value={onSave}
               onChange={(e) => setOnSave(e.target.value as SaveOutcome)}
+              disabled={!!tutorialSaveTargetIds}
               aria-label="On save"
             >
               <option value="half">save → half damage</option>
@@ -543,11 +588,20 @@ export function SaveResolver({
         <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Targets
         </legend>
-        <TargetChips targets={targets} selected={selected} onToggle={toggle} />
+        <TargetChips
+          targets={targets}
+          allowedTargetIds={tutorialSaveTargetIds}
+          selected={selected}
+          onToggle={resolved && tutorialSaveTargetIds ? () => {} : toggle}
+        />
       </fieldset>
 
       {!resolved ? (
-        <Button variant="primary" onClick={rollSaves} disabled={selectedTargets.length === 0}>
+        <Button
+          variant="primary"
+          onClick={rollSaves}
+          disabled={selectedTargets.length === 0 || !exactTargets}
+        >
           {noSave ? 'Roll damage' : 'Roll saves'}
         </Button>
       ) : (
@@ -575,6 +629,7 @@ export function SaveResolver({
                       <>
                         <Chip
                           size="sm"
+                          disabled={!!tutorialSaveTargetIds && !c.isPC}
                           tone="good"
                           active={row?.result === 'save'}
                           onClick={() => setResult(c.combatantId, 'save')}
@@ -583,6 +638,7 @@ export function SaveResolver({
                         </Chip>
                         <Chip
                           size="sm"
+                          disabled={!!tutorialSaveTargetIds && !c.isPC}
                           tone="bad"
                           active={row?.result === 'fail'}
                           onClick={() => setResult(c.combatantId, 'fail')}
@@ -608,7 +664,11 @@ export function SaveResolver({
                           </Chip>
                         )}
                         {!c.isPC && (
-                          <Chip size="sm" onClick={() => reroll(c)}>
+                          <Chip
+                            size="sm"
+                            disabled={!!tutorialSaveTargetIds}
+                            onClick={() => reroll(c)}
+                          >
                             Reroll
                           </Chip>
                         )}
@@ -634,7 +694,7 @@ export function SaveResolver({
                       onChange={(e) => setEdited(c.combatantId, e.target.value)}
                       inputMode="numeric"
                       aria-label={`Damage to ${nameOf(c)}`}
-                      disabled={!row?.result}
+                      disabled={!row?.result || !!tutorialSaveTargetIds}
                       className="w-16 disabled:opacity-50"
                     />
                   </span>
@@ -643,7 +703,14 @@ export function SaveResolver({
             })}
           </ul>
 
-          <Button variant="danger" onClick={apply} className="mt-3">
+          <Button
+            variant="danger"
+            onClick={apply}
+            disabled={
+              !!tutorialSaveTargetIds && selectedTargets.some((c) => !rows[c.combatantId]?.result)
+            }
+            className="mt-3"
+          >
             Apply damage
           </Button>
 
@@ -663,13 +730,15 @@ export function SaveResolver({
 
           {/* Lit only where every affected target has it: with several targets a chip
           cannot be half on, and applying to the rest is the more useful default. */}
-          <ConditionChips
-            applied={conditionsOnAll(affectedTargets())}
-            onRemove={clearCondition}
-            onApply={applyCondition}
-            onExhaustion={applyExhaustion}
-            sourceName={caster ? nameOf(caster) : undefined}
-          />
+          <div data-tutorial-cancel={tutorialSaveTargetIds ? '' : undefined}>
+            <ConditionChips
+              applied={conditionsOnAll(affectedTargets())}
+              onRemove={clearCondition}
+              onApply={applyCondition}
+              onExhaustion={applyExhaustion}
+              sourceName={caster ? nameOf(caster) : undefined}
+            />
+          </div>
           {note && <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
         </>
       )}

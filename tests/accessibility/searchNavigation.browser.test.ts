@@ -4,14 +4,17 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { createElement } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import App from '../../src/App.tsx'
+import { saveSettings } from '../../src/state/settings.ts'
 import { AuthContext } from '../../src/auth/useAuth.ts'
 import { authState } from '../fixtures.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
+
+beforeEach(() => saveSettings({ tutorialSuppression: 'dismissed' }))
 
 afterEach(() => {
   cleanup()

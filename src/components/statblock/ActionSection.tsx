@@ -136,6 +136,7 @@ export function ActionSection({
                 <button
                   type="button"
                   onClick={() => onAction(a)}
+                  data-tutorial-action={a.name}
                   title="Roll this action"
                   className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
                 >

@@ -92,7 +92,16 @@ export const DEFAULT_PLAYER_VIEW: PlayerViewSettings = {
   gmName: 'hidden',
 }
 
+export type TutorialSuppression = 'dismissed' | 'completed'
+
+/** Accept only the two permanent tutorial invitation suppression reasons. */
+export function parseTutorialSuppression(value: unknown): TutorialSuppression | null {
+  return value === 'dismissed' || value === 'completed' ? value : null
+}
+
 export interface AppSettings {
+  /** Permanent device invitation preference; guide progress is never persisted. */
+  tutorialSuppression: TutorialSuppression | null
   /** Colors of creature and ally side markers in the GM's tracker. */
   trackerColors: TrackerColors
   /** Suffix style for newly added copies of a creature. */
@@ -135,7 +144,11 @@ const KEY = 'openfray-settings'
 function read(): Record<string, unknown> {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw) as Record<string, unknown>
+    if (raw) {
+      const value: unknown = JSON.parse(raw)
+      if (value && typeof value === 'object' && !Array.isArray(value))
+        return value as Record<string, unknown>
+    }
   } catch {
     /* localStorage unavailable, or malformed JSON — fall back to defaults */
   }
@@ -176,6 +189,7 @@ function readPlayerView(value: unknown): PlayerViewSettings {
 export function loadSettings(): AppSettings {
   const data = read()
   return {
+    tutorialSuppression: parseTutorialSuppression(data.tutorialSuppression),
     trackerColors: readTrackerColors(data.trackerColors),
     creatureLabelStyle:
       data.creatureLabelStyle === 'roman' || data.creatureLabelStyle === 'letters'

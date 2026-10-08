@@ -51,7 +51,7 @@ interface DeathSaveControlsProps {
  */
 export function DeathSaveControls({ onSave, onFail, onRoll }: DeathSaveControlsProps) {
   return (
-    <div className="flex gap-1">
+    <div data-tutorial="death-save" className="flex gap-1">
       <button
         type="button"
         onClick={onSave}

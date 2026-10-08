@@ -254,6 +254,8 @@ export function Compendium({
   onRenamePreset,
   onDeletePreset,
   rosterPcs = [],
+  practicePc = false,
+  practicePcId,
   onCreatePc,
   onUpdatePc,
   onDeletePc,
@@ -300,6 +302,10 @@ export function Compendium({
   onUpdateCampaign?: (campaign: Campaign) => void
   /** Remove a campaign. */
   onDeleteCampaign?: (id: string) => void
+  /** Guide the normal new-character form and reveal its detail pane. */
+  practicePc?: boolean
+  /** The newly created practice character, never an existing roster entry. */
+  practicePcId?: string | null
   /** The signed-in user's party roster (empty when anonymous). */
   rosterPcs?: RosterPc[]
   /** Save a new roster PC. */
@@ -356,6 +362,9 @@ export function Compendium({
   // In the swipe shell the list and the entry are two screens swiped between; picking
   // an entry slides over to it, like tapping into a monster in the D&D Beyond app.
   const [pane, setPane] = useState(0)
+  useEffect(() => {
+    if (practicePc) setPane(1)
+  }, [practicePc])
   const { ref: panesRef, onScroll: onPanesScroll } = useSwipePanes(pane, setPane)
   /** Select an entry and, on a phone, slide over to show it. */
   const showEntry = (id: string) => {
@@ -557,7 +566,8 @@ export function Compendium({
       track(EVENTS.characterCreated)
       onCreatePc?.(pc)
     }
-    setSelectedId(pc.id)
+    if (practicePc) showEntry(pc.id)
+    else setSelectedId(pc.id)
   }
   /** Delete the roster PC once the GM confirms; a copy already on the board stays put. */
   const removePc = (pc: RosterPc) => {
@@ -866,8 +876,9 @@ export function Compendium({
               <>
                 <button
                   type="button"
+                  data-tutorial={practicePcId === selectedPc.id ? 'roster-add' : undefined}
                   onClick={() => onAddPcToEncounter?.(selectedPc)}
-                  className="mr-auto rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                  className="tap-y mr-auto rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
                 >
                   Add to encounter
                 </button>
@@ -927,7 +938,12 @@ export function Compendium({
               </Button>
             )}
             {tab === 'characters' && (
-              <Button variant="primary" size="lg" onClick={startNewPc}>
+              <Button
+                data-tutorial="roster-create"
+                variant="primary"
+                size="lg"
+                onClick={startNewPc}
+              >
                 Create character
               </Button>
             )}
@@ -980,6 +996,7 @@ export function Compendium({
       <PcFormModal
         open={pcForm != null}
         pc={pcForm?.pc}
+        practice={practicePc && !pcForm?.pc}
         campaigns={campaigns}
         onClose={() => setPcForm(null)}
         onSubmit={submitPc}

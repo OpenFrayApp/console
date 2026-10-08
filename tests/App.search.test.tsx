@@ -6,6 +6,7 @@ import { afterEach, expect, it } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { User } from '@supabase/supabase-js'
 import App from '../src/App.tsx'
+import { saveSettings } from '../src/state/settings.ts'
 import { AuthContext, type AuthState } from '../src/auth/useAuth.ts'
 import { authState } from './fixtures.ts'
 
@@ -19,6 +20,7 @@ afterEach(() => {
 
 /** Open real app search with a supplied authentication state and no network credentials. */
 async function openSearch(overrides: Partial<AuthState>) {
+  saveSettings({ tutorialSuppression: 'dismissed' })
   render(
     <AuthContext.Provider value={authState(overrides)}>
       <App />

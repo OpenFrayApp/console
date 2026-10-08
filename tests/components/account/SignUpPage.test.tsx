@@ -18,6 +18,7 @@ function renderPage(overrides: Partial<AuthState> = {}) {
     user: null,
     displayName: null,
     shareLicense: null,
+    tutorialSuppression: null,
     loading: false,
     identityExpired: false,
     configured: true,
@@ -26,6 +27,7 @@ function renderPage(overrides: Partial<AuthState> = {}) {
     deleteAccount: vi.fn(async () => ({ error: null })),
     setDisplayName: vi.fn(async () => ({ error: null })),
     setShareLicense: vi.fn(async () => ({ error: null })),
+    setTutorialSuppression: vi.fn(async () => ({ error: null })),
     ...overrides,
   }
   const onClose = vi.fn()

@@ -24,7 +24,9 @@ export function AddPcPicker({
   onClosed,
   keyHint,
   hideTrigger = false,
+  practice = false,
 }: {
+  practice?: boolean
   rosterPcs: RosterPc[]
   /** The user's campaigns, to show each PC's campaign acronym. */
   campaigns?: Campaign[]
@@ -45,10 +47,17 @@ export function AddPcPicker({
   /** Look up a campaign's name by id; undefined when the PC has no campaign. */
   const campaignName = (id?: string | null): string | undefined =>
     campaigns.find((c) => c.id === id)?.name
-  const entries = rosterPcs.map((pc) => ({ id: pc.id, name: pc.name, source: ROSTER_SOURCE, pc }))
+  const entries = (practice ? [] : rosterPcs).map((pc) => ({
+    id: pc.id,
+    name: pc.name,
+    source: ROSTER_SOURCE,
+    pc,
+  }))
 
   return (
     <LibraryPicker
+      locked={practice}
+      tutorialTarget="pc"
       label="Add PC"
       placeholder="Search your characters…"
       searchLabel="Search your characters"
@@ -79,7 +88,7 @@ export function AddPcPicker({
         <button
           type="button"
           onClick={onCreate}
-          className="mt-1 w-full rounded border-t border-slate-200 px-2 pt-2 pb-1 text-left text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:border-slate-800 dark:text-indigo-400"
+          className="tap-y mt-1 w-full rounded border-t border-slate-200 px-2 pt-2 pb-1 text-left text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:border-slate-800 dark:text-indigo-400"
         >
           Create a character…
         </button>

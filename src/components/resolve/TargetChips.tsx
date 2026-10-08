@@ -12,11 +12,15 @@ import { Chip } from '../ui/primitives.tsx'
  */
 export function TargetChips({
   targets,
+  allowedTargetId,
+  allowedTargetIds,
   selected,
   onToggle,
   emptyText = 'No other combatants to target.',
 }: {
   targets: Combatant[]
+  allowedTargetIds?: string[]
+  allowedTargetId?: string
   selected: Set<string>
   onToggle: (id: string) => void
   emptyText?: string
@@ -40,6 +44,10 @@ export function TargetChips({
           {list.map((t) => (
             <Chip
               key={t.combatantId}
+              disabled={
+                (allowedTargetId !== undefined && allowedTargetId !== t.combatantId) ||
+                (allowedTargetIds !== undefined && !allowedTargetIds.includes(t.combatantId))
+              }
               active={selected.has(t.combatantId)}
               aria-pressed={selected.has(t.combatantId)}
               onClick={() => onToggle(t.combatantId)}

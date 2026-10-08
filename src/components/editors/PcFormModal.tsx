@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { hasPracticeValues } from '../../tutorial/practiceValues.ts'
 import { useEffect, useState } from 'react'
 import type { Ability, AbilityScores, Edition, Senses, Speeds } from '../../schema/primitives.ts'
 import type { Campaign } from '../../schema/campaign.ts'
@@ -299,12 +300,14 @@ function LineList({
  * spells; the GM transcribes the board facts plus the roleplay notes to keep.
  */
 export function PcFormModal({
+  practice = false,
   open,
   pc,
   campaigns = [],
   onClose,
   onSubmit,
 }: {
+  practice?: boolean
   open: boolean
   /** The roster PC being edited, or null to create a new one. */
   pc?: RosterPc | null
@@ -369,7 +372,7 @@ export function PcFormModal({
 
   /** Build and submit the PC (edits keep their id), then close; blank name is a no-op. */
   const submit = () => {
-    if (!d.name.trim()) return
+    if (!d.name.trim() || (practice && (!hasPracticeValues(d.hp, d.ac) || d.acAuto))) return
     onSubmit(buildPc(d, pc?.id ?? crypto.randomUUID()))
     onClose()
   }
@@ -378,9 +381,15 @@ export function PcFormModal({
     <FormModal
       title={editing ? 'Edit player character' : 'New player character'}
       maxWidth="max-w-xl"
+      reserveTutorialSpace={practice}
       onClose={onClose}
     >
-      <div className="max-h-[70vh] space-y-3 overflow-auto p-4">
+      <div
+        style={
+          practice ? { maxHeight: 'calc(100dvh - var(--tutorial-h, 10rem) - 10rem)' } : undefined
+        }
+        className="max-h-[70vh] space-y-3 overflow-auto p-4"
+      >
         <Section title="Identity" open>
           <label className="block space-y-1">
             <span className={LABEL}>Campaign</span>
@@ -468,6 +477,7 @@ export function PcFormModal({
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              disabled={practice}
               checked={d.acAuto}
               onChange={(e) => patch({ acAuto: e.target.checked })}
             />
@@ -732,7 +742,9 @@ export function PcFormModal({
       </div>
 
       <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-        <Button onClick={onClose}>Cancel</Button>
+        <Button data-tutorial-cancel onClick={onClose}>
+          Cancel
+        </Button>
         <Button variant="primary" onClick={submit} disabled={!d.name.trim()}>
           {editing ? 'Save' : 'Create PC'}
         </Button>

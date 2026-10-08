@@ -6,7 +6,8 @@ import type { PlayerCharacter } from '../../schema/combatant.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { parseNonNegativeInt as num } from '../../lib/form.ts'
-import { popoverClass } from '../ui/popover.ts'
+import { popoverClass, tutorialPopoverStyle } from '../ui/popover.ts'
+import { hasPracticeValues } from '../../tutorial/practiceValues.ts'
 import { Button, Field, Select } from '../ui/primitives.tsx'
 
 /**
@@ -20,7 +21,9 @@ export function AddQuickForm({
   onClosed,
   keyHint,
   hideTrigger = false,
+  practice = false,
 }: {
+  practice?: boolean
   onAdd: (c: PlayerCharacter) => void
   /** Start open, and report closing — the phone Add menu opens this one directly. */
   autoOpen?: boolean
@@ -44,12 +47,12 @@ export function AddQuickForm({
     setOpen(false)
     onClosed?.()
   }, [onClosed])
-  useDismiss(ref, open, close)
+  useDismiss(ref, open && !practice, close)
 
   /** Add the quick combatant on the chosen side, then reset and close; blank name is a no-op. */
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || (practice && (!hasPracticeValues(hp, ac) || side !== 'friend'))) return
     const maxHp = Math.max(1, num(hp))
     onAdd({
       isPC: true,
@@ -72,16 +75,20 @@ export function AddQuickForm({
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref} data-tutorial="quick">
       <Button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? !practice && close() : setOpen(true))}
         title={keyHint ? `Quick add (${keyHint})` : undefined}
         className={hideTrigger ? 'hidden' : undefined}
       >
         Quick add
       </Button>
       {open && (
-        <form onSubmit={submit} className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}>
+        <form
+          style={practice ? tutorialPopoverStyle : undefined}
+          onSubmit={submit}
+          className={`${popoverClass('roomy:w-72')} space-y-2 p-2`}
+        >
           <div className="flex gap-2">
             <Field
               autoFocus
@@ -122,6 +129,11 @@ export function AddQuickForm({
               className="w-full"
             />
           </div>
+          {practice && (
+            <p role="status" className="text-sm text-slate-500">
+              Enter 30 hit points and armor class 12 with Side set to Friend.
+            </p>
+          )}
           <Button variant="primary" type="submit" className="w-full">
             Add
           </Button>

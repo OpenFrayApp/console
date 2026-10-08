@@ -113,11 +113,24 @@ export function RecapSummary({ recap, showXp }: { recap: Recap; showXp: boolean 
 }
 
 /** The end-of-combat recap. Outcome banner + XP, timing, and fight tallies. */
-export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => void }) {
+export function RecapScreen({
+  recap,
+  onClose,
+  reserveTutorialSpace = false,
+}: {
+  recap: Recap
+  onClose: () => void
+  reserveTutorialSpace?: boolean
+}) {
   // A milestone campaign doesn't track XP, so the XP tile has nothing to say.
   const showXp = useCampaignRules().leveling !== 'milestone'
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      style={
+        reserveTutorialSpace ? { paddingBottom: 'calc(var(--tutorial-h, 0px) + 1rem)' } : undefined
+      }
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -145,12 +158,19 @@ export function RecapScreen({ recap, onClose }: { recap: Recap; onClose: () => v
 export function EndCombatPrompt({
   onConfirm,
   onCancel,
+  reserveTutorialSpace = false,
 }: {
   onConfirm: () => void
   onCancel: () => void
+  reserveTutorialSpace?: boolean
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      style={
+        reserveTutorialSpace ? { paddingBottom: 'calc(var(--tutorial-h, 0px) + 1rem)' } : undefined
+      }
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    >
       <div
         role="dialog"
         aria-modal="true"

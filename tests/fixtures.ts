@@ -93,6 +93,7 @@ export function authState(over: Partial<AuthState> = {}): AuthState {
     user: null,
     displayName: null,
     shareLicense: null,
+    tutorialSuppression: null,
     loading: false,
     identityExpired: false,
     configured: true,
@@ -101,6 +102,7 @@ export function authState(over: Partial<AuthState> = {}): AuthState {
     deleteAccount: vi.fn(async () => ({ error: null })),
     setDisplayName: vi.fn(async () => ({ error: null })),
     setShareLicense: vi.fn(async () => ({ error: null })),
+    setTutorialSuppression: vi.fn(async () => ({ error: null })),
     ...over,
   }
 }

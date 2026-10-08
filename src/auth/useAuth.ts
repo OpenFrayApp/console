@@ -3,6 +3,7 @@
 
 import { createContext, useContext } from 'react'
 import type { ContentLicense } from '../schema/license.ts'
+import type { TutorialSuppression } from '../state/settings.ts'
 import type { User } from '@supabase/supabase-js'
 
 /** The OAuth identity providers OpenFray signs in with. */
@@ -29,6 +30,8 @@ export interface AuthState {
    * replaced the control rather than filling it would publish a term nobody chose.
    */
   shareLicense: ContentLicense | null
+  /** Confirmed account invitation preference; never an authorization claim. */
+  tutorialSuppression: TutorialSuppression | null
   /** True until the initial session lookup resolves (avoids an auth-UI flash). */
   loading: boolean
   /** The prior session expired without an explicit sign-out on this device. */
@@ -44,6 +47,8 @@ export interface AuthState {
   /** Set the name this account publishes under; an empty string clears it back to null. */
   setDisplayName: (name: string) => Promise<AuthResult>
   setShareLicense: (license: ContentLicense) => Promise<AuthResult>
+  /** Persist permanent invitation suppression for this identity without clearing an existing preference. */
+  setTutorialSuppression: (reason: TutorialSuppression) => Promise<AuthResult>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)
@@ -54,6 +59,7 @@ const ANONYMOUS: AuthState = {
   user: null,
   displayName: null,
   shareLicense: null,
+  tutorialSuppression: null,
   loading: false,
   identityExpired: false,
   configured: false,
@@ -64,6 +70,9 @@ const ANONYMOUS: AuthState = {
   deleteAccount: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),
   setDisplayName: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),
   setShareLicense: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),
+  setTutorialSuppression: async () => ({
+    error: 'Accounts aren’t available on this copy of OpenFray.',
+  }),
 }
 
 /** The auth state from context, or the anonymous fallback outside an AuthProvider. */

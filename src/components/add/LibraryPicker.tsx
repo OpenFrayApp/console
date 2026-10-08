@@ -7,7 +7,7 @@ import { DEFAULT_ENABLED_LIBRARIES, inEnabledLibrary } from '../../compendium/li
 import { cx } from '../../lib/cx.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
-import { popoverClass } from '../ui/popover.ts'
+import { popoverClass, tutorialPopoverStyle } from '../ui/popover.ts'
 import { Button, type ButtonVariant } from '../ui/primitives.tsx'
 import { LibraryEntryBadges as EntryBadges } from '../ui/LibraryEntryBadges.tsx'
 
@@ -53,7 +53,11 @@ export function LibraryPicker<T extends LibraryEntry>({
   grow = false,
   hideTrigger = false,
   triggerTitle,
+  locked = false,
+  tutorialTarget,
 }: {
+  locked?: boolean
+  tutorialTarget?: string
   label: string
   variant?: ButtonVariant
   disabled?: boolean
@@ -117,7 +121,7 @@ export function LibraryPicker<T extends LibraryEntry>({
     setPicked(null)
     onClosed?.()
   }, [onClosed])
-  useDismiss(ref, open, close)
+  useDismiss(ref, open && !locked, close)
 
   useEffect(() => {
     if (open) onOpen?.()
@@ -137,18 +141,25 @@ export function LibraryPicker<T extends LibraryEntry>({
     )
 
   return (
-    <div className={cx('relative', grow && 'narrow:flex-1')} ref={ref}>
+    <div
+      className={cx('relative', grow && 'narrow:flex-1')}
+      ref={ref}
+      data-tutorial={tutorialTarget}
+    >
       <Button
         variant={variant}
         className={cx(grow && 'narrow:w-full', hideTrigger && 'hidden')}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? !locked && close() : setOpen(true))}
         disabled={disabled}
         title={triggerTitle}
       >
         {label}
       </Button>
       {open && (
-        <div className={`${popoverClass('roomy:w-72', align)} p-2`}>
+        <div
+          style={locked ? tutorialPopoverStyle : undefined}
+          className={`${popoverClass('roomy:w-72', align)} p-2`}
+        >
           {children}
           <input
             autoFocus
@@ -183,7 +194,7 @@ export function LibraryPicker<T extends LibraryEntry>({
                         )
                       onPick(e)
                     }}
-                    className="flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="tap-y flex w-full justify-between gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     {row ? (
                       row(e)
