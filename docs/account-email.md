@@ -178,4 +178,5 @@ connection. It quarantines all restored pending work, including unattempted snap
 whose jobs may have been accepted after the backup. The manual local restore tool runs
 this gate automatically. See [Database recovery](./recovery.md) for hosted restore safeguards.
 The admin deployment guide covers staging delivery and manual reconciliation.
-Production activation requires separate authorization.
+Production activation requires separate authorization. Use the coordinated
+[deployment verification procedure](./account-email-verification.md) for issue #114.
