@@ -19,7 +19,11 @@ const FIELD =
 
 type Note = { kind: 'ok' | 'err'; text: string } | null
 
-const PROVIDER_LABELS: Record<string, string> = { google: 'Google', discord: 'Discord' }
+const PROVIDER_LABELS: Record<string, string> = {
+  google: 'Google',
+  discord: 'Discord',
+  'custom:patreon': 'Patreon',
+}
 /** The display label for an OAuth provider id ("google" → "Google"); email/absent → null. */
 function providerName(provider?: string): string | null {
   if (!provider || provider === 'email') return null

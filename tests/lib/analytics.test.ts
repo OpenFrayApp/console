@@ -70,6 +70,7 @@ describe('EVENTS', () => {
       creatureImported: 'Creature imported',
       signInDiscord: 'Sign-in started: Discord',
       signInGoogle: 'Sign-in started: Google',
+      signInPatreon: 'Sign-in started: Patreon',
       signedOut: 'Signed out',
       accountDeleted: 'Account deleted',
       compendiumOpened: 'Compendium opened',

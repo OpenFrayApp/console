@@ -40,7 +40,7 @@ function renderPage(overrides: Partial<AuthState> = {}) {
 }
 
 describe('SignUpPage', () => {
-  it.each(['Google', 'Discord'] as const)(
+  it.each(['Google', 'Discord', 'Patreon'] as const)(
     'starts %s immediately without a checkbox',
     async (provider) => {
       const trackEvent = vi.fn()
@@ -49,23 +49,27 @@ describe('SignUpPage', () => {
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: `Continue with ${provider}` }))
       await waitFor(() =>
-        expect(value.signInWithProvider).toHaveBeenCalledWith(provider.toLowerCase()),
+        expect(value.signInWithProvider).toHaveBeenCalledWith(
+          provider === 'Patreon' ? 'custom:patreon' : provider.toLowerCase(),
+        ),
       )
       expect(trackEvent).toHaveBeenCalledExactlyOnceWith(`Sign-in started: ${provider}`)
       expect(screen.getByRole('button', { name: 'Redirecting…' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: /Continue with/ })).toBeDisabled()
-      fireEvent.click(screen.getByRole('button', { name: /Continue with/ }))
+      for (const button of screen.getAllByRole('button', { name: /Continue with/ })) {
+        expect(button).toBeDisabled()
+        fireEvent.click(button)
+      }
       expect(value.signInWithProvider).toHaveBeenCalledTimes(1)
     },
   )
 
-  it('shows the agreement notice for both provider buttons and links both documents', () => {
+  it('shows the agreement notice for all provider buttons and links both documents', () => {
     renderPage()
-    for (const provider of ['Google', 'Discord']) {
+    for (const provider of ['Google', 'Discord', 'Patreon']) {
       expect(
         screen.getByRole('button', { name: `Continue with ${provider}` }),
       ).toHaveAccessibleDescription(
-        /^By continuing with Google or Discord, you agree to the Terms of Service\s*\. Our Privacy Policy explains how we handle your personal data\.$/,
+        /^By continuing with Google, Discord, or Patreon, you agree to the Terms of Service\s*\. Our Privacy Policy explains how we handle your personal data\.$/,
       )
     }
     for (const [name, href] of [
@@ -84,7 +88,7 @@ describe('SignUpPage', () => {
     ).toBeInTheDocument()
     const firstTime = screen.getByText(/Continuing creates a free account/)
     expect(firstTime).toBeInTheDocument()
-    for (const provider of ['Google', 'Discord']) {
+    for (const provider of ['Google', 'Discord', 'Patreon']) {
       const button = screen.getByRole('button', { name: `Continue with ${provider}` })
       expect(
         button.compareDocumentPosition(firstTime) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -98,11 +102,14 @@ describe('SignUpPage', () => {
       .mockResolvedValueOnce({ error: 'Provider is not enabled' })
       .mockResolvedValueOnce({ error: null })
     renderPage({ signInWithProvider })
-    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Patreon' }))
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent('Provider is not enabled'),
     )
-    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeEnabled()
+    expect(signInWithProvider).toHaveBeenCalledWith('custom:patreon')
+    for (const button of screen.getAllByRole('button', { name: /Continue with/ })) {
+      expect(button).toBeEnabled()
+    }
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Discord' }))
     await waitFor(() => expect(signInWithProvider).toHaveBeenLastCalledWith('discord'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()

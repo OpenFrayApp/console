@@ -76,6 +76,11 @@ enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 
+# Supabase Auth calls UserInfo with a Patreon token, not a Supabase JWT.
+# The handler validates that token against Patreon's fixed identity endpoint.
+[functions.patreon-userinfo]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 policy = "per_worker"

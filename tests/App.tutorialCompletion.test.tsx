@@ -189,7 +189,7 @@ it.each(['srd-5.2', 'srd-5.1'])(
   },
 )
 
-it.each(['google', 'discord'])(
+it.each(['google', 'discord', 'custom:patreon'])(
   'offers existing %s OAuth only after actual cleanup, without an anonymous encounter preservation promise',
   async (provider) => {
     const signIn = vi.fn(async () => ({ error: 'Provider unavailable. Try again later.' }))
@@ -207,7 +207,12 @@ it.each(['google', 'discord'])(
     ).toBeInTheDocument()
     fireEvent.click(
       within(entry).getByRole('button', {
-        name: provider === 'google' ? 'Continue with Google' : 'Continue with Discord',
+        name:
+          provider === 'google'
+            ? 'Continue with Google'
+            : provider === 'discord'
+              ? 'Continue with Discord'
+              : 'Continue with Patreon',
       }),
     )
     await waitFor(() => expect(signIn).toHaveBeenCalledWith(provider))

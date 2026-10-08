@@ -58,9 +58,10 @@ export const EVENTS = {
   characterCreated: 'Character created',
   creatureImported: 'Creature imported',
   // Account. Fathom events carry no properties, so the provider is part of the
-  // name; the sign-in total is the two added together.
+  // name; the sign-in total is the provider events added together.
   signInDiscord: 'Sign-in started: Discord',
   signInGoogle: 'Sign-in started: Google',
+  signInPatreon: 'Sign-in started: Patreon',
   signedOut: 'Signed out',
   accountDeleted: 'Account deleted',
   // Navigation and settings

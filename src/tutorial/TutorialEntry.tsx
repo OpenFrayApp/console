@@ -93,8 +93,8 @@ export function TutorialEntry({
                   </p>
                 ) : authConfigured ? (
                   <p>
-                    Sign in is optional. Choose Sign in to use Google or Discord, or Continue
-                    without an account.
+                    Sign in is optional. Choose Sign in to use Google, Discord, or Patreon, or
+                    Continue without an account.
                   </p>
                 ) : (
                   <p>

@@ -7,7 +7,7 @@ import type { TutorialSuppression } from '../state/settings.ts'
 import type { User } from '@supabase/supabase-js'
 
 /** The OAuth identity providers OpenFray signs in with. */
-export type OAuthProvider = 'google' | 'discord'
+export type OAuthProvider = 'google' | 'discord' | 'custom:patreon'
 
 /** The result of an auth attempt: an error message, or null on success. */
 export type AuthResult = { error: string | null }

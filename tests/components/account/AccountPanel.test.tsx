@@ -79,6 +79,17 @@ describe('AccountPanel', () => {
     expect(screen.queryByLabelText('New password')).toBeNull()
   })
 
+  it('labels the custom Patreon identity', () => {
+    renderPanel({
+      user: {
+        email: 'gm@example.com',
+        app_metadata: { provider: 'custom:patreon' },
+      } as unknown as User,
+    })
+    expect(screen.getByText('Patreon')).toBeInTheDocument()
+    expect(screen.queryByText('custom:patreon')).not.toBeInTheDocument()
+  })
+
   it('signs out from the panel', () => {
     const { value } = renderPanel()
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
