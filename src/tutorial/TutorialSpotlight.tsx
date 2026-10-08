@@ -3,6 +3,7 @@
 
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import type { SetupTask } from './useTutorialSetup.ts'
+import { placeTutorialHint, type HintBoundary } from './hintPlacement.ts'
 
 const FOCUSABLE = 'button, input, select, textarea, summary, a[href], [tabindex]'
 const CANCEL = '[aria-label="Close"], [data-tutorial-cancel]'
@@ -79,6 +80,15 @@ function taskTargets(task: SetupTask, ogreId?: string): HTMLElement[] {
   return item.length ? item : find('[aria-label="Add to the encounter"]')
 }
 
+/** Keep a task's nearby row or action text clear of its hint. */
+function taskContext(target: HTMLElement): HTMLElement {
+  if (target.matches('[data-tutorial-hp]'))
+    return target.closest<HTMLElement>('[data-combatant-row]') ?? target
+  if (target.matches('[data-tutorial-action]')) return target.closest('p') ?? target
+  if (target.matches('[data-tutorial-spell]')) return target.parentElement ?? target
+  return target
+}
+
 /** Restrict real controls to the current task and Exit, and track their changing browser geometry. */
 export function TutorialSpotlight({
   task,
@@ -105,6 +115,16 @@ export function TutorialSpotlight({
     const inerted = new Set<HTMLElement>()
     let frame = 0
     let revealed: HTMLElement | null = null
+    let revealFocused = false
+    const measured = new Set<HTMLElement>()
+    const geometryObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => {
+            revealFocused = true
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(refresh)
+          })
     /** Re-enable only branches that contain an allowed task or guide surface. */
     const restore = () => {
       for (const node of inerted) node.inert = false
@@ -120,11 +140,48 @@ export function TutorialSpotlight({
       const allowed = [...targets, ...(guide ? [guide] : [])]
       const pending = !['ready', 'complete'].includes(taskRef.current) && targets.length === 0
       setMissing(pending)
-      if (guide)
+      const viewport = window.visualViewport
+      const guideStyle = guide ? getComputedStyle(guide) : null
+      /** Read browser-provided safe-area padding from the guide's CSS. */
+      const inset = (edge: string) =>
+        parseFloat(guideStyle?.getPropertyValue(`--hint-safe-${edge}`) ?? '') || 0
+      const safeViewport: HintBoundary = {
+        left: (viewport?.offsetLeft ?? 0) + inset('left') + 8,
+        top: (viewport?.offsetTop ?? 0) + inset('top') + 8,
+        right: (viewport ? viewport.offsetLeft + viewport.width : innerWidth) - inset('right') - 8,
+        bottom:
+          (viewport ? viewport.offsetTop + viewport.height : innerHeight) - inset('bottom') - 8,
+      }
+      if (guide) {
+        guide.style.width = `${Math.max(0, Math.min(parseFloat(guideStyle!.maxWidth) || Infinity, safeViewport.right - safeViewport.left))}px`
+        guide.style.maxHeight = `${Math.max(0, (safeViewport.bottom - safeViewport.top) * 0.38)}px`
+        // Reserve the fallback throughout the task so moving the guide cannot reflow its anchor.
         document.body.style.setProperty(
           '--tutorial-h',
-          `${guide.getBoundingClientRect().height + 16}px`,
+          `${guide.getBoundingClientRect().height + inset('bottom') + 16 + Math.max(0, innerHeight - (viewport ? viewport.offsetTop + viewport.height : innerHeight))}px`,
         )
+      }
+      const focusedTask = document.activeElement
+      const surfaces = [
+        ...targets,
+        ...targets.map(taskContext),
+        ...(guide ? [guide] : []),
+        ...(focusedTask instanceof HTMLElement && targets.some((node) => node.contains(focusedTask))
+          ? [focusedTask]
+          : []),
+      ]
+      for (const node of measured) {
+        if (!surfaces.includes(node)) {
+          geometryObserver?.unobserve(node)
+          measured.delete(node)
+        }
+      }
+      for (const node of surfaces) {
+        if (!measured.has(node)) {
+          measured.add(node)
+          geometryObserver?.observe(node)
+        }
+      }
       /** Make unrelated branches inert without disabling an allowed descendant. */
       const restrict = (parent: HTMLElement) => {
         for (const child of parent.children) {
@@ -176,12 +233,26 @@ export function TutorialSpotlight({
         revealed = first
         first.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
       }
+      if (revealFocused) {
+        revealFocused = false
+        const focused = document.activeElement
+        if (focused instanceof HTMLElement && targets.some((node) => node.contains(focused)))
+          focused.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+      }
+      let targetBounds: HintBoundary | null = null
       if (targets.length) {
         const boxes = targets.map((node) => node.getBoundingClientRect())
         const left = Math.max(0, Math.min(...boxes.map((box) => box.left)) - 4)
         const top = Math.max(0, Math.min(...boxes.map((box) => box.top)) - 4)
         const right = Math.min(innerWidth, Math.max(...boxes.map((box) => box.right)) + 4)
         const bottom = Math.min(innerHeight, Math.max(...boxes.map((box) => box.bottom)) + 4)
+        const context = targets.map((node) => taskContext(node).getBoundingClientRect())
+        targetBounds = {
+          left: Math.min(...context.map((box) => box.left)) - 4,
+          top: Math.min(...context.map((box) => box.top)) - 4,
+          right: Math.max(...context.map((box) => box.right)) + 4,
+          bottom: Math.max(...context.map((box) => box.bottom)) + 4,
+        }
         setBounds((old) =>
           old &&
           old.left === left &&
@@ -192,6 +263,17 @@ export function TutorialSpotlight({
             : { left, top, width: right - left, height: bottom - top },
         )
       } else setBounds(null)
+      if (guide) {
+        const placement = placeTutorialHint(
+          safeViewport,
+          guide.getBoundingClientRect(),
+          targetBounds,
+        )
+        guide.style.left = `${placement.left}px`
+        guide.style.top = `${placement.top}px`
+        guide.style.bottom = 'auto'
+        guide.dataset.placement = placement.docked ? 'dock' : 'anchor'
+      }
       if (!allowed.some((node) => node.contains(document.activeElement))) {
         const cast =
           taskRef.current === 'spell'
@@ -281,13 +363,8 @@ export function TutorialSpotlight({
     /** Reveal the task again when a changed shell moves it within its scrolling panel. */
     const resize = () => {
       revealed = null
+      revealFocused = true
       refresh()
-      const focused = document.activeElement
-      if (
-        focused instanceof HTMLElement &&
-        taskTargets(taskRef.current, ogreId).some((node) => node.contains(focused))
-      )
-        focused.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
     }
     /** Return escaped programmatic focus to the current task. */
     const containFocus = () => refresh()
@@ -303,6 +380,8 @@ export function TutorialSpotlight({
     })
     refresh()
     window.addEventListener('resize', resize)
+    window.visualViewport?.addEventListener('resize', resize)
+    window.visualViewport?.addEventListener('scroll', refresh)
     document.addEventListener('scroll', refresh, true)
     document.addEventListener('focusin', containFocus)
     for (const event of ['pointerdown', 'click', 'dblclick'])
@@ -312,10 +391,13 @@ export function TutorialSpotlight({
     window.addEventListener('keydown', blockKey, true)
     return () => {
       observer.disconnect()
+      geometryObserver?.disconnect()
       cancelAnimationFrame(frame)
       restore()
       document.body.style.removeProperty('--tutorial-h')
       window.removeEventListener('resize', resize)
+      window.visualViewport?.removeEventListener('resize', resize)
+      window.visualViewport?.removeEventListener('scroll', refresh)
       document.removeEventListener('scroll', refresh, true)
       document.removeEventListener('focusin', containFocus)
       for (const event of ['pointerdown', 'click', 'dblclick'])

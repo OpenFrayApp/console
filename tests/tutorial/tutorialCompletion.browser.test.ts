@@ -155,9 +155,11 @@ it.each([
     expect(screen.queryByRole('dialog', { name: 'Combat recap' })).toBeNull()
     for (let tab = 0; tab < 4; tab++) {
       await userEvent.tab()
-      expect([stop, screen.getByRole('button', { name: 'Exit tutorial' })]).toContain(
-        document.activeElement,
-      )
+      expect([
+        stop,
+        screen.getByRole('region', { name: 'Tutorial instructions' }),
+        screen.getByRole('button', { name: 'Exit tutorial' }),
+      ]).toContain(document.activeElement)
     }
     await userEvent.click(stop)
     const done = screen.getByRole('button', { name: 'Done' })

@@ -94,9 +94,14 @@ export function TutorialSetup({
         role="dialog"
         aria-label="Tutorial introduction"
         data-tutorial-guide
-        className="fixed inset-x-2 bottom-2 z-[70] mx-auto max-h-[38dvh] max-w-xl overflow-y-auto rounded-lg border border-indigo-400 bg-white p-3 text-slate-900 shadow-xl short:flex short:max-w-none short:items-center short:gap-3 dark:bg-slate-900 dark:text-slate-100"
+        className="fixed bottom-2 left-2 z-[70] flex max-h-[38dvh] w-[calc(100%-1rem)] max-w-sm flex-col rounded-lg border border-indigo-400 bg-white p-3 text-slate-900 shadow-xl [--hint-safe-bottom:env(safe-area-inset-bottom,0px)] [--hint-safe-left:env(safe-area-inset-left,0px)] [--hint-safe-right:env(safe-area-inset-right,0px)] [--hint-safe-top:env(safe-area-inset-top,0px)] short:max-w-none short:flex-row short:items-center short:gap-3 dark:bg-slate-900 dark:text-slate-100"
       >
-        <div className="short:flex-1">
+        <div
+          role="region"
+          aria-label="Tutorial instructions"
+          tabIndex={0}
+          className="min-h-0 overflow-y-auto short:flex-1"
+        >
           <h2 className="mb-1 text-sm font-semibold">{titles[setup.task]}</h2>
           <p role="status" className="text-sm">
             {setup.task === 'prone' && setup.attackResult && (
@@ -116,7 +121,7 @@ export function TutorialSetup({
             and campaign choices stay unchanged.
           </p>
         </div>
-        <Button className="mt-2 short:mt-0 short:shrink-0" onClick={controller.requestExit}>
+        <Button className="mt-2 shrink-0 self-start short:mt-0" onClick={controller.requestExit}>
           Exit tutorial
         </Button>
       </section>

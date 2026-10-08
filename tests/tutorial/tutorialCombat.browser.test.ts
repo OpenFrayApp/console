@@ -39,7 +39,7 @@ const controls = {
   select: (element: HTMLElement, value: string) => userEvent.selectOptions(element, value),
 }
 
-/** Verify the current task can be reached above the guide by a real pointer. */
+/** Verify the current task remains clear of the hint and reachable by a real pointer. */
 async function expectUsable(target: HTMLElement) {
   await expect.poll(() => tutorialControlIsReachable(target)).toBe(true)
 }
@@ -108,6 +108,8 @@ it.each([
       await userEvent.tab()
       expect(
         dialog.contains(document.activeElement) ||
+          document.activeElement ===
+            screen.getByRole('region', { name: 'Tutorial instructions' }) ||
           document.activeElement === screen.getByRole('button', { name: 'Exit tutorial' }),
       ).toBe(true)
       expect((document.activeElement as HTMLElement).closest('[inert]')).toBeNull()
@@ -116,6 +118,9 @@ it.each([
       natural === 1
         ? within(dialog).getByRole('button', { name: 'Close' })
         : screen.getByRole('button', { name: 'Apply to Rowan' })
+    for (let index = 0; index < 12 && document.activeElement !== complete; index++)
+      await userEvent.tab()
+    expect(document.activeElement).toBe(complete)
     await expectUsable(complete)
     if (natural === 20) {
       await page.viewport(844, 390)

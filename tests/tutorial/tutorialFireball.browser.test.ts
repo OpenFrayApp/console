@@ -123,6 +123,8 @@ it.each([
       await userEvent.tab()
       expect(
         dialog.contains(document.activeElement) ||
+          document.activeElement ===
+            screen.getByRole('region', { name: 'Tutorial instructions' }) ||
           document.activeElement === screen.getByRole('button', { name: 'Exit tutorial' }),
       ).toBe(true)
       expect((document.activeElement as HTMLElement).closest('[inert]')).toBeNull()

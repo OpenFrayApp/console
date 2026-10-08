@@ -71,6 +71,7 @@ it.each(layouts.flatMap((layout) => ['light', 'dark'].map((theme) => ({ ...layou
     expect([
       screen.queryByRole('button', { name: 'Add PC' }),
       screen.queryByRole('button', { name: 'Add to the encounter' }),
+      screen.getByRole('region', { name: 'Tutorial instructions' }),
       screen.getByRole('button', { name: 'Exit tutorial' }),
     ]).toContain(document.activeElement)
     await userEvent.keyboard('{Escape}')
@@ -233,6 +234,7 @@ it.each([375, 1180, 1440])(
     expect([
       screen.queryByRole('button', { name: 'Add PC' }),
       screen.queryByRole('button', { name: 'Add to the encounter' }),
+      screen.getByRole('region', { name: 'Tutorial instructions' }),
       screen.getByRole('button', { name: 'Exit tutorial' }),
     ]).toContain(document.activeElement)
     await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))

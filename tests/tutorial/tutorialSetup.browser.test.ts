@@ -7,6 +7,7 @@ import { commands, page, userEvent } from 'vitest/browser'
 import type { User } from '@supabase/supabase-js'
 import { saveSettings } from '../../src/state/settings.ts'
 import { renderTutorial } from './setupHarness.tsx'
+import { tutorialControlIsReachable } from './browserHarness.ts'
 import '../../src/index.css'
 
 vi.mock('../../src/lib/supabase.ts', () => ({ supabase: null }))
@@ -40,7 +41,7 @@ async function launchFromSettings() {
   await userEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
 }
 
-/** Check pane alignment before revealing a long form control above the instruction dock. */
+/** Reveal a long form control and verify it remains clear of the hint. */
 async function expectUsable(target: HTMLElement) {
   await expect
     .poll(() => {
@@ -49,16 +50,127 @@ async function expectUsable(target: HTMLElement) {
     })
     .toBe(true)
   target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  const box = target.getBoundingClientRect()
-  const exit = screen.getByRole('button', { name: 'Exit tutorial' }).getBoundingClientRect()
-  expect(box.width).toBeGreaterThan(0)
-  expect(box.left).toBeGreaterThanOrEqual(0)
-  expect(box.right).toBeLessThanOrEqual(innerWidth)
-  expect(box.bottom).toBeLessThan(exit.top)
-  await expect
-    .poll(() => document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2))
-    .toBe(target)
+  await expect.poll(() => tutorialControlIsReachable(target)).toBe(true)
 }
+
+it('places the wide hint beside Add PC and follows the opened form', async () => {
+  await page.viewport(1440, 900)
+  renderTutorial()
+  await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
+  const guide = screen.getByRole('dialog', { name: 'Tutorial introduction' })
+  await expect
+    .poll(() => {
+      const hint = guide.getBoundingClientRect()
+      const control = screen.getByRole('button', { name: 'Add PC' }).getBoundingClientRect()
+      return (
+        hint.left >= control.right &&
+        hint.left - control.right < 24 &&
+        Math.abs(hint.top - control.top) < 24
+      )
+    })
+    .toBe(true)
+  await openAdd('Add PC')
+  await expect
+    .poll(() => {
+      const form = screen
+        .getByRole('textbox', { name: 'PC name' })
+        .closest('form')!
+        .getBoundingClientRect()
+      const hint = guide.getBoundingClientRect()
+      return hint.left >= form.right && hint.left - form.right < 24
+    })
+    .toBe(true)
+  const form = screen.getByRole('textbox', { name: 'PC name' }).closest('form')!
+  form.style.width = '600px'
+  await expect
+    .poll(() => {
+      const hint = guide.getBoundingClientRect()
+      const context = form.getBoundingClientRect()
+      return hint.left >= context.right && hint.left - context.right < 24
+    })
+    .toBe(true)
+})
+
+it('lets keyboard users scroll constrained instructions while Exit stays visible', async () => {
+  await page.viewport(320, 480)
+  renderTutorial()
+  await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
+  await openAdd('Add PC')
+  const instructions = screen.getByRole('region', { name: 'Tutorial instructions' })
+  expect(instructions.scrollHeight).toBeGreaterThan(instructions.clientHeight)
+  for (let index = 0; index < 12 && document.activeElement !== instructions; index++)
+    await userEvent.tab()
+  expect(document.activeElement).toBe(instructions)
+  await userEvent.keyboard('{PageDown}')
+  await expect.poll(() => instructions.scrollTop).toBeGreaterThan(0)
+  const exit = screen.getByRole('button', { name: 'Exit tutorial' })
+  await userEvent.tab()
+  expect(document.activeElement).toBe(exit)
+  const box = exit.getBoundingClientRect()
+  expect(
+    exit.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)),
+  ).toBe(true)
+})
+
+it.each(
+  [
+    { width: 375, height: 812 },
+    { width: 844, height: 390 },
+    { width: 820, height: 1180 },
+    { width: 1180, height: 820 },
+    { width: 1440, height: 900 },
+  ].flatMap((size) => [false, true].map((dark) => ({ ...size, dark }))),
+)(
+  'keeps hints, forms, and Exit clear at $width × $height dark=$dark',
+  async ({ width, height, dark }) => {
+    await page.viewport(width, height)
+    document.documentElement.classList.toggle('dark', dark)
+    await touchCommands.emulateTouch(width <= 1024)
+    renderTutorial()
+    await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
+    await openAdd('Add PC')
+    const guide = screen.getByRole('dialog', { name: 'Tutorial introduction' })
+    const name = screen.getByRole('textbox', { name: 'PC name' })
+    await expectUsable(name)
+    await expectUsable(screen.getByRole('button', { name: 'Add' }))
+    await expect
+      .poll(() => {
+        const hint = guide.getBoundingClientRect()
+        const exit = screen.getByRole('button', { name: 'Exit tutorial' })
+        const box = exit.getBoundingClientRect()
+        return (
+          hint.left >= 0 &&
+          hint.right <= innerWidth &&
+          hint.top >= 0 &&
+          hint.bottom <= innerHeight &&
+          box.top >= hint.top &&
+          box.bottom <= hint.bottom &&
+          exit.contains(
+            document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2),
+          )
+        )
+      })
+      .toBe(true)
+    if (width <= 1024)
+      expect(
+        screen.getByRole('button', { name: 'Exit tutorial' }).getBoundingClientRect().height,
+      ).toBeGreaterThanOrEqual(44)
+    name.closest('form')!.parentElement!.scrollBy(0, 100)
+    await expectUsable(name)
+    await page.viewport(height, width)
+    await expect
+      .poll(() => {
+        const hint = guide.getBoundingClientRect()
+        return (
+          hint.left >= 0 && hint.right <= innerWidth && hint.top >= 0 && hint.bottom <= innerHeight
+        )
+      })
+      .toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Yes, another time' }))
+    expect(document.body.style.getPropertyValue('--tutorial-h')).toBe('')
+  },
+)
 
 const touchCommands = commands as typeof commands & {
   emulateTouch(enabled: boolean): Promise<void>
@@ -125,6 +237,7 @@ it.each([
         screen.getByRole('textbox', { name: 'Max HP' }),
         screen.getByRole('button', { name: 'Add' }),
         screen.getByRole('button', { name: 'Exit tutorial' }),
+        screen.getByRole('region', { name: 'Tutorial instructions' }),
       ]).toContain(document.activeElement)
     }
     await userEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
