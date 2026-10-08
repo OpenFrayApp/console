@@ -29,8 +29,9 @@ Only `service_role` can execute these public RPCs:
 - `finish_account_mail(id, claim, outcome, provider_id)` records a sanitized result.
 
 The security-definer functions use a fixed search path and fully qualified private
-objects. Browser roles cannot claim jobs, enumerate addresses, select templates,
-or enqueue messages. The service role also has no direct private-table access.
+objects. Ordinary account holders cannot claim jobs, enumerate addresses, select templates,
+or enqueue messages. The capability-gated security operator RPCs are the explicit exception
+for reviewed security selections. The service role also has no direct private-table access.
 Existing moderation grants and routing are unchanged.
 
 Claims last two minutes. The worker’s provider requests time out after 15 seconds.
@@ -82,6 +83,39 @@ A fresh baseline would discard replay protection and is not a recovery procedure
 [legal publication procedure](https://github.com/OpenFrayApp/openfray/blob/main/docs/legal-publication.md)
 for the explicit baseline and activation gates.
 
+## Reviewed security notices
+
+Issue #113 uses the admin repo’s explicit `email:security` command. The operator renders
+incident facts from a private local file and reviews HTML, plain text, and selected account IDs.
+The template publisher rejects incomplete facts, placeholder text, markup, and unsafe links.
+Each incident has a content-addressed hosted template with no dynamic incident variables.
+
+`preview_security_notice(id, digest, template_id, template_revision, accounts)` freezes
+an explicit selection of 1–1000 existing accounts with usable trusted addresses.
+`confirm_security_notice(id, digest, accounts, reviewed)` requires the same operator,
+content digest, exact selection, and explicit review confirmation within one hour.
+Both RPCs require a current account and `may('security.notify')`. Only admin holds
+that capability initially; explicit denials apply. Anonymous callers cannot execute either RPC.
+Account holders cannot enumerate review records or initiate notices. Service credentials
+cannot execute the operator RPCs, and the command uses an operator JWT with the anon key.
+
+Confirmation queues individual deliveries under a unique `security/<incident UUID>` event.
+It pins the content digest, hosted template ID, and hosted revision. Concurrent confirmations
+and replay cannot create another delivery. The worker checks the pinned hosted version and
+uses the existing staging routing, tracking checks, request hash, leases, retry bounds,
+suppression behavior, and sanitized outcomes. Template drift blocks sending.
+
+Private review selections cascade on account erasure, as do queued deliveries and ledger entries.
+Deleting the reviewer removes unconfirmed reviews and their selections. Confirmation drops
+reviewer and draft recipient identifiers; recipient-free version history prevents replay.
+No incident prose or address enters the security review tables or command diagnostics.
+The shared recovery quarantine applies to these deliveries too. A provider request already
+in flight cannot be recalled by account erasure.
+
+See the admin repo’s `docs/account-email.md` for command syntax, private artifacts,
+reconciliation, and the separately authorized synthetic staging demonstration.
+Hosted publication and staging delivery remain deployment prerequisites, not local-test results.
+
 ## Erasure and verification
 
 The ledger references `auth.users(id) ON DELETE CASCADE`. Queue rows cascade from
@@ -125,7 +159,7 @@ The admin deployment guide documents the authorized staging-account and inbox ch
 Run the focused tests, fresh schema/type verification, and hostile boundary suite:
 
 ```bash
-npx vitest run tests/database/accountMail.test.ts tests/database/migrations.test.ts
+npx vitest run tests/database/accountMail.test.ts tests/database/securityNotices.test.ts tests/database/migrations.test.ts
 npm run db:types
 npm run db:verify
 npm run db:boundary

@@ -33,7 +33,7 @@ describe('Supabase authority evidence', () => {
   it('gives the forward-only lineage a stable head and schema hash', () => {
     const lineage = migrationLineage(migrations)
 
-    expect(lineage.at(-1)?.file).toBe('20261008090545_account_deletion_single_winner.sql')
+    expect(lineage.at(-1)?.file).toBe('20261008092503_security_notices.sql')
     expect(schemaHash(lineage)).toMatch(/^[a-f0-9]{64}$/)
     expect(new Set(lineage.map(({ hash }: { hash: string }) => hash)).size).toBe(lineage.length)
   })

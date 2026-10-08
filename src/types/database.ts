@@ -673,12 +673,23 @@ export type Database = {
           privacy_date: string
           recipient: string
           template: string
+          template_id: string
+          template_revision: string
           terms_date: string
         }[]
       }
       claim_encounter_writer: {
         Args: { want_encounter: string; want_writer: string }
         Returns: Json
+      }
+      confirm_security_notice: {
+        Args: {
+          p_accounts: string[]
+          p_digest: string
+          p_id: string
+          p_reviewed: boolean
+        }
+        Returns: string
       }
       delete_account: { Args: never; Returns: undefined }
       deny_capability: {
@@ -711,6 +722,16 @@ export type Database = {
       prepare_account_mail: {
         Args: { p_claim: string; p_hash: string; p_id: string }
         Returns: boolean
+      }
+      preview_security_notice: {
+        Args: {
+          p_accounts: string[]
+          p_digest: string
+          p_id: string
+          p_template_id: string
+          p_template_revision: string
+        }
+        Returns: number
       }
       reconcile_recovery_dependencies: {
         Args: { attach: boolean }

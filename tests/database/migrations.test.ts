@@ -82,6 +82,62 @@ beforeAll(async () => {
   }
 }, 60_000)
 
+describe('security notice operator boundary', () => {
+  it('checks live capabilities and denials before previewing or queuing affected accounts', async () => {
+    const operator = '11111111-1111-4111-8111-111111111119'
+    const recipient = '22222222-2222-4222-8222-222222222229'
+    const incident = '33333333-3333-4333-8333-333333333339'
+    const digest = 'a'.repeat(64)
+    await asOwner()
+    try {
+      await db.exec(
+        `insert into auth.users(id,email) values ('${operator}','operator@example.test'),('${recipient}','recipient@example.test')`,
+      )
+      await as(operator)
+      const preview = 'select public.preview_security_notice($1,$2,$3,$4,$5)'
+      const args = [incident, digest, incident, recipient, [recipient]]
+      await expect(db.query(preview, args)).rejects.toThrow(/Unauthorized/)
+      await asOwner()
+      await db.exec(`insert into user_roles(owner_id,role) values ('${operator}','admin')`)
+      await as(operator)
+      await db.query(preview, args)
+      await asOwner()
+      await db.exec(
+        `insert into capability_denials(owner_id,capability) values ('${operator}','security.notify')`,
+      )
+      await as(operator)
+      await expect(
+        db.query('select public.confirm_security_notice($1,$2,$3,true)', [
+          incident,
+          digest,
+          [recipient],
+        ]),
+      ).rejects.toThrow(/Unauthorized/)
+      await asOwner()
+      await db.exec(
+        `delete from capability_denials where owner_id='${operator}'; delete from auth.users where id='${recipient}'`,
+      )
+      await as(operator)
+      await expect(
+        db.query('select public.confirm_security_notice($1,$2,$3,true)', [
+          incident,
+          digest,
+          [recipient],
+        ]),
+      ).rejects.toThrow(/Review changed/)
+      await asOwner()
+      expect(
+        await value<number>(
+          `select count(*)::integer from account_mail.security_recipients where notice_id='${incident}'`,
+        ),
+      ).toBe(0)
+    } finally {
+      await asOwner()
+      await db.exec(`delete from auth.users where id in ('${operator}','${recipient}')`)
+    }
+  })
+})
+
 describe('the tracked migration lineage', () => {
   it('rebuilds every reviewed public table from a fresh database', async () => {
     const result = await db.query<{ tablename: string }>(`
@@ -245,6 +301,7 @@ describe('the tracked migration lineage', () => {
       'audit_recent(integer):authenticated',
       'capabilities_of(uuid):authenticated',
       'claim_encounter_writer(uuid,uuid):authenticated',
+      'confirm_security_notice(uuid,text,uuid[],boolean):authenticated',
       'delete_account():authenticated',
       'deny_capability(uuid,text,text):authenticated',
       'grant_role(uuid,text,text):authenticated',
@@ -255,6 +312,7 @@ describe('the tracked migration lineage', () => {
       'may_publish_more():authenticated',
       'may_use_reserved_byline():authenticated',
       'my_capabilities():authenticated',
+      'preview_security_notice(uuid,text,uuid,uuid,uuid[]):authenticated',
       'reported_share(text):authenticated',
       'reports_for(text):authenticated',
       'reports_open():authenticated',

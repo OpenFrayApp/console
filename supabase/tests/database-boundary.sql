@@ -172,7 +172,7 @@ begin
       and t.tgfoid='account_mail.on_account_created()'::regprocedure
   ) then raise exception 'CB-1: trusted welcome INSERT trigger is absent or changed'; end if;
   if (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='account_mail' and c.relkind='r' and c.relrowsecurity) <> 5
+      where n.nspname='account_mail' and c.relkind='r' and c.relrowsecurity) <> 7
     or exists (
       select 1 from pg_namespace n cross join lateral aclexplode(n.nspacl) acl
       where n.nspname='account_mail' and acl.grantee<>n.nspowner
@@ -202,6 +202,8 @@ begin
         ('prepare_account_mail(uuid,uuid,text)', 'service_role'),
         ('finish_account_mail(uuid,uuid,text,uuid)', 'service_role'),
         ('register_legal_publication(text,timestamp with time zone,date,date,boolean)', 'service_role'),
+        ('preview_security_notice(uuid,text,uuid,uuid,uuid[])', 'authenticated'),
+        ('confirm_security_notice(uuid,text,uuid[],boolean)', 'authenticated'),
         ('delete_account()', 'authenticated'),
         ('deny_capability(uuid,text,text)', 'authenticated'),
         ('grant_role(uuid,text,text)', 'authenticated'),
