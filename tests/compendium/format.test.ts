@@ -17,6 +17,17 @@ import {
 } from '../../src/compendium/format.ts'
 import { LIBRARIES } from '../../src/compendium/libraries.ts'
 
+it('preserves creator attribution in card footers while omitting Kibbles’ display version', () => {
+  expect(sourceInfo('kibblestasty-casting-compendium-v2.3').ruleset).toBe(
+    'Kibbles’ Casting Compendium (KibblesTasty)',
+  )
+  expect(sourceInfo('somanyrobots-spells-that-dont-suck').ruleset).toBe(
+    'Spells That Don’t Suck (Omega Ankh & somanyrobots)',
+  )
+  expect(sourceInfo('somanyrobots-so-many-spells').ruleset).toBe('So Many Spells (somanyrobots)')
+  expect(sourceInfo('khyberia-srd').ruleset).toBe('Khyberia SRD (Nick Stefanski)')
+})
+
 describe('formatSenses', () => {
   it('lists each sense in feet, passive perception last', () => {
     expect(formatSenses({ passivePerception: 14, darkvision: 60, blindsight: 30 })).toBe(

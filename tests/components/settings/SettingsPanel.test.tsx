@@ -228,14 +228,14 @@ describe('SettingsPanel', () => {
       expect(screen.getByRole('heading', { name: group })).toBeTruthy()
     }
 
-    fireEvent.click(screen.getByText('Tome of Beasts 3 (Kobold Press)'))
+    fireEvent.click(screen.getByText('Tome of Beasts 3'))
     expect(onSetEnabledLibraries).toHaveBeenCalledWith(['srd-5.2', 'kobold-press-tob3'])
   })
 
   it('shows 5e edition badges for the optional manual spell libraries', () => {
     const { onSetEnabledLibraries } = renderPanel()
     for (const name of [
-      'Kibbles’ Casting Compendium v2.3',
+      'Kibbles’ Casting Compendium',
       'Spells That Don’t Suck',
       'So Many Spells',
     ]) {
@@ -250,9 +250,26 @@ describe('SettingsPanel', () => {
     expect(screen.getByText(/Roll their dice and apply their effects manually/)).toBeTruthy()
   })
 
+  it('keeps source qualifiers and version suffixes out of the Settings list', () => {
+    renderPanel()
+    for (const title of [
+      'Basic Rules 2024',
+      'Basic Rules 2014',
+      'Khyberia SRD',
+      'Tome of Beasts 3',
+      'Kibbles’ Casting Compendium',
+    ]) {
+      const label = screen.getByText(title).closest('label')!
+      expect(label.textContent).not.toMatch(/[()]/)
+      expect(label.textContent).not.toContain('v2.3')
+    }
+    expect(screen.queryByText('So Many Spells (somanyrobots)')).toBeNull()
+    expect(screen.queryByText('Khyberia SRD (Nick Stefanski)')).toBeNull()
+  })
+
   it('never lets the user disable the last library', () => {
     const { onSetEnabledLibraries } = renderPanel()
-    fireEvent.click(screen.getByText('Basic Rules 2024 (SRD 5.2.1)'))
+    fireEvent.click(screen.getByText('Basic Rules 2024'))
     expect(onSetEnabledLibraries).not.toHaveBeenCalled()
   })
 

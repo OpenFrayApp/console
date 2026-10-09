@@ -8,6 +8,7 @@ import {
   editionBadgeClass,
   inEnabledLibrary,
   librarySource,
+  librarySettingsLabel,
   libraryReferenceOnly,
   librarySourceBadgeClass,
   libraryTag,
@@ -106,6 +107,19 @@ describe('libraries', () => {
       expect(kibbles).not.toBe(librarySourceBadgeClass(source))
       expect(stds).not.toBe(librarySourceBadgeClass(source))
     }
+  })
+
+  it('shortens Settings titles without modifying source attribution', () => {
+    for (const library of LIBRARIES) {
+      expect(librarySettingsLabel(library)).not.toMatch(/[()]/)
+    }
+    const library = LIBRARIES.find((entry) => entry.id === 'kibblestasty-casting-compendium-v2.3')!
+    expect(librarySettingsLabel(library)).toBe('Kibbles’ Casting Compendium')
+    expect(library.label).toBe('Kibbles’ Casting Compendium (KibblesTasty)')
+    expect(library.spellsFile).toBe('kibbles-casting-v23-spells.json')
+    expect(librarySettingsLabel({ label: 'Example (Author) collection (Publisher)' })).toBe(
+      'Example collection',
+    )
   })
 
   it('sanitizes a stored list: drops unknown ids, falls back when empty/invalid', () => {
