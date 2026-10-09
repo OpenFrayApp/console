@@ -232,6 +232,24 @@ describe('SettingsPanel', () => {
     expect(onSetEnabledLibraries).toHaveBeenCalledWith(['srd-5.2', 'kobold-press-tob3'])
   })
 
+  it('shows 5e edition badges for the optional manual spell libraries', () => {
+    const { onSetEnabledLibraries } = renderPanel()
+    for (const name of [
+      'Kibbles’ Casting Compendium v2.3',
+      'Spells That Don’t Suck',
+      'So Many Spells',
+    ]) {
+      const label = screen.getByText(name).closest('label')!
+      expect(within(label).queryByText('Reference')).toBeNull()
+      expect(within(label).queryByText('5.5e')).toBeNull()
+      expect(within(label).getByText('5e')).toBeTruthy()
+      expect((label.querySelector('input') as HTMLInputElement).checked).toBe(false)
+    }
+    fireEvent.click(screen.getByText('So Many Spells'))
+    expect(onSetEnabledLibraries).toHaveBeenCalledWith(['srd-5.2', 'somanyrobots-so-many-spells'])
+    expect(screen.getByText(/Roll their dice and apply their effects manually/)).toBeTruthy()
+  })
+
   it('never lets the user disable the last library', () => {
     const { onSetEnabledLibraries } = renderPanel()
     fireEvent.click(screen.getByText('Basic Rules 2024 (SRD 5.2.1)'))

@@ -5,8 +5,14 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { Spell } from '../../src/schema/spell.ts'
 import { LIBRARIES } from '../../src/compendium/libraries.ts'
-import { SPELL_EFFECTS, normalize } from '../../src/combat/spellEffects.ts'
+import {
+  SPELL_EFFECTS,
+  normalize,
+  spellEffectFor,
+  isSupportSpell,
+} from '../../src/combat/spellEffects.ts'
 import { NOT_MODELLED, SKIP_REASONS } from './spellCoverage.data.ts'
+import { REFERENCE_ONLY_SPELLS } from './referenceSpellCoverage.data.ts'
 
 /**
  * The coverage contract: every shipped spell has a verdict. A missing map key is
@@ -21,6 +27,7 @@ const spellsFor = (file: string): Spell[] => {
 
 const LIBRARY_SPELLS = LIBRARIES.filter((l) => l.spellsFile).map((l) => ({
   id: l.id,
+  referenceOnly: l.referenceOnly,
   spells: spellsFor(l.spellsFile!),
 }))
 
@@ -35,13 +42,31 @@ describe('spell coverage', () => {
   })
 
   it('gives every compendium spell a verdict — modelled or explicitly skipped', () => {
-    const untriaged = [...ALL_KEYS]
+    const automatedKeys = new Set(
+      LIBRARY_SPELLS.filter((l) => !l.referenceOnly).flatMap((l) =>
+        l.spells.map((s) => normalize(s.name)),
+      ),
+    )
+    const untriaged = [...automatedKeys]
       .filter((key) => !(key in SPELL_EFFECTS) && !(key in NOT_MODELLED))
       .sort()
     expect(
       untriaged,
       `Untriaged spells. Add each to src/combat/spells/* or to tests/combat/spellCoverage.data.ts:\n${untriaged.join('\n')}`,
     ).toEqual([])
+  })
+
+  it('gives every reference spell its own source-specific manual verdict', () => {
+    const referenceSpells = LIBRARY_SPELLS.filter((l) => l.referenceOnly).flatMap((l) => l.spells)
+    expect(referenceSpells.map((s) => s.id).sort()).toEqual(
+      Object.keys(REFERENCE_ONLY_SPELLS).sort(),
+    )
+    for (const spell of referenceSpells) {
+      expect(REFERENCE_ONLY_SPELLS[spell.id], spell.id).toBe('SOURCE_REVIEW')
+      expect(spell.mechanics, spell.id).toBeUndefined()
+      expect(spellEffectFor(spell), spell.id).toBeNull()
+      expect(isSupportSpell(spell), spell.id).toBe(false)
+    }
   })
 
   it('never names a spell the compendium does not have', () => {

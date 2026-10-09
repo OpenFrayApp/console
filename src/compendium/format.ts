@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Ability, Senses } from '../schema/primitives.ts'
+import { LICENSE_LABELS, type ContentLicense } from '../schema/license.ts'
 import { LIBRARIES, type Library } from './libraries.ts'
 
 /** A sense range, stored in feet, printed the way a stat block does: whole miles as
@@ -149,16 +150,9 @@ export interface SourceInfo {
   url?: string
 }
 
-const SOURCE_LICENSE: Record<string, string> = {
-  'srd-5.2': 'CC-BY-4.0',
-  'srd-5.1': 'CC-BY-4.0',
-  'kobold-press-tob': 'OGL-1.0a',
-  'kobold-press-tob2': 'OGL-1.0a',
-  'kobold-press-ccdx': 'OGL-1.0a',
-  'kobold-press-tob3': 'OGL-1.0a',
-  'openfray-brood-and-bloom': 'CC-BY-4.0',
-  'openfray-strong-waters': 'CC-BY-4.0',
-  'openfray-waking-garden': 'CC-BY-4.0',
+const SOURCE_LICENSE_LABELS: Partial<Record<ContentLicense, string>> = {
+  'cc-by-4.0': 'CC-BY-4.0',
+  'ogl-1.0a': 'OGL-1.0a',
 }
 
 /** Adapt a library label to the shorter wording used on a stat-block source line. */
@@ -174,7 +168,7 @@ export function sourceInfo(source: string): SourceInfo {
 
   return {
     ruleset: statBlockSourceLabel(library),
-    license: SOURCE_LICENSE[source],
+    license: SOURCE_LICENSE_LABELS[library.license] ?? LICENSE_LABELS[library.license],
     ...(library.bookUrl ? { url: library.bookUrl } : {}),
   }
 }

@@ -8,6 +8,7 @@ import {
   editionBadgeClass,
   inEnabledLibrary,
   librarySource,
+  libraryReferenceOnly,
   librarySourceBadgeClass,
   libraryTag,
   sanitizeEnabledLibraries,
@@ -72,6 +73,39 @@ describe('libraries', () => {
     expect(sw.bookUrl).toBe('/strong-waters/')
     expect(librarySource('openfray-strong-waters')).toBe('SW&PS')
     expect(libraryTag('openfray-strong-waters')).toBe('5.5')
+  })
+
+  it('keeps third-party reference collections independent, opt-in, and on their verified 5e baseline', () => {
+    const sources = [
+      'kibblestasty-casting-compendium-v2.3',
+      'somanyrobots-spells-that-dont-suck',
+      'somanyrobots-so-many-spells',
+    ]
+    for (const source of sources) {
+      const library = LIBRARIES.find((entry) => entry.id === source)!
+      expect(library.group).toBe('other')
+      expect(library.spellsFile).toBeTruthy()
+      expect(library.creaturesFile).toBeUndefined()
+      expect(libraryReferenceOnly(source)).toBe(true)
+      expect(libraryTag(source)).toBe('5.0')
+      expect(DEFAULT_ENABLED_LIBRARIES).not.toContain(source)
+      expect(sanitizeEnabledLibraries([source])).toEqual([source])
+    }
+    expect(libraryReferenceOnly('srd-5.2')).toBe(false)
+    expect(libraryReferenceOnly('custom')).toBe(false)
+  })
+
+  it('gives Kibbles its own color and shares the somanyrobots color across STDS and SMS', () => {
+    const kibbles = librarySourceBadgeClass('kibblestasty-casting-compendium-v2.3')
+    const stds = librarySourceBadgeClass('somanyrobots-spells-that-dont-suck')
+    expect(kibbles).toContain('orange')
+    expect(stds).toContain('cyan')
+    expect(librarySourceBadgeClass('somanyrobots-so-many-spells')).toBe(stds)
+    expect(kibbles).not.toBe(stds)
+    for (const source of ['srd-5.2', 'kobold-press-tob', 'openfray-brood-and-bloom', 'custom']) {
+      expect(kibbles).not.toBe(librarySourceBadgeClass(source))
+      expect(stds).not.toBe(librarySourceBadgeClass(source))
+    }
   })
 
   it('sanitizes a stored list: drops unknown ids, falls back when empty/invalid', () => {

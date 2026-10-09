@@ -4,6 +4,7 @@
 import type { Action, DamageRoll } from '../schema/action.ts'
 import type { Combatant, Concentration } from '../schema/combatant.ts'
 import type { Spell } from '../schema/spell.ts'
+import { isReferenceOnlySpell } from '../compendium/libraries.ts'
 import { spellEffectFor } from './spellEffects.ts'
 
 /**
@@ -25,6 +26,7 @@ const levelLabel = (level: number): string => (level === 0 ? 'Cantrip' : `Level 
 
 /** Base damage plus each upcast/caster-level variant. Empty when the spell deals no typed damage. */
 export function damageVariants(spell: Spell): DamageVariant[] {
+  if (isReferenceOnlySpell(spell)) return []
   const damage = spell.mechanics?.damage
   if (!damage) return []
   const variants: DamageVariant[] = [{ key: 'base', label: levelLabel(spell.level), damage }]
@@ -83,6 +85,7 @@ export function spellAction(
   spell: Spell,
   caster: { saveDc?: number; toHit?: number },
 ): Action | null {
+  if (isReferenceOnlySpell(spell)) return null
   const m = spell.mechanics
   if (!m) return null
   const id = `spell:${spell.id}`
