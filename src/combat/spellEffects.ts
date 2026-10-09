@@ -3,7 +3,7 @@
 
 import type { Effect } from '../schema/effect.ts'
 import type { Spell } from '../schema/spell.ts'
-import { isReferenceOnlySpell } from '../compendium/libraries.ts'
+import { isReferenceOnlySpell, libraryReferenceOnly } from '../compendium/libraries.ts'
 import { reminder } from './effects.ts'
 import { SPELL_EFFECTS } from './spells/index.ts'
 import type { SpellEffectDef } from './spells/shared.ts'
@@ -40,7 +40,7 @@ export const normalize = (name: string): string => name.toLowerCase().replace(/[
  * modelled effect keeps correctly-tagged spells untouched.
  */
 export function isSupportSpell(spell: Spell): boolean {
-  if (isReferenceOnlySpell(spell)) return false
+  if (libraryReferenceOnly(spell.source)) return false
   const def = SPELL_EFFECTS[normalize(spell.name)]
   if (!def || def.targeting === 'enemy') return false
   return !spell.mechanics?.damage?.length && !spell.mechanics?.attackRoll
@@ -73,7 +73,7 @@ export function delayedDamageEffect(spell: Spell, source?: string): Effect | nul
  * The bundle is minted per build, so each target gets its own.
  */
 export function spellEffectFor(spell: Spell): SpellEffectDef | null {
-  if (isReferenceOnlySpell(spell)) return null
+  if (libraryReferenceOnly(spell.source)) return null
   const def = SPELL_EFFECTS[normalize(spell.name)]
   if (!def) return null
   return {

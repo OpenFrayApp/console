@@ -66,6 +66,8 @@ describe('reference-only spell isolation', () => {
     const copy = { ...BLESS, id: 'custom:my-spell', source: 'kibblestasty-casting-compendium-v2.3' }
     expect(spellAction(copy, {})).not.toBeNull()
     expect(damageVariants(copy)).not.toEqual([])
+    expect(spellEffectFor(copy)).toBeNull()
+    expect(isSupportSpell(copy)).toBe(false)
   })
 
   it.each(LIBRARIES.filter((library) => library.referenceOnly))(
