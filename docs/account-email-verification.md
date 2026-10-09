@@ -11,6 +11,13 @@ Resolve Supabase's `develop` branch from the configured parent. Match its projec
 reference, URL, and database connection; never deploy to the production parent.
 Keep credentials in ignored, owner-only files and out of logs.
 
+Run `npm run mail:target` with `PRODUCTION_SUPABASE_URL`, `STAGING_SUPABASE_URL`,
+and `STAGING_DATABASE_URL` loaded securely into the process environment.
+The read-only check lists the parent’s branches using the authenticated Supabase CLI.
+It verifies the `develop` project and exact database identity, then reports only
+sanitized booleans. It applies no migrations and changes no secrets or delivery settings.
+It does not inspect scheduler, function, provider, or mailbox state.
+
 Normal staging testing uses:
 
 - `ACCOUNT_MAIL_MODE=staging`;
@@ -47,6 +54,19 @@ the isolated staging console URL.
    into automatic email delivery. Manual Resend sends need deliberate recipient review.
 8. Leave production unchanged. Staging authorization does not authorize a production
    push, deployment, scheduler, or email send.
+
+## Ordinary staging journey
+
+Before the synthetic retry and isolation checks, use an approved disposable account
+through a supported sign-in provider in the staging console. Confirm the welcome
+in its registered inbox, then delete that account through the console and confirm
+the deletion email. Explain the once-per-minute welcome cadence before starting;
+deletion confirmation is attempted directly after erasure.
+
+Record worker execution, provider acceptance, and human receipt separately.
+An HTTP 200 from `account-mail` can also mean no work or a recorded unsuccessful attempt.
+A successful signup does not prove deduplication or provider linking; verify those
+separately. Live Patreon consent and linking require the human provider journey.
 
 ## Required evidence
 
