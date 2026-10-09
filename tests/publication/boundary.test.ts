@@ -24,9 +24,19 @@ describe('publication boundary', () => {
     const shipped = LIBRARIES.filter((library) => library.creaturesFile).map((library) => ({
       id: library.id,
       indexPath: library.creaturesFile!.replace(/-creatures\.json$/, '-creatures.index.json'),
-      license: library.group === 'other' ? 'ogl-1.0a' : 'cc-by-4.0',
+      license: library.license,
     }))
     expect(PUBLICATION_SOURCE_MANIFEST.sources).toEqual(shipped)
+  })
+
+  it('retains CC-BY for a third-party creature library', () => {
+    expect(
+      PUBLICATION_SOURCE_MANIFEST.sources.find((source) => source.id === 'khyberia-srd'),
+    ).toEqual({
+      id: 'khyberia-srd',
+      indexPath: 'khyberia-creatures.index.json',
+      license: 'cc-by-4.0',
+    })
   })
 
   it('validates share codes without browser state', () => {
