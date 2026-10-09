@@ -620,21 +620,37 @@ export type Database = {
           saved_fights: number
         }[]
       }
-      accounts: {
-        Args: { limit_to?: number }
-        Returns: {
-          created_at: string
-          denials: string[]
-          display_name: string
-          email: string
-          full_name: string
-          id: string
-          last_sign_in_at: string
-          providers: string[]
-          roles: string[]
-          signed_in_with: string
-        }[]
-      }
+      accounts:
+        | {
+            Args: { limit_to?: number }
+            Returns: {
+              created_at: string
+              denials: string[]
+              display_name: string
+              email: string
+              full_name: string
+              id: string
+              last_sign_in_at: string
+              providers: string[]
+              roles: string[]
+              signed_in_with: string
+            }[]
+          }
+        | {
+            Args: { limit_to: number; who: string }
+            Returns: {
+              created_at: string
+              denials: string[]
+              display_name: string
+              email: string
+              full_name: string
+              id: string
+              last_sign_in_at: string
+              providers: string[]
+              roles: string[]
+              signed_in_with: string
+            }[]
+          }
       answer_reports: {
         Args: { decision: string; want: string }
         Returns: number
@@ -665,13 +681,44 @@ export type Database = {
           via: string
         }[]
       }
+      claim_account_mail: {
+        Args: never
+        Returns: {
+          claim: string
+          id: string
+          privacy_date: string
+          recipient: string
+          template: string
+          template_id: string
+          template_revision: string
+          terms_date: string
+        }[]
+      }
       claim_encounter_writer: {
         Args: { want_encounter: string; want_writer: string }
         Returns: Json
       }
+      confirm_security_notice: {
+        Args: {
+          p_accounts: string[]
+          p_digest: string
+          p_id: string
+          p_reviewed: boolean
+        }
+        Returns: string
+      }
       delete_account: { Args: never; Returns: undefined }
       deny_capability: {
         Args: { cap: string; who: string; why?: string }
+        Returns: boolean
+      }
+      finish_account_mail: {
+        Args: {
+          p_claim: string
+          p_id: string
+          p_outcome: string
+          p_provider_id?: string
+        }
         Returns: boolean
       }
       grant_role: {
@@ -688,9 +735,57 @@ export type Database = {
         Args: { extra?: Json; what: string; which: string }
         Returns: undefined
       }
+      prepare_account_mail: {
+        Args: { p_claim: string; p_hash: string; p_id: string }
+        Returns: boolean
+      }
+      preview_security_notice: {
+        Args: {
+          p_accounts: string[]
+          p_digest: string
+          p_id: string
+          p_template_id: string
+          p_template_revision: string
+        }
+        Returns: number
+      }
+      published_share: {
+        Args: { want: string }
+        Returns: {
+          code: string
+          created_at: string
+          kind: string
+          name: string
+          owned: boolean
+          publisher_id: string
+          publisher_name: string
+        }[]
+      }
+      published_shares: {
+        Args: { before_at?: string; before_code?: string; search_for?: string }
+        Returns: {
+          code: string
+          created_at: string
+          kind: string
+          name: string
+          owned: boolean
+          publisher_id: string
+          publisher_name: string
+        }[]
+      }
       reconcile_recovery_dependencies: {
         Args: { attach: boolean }
         Returns: undefined
+      }
+      register_legal_publication: {
+        Args: {
+          p_baseline?: boolean
+          p_privacy: string
+          p_published_at: string
+          p_revision: string
+          p_terms: string
+        }
+        Returns: string
       }
       report_share: {
         Args: { note?: string; reply_to?: string; want: string; why: string }
@@ -783,12 +878,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -812,11 +907,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -837,11 +932,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -862,11 +957,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -879,11 +974,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

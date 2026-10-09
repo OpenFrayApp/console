@@ -17,16 +17,19 @@ The `Database authority` workflow keeps the local migration, recovery-tool, host
 1. Confirm the target project, restore point, expected data loss, and operator authorization.
 2. Preserve the current deletion ledger outside the restore target through an approved protected connection.
 3. If the current ledger is unavailable, stop and establish how later deletions will remain enforced.
-4. Plan deletion replay, live-view revocation, writer-lease cleanup, and authentication-session handling before reopening access.
-5. Follow the [Supabase recovery documentation](https://supabase.com/docs/guides/platform/backups) for the selected backup format and restore method.
-6. Verify schema, grants, tenant isolation, authentication, and deleted-account and revoked-share behavior before reopening access.
-7. Record the restore point, elapsed time, verification results, and decision to reopen or abandon the target.
+4. Suspend account-email workers and their scheduler. Preserve post-snapshot provider acceptance records through approved protected access where available.
+5. Plan deletion replay, live-view revocation, writer-lease cleanup, and authentication-session handling before reopening access.
+6. Follow the [Supabase recovery documentation](https://supabase.com/docs/guides/platform/backups) for the selected backup format and restore method.
+7. Run `supabase/snippets/quarantine-account-mail-recovery.sql` with a protected operator connection before resuming workers. It quarantines all restored pending mail because snapshot state cannot prove subsequent provider acceptance.
+8. Reconcile quarantined mail against preserved or provider-side records. Keep unprovable outcomes quarantined; never blindly requeue them after the provider’s idempotency window.
+9. Verify schema, grants, tenant isolation, authentication, deleted-account and revoked-share behavior, and the account-mail quarantine before reopening access.
+10. Record the restore point, elapsed time, verification results, and decision to reopen or abandon the target.
 
 Supabase backup availability does not prove these checks passed. Deleting a Supabase project also deletes its provider-managed backups.
 
 ## Existing encrypted backups
 
-The scripts under `scripts/` remain available for manual inspection and recovery of the existing encrypted backup format. `restore-supabase.sh` accepts only a guarded local target, reads the current deletion ledger, replays deletions, and checks database boundaries.
+The scripts under `scripts/` remain available for manual inspection and recovery of the existing encrypted backup format. `restore-supabase.sh` accepts only a guarded local target, reads the current deletion ledger, replays deletions, quarantines restored pending account email, and checks database boundaries.
 
 These tools do not accept Supabase physical backups. The legacy restore tool rejects encrypted backups older than 24 hours and dumps without the deletion ledger. Older retained objects need a separately reviewed recovery procedure; do not bypass these checks to claim a passing restore.
 

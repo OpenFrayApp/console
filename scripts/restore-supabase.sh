@@ -62,6 +62,8 @@ gzip -dc "$DUMP" | psql "$RECOVERY_TARGET_DB_URL" \
   --no-psqlrc --set ON_ERROR_STOP=on --single-transaction --quiet
 psql "$RECOVERY_TARGET_DB_URL" --no-psqlrc --set ON_ERROR_STOP=on --quiet \
   --command 'select public.reconcile_recovery_dependencies(true)' >/dev/null
+psql "$RECOVERY_TARGET_DB_URL" --no-psqlrc --set ON_ERROR_STOP=on --quiet \
+  --file "$ROOT/supabase/snippets/quarantine-account-mail-recovery.sql"
 
 for table in "${BACKUP_TABLES[@]}"; do
   expected="$(backup_dump_count "$DUMP" "public.$table")" ||

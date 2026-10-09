@@ -80,13 +80,13 @@ function generateTypes(args, local = false) {
   return execute('supabase', ['gen', 'types', 'typescript', ...args, '--schema', 'public'])
 }
 
-/** Dump and normalize one public schema without retaining provider secrets. */
+/** Dump and normalize the application schemas without retaining provider secrets. */
 function dumpSchema(args, local = false) {
   const directory = mkdtempSync(resolve(tmpdir(), 'openfray-schema-'))
   const path = resolve(directory, 'schema.sql')
   try {
     const execute = local ? runLocal : run
-    execute('supabase', ['db', 'dump', ...args, '--schema', 'public', '--file', path])
+    execute('supabase', ['db', 'dump', ...args, '--schema', 'public,account_mail', '--file', path])
     return canonicalSchemaDump(readFileSync(path, 'utf8'))
   } finally {
     rmSync(directory, { recursive: true, force: true })

@@ -71,7 +71,7 @@ done
 SNAPSHOT="$(tr -d '[:space:]' <"$SNAPSHOT_OUTPUT")"
 [[ "$SNAPSHOT" =~ ^[0-9A-F]+-[0-9A-F]+-[0-9]+$ ]] || backup_die "exported backup snapshot is invalid"
 
-echo "backup: dumping public + auth with $("$PG_DUMP" --version) …"
+echo "backup: dumping public + auth + account mail with $("$PG_DUMP" --version) …"
 # The isolated target owns provider-role defaults; only the tracked postgres defaults travel.
 {
   printf '%s\n' "-- openfray-backup-created-at: $CREATED_AT"
@@ -90,6 +90,13 @@ echo "backup: dumping public + auth with $("$PG_DUMP" --version) …"
     --if-exists \
     --quote-all-identifiers \
     --no-owner
+  "$PG_DUMP" "$SUPABASE_DB_URL" \
+    --snapshot="$SNAPSHOT" \
+    --data-only \
+    --schema=account_mail \
+    --quote-all-identifiers \
+    --no-owner \
+    --no-privileges
 } | awk '/^ALTER DEFAULT PRIVILEGES FOR ROLE / && $6 != "\"postgres\"" { next } { print }' |
   gzip -9 >"$DUMP"
 printf '%s\n' 'rollback;' '\q' >&9

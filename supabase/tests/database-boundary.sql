@@ -9,7 +9,27 @@ declare
   insert_statement text;
   live_encounter uuid;
   other_live_encounter uuid;
+  realtime_insert text := 'insert into realtime.messages (topic,extension,event,private) values ($1,$2,$3,$4)';
+  realtime_fixture_time timestamptz := now();
 begin
+  -- Idle hosted branches can retain older managed partitions without a partition for today.
+  if exists (select 1 from pg_class where oid='realtime.messages'::regclass and relkind='p') then
+    if pg_get_partkeydef('realtime.messages'::regclass)<>'RANGE (inserted_at)' then
+      raise exception 'CB-3: unsupported managed Realtime partition key';
+    end if;
+    select max(start_at) into realtime_fixture_time from (
+      select substring(pg_get_expr(c.relpartbound,c.oid) from $bounds$FROM \('([^']+)'\)$bounds$)::timestamptz start_at
+      from pg_inherits i join pg_class c on c.oid=i.inhrelid
+      where i.inhparent='realtime.messages'::regclass
+    ) bounds where start_at<=now();
+    if realtime_fixture_time is null then
+      raise exception 'CB-3: Realtime fixture requires an existing managed messages partition';
+    end if;
+  end if;
+  if exists (select 1 from pg_attribute where attrelid='realtime.messages'::regclass
+    and attname='inserted_at' and not attisdropped) then
+    realtime_insert := 'insert into realtime.messages (topic,extension,event,private,inserted_at) values ($1,$2,$3,$4,$5)';
+  end if;
   if exists (
     select 1
     from pg_class c
@@ -166,6 +186,36 @@ begin
   ) then raise exception 'CB-1: security-definer functions must not retain PUBLIC execution';
   end if;
 
+  if not exists (
+    select 1 from pg_trigger t where t.tgrelid='auth.users'::regclass
+      and t.tgname='queue_account_welcome' and t.tgenabled='O' and t.tgtype=5 and t.tgnargs=1
+      and t.tgfoid='account_mail.on_account_created()'::regprocedure
+  ) then raise exception 'CB-1: trusted welcome INSERT trigger is absent or changed'; end if;
+  if (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname='account_mail' and c.relkind='r' and c.relrowsecurity) <> 7
+    or exists (
+      select 1 from pg_namespace n cross join lateral aclexplode(n.nspacl) acl
+      where n.nspname='account_mail' and acl.grantee<>n.nspowner
+    ) or exists (
+      select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      cross join lateral aclexplode(c.relacl) acl
+      where n.nspname='account_mail' and acl.grantee<>c.relowner
+    ) or exists (
+      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+      where n.nspname='account_mail' and acl.grantee<>p.proowner
+    ) then raise exception 'CB-1: account mail must remain private and owner-only'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.oid='public.accounts(integer)'::regprocedure
+      and not p.prosecdef and p.proconfig=array['search_path=public']::text[]
+      and has_function_privilege('authenticated',p.oid,'EXECUTE')
+      and not has_function_privilege('anon',p.oid,'EXECUTE')
+      and not has_function_privilege('service_role',p.oid,'EXECUTE')
+      and not has_function_privilege('report_ingress',p.oid,'EXECUTE')
+  ) then raise exception 'CB-1: account-list invoker wrapper differs from its restricted contract'; end if;
+
   if exists (
     with expected(signature, grantee) as (
       values
@@ -173,11 +223,17 @@ begin
         ('account_libraries()', 'authenticated'),
         ('account_made(uuid,integer)', 'authenticated'),
         ('account_overview(uuid)', 'authenticated'),
-        ('accounts(integer)', 'authenticated'),
+        ('accounts(integer,uuid)', 'authenticated'),
         ('answer_reports(text,text)', 'authenticated'),
         ('audit_recent(integer)', 'authenticated'),
         ('capabilities_of(uuid)', 'authenticated'),
         ('claim_encounter_writer(uuid,uuid)', 'authenticated'),
+        ('claim_account_mail()', 'service_role'),
+        ('prepare_account_mail(uuid,uuid,text)', 'service_role'),
+        ('finish_account_mail(uuid,uuid,text,uuid)', 'service_role'),
+        ('register_legal_publication(text,timestamp with time zone,date,date,boolean)', 'service_role'),
+        ('preview_security_notice(uuid,text,uuid,uuid,uuid[])', 'authenticated'),
+        ('confirm_security_notice(uuid,text,uuid[],boolean)', 'authenticated'),
         ('delete_account()', 'authenticated'),
         ('deny_capability(uuid,text,text)', 'authenticated'),
         ('grant_role(uuid,text,text)', 'authenticated'),
@@ -188,6 +244,8 @@ begin
         ('may_publish_more()', 'authenticated'),
         ('may_use_reserved_byline()', 'authenticated'),
         ('my_capabilities()', 'authenticated'),
+        ('published_share(text)', 'authenticated'),
+        ('published_shares(text,timestamp with time zone,text)', 'authenticated'),
         ('reported_share(text)', 'authenticated'),
         ('reports_for(text)', 'authenticated'),
         ('reports_open()', 'authenticated'),
@@ -288,6 +346,14 @@ begin
   delete from share_reports where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
   execute 'set local role anon';
+  begin
+    perform public.claim_account_mail();
+    raise exception 'CB-1: anonymous caller claimed account mail' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform count(*) from account_mail.ledger;
+    raise exception 'CB-1: anonymous caller read account recipients' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
   perform share('missing-cb1-share');
   begin
     perform count(*) from campaigns;
@@ -368,10 +434,8 @@ begin
     raise exception 'CB-3: the encounter owner could not publish';
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
-  insert into realtime.messages (topic, extension, event, private)
-    values
-      ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true),
-      ('player:' || repeat('a', 64) || ':lobby', 'presence', 'cb3-fixture', true);
+  execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'broadcast', 'cb3-fixture', true, realtime_fixture_time;
+  execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'presence', 'cb3-fixture', true, realtime_fixture_time;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);
@@ -445,8 +509,7 @@ begin
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
   foreach owner_table in array array['broadcast', 'presence'] loop
     begin
-      insert into realtime.messages (topic, extension, event, private)
-        values ('player:' || repeat('a', 64) || ':lobby', owner_table, 'cb3-fixture', true);
+      execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', owner_table, 'cb3-fixture', true, realtime_fixture_time;
       raise exception 'CB-3: a non-owner published through Realtime' using errcode = 'OF007';
     exception
       when insufficient_privilege then null;
@@ -469,15 +532,13 @@ begin
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('c', 64) || ':lobby', false);
   begin
-    insert into realtime.messages (topic, extension, event, private)
-      values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-cross-fixture', true);
+    execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'broadcast', 'cb3-cross-fixture', true, realtime_fixture_time;
     raise exception 'CB-3: an owner published to a channel other than the requested topic'
       using errcode = 'OF009';
   exception
     when insufficient_privilege then null;
   end;
-  insert into realtime.messages (topic, extension, event, private)
-    values ('player:' || repeat('c', 64) || ':lobby', 'broadcast', 'cb3-other-fixture', true);
+  execute realtime_insert using 'player:' || repeat('c',64) || ':lobby', 'broadcast', 'cb3-other-fixture', true, realtime_fixture_time;
   execute 'reset role';
 
   execute 'set local role anon';
@@ -510,23 +571,20 @@ begin
   end if;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':lobby', false);
   begin
-    insert into realtime.messages (topic, extension, event, private)
-      values ('player:' || repeat('a', 64) || ':lobby', 'broadcast', 'cb3-fixture', true);
+    execute realtime_insert using 'player:' || repeat('a',64) || ':lobby', 'broadcast', 'cb3-fixture', true, realtime_fixture_time;
     raise exception 'CB-3: an anonymous viewer broadcast through Realtime' using errcode = 'OF008';
   exception
     when insufficient_privilege then null;
   end;
   perform set_config('realtime.topic', 'player:' || repeat('a', 64) || ':join', false);
   begin
-    insert into realtime.messages (topic, extension, event, private)
-      values ('player:' || repeat('c', 64) || ':join', 'presence', 'cb3-cross-fixture', true);
+    execute realtime_insert using 'player:' || repeat('c',64) || ':join', 'presence', 'cb3-cross-fixture', true, realtime_fixture_time;
     raise exception 'CB-3: a viewer announced presence on another channel'
       using errcode = 'OF010';
   exception
     when insufficient_privilege then null;
   end;
-  insert into realtime.messages (topic, extension, event, private)
-    values ('player:' || repeat('a', 64) || ':join', 'presence', 'cb3-fixture', true);
+  execute realtime_insert using 'player:' || repeat('a',64) || ':join', 'presence', 'cb3-fixture', true, realtime_fixture_time;
   execute 'reset role';
 
   perform set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);
@@ -590,6 +648,15 @@ begin
     false
   );
   execute 'set local role authenticated';
+  begin
+    perform public.claim_account_mail();
+    raise exception 'CB-1: account holder claimed account mail' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into account_mail.ledger(owner_id,event,template)
+      values ('33333333-3333-3333-3333-333333333333','welcome','openfray-welcome-v1');
+    raise exception 'CB-1: account holder enqueued arbitrary account mail' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
   if may('reports.read') then raise exception 'CB-1: a viewer gained report authority';
   end if;
   begin
@@ -615,6 +682,9 @@ begin
     or reports_open() <> 0
     or exists (select 1 from audit_recent())
     or exists (select 1 from accounts())
+    or exists (select 1 from accounts(1,'11111111-1111-1111-1111-111111111111'))
+    or exists (select 1 from published_share('cb1owner'))
+    or exists (select 1 from published_shares())
     or exists (select 1 from capabilities_of('11111111-1111-1111-1111-111111111111'))
     or exists (select 1 from reports_queue())
     or exists (select 1 from reports_for('cb1owner'))
@@ -679,6 +749,13 @@ begin
   );
   execute 'set local role authenticated';
   perform delete_account();
+  begin
+    perform delete_account();
+    raise exception 'CB-1: repeated account deletion reported success' using errcode = 'OF004';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'Account no longer exists' then raise; end if;
+  end;
   execute 'reset role';
 
   foreach owner_table in array array(
@@ -697,7 +774,9 @@ begin
     end if;
   end loop;
 
-  if exists (select 1 from auth.users where id = '55555555-5555-5555-5555-555555555555')
+  if exists (select 1 from account_mail.ledger where owner_id='55555555-5555-5555-5555-555555555555')
+    or exists (select 1 from account_mail.queue q left join account_mail.ledger l on l.id=q.id where l.id is null)
+    or exists (select 1 from auth.users where id = '55555555-5555-5555-5555-555555555555')
     or exists (select 1 from audit_log where actor_id = '55555555-5555-5555-5555-555555555555')
     or exists (select 1 from takedown_notices where to_address = 'delete@example.test')
     or exists (select 1 from share_reports where reporter_id = '55555555-5555-5555-5555-555555555555')

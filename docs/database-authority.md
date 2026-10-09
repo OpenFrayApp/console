@@ -19,7 +19,7 @@ supabase start
 npm run db:verify
 ```
 
-The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized public schema. It writes `.artifacts/supabase/deployment-attestation.json`.
+The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized `public` and `account_mail` schemas. It writes `.artifacts/supabase/deployment-attestation.json`.
 
 Run the hostile database boundary suite against another fresh reset:
 
@@ -28,6 +28,9 @@ npm run db:boundary
 ```
 
 The suite exercises owner, other-tenant, anonymous, viewer, stale-writer, restricted-function, and service-role actors. It verifies Row-Level Security, grants, privileged functions, Realtime database-change exposure, and account deletion. The command writes `.artifacts/supabase/database-boundary-attestation.json`.
+On partitioned Realtime tables, synthetic messages use an existing managed partition.
+The fixture creates no partition and removes its rows in the same statement.
+An absent or unsupported managed partition blocks verification.
 
 Regenerate types only after a reviewed migration changes the public schema:
 
@@ -46,9 +49,21 @@ The forward migration adopts the existing hosted trigger without changing existi
 
 ## Function execution grants
 
-The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. Application functions grant no execution to `service_role`; the automatic RLS function remains owner-only.
+The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. The three [account-email worker RPCs](./account-email.md) grant execution only to `service_role`. Other application functions grant it no execution. The automatic RLS function remains owner-only.
 
 Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. Every future function migration must revoke `PUBLIC` and explicit API-role grants before granting its intended callers.
+
+## Existing admin read APIs
+
+`20261008143033_admin_read_api_alignment.sql` records the admin dashboard’s existing read functions.
+It preserves their signatures and capability checks without dropping hosted functions.
+`accounts(integer,uuid)` requires `roles.grant`; the account-list wrapper delegates as security invoker.
+`published_share` and `published_shares` require `shares.read` and return published metadata only.
+Publisher identity additionally requires `roles.grant`. Capability denials still apply.
+
+Only authenticated callers may execute these functions. Anonymous, service-role, and report-ingress
+execution is revoked explicitly. The hostile fixture checks their exact grants, the invoker wrapper,
+and denial of reads by ordinary accounts. The migration grants no direct table access.
 
 ## Report ingress
 

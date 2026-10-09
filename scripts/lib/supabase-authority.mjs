@@ -79,7 +79,7 @@ function canonicalTableColumns(value) {
   )
   return protectedSql
     .replace(
-      /^(CREATE TABLE (?:IF NOT EXISTS )?"public"\."(?:[^"]|"")*" \(\n)([\s\S]*?)(\n\);)/gm,
+      /^(CREATE TABLE (?:IF NOT EXISTS )?"(?:public|account_mail)"\."(?:[^"]|"")*" \(\n)([\s\S]*?)(\n\);)/gm,
       (statement, opening, body, closing) => {
         const definitions = body.split('\n').map((line) => line.replace(/,$/, ''))
         if (!definitions.every((line) => /^ {4}(?:"|CONSTRAINT )/.test(line))) return statement
