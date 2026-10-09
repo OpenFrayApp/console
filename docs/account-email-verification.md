@@ -6,7 +6,9 @@ staging evidence passes and the maintainer separately authorizes the production 
 
 ## Resolve and authorize the target
 
-Confirm the test inbox, staging project, and permission to publish, deploy, and send.
+Confirm the staging project and permission to publish, deploy, and send.
+For controlled smoke tests, confirm one test inbox. For normal staging testing,
+authorize delivery to registered staging account addresses explicitly.
 Resolve a Supabase branch from its parent before using any hosted command:
 
 ```bash
@@ -45,20 +47,26 @@ and the workspace’s [legal publication procedure](https://github.com/OpenFrayA
 4. Verify domain readiness, disabled tracking, suppression, and the team’s actual rate limit.
    Use a server key with domain/template read access and sending permission.
    A sending-only key returns `restricted_api_key` and cannot pass worker safety checks.
-5. Configure explicit staging mode, confirmed To/Reply-To override, pinned templates,
-   and separate worker/publication hook secrets. Never supply recipient overrides in requests.
+5. Configure explicit staging mode, pinned templates, and separate worker/publication
+   hook secrets. For normal testing, opt into `ACCOUNT_STAGING_RECIPIENT_MODE=registered`
+   and bind `ACCOUNT_STAGING_PROJECT_REF` to the verified staging project. For a controlled
+   smoke test, retain the confirmed To/Reply-To override instead. Never supply recipient
+   overrides in requests.
 6. Deploy `account-mail`, `legal-publication`, and `account-delete` to staging.
    Keep their own authentication checks; deployment disables only the platform JWT verifier.
 7. Verify `account-delete` authentication and erasure before releasing the updated console.
    Deploy legal copy and metadata together on an isolated HTTPS staging origin.
 8. Temporarily approve the first legal baseline. Verify no historical jobs, then remove approval.
-9. Run the staging matrix below manually. Enable no recurring sender during verification.
+9. Run the controlled staging matrix manually with no recurring sender. After successful
+   smoke verification and explicit authorization for normal staging testing, enable only
+   the staging one-minute scheduler and registered-recipient routing. Production remains disabled.
 10. Leave production disabled. Passing staging evidence permits an authorization request;
     it does not authorize production configuration, publication, deployment, or sending.
 
 Account messages use `OpenFray <comms@notifications.openfray.app>`, the reviewed
 signature, and production console/document links. Staging overrides To and Reply-To
-with the confirmed inbox and prefixes subjects. Existing moderation sender and reply
+with the confirmed inbox for smoke tests; normal staging uses registered addresses and
+support Reply-To. Both modes prefix subjects. Existing moderation sender and reply
 routing stay unchanged.
 
 ## Staging evidence matrix
