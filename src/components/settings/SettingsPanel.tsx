@@ -8,7 +8,6 @@ import {
   editionBadgeClass,
   editionLabel,
   librarySourceBadgeClass,
-  libraryTag,
 } from '../../compendium/libraries.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import {
@@ -257,9 +256,9 @@ export function SettingsPanel({
                         )}
                         <span className="flex shrink-0 items-center gap-1.5">
                           <Badge tone={librarySourceBadgeClass(lib.id)}>{lib.shortLabel}</Badge>
-                          {libraryTag(lib.id) && (
-                            <Badge tone={editionBadgeClass(libraryTag(lib.id))}>
-                              {editionLabel(libraryTag(lib.id))}
+                          {lib.edition && (
+                            <Badge tone={editionBadgeClass(lib.edition)}>
+                              {editionLabel(lib.edition)}
                             </Badge>
                           )}
                         </span>
