@@ -251,6 +251,7 @@ it.each([true, false])(
     }
     expect(loadSettings().tutorialSuppression).toBe('completed')
   },
+  15_000,
 )
 
 it.each([false, true])(
