@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { A5E_REFERENCE_ONLY_SPELLS } from './a5eSpellCoverage.data.ts'
+
 /** Explicit source-specific verdicts: spell cards pending manual automation review. */
 export const REFERENCE_ONLY_SPELLS: Record<string, 'SOURCE_REVIEW'> = {
+  ...A5E_REFERENCE_ONLY_SPELLS,
   'kibblestasty-casting-compendium-v2.3:acid-bubble': 'SOURCE_REVIEW',
   'kibblestasty-casting-compendium-v2.3:acid-rain': 'SOURCE_REVIEW',
   'kibblestasty-casting-compendium-v2.3:acidic-pit': 'SOURCE_REVIEW',

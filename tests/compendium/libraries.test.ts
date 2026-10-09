@@ -31,6 +31,17 @@ describe('libraries', () => {
     expect(inEnabledLibrary(b, ['srd-5.2', 'srd-5.1'])).toBe(true)
   })
 
+  it('keeps the verified A5E ruleset distinct from SRD editions', () => {
+    const library = LIBRARIES.find((entry) => entry.id === 'en-publishing-a5e-ag')!
+    expect(library.edition).toBeUndefined()
+    expect(library.ruleset).toBe('a5e')
+    expect(libraryTag(library.id)).toBe('a5e')
+    expect(library.referenceOnly).toBe(true)
+    expect(library.license).toBe('cc-by-4.0')
+    expect(DEFAULT_ENABLED_LIBRARIES).not.toContain(library.id)
+    expect(librarySourceBadgeClass(library.id)).toContain('fuchsia')
+  })
+
   it('tags a source with its edition', () => {
     expect(libraryTag('srd-5.1')).toBe('5.0')
     expect(libraryTag('srd-5.2')).toBe('5.5')
