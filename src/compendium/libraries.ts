@@ -103,9 +103,19 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'creature-codex-creatures.json',
   },
   {
+    id: 'khyberia-srd',
+    license: 'cc-by-4.0',
+    label: 'Khyberia SRD (Nick Stefanski)',
+    shortLabel: 'KHYBERIA',
+    family: 'khyberia',
+    group: 'other',
+    edition: '5.0',
+    creaturesFile: 'khyberia-creatures.json',
+  },
+  {
     id: 'kibblestasty-casting-compendium-v2.3',
     license: 'cc-by-4.0',
-    label: 'Kibbles’ Casting Compendium v2.3',
+    label: 'Kibbles’ Casting Compendium (KibblesTasty)',
     shortLabel: 'KCC',
     family: 'kibbles',
     group: 'other',
@@ -116,7 +126,7 @@ export const LIBRARIES: Library[] = [
   {
     id: 'somanyrobots-spells-that-dont-suck',
     license: 'cc-by-4.0',
-    label: 'Spells That Don’t Suck',
+    label: 'Spells That Don’t Suck (Omega Ankh & somanyrobots)',
     shortLabel: 'STDS',
     family: 'somanyrobots',
     group: 'other',
@@ -127,7 +137,7 @@ export const LIBRARIES: Library[] = [
   {
     id: 'somanyrobots-so-many-spells',
     license: 'cc-by-4.0',
-    label: 'So Many Spells',
+    label: 'So Many Spells (somanyrobots)',
     shortLabel: 'SMS',
     family: 'somanyrobots',
     group: 'other',
@@ -228,6 +238,11 @@ export function isReferenceOnlySpell(spell: { id: string; source: string }): boo
 /** The edition tag for a source (e.g. "5.5" / "5.0"), for the compendium badge. */
 export function libraryTag(source: string): string | undefined {
   return LIBRARIES.find((l) => l.id === source)?.edition
+}
+
+/** Shorten a library title for Settings without changing its full source attribution. */
+export function librarySettingsLabel(library: Pick<Library, 'label'>): string {
+  return library.label.replace(/\s*\([^)]*\)/g, '').trim()
 }
 
 /** The compact source label for a source (e.g. "Core" / "ToB3"), for the source badge. */

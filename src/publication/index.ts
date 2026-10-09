@@ -68,6 +68,11 @@ export const PUBLICATION_SOURCE_MANIFEST = {
       license: 'ogl-1.0a',
     },
     {
+      id: 'khyberia-srd',
+      indexPath: 'khyberia-creatures.index.json',
+      license: 'cc-by-4.0',
+    },
+    {
       id: 'openfray-brood-and-bloom',
       indexPath: 'brood-and-bloom-creatures.index.json',
       license: 'cc-by-4.0',

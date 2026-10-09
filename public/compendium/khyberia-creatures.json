@@ -1,0 +1,2229 @@
+[
+  {
+    "id": "khyberia-srd:frogoblin",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Frogoblin",
+    "size": "Medium",
+    "type": "humanoid",
+    "ac": 15,
+    "maxHp": 11,
+    "initiative": 1,
+    "speed": {
+      "walk": 20,
+      "swim": 40
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 13,
+      "con": 12,
+      "int": 8,
+      "wis": 10,
+      "cha": 8
+    },
+    "senses": {
+      "passivePerception": 12,
+      "darkvision": 30
+    },
+    "sourcePage": 2,
+    "alignment": "chaotic neutral",
+    "hpFormula": "2d8+2",
+    "cr": 0.25,
+    "xp": 50,
+    "skills": {
+      "perception": 2,
+      "stealth": 5
+    },
+    "languages": [
+      "Aquan",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Amphibious Aptitude",
+        "text": "The frogoblin can breathe air and water. It has advantage on Wisdom (Survival) checks in rivers, swamps, and wetlands."
+      },
+      {
+        "name": "Standing Leap",
+        "text": "The frogoblin's long jump is up to 20 feet and its high jump is up to 10 feet, with or without a running start. The frogoblin doesn’t provoke opportunity attacks while leaping."
+      }
+    ],
+    "actions": [
+      {
+        "id": "javelin",
+        "name": "Javelin",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 4 (1d6 + 1) piercing damage.",
+        "reach": 5,
+        "range": {
+          "normal": 30,
+          "long": 120
+        },
+        "damage": [
+          {
+            "formula": "1d6+1",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "tongue",
+        "name": "Tongue",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) bludgeoning damage, and the target is grappled (escape DC 11). Until this grapple ends, the target is restrained, and the frogoblin can't use its tongue on another target.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+1",
+            "type": "bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:frogoblin-chorister",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Frogoblin Chorister",
+    "size": "Medium",
+    "type": "humanoid",
+    "ac": 14,
+    "maxHp": 33,
+    "initiative": 1,
+    "speed": {
+      "walk": 20,
+      "swim": 40
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 13,
+      "con": 12,
+      "int": 8,
+      "wis": 13,
+      "cha": 14
+    },
+    "senses": {
+      "passivePerception": 13,
+      "darkvision": 30
+    },
+    "sourcePage": 2,
+    "alignment": "chaotic neutral",
+    "hpFormula": "6d8+6",
+    "cr": 2,
+    "xp": 450,
+    "skills": {
+      "deception": 4,
+      "perception": 3,
+      "stealth": 6
+    },
+    "languages": [
+      "Aquan",
+      "Common"
+    ],
+    "spellcasting": {
+      "groups": [
+        {
+          "usage": {
+            "type": "atWill"
+          },
+          "spells": [
+            {
+              "name": "shillelagh",
+              "ref": "srd-5.1:shillelagh"
+            },
+            {
+              "name": "thaumaturgy",
+              "ref": "srd-5.1:thaumaturgy"
+            }
+          ]
+        }
+      ],
+      "ability": "cha",
+      "saveDc": 12,
+      "toHit": 4
+    },
+    "traits": [
+      {
+        "name": "Amphibious Aptitude",
+        "text": "The frogoblin can breathe air and water. It has advantage on Wisdom (Survival) checks in rivers, swamps, and wetlands."
+      },
+      {
+        "name": "Standing Leap",
+        "text": "The frogoblin's long jump is up to 20 feet and its high jump is up to 10 feet, with or without a running start. The frogoblin doesn’t provoke opportunity attacks while leaping."
+      },
+      {
+        "name": "Chaotic Devotion",
+        "text": "The frogoblin has advantage on saving throws against being charmed or frightened."
+      },
+      {
+        "name": "Water Savant",
+        "text": "When casting the thaumaturgy spell, the frogoblin can cause an area of water no larger than a 5-foot cube to take any shape and redirect its flow, but not with sufficient force to cause damage."
+      },
+      {
+        "name": "Spellcasting",
+        "text": "The frogoblin is a 4th-level spellcaster. Her spellcasting ability is Charisma (spell save DC 12, +4 to hit with spell attacks). The frogoblin has the following spells prepared: Cantrips (at will): shillelagh, thaumaturgy"
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin makes two club attacks or one club and one tongue attack."
+      },
+      {
+        "id": "club",
+        "name": "Club",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit (+4 to hit with shillelagh), reach 5 ft., one target. Hit: 3 (1d4 + 1) bludgeoning damage, or 6 (1d8 + 2) bludgeoning damage with shillelagh.",
+        "reach": 5
+      },
+      {
+        "id": "tongue",
+        "name": "Tongue",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) bludgeoning damage, and the target is grappled (escape DC 11). Until this grapple ends, the target is restrained, and the frogoblin can't use its tongue on another target.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+1",
+            "type": "bludgeoning"
+          }
+        ]
+      },
+      {
+        "id": "koaxian-chorus",
+        "name": "Koaxian Chorus",
+        "kind": "save",
+        "toHit": null,
+        "text": "Brekekekek, koax koax! The frogoblin sings her maddening chant. Each creature that starts its turn within 20 feet that can hear the frogoblin must succeed on a DC 12 Wisdom saving throw. On a failure, the creature takes 9 (2d8) psychic damage and rolls a d8 to determine what it does during its next turn. On a 1 to 4, the creature does nothing. On a 5 or 6, the creature takes no action or bonus action and uses all its movement to move in a randomly determined direction. On a 7 or 8, the creature makes a melee attack against a randomly determined creature within its reach or does nothing if it can't make such an attack.",
+        "recharge": {
+          "type": "dice",
+          "value": 5
+        },
+        "save": {
+          "ability": "wis",
+          "dc": 12,
+          "onSave": "none"
+        },
+        "damage": [
+          {
+            "formula": "2d8",
+            "type": "psychic"
+          }
+        ]
+      },
+      {
+        "id": "primordial-croak-recharges-after-a-short-or-long-rest",
+        "name": "Primordial Croak (Recharges after a Short or Long Rest)",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin croaks an ode to her people’s primordial past, invigorating other nearby frogoblins. She can target up to three frogoblins within 30 ft. Each target's hit point maximum and current hit points increase by 5 for the next minute."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:frogoblin-faerie-knight",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Frogoblin Faerie Knight",
+    "size": "Medium",
+    "type": "humanoid",
+    "ac": 18,
+    "maxHp": 52,
+    "initiative": 1,
+    "speed": {
+      "walk": 20,
+      "swim": 40
+    },
+    "abilities": {
+      "str": 16,
+      "dex": 13,
+      "con": 14,
+      "int": 8,
+      "wis": 11,
+      "cha": 15
+    },
+    "senses": {
+      "passivePerception": 12,
+      "darkvision": 30
+    },
+    "sourcePage": 3,
+    "alignment": "chaotic good",
+    "hpFormula": "8d8+16",
+    "cr": 3,
+    "xp": 700,
+    "skills": {
+      "perception": 2,
+      "stealth": 5
+    },
+    "languages": [
+      "Aquan",
+      "Common",
+      "Sylvan"
+    ],
+    "traits": [
+      {
+        "name": "Amphibious Aptitude",
+        "text": "The frogoblin can breathe air and water. It has advantage on Wisdom (Survival) checks in rivers, swamps, and wetlands."
+      },
+      {
+        "name": "Standing Leap",
+        "text": "The frogoblin's long jump is up to 20 feet and its high jump is up to 10 feet, with or without a running start. The frogoblin doesn’t provoke opportunity attacks while leaping."
+      },
+      {
+        "name": "Water Crafter",
+        "text": "Once per day, if at least three other frogoblins are within 30 ft., the frogoblin may cast the spell Control Water as a 7th-level spellcaster, using Charisma as the spellcasting ability (spell save DC 12)."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin makes two pike attacks or one pike and one tongue attack."
+      },
+      {
+        "id": "pike",
+        "name": "Pike",
+        "kind": "melee",
+        "toHit": 5,
+        "text": "Melee Weapon Attack: +5 to hit, reach 10 ft., one target. Hit: 8 (1d10 + 3) piercing damage.",
+        "reach": 10,
+        "damage": [
+          {
+            "formula": "1d10+3",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "tongue",
+        "name": "Tongue",
+        "kind": "melee",
+        "toHit": 5,
+        "text": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 5 (1d4 + 3) bludgeoning damage, and the target is grappled (escape DC 13). Until this grapple ends, the target is restrained, and the frogoblin can't use its tongue on another target.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+3",
+            "type": "bludgeoning"
+          }
+        ]
+      },
+      {
+        "id": "fey-croak-recharges-after-a-short-or-long-rest",
+        "name": "Fey Croak (Recharges after a Short or Long Rest)",
+        "kind": "save",
+        "toHit": null,
+        "text": "The frogoblin targets one humanoid or beast that she can see within 30 feet of her, croaking an enchanting melody. If the target can hear the frogoblin, it must succeed on a DC 13 Wisdom saving throw or be magically charmed for one minute. The frogoblin can have no more than one humanoid or beast charmed at a time. Each time the frogoblin or its allies do anything harmful to the target, it can repeat the saving throw, ending the effect on itself on a success.",
+        "save": {
+          "ability": "wis",
+          "dc": 13,
+          "onSave": "negates"
+        }
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:frogoblin-hopper",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Frogoblin Hopper",
+    "size": "Medium",
+    "type": "humanoid",
+    "ac": 15,
+    "maxHp": 27,
+    "initiative": 1,
+    "speed": {
+      "walk": 20,
+      "swim": 40
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 13,
+      "con": 12,
+      "int": 8,
+      "wis": 10,
+      "cha": 8
+    },
+    "senses": {
+      "passivePerception": 12,
+      "darkvision": 30
+    },
+    "sourcePage": 3,
+    "alignment": "chaotic neutral",
+    "hpFormula": "5d8+5",
+    "cr": 1,
+    "xp": 200,
+    "skills": {
+      "perception": 2,
+      "stealth": 5
+    },
+    "languages": [
+      "Aquan",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Amphibious Aptitude",
+        "text": "The frogoblin can breathe air and water. It has advantage on Wisdom (Survival) checks in rivers, swamps, and wetlands."
+      },
+      {
+        "name": "Standing Leap",
+        "text": "The frogoblin's long jump is up to 20 feet and its high jump is up to 10 feet, with or without a running start. The frogoblin doesn’t provoke opportunity attacks while leaping."
+      },
+      {
+        "name": "Hopping Mad",
+        "text": "Once per turn, if the frogoblin moves at least 20 feet straight toward a creature and then hits it with a melee spear attack on the same turn, it deals an extra 3 (1d6) piercing damage, or 4 (1d8) extra piercing damage if used with two hands."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin makes two spear attacks or one spear and one tongue attack."
+      },
+      {
+        "id": "spear",
+        "name": "Spear",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d6 + 1) piercing damage, or 5 (1d8 + 1) piercing damage if used with two hands to make a melee attack.",
+        "reach": 5,
+        "range": {
+          "normal": 20,
+          "long": 60
+        }
+      },
+      {
+        "id": "tongue",
+        "name": "Tongue",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) bludgeoning damage, and the target is grappled (escape DC 11). Until this grapple ends, the target is restrained, and the frogoblin can't use its tongue on another target.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+1",
+            "type": "bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:frogoblin-hunter",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Frogoblin Hunter",
+    "size": "Medium",
+    "type": "humanoid",
+    "ac": 13,
+    "maxHp": 22,
+    "initiative": 1,
+    "speed": {
+      "walk": 20,
+      "swim": 40
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 13,
+      "con": 12,
+      "int": 8,
+      "wis": 12,
+      "cha": 8
+    },
+    "senses": {
+      "passivePerception": 12,
+      "darkvision": 30
+    },
+    "sourcePage": 4,
+    "alignment": "chaotic neutral",
+    "hpFormula": "4d8+4",
+    "cr": 0.5,
+    "xp": 100,
+    "skills": {
+      "perception": 3,
+      "stealth": 6
+    },
+    "languages": [
+      "Aquan",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Amphibious Aptitude",
+        "text": "The frogoblin can breathe air and water. It has advantage on Wisdom (Survival) checks in rivers, swamps, and wetlands."
+      },
+      {
+        "name": "Standing Leap",
+        "text": "The frogoblin's long jump is up to 20 feet and its high jump is up to 10 feet, with or without a running start. The frogoblin doesn’t provoke opportunity attacks while leaping."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin makes two attacks: one with its javelin and one with its tongue, or two with its shortbow."
+      },
+      {
+        "id": "javelin",
+        "name": "Javelin",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 4 (1d6 + 1) piercing damage.",
+        "reach": 5,
+        "range": {
+          "normal": 30,
+          "long": 120
+        },
+        "damage": [
+          {
+            "formula": "1d6+1",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "shortbow",
+        "name": "Shortbow",
+        "kind": "ranged",
+        "toHit": 3,
+        "text": "Ranged Weapon Attack: +3 to hit, range 80/320 ft., one target. Hit: 4 (1d6 + 1) piercing damage.",
+        "range": {
+          "normal": 80,
+          "long": 320
+        },
+        "damage": [
+          {
+            "formula": "1d6+1",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "tongue",
+        "name": "Tongue",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) bludgeoning damage, and the target is grappled (escape DC 11). Until this grapple ends, the target is restrained, and the frogoblin can't use its tongue on another target.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+1",
+            "type": "bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:frogoblin-princess",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Frogoblin Princess",
+    "size": "Medium",
+    "type": "humanoid",
+    "ac": 15,
+    "maxHp": 52,
+    "initiative": 1,
+    "speed": {
+      "walk": 20,
+      "swim": 40
+    },
+    "abilities": {
+      "str": 16,
+      "dex": 13,
+      "con": 14,
+      "int": 8,
+      "wis": 11,
+      "cha": 15
+    },
+    "senses": {
+      "passivePerception": 12,
+      "darkvision": 30
+    },
+    "sourcePage": 4,
+    "alignment": "chaotic neutral",
+    "hpFormula": "8d8+16",
+    "cr": 3,
+    "xp": 700,
+    "skills": {
+      "perception": 2,
+      "stealth": 5
+    },
+    "languages": [
+      "Aquan",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Amphibious Aptitude",
+        "text": "The frogoblin can breathe air and water. It has advantage on Wisdom (Survival) checks in rivers, swamps, and wetlands."
+      },
+      {
+        "name": "Standing Leap",
+        "text": "The frogoblin's long jump is up to 20 feet and its high jump is up to 10 feet, with or without a running start. The frogoblin doesn’t provoke opportunity attacks while leaping."
+      },
+      {
+        "name": "Water Crafter",
+        "text": "Once per day, if at least three other frogoblins are within 30 ft., the frogoblin may cast the spell Control Water as a 7th-level spellcaster, using Charisma as the spellcasting ability (spell save DC 12)."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin makes two greatsword attacks or one greatsword and one tongue attack."
+      },
+      {
+        "id": "greatsword",
+        "name": "Greatsword",
+        "kind": "melee",
+        "toHit": 5,
+        "text": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) slashing damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "2d6+3",
+            "type": "slashing"
+          }
+        ]
+      },
+      {
+        "id": "tongue",
+        "name": "Tongue",
+        "kind": "melee",
+        "toHit": 5,
+        "text": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 5 (1d4 + 3) bludgeoning damage, and the target is grappled (escape DC 13). Until this grapple ends, the target is restrained, and the frogoblin can't use its tongue on another target.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+3",
+            "type": "bludgeoning"
+          }
+        ]
+      },
+      {
+        "id": "royal-croak-recharges-after-a-short-or-long-rest",
+        "name": "Royal Croak (Recharges after a Short or Long Rest)",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The frogoblin croaks a royal edict, rallying the frogoblins under her command. Until the start of the frogoblin’s next turn, all frogoblins that are not hostile to the princess and can see her gain advantage on attack rolls and saving throws."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:cudrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Cudrone",
+    "size": "Medium",
+    "type": "construct",
+    "ac": 16,
+    "maxHp": 22,
+    "initiative": 2,
+    "speed": {
+      "walk": 30,
+      "fly": 30
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 14,
+      "con": 12,
+      "int": 10,
+      "wis": 10,
+      "cha": 10
+    },
+    "senses": {
+      "passivePerception": 12,
+      "truesight": 120
+    },
+    "sourcePage": 5,
+    "alignment": "lawful neutral",
+    "hpFormula": "4d8+4",
+    "cr": 1,
+    "xp": 200,
+    "skills": {
+      "perception": 2
+    },
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Cudrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      },
+      {
+        "name": "Sneak Attack (1/Turn)",
+        "text": "The cudrone deals an extra 3 (1d6) damage when it hits a target with a shortsword attack and has advantage on the attack roll, or when the target is within 5 feet of an ally of the cudrone that isn't incapacitated and the cudrone doesn't have disadvantage on the attack roll."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The cudrone makes two shortsword attacks or four shortbow attacks."
+      },
+      {
+        "id": "shortsword",
+        "name": "Shortsword",
+        "kind": "melee",
+        "toHit": 4,
+        "text": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d6+2",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "shortbow",
+        "name": "Shortbow",
+        "kind": "ranged",
+        "toHit": 4,
+        "text": "Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+        "range": {
+          "normal": 80,
+          "long": 320
+        },
+        "damage": [
+          {
+            "formula": "1d6+2",
+            "type": "piercing"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:dihedrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Dihedrone",
+    "size": "Medium",
+    "type": "construct",
+    "ac": 15,
+    "maxHp": 6,
+    "initiative": 1,
+    "speed": {
+      "walk": 30,
+      "fly": 30
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 12,
+      "con": 14,
+      "int": 6,
+      "wis": 10,
+      "cha": 4
+    },
+    "senses": {
+      "passivePerception": 10,
+      "truesight": 120
+    },
+    "sourcePage": 5,
+    "alignment": "lawful neutral",
+    "hpFormula": "1d8+2",
+    "cr": 0.125,
+    "xp": 25,
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Dihedrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      },
+      {
+        "name": "Common Repairs",
+        "text": "The dihedrone can cast the mending cantrip as a bonus action."
+      }
+    ],
+    "actions": [
+      {
+        "id": "dident",
+        "name": "Dident",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 2 (1d2 + 1) piercing damage.",
+        "reach": 5,
+        "range": {
+          "normal": 20,
+          "long": 60
+        },
+        "damage": [
+          {
+            "formula": "1d2+1",
+            "type": "piercing"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:dodecatron",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Dodecatron",
+    "size": "Huge",
+    "type": "construct",
+    "ac": 16,
+    "maxHp": 125,
+    "initiative": 0,
+    "speed": {
+      "walk": 40,
+      "fly": 10
+    },
+    "abilities": {
+      "str": 20,
+      "dex": 10,
+      "con": 22,
+      "int": 10,
+      "wis": 20,
+      "cha": 14
+    },
+    "senses": {
+      "passivePerception": 15,
+      "truesight": 120
+    },
+    "sourcePage": 6,
+    "alignment": "lawful neutral",
+    "hpFormula": "10d12+60",
+    "cr": 8,
+    "xp": 3900,
+    "skills": {
+      "perception": 5
+    },
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "spellcasting": {
+      "groups": [
+        {
+          "usage": {
+            "type": "atWill"
+          },
+          "spells": [
+            {
+              "name": "command",
+              "ref": "srd-5.1:command"
+            },
+            {
+              "name": "dispel magic",
+              "ref": "srd-5.1:dispel-magic"
+            },
+            {
+              "name": "wall of force",
+              "ref": "srd-5.1:wall-of-force"
+            }
+          ]
+        }
+      ],
+      "ability": "wis",
+      "saveDc": 15
+    },
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Dodecatrons are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      },
+      {
+        "name": "Innate Spellcasting",
+        "text": "The dodecatron’s innate spellcasting ability is Wisdom (spell save DC 15). It can innately cast the following spells, requiring no material components: At will: command, dispel magic, wall of force"
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The dodecatron makes five total appendage attacks, choosing any combination of cutting appendage and grasping appendage attacks."
+      },
+      {
+        "id": "cutting-appendage",
+        "name": "Cutting Appendage",
+        "kind": "melee",
+        "toHit": 8,
+        "text": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 11 (1d12 + 5) slashing damage.",
+        "reach": 10,
+        "damage": [
+          {
+            "formula": "1d12+5",
+            "type": "slashing"
+          }
+        ]
+      },
+      {
+        "id": "grasping-appendage",
+        "name": "Grasping Appendage",
+        "kind": "melee",
+        "toHit": 8,
+        "text": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 8 (1d6 + 5) piercing damage, and target is grappled (escape DC 15). For each target the dodecatron is grappling at the beginning of its turn, reduce the number of appendage attacks it can make with its multiattack ability by one.",
+        "reach": 10,
+        "damage": [
+          {
+            "formula": "1d6+5",
+            "type": "piercing"
+          }
+        ]
+      }
+    ],
+    "reactions": [
+      {
+        "id": "iron-law-of-averages",
+        "name": "Iron Law of Averages",
+        "kind": "utility",
+        "toHit": null,
+        "text": "Until the end of its next turn, whenever a spell or attack would deal damage to the dodecatron, if the rolled damage exceeds the average roll possible, then the dodecatron takes average damage instead of the rolled damage. This ability does not apply if an attack is a critical hit.",
+        "recharge": {
+          "type": "dice",
+          "value": 6
+        }
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:hemicudrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Hemicudrone",
+    "size": "Medium",
+    "type": "construct",
+    "ac": 15,
+    "maxHp": 11,
+    "initiative": 1,
+    "speed": {
+      "walk": 30
+    },
+    "abilities": {
+      "str": 10,
+      "dex": 12,
+      "con": 12,
+      "int": 6,
+      "wis": 10,
+      "cha": 6
+    },
+    "senses": {
+      "passivePerception": 10,
+      "truesight": 120
+    },
+    "sourcePage": 6,
+    "alignment": "lawful neutral",
+    "hpFormula": "2d8+2",
+    "cr": 0.25,
+    "xp": 50,
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Hemicudrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The hemicudrone makes two slam attacks."
+      },
+      {
+        "id": "slam",
+        "name": "Slam",
+        "kind": "melee",
+        "toHit": 2,
+        "text": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 2 (1d3) bludgeoning damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d3",
+            "type": "bludgeoning"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      },
+      {
+        "id": "generic-insight",
+        "name": "Generic Insight",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The hemicodrone makes a mildly helpful observation. One target creature adds 1d3 to its next ability check, attack roll, or saving throw it makes."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:icosahedrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Icosahedrone",
+    "size": "Medium",
+    "type": "construct",
+    "ac": 15,
+    "maxHp": 4,
+    "initiative": 1,
+    "speed": {
+      "walk": 30,
+      "fly": 30
+    },
+    "abilities": {
+      "str": 10,
+      "dex": 12,
+      "con": 10,
+      "int": 6,
+      "wis": 12,
+      "cha": 4
+    },
+    "senses": {
+      "passivePerception": 11,
+      "truesight": 120
+    },
+    "sourcePage": 7,
+    "alignment": "lawful neutral",
+    "hpFormula": "1d8",
+    "cr": 0,
+    "xp": 10,
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Icosahedrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      }
+    ],
+    "actions": [
+      {
+        "id": "slam",
+        "name": "Slam",
+        "kind": "melee",
+        "toHit": 2,
+        "text": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 1 (1) bludgeoning damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1",
+            "type": "bludgeoning"
+          }
+        ]
+      },
+      {
+        "id": "reconfigure-fate-recharges-after-a-short-or-long-rest",
+        "name": "Reconfigure Fate (Recharges after a Short or Long Rest)",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The icosahedrone targets one creature to alter their fate. Once before the start of the icosahedrone’s next turn, if the target fails an attack roll, skill check, or saving throw, they may reroll the check, but must use the new roll."
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:octahedrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Octahedrone",
+    "size": "Medium",
+    "type": "construct",
+    "ac": 15,
+    "maxHp": 22,
+    "initiative": 1,
+    "speed": {
+      "walk": 30,
+      "fly": 30
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 12,
+      "con": 12,
+      "int": 10,
+      "wis": 14,
+      "cha": 12
+    },
+    "senses": {
+      "passivePerception": 14,
+      "truesight": 120
+    },
+    "sourcePage": 8,
+    "alignment": "lawful neutral",
+    "hpFormula": "4d8+4",
+    "cr": 1,
+    "xp": 200,
+    "skills": {
+      "perception": 4
+    },
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Octahedrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The octahedrone makes three flail attacks."
+      },
+      {
+        "id": "flail",
+        "name": "Flail",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 5 (1d8 + 1) bludgeoning damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d8+1",
+            "type": "bludgeoning"
+          }
+        ]
+      },
+      {
+        "id": "electric-burst",
+        "name": "Electric Burst",
+        "kind": "save",
+        "toHit": null,
+        "text": "The octohedrone targets three creatures within 30 feet. If a target is a construct, it regains 6 (1d8 + 2) hit points. Each target that is not a construct must make a DC 12 Dexterity saving throw or take 6 (1d8 + 2) lightning damage.",
+        "recharge": {
+          "type": "dice",
+          "value": 4
+        },
+        "save": {
+          "ability": "dex",
+          "dc": 12,
+          "onSave": "none"
+        },
+        "damage": [
+          {
+            "formula": "1d8+2",
+            "type": "lightning"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:tetrahedrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Tetrahedrone",
+    "size": "Medium",
+    "type": "construct",
+    "ac": 15,
+    "maxHp": 16,
+    "initiative": 1,
+    "speed": {
+      "walk": 30,
+      "fly": 30
+    },
+    "abilities": {
+      "str": 12,
+      "dex": 12,
+      "con": 12,
+      "int": 8,
+      "wis": 10,
+      "cha": 8
+    },
+    "senses": {
+      "passivePerception": 10,
+      "truesight": 120
+    },
+    "sourcePage": 8,
+    "alignment": "lawful neutral",
+    "hpFormula": "3d8+3",
+    "cr": 0.5,
+    "xp": 100,
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "spellcasting": {
+      "groups": [
+        {
+          "usage": {
+            "type": "atWill"
+          },
+          "spells": [
+            {
+              "name": "magic missile",
+              "ref": "srd-5.1:magic-missile"
+            }
+          ]
+        }
+      ],
+      "ability": "int",
+      "saveDc": 9
+    },
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Tetrahedrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      },
+      {
+        "name": "Innate Spellcasting",
+        "text": "The tetrahedrone’s innate spellcasting ability is Intelligence (spell save DC 9). It can innately cast the following spells, requiring no material components: At will: magic missile"
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The tetrahedrone makes three dagger attacks."
+      },
+      {
+        "id": "dagger",
+        "name": "Dagger",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 3 (1d4 + 1) piercing damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+1",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "magic-missile",
+        "name": "Magic Missile",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The tetrahedrone casts magic missile. It creates three glowing darts of magical force. Each dart hits a creature within 120 feet, dealing 3 (1d4 + 1) force damage to its target."
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:trapezohedrone",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Trapezohedrone",
+    "size": "Large",
+    "type": "construct",
+    "ac": 16,
+    "maxHp": 32,
+    "initiative": 2,
+    "speed": {
+      "walk": 40
+    },
+    "abilities": {
+      "str": 14,
+      "dex": 14,
+      "con": 12,
+      "int": 10,
+      "wis": 10,
+      "cha": 12
+    },
+    "senses": {
+      "passivePerception": 14,
+      "truesight": 120
+    },
+    "sourcePage": 9,
+    "alignment": "lawful neutral",
+    "hpFormula": "5d10+5",
+    "cr": 2,
+    "xp": 450,
+    "skills": {
+      "perception": 4
+    },
+    "languages": [
+      "Binary",
+      "Common"
+    ],
+    "traits": [
+      {
+        "name": "Unquestioning Servant",
+        "text": "Trapezohedrones are unassailable servants of the cosmic order, and are immune to any mind-affecting magic inasmuch as it would prevent them from following their programmed orders."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The trapezohedrone makes four glaive attacks."
+      },
+      {
+        "id": "glaive",
+        "name": "Glaive",
+        "kind": "melee",
+        "toHit": 4,
+        "text": "Melee Weapon Attack: +4 to hit, reach 10 ft., one target. Hit: 7 (1d10 + 2) slashing damage.",
+        "reach": 10,
+        "damage": [
+          {
+            "formula": "1d10+2",
+            "type": "slashing"
+          }
+        ]
+      },
+      {
+        "id": "metallic-screech",
+        "name": "Metallic Screech",
+        "kind": "save",
+        "toHit": null,
+        "text": "The trapezohedrone grinds two of its shields together, projecting a metallic screech that affects creatures in a 30-foot cone. Each creature in that area must succeed on a DC 11 Constitution saving throw. On a failed save, the creature takes 6 (1d10+1) thunder damage and becomes shaken: the creature can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the creature can use either an action or a bonus action on its turn, but not both. These effects last for 1 minute. The creature can repeat the saving throw at the end of each of its turns, ending the effect on itself with a successful save. Creatures that are immune to the stunned condition are not affected by this ability.",
+        "recharge": {
+          "type": "dice",
+          "value": 5
+        },
+        "save": {
+          "ability": "con",
+          "dc": 11,
+          "onSave": "half"
+        },
+        "damage": [
+          {
+            "formula": "1d10+1",
+            "type": "thunder"
+          }
+        ]
+      }
+    ],
+    "bonusActions": [
+      {
+        "id": "clockwork-stabilizers",
+        "name": "Clockwork Stabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "As a bonus action, when the hedron to has disadvantage on an attack roll, saving throw, or ability check, the hedron reveals tiny clockwork apparati from hidden compartments that aid it in the given situation. The hedron gains advantage on the roll in question, effectively canceling out the disadvantage."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "clockwork-destabilizers",
+        "name": "Clockwork Destabilizers",
+        "kind": "utility",
+        "toHit": null,
+        "text": "When another creature has advantage on an attack roll against the hedron or on an ability check contested against the hedron, tiny clockwork apparati emerge from hidden compartments on the hedron that distract and hinder the creature. The creature suffers disadvantage on the roll in question, effectively canceling out the advantage."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:kyanos-b-lot",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Kyanos B’lot",
+    "size": "Large",
+    "type": "aberration",
+    "ac": 15,
+    "maxHp": 123,
+    "initiative": 2,
+    "speed": {
+      "walk": 30
+    },
+    "abilities": {
+      "str": 21,
+      "dex": 15,
+      "con": 19,
+      "int": 6,
+      "wis": 7,
+      "cha": 8
+    },
+    "senses": {
+      "passivePerception": 11,
+      "darkvision": 60
+    },
+    "sourcePage": 10,
+    "alignment": "chaotic neutral",
+    "hpFormula": "13d10+52",
+    "cr": 7,
+    "xp": 2900,
+    "skills": {
+      "perception": 1,
+      "stealth": 5
+    },
+    "resistances": [
+      "cold",
+      "lightning"
+    ],
+    "languages": [
+      "Common",
+      "Primordial",
+      "telepathy 60 ft."
+    ],
+    "traits": [
+      {
+        "name": "Amorphous",
+        "text": "The b’lot can move through a space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "name": "Magic Resistance",
+        "text": "The b’lot has advantage on saving throws against spells and other magical effects."
+      },
+      {
+        "name": "Nimble Escape",
+        "text": "The b’lot can take the Disengage or Hide action as a bonus action on each of its turns."
+      },
+      {
+        "name": "Phrenetic Shapeshift",
+        "text": "As a bonus action on its turn, the b’lot partially alters its form to resemble a random creature. Randomly choose a creature of the same CR as the b’lot; until the end of the b’lot’s next turn, it gains all the actions and reactions of the selected creature, except for actions with a recharge or legendary actions. When the b’lot uses its phrenetic shapeshift, it also loses any actions it previously gained with this ability from another creature."
+      },
+      {
+        "name": "Regeneration",
+        "text": "The b’lot regains 10 hit points at the start of its turn if it has at least 1 hit point."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The b’lot makes one bite and two claw attacks."
+      },
+      {
+        "id": "bite",
+        "name": "Bite",
+        "kind": "melee",
+        "toHit": 8,
+        "text": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 8 (1d6 + 5) piercing damage plus 3 (1d6) cold or lightning damage, with the damage type chosen by the b’lot.",
+        "reach": 5
+      },
+      {
+        "id": "claw",
+        "name": "Claw",
+        "kind": "melee",
+        "toHit": 8,
+        "text": "Melee Weapon Attack: +8 to hit, reach 5 ft., one target. Hit: 8 (1d6 + 5) slashing damage plus 3 (1d6) cold or lightning damage, and the target must succeed on a DC 15 Constitution saving throw. On a failed save, the target is slowed; it can't use reactions, its speed is halved, and it can't make more than one attack on its turn. In addition, the target can take either an action or a bonus action on its turn, not both. These effects last until the end of the target’s next turn.",
+        "reach": 5
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:magentos-b-lot",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Magentos B’lot",
+    "size": "Large",
+    "type": "aberration",
+    "ac": 14,
+    "maxHp": 93,
+    "initiative": 1,
+    "speed": {
+      "walk": 30
+    },
+    "abilities": {
+      "str": 17,
+      "dex": 13,
+      "con": 16,
+      "int": 7,
+      "wis": 7,
+      "cha": 7
+    },
+    "senses": {
+      "passivePerception": 11,
+      "darkvision": 60
+    },
+    "sourcePage": 10,
+    "alignment": "chaotic neutral",
+    "hpFormula": "11d10+33",
+    "cr": 5,
+    "xp": 1800,
+    "skills": {
+      "perception": 1
+    },
+    "resistances": [
+      "fire",
+      "lightning"
+    ],
+    "languages": [
+      "Common",
+      "Primordial",
+      "telepathy 60 ft."
+    ],
+    "traits": [
+      {
+        "name": "Amorphous",
+        "text": "The b’lot can move through a space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "name": "Magic Resistance",
+        "text": "The b’lot has advantage on saving throws against spells and other magical effects."
+      },
+      {
+        "name": "Phrenetic Shapeshift",
+        "text": "As a bonus action on its turn, the b’lot partially alters its form to resemble a random creature. Randomly choose a creature of the same CR as the b’lot; until the end of the b’lot’s next turn, it gains all the actions and reactions of the selected creature, except for actions with a recharge or legendary actions. When the b’lot uses its phrenetic shapeshift, it also loses any actions it previously gained with this ability from another creature."
+      },
+      {
+        "name": "Regeneration",
+        "text": "The b’lot regains 10 hit points at the start of its turn if it has at least 1 hit point."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The b’lot makes three claw attacks."
+      },
+      {
+        "id": "claw",
+        "name": "Claw",
+        "kind": "melee",
+        "toHit": 6,
+        "text": "Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 6 (1d6 + 3) slashing damage plus 2 (1d4) fire or lightning damage, with the damage type chosen by the b’lot.",
+        "reach": 5
+      },
+      {
+        "id": "psychic-scream",
+        "name": "Psychic Scream",
+        "kind": "save",
+        "toHit": null,
+        "text": "The b’lot targets one creature it can see within 30 ft. The target must make a DC 14 Wisdom saving throw or take 6 (1d12) psychic damage. In addition, on a failed save, the target suffers disadvantage on checks to maintain concentration from this damage, and suffers disadvantage on attack rolls against creatures other than the b’lot until the start of the b’lot’s next turn.",
+        "recharge": {
+          "type": "dice",
+          "value": 5
+        },
+        "save": {
+          "ability": "wis",
+          "dc": 14,
+          "onSave": "none"
+        },
+        "damage": [
+          {
+            "formula": "1d12",
+            "type": "psychic"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:xanthos-b-lot",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Xanthos B’lot",
+    "size": "Large",
+    "type": "aberration",
+    "ac": 16,
+    "maxHp": 127,
+    "initiative": 2,
+    "speed": {
+      "walk": 30
+    },
+    "abilities": {
+      "str": 18,
+      "dex": 14,
+      "con": 16,
+      "int": 13,
+      "wis": 9,
+      "cha": 15
+    },
+    "senses": {
+      "passivePerception": 12,
+      "darkvision": 60
+    },
+    "sourcePage": 11,
+    "alignment": "chaotic neutral",
+    "hpFormula": "15d10+45",
+    "cr": 8,
+    "xp": 3900,
+    "skills": {
+      "arcana": 4,
+      "perception": 2
+    },
+    "resistances": [
+      "acid",
+      "fire",
+      "poison"
+    ],
+    "languages": [
+      "Common",
+      "Primordial",
+      "telepathy 60 ft."
+    ],
+    "spellcasting": {
+      "groups": [
+        {
+          "usage": {
+            "type": "atWill"
+          },
+          "spells": [
+            {
+              "name": "detect magic",
+              "ref": "srd-5.1:detect-magic"
+            },
+            {
+              "name": "detect thoughts",
+              "ref": "srd-5.1:detect-thoughts"
+            },
+            {
+              "name": "fire bolt",
+              "ref": "srd-5.1:fire-bolt"
+            },
+            {
+              "name": "minor illusion",
+              "ref": "srd-5.1:minor-illusion"
+            }
+          ]
+        },
+        {
+          "usage": {
+            "type": "perDay",
+            "per": 2
+          },
+          "spells": [
+            {
+              "name": "hypnotic pattern",
+              "ref": "srd-5.1:hypnotic-pattern"
+            },
+            {
+              "name": "invisibility",
+              "ref": "srd-5.1:invisibility"
+            }
+          ]
+        },
+        {
+          "usage": {
+            "type": "perDay",
+            "per": 1
+          },
+          "spells": [
+            {
+              "name": "fireball",
+              "ref": "srd-5.1:fireball"
+            }
+          ]
+        }
+      ],
+      "ability": "cha",
+      "saveDc": 13
+    },
+    "traits": [
+      {
+        "name": "Shapechanger",
+        "text": "The b’lot can use a bonus action to polymorph into a Small or Medium humanoid, or back into its true form. Its statistics, other than its size, are the same in each form. Any equipment it is wearing or carrying isn't transformed. It reverts to its true form if it dies."
+      },
+      {
+        "name": "Amorphous",
+        "text": "The b’lot can move through a space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "name": "Magic Resistance",
+        "text": "The b’lot has advantage on saving throws against spells and other magical effects."
+      },
+      {
+        "name": "Phrenetic Shapeshift",
+        "text": "As a bonus action on its turn, the b’lot partially alters its form to resemble a random creature. Randomly choose a creature of the same CR as the b’lot; until the end of the b’lot’s next turn, it gains all the actions and reactions of the selected creature, except for actions with a recharge or legendary actions. When the b’lot uses its phrenetic shapeshift, it also loses any actions it previously gained with this ability from another creature. The b’lot can only use its phrenetic shapeshift while in its true form."
+      },
+      {
+        "name": "Regeneration",
+        "text": "The b’lot regains 10 hit points at the start of its turn if it has at least 1 hit point."
+      },
+      {
+        "name": "Chaos Swell",
+        "text": "The b’lot’s profound connection to chaos is such that its claws can slash the fabric of reality itself. A creature hit by the b’lot’s claws must make a DC 13 Wisdom saving throw, and on a failure it is targeted by a random effect from the Chaos Swell table. Each claw attack can trigger a saving throw, but a creature can only be affected by a b’lot’s chaos swell once per round."
+      },
+      {
+        "name": "Chaos Swell table",
+        "text": "1d12 Chaos Swell Effect 1 The target's Strength score is reduced by 1d4 for 1 hour. 2 The target's Dexterity score is reduced by 1d4 for 1 hour. 3 The target's Constitution score is reduced by 1d4 for 1 hour. 4 The target's Intelligence score is reduced by 1d4 for 1 hour. 5 The target's Wisdom score is reduced by 1d4 for 1 hour. 6 The target's Charisma score is reduced by 1d4 for 1 hour. 7 The target takes 1d8 necrotic damage and the target's hit point maximum is reduced by the same amount. 8 The target becomes poisoned for 1d4 rounds. 9 The target gains 4d6 temporary hit points that last for 1 hour. 10 The target gains the effects of a heal spell. 11 The target suffers the effects of a flesh to stone spell. 12 The target and each creature within 30 feet of the target take 1d6 damage of a random type (acid, cold, fire, or lightning)."
+      },
+      {
+        "name": "Innate Spellcasting",
+        "text": "The b’lot’s innate spellcasting ability is Charisma (spell save DC 13). The b’lot can innately cast the following spells, requiring no material components: At will: detect magic, detect thoughts, fire bolt, minor illusion 2/day each: hypnotic pattern, invisibility (self only) 1/day: fireball"
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The b’lot makes one bite and two claw attacks; two quarterstaff attacks; or two fire bolt attacks."
+      },
+      {
+        "id": "bite-b-lot-form-only",
+        "name": "Bite (B’lot Form Only)",
+        "kind": "melee",
+        "toHit": 7,
+        "text": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 7 (1d6 + 4) piercing damage plus 3 (1d6) fire or poison damage, with the damage type chosen by the b’lot.",
+        "reach": 5
+      },
+      {
+        "id": "claw-b-lot-form-only",
+        "name": "Claw (B’lot Form Only)",
+        "kind": "melee",
+        "toHit": 7,
+        "text": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 7 (1d6 + 4) slashing damage, and the target must succeed on a DC 13 Wisdom saving throw or be affected by the Koaxian’s Chaos Swell ability.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d6+4",
+            "type": "slashing"
+          }
+        ]
+      },
+      {
+        "id": "quarterstaff",
+        "name": "Quarterstaff",
+        "kind": "melee",
+        "toHit": 7,
+        "text": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 7 (1d6 + 4) bludgeoning damage plus 3 (1d6) fire damage or poison damage, with the damage type chosen by the b’lot.",
+        "reach": 5
+      },
+      {
+        "id": "fire-bolt",
+        "name": "Fire Bolt",
+        "kind": "ranged",
+        "toHit": 4,
+        "text": "Ranged Spell Attack: +4 to hit, range 120 ft., one target. Hit: 11 (2d10) fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.",
+        "range": {
+          "normal": 120
+        },
+        "damage": [
+          {
+            "formula": "2d10",
+            "type": "fire"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:muck-mephit",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Muck Mephit",
+    "size": "Small",
+    "type": "elemental",
+    "ac": 11,
+    "maxHp": 22,
+    "initiative": 1,
+    "speed": {
+      "walk": 30,
+      "fly": 30
+    },
+    "abilities": {
+      "str": 8,
+      "dex": 12,
+      "con": 12,
+      "int": 7,
+      "wis": 10,
+      "cha": 10
+    },
+    "senses": {
+      "passivePerception": 10,
+      "darkvision": 60
+    },
+    "sourcePage": 12,
+    "alignment": "neutral evil",
+    "hpFormula": "5d6+5",
+    "cr": 0.25,
+    "xp": 50,
+    "skills": {
+      "stealth": 3
+    },
+    "immunities": [
+      "acid",
+      "poison"
+    ],
+    "vulnerabilities": [
+      "fire"
+    ],
+    "conditionImmunities": [
+      "poisoned"
+    ],
+    "languages": [
+      "Aquan",
+      "Terran"
+    ],
+    "spellcasting": {
+      "groups": [
+        {
+          "usage": {
+            "type": "perDay",
+            "per": 1
+          },
+          "spells": [
+            {
+              "name": "grease",
+              "ref": "srd-5.1:grease"
+            }
+          ]
+        }
+      ],
+      "ability": "cha"
+    },
+    "traits": [
+      {
+        "name": "Death Burst",
+        "text": "When the mephit dies, it explodes in a burst of muck. Each creature within 5 feet of it must then succeed on a DC 10 Dexterity saving throw or be restrained for 1 minute. At the end of each of its turns, a creature can repeat the saving throw. On a success, the effect ends."
+      },
+      {
+        "name": "False Appearance",
+        "text": "While the mephit remains motionless, it is indistinguishable from an ordinary heap of muck."
+      },
+      {
+        "name": "Innate Spellcasting (1/Day)",
+        "text": "The mephit can innately cast grease, requiring no material components. Its innate spellcasting ability is Charisma."
+      }
+    ],
+    "actions": [
+      {
+        "id": "slam",
+        "name": "Slam",
+        "kind": "melee",
+        "toHit": 3,
+        "text": "Melee Weapon Attack: +3 to hit, reach 5 ft., one creature. Hit: 3 (1d4 + 1) bludgeoning damage plus 2 (1d4) acid damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d4+1",
+            "type": "bludgeoning"
+          },
+          {
+            "formula": "1d4",
+            "type": "acid"
+          }
+        ]
+      },
+      {
+        "id": "muck-breath",
+        "name": "Muck Breath",
+        "kind": "save",
+        "toHit": null,
+        "text": "The mephit exhales a 15-foot cone of sticky muck. Each creature in that area must succeed on a DC 10 Dexterity saving throw or be restrained for 1 minute. At the end of each of its turns, a creature can repeat the saving throw. On a success, the effect ends.",
+        "recharge": {
+          "type": "dice",
+          "value": 6
+        },
+        "save": {
+          "ability": "dex",
+          "dc": 10,
+          "onSave": "negates"
+        }
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:war-snail",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "War Snail",
+    "size": "Large",
+    "type": "beast",
+    "ac": 16,
+    "maxHp": 57,
+    "initiative": -3,
+    "speed": {
+      "walk": 20,
+      "climb": 10
+    },
+    "abilities": {
+      "str": 16,
+      "dex": 5,
+      "con": 19,
+      "int": 1,
+      "wis": 10,
+      "cha": 3
+    },
+    "senses": {
+      "passivePerception": 10,
+      "darkvision": 60,
+      "tremorsense": 60
+    },
+    "sourcePage": 13,
+    "alignment": "unaligned",
+    "hpFormula": "6d10+24",
+    "cr": 3,
+    "xp": 700,
+    "resistances": [
+      "acid",
+      "fire"
+    ],
+    "vulnerabilities": [
+      "necrotic"
+    ],
+    "traits": [
+      {
+        "name": "Reflective Shell",
+        "text": "Any time the snail is the target of a spell, where the target of the spell is one or more creatures, roll a d6. On a 1 to 4, the spell works as intended. On a 5, the snail is unaffected. On a 6, the snail is unaffected, and the effect is reflected back at the caster as though it originated from the snail, turning the caster into the target."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The snail makes two armed tentacle attacks."
+      },
+      {
+        "id": "armed-tentacle",
+        "name": "Armed Tentacle",
+        "kind": "melee",
+        "toHit": 5,
+        "text": "Melee Weapon Attack: +5 to hit, reach 5 ft., one creature. Hit: 6 (1d6 + 3) bludgeoning damage plus 6 (1d6 + 3) piercing damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "1d6+3",
+            "type": "bludgeoning"
+          },
+          {
+            "formula": "1d6+3",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "scintillating-colors-recharges-after-a-short-or-long-rest",
+        "name": "Scintillating Colors (Recharges after a Short or Long Rest)",
+        "kind": "save",
+        "toHit": null,
+        "text": "The snail’s shell shines like a Robe of Scintillating Colors, displaying a shifting pattern of dazzling hues until the end of the snail’s next turn. The snail’s shell sheds bright light in a 30-foot radius during this time, and dim light for an additional 30 feet. Any creatures within 30 feet of the snail when it uses this action must succeed on a DC 15 Wisdom saving throw or become stunned until the end of the snail’s next turn. Creatures also have disadvantage on attack rolls against the snail until the effect ends if they can see its shell.",
+        "save": {
+          "ability": "wis",
+          "dc": 15,
+          "onSave": "negates"
+        }
+      },
+      {
+        "id": "hide-in-shell",
+        "name": "Hide in Shell",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The snail hides in its shell, gaining a +4 bonus to its AC until it emerges, which it can do as a bonus action on its turn. While hiding in its shell, the snail is restrained and cannot move."
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:water-guardian",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Water Guardian",
+    "size": "Large",
+    "type": "elemental",
+    "ac": 12,
+    "maxHp": 60,
+    "initiative": 2,
+    "speed": {
+      "walk": 0,
+      "swim": 60
+    },
+    "abilities": {
+      "str": 19,
+      "dex": 14,
+      "con": 15,
+      "int": 5,
+      "wis": 10,
+      "cha": 8
+    },
+    "senses": {
+      "passivePerception": 10,
+      "darkvision": 60
+    },
+    "sourcePage": 13,
+    "alignment": "neutral",
+    "hpFormula": "8d10+16",
+    "cr": 3,
+    "xp": 700,
+    "resistances": [
+      "acid",
+      "fire",
+      "bludgeoning, piercing, and slashing from nonmagical attacks"
+    ],
+    "immunities": [
+      "poison"
+    ],
+    "conditionImmunities": [
+      "exhaustion",
+      "grappled",
+      "paralyzed",
+      "petrified",
+      "poisoned",
+      "prone",
+      "restrained",
+      "unconscious"
+    ],
+    "traits": [
+      {
+        "name": "Water Form",
+        "text": "The water guardian can enter a hostile creature's space and stop there. It can move through a space as narrow as 1 inch wide without squeezing."
+      },
+      {
+        "name": "Unseen Defender",
+        "text": "The water guardian is connected to a particular body of water that it defends, and removing it from the water or destroying the water destroys the water guardian. While underwater, the water guardian is invisible."
+      }
+    ],
+    "actions": [
+      {
+        "id": "slam",
+        "name": "Slam",
+        "kind": "melee",
+        "toHit": 6,
+        "text": "Melee Weapon Attack: +6 to hit, reach 10 ft., one creature. Hit: 11 (2d6 + 4) bludgeoning damage.",
+        "reach": 10,
+        "damage": [
+          {
+            "formula": "2d6+4",
+            "type": "bludgeoning"
+          }
+        ]
+      },
+      {
+        "id": "constrict",
+        "name": "Constrict",
+        "kind": "melee",
+        "toHit": 6,
+        "text": "Melee Weapon Attack: +6 to hit, reach 10 ft., one creature. Hit: 13 (2d8 + 4) bludgeoning damage, and the target is grappled (escape DC 14). Until this grapple ends, the creature is restrained, and the water constrictor can't constrict another target.",
+        "reach": 10,
+        "damage": [
+          {
+            "formula": "2d8+4",
+            "type": "bludgeoning"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "khyberia-srd:wodyanoi",
+    "source": "khyberia-srd",
+    "edition": "5.0",
+    "name": "Wodyanoi",
+    "size": "Large",
+    "type": "monstrosity",
+    "ac": 17,
+    "maxHp": 85,
+    "initiative": 1,
+    "speed": {
+      "walk": 30,
+      "swim": 20
+    },
+    "abilities": {
+      "str": 18,
+      "dex": 13,
+      "con": 18,
+      "int": 7,
+      "wis": 11,
+      "cha": 7
+    },
+    "senses": {
+      "passivePerception": 13,
+      "darkvision": 60
+    },
+    "sourcePage": 14,
+    "alignment": "chaotic evil",
+    "hpFormula": "9d10+36",
+    "cr": 5,
+    "xp": 1800,
+    "skills": {
+      "perception": 3
+    },
+    "languages": [
+      "Aquan"
+    ],
+    "traits": [
+      {
+        "name": "Amphibious",
+        "text": "The wodyanoi can breathe air and water."
+      },
+      {
+        "name": "Kaleidoscopic Eyes",
+        "text": "When a creature that can see the wodyanoi’s eye spots starts its turn within 30 feet of the wodyanoi, the wodyanoi can force it to make a DC 14 Wisdom saving throw if the wodyanoi isn't incapacitated and can see the creature. On a failure, the creature can't take reactions until the start of its next turn and rolls a d8 to determine what it does during its turn. On a 1 to 4, the creature does nothing. On a 5 or 6, the creature takes no action or bonus action and uses all its movement to move in a randomly determined direction. On a 7 or 8, the creature makes a melee attack against a randomly determined creature within its reach or does nothing if it can't make such an attack. Unless surprised, a creature can avert its eyes to avoid the saving throw at the start of its turn. If the creature does so, it can't see the wodyanoi until the start of its next turn, when it can avert its eyes again. If the creature looks at the wodyanoi in the meantime, it must immediately make the save."
+      },
+      {
+        "name": "Speak with Fish",
+        "text": "The wodyanoi can speak with fish as if they shared a language."
+      }
+    ],
+    "actions": [
+      {
+        "id": "multiattack",
+        "name": "Multiattack",
+        "kind": "utility",
+        "toHit": null,
+        "text": "The wodyanoi makes three attacks: one with its tusk and two with its claws."
+      },
+      {
+        "id": "claw",
+        "name": "Claw",
+        "kind": "melee",
+        "toHit": 7,
+        "text": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) slashing damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "2d6+4",
+            "type": "slashing"
+          }
+        ]
+      },
+      {
+        "id": "tusk",
+        "name": "Tusk",
+        "kind": "melee",
+        "toHit": 7,
+        "text": "Melee Weapon Attack: +7 to hit, reach 5 ft., one target. Hit: 7 (2d6 + 4) piercing damage.",
+        "reach": 5,
+        "damage": [
+          {
+            "formula": "2d6+4",
+            "type": "piercing"
+          }
+        ]
+      },
+      {
+        "id": "gyre",
+        "name": "Gyre",
+        "kind": "utility",
+        "toHit": null,
+        "text": "If the wodyanoi is immersed in water, it may create a swirling vortex of water 10 feet wide and up to 30 feet long projecting out from itself in the direction of its choice. Each creature caught in the area of the gyre must make a Strength saving throw. On a failed save, the creature takes 13 (3d8) bludgeoning damage and is pushed to the end of the gyre furthest from the wodyanoi. On a successful save, the creature takes half damage and is not pushed.",
+        "recharge": {
+          "type": "dice",
+          "value": 5
+        },
+        "damage": [
+          {
+            "formula": "3d8",
+            "type": "bludgeoning"
+          }
+        ]
+      }
+    ]
+  }
+]
