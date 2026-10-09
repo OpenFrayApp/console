@@ -103,6 +103,17 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'creature-codex-creatures.json',
   },
   {
+    id: 'kobold-press-toh',
+    license: 'ogl-1.0a',
+    label: 'Tome of Heroes (Kobold Press)',
+    shortLabel: 'ToH',
+    family: 'tob',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'tome-of-heroes-spells.json',
+  },
+  {
     id: 'kibblestasty-casting-compendium-v2.3',
     license: 'cc-by-4.0',
     label: 'Kibbles’ Casting Compendium v2.3',

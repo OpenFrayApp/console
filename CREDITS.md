@@ -192,6 +192,23 @@ made**: the stat blocks were reformatted and restructured into OpenFray's schema
 *Kobold Press* and *Midgard* are trademarks of Open Design; OpenFray is not affiliated
 with or endorsed by Kobold Press.
 
+### Tome of Heroes (Kobold Press)
+
+OpenFray includes 90 Open Game Content spell reference cards from *Tome of Heroes* ©2022 Open Design LLC under the **Open Game License v1.0a**.
+The source is the [Open5e](https://open5e.com) republication, checked against the book and the publisher’s [May 29, 2025 errata](https://koboldpress.com/errata/#tome-of-heroes).
+**Changes were made**: cards were restructured into OpenFray’s schema, missing material descriptions were restored, and schools, durations, concentration, and class assignments were corrected.
+Publisher errata is applied; printed ambiguities remain unchanged.
+These cards are manual reference only.
+
+Art, fiction, sidebars, place names, and specific character references are excluded.
+Excluded rune-casting, hedge-magic, and gunpowder material is not included.
+Deadly Salvo is withheld because it depends on the excluded gunpowder rules.
+*Kobold Press* and *Midgard* are trademarks of Open Design; OpenFray is not affiliated with or endorsed by Kobold Press.
+
+**Open Game Content designation:** the spell names, rules text, and mechanical display fields in `tome-of-heroes-spells.json` are Open Game Content under OGL 1.0a.
+This designation excludes the console’s code, interface, artwork, and other content.
+The full OGL follows; its Section 15 includes the book’s complete copyright chain.
+
 #### OPEN GAME LICENSE Version 1.0a
 
 The following text is the property of Wizards of the Coast, Inc. and is Copyright 2000
@@ -408,6 +425,54 @@ Warlock Lair: Lost and Found. ©2020 Open Design LLC. Authors Jonathan and Beth 
 Warlock Lair: A Drinking Problem ©2020 Open Design LLC. Author Jonathan Miley.
 
 Warlock Lair: Gold and Glory ©2020 Open Design LLC. Author Bryan Armor.
+
+#### Tome of Heroes Section 15 copyright chain
+
+Open Game License v 1.0a Copyright 2000, Wizards of the Coast, LLC.
+
+System Reference Document 5.1 Copyright 2016, Wizards of the Coast, Inc.; Authors Mike Mearls, Jeremy Crawford, Chris Perkins, Rodney Thompson, Peter Lee, James Wyatt, Robert J. Schwalb, Bruce R. Cordell, Chris Sims, and Steve Townshend, based on original material by E. Gary Gygax and Dave Arneson.
+
+Deep Magic for 5th Edition ©2020 Open Design LLC; Authors: Dan Dillon, Chris Harris, and Jeff Lee
+
+Demon Cults and Secret Societies ©2017 Open Design LLC; Authors: Jeff Lee, Jon Sawatsky, and Mike Welham
+
+Margreve Player’s Guide ©2019 Open Design LLC; Authors: Lou Anders, Matthew Corley, Dan Dillon, Jon Sawatsky, Dennis Sustare, and Mike Welham
+
+Midgard Heroes Handbook ©2018 Open Design LLC; Authors: Wolfgang Baur, Scott Carter, Dan Dillon, Richard Green, Chris Harris, Rich Howard, Greg Marks, Shawn Merwin, Michael Ohl, and Jon Sawatsky
+
+Midgard Worldbook for 5th Edition ©2021 Open Design LLC; Authors: Wolfgang Baur, Dan Dillon, Richard Green, Jeff Grubb, Chris Harris, Jon Sawatsky, and Brian Suskind
+
+Southland’s Player’s Guide ©2021 Open Design LLC; Authors: Richard Green, Greg Marks, Ben McFarland, Shawn Merwin, Kelly Pawlik, and Brian Suskind
+
+Underworld Player’s Guide ©2020 Open Design LLC; Authors: Wolfgang Baur, Dan Dillon, Jeff Lee, Christopher Lockey, Shawn Merwin, and Kelly Pawlik
+
+Vault of Magic ©2021 Open Design LLC; Authors: Phillip Larwood, Jeff Lee, and Christopher Lockey
+
+Warlock 4: The Dragon Empire ©2018 Open Design LLC; Authors: Wolfgang Baur, Chris Harris, James J. Haeck, Jeremy Hochhalter, Jon Sawatsky, and Brian Suskind
+
+Warlock 8: Undead ©2018 Open Design LLC; Authors: Wolfgang Baur, Dan Dillon, Chris Harris, and Kelly Pawlik
+
+Warlock 12: Dwarves ©2019 Open Design LLC; Authors: Wolfgang Baur, Ben McFarland, Robert Fairbanks, Hannah Rose, and Ashley Warren
+
+Warlock 13: War and Battle ©2019 Open Design LLC; Authors: Kelly Pawlik and Brian Suskind
+
+Warlock 14: Clockwork ©2019 Open Design LLC; Authors: Sarah Madsen and Greg Marks
+
+Warlock 17: Halflings ©2020 Open Design LLC; Authors: Victoria Jaczko and Kelly Pawlik
+
+Warlock 23: Bearfolk ©2020 Open Design LLC; Authors: Celeste Conowitch, Sarah Madsen, and Mike Welham
+
+Warlock 26: Dragons ©2021 Open Design LLC; Authors: Celeste Conowitch, Gabriel Hicks, and Richard Pett
+
+Warlock Guide to Liminal Magic ©2020 Open Design LLC; Author: Sarah Madsen
+
+Warlock Grimoire ©2019 Open Design LLC; Authors: Wolfgang Baur, Peter von Bleichert, Lysa Chen, Dan Dillon, Richard Green, Jeff Grubb, James J. Haeck, Chris Harris, Jeremy Hochhalter, Brandon Hodge, Sarah Madsen, Ben McFarland, Shawn Merwin, Kelly Pawlik, Richard Pett, Hannah Rose, Jon Sawatsky, Brian Suskind, Troy E. Taylor, and Steve Winter
+
+Warlock Grimoire 2 ©2020 Open Design LLC; Authors: Wolfgang Baur, Celeste Conowitch, David “Zeb” Cook, Dan Dillon, Robert Fairbanks, Scott Gable, Richard Green, Victoria Jaczko, TK Johnson, Christopher Lockey, Sarah Madsen, Greg Marks, Ben McFarland, Kelly Pawlik, Lysa Penrose, Richard Pett, Marc Radle, Hannah Rose, Jon Sawatsky, Robert Schwalb, Brian Suskind, Ashley Warren, and Mike Welham
+
+Zobeck Gazeteer for 5th Edition ©2018 Open Design LLC; Authors: James Haeck
+
+Tome of Heroes ©2022 Open Design LLC; Authors: Celeste Conowitch, Jeff Lee, Sarah Madsen, Ben McFarland, Kelly Pawlik, Brian Suskind
 
 END OF LICENSE
 

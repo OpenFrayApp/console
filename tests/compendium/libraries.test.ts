@@ -77,6 +77,7 @@ describe('libraries', () => {
 
   it('keeps third-party reference collections independent, opt-in, and on their verified 5e baseline', () => {
     const sources = [
+      'kobold-press-toh',
       'kibblestasty-casting-compendium-v2.3',
       'somanyrobots-spells-that-dont-suck',
       'somanyrobots-so-many-spells',
@@ -91,6 +92,11 @@ describe('libraries', () => {
       expect(DEFAULT_ENABLED_LIBRARIES).not.toContain(source)
       expect(sanitizeEnabledLibraries([source])).toEqual([source])
     }
+    expect(LIBRARIES.find((library) => library.id === 'kobold-press-toh')?.license).toBe('ogl-1.0a')
+    expect(librarySource('kobold-press-toh')).toBe('ToH')
+    expect(librarySourceBadgeClass('kobold-press-toh')).toBe(
+      librarySourceBadgeClass('kobold-press-tob3'),
+    )
     expect(libraryReferenceOnly('srd-5.2')).toBe(false)
     expect(libraryReferenceOnly('custom')).toBe(false)
   })
