@@ -2,7 +2,13 @@
 
 The console owns the account-email migration. The admin repo owns the server-only
 worker, React Email source, template publisher, and deployment procedure.
-Welcome emails are defined in console issue #110; published legal-date notices in #111.
+Only signup welcomes and authenticated deletion confirmations are automatic.
+Terms, Privacy, combined policy updates, and case-by-case security notices are
+prepared, reviewed, and sent manually in Resend. The parent’s
+[manual notice guide](https://github.com/OpenFrayApp/openfray/blob/develop/docs/legal-publication.md)
+is authoritative for this workflow and repository ownership.
+Changing a policy date does not authorize or trigger sending.
+Source merge, service deployment, and delivery activation are separate actions.
 
 ## Account creation
 
@@ -67,68 +73,47 @@ Jobs with only definitive failures become `failed` after rejection or retry exha
 The ledger retains only allowlisted failure categories, not provider response bodies.
 Terminal jobs drop the queue’s address and the recipient-derived request hash.
 
-## Legal publication
+## Retained legal and security contracts
 
-`register_legal_publication(revision, published_at, terms, privacy, baseline)` is
-service-role-only. The admin handler verifies live metadata before invoking it.
-The parent deployment job separately verifies successful Pages production publication.
-Browser roles cannot register publications or read history, recipients, or sending state.
+Legal registration is disabled with `LEGAL_PUBLICATION_ENABLED=false`; the parent
+has no post-deployment registration job. Legal baselines and the security operator
+command are not part of current setup. Their RPCs, capabilities, templates, and
+history remain in source and the database. Keep those records for recovery and
+replay protection; manual sending does not remove the older technical paths.
 
-A locked singleton serializes registration and baseline initialization. The first call
-requires explicit baseline approval and records both dates without queuing historical mail.
-Later registrations remember each document/date independently, including baseline dates.
-Known dates never send again, even after rollback or same-date wording edits.
-A repeated Git revision must carry the same legal dates and creates no second event.
+`register_legal_publication(revision, published_at, terms, privacy, baseline)`
+remains service-role-only. Browser roles cannot register publications or read
+history, recipients, or sending state. Its locked singleton records document dates
+independently. Known dates and repeated revisions cannot create another delivery.
+Publication history contains no recipient identifiers and survives account erasure.
 
-New dates create one publication and one account delivery per eligible recipient.
-A simultaneous Terms/Privacy change selects `openfray-legal-v3`; individual changes select
-`openfray-terms-v3` or `openfray-privacy-v3`. Each ledger entry pins its dates and template.
-Accounts must exist with a usable server-held address and creation time at or before publication.
-Later accounts receive no historical notices. The worker rechecks existence when claiming,
-and erasure prevents preparing a previously claimed job. Addresses are resolved at delivery.
+Retained legal jobs pin their document dates and template identity. Simultaneous
+Terms/Privacy changes select `openfray-legal-v3`; individual changes select
+`openfray-terms-v3` or `openfray-privacy-v3`. Eligibility uses account creation
+time and a usable server-held address. Erasure prevents preparing a claimed job.
 
-Legal deliveries use the existing private queue, claim fencing, request hashes, retries,
-and long-term acceptance ledger. Publication history contains no recipient identifiers
-and survives account erasure so future deployments cannot replay an old document date.
-Recovery must preserve this history alongside the queue and ledger. The quarantine
-snippet pauses registration until an operator reconciles dates published after the snapshot.
-Resume only after restoring those history entries and clearing `registration_paused`.
-A fresh baseline would discard replay protection and is not a recovery procedure. See the parent’s
-[legal publication procedure](https://github.com/OpenFrayApp/openfray/blob/main/docs/legal-publication.md)
-for the explicit baseline and activation gates.
+`preview_security_notice(id, digest, template_id, template_revision, accounts)`
+and `confirm_security_notice(id, digest, accounts, reviewed)` remain gated by
+a current account and `may('security.notify')`. Explicit capability denials apply.
+Service credentials cannot execute these operator RPCs. Reviews freeze an explicit
+selection of 1–1000 eligible accounts and expire after one hour.
 
-## Reviewed security notices
+Retained security deliveries use a unique `security/<incident UUID>` identity
+and pin their content digest, hosted template ID, and revision. Confirmed,
+recipient-free version history prevents replay. Account erasure removes private
+review selections, queued deliveries, and account-linked ledger entries.
+No incident prose or address enters the security review tables.
 
-Issue #113 uses the admin repo’s explicit `email:security` command. The operator renders
-incident facts from a private local file and reviews HTML, plain text, and selected account IDs.
-The template publisher rejects incomplete facts, placeholder text, markup, and unsafe links.
-Each incident has a content-addressed hosted template with no dynamic incident variables.
+Both delivery types retain the queue’s claim fencing, request hashes, retry bounds,
+and sanitized outcomes. Keep uncertain attempts quarantined. An in-flight provider
+request cannot be recalled by erasure. A fresh legal baseline or new incident
+identity is not a retry or recovery procedure.
 
-`preview_security_notice(id, digest, template_id, template_revision, accounts)` freezes
-an explicit selection of 1–1000 existing accounts with usable trusted addresses.
-`confirm_security_notice(id, digest, accounts, reviewed)` requires the same operator,
-content digest, exact selection, and explicit review confirmation within one hour.
-Both RPCs require a current account and `may('security.notify')`. Only admin holds
-that capability initially; explicit denials apply. Anonymous callers cannot execute either RPC.
-Account holders cannot enumerate review records or initiate notices. Service credentials
-cannot execute the operator RPCs, and the command uses an operator JWT with the anon key.
-
-Confirmation queues individual deliveries under a unique `security/<incident UUID>` event.
-It pins the content digest, hosted template ID, and hosted revision. Concurrent confirmations
-and replay cannot create another delivery. The worker checks the pinned hosted version and
-uses the existing staging routing, tracking checks, request hash, leases, retry bounds,
-suppression behavior, and sanitized outcomes. Template drift blocks sending.
-
-Private review selections cascade on account erasure, as do queued deliveries and ledger entries.
-Deleting the reviewer removes unconfirmed reviews and their selections. Confirmation drops
-reviewer and draft recipient identifiers; recipient-free version history prevents replay.
-No incident prose or address enters the security review tables or command diagnostics.
-The shared recovery quarantine applies to these deliveries too. A provider request already
-in flight cannot be recalled by account erasure.
-
-See the admin repo’s `docs/account-email.md` for command syntax, private artifacts,
-reconciliation, and the separately authorized synthetic staging demonstration.
-Hosted publication and staging delivery remain deployment prerequisites, not local-test results.
+Follow [database recovery](./recovery.md) before resuming workers on a restored
+database. Preserve dates published after the snapshot and reconcile them before
+clearing `registration_paused`; leave configured legal registration disabled.
+Recovery must retain publication, notified-version, confirmed security, and
+uncertain-attempt history.
 
 ## Erasure and verification
 
