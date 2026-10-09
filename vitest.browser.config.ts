@@ -38,6 +38,8 @@ export default defineConfig({
     ],
   },
   test: {
+    env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
+    setupFiles: ['./tests/setupNetwork.ts'],
     include: ['tests/**/*.browser.test.ts', 'tests/publication/browser.test.ts'],
     browser: {
       enabled: true,

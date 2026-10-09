@@ -23,7 +23,10 @@ export default defineConfig({
     // Default to node (fast). Component tests opt into jsdom with a file
     // docblock: `// @vitest-environment jsdom`.
     environment: 'node',
-    setupFiles: ['./tests/setup.ts'],
+    // Vite loads .env for tests too. Never initialize a hosted backend from local credentials.
+    // Keep this as the baseline so vi.unstubAllEnvs() cannot restore production credentials.
+    env: { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' },
+    setupFiles: ['./tests/setupNetwork.ts', './tests/setup.ts'],
     // The site workspace runs its own suite (astro-aware config): `npm run test -w site`.
     exclude: [
       ...configDefaults.exclude,
