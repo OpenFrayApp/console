@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 // @vitest-environment jsdom
 
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { User } from '@supabase/supabase-js'
 import App from '../src/App.tsx'
@@ -14,6 +14,7 @@ const user = { id: 'search-owner', email: 'gm@example.com' } as User
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   sessionStorage.clear()
   localStorage.clear()
 })
@@ -29,6 +30,24 @@ async function openSearch(overrides: Partial<AuthState>) {
   await act(() => Promise.resolve())
   fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
 }
+
+it('does not contact Supabase when a component test supplies a signed-in user', async () => {
+  // Intercept before rendering so this regression cannot send real requests when it fails.
+  const fetch = vi
+    .spyOn(globalThis, 'fetch')
+    .mockImplementation(async () =>
+      Response.json({ code: '42501', message: 'Unconfigured test backend' }, { status: 401 }),
+    )
+  await openSearch({ user })
+  fireEvent.click(screen.getByRole('option', { name: 'Shared links' }))
+  await screen.findByRole('dialog', { name: 'Shared links' })
+  // Local compendium fetches are allowed; hosted Supabase requests are the regression.
+  const contactedSupabase = fetch.mock.calls.some(([input]) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    return new URL(url, 'http://localhost').hostname.endsWith('.supabase.co')
+  })
+  expect(contactedSupabase).toBe(false)
+})
 
 it.each([
   { state: 'loading', auth: { loading: true, user }, expected: [] },
