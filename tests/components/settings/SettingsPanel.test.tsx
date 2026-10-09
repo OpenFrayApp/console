@@ -250,6 +250,17 @@ describe('SettingsPanel', () => {
     expect(screen.getByText(/Roll their dice and apply their effects manually/)).toBeTruthy()
   })
 
+  it('labels A5E separately without claiming SRD compatibility', () => {
+    const { onSetEnabledLibraries } = renderPanel()
+    const label = screen.getByText('A5E SRD: Adventurer’s Guide spells').closest('label')!
+    expect(within(label).getByText('A5E')).toBeTruthy()
+    expect(within(label).queryByText('5e')).toBeNull()
+    expect(within(label).queryByText('5.5e')).toBeNull()
+    expect((label.querySelector('input') as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(screen.getByText('A5E SRD: Adventurer’s Guide spells'))
+    expect(onSetEnabledLibraries).toHaveBeenCalledWith(['srd-5.2', 'en-publishing-a5e-ag'])
+  })
+
   it('never lets the user disable the last library', () => {
     const { onSetEnabledLibraries } = renderPanel()
     fireEvent.click(screen.getByText('Basic Rules 2024 (SRD 5.2.1)'))

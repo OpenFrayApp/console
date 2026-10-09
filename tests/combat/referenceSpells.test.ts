@@ -55,6 +55,26 @@ describe('reference-only spell isolation', () => {
     expect(createHash('sha256').update(JSON.stringify(spells)).digest('hex')).toBe(sha256)
   })
 
+  it('ships the publisher-verified A5E subset without converting its ruleset', () => {
+    const spells = JSON.parse(
+      readFileSync(new URL('../../public/compendium/a5e-srd-spells.json', import.meta.url), 'utf8'),
+    ) as Spell[]
+    expect(spells).toHaveLength(369)
+    expect(createHash('sha256').update(JSON.stringify(spells)).digest('hex')).toBe(
+      '926a1d330ac3e8ae4930878c13326898070dafa40027842b0741e6f9321a3c91',
+    )
+    expect(
+      spells.every(
+        (spell) => !spell.edition && !spell.mechanics && spell.source === 'en-publishing-a5e-ag',
+      ),
+    ).toBe(true)
+    expect(spells.some((spell) => ['Guardian of Faith', 'Wish'].includes(spell.name))).toBe(false)
+    const acid = spells.find((spell) => spell.name === 'Acid Arrow')!
+    expect(acid.components.materials).toBe('flint arrowhead')
+    expect(acid.classes).toEqual(['sorcerer', 'wizard'])
+    for (const spell of spells) expect(spellEffectFor(spell)).toBeNull()
+  })
+
   it('retains reviewed SRD automation', () => {
     expect(spellEffectFor(BLESS)).not.toBeNull()
     expect(isSupportSpell({ ...BLESS, mechanics: undefined })).toBe(true)

@@ -132,6 +132,25 @@ manually. They use the 5e baseline declared by their creators, including SRD 5.1
 OpenFray records their edition as 5.0 and displays the 5e badge.
 OpenFray is not affiliated with or endorsed by these creators.
 
+### A5E System Reference Document: Adventurer’s Guide spells (EN Publishing)
+
+Source: the publisher’s [A5ESRD spellcasting chapter](https://a5esrd.com/s/a5e_srd_11.pdf),
+with [license information](https://a5esrd.com/a5esrd).
+We elect **CC-BY-4.0** from the publisher’s CC-BY, ORC, and OGL license options.
+
+> This work includes material taken from the A5E System Reference Document (A5ESRD) by EN Publishing and available at A5ESRD.com, based on *Level Up: Advanced 5th Edition*, available at www.levelup5e.com. The A5ESRD is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+Open5e supplied the discovery list. The publisher’s licensed PDF supplies the 369
+published cards, including material components, class lists, and rare-variant prose.
+Guardian of Faith is absent from that PDF. Wish is withheld because its range is
+not specified there. No art or trademark compatibility logo is included.
+
+**Changes were made:** rule text and metadata were reformatted into OpenFray’s schema;
+concentration limits use its separate flag and “up to” duration convention.
+Page references are physical pages in the 137-page spellcasting PDF.
+A5E is displayed as a distinct ruleset. It is not converted into SRD 5e or 5.5e,
+and no source-specific automation is provided. OpenFray is not endorsed by EN Publishing.
+
 ### Tome of Beasts (Kobold Press)
 
 OpenFray includes **Open Game Content** from *Tome of Beasts* © 2016 Open Design LLC,
