@@ -14,6 +14,9 @@ it.each([false, true])(
   (sourceAsIcon) => {
     const { container } = render(<LegalLinks sourceAsIcon={sourceAsIcon} />)
     const license = screen.getByRole('link', { name: 'AGPL-3.0' })
+    expect(license.className).toContain('whitespace-nowrap')
+    const credits = screen.getByRole('link', { name: 'Credits' })
+    expect(credits).toHaveAttribute('href', '/credits/')
     const release = screen.getByText(`v${version}`)
     expect(license.compareDocumentPosition(release) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(container.textContent).toMatch(

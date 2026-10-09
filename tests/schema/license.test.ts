@@ -34,13 +34,21 @@ describe('what a source is published under', () => {
   })
 
   it('covers every library that ships, so a new book cannot arrive unlicensed', () => {
-    // The answer is derived from `group`, which exists for the settings panel. A fourth
-    // group added there would otherwise inherit CC BY silently, which for a third-party
-    // book would be a license claim we have no right to make.
     for (const library of LIBRARIES) {
-      expect(['core', 'openfray', 'other'], library.id).toContain(library.group)
+      expect(licenseOfSource(library.id), library.id).toBe(library.license)
       expect(licenseOfSource(library.id), library.id).not.toBe('unstated')
     }
+  })
+
+  it.each([
+    'kibblestasty-casting-compendium-v2.3',
+    'somanyrobots-spells-that-dont-suck',
+    'somanyrobots-so-many-spells',
+  ])('uses the verified CC-BY license for %s even in the Other group', (source) => {
+    expect(licenseOfSource(source)).toBe('cc-by-4.0')
+    expect(licenseIsFixed(source)).toBe(false)
+    expect(licensesForDerivative(source)).not.toContain('ogl-1.0a')
+    expect(licensesForDerivative(source)).not.toContain('cc0-1.0')
   })
 
   it('says nothing about a source it does not ship', () => {

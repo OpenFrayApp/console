@@ -126,12 +126,7 @@ export const LICENSES_FROM_SCRATCH: ContentLicense[] = [
 
 /** What a compendium library's own content is published under. */
 export function licenseOfSource(source: string): ContentLicense {
-  const library = LIBRARIES.find((l) => l.id === source)
-  if (!library) return 'unstated'
-  // Kobold Press titles ship as Open Game Content; the SRD and our own books are CC-BY.
-  // `group` is the settings-panel grouping, and it happens to split exactly this way —
-  // asserted by a test, so a fourth group can't quietly inherit the wrong answer.
-  return library.group === 'other' ? 'ogl-1.0a' : 'cc-by-4.0'
+  return LIBRARIES.find((library) => library.id === source)?.license ?? 'unstated'
 }
 
 /**

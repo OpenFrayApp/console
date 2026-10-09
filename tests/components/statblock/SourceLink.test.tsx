@@ -19,6 +19,22 @@ describe('SourceLink', () => {
     expect(screen.getByText(/License: CC BY 4.0/)).toBeInTheDocument()
   })
 
+  it.each([
+    'kibblestasty-casting-compendium-v2.3',
+    'somanyrobots-spells-that-dont-suck',
+    'somanyrobots-so-many-spells',
+  ])('shows the verified CC-BY badge and terms for %s', (source) => {
+    render(<SourceLink source={source} />)
+    const badge = screen.getByRole('button', { name: 'License: CC BY 4.0' })
+    expect(screen.queryByText(/OGL/)).toBeNull()
+    fireEvent.click(badge)
+    expect(screen.getByRole('dialog').textContent).toContain('Credit is required')
+    expect(screen.getByRole('dialog').querySelector('a')).toHaveAttribute(
+      'href',
+      'https://creativecommons.org/licenses/by/4.0/',
+    )
+  })
+
   it('reads a third-party book as Open Game Content', () => {
     render(<SourceLink source="kobold-press-tob" />)
     expect(screen.getByText(/License: OGL 1.0a/)).toBeInTheDocument()

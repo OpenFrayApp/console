@@ -64,6 +64,74 @@ as backdrops the Game Master picks for the shared player view.
 
 ## Third-party content
 
+### Kibbles’ Casting Compendium v2.3
+
+Includes content from *Kibbles’ Casting Compendium* by KibblesTasty Homebrew LLC,
+available at <https://www.kthomebrew.com/krd>.
+The spell text is licensed under the Creative Commons Attribution 4.0 International
+License (CC-BY-4.0), available at
+<https://creativecommons.org/licenses/by/4.0/legalcode>.
+
+OpenFray includes all 295 spells from the publisher’s v2.3 PDF, including its psionic
+and blood-magic sections. **Changes were made:** spell fields were restructured into
+OpenFray’s schema, line wrapping and tables were reformatted, and art credits were
+removed from spell cards. Artwork, chapter introductions, and feat rules are excluded.
+PDF page references count physical pages from 1 and can differ from printed pagination.
+
+*Wall of Blood* is credited separately to *So Many Spells* by somanyrobots.
+It is used under that collection’s CC-BY-4.0 license and attribution below.
+The SRD 5.1 attribution above also applies to this collection’s SRD-derived material.
+
+### Spells That Don’t Suck
+
+Includes spells from *Spells That Don’t Suck* by Omega Ankh and somanyrobots,
+available at <https://www.gmbinder.com/share/-NR0OWlW60yv2EfA3qQp>.
+The document is licensed under the Creative Commons Attribution 4.0 International
+License (CC-BY-4.0), available at
+<https://creativecommons.org/licenses/by/4.0/legalcode>.
+
+Includes spells from *Kibbles’ Casting Compendium 2.0* by KibblesTasty Homebrew LLC,
+licensed CC-BY-4.0 and available at <https://www.kthomebrew.com/krd>.
+The source credits KibblesTasty for Arcanist’s Sword, Arctic Breath, Cold Snap,
+Dust Cyclone, Flickering Strikes, Form of Fire, Form of Ice, Form of Stone,
+Form of Water, Form of Wind, Frighten, Lightning Tendril, Manipulate Earth,
+Manipulate Fire, Manipulate Water, Manipulate Wind, and Martial Transformation.
+All other spells are credited to Omega Ankh and somanyrobots.
+
+OpenFray includes 181 spell cards from the creators’ GM Binder document.
+**Changes were made:** spell fields and tables were reformatted into OpenFray’s schema,
+and advice panels were omitted. Artwork, design commentary, and appendices are excluded.
+Same-name spells remain separate from other libraries’ versions.
+
+### So Many Spells
+
+Includes spells from *So Many Spells* by somanyrobots,
+available at <https://www.gmbinder.com/share/-NMZq9u_rDyV_XD5YTxf>.
+Its rules and spell text are licensed under the Creative Commons Attribution 4.0
+International License (CC-BY-4.0), available at
+<https://creativecommons.org/licenses/by/4.0/legalcode>.
+The SRD 5.1 attribution above also applies to this collection’s SRD-derived material.
+
+The source retains these commissioned-spell credits from *Songs of the Spellbound Sea*:
+
+- Benjamen B.: Howl of the Moon.
+- Nolan and Salvador Blanchfield: Shackle of Flame.
+- Chris Grimmett: Lightning Spike.
+- Maya Selbie: Surf Skip.
+
+It also identifies Ghost in the Machine, Plague Arrow, and Ghastly Stampede as
+backer-commissioned spells from *Machines of Bone & Blood*.
+
+OpenFray includes 179 spell cards. Bind Lesser Fiend is withheld because it references
+SRD-excluded Wizards of the Coast content.
+**Changes were made:** spell fields and tables were reformatted into OpenFray’s schema,
+and advice panels were omitted. Cover art, design commentary, and appendices are excluded.
+
+These three spell libraries are reference-only. Their dice and effects are handled
+manually. They use the 5e baseline declared by their creators, including SRD 5.1 references.
+OpenFray records their edition as 5.0 and displays the 5e badge.
+OpenFray is not affiliated with or endorsed by these creators.
+
 ### Tome of Beasts (Kobold Press)
 
 OpenFray includes **Open Game Content** from *Tome of Beasts* © 2016 Open Design LLC,

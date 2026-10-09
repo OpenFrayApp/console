@@ -56,7 +56,7 @@ export function LegalLinks({
           </a>
           &nbsp;
           <span>
-            <a href={LICENSE_URL} target="_blank" rel="noreferrer">
+            <a href={LICENSE_URL} target="_blank" rel="noreferrer" className="whitespace-nowrap">
               AGPL-3.0
             </a>
           </span>
@@ -67,11 +67,20 @@ export function LegalLinks({
             Source
           </a>
           {dot}
-          <a href={LICENSE_URL} target="_blank" rel="noreferrer" className={linkClassName}>
+          <a
+            href={LICENSE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className={`whitespace-nowrap ${linkClassName ?? ''}`}
+          >
             AGPL-3.0
           </a>
         </>
       )}
+      {dot}
+      <a href="/credits/" target="_blank" rel="noreferrer" className={linkClassName}>
+        Credits
+      </a>
       {dot}
       <span className="whitespace-nowrap">v{version}</span>
     </Tag>

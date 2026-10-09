@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import type { Edition } from '../schema/primitives.ts'
+import type { ContentLicense } from '../schema/license.ts'
 
 /**
  * Content libraries the compendium can surface. A library's `id` matches the
@@ -13,6 +14,8 @@ import type { Edition } from '../schema/primitives.ts'
 export interface Library {
   /** Matches the entries' `source`. */
   id: string
+  /** Publisher-verified reuse license, independent of the settings group. */
+  license: ContentLicense
   label: string
   /** Compact source label for the dropdown/list badge, e.g. "Core" / "ToB3". */
   shortLabel: string
@@ -23,7 +26,10 @@ export interface Library {
    *  'other' (third-party books). Homebrew is injected into 'other' by the panel — it's a
    *  preference, not a library. */
   group: 'core' | 'openfray' | 'other'
-  edition: Edition
+  /** Omitted when the publisher's rules edition has not been verified. */
+  edition?: Edition
+  /** Readable spell cards whose automation has not been reviewed for this source. */
+  referenceOnly?: boolean
   /** Absent for a library that ships no stat blocks (e.g. a book of spells and presets). */
   creaturesFile?: string
   /** Absent for creatures-only libraries (e.g. a bestiary like Tome of Beasts). */
@@ -36,6 +42,7 @@ export interface Library {
 export const LIBRARIES: Library[] = [
   {
     id: 'srd-5.2',
+    license: 'cc-by-4.0',
     label: 'Basic Rules 2024 (SRD 5.2.1)',
     shortLabel: 'Core',
     family: 'srd',
@@ -46,6 +53,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'srd-5.1',
+    license: 'cc-by-4.0',
     label: 'Basic Rules 2014 (SRD 5.1)',
     shortLabel: 'Core',
     family: 'srd',
@@ -56,6 +64,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'kobold-press-tob',
+    license: 'ogl-1.0a',
     label: 'Tome of Beasts 1 (Kobold Press)',
     shortLabel: 'ToB1',
     family: 'tob',
@@ -65,6 +74,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'kobold-press-tob2',
+    license: 'ogl-1.0a',
     label: 'Tome of Beasts 2 (Kobold Press)',
     shortLabel: 'ToB2',
     family: 'tob',
@@ -74,6 +84,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'kobold-press-tob3',
+    license: 'ogl-1.0a',
     label: 'Tome of Beasts 3 (Kobold Press)',
     shortLabel: 'ToB3',
     family: 'tob',
@@ -83,6 +94,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'kobold-press-ccdx',
+    license: 'ogl-1.0a',
     label: 'Creature Codex (Kobold Press)',
     shortLabel: 'CCdx',
     family: 'tob',
@@ -91,7 +103,41 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'creature-codex-creatures.json',
   },
   {
+    id: 'kibblestasty-casting-compendium-v2.3',
+    license: 'cc-by-4.0',
+    label: 'Kibbles’ Casting Compendium v2.3',
+    shortLabel: 'KCC',
+    family: 'kibbles',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'kibbles-casting-v23-spells.json',
+  },
+  {
+    id: 'somanyrobots-spells-that-dont-suck',
+    license: 'cc-by-4.0',
+    label: 'Spells That Don’t Suck',
+    shortLabel: 'STDS',
+    family: 'somanyrobots',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'spells-that-dont-suck-spells.json',
+  },
+  {
+    id: 'somanyrobots-so-many-spells',
+    license: 'cc-by-4.0',
+    label: 'So Many Spells',
+    shortLabel: 'SMS',
+    family: 'somanyrobots',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'so-many-spells-spells.json',
+  },
+  {
     id: 'openfray-brood-and-bloom',
+    license: 'cc-by-4.0',
     label: 'Brood & Bloom',
     shortLabel: 'B&B',
     family: 'openfray',
@@ -103,6 +149,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'openfray-strong-waters',
+    license: 'cc-by-4.0',
     label: 'On Strong Waters and Potent Simples',
     shortLabel: 'SW&PS',
     family: 'openfray',
@@ -114,6 +161,7 @@ export const LIBRARIES: Library[] = [
   },
   {
     id: 'openfray-waking-garden',
+    license: 'cc-by-4.0',
     label: 'The Waking Garden',
     shortLabel: 'TWG',
     family: 'openfray',
@@ -130,6 +178,8 @@ const SOURCE_BADGE_CLASS: Record<string, string> = {
   srd: 'bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300',
   tob: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
   openfray: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
+  kibbles: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+  somanyrobots: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300',
 }
 const SOURCE_BADGE_FALLBACK = 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
 
@@ -163,6 +213,16 @@ export function inEnabledLibrary(
 ): boolean {
   if (item.id.startsWith('custom:')) return showHomebrew
   return enabled.includes(item.source)
+}
+
+/** Whether a source's spells are reference cards without reviewed automation. */
+export function libraryReferenceOnly(source: string): boolean {
+  return LIBRARIES.some((library) => library.id === source && library.referenceOnly)
+}
+
+/** Identify reference-only library templates without restricting user-authored copies. */
+export function isReferenceOnlySpell(spell: { id: string; source: string }): boolean {
+  return libraryReferenceOnly(spell.source) && !spell.id.startsWith('custom:')
 }
 
 /** The edition tag for a source (e.g. "5.5" / "5.0"), for the compendium badge. */
