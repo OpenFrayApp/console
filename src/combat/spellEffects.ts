@@ -7,6 +7,7 @@ import { isReferenceOnlySpell, libraryReferenceOnly } from '../compendium/librar
 import { reminder } from './effects.ts'
 import { SPELL_EFFECTS } from './spells/index.ts'
 import type { SpellEffectDef } from './spells/shared.ts'
+import { reviewedSpellCasting } from './reviewedSpells.ts'
 
 /**
  * The map of spells to the board effect they leave behind, so casting one can *offer*
@@ -40,10 +41,12 @@ export const normalize = (name: string): string => name.toLowerCase().replace(/[
  * modelled effect keeps correctly-tagged spells untouched.
  */
 export function isSupportSpell(spell: Spell): boolean {
-  if (libraryReferenceOnly(spell.source)) return false
-  const def = SPELL_EFFECTS[normalize(spell.name)]
+  const reviewed = reviewedSpellCasting(spell)
+  if (libraryReferenceOnly(spell.source) && !reviewed) return false
+  const def = reviewed ? reviewed.effect : SPELL_EFFECTS[normalize(spell.name)]
   if (!def || def.targeting === 'enemy') return false
-  return !spell.mechanics?.damage?.length && !spell.mechanics?.attackRoll
+  const mechanics = reviewed ? reviewed.mechanics : spell.mechanics
+  return !mechanics?.damage?.length && !mechanics?.attackRoll
 }
 
 /**
@@ -73,8 +76,9 @@ export function delayedDamageEffect(spell: Spell, source?: string): Effect | nul
  * The bundle is minted per build, so each target gets its own.
  */
 export function spellEffectFor(spell: Spell): SpellEffectDef | null {
-  if (libraryReferenceOnly(spell.source)) return null
-  const def = SPELL_EFFECTS[normalize(spell.name)]
+  const reviewed = reviewedSpellCasting(spell)
+  if (libraryReferenceOnly(spell.source) && !reviewed) return null
+  const def = reviewed ? reviewed.effect : SPELL_EFFECTS[normalize(spell.name)]
   if (!def) return null
   return {
     ...def,

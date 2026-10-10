@@ -13,6 +13,7 @@ import {
 } from '../../src/combat/spellEffects.ts'
 import { NOT_MODELLED, SKIP_REASONS } from './spellCoverage.data.ts'
 import { REFERENCE_ONLY_SPELLS } from './referenceSpellCoverage.data.ts'
+import { REVIEWED_SPELL_CASTING, reviewedSpellCasting } from '../../src/combat/reviewedSpells.ts'
 
 /**
  * The coverage contract: every shipped spell has a verdict. A missing map key is
@@ -58,14 +59,26 @@ describe('spell coverage', () => {
 
   it('gives every reference spell its own source-specific manual verdict', () => {
     const referenceSpells = LIBRARY_SPELLS.filter((l) => l.referenceOnly).flatMap((l) => l.spells)
-    expect(referenceSpells.map((s) => s.id).sort()).toEqual(
-      Object.keys(REFERENCE_ONLY_SPELLS).sort(),
-    )
-    for (const spell of referenceSpells) {
+    expect(
+      referenceSpells
+        .filter((s) => !reviewedSpellCasting(s))
+        .map((s) => s.id)
+        .sort(),
+    ).toEqual(Object.keys(REFERENCE_ONLY_SPELLS).sort())
+    for (const spell of referenceSpells.filter((s) => !reviewedSpellCasting(s))) {
       expect(REFERENCE_ONLY_SPELLS[spell.id], spell.id).toBe('SOURCE_REVIEW')
       expect(spell.mechanics, spell.id).toBeUndefined()
       expect(spellEffectFor(spell), spell.id).toBeNull()
       expect(isSupportSpell(spell), spell.id).toBe(false)
+    }
+  })
+
+  it('binds every reviewed profile to a shipped source-specific spell', () => {
+    for (const id of Object.keys(REVIEWED_SPELL_CASTING)) {
+      const spell = ALL_SPELLS.find((s) => s.id === id)
+      expect(spell, id).toBeDefined()
+      expect(reviewedSpellCasting(spell!), id).toBeDefined()
+      expect(REFERENCE_ONLY_SPELLS[id], id).toBeUndefined()
     }
   })
 

@@ -6,7 +6,12 @@ import type { Combatant } from '../../schema/combatant.ts'
 import { deriveSaveDc, deriveSpellAttack } from '../../schema/pcStats.ts'
 import type { Spell } from '../../schema/spell.ts'
 import type { EncounterAction } from '../../state/encounter.ts'
-import { landsOnCast, spellAction, spellConcentration } from '../../combat/casting.ts'
+import {
+  castingMechanics,
+  landsOnCast,
+  spellAction,
+  spellConcentration,
+} from '../../combat/casting.ts'
 import { startConcentration } from '../../combat/concentration.ts'
 import { isFoe, nameOf } from '../../combat/combatant.ts'
 import { loadSrdSpells } from '../../compendium/srd.ts'
@@ -241,7 +246,7 @@ export function CastSpellPanel({
       subtitle={`${spellLevelShort(spell.level)} · ${spell.school}${caster ? ` · ${caster.isPC ? caster.name : caster.label}` : ''}`}
       onClose={reset}
     >
-      {spell.mechanics && !isSupportSpell(spell) ? (
+      {castingMechanics(spell) && !isSupportSpell(spell) ? (
         <div className="space-y-3">
           <SpellResolution
             spell={spell}

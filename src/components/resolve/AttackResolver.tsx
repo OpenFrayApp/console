@@ -26,6 +26,7 @@ import {
 } from '../../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { Modal } from '../ui/Modal.tsx'
+import { SpellCastingNote } from '../statblock/SpellCastingNote.tsx'
 import { TargetChips } from './TargetChips.tsx'
 import { ConditionChips, DamagePill, NaturalRoll } from './rollPieces.tsx'
 import {
@@ -319,6 +320,7 @@ export function AttackResolver({
       restrictDismiss={!!tutorialTargetId}
       closeCompletesOperation={!!attack && !hit}
     >
+      <SpellCastingNote spell={spell} />
       <fieldset className="mb-3">
         <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
           Target
