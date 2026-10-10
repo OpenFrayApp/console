@@ -79,6 +79,7 @@ describe('libraries', () => {
   it('keeps third-party reference collections independent, opt-in, and on their verified 5e baseline', () => {
     const sources = [
       'kobold-press-toh',
+      'kobold-press-deepm',
       'kibblestasty-casting-compendium-v2.3',
       'somanyrobots-spells-that-dont-suck',
       'somanyrobots-so-many-spells',

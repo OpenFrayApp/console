@@ -32,6 +32,11 @@ const BLESS: Spell = {
 describe('reference-only spell isolation', () => {
   it.each([
     [
+      'deep-magic-2020-spells.json',
+      503,
+      '6ea27875af39266eaec4b445289204a657a411b97feee31314fe65c9eaa6ff85',
+    ],
+    [
       'tome-of-heroes-spells.json',
       90,
       '0dfd2cd8ddc8faf579766f7529627ea523fdf4f284fd01649405d4e673fed53d',
@@ -74,6 +79,73 @@ describe('reference-only spell isolation', () => {
     expect(credits).toContain('**Open Game Content designation:**')
     expect(credits).toContain('tome-of-heroes-spells.json')
     expect(credits).toContain('Deadly Salvo is withheld')
+  })
+
+  it('ships the verified Deep Magic 2020 notice chain, full OGL, and OGC designation', () => {
+    const credits = readFileSync(new URL('../../CREDITS.md', import.meta.url), 'utf8')
+    const chain = credits
+      .split('#### Deep Magic 2020 Section 15 copyright chain')[1]
+      ?.split('#### OpenFray copyright notice')[0]
+      .replace(/\s+/g, ' ')
+      .trim()
+    expect(chain).toBeTruthy()
+    expect(createHash('sha256').update(chain!).digest('hex')).toBe(
+      '064dd0e577c58d29204afa079a10a9950ff1b077aaa323226d09b1b16b3376ef',
+    )
+    const source = credits.split('### Deep Magic 2020 (Kobold Press)')[1]
+    expect(source).toContain('#### OPEN GAME LICENSE Version 1.0a')
+    expect(source).toContain('14. Reformation:')
+    expect(source).toContain('**Open Game Content designation:**')
+    expect(source).toContain('deep-magic-2020-spells.json')
+    expect(source).toContain('Eleven custom-ritual spells are withheld')
+  })
+
+  it('keeps all eleven ritual dependencies outside the Deep Magic dataset and preserves its corrections', () => {
+    const spells = JSON.parse(
+      readFileSync(
+        new URL('../../public/compendium/deep-magic-2020-spells.json', import.meta.url),
+        'utf8',
+      ),
+    ) as Spell[]
+    const holds = [
+      'Afflict Line',
+      'Bloom',
+      'Celebration',
+      'Clearing the Field',
+      'Desolation',
+      'Encroaching Shadows',
+      'Guest of Honor',
+      'Shadows Brought to Light',
+      'Shadowy Retribution',
+      'Song of the Forest',
+      'Vine Trestle',
+    ]
+    expect(spells.filter((spell) => holds.includes(spell.name))).toEqual([])
+    expect(new Set(spells.map((spell) => spell.id)).size).toBe(503)
+    expect(spells.every((spell) => spell.source === 'kobold-press-deepm' && !spell.mechanics)).toBe(
+      true,
+    )
+    const spectral = spells.find((spell) => spell.name === 'Conjure Spectral Dead')!
+    expect(spectral.text).toContain('or one [ghost]')
+    expect(spectral.text).toContain('or a [wight]')
+    expect(spectral.text).not.toContain('will-o')
+    expect(spells.find((spell) => spell.name === 'Harry')?.duration).toBe('up to 1 hour')
+    expect(spells.find((spell) => spell.name === 'Bloodshot')?.range).toBe('30 feet')
+    expect(spells.filter((spell) => spell.id.includes('anchoring-rope'))).toHaveLength(1)
+  })
+
+  it('keeps custom Deep Magic copies manual and blocks same-name SRD effects', () => {
+    const copy = {
+      ...BLESS,
+      id: 'custom:deep-magic-copy',
+      source: 'kobold-press-deepm',
+      mechanics: undefined,
+    }
+    expect(spellEffectFor(copy)).toBeNull()
+    expect(isSupportSpell(copy)).toBe(false)
+    expect(spellAction(copy, {})).toBeNull()
+    expect(damageVariants(copy)).toEqual([])
+    expect(delayedDamageEffect(copy)).toBeNull()
   })
 
   it('retains reviewed SRD automation', () => {
