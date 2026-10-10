@@ -11,6 +11,14 @@ import { SO_MANY_SPELLS_MIDDLE } from './spells/soManySpellsMiddle.ts'
 import { SO_MANY_SPELLS_LATER } from './spells/soManySpellsLater.ts'
 import { SO_MANY_SPELLS_FINAL } from './spells/soManySpellsFinal.ts'
 
+import { SPELLS_THAT_DONT_SUCK_1 } from './spells/spellsThatDontSuck1.ts'
+import { SPELLS_THAT_DONT_SUCK_2 } from './spells/spellsThatDontSuck2.ts'
+import { SPELLS_THAT_DONT_SUCK_3 } from './spells/spellsThatDontSuck3.ts'
+import { SPELLS_THAT_DONT_SUCK_4 } from './spells/spellsThatDontSuck4.ts'
+import { SPELLS_THAT_DONT_SUCK_5 } from './spells/spellsThatDontSuck5.ts'
+import { SPELLS_THAT_DONT_SUCK_6 } from './spells/spellsThatDontSuck6.ts'
+import { SPELLS_THAT_DONT_SUCK_7 } from './spells/spellsThatDontSuck7.ts'
+
 export interface ReviewedSpellCasting {
   source: Spell['source']
   edition: Spell['edition']
@@ -32,6 +40,13 @@ export const REVIEWED_SPELL_CASTING: Record<string, ReviewedSpellCasting> = {
   ...SO_MANY_SPELLS_MIDDLE,
   ...SO_MANY_SPELLS_LATER,
   ...SO_MANY_SPELLS_FINAL,
+  ...SPELLS_THAT_DONT_SUCK_1,
+  ...SPELLS_THAT_DONT_SUCK_2,
+  ...SPELLS_THAT_DONT_SUCK_3,
+  ...SPELLS_THAT_DONT_SUCK_4,
+  ...SPELLS_THAT_DONT_SUCK_5,
+  ...SPELLS_THAT_DONT_SUCK_6,
+  ...SPELLS_THAT_DONT_SUCK_7,
 }
 
 /** Find an explicitly reviewed source entry, never a same-name or custom-copy fallback. */

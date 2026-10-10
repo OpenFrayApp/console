@@ -474,7 +474,7 @@ describe('So Many Spells reviewed casting', () => {
   })
 
   it('keeps other catalogs pending and non-rollable even if forged mechanics are supplied', () => {
-    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toHaveLength(979)
+    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toHaveLength(798)
     expect(
       Object.keys(REFERENCE_ONLY_SPELLS).some((id) =>
         id.startsWith('somanyrobots-so-many-spells:'),

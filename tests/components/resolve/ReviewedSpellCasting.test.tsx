@@ -28,6 +28,9 @@ const cards = JSON.parse(
 const soManyCards = JSON.parse(
   readFileSync('public/compendium/so-many-spells-spells.json', 'utf8'),
 ) as Spell[]
+const stdsCards = JSON.parse(
+  readFileSync('public/compendium/spells-that-dont-suck-spells.json', 'utf8'),
+) as Spell[]
 const caster = monster({
   combatantId: 'caster',
   label: 'Mage',
@@ -375,3 +378,175 @@ describe.each(['panel', 'monster'] as const)('So Many Spells through %s casting'
     ])
   })
 })
+
+/** Get an approved Spells That Don’t Suck card without invented mechanics. */
+function stdsCard(slug: string) {
+  return stdsCards.find((spell) => spell.id === `somanyrobots-spells-that-dont-suck:${slug}`)!
+}
+
+describe.each(['panel', 'monster'] as const)(
+  'Spells That Don’t Suck through %s casting',
+  (entry) => {
+    it.each([
+      'caustic-quarrel',
+      'draining-bolt',
+      'ghost-touch',
+      'lightning-leash',
+      'touch-of-filth',
+    ])('offers %s riders only after a hit', (slug) => {
+      const spell = stdsCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${spell.name}`) }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(update.update(target).effects.length).toBeGreaterThan(0)
+    })
+
+    it.each([
+      'caustic-quarrel',
+      'draining-bolt',
+      'ghost-touch',
+      'lightning-leash',
+      'touch-of-filth',
+      'inflict-disease',
+    ])('offers no %s rider after a miss', (slug) => {
+      dice.draw = 0
+      const spell = stdsCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      expect(screen.getByText('Critical miss!')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: new RegExp(`Apply ${spell.name}`) })).toBeNull()
+      expect(dispatch).not.toHaveBeenCalled()
+    })
+
+    it('applies disease reminder without initial damage or a preemptive disease condition', () => {
+      const dispatch = cast(stdsCard('inflict-disease'), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      expect(screen.queryByLabelText('Damage to apply')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: /Apply Inflict Disease/ }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(update.update(target).hp.current).toBe(target.hp.current)
+      expect(update.update(target).effects).toMatchObject([
+        { name: 'Inflict Disease', modifier: null },
+      ])
+    })
+
+    it.each([
+      'animal-transformation',
+      'bewilder',
+      'captivate',
+      'earth-leash',
+      'expose-weakness',
+      'expulsion',
+      'false-foes',
+      'injunction',
+      'phantasm',
+      'phantasmal-nightmares',
+      'unbridled-fury',
+    ])('does not roll %s later damage or HP reduction at casting', (slug) => {
+      cast(stdsCard(slug), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      expect(screen.getByLabelText('Damage to Ogre')).toHaveValue('0')
+    })
+
+    it.each(['black-ice', 'drink-life', 'great-wave', 'muddy-servant', 'rain-of-fire'])(
+      'sustains %s creation after successful saves',
+      (slug) => {
+        const spell = stdsCard(slug)
+        const dispatch = cast(spell, entry)
+        fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+        expect(screen.queryByRole('button', { name: new RegExp(`Apply ${spell.name}`) })).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+        const update = dispatch.mock.calls
+          .map(([action]) => action)
+          .find((action) => action.type === 'update' && action.id === 'caster')
+        expect(update?.update(caster).concentration?.spell).toBe(spell.name)
+        expect(
+          dispatch.mock.calls
+            .filter(([action]) => action.type === 'update' && action.id === 'target')
+            .flatMap(([action]) => action.update(target).effects),
+        ).toEqual([])
+      },
+    )
+
+    it('applies Mass Freeze only to a failed target and links both effects to caster concentration', () => {
+      const dispatch = cast(stdsCard('mass-freeze'), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: /Apply Mass Freeze/ }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(update.update(target).effects).toMatchObject([
+        { name: 'Restrained', source: 'caster', concentration: true },
+        { name: 'Mass Freeze', source: 'caster', concentration: true },
+      ])
+    })
+
+    it('offers no frozen condition on a successful save', () => {
+      const dispatch = cast(stdsCard('mass-freeze'), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      expect(screen.queryByRole('button', { name: /Apply Mass Freeze/ })).toBeNull()
+      expect(dispatch.mock.calls.some(([action]) => action.type === 'update')).toBe(false)
+    })
+
+    it.each([
+      'death-ray',
+      'prismatic-bolt',
+      'scintillant-blast',
+      'shatter-mind',
+      'siphon-life',
+      'spreadshot',
+      'morph-earth',
+    ])('keeps %s mixed branches explicitly manual', (slug) => {
+      cast(stdsCard(slug), entry)
+      expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
+    })
+
+    it('does not invent concentration for Lashing Vine after its optional pull save', () => {
+      const dispatch = cast(stdsCard('lashing-vine'), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+      expect(stdsCard('lashing-vine').concentration).toBe(false)
+      expect(
+        dispatch.mock.calls.some(([action]) => action.type === 'update' && action.id === 'caster'),
+      ).toBe(false)
+    })
+
+    it('offers Oakenhide reminder without adding initial temporary HP or an AC bonus', () => {
+      const dispatch = cast(stdsCard('oakenhide'), entry)
+      expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'caster')
+      expect(update.update(caster).hp).toEqual(caster.hp)
+      expect(update.update(caster).concentration).toBeNull()
+      expect(acOf(update.update(caster))).toBe(acOf(caster))
+      expect(update.update(caster).effects).toMatchObject([
+        {
+          name: 'Oakenhide',
+          modifier: null,
+          source: 'caster',
+          duration: { type: 'rounds', rounds: 10 },
+        },
+      ])
+    })
+  },
+)
