@@ -97,6 +97,30 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
   )
 
   it.each([
+    ['butterfly-effect', 'CHA'],
+    ['calm-beasts', 'CHA'],
+    ['conjure-spectral-allies', 'WIS'],
+    ['divine-retribution', 'CON'],
+    ['emerald-eyes', 'WIS'],
+    ['eruption', 'STR'],
+    ['glare', 'WIS'],
+    ['immolating-gibbet', 'DEX'],
+    ['inexorable-summons', 'WIS'],
+    ['jarring-growl', 'WIS'],
+    ['lightless-torch', 'DEX'],
+    ['long-game', 'CHA'],
+    ['magma-spray', 'DEX'],
+    ['mass-faerie-fire', 'DEX'],
+    ['oathbound-implement', 'WIS'],
+    ['outmaneuver', 'WIS'],
+    ['power-word-fling', 'STR'],
+    ['reapers-knell', 'WIS'],
+    ['shared-frenzy', 'CHA'],
+    ['silvershout', 'CON'],
+    ['sneer', 'CHA'],
+    ['steam-gout', 'DEX'],
+    ['sudden-stampede', 'DEX'],
+    ['war-horn', 'WIS'],
     ['clear-the-board', 'WIS'],
     ['forced-reposition', 'CON'],
     ['power-word-rend', 'CON'],
@@ -146,6 +170,40 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     ])
   })
 
+  it('offers no Prone effect when the initial save succeeds', () => {
+    const dispatch = cast('steam-gout', entry)
+    fireEvent.change(screen.getByLabelText('Save DC'), { target: { value: '1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    expect(screen.queryByRole('button', { name: /Apply Steam Gout/ })).toBeNull()
+    expect(dispatch.mock.calls.some(([action]) => action.type === 'update')).toBe(false)
+  })
+
+  it.each(['eruption', 'magma-spray', 'steam-gout'])(
+    'sustains %s’s area even when all targets save',
+    (slug) => {
+      const dispatch = cast(slug, entry)
+      fireEvent.change(screen.getByLabelText('Save DC'), { target: { value: '1' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'caster')
+      expect(update.update(caster).concentration?.spell).toBe(card(slug).name)
+    },
+  )
+
+  it('opens Smelting Blast as an attack without prematurely applying its coating', () => {
+    cast('smelting-blast', entry)
+    expect(screen.getByRole('button', { name: 'Roll attack' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Save DC')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Apply Smelting Blast/ })).toBeNull()
+    expect(
+      screen.getByText(/After a hit, separately resolve a Constitution save/),
+    ).toBeInTheDocument()
+  })
+
   it('does not resolve Crown of Thorns’ later trigger as an initial save', () => {
     cast('crown-of-thorns', entry)
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
@@ -153,8 +211,8 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     expect(screen.getByRole('button', { name: 'Apply effect' })).toBeInTheDocument()
   })
 
-  it('shows unreviewed spells as manual without inventing a resolver', () => {
-    cast('smelting-blast', entry)
+  it('shows reviewed manual-only spells without inventing an initial resolver', () => {
+    cast('gale', entry)
     expect(screen.getByText('Manual spell:')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()

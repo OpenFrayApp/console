@@ -22,7 +22,7 @@ function nextTurnCondition(name: ConditionName, multi = false): SpellEffectDef {
 }
 
 /** Keep conditional and later-triggered rules visible without applying broad modifiers. */
-function ruleReminder(
+export function ruleReminder(
   name: string,
   note: string,
   duration: EffectDuration,
@@ -38,7 +38,7 @@ function ruleReminder(
 }
 
 /** Bind a reviewed Tome of Heroes profile to its printed source and edition. */
-function reviewed(
+export function reviewed(
   name: string,
   profile: Omit<ReviewedSpellCasting, 'source' | 'edition' | 'name'>,
 ): ReviewedSpellCasting {

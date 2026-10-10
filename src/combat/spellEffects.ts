@@ -85,7 +85,8 @@ export function spellEffectFor(spell: Spell): SpellEffectDef | null {
     build: (ctx) => {
       const built = def.build(ctx).map((effect) => ({
         ...effect,
-        ...(spell.concentration && { concentration: true as const }),
+        ...(spell.concentration &&
+          effect.concentration !== false && { concentration: true as const }),
         ...(effect.duration.type === 'manual' && { durationNote: spell.duration }),
       }))
       if (built.length < 2) return built

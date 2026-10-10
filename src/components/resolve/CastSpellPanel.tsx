@@ -20,6 +20,7 @@ import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import type { LibrarySort } from '../../state/settings.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { isSupportSpell } from '../../combat/spellEffects.ts'
+import { reviewedSpellCasting } from '../../combat/reviewedSpells.ts'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
 import { LibraryPicker } from '../add/LibraryPicker.tsx'
 import { Modal } from '../ui/Modal.tsx'
@@ -230,7 +231,8 @@ export function CastSpellPanel({
         spell={spell}
         casterId={caster?.combatantId}
         onResolved={(landed) => {
-          if (landed && spell.concentration) concentrate(spell)
+          if ((landed || reviewedSpellCasting(spell)?.sustainedArea) && spell.concentration)
+            concentrate(spell)
         }}
         onClose={reset}
       />

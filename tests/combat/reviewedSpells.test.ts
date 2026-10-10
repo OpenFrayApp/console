@@ -14,6 +14,7 @@ import {
 import { isSupportSpell, spellEffectFor } from '../../src/combat/spellEffects.ts'
 import { REVIEWED_SPELL_CASTING, reviewedSpellCasting } from '../../src/combat/reviewedSpells.ts'
 import { monster } from '../fixtures.ts'
+import { TOME_OF_HEROES_REVIEW_RECORDS as REVIEWED_RECORDS } from '../fixtures/tomeOfHeroesReview.ts'
 
 const spells = JSON.parse(
   readFileSync(
@@ -21,39 +22,6 @@ const spells = JSON.parse(
     'utf8',
   ),
 ) as Spell[]
-const REVIEWED_RECORDS: Record<string, string> = {
-  'kobold-press-toh:clear-the-board':
-    'ee6373d8550cc51fe7c3c9d77aa663478c66aec0ea4bab772bbf1ad923c06d1a',
-  'kobold-press-toh:forced-reposition':
-    'e9cb0bf8576997408bf86498ac93c9ff1c674ef862ea7c57f290881c52da4402',
-  'kobold-press-toh:power-word-rend':
-    'cfe5024f4940ed5adf22657d6d2564c4c51b1f94ab2c74be547e8cb443a16e65',
-  'kobold-press-toh:sudden-slue':
-    '2bee97376944ff06c5ab8509288d30f50907dabbbf8990784c5e8a7dfa1f9528',
-  'kobold-press-toh:damaging-intel':
-    '6b985b87ae67c03d84f0e27ea6d94ceba711960f650c592d5a45feb63629ece3',
-  'kobold-press-toh:stone-aegis':
-    '1d2b6627caae1ab275764b6f2473499ca56aa2a458733acd343d58f9040452a4',
-  'kobold-press-toh:burst-stone':
-    '20b94e0fa8f248c8abef76fc4a9d0e2f4043d025d4452600df8d149219da7d4e',
-  'kobold-press-toh:furious-wail':
-    '94a044ea1359bb27c739178b4a7e8e0bacad5070d893ffe7c9b7d8f932f9e0e2',
-  'kobold-press-toh:lance': 'f4d924582fe4b60c6233b90f1813c48d1640807c3f83574fb0c086e14d1f3293',
-  'kobold-press-toh:shocking-volley':
-    'b745b567ed3a67d60d874f7208c5172acee1c4ddcc24a11d814ff6886868c754',
-  'kobold-press-toh:pincer': '65b061969f61d2f5b49d0b2b0bd9795514feceb088288c50755ae01c3f1385f4',
-  'kobold-press-toh:babble': '522d8bdc06448d0fdb931677e02e32086f782b2a0977a7414a5ef95dfcecb2fd',
-  'kobold-press-toh:blunted-edge':
-    '64a96e639acb6100c925a78d427e350b96d9f8ddf355ca4ba4932e054728f22b',
-  'kobold-press-toh:bound-haze': '7e0f80ce060995e544647b2a8deaa585f7f64cba5494aa82926d6040c18ad977',
-  'kobold-press-toh:toothless-beast':
-    '9899007f47f3ffd6da2b31dcbce4d3da894749ce2e858fb502d696b3438f1c32',
-  'kobold-press-toh:crown-of-thorns':
-    '14c63592016ddccd234a0a2ca248815c0443129273e6e323ec0b734a24282d72',
-  'kobold-press-toh:iron-gut': '07a68274cf26fd5e8407a7b1310acf5ea02cb0c1c1d67ecca61abc1315864938',
-  'kobold-press-toh:misdirection':
-    '42462f706032be5e27c0e3e590f8f06ea6c0e5984571dc4404e1d320d6e920b1',
-}
 
 /** Read the actual approved source card for a tested profile. */
 function card(slug: string): Spell {
@@ -73,7 +41,12 @@ function effects(slug: string) {
 
 describe('reviewed source casting', () => {
   it('has reviewed source evidence for every registered profile', () => {
-    expect(Object.keys(REVIEWED_SPELL_CASTING).sort()).toEqual(Object.keys(REVIEWED_RECORDS).sort())
+    expect(
+      Object.entries(REVIEWED_SPELL_CASTING)
+        .filter(([, profile]) => profile.source === 'kobold-press-toh')
+        .map(([id]) => id)
+        .sort(),
+    ).toEqual(Object.keys(REVIEWED_RECORDS).sort())
   })
 
   it.each(Object.entries(REVIEWED_RECORDS))(
@@ -93,6 +66,30 @@ describe('reviewed source casting', () => {
   )
 
   it.each([
+    ['butterfly-effect', 'cha', 'negates', undefined, undefined],
+    ['calm-beasts', 'cha', 'negates', undefined, undefined],
+    ['conjure-spectral-allies', 'wis', 'half', '6d10', 'necrotic'],
+    ['divine-retribution', 'con', 'negates', undefined, undefined],
+    ['emerald-eyes', 'wis', 'negates', undefined, undefined],
+    ['eruption', 'str', 'half', '8d6', 'bludgeoning'],
+    ['glare', 'wis', 'negates', undefined, undefined],
+    ['immolating-gibbet', 'dex', 'negates', undefined, undefined],
+    ['inexorable-summons', 'wis', 'negates', undefined, undefined],
+    ['jarring-growl', 'wis', 'negates', undefined, undefined],
+    ['lightless-torch', 'dex', 'negates', undefined, undefined],
+    ['long-game', 'cha', 'negates', undefined, undefined],
+    ['magma-spray', 'dex', 'half', '3d8', 'fire'],
+    ['mass-faerie-fire', 'dex', 'negates', undefined, undefined],
+    ['oathbound-implement', 'wis', 'negates', undefined, undefined],
+    ['outmaneuver', 'wis', 'negates', undefined, undefined],
+    ['power-word-fling', 'str', 'negates', undefined, undefined],
+    ['reapers-knell', 'wis', 'negates', undefined, undefined],
+    ['shared-frenzy', 'cha', 'negates', undefined, undefined],
+    ['silvershout', 'con', 'negates', undefined, undefined],
+    ['sneer', 'cha', 'negates', undefined, undefined],
+    ['steam-gout', 'dex', 'half', '2d8', 'fire'],
+    ['sudden-stampede', 'dex', 'half', '6d10', 'bludgeoning'],
+    ['war-horn', 'wis', 'negates', undefined, undefined],
     ['clear-the-board', 'wis', 'negates', undefined, undefined],
     ['forced-reposition', 'con', 'negates', undefined, undefined],
     ['power-word-rend', 'con', 'half', '4d6+20', 'force'],
@@ -147,6 +144,108 @@ describe('reviewed source casting', () => {
     expect(spellAction(card('stone-aegis'), {})).toBeNull()
   })
 
+  it('triages all 90 source spells without classifying manual rules as initial saves', () => {
+    const profiles = spells.map((spell) => reviewedSpellCasting(spell)!)
+    expect(profiles).toHaveLength(90)
+    expect(profiles.filter((profile) => profile.mechanics)).toHaveLength(39)
+    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(23)
+    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(28)
+  })
+
+  it.each([
+    'immolating-gibbet',
+    'power-word-fling',
+    'long-game',
+    'reapers-knell',
+    'sneer',
+    'divine-retribution',
+  ])('never folds conditional/later damage into the initial save for %s', (slug) => {
+    expect(castingMechanics(card(slug))?.damage).toBeUndefined()
+    expect(damageVariants(card(slug))).toEqual([])
+  })
+
+  it('keeps Smelting Blast’s coating save and ongoing damage separate from the attack', () => {
+    expect(spellAction(card('smelting-blast'), { toHit: 8 })).toMatchObject({
+      toHit: 8,
+      damage: [{ formula: '2d8', type: 'fire' }],
+    })
+    expect(castingMechanics(card('smelting-blast'))?.save).toBeUndefined()
+    expect(spellEffectFor(card('smelting-blast'))).toBeNull()
+  })
+
+  it.each([
+    'gale',
+    'mud',
+    'spiked-barricade',
+    'jagged-forcelance',
+    'portal-trap',
+    'stone-fetch',
+    'pipers-lure',
+  ])('does not resolve later-triggered %s hazards at initial casting', (slug) => {
+    expect(spellAction(card(slug), {})).toBeNull()
+    expect(damageVariants(card(slug))).toEqual([])
+  })
+
+  it.each(['eruption', 'steam-gout'])(
+    'keeps %s’s initial Prone after concentration ends',
+    (slug) => {
+      expect(effects(slug)[0].concentration).toBe(false)
+      expect(effects(slug)[0].duration.type).toBe('manual')
+      expect(reviewedSpellCasting(card(slug))?.sustainedArea).toBe(true)
+    },
+  )
+
+  it('keeps Outmaneuver Speed 0 distinct from Restrained', () => {
+    expect(effects('outmaneuver')).toMatchObject([
+      {
+        modifier: { applies: 'speed', value: 'zero' },
+        source: 'target',
+        duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+      },
+    ])
+    expect(effects('outmaneuver').some((effect) => effect.name === 'Restrained')).toBe(false)
+  })
+
+  it('does not substitute Incapacitated for Glare’s no-actions rule', () => {
+    expect(effects('glare')).toMatchObject([{ modifier: null, duration: { type: 'manual' } }])
+    expect(effects('glare').some((effect) => effect.name === 'Incapacitated')).toBe(false)
+  })
+
+  it('narrows Bloodlust to Strength checks, never all rolls or saves', () => {
+    expect(effects('bloodlust')[0].modifier).toMatchObject({
+      mode: 'advantage',
+      applies: 'abilityChecks',
+      abilities: ['str'],
+    })
+  })
+
+  it('narrows Dreamwine to Charisma checks and saves', () => {
+    expect(
+      effects('dreamwine')
+        .filter((effect) => effect.modifier)
+        .map((effect) => effect.modifier),
+    ).toMatchObject([
+      { mode: 'advantage', applies: 'abilityChecks', abilities: ['cha'] },
+      { mode: 'advantage', applies: 'savingThrows', abilities: ['cha'] },
+    ])
+  })
+
+  it.each([
+    'bloodlust',
+    'dreamwine',
+    'wild-hunt',
+    'butterfly-effect',
+    'conjure-spectral-allies',
+    'war-horn',
+  ])('builds fresh bundled effects per target for %s', (slug) => {
+    const a = effects(slug)
+    const b = effects(slug)
+    expect(a[0].bundle?.id).toBeTruthy()
+    expect(a[0].bundle?.id).not.toBe(b[0].bundle?.id)
+    expect(a.every((effect) => effect.bundle?.id === a[0].bundle?.id)).toBe(true)
+    expect(a.every((effect) => !b.some((other) => other.id === effect.id))).toBe(true)
+  })
+
   it('resolves Lance as an attack, not an invented saving throw', () => {
     expect(spellAction(card('lance'), { saveDc: 17, toHit: 8 })).toMatchObject({
       kind: 'ranged',
@@ -194,8 +293,8 @@ describe('reviewed source casting', () => {
     },
   )
 
-  it.each(['armored-formation', 'smelting-blast', 'sneer', 'gale', 'rebounding-bolt'])(
-    'keeps unreviewed %s isolated, even if mechanics are injected',
+  it.each(['conjure-construct', 'high-ground', 'spiked-barricade', 'gale', 'rebounding-bolt'])(
+    'keeps manual-only %s non-rollable, even if mechanics are injected',
     (slug) => {
       const spell = {
         ...card(slug),
