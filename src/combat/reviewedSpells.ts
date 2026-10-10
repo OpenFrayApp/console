@@ -19,6 +19,17 @@ import { SPELLS_THAT_DONT_SUCK_5 } from './spells/spellsThatDontSuck5.ts'
 import { SPELLS_THAT_DONT_SUCK_6 } from './spells/spellsThatDontSuck6.ts'
 import { SPELLS_THAT_DONT_SUCK_7 } from './spells/spellsThatDontSuck7.ts'
 
+import { KIBBLES_CASTING_1 } from './spells/kibblesCasting1.ts'
+import { KIBBLES_CASTING_2 } from './spells/kibblesCasting2.ts'
+import { KIBBLES_CASTING_3 } from './spells/kibblesCasting3.ts'
+import { KIBBLES_CASTING_4 } from './spells/kibblesCasting4.ts'
+import { KIBBLES_CASTING_5 } from './spells/kibblesCasting5.ts'
+import { KIBBLES_CASTING_6 } from './spells/kibblesCasting6.ts'
+import { KIBBLES_CASTING_7 } from './spells/kibblesCasting7.ts'
+import { KIBBLES_CASTING_8 } from './spells/kibblesCasting8.ts'
+import { KIBBLES_CASTING_9 } from './spells/kibblesCasting9.ts'
+import { KIBBLES_CASTING_10 } from './spells/kibblesCasting10.ts'
+
 export interface ReviewedSpellCasting {
   source: Spell['source']
   edition: Spell['edition']
@@ -47,6 +58,16 @@ export const REVIEWED_SPELL_CASTING: Record<string, ReviewedSpellCasting> = {
   ...SPELLS_THAT_DONT_SUCK_5,
   ...SPELLS_THAT_DONT_SUCK_6,
   ...SPELLS_THAT_DONT_SUCK_7,
+  ...KIBBLES_CASTING_1,
+  ...KIBBLES_CASTING_2,
+  ...KIBBLES_CASTING_3,
+  ...KIBBLES_CASTING_4,
+  ...KIBBLES_CASTING_5,
+  ...KIBBLES_CASTING_6,
+  ...KIBBLES_CASTING_7,
+  ...KIBBLES_CASTING_8,
+  ...KIBBLES_CASTING_9,
+  ...KIBBLES_CASTING_10,
 }
 
 /** Find an explicitly reviewed source entry, never a same-name or custom-copy fallback. */

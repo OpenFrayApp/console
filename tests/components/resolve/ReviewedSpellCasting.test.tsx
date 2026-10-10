@@ -31,6 +31,9 @@ const soManyCards = JSON.parse(
 const stdsCards = JSON.parse(
   readFileSync('public/compendium/spells-that-dont-suck-spells.json', 'utf8'),
 ) as Spell[]
+const kibblesCards = JSON.parse(
+  readFileSync('public/compendium/kibbles-casting-v23-spells.json', 'utf8'),
+) as Spell[]
 const caster = monster({
   combatantId: 'caster',
   label: 'Mage',
@@ -41,6 +44,11 @@ const target = monster({ combatantId: 'target', label: 'Ogre' })
 /** Get the actual source card without invented mechanics. */
 function card(slug: string) {
   return cards.find((spell) => spell.id === `kobold-press-toh:${slug}`)!
+}
+
+/** Get the approved Kibbles card with its source-specific identity. */
+function kibblesCard(slug: string): Spell {
+  return kibblesCards.find((spell) => spell.id === `kibblestasty-casting-compendium-v2.3:${slug}`)!
 }
 
 /** Open an actual catalog spell through either casting entry point. */
@@ -550,3 +558,137 @@ describe.each(['panel', 'monster'] as const)(
     })
   },
 )
+
+describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entry) => {
+  it.each(['acid-bubble', 'electrocute', 'mind-blast', 'flash-freeze', 'shadow-bind', 'supernova'])(
+    'opens %s initial save and manual guidance',
+    (slug) => {
+      cast(kibblesCard(slug), entry)
+      expect(screen.getByLabelText('Save DC')).toHaveValue('99')
+      expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+    },
+  )
+
+  it.each(['melting-glob', 'decaying-touch', 'freeze'])('gates %s later rider on a hit', (slug) => {
+    const spell = kibblesCard(slug)
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${spell.name}`) }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).effects).toHaveLength(1)
+  })
+
+  it.each(['melting-glob', 'decaying-touch', 'freeze'])(
+    'never applies %s rider on a miss',
+    (slug) => {
+      dice.draw = 0
+      const spell = kibblesCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      expect(screen.getByText('Critical miss!')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: new RegExp(`Apply ${spell.name}`) })).toBeNull()
+      expect(dispatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['elemental-orb', 'ice-arrow', 'water-bullet', 'wasp-barrage', 'windborne-weapon'])(
+    'keeps %s type/modifier-dependent damage manual',
+    (slug) => {
+      cast(kibblesCard(slug), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      expect(screen.queryByLabelText('Damage to apply')).toBeNull()
+      expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+    },
+  )
+
+  it.each(['fire-cyclone', 'flamethrower', 'starfall', 'thunder-pulse', 'vicious-vapors'])(
+    'retains %s concentration after successful initial saves',
+    (slug) => {
+      const spell = kibblesCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      expect(screen.queryByRole('button', { name: new RegExp(`Apply ${spell.name}`) })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'caster')
+      expect(update.update(caster).concentration?.spell).toBe(spell.name)
+      expect(
+        dispatch.mock.calls
+          .filter(([action]) => action.type === 'update' && action.id === 'target')
+          .flatMap(([action]) => action.update(target).effects),
+      ).toEqual([])
+    },
+  )
+
+  it('applies Mind Blast Stunned at target turn end only on failure', () => {
+    const dispatch = cast(kibblesCard('mind-blast'), entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: /Apply Mind Blast/ }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).effects).toMatchObject([
+      {
+        name: 'Stunned',
+        source: 'target',
+        duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+      },
+    ])
+  })
+
+  it.each(['poison-dart', 'spider-bite', 'water-blast', 'crackle'])(
+    'does not apply %s secondary-save condition after attack alone',
+    (slug) => {
+      const spell = kibblesCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Apply to Ogre' }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(update.update(target).effects).toEqual([])
+    },
+  )
+
+  it.each([
+    'acidic-pit',
+    'brilliant-blade',
+    'ice-spike',
+    'jumping-jolt',
+    'whirling-conflagration',
+    'exsanguinate',
+  ])('keeps %s incompatible outcomes manual', (slug) => {
+    cast(kibblesCard(slug), entry)
+    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+  })
+
+  it.each(['acid-rain', 'heavenly-ray', 'summon-dragon', 'sanguine-spears', 'vampiric-mosquito'])(
+    'tracks %s creation without premature damage or healing',
+    (slug) => {
+      const spell = kibblesCard(slug)
+      const dispatch = cast(spell, entry)
+      expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'caster')
+      expect(update.update(caster).hp).toEqual(caster.hp)
+      expect(update.update(caster).effects).toMatchObject([
+        { name: spell.name, source: 'caster', modifier: null },
+      ])
+    },
+  )
+})

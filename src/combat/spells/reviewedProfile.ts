@@ -39,11 +39,17 @@ export function ruleReminder(
   duration: EffectDuration,
   targeting: SpellEffectDef['targeting'] = 'enemy',
   multi = false,
+  durationNote?: string,
 ): SpellEffectDef {
   return {
     summary: note,
     targeting,
     multi,
-    build: ({ source }) => [reminder(name, note, { source, duration: { ...duration } })],
+    build: ({ source }) => [
+      {
+        ...reminder(name, note, { source, duration: { ...duration } }),
+        ...(durationNote && { durationNote }),
+      },
+    ],
   }
 }
