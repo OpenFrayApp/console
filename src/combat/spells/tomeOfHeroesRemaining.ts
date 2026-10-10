@@ -5,7 +5,8 @@ import type { ConditionName } from '../../schema/effect.ts'
 import type { ReviewedSpellCasting } from '../reviewedSpells.ts'
 import type { SpellEffectDef } from './shared.ts'
 import { condition, flatBonus, modifierEffect, reminder } from '../effects.ts'
-import { reviewed, ruleReminder } from './tomeOfHeroes.ts'
+import { reviewed } from './tomeOfHeroes.ts'
+import { ruleReminder } from './reviewedProfile.ts'
 
 /** Apply the printed condition and preserve its manually resolved escape rules. */
 function lingeringCondition(name: string, state: ConditionName, note: string): SpellEffectDef {
@@ -89,7 +90,7 @@ export const TOME_OF_HEROES_REMAINDER: Record<string, ReviewedSpellCasting> = {
       'Choose visible targets; one additional target per slot above 3rd, within 30 feet of each other. Resolve forced actions and special escape saves manually. The first successful no-target save permits free action for that turn; it does not end the spell.',
   }),
   'kobold-press-toh:eruption': reviewed('Eruption', {
-    sustainedArea: true,
+    persistsAfterSave: true,
     mechanics: {
       damage: [{ formula: '8d6', type: 'bludgeoning' }],
       save: { ability: 'str', onSave: 'half' },
@@ -153,7 +154,7 @@ export const TOME_OF_HEROES_REMAINDER: Record<string, ReviewedSpellCasting> = {
       'Converse during casting. No damage occurs on the initial save. Resolve the later action, elapsed days, and psychic damage manually. Greater Restoration or Wish ends the spell; caster knows this only on the same plane. A successful initial save alerts the target to the magic.',
   }),
   'kobold-press-toh:magma-spray': reviewed('Magma Spray', {
-    sustainedArea: true,
+    persistsAfterSave: true,
     mechanics: {
       damage: [{ formula: '3d8', type: 'fire' }],
       save: { ability: 'dex', onSave: 'half' },
@@ -256,7 +257,7 @@ export const TOME_OF_HEROES_REMAINDER: Record<string, ReviewedSpellCasting> = {
       'On a failed Charisma save, roll and apply 2d4 plus the caster’s spellcasting ability modifier as psychic damage manually. The caster modifier is not inferred from save DC or attack bonus; no damage is rolled automatically.',
   }),
   'kobold-press-toh:steam-gout': reviewed('Steam Gout', {
-    sustainedArea: true,
+    persistsAfterSave: true,
     mechanics: {
       damage: [{ formula: '2d8', type: 'fire' }],
       save: { ability: 'dex', onSave: 'half' },

@@ -121,7 +121,7 @@ export function SpellCastModal({
         defaultMagical
         spell={spell}
         onResolved={(landed) => {
-          if (landed || (spell && reviewedSpellCasting(spell)?.sustainedArea)) concentrate()
+          if (landed || (spell && reviewedSpellCasting(spell)?.persistsAfterSave)) concentrate()
         }}
         onClose={onClose}
       />

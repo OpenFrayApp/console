@@ -231,7 +231,7 @@ export function CastSpellPanel({
         spell={spell}
         casterId={caster?.combatantId}
         onResolved={(landed) => {
-          if ((landed || reviewedSpellCasting(spell)?.sustainedArea) && spell.concentration)
+          if ((landed || reviewedSpellCasting(spell)?.persistsAfterSave) && spell.concentration)
             concentrate(spell)
         }}
         onClose={reset}

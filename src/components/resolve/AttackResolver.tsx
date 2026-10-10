@@ -27,6 +27,7 @@ import {
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { Modal } from '../ui/Modal.tsx'
 import { SpellCastingNote } from '../statblock/SpellCastingNote.tsx'
+import { reviewedSpellCasting } from '../../combat/reviewedSpells.ts'
 import { TargetChips } from './TargetChips.tsx'
 import { ConditionChips, DamagePill, NaturalRoll } from './rollPieces.tsx'
 import {
@@ -230,12 +231,13 @@ export function AttackResolver({
   // lands on is the entry's own `targeting`, so a self-spell never marks the creature
   // that was hit.
   const spellEffect = spell ? spellEffectFor(spell) : null
+  const requiresHit = !!(spell && reviewedSpellCasting(spell)?.mechanics?.attackRoll)
   const effectTarget =
     spellEffect?.targeting === 'enemy' ? (attack?.target ?? null) : (caster ?? null)
 
   /** Apply the spell's modelled effect to whoever it belongs on. */
   const applySpellEffect = () => {
-    if (!spellEffect || !spell || !effectTarget) return
+    if (!spellEffect || !spell || !effectTarget || (requiresHit && !hit)) return
     flush()
     const effects = spellEffect.build({ source: sourceId, spell, target: effectTarget })
     dispatch({
@@ -464,7 +466,7 @@ export function AttackResolver({
         </div>
       )}
 
-      {attack && spellEffect && effectTarget && (
+      {attack && spellEffect && effectTarget && (!requiresHit || hit) && (
         <div className="mt-3 rounded-md border border-indigo-200 bg-indigo-50/50 p-2 dark:border-indigo-900/60 dark:bg-indigo-900/10">
           <Button
             variant="primary"

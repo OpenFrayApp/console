@@ -97,13 +97,14 @@ export function spellAction(
   if (!m) return null
   const id = `spell:${spell.id}`
   const damage = m.damage
-  if (m.attackRoll && damage) {
+  const reviewed = reviewedSpellCasting(spell)
+  if (m.attackRoll && (damage || reviewed)) {
     return {
       id,
       name: spell.name,
-      kind: 'ranged',
+      kind: reviewed?.attackKind ?? 'ranged',
       toHit: caster.toHit ?? 0,
-      damage,
+      ...(damage && { damage }),
       text: spell.text,
     }
   }

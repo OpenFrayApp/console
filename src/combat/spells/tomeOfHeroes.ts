@@ -1,48 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import type { ConditionName, EffectDuration } from '../../schema/effect.ts'
 import type { ReviewedSpellCasting } from '../reviewedSpells.ts'
 import { condition, flatBonus, reminder } from '../effects.ts'
-import type { SpellEffectDef } from './shared.ts'
-
-/** Build a condition that lasts until the affected creature's next turn ends. */
-function nextTurnCondition(name: ConditionName, multi = false): SpellEffectDef {
-  return {
-    summary: `${name} until the end of its next turn`,
-    targeting: 'enemy',
-    multi,
-    build: ({ source, target }) => [
-      condition(name, {
-        source: target?.combatantId ?? source,
-        duration: target ? { type: 'untilSourceTurn', when: 'endOfTurn' } : { type: 'manual' },
-      }),
-    ],
-  }
-}
-
-/** Keep conditional and later-triggered rules visible without applying broad modifiers. */
-export function ruleReminder(
-  name: string,
-  note: string,
-  duration: EffectDuration,
-  targeting: SpellEffectDef['targeting'] = 'enemy',
-  multi = false,
-): SpellEffectDef {
-  return {
-    summary: note,
-    targeting,
-    multi,
-    build: ({ source }) => [reminder(name, note, { source, duration: { ...duration } })],
-  }
-}
+import { sourceProfile, ruleReminder, nextTurnCondition } from './reviewedProfile.ts'
 
 /** Bind a reviewed Tome of Heroes profile to its printed source and edition. */
 export function reviewed(
   name: string,
   profile: Omit<ReviewedSpellCasting, 'source' | 'edition' | 'name'>,
 ): ReviewedSpellCasting {
-  return { source: 'kobold-press-toh', edition: '5.0', name, ...profile }
+  return sourceProfile('kobold-press-toh', '5.0', name, profile)
 }
 
 export const TOME_OF_HEROES_CASTING: Record<string, ReviewedSpellCasting> = {

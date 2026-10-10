@@ -191,7 +191,7 @@ describe('reviewed source casting', () => {
     (slug) => {
       expect(effects(slug)[0].concentration).toBe(false)
       expect(effects(slug)[0].duration.type).toBe('manual')
-      expect(reviewedSpellCasting(card(slug))?.sustainedArea).toBe(true)
+      expect(reviewedSpellCasting(card(slug))?.persistsAfterSave).toBe(true)
     },
   )
 

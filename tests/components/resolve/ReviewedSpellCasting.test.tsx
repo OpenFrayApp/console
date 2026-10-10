@@ -10,9 +10,23 @@ import { CastSpellPanel } from '../../../src/components/resolve/CastSpellPanel.t
 import { SpellCastModal } from '../../../src/components/resolve/SpellCastModal.tsx'
 import { creature, monster } from '../../fixtures.ts'
 import { acOf } from '../../../src/combat/combatant.ts'
+import type { RollContext } from '../../../src/dice/roll.ts'
+
+const dice = vi.hoisted(() => ({ draw: 10 }))
+vi.mock('../../../src/dice/roll.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/dice/roll.ts')>()
+  return {
+    ...actual,
+    roll: (formula: string, context: RollContext = {}) =>
+      actual.roll(formula, { ...context, rand: () => dice.draw }),
+  }
+})
 
 const cards = JSON.parse(
   readFileSync('public/compendium/tome-of-heroes-spells.json', 'utf8'),
+) as Spell[]
+const soManyCards = JSON.parse(
+  readFileSync('public/compendium/so-many-spells-spells.json', 'utf8'),
 ) as Spell[]
 const caster = monster({
   combatantId: 'caster',
@@ -27,12 +41,13 @@ function card(slug: string) {
 }
 
 /** Open an actual catalog spell through either casting entry point. */
-function cast(slug: string, entry: 'panel' | 'monster') {
+function cast(slug: string | Spell, entry: 'panel' | 'monster') {
+  const spell = typeof slug === 'string' ? card(slug) : slug
   const dispatch = vi.fn()
   if (entry === 'panel') {
     render(
       <CastSpellPanel
-        preparedSpell={card(slug)}
+        preparedSpell={spell}
         defaultCasterId="caster"
         combatants={[caster, target]}
         dispatch={dispatch}
@@ -44,8 +59,8 @@ function cast(slug: string, entry: 'panel' | 'monster') {
     render(
       <SpellCastModal
         caster={caster}
-        spellRef={{ name: card(slug).name }}
-        spell={card(slug)}
+        spellRef={{ name: spell.name }}
+        spell={spell}
         usesRemaining={2}
         combatants={[caster, target]}
         dispatch={dispatch}
@@ -61,6 +76,7 @@ function cast(slug: string, entry: 'panel' | 'monster') {
 }
 
 beforeEach(() => {
+  dice.draw = 10
   vi.stubGlobal('matchMedia', () => ({
     matches: true,
     addEventListener() {},
@@ -204,6 +220,15 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     ).toBeInTheDocument()
   })
 
+  it('does not offer Lance’s Restrained effect after a miss', () => {
+    dice.draw = 0
+    const dispatch = cast('lance', entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    expect(screen.queryByRole('button', { name: 'Apply Lance to Ogre' })).toBeNull()
+    expect(dispatch.mock.calls.some(([action]) => action.type === 'update')).toBe(false)
+  })
+
   it('does not resolve Crown of Thorns’ later trigger as an initial save', () => {
     cast('crown-of-thorns', entry)
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
@@ -217,5 +242,136 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
+  })
+})
+
+/** Get an approved So Many Spells card without test-authored mechanics. */
+function soManyCard(slug: string) {
+  return soManyCards.find((spell) => spell.id === `somanyrobots-so-many-spells:${slug}`)!
+}
+
+describe.each(['panel', 'monster'] as const)('So Many Spells through %s casting', (entry) => {
+  it.each(['auric-lance', 'thorn-lance', 'molten-shard', 'venomous-maw', 'sonic-blast'])(
+    'offers %s riders only after a hit',
+    (slug) => {
+      const spell = soManyCard(slug)
+      const dispatch = cast(spell, entry)
+      expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${spell.name}`) }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(update.update(target).effects.length).toBeGreaterThan(0)
+    },
+  )
+
+  it.each(['auric-lance', 'thorn-lance', 'molten-shard', 'venomous-maw', 'sonic-blast'])(
+    'does not offer %s riders after a natural 1 miss',
+    (slug) => {
+      dice.draw = 0
+      const spell = soManyCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+      expect(screen.getByText('Critical miss!')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: new RegExp(`Apply ${spell.name}`) })).toBeNull()
+      expect(dispatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it('casts Deathgrip as an attack with no immediate damage', () => {
+    const dispatch = cast(soManyCard('deathgrip'), entry)
+    expect(screen.getByText(/Initial ranged spell attack deals no damage/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    expect(screen.queryByLabelText('Damage to apply')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Apply Deathgrip/ }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).hp.current).toBe(target.hp.current)
+    expect(update.update(target).effects).toMatchObject([{ name: 'Deathgrip', modifier: null }])
+    expect(
+      update
+        .update(target)
+        .effects.some((effect: { name: string }) => effect.name === 'Restrained'),
+    ).toBe(false)
+  })
+
+  it.each([
+    'conjure-poltergeist',
+    'eclipse',
+    'grasping-dead',
+    'irresistible-melody',
+    'shard-rain',
+    'sonorous-toll',
+    'starfire-beam',
+    'stormwall',
+    'vampiric-mist',
+    'wall-of-misery',
+  ])('keeps %s creation concentrating after successful initial saves', (slug) => {
+    const spell = soManyCard(slug)
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(screen.queryByRole('button', { name: new RegExp(`Apply ${spell.name}`) })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'caster')
+    expect(update?.update(caster).concentration?.spell).toBe(spell.name)
+    expect(
+      dispatch.mock.calls
+        .filter(([action]) => action.type === 'update' && action.id === 'target')
+        .flatMap(([action]) => action.update(target).effects),
+    ).toEqual([])
+  })
+
+  it.each([
+    'deadly-light',
+    'death-hex',
+    'grasping-dead',
+    'melt-flesh',
+    'poison-light',
+    'putrefy',
+    'shackle-of-flame',
+    'wind-of-ruin',
+  ])('does not roll later damage or HP reductions during %s initial save', (slug) => {
+    cast(soManyCard(slug), entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    expect(screen.getByLabelText('Damage to Ogre')).toHaveValue('0')
+  })
+
+  it.each([
+    'ghastly-stampede',
+    'gloamblast',
+    'lightning-spike',
+    'screaming-skull',
+    'searing-hammer',
+    'thunderous-chords',
+    'volcanic-seep',
+  ])('keeps %s mixed or ambiguous rules explicitly manual', (slug) => {
+    cast(soManyCard(slug), entry)
+    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
+  })
+
+  it('tracks Fetid Blade on the wielder with caster-owned concentration and no initial save', () => {
+    const dispatch = cast(soManyCard('fetid-blade'), entry)
+    expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply effect' }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).effects).toMatchObject([
+      { name: 'Fetid Blade', source: 'caster', concentration: true },
+    ])
   })
 })

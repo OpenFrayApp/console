@@ -87,7 +87,8 @@ export function spellEffectFor(spell: Spell): SpellEffectDef | null {
         ...effect,
         ...(spell.concentration &&
           effect.concentration !== false && { concentration: true as const }),
-        ...(effect.duration.type === 'manual' && { durationNote: spell.duration }),
+        ...(effect.duration.type === 'manual' &&
+          !effect.durationNote && { durationNote: spell.duration }),
       }))
       if (built.length < 2) return built
       const bundle = { id: crypto.randomUUID(), name: spell.name }
