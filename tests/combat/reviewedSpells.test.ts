@@ -22,6 +22,18 @@ const spells = JSON.parse(
   ),
 ) as Spell[]
 const REVIEWED_RECORDS: Record<string, string> = {
+  'kobold-press-toh:clear-the-board':
+    'ee6373d8550cc51fe7c3c9d77aa663478c66aec0ea4bab772bbf1ad923c06d1a',
+  'kobold-press-toh:forced-reposition':
+    'e9cb0bf8576997408bf86498ac93c9ff1c674ef862ea7c57f290881c52da4402',
+  'kobold-press-toh:power-word-rend':
+    'cfe5024f4940ed5adf22657d6d2564c4c51b1f94ab2c74be547e8cb443a16e65',
+  'kobold-press-toh:sudden-slue':
+    '2bee97376944ff06c5ab8509288d30f50907dabbbf8990784c5e8a7dfa1f9528',
+  'kobold-press-toh:damaging-intel':
+    '6b985b87ae67c03d84f0e27ea6d94ceba711960f650c592d5a45feb63629ece3',
+  'kobold-press-toh:stone-aegis':
+    '1d2b6627caae1ab275764b6f2473499ca56aa2a458733acd343d58f9040452a4',
   'kobold-press-toh:burst-stone':
     '20b94e0fa8f248c8abef76fc4a9d0e2f4043d025d4452600df8d149219da7d4e',
   'kobold-press-toh:furious-wail':
@@ -81,6 +93,11 @@ describe('reviewed source casting', () => {
   )
 
   it.each([
+    ['clear-the-board', 'wis', 'negates', undefined, undefined],
+    ['forced-reposition', 'con', 'negates', undefined, undefined],
+    ['power-word-rend', 'con', 'half', '4d6+20', 'force'],
+    ['sudden-slue', 'dex', 'half', '6d6', 'bludgeoning'],
+    ['damaging-intel', 'cha', 'negates', undefined, undefined],
     ['burst-stone', 'dex', 'half', '4d8', 'bludgeoning'],
     ['furious-wail', 'cha', 'half', '10d10+30', 'psychic'],
     ['shocking-volley', 'dex', 'half', '2d8', 'lightning'],
@@ -99,6 +116,36 @@ describe('reviewed source casting', () => {
       expect(isSupportSpell(card(slug!))).toBe(false)
     },
   )
+
+  it('keeps Damaging Intel advantage scoped to a qualifying ally attack, not all attackers', () => {
+    expect(effects('damaging-intel')).toMatchObject([
+      {
+        modifier: null,
+        source: 'caster',
+        duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+      },
+    ])
+  })
+
+  it('applies Stone Aegis AC without turning temporary hit points into healing', () => {
+    const built = effects('stone-aegis')
+    expect(built).toMatchObject([
+      {
+        modifier: { mode: 'flatBonus', value: 2, applies: 'ac' },
+        source: 'caster',
+        duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+      },
+      {
+        modifier: null,
+        source: 'caster',
+        duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+      },
+    ])
+    expect(built[0].bundle?.id).toBe(built[1].bundle?.id)
+    expect(landsOnCast(card('stone-aegis'))).toBe(false)
+    expect(isSupportSpell(card('stone-aegis'))).toBe(true)
+    expect(spellAction(card('stone-aegis'), {})).toBeNull()
+  })
 
   it('resolves Lance as an attack, not an invented saving throw', () => {
     expect(spellAction(card('lance'), { saveDc: 17, toHit: 8 })).toMatchObject({

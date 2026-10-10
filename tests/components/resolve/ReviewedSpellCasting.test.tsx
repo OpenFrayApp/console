@@ -9,6 +9,7 @@ import type { Spell } from '../../../src/schema/spell.ts'
 import { CastSpellPanel } from '../../../src/components/resolve/CastSpellPanel.tsx'
 import { SpellCastModal } from '../../../src/components/resolve/SpellCastModal.tsx'
 import { creature, monster } from '../../fixtures.ts'
+import { acOf } from '../../../src/combat/combatant.ts'
 
 const cards = JSON.parse(
   readFileSync('public/compendium/tome-of-heroes-spells.json', 'utf8'),
@@ -72,22 +73,57 @@ afterEach(() => {
 })
 
 describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting', (entry) => {
-  it('resolves Burst Stone and applies Prone only to a failed target', () => {
-    const dispatch = cast('burst-stone', entry)
-    expect(screen.getByLabelText('Save DC')).toHaveValue('99')
-    expect(screen.getByLabelText('On save')).toHaveValue('half')
-    expect(screen.getByText(/Mark the difficult terrain/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
-    fireEvent.click(screen.getByRole('button', { name: /Apply Burst Stone/ }))
+  it.each(['burst-stone', 'sudden-slue'])(
+    'resolves %s and applies Prone only to a failed target',
+    (slug) => {
+      const dispatch = cast(slug, entry)
+      expect(screen.getByLabelText('Save DC')).toHaveValue('99')
+      expect(screen.getByLabelText('On save')).toHaveValue('half')
+      if (slug === 'burst-stone')
+        expect(screen.getByText(/Mark the difficult terrain/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${card(slug).name}`) }))
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(update.update(target).effects).toMatchObject([
+        { name: 'Prone', duration: { type: 'manual' } },
+      ])
+      expect(
+        dispatch.mock.calls.some(([action]) => action.type === 'update' && action.id === 'caster'),
+      ).toBe(false)
+    },
+  )
+
+  it.each([
+    ['clear-the-board', 'WIS'],
+    ['forced-reposition', 'CON'],
+    ['power-word-rend', 'CON'],
+    ['damaging-intel', 'CHA'],
+  ])('opens the printed save for %s without inventing an attack roll', (slug, ability) => {
+    cast(slug, entry)
+    expect(screen.getByText(`${ability} save`)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+    expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+  })
+
+  it('applies Stone Aegis to the caster without modifying current or temporary hit points', () => {
+    const dispatch = cast('stone-aegis', entry)
     const update = dispatch.mock.calls
       .map(([action]) => action)
-      .find((action) => action.type === 'update' && action.id === 'target')
-    expect(update.update(target).effects).toMatchObject([
-      { name: 'Prone', duration: { type: 'manual' } },
+      .find((action) => action.type === 'update' && action.id === 'caster')
+    const after = update.update(caster)
+    expect(after.hp).toBe(caster.hp)
+    expect(after.hp.temp).toBe(caster.hp.temp)
+    expect(acOf(after)).toBe(acOf(caster) + 2)
+    expect(after.effects).toMatchObject([
+      { modifier: { applies: 'ac', value: 2 }, source: 'caster' },
+      { modifier: null, source: 'caster' },
     ])
+    expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(
-      dispatch.mock.calls.some(([action]) => action.type === 'update' && action.id === 'caster'),
+      dispatch.mock.calls.some(([action]) => action.type === 'update' && action.id === 'target'),
     ).toBe(false)
   })
 

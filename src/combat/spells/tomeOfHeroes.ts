@@ -3,7 +3,7 @@
 
 import type { ConditionName, EffectDuration } from '../../schema/effect.ts'
 import type { ReviewedSpellCasting } from '../reviewedSpells.ts'
-import { condition, reminder } from '../effects.ts'
+import { condition, flatBonus, reminder } from '../effects.ts'
 import type { SpellEffectDef } from './shared.ts'
 
 /** Build a condition that lasts until the affected creature's next turn ends. */
@@ -46,6 +46,68 @@ function reviewed(
 }
 
 export const TOME_OF_HEROES_CASTING: Record<string, ReviewedSpellCasting> = {
+  'kobold-press-toh:clear-the-board': reviewed('Clear the Board', {
+    mechanics: { save: { ability: 'wis', onSave: 'negates' } },
+    manual:
+      'Select up to six hostile creatures within range for Wisdom saves. Teleport failed targets up to 90 feet in the opposite cardinal direction from yourself and up to five willing friendly creatures. Destinations must be visible, unoccupied, on a floor or ground, and not dangerous terrain. Resolve all movement manually.',
+  }),
+  'kobold-press-toh:forced-reposition': reviewed('Forced Reposition', {
+    mechanics: { save: { ability: 'con', onSave: 'negates' } },
+    manual:
+      'Only unwilling targets make the Constitution save. Teleport the target to a visible unoccupied space up to 60 feet above you; never into a solid object. Resolve falling, flight, and falling damage manually. One additional target per slot above 4th, within 30 feet of each other.',
+  }),
+  'kobold-press-toh:power-word-rend': reviewed('Power Word Rend', {
+    mechanics: {
+      damage: [{ formula: '4d6+20', type: 'force' }],
+      save: { ability: 'con', onSave: 'half' },
+    },
+    manual:
+      'Choose one visible creature within range that has vital internal organs. Constructs, oozes, undead, and other creatures without vital internal organs are unaffected. If the target is below half its hit point maximum, set its save to disadvantage manually. One additional target per slot above 4th, within 30 feet of each other.',
+  }),
+  'kobold-press-toh:sudden-slue': reviewed('Sudden Slue', {
+    mechanics: {
+      damage: [{ formula: '6d6', type: 'bludgeoning' }],
+      save: { ability: 'dex', onSave: 'half' },
+    },
+    effect: {
+      summary: 'Knocked prone',
+      targeting: 'enemy',
+      multi: true,
+      build: ({ source }) => [condition('Prone', { source })],
+    },
+    manual:
+      'Select creatures in the chosen 20-foot cube within range. Apply Prone only to failed saves. The bears disappear after their charge; no summoned creatures remain.',
+  }),
+  'kobold-press-toh:damaging-intel': reviewed('Damaging Intel', {
+    mechanics: { save: { ability: 'cha', onSave: 'negates' } },
+    effect: ruleReminder(
+      'Damaging Intel',
+      'Caster learns damage vulnerabilities, resistances, and immunities. The next attack by one of the caster’s allies in range has advantage before the end of the caster’s next turn.',
+      { type: 'untilSourceTurn', when: 'endOfTurn' },
+    ),
+    manual:
+      'Choose one visible creature within range. On a failed save, inspect its damage defenses manually and grant advantage only to the next qualifying ally attack, then remove the reminder. Do not grant advantage to all attackers or to the caster.',
+  }),
+  'kobold-press-toh:stone-aegis': reviewed('Stone Aegis', {
+    effect: {
+      summary: '+2 AC until the start of your next turn; 5 temporary hit points',
+      targeting: 'self',
+      build: ({ source }) => [
+        flatBonus('Stone Aegis', 2, {
+          source,
+          applies: 'ac',
+          duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+        }),
+        reminder(
+          'Stone Aegis',
+          'Set 5 temporary hit points manually. They last until the start of your next turn. May spend a bonus action at the start of later turns to extend only the AC bonus, up to 1 minute.',
+          { source, duration: { type: 'untilSourceTurn', when: 'startOfTurn' } },
+        ),
+      ],
+    },
+    manual:
+      'Apply before resolving the triggering attack. Set 5 temporary hit points manually; do not add them to existing temporary hit points. The AC bonus is tracked until the start of your next turn. Later bonus-action extensions apply only to AC, never grant new temporary hit points, and stop after 1 minute.',
+  }),
   'kobold-press-toh:burst-stone': reviewed('Burst Stone', {
     mechanics: {
       damage: [{ formula: '4d8', type: 'bludgeoning' }],
