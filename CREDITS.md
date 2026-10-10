@@ -64,6 +64,27 @@ as backdrops the Game Master picks for the shared player view.
 
 ## Third-party content
 
+### Khyberia SRD
+
+OpenFray includes 21 creatures from the October 2023 Khyberia SRD by Nick Stefanski.
+The source’s required attribution and upstream notices follow:
+
+> This work includes material taken from the Khyberia SRD by Nick Stefanski, available at www.khyberia.com. The Khyberia SRD is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+> This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC and available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+> This work includes material taken from the A5E System Reference Document (A5ESRD) by EN Publishing and available at A5ESRD.com, based on Level Up: Advanced 5th Edition, available at www.levelup5e.com. The A5ESRD is licensed under the Creative Commons Attribution 4.0 International License available at https://creativecommons.org/licenses/by/4.0/legalcode.
+
+**Changes were made:** creature fields and line wrapping were restructured into
+OpenFray’s schema. The Chaos Swell table is retained as a trait.
+Conditional effects, optional damage, and rest-based recovery require manual handling.
+Published statistics were not corrected. Wodyanoi’s Gyre has no printed save DC;
+the Game Master must choose one to use that action. Artwork and unrelated rules are excluded.
+
+The imported blocks use conventional 5e statistics and inline rules for their unusual effects.
+They are tagged 5e, not A5E or 2024. No separate A5E creature library is included.
+OpenFray is not affiliated with or endorsed by Nick Stefanski, EN Publishing, or Wizards of the Coast.
+
 ### Kibbles’ Casting Compendium v2.3
 
 Includes content from *Kibbles’ Casting Compendium* by KibblesTasty Homebrew LLC,

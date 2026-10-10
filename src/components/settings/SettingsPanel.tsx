@@ -8,6 +8,7 @@ import {
   editionBadgeClass,
   editionLabel,
   librarySourceBadgeClass,
+  librarySettingsLabel,
 } from '../../compendium/libraries.ts'
 import { track, EVENTS } from '../../lib/analytics.ts'
 import {
@@ -249,10 +250,10 @@ export function SettingsPanel({
                             }}
                             className="min-w-0 flex-1 underline decoration-dotted underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-400"
                           >
-                            {lib.label}
+                            {librarySettingsLabel(lib)}
                           </a>
                         ) : (
-                          <span className="min-w-0 flex-1">{lib.label}</span>
+                          <span className="min-w-0 flex-1">{librarySettingsLabel(lib)}</span>
                         )}
                         <span className="flex shrink-0 items-center gap-1.5">
                           <Badge tone={librarySourceBadgeClass(lib.id)}>{lib.shortLabel}</Badge>
