@@ -114,6 +114,17 @@ export const LIBRARIES: Library[] = [
     spellsFile: 'tome-of-heroes-spells.json',
   },
   {
+    id: 'kobold-press-deepm',
+    license: 'ogl-1.0a',
+    label: 'Deep Magic 2020 (Kobold Press)',
+    shortLabel: 'DM20',
+    family: 'tob',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'deep-magic-2020-spells.json',
+  },
+  {
     id: 'khyberia-srd',
     license: 'cc-by-4.0',
     label: 'Khyberia SRD (Nick Stefanski)',

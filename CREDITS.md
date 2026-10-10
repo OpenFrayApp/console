@@ -497,6 +497,202 @@ Tome of Heroes ©2022 Open Design LLC; Authors: Celeste Conowitch, Jeff Lee, Sar
 
 END OF LICENSE
 
+### Deep Magic 2020 (Kobold Press)
+
+OpenFray includes 503 Open Game Content spell reference cards from *Deep Magic for 5th Edition* © 2020 Open Design LLC.
+The cards use the **Open Game License v1.0a** and the 2014 5e baseline.
+The book states: “The Open Game Content includes the spells previously published and the backer spells.”
+The selected [Open5e](https://open5e.com) republication is accepted provenance evidence under that selective grant.
+This approval covers the reviewed spell selection, not the whole book.
+
+**Changes were made:** spell fields and tables were restructured into OpenFray’s schema.
+Printed ranges, durations, class lists, and effect wording were restored, and the publisher’s [2020-book errata](https://koboldpress.com/errata/) was applied.
+The action and reaction versions of Anchoring Rope were consolidated.
+Printed ambiguities remain unchanged. All cards are manual reference only.
+PDF page references count physical pages from 1.
+
+Eleven custom-ritual spells are withheld: Afflict Line, Bloom, Celebration, Clearing the Field, Desolation, Encroaching Shadows, Guest of Honor, Shadows Brought to Light, Shadowy Retribution, Song of the Forest, and Vine Trestle.
+Artwork, fiction, character lore, setting-use prose, sidebars, supporting-rule chapters, and summoned-creature stat blocks are excluded.
+References to madness, Void taint, flesh warping, and summoned creatures remain manual references to external rules.
+*Kobold Press* and *Midgard* are trademarks of Open Design.
+OpenFray is not affiliated with or endorsed by Kobold Press.
+
+**Open Game Content designation:** the spell names, rules text, and mechanical display fields in `deep-magic-2020-spells.json` are Open Game Content under OGL 1.0a.
+This designation excludes the console’s code, interface, artwork, and other content.
+The complete license and the book’s verified 35-notice Section 15 chain follow.
+
+#### OPEN GAME LICENSE Version 1.0a
+
+The following text is the property of Wizards of the Coast, Inc. and is Copyright 2000
+Wizards of the Coast, Inc ("Wizards"). All Rights Reserved.
+
+1. Definitions: (a)"Contributors" means the copyright and/or trademark owners who have
+contributed Open Game Content; (b)"Derivative Material" means copyrighted material
+including derivative works and translations (including into other computer languages),
+potation, modification, correction, addition, extension, upgrade, improvement,
+compilation, abridgment or other form in which an existing work may be recast,
+transformed or adapted; (c) "Distribute" means to reproduce, license, rent, lease, sell,
+broadcast, publicly display, transmit or otherwise distribute; (d)"Open Game Content"
+means the game mechanic and includes the methods, procedures, processes and routines to
+the extent such content does not embody the Product Identity and is an enhancement over
+the prior art and any additional content clearly identified as Open Game Content by the
+Contributor, and means any work covered by this License, including translations and
+derivative works under copyright law, but specifically excludes Product Identity. (e)
+"Product Identity" means product and product line names, logos and identifying marks
+including trade dress; artifacts; creatures characters; stories, storylines, plots,
+thematic elements, dialogue, incidents, language, artwork, symbols, designs, depictions,
+likenesses, formats, poses, concepts, themes and graphic, photographic and other visual
+or audio representations; names and descriptions of characters, spells, enchantments,
+personalities, teams, personas, likenesses and special abilities; places, locations,
+environments, creatures, equipment, magical or supernatural abilities or effects, logos,
+symbols, or graphic designs; and any other trademark or registered trademark clearly
+identified as Product identity by the owner of the Product Identity, and which
+specifically excludes the Open Game Content; (f) "Trademark" means the logos, names,
+mark, sign, motto, designs that are used by a Contributor to identify itself or its
+products or the associated products contributed to the Open Game License by the
+Contributor (g) "Use", "Used" or "Using" means to use, Distribute, copy, edit, format,
+modify, translate and otherwise create Derivative Material of Open Game Content. (h)
+"You" or "Your" means the licensee in terms of this agreement.
+
+2. The License: This License applies to any Open Game Content that contains a notice
+indicating that the Open Game Content may only be Used under and in terms of this
+License. You must affix such a notice to any Open Game Content that you Use. No terms may
+be added to or subtracted from this License except as described by the License itself. No
+other terms or conditions may be applied to any Open Game Content distributed using this
+License.
+
+3. Offer and Acceptance: By Using the Open Game Content You indicate Your acceptance of
+the terms of this License.
+
+4. Grant and Consideration: In consideration for agreeing to use this License, the
+Contributors grant You a perpetual, worldwide, royalty-free, non-exclusive license with
+the exact terms of this License to Use, the Open Game Content.
+
+5. Representation of Authority to Contribute: If You are contributing original material as
+Open Game Content, You represent that Your Contributions are Your original creation and/
+or You have sufficient rights to grant the rights conveyed by this License.
+
+6. Notice of License Copyright: You must update the COPYRIGHT NOTICE portion of this
+License to include the exact text of the COPYRIGHT NOTICE of any Open Game Content You are
+copying, modifying or distributing, and You must add the title, the copyright date, and
+the copyright holder's name to the COPYRIGHT NOTICE of any original Open Game Content you
+Distribute.
+
+7. Use of Product Identity: You agree not to Use any Product Identity, including as an
+indication as to compatibility, except as expressly licensed in another, independent
+Agreement with the owner of each element of that Product Identity. You agree not to
+indicate compatibility or co-adaptability with any Trademark or Registered Trademark in
+conjunction with a work containing Open Game Content except as expressly licensed in
+another, independent Agreement with the owner of such Trademark or Registered Trademark.
+The use of any Product Identity in Open Game Content does not constitute a challenge to
+the ownership of that Product Identity. The owner of any Product Identity used in Open
+Game Content shall retain all rights, title and interest in and to that Product Identity.
+
+8. Identification: If you distribute Open Game Content You must clearly indicate which
+portions of the work that you are distributing are Open Game Content.
+
+9. Updating the License: Wizards or its designated Agents may publish updated versions of
+this License. You may use any authorized version of this License to copy, modify and
+distribute any Open Game Content originally distributed under any version of this License.
+
+10. Copy of this License: You MUST include a copy of this License with every copy of the
+Open Game Content You Distribute.
+
+11. Use of Contributor Credits: You may not market or advertise the Open Game Content
+using the name of any Contributor unless You have written permission from the Contributor
+to do so.
+
+12. Inability to Comply: If it is impossible for You to comply with any of the terms of
+this License with respect to some or all of the Open Game Content due to statute, judicial
+order, or governmental regulation then You may not Use any Open Game Material so affected.
+
+13. Termination: This License will terminate automatically if You fail to comply with all
+terms herein and fail to cure such breach within 30 days of becoming aware of the breach.
+All sublicenses shall survive the termination of this License.
+
+14. Reformation: If any provision of this License is held to be unenforceable, such
+provision shall be reformed only to the extent necessary to make it enforceable.
+
+15. COPYRIGHT NOTICE
+
+#### Deep Magic 2020 Section 15 copyright chain
+
+Open Game License v 1.0a Copyright 2000, Wizards of the Coast, Inc.
+
+System Reference Document 5.0 Copyright 2016, Wizards of the Coast, Inc.; Authors Mike Mearls, Jeremy Crawford, Chris Perkins, Rodney Thompson, Peter Lee, James Wyatt, Robert J. Schwalb, Bruce R. Cordell, Chris Sims, and Steve Townshend, based on original material by E. Gary Gygax and Dave Arneson.
+
+Deep Magic: Alkemancy © 2019 Open Design LLC; Author: Phillip Larwood.
+
+Deep Magic: Angelic Seals and Wards © 2016 Open Design; Author: Dan Dillon.
+
+Deep Magic: Battle Magic © 2016 Open Design; Author: Greg Marks.
+
+Deep Magic: Blood and Doom © 2017 Open Design; Author: Chris Harris.
+
+Deep Magic: Chaos Magic © 2016 Open Design; Author: Greg Marks.
+
+Deep Magic: Clockwork © 2016 Open Design; Author: Scott Carter.
+
+Deep Magic: Combat Divination © 2019 Open Design LLC; Author: Matt Corley.
+
+Deep Magic: Dragon Magic © 2017 Open Design; Author: Shawn Merwin.
+
+Deep Magic: Elemental Magic © 2017 Open Design; Author: Dan Dillon.
+
+Deep Magic: Elven High Magic © 2016 Open Design; Author: Greg Marks.
+
+Deep Magic: Hieroglyph Magic © 2018 Open Design LLC; Author: Michael Ohl.
+
+Deep Magic: Illumination Magic © 2016 Open Design; Author: Greg Marks.
+
+Deep Magic: Ley Line Magic © 2016 Open Design; Author: Dan Dillon.
+
+Deep Magic: Mythos Magic © 2018 Open Design LLC; Author: Christopher Lockey.
+
+Deep Magic: Runes © 2016 Open Design; Author: Chris Harris.
+
+Deep Magic: Shadow Magic © 2016 Open Design; Author: Michael Ohl.
+
+Deep Magic: Time Magic © 2018 Open Design LLC; Author: Carlos Ovalle.
+
+Deep Magic: Void Magic. © 2016 Open Design; Author: Dan Dillon.
+
+Deep Magic: Winter Magic. © 2019 Open Design; Author: Mike Welham.
+
+Creature Codex © 2018 Open Design LLC; Authors: Wolfgang Baur, Dan Dillon, Richard Green, James Haeck, Chris Harris, Jeremy Hochhalter, James Introcaso, Chris Lockey, Shawn Merwin, and Jon Sawatsky.
+
+Demon Cults & Secret Societies for 5th Edition. © 2017 Open Design. Authors: Jeff Lee, Mike Welham, Jon Sawatsky.
+
+Margreve Player’s Guide © 2019 Open Design LLC; Authors: Dan Dillon, Dennis Sustare, Jon Sawatsky, Lou Anders, Matthew Corley, and Mike Welham.
+
+Midgard Heroes © 2015 Open Design; Author: Dan Dillon.
+
+Midgard Heroes Handbook © 2018 Open Design LLC; Authors: Chris Harris, Dan Dillon, Greg Marks, Jon Sawatsky, Michael Ohl, Richard Green, Rich Howard, Scott Carter, Shawn Merwin, and Wolfgang Baur.
+
+Midgard Worldbook. Copyright © 2018 Open Design LLC. Authors: Wolfgang Baur, Dan Dillon, Richard Green, Jeff Grubb, Chris Harris, Brian Suskind, and Jon Sawatsky.
+
+Southlands Heroes © 2015 Open Design; Author: Rich Howard.
+
+Tome of Beasts © 2016 Open Design; Authors: Chris Harris, Dan Dillon, Rodrigo Garcia Carmona, and Wolfgang Baur.
+
+Underworld Player's Guide © 2020 Open Design LLC; Authors: Wolfgang Baur, Dan Dillon, Jeff Lee, Christopher Lockey, Shawn Merwin, and Kelly Pawlik.
+
+Warlock 6: City of Brass. Authors: Richard Green, Jeff Grubb, Richard Pett, Steve Winter. © 2018 Open Design.
+
+Warlock 8: Undead. Authors: Wolfgang Baur, Dan Dillon, Chris Harris, Kelly Pawlik. © 2018 Open Design.
+
+Warlock 10: The Magocracies. Authors: Dan Dillon, Ben McFarland, Kelly Pawlik, Troy E. Taylor. © 2019 Open Design LLC.
+
+Warlock Bestiary. Authors: Jeff Lee with Chris Harris, James Introcaso, and Wolfgang Baur. © 2018 Open Design LLC.
+
+Deep Magic for 5th Edition © 2020 Open Design LLC; Authors: Dan Dillon, Chris Harris, and Jeff Lee.
+
+#### OpenFray copyright notice
+
+OpenFray Deep Magic 2020 spell reference cards. Copyright 2026 Nicola Mustone.
+
+END OF LICENSE
+
 ---
 
 *OpenFray is compatible with 5e (2014) and 5.5e (2024), and is not affiliated with,
