@@ -103,6 +103,17 @@ export const LIBRARIES: Library[] = [
     creaturesFile: 'creature-codex-creatures.json',
   },
   {
+    id: 'kobold-press-toh',
+    license: 'ogl-1.0a',
+    label: 'Tome of Heroes (Kobold Press)',
+    shortLabel: 'ToH',
+    family: 'tob',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'tome-of-heroes-spells.json',
+  },
+  {
     id: 'khyberia-srd',
     license: 'cc-by-4.0',
     label: 'Khyberia SRD (Nick Stefanski)',

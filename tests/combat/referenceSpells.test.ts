@@ -32,6 +32,11 @@ const BLESS: Spell = {
 describe('reference-only spell isolation', () => {
   it.each([
     [
+      'tome-of-heroes-spells.json',
+      90,
+      '0dfd2cd8ddc8faf579766f7529627ea523fdf4f284fd01649405d4e673fed53d',
+    ],
+    [
       'kibbles-casting-v23-spells.json',
       295,
       '90f5320602e298fdba46b7fa0030bf4d6e2212faf3dc8e7d0d56396eec42a946',
@@ -55,6 +60,22 @@ describe('reference-only spell isolation', () => {
     expect(createHash('sha256').update(JSON.stringify(spells)).digest('hex')).toBe(sha256)
   })
 
+  it('ships the complete source-verified Tome of Heroes copyright chain and OGC designation', () => {
+    const credits = readFileSync(new URL('../../CREDITS.md', import.meta.url), 'utf8')
+    const chain = credits
+      .split('#### Tome of Heroes Section 15 copyright chain')[1]
+      ?.split('END OF LICENSE')[0]
+      .replace(/\s+/g, ' ')
+      .trim()
+    expect(chain).toBeTruthy()
+    expect(createHash('sha256').update(chain!).digest('hex')).toBe(
+      '06883ba46aad17cdc02712412ca42156c6543823c48760076fbff222bd0e22ef',
+    )
+    expect(credits).toContain('**Open Game Content designation:**')
+    expect(credits).toContain('tome-of-heroes-spells.json')
+    expect(credits).toContain('Deadly Salvo is withheld')
+  })
+
   it('retains reviewed SRD automation', () => {
     expect(spellEffectFor(BLESS)).not.toBeNull()
     expect(isSupportSpell({ ...BLESS, mechanics: undefined })).toBe(true)
@@ -68,6 +89,20 @@ describe('reference-only spell isolation', () => {
     expect(damageVariants(copy)).not.toEqual([])
     expect(spellEffectFor(copy)).toBeNull()
     expect(isSupportSpell(copy)).toBe(false)
+  })
+
+  it('keeps custom Tome of Heroes copies manual and blocks same-name SRD effects', () => {
+    const copy = {
+      ...BLESS,
+      id: 'custom:tome-reference-copy',
+      source: 'kobold-press-toh',
+      mechanics: undefined,
+    }
+    expect(spellEffectFor(copy)).toBeNull()
+    expect(isSupportSpell(copy)).toBe(false)
+    expect(spellAction(copy, {})).toBeNull()
+    expect(damageVariants(copy)).toEqual([])
+    expect(delayedDamageEffect(copy)).toBeNull()
   })
 
   it.each(LIBRARIES.filter((library) => library.referenceOnly))(
