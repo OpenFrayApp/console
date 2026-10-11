@@ -34,11 +34,11 @@ async function openAdd(name: string) {
   }
 }
 
-/** Launch through the normal search and Settings route from the current screen. */
-async function launchFromSettings() {
+/** Launch through the normal search command from the current screen. */
+async function launchFromSearch() {
   await userEvent.click(screen.getByRole('button', { name: 'Search references' }))
-  await userEvent.click(screen.getByRole('option', { name: 'Settings' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  await userEvent.fill(screen.getByRole('combobox', { name: 'Search references' }), 'tutorial')
+  await userEvent.click(screen.getByRole('option', { name: 'Start tutorial' }))
 }
 
 /** Reveal a long form control and verify it remains clear of the hint. */
@@ -328,7 +328,7 @@ it.each([
           return box.right <= 0 || box.left >= innerWidth
         })
         .toBe(true)
-      await launchFromSettings()
+      await launchFromSearch()
     } else await userEvent.click(await screen.findByRole('button', { name: 'Start tutorial' }))
     await openAdd('Add PC')
     await userEvent.fill(screen.getByRole('textbox', { name: 'PC name' }), 'Rowan')
@@ -452,7 +452,7 @@ it.each(
     await userEvent.click(screen.getByRole('button', { name: 'Search references' }))
     await userEvent.click(screen.getByRole('option', { name: 'Compendium' }))
     await userEvent.click(screen.getByRole('tab', { name: tab }))
-    await launchFromSettings()
+    await launchFromSearch()
     expect(screen.queryByRole('tab', { name: tab })).toBeNull()
     expect(screen.queryByText(/stays in your roster after clearing/)).toBeNull()
     await openAdd('Add PC')

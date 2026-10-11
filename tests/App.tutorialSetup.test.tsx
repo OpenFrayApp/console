@@ -237,11 +237,13 @@ it('creates a NEW durable roster character through the signed-in path and leaves
   ])
 })
 
-/** Launch manually through the real search and Settings controls. */
-function launchFromSettings() {
+/** Launch manually through the real search command. */
+function launchFromSearch() {
   fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
-  fireEvent.click(screen.getByRole('option', { name: 'Settings' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Search references' }), {
+    target: { value: 'tutorial' },
+  })
+  fireEvent.click(screen.getByRole('option', { name: 'Start tutorial' }))
 }
 
 it.each(
@@ -256,7 +258,7 @@ it.each(
     fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
     fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
     fireEvent.click(screen.getByRole('tab', { name: tab }))
-    launchFromSettings()
+    launchFromSearch()
     expect(screen.queryByRole('tab', { name: tab })).toBeNull()
     expect(screen.queryByText(/stays in your roster after clearing/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Add PC' }))
@@ -293,7 +295,7 @@ it.each(['library', 'board'])(
     fireEvent.click(screen.getByRole('option', { name: 'Compendium' }))
     fireEvent.click(screen.getByRole('tab', { name: 'Characters' }))
     const settings = loadSettings()
-    launchFromSettings()
+    launchFromSearch()
     expect(screen.getByRole('dialog', { name: 'Before starting the tutorial' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
     expect(screen.getByRole('tab', { name: 'Characters' })).toHaveAttribute('aria-selected', 'true')
@@ -313,7 +315,7 @@ it.each(['Controls', 'Stat block'])(
     fireEvent.click(await screen.findByRole('button', { name: 'Not now' }))
     fireEvent.click(screen.getByRole('button', { name: pane }))
     expect(screen.getByRole('button', { name: pane })).toHaveAttribute('aria-current', 'page')
-    launchFromSettings()
+    launchFromSearch()
     expect(screen.getByRole('button', { name: 'Tracker' })).toHaveAttribute('aria-current', 'page')
     addPractice('Add PC', 'PC name', 'Rowan')
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))

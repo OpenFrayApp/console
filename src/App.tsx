@@ -1983,10 +1983,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             <DialogFocus>
               <SettingsPanel
                 onClose={() => setSettingsOpen(false)}
-                onStartTutorial={() => {
-                  setSettingsOpen(false)
-                  tutorial.launch()
-                }}
                 enabledLibraries={enabledLibraries}
                 onSetEnabledLibraries={setEnabledLibraries}
                 showHomebrew={showHomebrew}
