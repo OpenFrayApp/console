@@ -134,16 +134,24 @@ export function FeedbackDialog({
         {result && result.result !== 'failed' ? (
           <div className="space-y-3" role="status">
             <p>
-              {result.result === 'issue'
-                ? 'Feedback posted on GitHub.'
-                : 'Feedback sent by email. Delivery hasn’t been confirmed.'}
+              {result.result === 'issue' ? 'Feedback posted on GitHub.' : 'Feedback sent by email.'}
             </p>
-            {result.result === 'issue' && (
-              <LinkButton href={result.url} target="_blank" rel="noreferrer">
-                View issue
-              </LinkButton>
-            )}
-            <Button onClick={close}>Done</Button>
+            <div className="flex flex-wrap items-stretch gap-2">
+              {result.result === 'issue' && (
+                <LinkButton
+                  variant="secondary"
+                  size="md"
+                  href={result.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View
+                </LinkButton>
+              )}
+              <Button variant="primary" size="md" onClick={close}>
+                Done
+              </Button>
+            </div>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3" aria-busy={busy}>

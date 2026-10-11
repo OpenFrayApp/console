@@ -5,9 +5,9 @@ export const FEEDBACK_CATEGORIES = [
   { value: 'bug', label: 'Bug' },
   { value: 'feature', label: 'Feature request' },
   { value: 'question', label: 'Question' },
+  { value: 'security', label: 'Security' },
   { value: 'other', label: 'Other' },
   { value: 'unsure', label: 'Not sure' },
-  { value: 'security', label: 'Security' },
 ] as const
 
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number]['value']
