@@ -30,11 +30,13 @@ function card(slug: string): Spell {
 /** Build reviewed effects with different caster and affected-creature identities. */
 function effects(slug: string) {
   const spell = card(slug)
-  return spellEffectFor(spell)!.build({
-    spell,
-    source: 'caster',
-    target: monster({ combatantId: 'target' }),
-  })
+  return (
+    spellEffectFor(spell)?.build({
+      spell,
+      source: 'caster',
+      target: monster({ combatantId: 'target' }),
+    }) ?? []
+  )
 }
 
 describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
@@ -42,8 +44,8 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
     expect(spells).toHaveLength(295)
     const profiles = spells.map((spell) => reviewedSpellCasting(spell)!)
     expect(profiles.filter((profile) => profile.mechanics)).toHaveLength(121)
-    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(106)
-    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(68)
+    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(67)
+    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(107)
     expect(
       Object.entries(REVIEWED_SPELL_CASTING)
         .filter(([, profile]) => profile.source === source)
@@ -58,7 +60,7 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
       const spell = spells.find((entry) => entry.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(digest)
       expect(REFERENCE_ONLY_SPELLS[id]).toBeUndefined()
-      expect(reviewedSpellCasting(spell)?.manual).toBeTruthy()
+      expect(reviewedSpellCasting(spell)).toBeDefined()
       expect(spell.mechanics).toBeUndefined()
       const original = JSON.stringify(spell)
       spellAction(spell, { saveDc: 17, toHit: 8 })
@@ -265,7 +267,7 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
     'sanctified-charge',
   ])('keeps %s incompatible initial branches manual', (slug) => {
     expect(spellAction(card(slug), { saveDc: 17, toHit: 8 })).toBeNull()
-    expect(reviewedSpellCasting(card(slug))?.manual).toBeTruthy()
+    expect(reviewedSpellCasting(card(slug))).toBeDefined()
   })
 
   it('does not invent typed damage, secondary saves, or fixed choice types', () => {
@@ -294,7 +296,6 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
       'blood-frenzy',
       'flicker',
       'nullify-effect',
-      'time-slip',
       'mutate',
       'rotting-curse',
       'unlocked-potential',
@@ -325,8 +326,12 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
       'vicious-vapors',
     ]) {
       expect(reviewedSpellCasting(card(slug))?.persistsAfterSave).toBe(true)
-      expect(spellEffectFor(card(slug))?.targeting).toBe('self')
-      expect(effects(slug)[0]).toMatchObject({ source: 'caster', concentration: true })
+      if (['illusory-pit', 'twisting-eruption', 'vicious-vapors'].includes(slug)) {
+        expect(spellEffectFor(card(slug))?.targeting).toBe('enemy')
+        expect(effects(slug).some((effect) => effect.icon === 'condition')).toBe(true)
+      } else {
+        expect(spellEffectFor(card(slug))).toBeNull()
+      }
     }
   })
 

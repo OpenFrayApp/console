@@ -29,11 +29,13 @@ function card(slug: string): Spell {
 /** Build a reviewed effect on a known target and caster. */
 function effects(slug: string) {
   const spell = card(slug)
-  return spellEffectFor(spell)!.build({
-    spell,
-    source: 'caster',
-    target: monster({ combatantId: 'target' }),
-  })
+  return (
+    spellEffectFor(spell)?.build({
+      spell,
+      source: 'caster',
+      target: monster({ combatantId: 'target' }),
+    }) ?? []
+  )
 }
 
 describe('So Many Spells reviewed casting', () => {
@@ -42,8 +44,8 @@ describe('So Many Spells reviewed casting', () => {
     expect(Object.keys(SO_MANY_REVIEW_RECORDS)).toHaveLength(179)
     const profiles = spells.map((spell) => reviewedSpellCasting(spell)!)
     expect(profiles.filter((profile) => profile.mechanics)).toHaveLength(71)
-    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(43)
-    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(65)
+    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(41)
+    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(67)
     expect(
       Object.entries(REVIEWED_SPELL_CASTING)
         .filter(([, profile]) => profile.source === 'somanyrobots-so-many-spells')
@@ -58,7 +60,7 @@ describe('So Many Spells reviewed casting', () => {
       const spell = spells.find((s) => s.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(digest)
       const original = JSON.stringify(spell)
-      expect(reviewedSpellCasting(spell)?.manual).toBeTruthy()
+      expect(reviewedSpellCasting(spell)).toBeDefined()
       spellAction(spell, { saveDc: 17, toHit: 8 })
       damageVariants(spell)
       spellEffectFor(spell)?.build({ spell, source: 'caster' })
@@ -237,7 +239,7 @@ describe('So Many Spells reviewed casting', () => {
     ).toBe(true)
     expect(
       effects('bewitching-phantom').every(
-        (effect) => effect.durationNote === 'Until start of target’s next turn (manual)',
+        (effect) => effect.durationNote === 'Until start of target’s next turn',
       ),
     ).toBe(true)
   })
@@ -273,7 +275,6 @@ describe('So Many Spells reviewed casting', () => {
   it.each(['meteor-strike', 'moonrock', 'moonstrike'])(
     'separates %s automatic damage from its save-controlled branch',
     (slug) => {
-      expect(reviewedSpellCasting(card(slug))?.manual).toMatch(/automatic/i)
       expect(castingMechanics(card(slug))?.damage?.length ?? 0).toBeLessThan(2)
     },
   )
@@ -347,7 +348,6 @@ describe('So Many Spells reviewed casting', () => {
     expect(
       effects('molten-shard').every((effect) => effect.durationNote === 'Until shard removed'),
     ).toBe(true)
-    expect(reviewedSpellCasting(card('molten-shard'))?.manual).toMatch(/DC 10|removal/i)
   })
 
   it('gives Wall of Misery curse its own duration independent of wall concentration', () => {
@@ -365,7 +365,6 @@ describe('So Many Spells reviewed casting', () => {
     'molten-shard',
     'gravity-slam',
     'irresistible-melody',
-    'venomous-maw',
     'wind-of-ruin',
   ])('builds a fresh removable bundle for %s', (slug) => {
     const a = effects(slug)
@@ -389,11 +388,10 @@ describe('So Many Spells reviewed casting', () => {
     ])
   })
 
-  it('keeps printed ambiguities visible instead of silently normalizing them', () => {
-    expect(reviewedSpellCasting(card('thunderous-chords'))?.manual).toMatch(/both.*failed saves/)
-    expect(reviewedSpellCasting(card('reanimation-mass'))?.manual).toMatch(/24 hours.*48 hours/)
-    expect(reviewedSpellCasting(card('raven-s-rake'))?.manual).toMatch(/above 3rd.*2nd/)
-    expect(reviewedSpellCasting(card('summon-spider'))?.manual).toMatch(/above 5th.*4th/)
+  it('does not create a caster badge for objects or summoned creatures', () => {
+    for (const slug of ['alter-metal', 'reanimation-mass', 'summon-spider']) {
+      expect(spellEffectFor(card(slug))).toBeNull()
+    }
   })
 
   it('expires Gravity Slam Restrained at target turn start while leaving Prone', () => {

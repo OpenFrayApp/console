@@ -200,10 +200,6 @@ export function SettingsPanel({
               Select the libraries your table uses. They add creatures and spells in the compendium,
               in the Add creature list, and in the Cast spell list.
             </p>
-            <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-              Reference libraries provide spell cards. Roll their dice and apply their effects
-              manually.
-            </p>
             <div className="space-y-4">
               {GROUPS.map((group) => (
                 <div key={group.key}>

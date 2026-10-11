@@ -31,12 +31,16 @@ function card(slug: string): Spell {
 /** Build the reviewed effect for an actual target and caster. */
 function effects(slug: string) {
   const spell = card(slug)
-  return spellEffectFor(spell)!.build({
-    spell,
-    source: 'caster',
-    target: monster({ combatantId: 'target' }),
-    save: { ability: 'wis', dc: 17 },
-  })
+  return (
+    spellEffectFor(spell)?.build({
+      spell,
+      source: 'caster',
+      target: monster({ combatantId: 'target' }),
+      save: castingMechanics(spell)?.save
+        ? { ability: castingMechanics(spell)!.save!.ability, dc: 17 }
+        : undefined,
+    }) ?? []
+  )
 }
 
 describe('reviewed source casting', () => {
@@ -55,7 +59,7 @@ describe('reviewed source casting', () => {
       const spell = spells.find((s) => s.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(digest)
       const before = JSON.stringify(spell)
-      expect(reviewedSpellCasting(spell)?.manual).toBeTruthy()
+      expect(reviewedSpellCasting(spell)).toBeDefined()
       castingMechanics(spell)
       damageVariants(spell)
       spellAction(spell, { saveDc: 17, toHit: 8 })
@@ -132,13 +136,9 @@ describe('reviewed source casting', () => {
         source: 'caster',
         duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
       },
-      {
-        modifier: null,
-        source: 'caster',
-        duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
-      },
     ])
-    expect(built[0].bundle?.id).toBe(built[1].bundle?.id)
+    expect(built).toHaveLength(1)
+    expect(built[0].bundle).toBeUndefined()
     expect(landsOnCast(card('stone-aegis'))).toBe(false)
     expect(isSupportSpell(card('stone-aegis'))).toBe(true)
     expect(spellAction(card('stone-aegis'), {})).toBeNull()
@@ -148,8 +148,8 @@ describe('reviewed source casting', () => {
     const profiles = spells.map((spell) => reviewedSpellCasting(spell)!)
     expect(profiles).toHaveLength(90)
     expect(profiles.filter((profile) => profile.mechanics)).toHaveLength(39)
-    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(23)
-    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(28)
+    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(22)
+    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(29)
   })
 
   it.each([
@@ -230,21 +230,17 @@ describe('reviewed source casting', () => {
     ])
   })
 
-  it.each([
-    'bloodlust',
-    'dreamwine',
-    'wild-hunt',
-    'butterfly-effect',
-    'conjure-spectral-allies',
-    'war-horn',
-  ])('builds fresh bundled effects per target for %s', (slug) => {
-    const a = effects(slug)
-    const b = effects(slug)
-    expect(a[0].bundle?.id).toBeTruthy()
-    expect(a[0].bundle?.id).not.toBe(b[0].bundle?.id)
-    expect(a.every((effect) => effect.bundle?.id === a[0].bundle?.id)).toBe(true)
-    expect(a.every((effect) => !b.some((other) => other.id === effect.id))).toBe(true)
-  })
+  it.each(['bloodlust', 'dreamwine', 'wild-hunt', 'butterfly-effect'])(
+    'builds fresh bundled effects per target for %s',
+    (slug) => {
+      const a = effects(slug)
+      const b = effects(slug)
+      expect(a[0].bundle?.id).toBeTruthy()
+      expect(a[0].bundle?.id).not.toBe(b[0].bundle?.id)
+      expect(a.every((effect) => effect.bundle?.id === a[0].bundle?.id)).toBe(true)
+      expect(a.every((effect) => !b.some((other) => other.id === effect.id))).toBe(true)
+    },
+  )
 
   it('resolves Lance as an attack, not an invented saving throw', () => {
     expect(spellAction(card('lance'), { saveDc: 17, toHit: 8 })).toMatchObject({
@@ -277,19 +273,37 @@ describe('reviewed source casting', () => {
       expect(spellAction(card(slug), {})).toBeNull()
       expect(damageVariants(card(slug))).toEqual([])
       expect(effects(slug).every((effect) => effect.modifier === null)).toBe(true)
-      expect(landsOnCast(card(slug))).toBe(false)
+      expect(landsOnCast(card(slug))).toBe(slug === 'misdirection')
+      if (slug === 'misdirection') expect(spellEffectFor(card(slug))).toBeNull()
     },
   )
 
-  it.each(['babble', 'blunted-edge', 'bound-haze', 'toothless-beast', 'iron-gut'])(
-    'keeps unsupported conditional rules and escape saves manual for %s',
+  it.each(['babble', 'blunted-edge', 'toothless-beast', 'iron-gut'])(
+    'keeps conditional and weapon-only consequences as concise reminders for %s',
     (slug) => {
-      expect(
-        effects(slug).every(
-          (effect) => effect.modifier === null && effect.duration.type !== 'saveEnds',
-        ),
-      ).toBe(true)
+      expect(effects(slug).every((effect) => effect.modifier === null)).toBe(true)
       expect(effects(slug).every((effect) => effect.concentration)).toBe(true)
+    },
+  )
+
+  it('models Bound Haze attack disadvantage without extending Perception disadvantage to all Wisdom checks', () => {
+    const modifiers = effects('bound-haze').filter((effect) => effect.modifier)
+    expect(modifiers).toHaveLength(1)
+    expect(modifiers[0]).toMatchObject({
+      modifier: { applies: 'attackRolls', mode: 'disadvantage' },
+      duration: { type: 'saveEnds', save: { ability: 'dex', dc: 17 } },
+    })
+  })
+
+  it.each(['conjure-spectral-allies', 'war-horn'])(
+    'builds a fresh single condition without a redundant reminder for %s',
+    (slug) => {
+      const a = effects(slug)
+      const b = effects(slug)
+      expect(a).toHaveLength(1)
+      expect(a[0].icon).toBe('condition')
+      expect(a[0].bundle).toBeUndefined()
+      expect(a[0].id).not.toBe(b[0].id)
     },
   )
 

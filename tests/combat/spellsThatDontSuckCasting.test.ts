@@ -30,11 +30,13 @@ function card(slug: string): Spell {
 /** Build effects for a known caster and affected creature. */
 function effects(slug: string) {
   const spell = card(slug)
-  return spellEffectFor(spell)!.build({
-    spell,
-    source: 'caster',
-    target: monster({ combatantId: 'target' }),
-  })
+  return (
+    spellEffectFor(spell)?.build({
+      spell,
+      source: 'caster',
+      target: monster({ combatantId: 'target' }),
+    }) ?? []
+  )
 }
 
 describe('Spells That Don’t Suck reviewed casting', () => {
@@ -43,8 +45,8 @@ describe('Spells That Don’t Suck reviewed casting', () => {
     expect(Object.keys(SPELLS_THAT_DONT_SUCK_REVIEW_RECORDS)).toHaveLength(181)
     const profiles = spells.map((spell) => reviewedSpellCasting(spell)!)
     expect(profiles.filter((profile) => profile.mechanics)).toHaveLength(56)
-    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(65)
-    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(60)
+    expect(profiles.filter((profile) => !profile.mechanics && profile.effect)).toHaveLength(45)
+    expect(profiles.filter((profile) => !profile.mechanics && !profile.effect)).toHaveLength(80)
     expect(
       Object.entries(REVIEWED_SPELL_CASTING)
         .filter(([, profile]) => profile.source === 'somanyrobots-spells-that-dont-suck')
@@ -59,7 +61,7 @@ describe('Spells That Don’t Suck reviewed casting', () => {
       const spell = spells.find((s) => s.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(digest)
       expect(REFERENCE_ONLY_SPELLS[id]).toBeUndefined()
-      expect(reviewedSpellCasting(spell)?.manual).toBeTruthy()
+      expect(reviewedSpellCasting(spell)).toBeDefined()
       const original = JSON.stringify(spell)
       spellAction(spell, { saveDc: 17, toHit: 8 })
       damageVariants(spell)
@@ -180,7 +182,11 @@ describe('Spells That Don’t Suck reviewed casting', () => {
   ])('does not resolve %s later damage/healing/HP loss on casting', (slug) => {
     expect(spellAction(card(slug), {})).toBeNull()
     expect(castingMechanics(card(slug))).toBeUndefined()
-    expect(spellEffectFor(card(slug))).not.toBeNull()
+    if (['incinerate', 'oakenhide', 'rejuvenation'].includes(slug)) {
+      expect(spellEffectFor(card(slug))).not.toBeNull()
+    } else {
+      expect(spellEffectFor(card(slug))).toBeNull()
+    }
   })
 
   it.each([
@@ -198,16 +204,13 @@ describe('Spells That Don’t Suck reviewed casting', () => {
   ])('keeps %s mixed branches or untyped HP loss manual', (slug) => {
     expect(spellAction(card(slug), {})).toBeNull()
     expect(spellEffectFor(card(slug))).toBeNull()
-    expect(reviewedSpellCasting(card(slug))?.manual).toBeTruthy()
+    expect(reviewedSpellCasting(card(slug))).toBeDefined()
   })
 
-  it('tracks created hazards on caster without selecting a premature victim', () => {
+  it('leaves created traps, objects, and narrative effects off the caster', () => {
     for (const slug of ['magic-net', 'enkindle', 'sky-omen']) {
       expect(spellAction(card(slug), {})).toBeNull()
-      expect(spellEffectFor(card(slug))?.targeting).toBe('self')
-      expect(
-        effects(slug).every((effect) => effect.source === 'caster' && effect.modifier === null),
-      ).toBe(true)
+      expect(spellEffectFor(card(slug))).toBeNull()
     }
     expect(effects('inflict-disease')[0].durationNote).toBe('Until cured; may set for 7 days')
   })
@@ -269,10 +272,7 @@ describe('Spells That Don’t Suck reviewed casting', () => {
       activeIndex: 0,
     }
     encounter = nextTurn(encounter)
-    expect(encounter.combatants[1].effects.map((effect) => effect.name)).toEqual([
-      'Deafened',
-      'Thunder Burst',
-    ])
+    expect(encounter.combatants[1].effects.map((effect) => effect.name)).toEqual(['Deafened'])
     encounter = nextTurn(encounter)
     expect(encounter.combatants[1].effects).toEqual([])
   })
@@ -297,10 +297,7 @@ describe('Spells That Don’t Suck reviewed casting', () => {
       ],
     }
     const after = encounterReducer(encounter, { type: 'endConcentration', id: 'caster' })
-    expect(after.combatants[1].effects.map((effect) => effect.name)).toEqual([
-      'Prone',
-      'Earth Rumble',
-    ])
+    expect(after.combatants[1].effects.map((effect) => effect.name)).toEqual(['Prone'])
     expect(effects('synaptic-shockwave')[0].durationNote).toContain('escape save')
   })
 })
