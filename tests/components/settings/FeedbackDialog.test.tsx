@@ -56,7 +56,7 @@ it('posts the entered title, opt-in details, and expected behavior and shows the
   fireEvent.click(screen.getByLabelText('Include technical details'))
   fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }))
   expect(await screen.findByText('Feedback posted on GitHub.')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'View issue' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'View' })).toHaveAttribute(
     'href',
     'https://github.com/OpenFrayApp/console/issues/42',
   )
@@ -93,10 +93,9 @@ it('distinguishes email acceptance and clears the successful draft', async () =>
     target: { value: 'Synthetic description' },
   })
   fireEvent.click(screen.getByRole('button', { name: 'Send feedback' }))
-  expect(await screen.findByText(/Feedback sent by email/)).toHaveTextContent(
-    'Delivery hasn’t been confirmed.',
-  )
-  expect(screen.queryByRole('link', { name: 'View issue' })).toBeNull()
+  expect(await screen.findByText('Feedback sent by email.')).toBeInTheDocument()
+  expect(screen.queryByText(/Delivery hasn’t been confirmed/)).toBeNull()
+  expect(screen.queryByRole('link', { name: 'View' })).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Done' }))
   view.rerender(<FeedbackDialog {...props} open={false} />)
   view.rerender(<FeedbackDialog {...props} />)
@@ -140,6 +139,14 @@ it('keeps a draft across closing and reopening and makes Security private', () =
   const onClose = vi.fn()
   const props = { open: true, onClose, counts: { creatures: 3, players: 2, npcs: 1 } }
   const view = render(<FeedbackDialog {...props} />)
+  expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+    'Bug',
+    'Feature request',
+    'Question',
+    'Security',
+    'Other',
+    'Not sure',
+  ])
   fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'A report' } })
   fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'What happened' } })
   expect(screen.getByLabelText('Expected behavior (optional)')).toBeInTheDocument()
