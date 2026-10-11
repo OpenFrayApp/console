@@ -6,6 +6,7 @@ import {
   capitalizeSegments,
   crDetail,
   formatSenses,
+  formatSpellCastingTime,
   legendaryPreamble,
   proficiencyBonus,
   signed,
@@ -25,7 +26,32 @@ it('preserves creator attribution in card footers while omitting Kibbles’ disp
     'Spells That Don’t Suck (Omega Ankh & somanyrobots)',
   )
   expect(sourceInfo('somanyrobots-so-many-spells').ruleset).toBe('So Many Spells (somanyrobots)')
-  expect(sourceInfo('khyberia-srd').ruleset).toBe('Khyberia SRD (Nick Stefanski)')
+  expect(sourceInfo('khyberia-srd').ruleset).toBe('Khyberia (Nick Stefanski)')
+  expect(sourceInfo('kobold-press-deepm').ruleset).toBe('Deep Magic')
+})
+
+describe('formatSpellCastingTime', () => {
+  it.each([
+    ['action', 'Action'],
+    ['1 action', 'Action'],
+    ['bonus action', 'Bonus Action'],
+    ['1 bonus-action', 'Bonus Action'],
+    ['reaction', 'Reaction'],
+    [
+      '1 reaction (which you take when a creature dies)',
+      'Reaction (which you take when a creature dies)',
+    ],
+    [
+      '1 reaction, which you take when a creature dies',
+      'Reaction, which you take when a creature dies',
+    ],
+    ['reaction when you are hit', 'Reaction when you are hit'],
+    ['2 actions', '2 Actions'],
+    ['1 minute', '1 Minute'],
+    ['10 minutes plus 1 hour of attunement', '10 Minutes Plus 1 Hour Of Attunement'],
+  ])('displays %s as %s while preserving meaningful counts and conditions', (raw, displayed) => {
+    expect(formatSpellCastingTime(raw)).toBe(displayed)
+  })
 })
 
 describe('formatSenses', () => {

@@ -42,8 +42,19 @@ describe('libraries', () => {
     expect(librarySource('srd-5.2')).toBe('Core')
     expect(librarySource('srd-5.1')).toBe('Core')
     expect(librarySource('kobold-press-tob3')).toBe('ToB3')
-    expect(librarySource('kobold-press-ccdx')).toBe('CCdx')
+    expect(librarySource('kobold-press-ccdx')).toBe('CC')
     expect(librarySource('custom')).toBeUndefined()
+  })
+
+  it('uses concise Deep Magic and Khyberia titles while retaining attribution and stable sources', () => {
+    const deepMagic = LIBRARIES.find((library) => library.id === 'kobold-press-deepm')!
+    const khyberia = LIBRARIES.find((library) => library.id === 'khyberia-srd')!
+    expect(librarySettingsLabel(deepMagic)).toBe('Deep Magic')
+    expect(librarySettingsLabel(khyberia)).toBe('Khyberia')
+    expect(deepMagic.label).toBe('Deep Magic (Kobold Press)')
+    expect(khyberia.label).toBe('Khyberia (Nick Stefanski)')
+    expect(deepMagic.spellsFile).toBe('deep-magic-2020-spells.json')
+    expect(khyberia.creaturesFile).toBe('khyberia-creatures.json')
   })
 
   it('colors source badges by family: siblings match, different families differ', () => {
@@ -80,6 +91,7 @@ describe('libraries', () => {
     const sources = [
       'kobold-press-toh',
       'kobold-press-deepm',
+      'kobold-press-wz',
       'kibblestasty-casting-compendium-v2.3',
       'somanyrobots-spells-that-dont-suck',
       'somanyrobots-so-many-spells',
@@ -99,6 +111,10 @@ describe('libraries', () => {
     expect(librarySourceBadgeClass('kobold-press-toh')).toBe(
       librarySourceBadgeClass('kobold-press-tob3'),
     )
+    expect(librarySource('kobold-press-wz')).toBe('WG')
+    expect(librarySourceBadgeClass('kobold-press-wz')).toBe(
+      librarySourceBadgeClass('kobold-press-tob3'),
+    )
     expect(libraryReferenceOnly('srd-5.2')).toBe(false)
     expect(libraryReferenceOnly('custom')).toBe(false)
   })
@@ -107,7 +123,10 @@ describe('libraries', () => {
     const kibbles = librarySourceBadgeClass('kibblestasty-casting-compendium-v2.3')
     const stds = librarySourceBadgeClass('somanyrobots-spells-that-dont-suck')
     expect(kibbles).toContain('orange')
-    expect(stds).toContain('cyan')
+    expect(stds).toBe(
+      'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300',
+    )
+    expect(librarySourceBadgeClass('srd-5.2')).toContain('sky')
     expect(librarySourceBadgeClass('somanyrobots-so-many-spells')).toBe(stds)
     expect(kibbles).not.toBe(stds)
     for (const source of ['srd-5.2', 'kobold-press-tob', 'openfray-brood-and-bloom', 'custom']) {

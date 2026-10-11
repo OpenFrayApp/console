@@ -62,6 +62,7 @@ const ROUNDS_PER = { round: 1, minute: 10 } as const
  * durations convert (1 minute = 10 rounds); hours and longer return undefined (indefinite).
  */
 export function durationRounds(duration: string): number | undefined {
+  if (/^special\b/i.test(duration)) return undefined
   const m = /(\d+)\s*(round|minute)s?/i.exec(duration)
   if (!m) return undefined
   return Number(m[1]) * ROUNDS_PER[m[2].toLowerCase() as 'round' | 'minute']

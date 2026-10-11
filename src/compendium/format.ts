@@ -56,6 +56,16 @@ export function capitalizeSegments(value: string | undefined): string | undefine
     .join(', ')
 }
 
+/** Display casting-time labels without a redundant action count, preserving reaction conditions. */
+export function formatSpellCastingTime(value: string): string {
+  const time = value
+    .trim()
+    .replace(/^1\s+(?=(?:bonus[- ]+)?action\b|reaction\b)/i, '')
+    .replace(/^bonus-action\b/i, 'bonus action')
+  const action = time.match(/^(?:bonus action|action|reaction)\b/i)
+  return action ? titleCase(action[0]) + time.slice(action[0].length) : titleCase(time)
+}
+
 /** "Cantrip" for level 0, otherwise the compact "Lvl N" a picker row wears. */
 export function spellLevelShort(level: number): string {
   return level === 0 ? 'Cantrip' : `Lvl ${level}`
