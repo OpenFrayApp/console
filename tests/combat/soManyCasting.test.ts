@@ -474,7 +474,7 @@ describe('So Many Spells reviewed casting', () => {
   })
 
   it('keeps Deep Magic pending and non-rollable even if forged mechanics are supplied', () => {
-    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toHaveLength(503)
+    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toHaveLength(483)
     expect(
       Object.keys(REFERENCE_ONLY_SPELLS).every((id) => id.startsWith('kobold-press-deepm:')),
     ).toBe(true)

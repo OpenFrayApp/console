@@ -34,6 +34,9 @@ const stdsCards = JSON.parse(
 const kibblesCards = JSON.parse(
   readFileSync('public/compendium/kibbles-casting-v23-spells.json', 'utf8'),
 ) as Spell[]
+const deepMagicCards = JSON.parse(
+  readFileSync('public/compendium/deep-magic-2020-spells.json', 'utf8'),
+) as Spell[]
 const caster = monster({
   combatantId: 'caster',
   label: 'Mage',
@@ -100,6 +103,64 @@ afterEach(() => {
 })
 
 describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting', (entry) => {
+  it('applies Deep Magic fright only after a failed initial save', () => {
+    const spell = deepMagicCards.find(
+      (card) => card.id === 'kobold-press-deepm:abhorrent-apparition',
+    )!
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: /Apply Abhorrent Apparition/ }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).effects).toMatchObject([
+      { name: 'Frightened', duration: { type: 'rounds', rounds: 10 } },
+    ])
+  })
+
+  it('retains Deep Magic gravity area after successful initial saves', () => {
+    const spell = deepMagicCards.find((card) => card.id === 'kobold-press-deepm:amplify-gravity')!
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'caster')
+    expect(update.update(caster).concentration?.spell).toBe(spell.name)
+  })
+
+  it('does not apply Ale-dritch poison without its secondary save', () => {
+    const spell = deepMagicCards.find((card) => card.id === 'kobold-press-deepm:ale-dritch-blast')!
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to Ogre' }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).effects).toEqual([])
+  })
+
+  it.each(['acid-gate', 'acid-rain', 'alchemical-form'])(
+    'creates Deep Magic %s without premature damage',
+    (slug) => {
+      const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
+      const dispatch = cast(spell, entry)
+      expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'caster')
+      expect(update.update(caster).hp).toEqual(caster.hp)
+      expect(update.update(caster).effects).toMatchObject([
+        { name: spell.name, source: 'caster', modifier: null },
+      ])
+    },
+  )
+
   it.each(['burst-stone', 'sudden-slue'])(
     'resolves %s and applies Prone only to a failed target',
     (slug) => {

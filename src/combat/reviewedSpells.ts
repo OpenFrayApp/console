@@ -30,6 +30,8 @@ import { KIBBLES_CASTING_8 } from './spells/kibblesCasting8.ts'
 import { KIBBLES_CASTING_9 } from './spells/kibblesCasting9.ts'
 import { KIBBLES_CASTING_10 } from './spells/kibblesCasting10.ts'
 
+import { DEEP_MAGIC_2020_FIRST } from './spells/deepMagic2020First.ts'
+
 export interface ReviewedSpellCasting {
   source: Spell['source']
   edition: Spell['edition']
@@ -68,6 +70,7 @@ export const REVIEWED_SPELL_CASTING: Record<string, ReviewedSpellCasting> = {
   ...KIBBLES_CASTING_8,
   ...KIBBLES_CASTING_9,
   ...KIBBLES_CASTING_10,
+  ...DEEP_MAGIC_2020_FIRST,
 }
 
 /** Find an explicitly reviewed source entry, never a same-name or custom-copy fallback. */
