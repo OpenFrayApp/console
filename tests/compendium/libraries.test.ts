@@ -107,7 +107,8 @@ describe('libraries', () => {
     const kibbles = librarySourceBadgeClass('kibblestasty-casting-compendium-v2.3')
     const stds = librarySourceBadgeClass('somanyrobots-spells-that-dont-suck')
     expect(kibbles).toContain('orange')
-    expect(stds).toContain('cyan')
+    expect(stds).toBe('bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300')
+    expect(librarySourceBadgeClass('srd-5.2')).toContain('sky')
     expect(librarySourceBadgeClass('somanyrobots-so-many-spells')).toBe(stds)
     expect(kibbles).not.toBe(stds)
     for (const source of ['srd-5.2', 'kobold-press-tob', 'openfray-brood-and-bloom', 'custom']) {

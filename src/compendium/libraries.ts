@@ -211,7 +211,7 @@ const SOURCE_BADGE_CLASS: Record<string, string> = {
   tob: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
   openfray: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
   kibbles: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
-  somanyrobots: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300',
+  somanyrobots: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300',
 }
 const SOURCE_BADGE_FALLBACK = 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
 
