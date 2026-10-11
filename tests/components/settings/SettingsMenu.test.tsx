@@ -14,16 +14,18 @@ function menu({ theme = 'dark' as Theme, open = true } = {}) {
   const onToggleTheme = vi.fn()
   const onOpenSettings = vi.fn()
   const onShowHotkeys = vi.fn()
+  const onShareFeedback = vi.fn()
   render(
     <SettingsMenu
       theme={theme}
       onToggleTheme={onToggleTheme}
       onOpenSettings={onOpenSettings}
       onShowHotkeys={onShowHotkeys}
+      onShareFeedback={onShareFeedback}
     />,
   )
   if (open) fireEvent.click(screen.getByRole('button', { name: 'Settings and more' }))
-  return { onToggleTheme, onOpenSettings, onShowHotkeys }
+  return { onToggleTheme, onOpenSettings, onShowHotkeys, onShareFeedback }
 }
 
 describe('SettingsMenu', () => {
@@ -65,11 +67,11 @@ describe('SettingsMenu', () => {
     expect(link).toHaveAttribute('target', '_blank')
   })
 
-  it('sends a bug report to a fresh GitHub issue, in its own tab', () => {
-    menu()
-    const link = screen.getByText('Report a bug').closest('a')
-    expect(link).toHaveAttribute('href', 'https://github.com/OpenFrayApp/console/issues/new')
-    expect(link).toHaveAttribute('target', '_blank')
+  it('opens feedback in the console and closes the settings menu', () => {
+    const { onShareFeedback } = menu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Share feedback' }))
+    expect(onShareFeedback).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 
   it('closes on Escape', () => {
