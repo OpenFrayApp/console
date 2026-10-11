@@ -40,6 +40,33 @@ describe('SpellCard', () => {
     expect(screen.getByText(/Basic Rules 2024/)).toBeInTheDocument()
   })
 
+  it.each([
+    ['1 action', 'Action'],
+    ['1 bonus action', 'Bonus Action'],
+    [
+      '1 reaction (which you take when a creature dies)',
+      'Reaction (which you take when a creature dies)',
+    ],
+    [
+      '1 reaction, which you take when a creature dies',
+      'Reaction, which you take when a creature dies',
+    ],
+    ['2 actions', '2 Actions'],
+    ['10 minutes plus 1 hour of attunement', '10 Minutes Plus 1 Hour Of Attunement'],
+  ])('formats casting time %s for display without changing source data', (raw, displayed) => {
+    const card = spell({ castingTime: raw, duration: 'instantaneous' })
+    const original = JSON.stringify(card)
+    render(<SpellCard spell={card} />)
+    expect(screen.getByText(displayed)).toBeInTheDocument()
+    expect(screen.getByText('Instantaneous')).toBeInTheDocument()
+    expect(JSON.stringify(card)).toBe(original)
+  })
+
+  it('title-cases special duration details without converting their timing', () => {
+    render(<SpellCard spell={spell({ concentration: true, duration: 'special (+ 1 round)' })} />)
+    expect(screen.getByText('Concentration, Special (+ 1 Round)')).toBeInTheDocument()
+  })
+
   it('labels a cantrip', () => {
     render(<SpellCard spell={LIGHT} />)
     expect(screen.getByText('Evocation cantrip')).toBeInTheDocument()

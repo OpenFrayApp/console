@@ -4,7 +4,7 @@
 import type { Spell } from '../../schema/spell.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
-import { spellLevelOrdinal } from '../../compendium/format.ts'
+import { formatSpellCastingTime, spellLevelOrdinal, titleCase } from '../../compendium/format.ts'
 import { Button } from '../ui/primitives.tsx'
 
 /** The italic type line: "evocation cantrip" or "3rd-level evocation". */
@@ -78,7 +78,7 @@ export function SpellCard({
   onDelete?: () => void
 }) {
   return (
-    <div className="flex flex-1 flex-col space-y-3">
+    <div className="flex flex-1 flex-col space-y-3 text-left">
       <div>
         <h3 className="text-lg font-semibold">{spell.name}</h3>
         <p className="flex items-center gap-1.5 text-sm italic text-slate-500 dark:text-slate-400">
@@ -88,12 +88,12 @@ export function SpellCard({
       </div>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-        <Row label="Casting Time" value={spell.castingTime} />
+        <Row label="Casting Time" value={formatSpellCastingTime(spell.castingTime)} />
         <Row label="Range" value={spell.range} />
         <Row label="Components" value={componentLine(spell)} />
         <Row
           label="Duration"
-          value={`${spell.concentration ? 'Concentration, ' : ''}${spell.duration}`}
+          value={`${spell.concentration ? 'Concentration, ' : ''}${titleCase(spell.duration)}`}
         />
       </dl>
 

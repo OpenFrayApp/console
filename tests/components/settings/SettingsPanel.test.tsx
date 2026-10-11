@@ -256,7 +256,8 @@ describe('SettingsPanel', () => {
     for (const title of [
       'Basic Rules 2024',
       'Basic Rules 2014',
-      'Khyberia SRD',
+      'Khyberia',
+      'Deep Magic',
       'Tome of Beasts 3',
       'Kibbles’ Casting Compendium',
     ]) {
@@ -265,7 +266,7 @@ describe('SettingsPanel', () => {
       expect(label.textContent).not.toContain('v2.3')
     }
     expect(screen.queryByText('So Many Spells (somanyrobots)')).toBeNull()
-    expect(screen.queryByText('Khyberia SRD (Nick Stefanski)')).toBeNull()
+    expect(screen.queryByText('Khyberia (Nick Stefanski)')).toBeNull()
   })
 
   it('never lets the user disable the last library', () => {
