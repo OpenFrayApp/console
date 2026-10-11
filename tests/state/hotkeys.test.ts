@@ -75,7 +75,7 @@ describe('chordOf', () => {
 
 describe('formatChord', () => {
   it('names the keys pressed', () => {
-    expect(formatChord('meta+k')).toBe('⌘+K')
+    expect(formatChord('meta+k')).toBe('⌘K')
     expect(formatChord('n')).toBe('N')
     expect(formatChord('shift+n')).toBe('Shift+N')
     expect(formatChord('ctrl+a')).toBe('Ctrl+A')
