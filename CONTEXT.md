@@ -23,3 +23,11 @@ _Avoid_: Saved action
 **Divergent copies**:
 Recovery and cloud copies that contain independent committed actions, so neither can safely replace the other automatically.
 _Avoid_: Newer save, sync error
+
+**Feedback report**:
+A title, description, and category supplied by a console user about a bug, feature request, question, or other concern.
+_Avoid_: Share report, moderation report
+
+**Security feedback**:
+A feedback report about a possible vulnerability, shared privately with the maintainer.
+_Avoid_: Public security issue

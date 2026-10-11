@@ -192,12 +192,14 @@ export function SettingsMenu({
   onToggleTheme,
   onOpenSettings,
   onShowHotkeys,
+  onShareFeedback,
 }: {
   theme: Theme
   onToggleTheme: () => void
   onOpenSettings: () => void
   /** Open the keyboard cheat sheet — the same overlay Shift+/ shows. */
   onShowHotkeys: () => void
+  onShareFeedback: () => void
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -266,10 +268,12 @@ export function SettingsMenu({
 
           <Item
             icon={<BugIcon />}
-            href="https://github.com/OpenFrayApp/console/issues/new"
-            onClick={close}
+            onClick={() => {
+              close()
+              onShareFeedback()
+            }}
           >
-            Report a bug
+            Share feedback
           </Item>
 
           {/* The footer's legal links, which the phone footer has no room for. The

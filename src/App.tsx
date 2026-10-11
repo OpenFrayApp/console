@@ -166,6 +166,7 @@ import { useTutorialSetup } from './tutorial/useTutorialSetup.ts'
 import { TutorialSetup } from './tutorial/TutorialSetup.tsx'
 import { TutorialEntry } from './tutorial/TutorialEntry.tsx'
 import type { TutorialSuppression } from './state/settings.ts'
+import { FeedbackDialog } from './components/settings/FeedbackDialog.tsx'
 import { SettingsMenu, SlidersIcon, HelpIcon } from './components/settings/SettingsMenu.tsx'
 import { MobileNav, type MobileTab } from './components/shell/MobileNav.tsx'
 import { Wordmark } from './components/shell/Wordmark.tsx'
@@ -318,6 +319,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   }
   const keymap = useMemo(() => resolveHotkeys(hotkeys), [hotkeys])
   const [helpOpen, setHelpOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   // Bump counters that open an already-mounted control from the keyboard; each
   // consumer latches the value it mounted with, so only a later bump acts.
   const [groupSaveRequest, setGroupSaveRequest] = useState(0)
@@ -1432,6 +1434,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       !searchOpen &&
       !authOpen &&
       !helpOpen &&
+      !feedbackOpen &&
       !initPrompt &&
       !recap &&
       !endPrompt &&
@@ -1867,6 +1870,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   track(EVENTS.themeToggled)
                   toggleTheme()
                 }}
+                onShareFeedback={() => setFeedbackOpen(true)}
                 onShowHotkeys={() => setHelpOpen(true)}
                 onOpenSettings={() => {
                   track(EVENTS.settingsOpened)
@@ -2134,6 +2138,19 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             )}
           </main>
 
+          <FeedbackDialog
+            open={feedbackOpen}
+            onClose={() => setFeedbackOpen(false)}
+            counts={{
+              creatures: encounter.combatants.filter((combatant) => !combatant.isPC).length,
+              players: encounter.combatants.filter(
+                (combatant) => combatant.isPC && combatant.kind !== 'quick',
+              ).length,
+              npcs: encounter.combatants.filter(
+                (combatant) => combatant.isPC && combatant.kind === 'quick',
+              ).length,
+            }}
+          />
           {helpOpen && <KeyboardHelp bindings={keymap} onClose={() => setHelpOpen(false)} />}
 
           {logOpen && (
