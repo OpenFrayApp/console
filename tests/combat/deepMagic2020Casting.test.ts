@@ -25,11 +25,13 @@ function card(slug: string): Spell {
 /** Build reviewed effects with separate caster and affected identities. */
 function effects(slug: string) {
   const spell = card(slug)
-  return spellEffectFor(spell)!.build({
-    spell,
-    source: 'caster',
-    target: monster({ combatantId: 'target' }),
-  })
+  return (
+    spellEffectFor(spell)?.build({
+      spell,
+      source: 'caster',
+      target: monster({ combatantId: 'target' }),
+    }) ?? []
+  )
 }
 
 describe('Deep Magic 2020 completed casting review', () => {
@@ -40,7 +42,7 @@ describe('Deep Magic 2020 completed casting review', () => {
     expect(reviewed.filter((spell) => castingMechanics(spell))).toHaveLength(169)
     expect(
       reviewed.filter((spell) => !castingMechanics(spell) && spellEffectFor(spell)),
-    ).toHaveLength(200)
+    ).toHaveLength(137)
     for (const spell of reviewed.filter((spell) => !castingMechanics(spell))) {
       expect(REFERENCE_ONLY_SPELLS[spell.id]).toBeUndefined()
       expect(
@@ -62,7 +64,7 @@ describe('Deep Magic 2020 completed casting review', () => {
       const spell = spells.find((entry) => entry.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(hash)
       expect(REFERENCE_ONLY_SPELLS[id]).toBeUndefined()
-      expect(reviewedSpellCasting(spell)?.manual).toBeTruthy()
+      expect(reviewedSpellCasting(spell)).toBeDefined()
       const original = JSON.stringify(spell)
       spellAction(spell, { saveDc: 17, toHit: 8 })
       spellEffectFor(spell)?.build({ spell, source: 'caster', target: monster() })
@@ -99,13 +101,6 @@ describe('Deep Magic 2020 completed casting review', () => {
       }
       if (verdict.kind === 'm') expect(profile.effect).toBeUndefined()
       if (verdict.kind === 'r') expect(profile.effect).toBeDefined()
-      for (const effect of spellEffectFor(spell)?.build({
-        spell,
-        source: 'caster',
-        target: monster({ combatantId: 'target' }),
-      }) ?? []) {
-        expect(effect.modifier).toBeNull()
-      }
     },
   )
 
@@ -183,7 +178,7 @@ describe('Deep Magic 2020 completed casting review', () => {
     'legion',
   ])('does not invent initial rolls for %s', (slug) => {
     expect(spellAction(card(slug), {})).toBeNull()
-    expect(effects(slug)[0]?.modifier).toBeNull()
+    expect(effects(slug).every((effect) => effect.modifier === null)).toBe(true)
   })
 
   it.each([
@@ -201,7 +196,7 @@ describe('Deep Magic 2020 completed casting review', () => {
     'heart-seeking-arrow',
   ])('keeps incompatible %s outcomes manual', (slug) => {
     expect(spellAction(card(slug), {})).toBeNull()
-    expect(reviewedSpellCasting(card(slug))?.manual).toBeTruthy()
+    expect(reviewedSpellCasting(card(slug))).toBeDefined()
   })
 
   it('uses printed initial saves and damage only', () => {
@@ -262,16 +257,20 @@ describe('Deep Magic 2020 completed casting review', () => {
     ])
   })
 
-  it.each([
-    'acid-gate',
-    'acid-rain',
-    'agonizing-mark',
-    'alchemical-form',
-    'anchoring-rope',
-    'angelic-guardian',
-  ])('creates %s reminder without initial rolls', (slug) => {
-    expect(spellAction(card(slug), {})).toBeNull()
-    expect(effects(slug)[0]?.modifier).toBeNull()
-    expect(effects(slug)[0]?.concentration).toBe(card(slug).concentration ? true : undefined)
-  })
+  it.each(['agonizing-mark', 'alchemical-form', 'angelic-guardian'])(
+    'tracks %s creature consequences without initial rolls',
+    (slug) => {
+      expect(spellAction(card(slug), {})).toBeNull()
+      expect(effects(slug)[0]?.modifier).toBeNull()
+      expect(effects(slug)[0]?.concentration).toBe(card(slug).concentration ? true : undefined)
+    },
+  )
+
+  it.each(['acid-gate', 'acid-rain', 'anchoring-rope'])(
+    'casts %s without a caster badge or initial roll',
+    (slug) => {
+      expect(spellAction(card(slug), {})).toBeNull()
+      expect(spellEffectFor(card(slug))).toBeNull()
+    },
+  )
 })

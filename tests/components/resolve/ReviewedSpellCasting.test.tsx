@@ -104,6 +104,26 @@ afterEach(() => {
 
 describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting', (entry) => {
   it.each([
+    'kibblestasty-casting-compendium-v2.3:animate-shadow',
+    'somanyrobots-so-many-spells:alter-metal',
+    'kobold-press-deepm:conjure-fey-hound',
+    'kobold-press-deepm:dark-path',
+  ])('casts %s without invented guidance, targets, or effects', (id) => {
+    const spell = [...kibblesCards, ...soManyCards, ...deepMagicCards].find(
+      (card) => card.id === id,
+    )!
+    const dispatch = cast(spell, entry)
+    expect(screen.queryByText('GM resolution:')).not.toBeInTheDocument()
+    expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Apply effect|Roll saves|Roll attack/ })).toBeNull()
+    expect(
+      dispatch.mock.calls
+        .filter(([action]) => action.type === 'update')
+        .flatMap(([action]) => action.update(action.id === 'caster' ? caster : target).effects),
+    ).toEqual([])
+  })
+
+  it.each([
     'black-swan-storm',
     'blizzard',
     'creeping-ice',
@@ -181,7 +201,7 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
   ])('does not offer invented compatible outcomes for %s', (slug) => {
     const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
     cast(spell, entry)
-    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
@@ -203,9 +223,13 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
       .map(([action]) => action)
       .find((action) => action.type === 'update' && action.id === 'caster')
     expect(update.update(caster).hp).toEqual(caster.hp)
-    expect(update.update(caster).effects).toMatchObject([
-      { name: spell.name, source: 'caster', modifier: null },
-    ])
+    if (['writhing-arms', 'maw-of-needles'].includes(slug)) {
+      expect(update.update(caster).effects).toMatchObject([
+        { name: spell.name, source: 'caster', modifier: null },
+      ])
+    } else {
+      expect(update.update(caster).effects).toEqual([])
+    }
   })
 
   it('applies Deep Magic fright only after a failed initial save', () => {
@@ -220,7 +244,10 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
       .map(([action]) => action)
       .find((action) => action.type === 'update' && action.id === 'target')
     expect(update.update(target).effects).toMatchObject([
-      { name: 'Frightened', duration: { type: 'rounds', rounds: 10 } },
+      {
+        name: 'Frightened',
+        duration: { type: 'saveEnds', save: { ability: 'wis', dc: 99 }, when: 'endOfTurn' },
+      },
     ])
   })
 
@@ -260,9 +287,13 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
         .map(([action]) => action)
         .find((action) => action.type === 'update' && action.id === 'caster')
       expect(update.update(caster).hp).toEqual(caster.hp)
-      expect(update.update(caster).effects).toMatchObject([
-        { name: spell.name, source: 'caster', modifier: null },
-      ])
+      if (slug === 'alchemical-form') {
+        expect(update.update(caster).effects).toMatchObject([
+          { name: spell.name, source: 'caster', modifier: null },
+        ])
+      } else {
+        expect(update.update(caster).effects).toEqual([])
+      }
     },
   )
 
@@ -273,7 +304,7 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
       expect(screen.getByLabelText('Save DC')).toHaveValue('99')
       expect(screen.getByLabelText('On save')).toHaveValue('half')
       if (slug === 'burst-stone')
-        expect(screen.getByText(/Mark the difficult terrain/)).toBeInTheDocument()
+        expect(screen.queryByText(/Mark the difficult terrain/)).not.toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
       fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
       fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${card(slug).name}`) }))
@@ -322,7 +353,7 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     cast(slug, entry)
     expect(screen.getByText(`${ability} save`)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
-    expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+    expect(screen.queryByText('GM resolution:')).not.toBeInTheDocument()
   })
 
   it('applies Stone Aegis to the caster without modifying current or temporary hit points', () => {
@@ -336,7 +367,6 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     expect(acOf(after)).toBe(acOf(caster) + 2)
     expect(after.effects).toMatchObject([
       { modifier: { applies: 'ac', value: 2 }, source: 'caster' },
-      { modifier: null, source: 'caster' },
     ])
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(
@@ -347,7 +377,7 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
   it('resolves Lance as an attack and anchors Restrained to the target’s next turn', () => {
     const dispatch = cast('lance', entry)
     expect(screen.queryByLabelText('Save DC')).toBeNull()
-    expect(screen.getByText(/Apply Restrained only on a hit/)).toBeInTheDocument()
+    expect(screen.queryByText(/Apply Restrained only on a hit/)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
     fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
     fireEvent.click(screen.getByRole('button', { name: 'Apply Lance to Ogre' }))
@@ -393,8 +423,8 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     expect(screen.queryByLabelText('Save DC')).toBeNull()
     expect(screen.queryByRole('button', { name: /Apply Smelting Blast/ })).toBeNull()
     expect(
-      screen.getByText(/After a hit, separately resolve a Constitution save/),
-    ).toBeInTheDocument()
+      screen.queryByText(/After a hit, separately resolve a Constitution save/),
+    ).not.toBeInTheDocument()
   })
 
   it('does not offer Lance’s Restrained effect after a miss', () => {
@@ -415,7 +445,7 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
 
   it('shows reviewed manual-only spells without inventing an initial resolver', () => {
     cast('gale', entry)
-    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
@@ -433,7 +463,7 @@ describe.each(['panel', 'monster'] as const)('So Many Spells through %s casting'
     (slug) => {
       const spell = soManyCard(slug)
       const dispatch = cast(spell, entry)
-      expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+      expect(screen.queryByText('GM resolution:')).not.toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
       fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
       fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${spell.name}`) }))
@@ -460,7 +490,9 @@ describe.each(['panel', 'monster'] as const)('So Many Spells through %s casting'
 
   it('casts Deathgrip as an attack with no immediate damage', () => {
     const dispatch = cast(soManyCard('deathgrip'), entry)
-    expect(screen.getByText(/Initial ranged spell attack deals no damage/)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Initial ranged spell attack deals no damage/),
+    ).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
     fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
     expect(screen.queryByLabelText('Damage to apply')).toBeNull()
@@ -533,7 +565,7 @@ describe.each(['panel', 'monster'] as const)('So Many Spells through %s casting'
     'volcanic-seep',
   ])('keeps %s mixed or ambiguous rules explicitly manual', (slug) => {
     cast(soManyCard(slug), entry)
-    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
@@ -686,7 +718,7 @@ describe.each(['panel', 'monster'] as const)(
       'morph-earth',
     ])('keeps %s mixed branches explicitly manual', (slug) => {
       cast(stdsCard(slug), entry)
-      expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+      expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
@@ -726,12 +758,41 @@ describe.each(['panel', 'monster'] as const)(
 )
 
 describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entry) => {
+  it.each([
+    ['illusory-pit', 'Prone'],
+    ['poison-blast', 'Poisoned'],
+    ['twisting-eruption', 'Restrained'],
+    ['vicious-vapors', 'Poisoned'],
+  ])(
+    'applies %s’s initial failed-save condition to its target, never the caster',
+    (slug, state) => {
+      const spell = kibblesCard(slug)
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Apply ${spell.name}`) }))
+      const targetUpdate = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'target')
+      expect(
+        targetUpdate
+          .update(target)
+          .effects.some((effect: { name: string }) => effect.name === state),
+      ).toBe(true)
+      for (const [action] of dispatch.mock.calls.filter(
+        ([action]) => action.type === 'update' && action.id === 'caster',
+      )) {
+        expect(action.update(caster).effects).toEqual([])
+      }
+    },
+  )
+
   it.each(['acid-bubble', 'electrocute', 'mind-blast', 'flash-freeze', 'shadow-bind', 'supernova'])(
     'opens %s initial save and manual guidance',
     (slug) => {
       cast(kibblesCard(slug), entry)
       expect(screen.getByLabelText('Save DC')).toHaveValue('99')
-      expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+      expect(screen.queryByText('GM resolution:')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
     },
   )
@@ -769,7 +830,7 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
       fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
       fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
       expect(screen.queryByLabelText('Damage to apply')).toBeNull()
-      expect(screen.getByText('GM resolution:')).toBeInTheDocument()
+      expect(screen.queryByText('GM resolution:')).not.toBeInTheDocument()
     },
   )
 
@@ -836,7 +897,7 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
     'exsanguinate',
   ])('keeps %s incompatible outcomes manual', (slug) => {
     cast(kibblesCard(slug), entry)
-    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
   })
@@ -852,9 +913,13 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
         .map(([action]) => action)
         .find((action) => action.type === 'update' && action.id === 'caster')
       expect(update.update(caster).hp).toEqual(caster.hp)
-      expect(update.update(caster).effects).toMatchObject([
-        { name: spell.name, source: 'caster', modifier: null },
-      ])
+      if (['sanguine-spears', 'vampiric-mosquito'].includes(slug)) {
+        expect(update.update(caster).effects).toMatchObject([
+          { name: spell.name, source: 'caster', modifier: null },
+        ])
+      } else {
+        expect(update.update(caster).effects).toEqual([])
+      }
     },
   )
 })

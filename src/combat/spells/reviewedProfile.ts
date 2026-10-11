@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import type { ConditionName, EffectDuration, EffectModifier } from '../../schema/effect.ts'
+import type { Ability } from '../../schema/primitives.ts'
 import type { Spell, SpellMechanics } from '../../schema/spell.ts'
-import type { ConditionName, EffectDuration } from '../../schema/effect.ts'
+import { condition, modifierEffect, reminder } from '../effects.ts'
 import type { ReviewedSpellCasting } from '../reviewedSpells.ts'
-import type { SpellEffectDef } from './shared.ts'
-import { condition, reminder } from '../effects.ts'
+import { timedDuration, type SpellEffectDef } from './shared.ts'
 
 /** Author initial damage and its explicit slot or cantrip progression without reading spell prose. */
 export function reviewedDamage(
@@ -58,24 +59,56 @@ export function sourceProfile(
   return { ...profile, source, edition, name }
 }
 
-/** Keep conditional and later-triggered rules visible without applying broad modifiers. */
-export function ruleReminder(
+type BoardConsequence = (
+  | { condition: ConditionName; modifier?: never; note?: never }
+  | { modifier: EffectModifier; condition?: never; note?: string }
+  | { note: string; condition?: never; modifier?: never }
+) & {
+  duration?: EffectDuration | 'escape'
+  fallbackDuration?: EffectDuration
+  escapeAbility?: Ability
+  turnOwner?: 'target'
+  concentration?: false
+  durationNote?: string
+}
+
+/** Build authored creature consequences using the same effect shapes as the Core tables. */
+export function boardEffect(
   name: string,
-  note: string,
-  duration: EffectDuration,
-  targeting: SpellEffectDef['targeting'] = 'enemy',
-  multi = false,
-  durationNote?: string,
+  consequences: BoardConsequence[],
+  options: Pick<SpellEffectDef, 'summary' | 'targeting' | 'multi'>,
 ): SpellEffectDef {
   return {
-    summary: note,
-    targeting,
-    multi,
-    build: ({ source }) => [
-      {
-        ...reminder(name, note, { source, duration: { ...duration } }),
-        ...(durationNote && { durationNote }),
-      },
-    ],
+    ...options,
+    build: ({ source, target, spell, save }) =>
+      consequences.map((consequence) => {
+        const duration =
+          consequence.duration === 'escape'
+            ? save
+              ? {
+                  type: 'saveEnds' as const,
+                  save: { ...save, ability: consequence.escapeAbility ?? save.ability },
+                  when: 'endOfTurn' as const,
+                }
+              : (consequence.fallbackDuration ?? timedDuration(spell))
+            : (consequence.duration ?? timedDuration(spell))
+        const opts = {
+          source: consequence.turnOwner === 'target' ? (target?.combatantId ?? source) : source,
+          duration:
+            consequence.turnOwner === 'target' && !target
+              ? { type: 'manual' as const }
+              : { ...duration },
+        }
+        const effect = consequence.condition
+          ? condition(consequence.condition, opts)
+          : consequence.modifier
+            ? modifierEffect({ name, ...consequence.modifier }, { ...opts, note: consequence.note })
+            : reminder(name, consequence.note!, opts)
+        return {
+          ...effect,
+          ...(consequence.concentration === false && { concentration: false as const }),
+          ...(consequence.durationNote && { durationNote: consequence.durationNote }),
+        }
+      }),
   }
 }

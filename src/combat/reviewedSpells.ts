@@ -58,8 +58,6 @@ export interface ReviewedSpellCasting {
   attackKind?: 'melee' | 'ranged'
   mechanics?: SpellMechanics
   effect?: SpellEffectDef
-  /** Rules the existing resolvers cannot execute, shown alongside the cast. */
-  manual: string
 }
 
 export const REVIEWED_SPELL_CASTING: Record<string, ReviewedSpellCasting> = {

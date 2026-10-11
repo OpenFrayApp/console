@@ -14,8 +14,6 @@ export const SPELLS_THAT_DONT_SUCK_7: Record<string, ReviewedSpellCasting> = {
         save: { ability: 'con', onSave: 'half' },
         damage: [{ formula: '14d6', type: 'necrotic' }],
       },
-      manual:
-        'Choose visible creature; maximum HP reduced by actual necrotic damage taken on either save outcome for 1 hour. Reduction is manual and does not end after one round or depend on failure only.',
     },
   ),
 }

@@ -247,7 +247,8 @@ describe('SettingsPanel', () => {
     }
     fireEvent.click(screen.getByText('So Many Spells'))
     expect(onSetEnabledLibraries).toHaveBeenCalledWith(['srd-5.2', 'somanyrobots-so-many-spells'])
-    expect(screen.getByText(/Roll their dice and apply their effects manually/)).toBeTruthy()
+    expect(screen.queryByText(/Reference libraries provide spell cards/)).toBeNull()
+    expect(screen.queryByText(/Roll their dice and apply their effects manually/)).toBeNull()
   })
 
   it('keeps source qualifiers and version suffixes out of the Settings list', () => {

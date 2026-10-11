@@ -3,286 +3,178 @@
 
 import type { ReviewedSpellCasting } from '../reviewedSpells.ts'
 import { deepMagicProfile } from './deepMagic2020Profile.ts'
-import { ruleReminder, reviewedDamage } from './reviewedProfile.ts'
+import { boardEffect, reviewedDamage } from './reviewedProfile.ts'
 
 export const DEEP_MAGIC_2020_REMAINING_1: Record<string, ReviewedSpellCasting> = {
-  'kobold-press-deepm:animated-scroll': deepMagicProfile('Animated Scroll', {
-    manual:
-      'Create one folded-paper CR 0 beast manually; recasting changes its form. Duration 24/48/72/96 hours at caster levels 1/5/11/17.',
-  }),
+  'kobold-press-deepm:animated-scroll': deepMagicProfile('Animated Scroll', {}),
   'kobold-press-deepm:anticipate-arcana': deepMagicProfile('Anticipate Arcana', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Anticipate Arcana',
-      'Advantage only on saves against spells or magical effects until caster next turn start; apply manually.',
-      { type: 'untilSourceTurn', when: 'startOfTurn' },
-      'self',
-      false,
-      'Until caster next turn start',
+      [
+        {
+          note: 'Magical effect saves: advantage',
+          duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+          durationNote: 'Until caster next turn start',
+        },
+      ],
+      { summary: 'Magical effect saves: advantage', targeting: 'self', multi: false },
     ),
-    manual:
-      'Advantage only on saves against spells or magical effects until caster next turn start; apply manually.',
   }),
-  'kobold-press-deepm:anticipate-attack': deepMagicProfile('Anticipate Attack', {
-    manual:
-      'Move up to half speed without opportunity attacks; reassess incoming attack range, targeting, and cover after movement manually.',
-  }),
+  'kobold-press-deepm:anticipate-attack': deepMagicProfile('Anticipate Attack', {}),
   'kobold-press-deepm:anticipate-weakness': deepMagicProfile('Anticipate Weakness', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Anticipate Weakness',
-      'Attack advantage until current turn end; apply and expire manually, not next turn end.',
-      { type: 'manual' },
-      'self',
-      false,
-      'Track printed duration and any early endpoint manually',
+      [
+        {
+          modifier: {
+            applies: 'attackRolls',
+            mode: 'advantage',
+            value: null,
+            direction: 'outgoing',
+          },
+          duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+        },
+      ],
+      { summary: 'Attacks: advantage', targeting: 'self', multi: false },
     ),
-    manual:
-      'Attack advantage until current turn end; apply and expire manually, not next turn end.',
   }),
   'kobold-press-deepm:arcane-sight': deepMagicProfile('Arcane Sight', {
-    effect: ruleReminder(
-      'Arcane Sight',
-      'Track True Seeing, Detect Magic, and witnessed spell identification for up to 1 hour; perception benefits manual.',
-      { type: 'manual' },
-      'ally',
-      true,
-      'Track printed duration and any early endpoint manually',
-    ),
-    manual:
-      'Track True Seeing, Detect Magic, and witnessed spell identification for up to 1 hour; perception benefits manual.',
+    effect: boardEffect('Arcane Sight', [{ note: 'True Seeing; Detect Magic' }], {
+      summary: 'True Seeing; Detect Magic',
+      targeting: 'ally',
+      multi: true,
+    }),
   }),
-  'kobold-press-deepm:as-you-were': deepMagicProfile('As You Were', {
-    manual:
-      'Corpse preservation or undead appearance restoration lasts caster-level hours despite Instantaneous header. Hostile uncontrolled undead get Charisma save; radiant/necrotic damage or Constitution reduction ends disguise.',
-  }),
-  'kobold-press-deepm:ashen-memories': deepMagicProfile('Ashen Memories', {
-    manual:
-      'Touch fire remains for a GM-selected vision of a significant event; no combat roll or guaranteed information.',
-  }),
+  'kobold-press-deepm:as-you-were': deepMagicProfile('As You Were', {}),
+  'kobold-press-deepm:ashen-memories': deepMagicProfile('Ashen Memories', {}),
   'kobold-press-deepm:aspect-of-the-dragon': deepMagicProfile('Aspect of the Dragon', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Aspect of the Dragon',
-      'Choose dragon CR 10 or less; copy form statistics and handle separate HP, excess damage, retained features, speech, and equipment manually.',
-      { type: 'rounds', rounds: 10 },
-      'self',
-      false,
-      'up to 1 minute',
+      [{ note: 'Dragon form (dragon HP)', duration: { type: 'rounds', rounds: 10 } }],
+      { summary: 'Dragon form (dragon HP)', targeting: 'self', multi: false },
     ),
-    manual:
-      'Choose dragon CR 10 or less; copy form statistics and handle separate HP, excess damage, retained features, speech, and equipment manually.',
   }),
   'kobold-press-deepm:aspect-of-the-serpent': deepMagicProfile('Aspect of the Serpent', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Aspect of the Serpent',
-      'Grant 60-foot darkvision/30-foot blindsight manually. Optional bonus-action ranged weapon attack and later bite use weapon statistics, secondary DC 14 Constitution paralysis saves; +1d6 damage per higher slot.',
-      { type: 'rounds', rounds: 10 },
-      'ally',
-      true,
-      'up to 1 minute',
+      [
+        {
+          note: 'Darkvision 60 ft; blindsight 30 ft; serpent strike',
+          duration: { type: 'rounds', rounds: 10 },
+        },
+      ],
+      {
+        summary: 'Darkvision 60 ft; blindsight 30 ft; serpent strike',
+        targeting: 'ally',
+        multi: true,
+      },
     ),
-    manual:
-      'Grant 60-foot darkvision/30-foot blindsight manually. Optional bonus-action ranged weapon attack and later bite use weapon statistics, secondary DC 14 Constitution paralysis saves; +1d6 damage per higher slot.',
   }),
   'kobold-press-deepm:aura-of-protection-or-destruction': deepMagicProfile(
     'Aura of Protection or Destruction',
     {
-      effect: ruleReminder(
+      effect: boardEffect(
         'Aura of Protection or Destruction',
-        'Choose 30-foot aura making all attacks by/against creatures inside natural 1 or natural 20 until caster next turn start; higher slots extend rounds. Resolve rolls manually.',
-        { type: 'manual' },
-        'self',
-        false,
-        'Track printed duration and any early endpoint manually',
+        [{ note: 'Aura: attacks become natural 1 or 20', duration: { type: 'manual' } }],
+        { summary: 'Aura: attacks become natural 1 or 20', targeting: 'self', multi: false },
       ),
-      manual:
-        'Choose 30-foot aura making all attacks by/against creatures inside natural 1 or natural 20 until caster next turn start; higher slots extend rounds. Resolve rolls manually.',
     },
   ),
-  'kobold-press-deepm:auspicious-warning': deepMagicProfile('Auspicious Warning', {
-    manual:
-      'Add rolled d4 to just-made attack, check, or save and recalculate success manually; no persistent bonus.',
-  }),
-  'kobold-press-deepm:avoid-grievous-injury': deepMagicProfile('Avoid Grievous Injury', {
-    manual:
-      'Reaction before critical damage roll converts triggering critical hit to normal hit manually.',
-  }),
+  'kobold-press-deepm:auspicious-warning': deepMagicProfile('Auspicious Warning', {}),
+  'kobold-press-deepm:avoid-grievous-injury': deepMagicProfile('Avoid Grievous Injury', {}),
   'kobold-press-deepm:avronins-astral-assembly': deepMagicProfile('Avronin’s Astral Assembly', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Avronin’s Astral Assembly',
-      'Invite up to casting modifier creatures (minimum 1). Track astral projections, unconscious bodies, voluntary departure, and broken-gem two-level exhaustion manually.',
-      { type: 'manual' },
-      'self',
-      false,
-      'Track printed duration and any early endpoint manually',
+      [{ note: 'Astral projection (body Unconscious)' }],
+      { summary: 'Astral projection (body Unconscious)', targeting: 'self', multi: false },
     ),
-    manual:
-      'Invite up to casting modifier creatures (minimum 1). Track astral projections, unconscious bodies, voluntary departure, and broken-gem two-level exhaustion manually.',
   }),
-  'kobold-press-deepm:awaken-object': deepMagicProfile('Awaken Object', {
-    manual:
-      'Create independent sentient construct from eligible object using printed size table, rolled mental abilities, and 30-foot movement; no initial attack or invented damage type.',
-  }),
+  'kobold-press-deepm:awaken-object': deepMagicProfile('Awaken Object', {}),
   'kobold-press-deepm:bad-timing': deepMagicProfile('Bad Timing', {
     mechanics: { save: { ability: 'cha', onSave: 'negates' } },
-    effect: ruleReminder(
+    effect: boardEffect(
       'Bad Timing',
-      'Failure imposes disadvantage on next attack or ability check within 10 minutes; apply, spend, and expire manually despite Instantaneous header.',
-      { type: 'manual' },
-      'enemy',
-      true,
-      'Track printed consequence and endpoint manually',
+      [{ note: 'Next attack or ability check: disadvantage', duration: { type: 'manual' } }],
+      { summary: 'Next attack or ability check: disadvantage', targeting: 'enemy', multi: true },
     ),
-    manual:
-      'Failure imposes disadvantage on next attack or ability check within 10 minutes; apply, spend, and expire manually despite Instantaneous header.',
   }),
   'kobold-press-deepm:batsense': deepMagicProfile('Batsense', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Batsense',
-      '60-foot echolocation blindsight fails while deafened or in magical silence; hearing Perception advantage and silence-dependent Stealth disadvantage remain conditional/manual.',
-      { type: 'manual' },
-      'ally',
-      true,
-      'Track printed duration and any early endpoint manually',
+      [{ note: 'Echolocation 60 ft; fails when Deafened/silenced' }],
+      {
+        summary: 'Echolocation 60 ft; fails when Deafened/silenced',
+        targeting: 'ally',
+        multi: true,
+      },
     ),
-    manual:
-      '60-foot echolocation blindsight fails while deafened or in magical silence; hearing Perception advantage and silence-dependent Stealth disadvantage remain conditional/manual.',
   }),
   'kobold-press-deepm:become-nightwing': deepMagicProfile('Become Nightwing', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Become Nightwing',
-      'Grant 60-foot flight; later Recharge 4–6 breath uses Dexterity save for 5d6 necrotic, half on success. No breath on casting.',
-      { type: 'rounds', rounds: 10 },
-      'self',
-      false,
-      'up to 1 minute',
+      [
+        {
+          note: 'Fly 60 ft; Recharge 4–6 necrotic breath',
+          duration: { type: 'rounds', rounds: 10 },
+        },
+      ],
+      { summary: 'Fly 60 ft; Recharge 4–6 necrotic breath', targeting: 'self', multi: false },
     ),
-    manual:
-      'Grant 60-foot flight; later Recharge 4–6 breath uses Dexterity save for 5d6 necrotic, half on success. No breath on casting.',
   }),
   'kobold-press-deepm:beguiling-bet': deepMagicProfile('Beguiling Bet', {
     mechanics: { save: { ability: 'wis', onSave: 'negates' } },
-    effect: ruleReminder(
+    effect: boardEffect(
       'Beguiling Bet',
-      'Failure charms and compels next-action skill contest. Casting modifier substitution, continued contests, early ending, and additional targets at slots 4/6/8 remain manual.',
-      { type: 'manual' },
-      'enemy',
-      true,
-      'Track printed consequence and endpoint manually',
+      [{ condition: 'Charmed' }, { note: 'Compelled to skill contest' }],
+      { summary: 'Charmed; Compelled to skill contest', targeting: 'enemy', multi: true },
     ),
-    manual:
-      'Failure charms and compels next-action skill contest. Casting modifier substitution, continued contests, early ending, and additional targets at slots 4/6/8 remain manual.',
   }),
   'kobold-press-deepm:benediction': deepMagicProfile('Benediction', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Benediction',
-      'Next damage reduced by d4, then spell ends; roll reduction and clear reminder/concentration manually.',
-      { type: 'rounds', rounds: 10 },
-      'ally',
-      true,
-      'up to 1 minute',
+      [{ note: 'Next damage reduced by 1d4', duration: { type: 'rounds', rounds: 10 } }],
+      { summary: 'Next damage reduced by 1d4', targeting: 'ally', multi: true },
     ),
-    manual:
-      'Next damage reduced by d4, then spell ends; roll reduction and clear reminder/concentration manually.',
   }),
   'kobold-press-deepm:bestial-fury': deepMagicProfile('Bestial Fury', {
     mechanics: { save: { ability: 'cha', onSave: 'negates' } },
-    effect: ruleReminder(
-      'Bestial Fury',
-      'Exclude undead/constructs; willing failure allowed. Compelled nearest-enemy natural/unarmed attacks, extra 1d6 matching weapon type, charm/fear immunity, and no-enemy action repeat save manual; higher slots add targets.',
-      { type: 'manual' },
-      'enemy',
-      true,
-      'Track printed consequence and endpoint manually',
-    ),
-    manual:
-      'Exclude undead/constructs; willing failure allowed. Compelled nearest-enemy natural/unarmed attacks, extra 1d6 matching weapon type, charm/fear immunity, and no-enemy action repeat save manual; higher slots add targets.',
+    effect: boardEffect('Bestial Fury', [{ note: 'Nearest enemy: natural/unarmed attacks +1d6' }], {
+      summary: 'Nearest enemy: natural/unarmed attacks +1d6',
+      targeting: 'enemy',
+      multi: true,
+    }),
   }),
-  'kobold-press-deepm:binding-oath': deepMagicProfile('Binding Oath', {
-    manual:
-      'Seal willing oath; choose Bestow Curse consequence only upon breach. Track notification, remaining oath, and printed removal/slot restrictions manually.',
-  }),
-  'kobold-press-deepm:biting-arrow': deepMagicProfile('Biting Arrow', {
-    manual:
-      'Requires ranged weapon attack and weapon damage, not spell attack. On hit frost triggers later reaction cold damage until caster next turn start; caster-level weapon/cold scaling manual.',
-  }),
+  'kobold-press-deepm:binding-oath': deepMagicProfile('Binding Oath', {}),
+  'kobold-press-deepm:biting-arrow': deepMagicProfile('Biting Arrow', {}),
   'kobold-press-deepm:bitter-chains': deepMagicProfile('Bitter Chains', {
     mechanics: { attackRoll: true },
     attackKind: 'melee',
-    manual:
-      'Hit binds without initial damage: half speed and disadvantage on attacks, saves, Dexterity checks. Moving over 5 feet triggers 3d6 piercing; action Strength/Dexterity check or AC 18/20 HP chains ends binding manually.',
   }),
   'kobold-press-deepm:black-goats-blessing': deepMagicProfile('Black Goat’s Blessing', {
-    effect: ruleReminder(
+    effect: boardEffect(
       'Black Goat’s Blessing',
-      'Disadvantage only on saves against this caster’s spells until caster next turn end; apply relational modifier manually.',
-      { type: 'manual' },
-      'enemy',
-      true,
-      'Track printed duration and any early endpoint manually',
+      [
+        {
+          note: 'This caster’s spells: save disadvantage',
+          duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+        },
+      ],
+      { summary: 'This caster’s spells: save disadvantage', targeting: 'enemy', multi: true },
     ),
-    manual:
-      'Disadvantage only on saves against this caster’s spells until caster next turn end; apply relational modifier manually.',
   }),
   'kobold-press-deepm:black-hand': deepMagicProfile('Black Hand', {
     mechanics: { attackRoll: true },
     attackKind: 'ranged',
-    manual:
-      'Hit applies target physical-ability attack/check/save disadvantage and caster advantage manually. Target turn-end Constitution save at disadvantage ends effect; no initial damage.',
   }),
-  'kobold-press-deepm:black-ribbons': deepMagicProfile('Black Ribbons', {
-    effect: ruleReminder(
-      'Black Ribbons',
-      '20-foot cube difficult terrain. Only turn-end Dexterity failures restrain until target next turn end; successful save grants immunity to later restraint. Track later saves and immunity manually.',
-      { type: 'rounds', rounds: 10 },
-      'self',
-      false,
-      'up to 1 minute',
-    ),
-    manual:
-      '20-foot cube difficult terrain. Only turn-end Dexterity failures restrain until target next turn end; successful save grants immunity to later restraint. Track later saves and immunity manually.',
-  }),
-  'kobold-press-deepm:black-sunshine': deepMagicProfile('Black Sunshine', {
-    effect: ruleReminder(
-      'Black Sunshine',
-      'Designated allies invisible only within 60 feet and reachable orb light. Later thrown-weapon hit ends spell and triggers Dexterity blindness saves in burst; repeat end-turn saves manual.',
-      { type: 'rounds', rounds: 10 },
-      'self',
-      false,
-      'up to 1 minute',
-    ),
-    manual:
-      'Designated allies invisible only within 60 feet and reachable orb light. Later thrown-weapon hit ends spell and triggers Dexterity blindness saves in burst; repeat end-turn saves manual.',
-  }),
+  'kobold-press-deepm:black-ribbons': deepMagicProfile('Black Ribbons', {}),
+  'kobold-press-deepm:black-sunshine': deepMagicProfile('Black Sunshine', {}),
   'kobold-press-deepm:black-swan-storm': deepMagicProfile('Black Swan Storm', {
     mechanics: {
       save: { ability: 'dex', onSave: 'half' },
       ...reviewedDamage([{ formula: '2d8', type: 'force' }], 2, [1]),
     },
     persistsAfterSave: true,
-    manual:
-      'Select creatures in 5-foot cube for initial force damage; area lowers illumination within 20 feet even on successful saves. +1d8 per slot above 2nd; lighting manual.',
   }),
-  'kobold-press-deepm:black-well': deepMagicProfile('Black Well', {
-    effect: ruleReminder(
-      'Black Well',
-      'No initial damage. Turn-start Strength pull; entry Constitution save for 6d8 necrotic and stunned/failure or incapacitated/success. Later occupancy, exit recovery, capacity, ending prone, and higher-slot damage/pull manual.',
-      { type: 'rounds', rounds: 10 },
-      'self',
-      false,
-      'up to 1 minute',
-    ),
-    manual:
-      'No initial damage. Turn-start Strength pull; entry Constitution save for 6d8 necrotic and stunned/failure or incapacitated/success. Later occupancy, exit recovery, capacity, ending prone, and higher-slot damage/pull manual.',
-  }),
-  'kobold-press-deepm:blade-of-my-brother': deepMagicProfile('Blade of my Brother', {
-    effect: ruleReminder(
-      'Blade of my Brother',
-      'Animate deceased ally’s weapon near chosen ally; attacks use printed spellcasting-level plus weapon bonus, not spell attack bonus. Separation ends spell; later weapon attacks manual.',
-      { type: 'rounds', rounds: 4 },
-      'self',
-      false,
-      'up to 4 rounds',
-    ),
-    manual:
-      'Animate deceased ally’s weapon near chosen ally; attacks use printed spellcasting-level plus weapon bonus, not spell attack bonus. Separation ends spell; later weapon attacks manual.',
-  }),
+  'kobold-press-deepm:black-well': deepMagicProfile('Black Well', {}),
+  'kobold-press-deepm:blade-of-my-brother': deepMagicProfile('Blade of my Brother', {}),
 }
