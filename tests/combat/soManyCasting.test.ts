@@ -473,8 +473,8 @@ describe('So Many Spells reviewed casting', () => {
     })
   })
 
-  it('keeps Deep Magic pending and non-rollable even if forged mechanics are supplied', () => {
-    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toHaveLength(483)
+  it('has no remaining pending cards and rejects unreviewed forged identities', () => {
+    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toHaveLength(0)
     expect(
       Object.keys(REFERENCE_ONLY_SPELLS).every((id) => id.startsWith('kobold-press-deepm:')),
     ).toBe(true)
@@ -483,7 +483,7 @@ describe('So Many Spells reviewed casting', () => {
         id.startsWith('somanyrobots-so-many-spells:'),
       ),
     ).toBe(false)
-    for (const id of Object.keys(REFERENCE_ONLY_SPELLS)) {
+    for (const id of ['kobold-press-deepm:unreviewed-copy']) {
       const spell = { ...card('sonic-blast'), id, source: id.split(':')[0] } as Spell
       const forged = {
         ...spell,

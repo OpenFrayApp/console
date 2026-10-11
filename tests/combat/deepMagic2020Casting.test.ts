@@ -9,6 +9,7 @@ import { castingMechanics, damageVariants, spellAction } from '../../src/combat/
 import { reviewedSpellCasting } from '../../src/combat/reviewedSpells.ts'
 import { spellEffectFor } from '../../src/combat/spellEffects.ts'
 import { DEEP_MAGIC_2020_REVIEW_RECORDS } from '../fixtures/deepMagic2020Review.ts'
+import { DEEP_MAGIC_2020_VERDICTS } from '../fixtures/deepMagic2020Verdicts.ts'
 import { REFERENCE_ONLY_SPELLS } from './referenceSpellCoverage.data.ts'
 import { monster } from '../fixtures.ts'
 
@@ -31,17 +32,17 @@ function effects(slug: string) {
   })
 }
 
-describe('Deep Magic 2020 first reviewed batch', () => {
-  it('reviews exactly the first 20 cards and leaves 483 guarded', () => {
+describe('Deep Magic 2020 completed casting review', () => {
+  it('reviews all 503 cards and leaves none pending', () => {
     const reviewed = spells.filter((spell) => reviewedSpellCasting(spell))
     expect(reviewed.map((spell) => spell.id)).toEqual(Object.keys(DEEP_MAGIC_2020_REVIEW_RECORDS))
-    expect(reviewed).toHaveLength(20)
-    expect(reviewed.filter((spell) => castingMechanics(spell))).toHaveLength(5)
+    expect(reviewed).toHaveLength(503)
+    expect(reviewed.filter((spell) => castingMechanics(spell))).toHaveLength(169)
     expect(
       reviewed.filter((spell) => !castingMechanics(spell) && spellEffectFor(spell)),
-    ).toHaveLength(9)
-    for (const spell of spells.slice(20)) {
-      expect(REFERENCE_ONLY_SPELLS[spell.id]).toBe('SOURCE_REVIEW')
+    ).toHaveLength(200)
+    for (const spell of reviewed.filter((spell) => !castingMechanics(spell))) {
+      expect(REFERENCE_ONLY_SPELLS[spell.id]).toBeUndefined()
       expect(
         spellAction(
           {
@@ -51,8 +52,8 @@ describe('Deep Magic 2020 first reviewed batch', () => {
           {},
         ),
       ).toBeNull()
-      expect(spellEffectFor(spell)).toBeNull()
     }
+    expect(Object.keys(REFERENCE_ONLY_SPELLS)).toEqual([])
   })
 
   it.each(Object.entries(DEEP_MAGIC_2020_REVIEW_RECORDS))(
@@ -75,6 +76,133 @@ describe('Deep Magic 2020 first reviewed batch', () => {
         expect(reviewedSpellCasting(altered)).toBeUndefined()
     },
   )
+
+  it.each(Object.entries(DEEP_MAGIC_2020_VERDICTS))(
+    'preserves %s authored roll boundary',
+    (id, verdict) => {
+      const spell = spells.find((entry) => entry.id === id)!
+      const profile = reviewedSpellCasting(spell)!
+      const forged = {
+        ...spell,
+        mechanics: { attackRoll: true, damage: [{ formula: '99d6', type: 'fire' as const }] },
+      }
+      expect(castingMechanics(forged)).toEqual(castingMechanics(spell))
+      expect(profile.attackKind).toBe(verdict.attackKind)
+      if (verdict.mechanics) {
+        expect(profile.mechanics).toMatchObject(verdict.mechanics)
+        if (!verdict.mechanics.damage) expect(profile.mechanics?.damage).toBeUndefined()
+        if (verdict.kind === 'a') expect(profile.mechanics?.save).toBeUndefined()
+        else expect(profile.mechanics?.attackRoll).toBeUndefined()
+      } else {
+        expect(spellAction(forged, {})).toBeNull()
+        expect(profile.mechanics).toBeUndefined()
+      }
+      if (verdict.kind === 'm') expect(profile.effect).toBeUndefined()
+      if (verdict.kind === 'r') expect(profile.effect).toBeDefined()
+      for (const effect of spellEffectFor(spell)?.build({
+        spell,
+        source: 'caster',
+        target: monster({ combatantId: 'target' }),
+      }) ?? []) {
+        expect(effect.modifier).toBeNull()
+      }
+    },
+  )
+
+  it('keeps printed exceptional scaling and chosen components manual', () => {
+    expect(
+      damageVariants(card('flame-wave')).find((variant) => variant.key === 'slot-5')?.damage,
+    ).toEqual([{ formula: '8d8', type: 'fire' }])
+    expect(damageVariants(card('bloodshot')).at(-1)?.damage).toEqual([
+      { formula: '9d10', type: 'fire' },
+      { formula: '2d8', type: 'psychic' },
+    ])
+    expect(damageVariants(card('last-rays-of-the-dying-sun')).at(-1)?.damage).toEqual([
+      { formula: '8d6', type: 'fire' },
+      { formula: '8d6', type: 'cold' },
+    ])
+    expect(damageVariants(card('death-gods-touch')).at(-1)?.damage).toEqual([
+      { formula: '14d10', type: 'necrotic' },
+    ])
+    for (const slug of [
+      'fusillade-of-ice',
+      'clash-of-glaciers',
+      'blood-scarab',
+      'heartache',
+      'screaming-ray',
+      'caustic-blood',
+    ]) {
+      expect(castingMechanics(card(slug))?.scaling).toBeUndefined()
+    }
+  })
+
+  it('keeps independent turn-boundary conditions off concentration and secondary saves', () => {
+    expect(effects('puff-of-smoke')).toMatchObject([
+      {
+        name: 'Blinded',
+        source: 'caster',
+        concentration: false,
+        duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+      },
+    ])
+    expect(effects('memento-mori')).toMatchObject([
+      {
+        name: 'Stunned',
+        source: 'target',
+        concentration: false,
+        duration: { type: 'untilSourceTurn', when: 'endOfTurn' },
+      },
+    ])
+    expect(effects('shadow-hands')).toMatchObject([
+      { name: 'Frightened', source: 'target', concentration: false },
+    ])
+    expect(effects('void-strike')).toMatchObject([
+      { name: 'Frightened', source: 'caster', concentration: false },
+    ])
+    for (const slug of [
+      'screaming-ray',
+      'blood-to-acid',
+      'boiling-blood',
+      'mephitic-croak',
+      'touch-of-the-unliving',
+    ]) {
+      expect(spellEffectFor(card(slug))).toBeNull()
+    }
+  })
+
+  it.each([
+    'black-well',
+    'freezing-fog',
+    'glacial-fog',
+    'void-rift',
+    'wind-of-the-hereafter',
+    'umbral-storm',
+    'writhing-arms',
+    'maw-of-needles',
+    'staff-of-violet-fire',
+    'legion',
+  ])('does not invent initial rolls for %s', (slug) => {
+    expect(spellAction(card(slug), {})).toBeNull()
+    expect(effects(slug)[0]?.modifier).toBeNull()
+  })
+
+  it.each([
+    'night-terrors',
+    'time-slippage',
+    'time-loop',
+    'exsanguinate',
+    'keening-wail',
+    'energy-absorption',
+    'frenzied-bolt',
+    'prismatic-ray',
+    'triumph-of-ice',
+    'vomit-tentacles',
+    'thunderous-charge',
+    'heart-seeking-arrow',
+  ])('keeps incompatible %s outcomes manual', (slug) => {
+    expect(spellAction(card(slug), {})).toBeNull()
+    expect(reviewedSpellCasting(card(slug))?.manual).toBeTruthy()
+  })
 
   it('uses printed initial saves and damage only', () => {
     expect(spellAction(card('abhorrent-apparition'), { saveDc: 17 })).toMatchObject({

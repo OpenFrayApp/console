@@ -103,6 +103,111 @@ afterEach(() => {
 })
 
 describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting', (entry) => {
+  it.each([
+    'black-swan-storm',
+    'blizzard',
+    'creeping-ice',
+    'mire',
+    'pyroclasm',
+    'talons-of-a-hungry-land',
+    'time-vortex',
+    'winterdark',
+  ])('retains %s creation after successful initial saves', (slug) => {
+    const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+    if (spell.concentration) {
+      const update = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => action.type === 'update' && action.id === 'caster')
+      expect(update.update(caster).concentration?.spell).toBe(spell.name)
+    }
+    expect(
+      dispatch.mock.calls
+        .filter(([action]) => action.type === 'update' && action.id === 'target')
+        .flatMap(([action]) => action.update(target).effects),
+    ).toEqual([])
+  })
+
+  it('keeps Void Strike concentration on a miss without frightening the missed target', () => {
+    const spell = deepMagicCards.find((card) => card.id === 'kobold-press-deepm:void-strike')!
+    dice.draw = 0
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll attack' }))
+    expect(screen.queryByRole('button', { name: /Apply Void Strike/ })).toBeNull()
+    fireEvent.change(screen.getByLabelText('Damage to apply'), { target: { value: '0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to Ogre' }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'caster')
+    expect(update.update(caster).concentration?.spell).toBe(spell.name)
+    expect(
+      dispatch.mock.calls
+        .filter(([action]) => action.type === 'update' && action.id === 'target')
+        .flatMap(([action]) => action.update(target).effects),
+    ).toEqual([])
+  })
+
+  it('applies Puff of Smoke on the caster turn boundary only after failure', () => {
+    const spell = deepMagicCards.find((card) => card.id === 'kobold-press-deepm:puff-of-smoke')!
+    const dispatch = cast(spell, entry)
+    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+    fireEvent.click(screen.getByRole('button', { name: /Apply Puff of Smoke/ }))
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'target')
+    expect(update.update(target).effects).toMatchObject([
+      {
+        name: 'Blinded',
+        source: 'caster',
+        concentration: false,
+        duration: { type: 'untilSourceTurn', when: 'startOfTurn' },
+      },
+    ])
+  })
+
+  it.each([
+    'exsanguinate',
+    'time-loop',
+    'time-slippage',
+    'night-terrors',
+    'prismatic-ray',
+    'thunderous-wave',
+  ])('does not offer invented compatible outcomes for %s', (slug) => {
+    const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
+    cast(spell, entry)
+    expect(screen.getByText('Manual spell:')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Apply effect' })).toBeNull()
+  })
+
+  it.each([
+    'black-well',
+    'freezing-fog',
+    'glacial-fog',
+    'void-rift',
+    'writhing-arms',
+    'maw-of-needles',
+  ])('tracks %s without premature damage, saves, or attacks', (slug) => {
+    const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
+    const dispatch = cast(spell, entry)
+    expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Roll attack' })).toBeNull()
+    const update = dispatch.mock.calls
+      .map(([action]) => action)
+      .find((action) => action.type === 'update' && action.id === 'caster')
+    expect(update.update(caster).hp).toEqual(caster.hp)
+    expect(update.update(caster).effects).toMatchObject([
+      { name: spell.name, source: 'caster', modifier: null },
+    ])
+  })
+
   it('applies Deep Magic fright only after a failed initial save', () => {
     const spell = deepMagicCards.find(
       (card) => card.id === 'kobold-press-deepm:abhorrent-apparition',
