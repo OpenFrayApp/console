@@ -5,7 +5,12 @@ import { useState } from 'react'
 import type { Combatant } from '../../schema/combatant.ts'
 import type { Spell } from '../../schema/spell.ts'
 import type { EncounterAction } from '../../state/encounter.ts'
-import { damageFormula, damageTypes, damageVariants } from '../../combat/casting.ts'
+import {
+  castingMechanics,
+  damageFormula,
+  damageTypes,
+  damageVariants,
+} from '../../combat/casting.ts'
 import { roll } from '../../dice/roll.ts'
 import { GroupSaveForm } from './GroupSaveForm.tsx'
 import { Button, Chip, Select } from '../ui/primitives.tsx'
@@ -36,7 +41,7 @@ export function SpellResolution({
   const [variantKey, setVariantKey] = useState('base')
   const [rolled, setRolled] = useState<{ total: number; detail: string } | null>(null)
 
-  const mechanics = spell.mechanics
+  const mechanics = castingMechanics(spell)
   if (!mechanics) return null
 
   const variants = damageVariants(spell)

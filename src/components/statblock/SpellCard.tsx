@@ -4,6 +4,7 @@
 import type { Spell } from '../../schema/spell.ts'
 import { Markdown } from './Markdown.tsx'
 import { SourceLink } from './SourceLink.tsx'
+import { SpellCastingNote } from './SpellCastingNote.tsx'
 import { spellLevelOrdinal } from '../../compendium/format.ts'
 import { Button } from '../ui/primitives.tsx'
 
@@ -96,6 +97,8 @@ export function SpellCard({
           value={`${spell.concentration ? 'Concentration, ' : ''}${spell.duration}`}
         />
       </dl>
+
+      <SpellCastingNote spell={spell} />
 
       <div className="text-sm text-slate-700 dark:text-slate-300">
         <Markdown linkConditions>{spell.text}</Markdown>

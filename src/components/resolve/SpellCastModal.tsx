@@ -13,6 +13,7 @@ import { titleCase } from '../../compendium/format.ts'
 import type { CompletedSave } from './resolverShared.ts'
 import { ActionResolver } from './ActionResolver.tsx'
 import { ApplySpellEffect } from './ApplySpellEffect.tsx'
+import { reviewedSpellCasting } from '../../combat/reviewedSpells.ts'
 import { Modal } from '../ui/Modal.tsx'
 import { Button } from '../ui/primitives.tsx'
 import { SpellCard } from '../statblock/SpellCard.tsx'
@@ -120,7 +121,7 @@ export function SpellCastModal({
         defaultMagical
         spell={spell}
         onResolved={(landed) => {
-          if (landed) concentrate()
+          if (landed || (spell && reviewedSpellCasting(spell)?.persistsAfterSave)) concentrate()
         }}
         onClose={onClose}
       />

@@ -3,9 +3,10 @@
 
 import type { Action, DamageRoll } from '../schema/action.ts'
 import type { Combatant, Concentration } from '../schema/combatant.ts'
-import type { Spell } from '../schema/spell.ts'
+import type { Spell, SpellMechanics } from '../schema/spell.ts'
 import { isReferenceOnlySpell } from '../compendium/libraries.ts'
 import { spellEffectFor } from './spellEffects.ts'
+import { reviewedSpellCasting } from './reviewedSpells.ts'
 
 /**
  * A spell supplies dice, damage type, and save ability; the *caster* supplies the
@@ -24,13 +25,20 @@ export interface DamageVariant {
 /** The display label for a spell level: "Cantrip" for 0, otherwise "Level N". */
 const levelLabel = (level: number): string => (level === 0 ? 'Cantrip' : `Level ${level}`)
 
+/** Read reviewed source mechanics, keeping unreviewed library templates non-rollable. */
+export function castingMechanics(spell: Spell): SpellMechanics | undefined {
+  const reviewed = reviewedSpellCasting(spell)
+  if (reviewed) return reviewed.mechanics
+  return isReferenceOnlySpell(spell) ? undefined : spell.mechanics
+}
+
 /** Base damage plus each upcast/caster-level variant. Empty when the spell deals no typed damage. */
 export function damageVariants(spell: Spell): DamageVariant[] {
-  if (isReferenceOnlySpell(spell)) return []
-  const damage = spell.mechanics?.damage
+  const mechanics = castingMechanics(spell)
+  const damage = mechanics?.damage
   if (!damage) return []
   const variants: DamageVariant[] = [{ key: 'base', label: levelLabel(spell.level), damage }]
-  for (const s of spell.mechanics?.scaling ?? []) {
+  for (const s of mechanics?.scaling ?? []) {
     const label = s.by === 'slot' ? `Slot ${s.level}` : `Caster level ${s.level}`
     variants.push({ key: `${s.by}-${s.level}`, label, damage: s.damage })
   }
@@ -85,18 +93,18 @@ export function spellAction(
   spell: Spell,
   caster: { saveDc?: number; toHit?: number },
 ): Action | null {
-  if (isReferenceOnlySpell(spell)) return null
-  const m = spell.mechanics
+  const m = castingMechanics(spell)
   if (!m) return null
   const id = `spell:${spell.id}`
   const damage = m.damage
-  if (m.attackRoll && damage) {
+  const reviewed = reviewedSpellCasting(spell)
+  if (m.attackRoll && (damage || reviewed)) {
     return {
       id,
       name: spell.name,
-      kind: 'ranged',
+      kind: reviewed?.attackKind ?? 'ranged',
       toHit: caster.toHit ?? 0,
-      damage,
+      ...(damage && { damage }),
       text: spell.text,
     }
   }

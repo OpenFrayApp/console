@@ -37,6 +37,7 @@ import { delayedDamageEffect, spellEffectFor } from '../../combat/spellEffects.t
 import { concentrationPromptDC, rollConcentrationCheck } from '../../combat/concentration.ts'
 import { ConcentrationPrompt } from './ConcentrationPrompt.tsx'
 import { Modal } from '../ui/Modal.tsx'
+import { SpellCastingNote } from '../statblock/SpellCastingNote.tsx'
 import { TargetChips } from './TargetChips.tsx'
 import { ConditionChips, DamagePill, DamageTypeSelect, NaturalRoll } from './rollPieces.tsx'
 import {
@@ -506,6 +507,7 @@ export function SaveResolver({
       reserveTutorialSpace={!!tutorialSaveTargetIds}
       restrictDismiss={!!tutorialSaveTargetIds}
     >
+      <SpellCastingNote spell={spell} />
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         {noSave ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
