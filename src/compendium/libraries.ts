@@ -125,6 +125,17 @@ export const LIBRARIES: Library[] = [
     spellsFile: 'deep-magic-2020-spells.json',
   },
   {
+    id: 'kobold-press-wz',
+    license: 'ogl-1.0a',
+    label: 'Warlock Grimoire (Kobold Press)',
+    shortLabel: 'WGr',
+    family: 'tob',
+    group: 'other',
+    edition: '5.0',
+    referenceOnly: true,
+    spellsFile: 'warlock-grimoire-spells.json',
+  },
+  {
     id: 'khyberia-srd',
     license: 'cc-by-4.0',
     label: 'Khyberia SRD (Nick Stefanski)',

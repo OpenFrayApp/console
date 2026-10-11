@@ -80,6 +80,7 @@ describe('libraries', () => {
     const sources = [
       'kobold-press-toh',
       'kobold-press-deepm',
+      'kobold-press-wz',
       'kibblestasty-casting-compendium-v2.3',
       'somanyrobots-spells-that-dont-suck',
       'somanyrobots-so-many-spells',
@@ -99,6 +100,10 @@ describe('libraries', () => {
     expect(librarySourceBadgeClass('kobold-press-toh')).toBe(
       librarySourceBadgeClass('kobold-press-tob3'),
     )
+    expect(librarySource('kobold-press-wz')).toBe('WGr')
+    expect(librarySourceBadgeClass('kobold-press-wz')).toBe(
+      librarySourceBadgeClass('kobold-press-tob3'),
+    )
     expect(libraryReferenceOnly('srd-5.2')).toBe(false)
     expect(libraryReferenceOnly('custom')).toBe(false)
   })
@@ -107,7 +112,9 @@ describe('libraries', () => {
     const kibbles = librarySourceBadgeClass('kibblestasty-casting-compendium-v2.3')
     const stds = librarySourceBadgeClass('somanyrobots-spells-that-dont-suck')
     expect(kibbles).toContain('orange')
-    expect(stds).toBe('bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300')
+    expect(stds).toBe(
+      'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300',
+    )
     expect(librarySourceBadgeClass('srd-5.2')).toContain('sky')
     expect(librarySourceBadgeClass('somanyrobots-so-many-spells')).toBe(stds)
     expect(kibbles).not.toBe(stds)

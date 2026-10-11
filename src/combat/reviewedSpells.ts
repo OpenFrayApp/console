@@ -3,6 +3,7 @@
 
 import type { Spell, SpellMechanics } from '../schema/spell.ts'
 import type { SpellEffectDef } from './spells/shared.ts'
+import { WARLOCK_GRIMOIRE_CASTING } from './spells/warlockGrimoire.ts'
 import { TOME_OF_HEROES_CASTING } from './spells/tomeOfHeroes.ts'
 import { TOME_OF_HEROES_REMAINDER } from './spells/tomeOfHeroesRemaining.ts'
 import { SO_MANY_SPELLS_CASTING } from './spells/soManySpells.ts'
@@ -61,6 +62,7 @@ export interface ReviewedSpellCasting {
 }
 
 export const REVIEWED_SPELL_CASTING: Record<string, ReviewedSpellCasting> = {
+  ...WARLOCK_GRIMOIRE_CASTING,
   ...TOME_OF_HEROES_CASTING,
   ...TOME_OF_HEROES_REMAINDER,
   ...SO_MANY_SPELLS_CASTING,

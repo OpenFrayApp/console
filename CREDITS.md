@@ -695,11 +695,13 @@ END OF LICENSE
 
 ### Warlock Grimoire spell selection (Kobold Press)
 
-Attribution is prepared for spell rules from *Warlock Grimoire* (2019),
+This selection includes designated spell rules from *Warlock Grimoire* (2019),
 *Warlock Grimoire 2* (2020), *Warlock Grimoire 3* (2022), and
 *Warlock Guide to Liminal Magic* (2020), published by Open Design LLC.
 This combined selection uses the display label **Warlock Grimoire**.
-No cards from this selection are distributed yet.
+The selection contains 35 source-corrected spell cards. Three located entries and
+five unsupplied imports are withheld. Existing casting profiles support ordinary
+board consequences; unsupported and conditional rules remain prose.
 
 - **License:** Open Game License Version 1.0a.
 - **Scope:** designated spell rules only, subject to each source’s own declaration.
@@ -707,8 +709,12 @@ No cards from this selection are distributed yet.
   Mechanically essential reserved references are withheld, not silently replaced.
 - **Supporting content:** no subclass, ley-line subsystem, or creature stat block is imported by this selection.
   References to existing spells and creatures do not grant permission to copy another source.
-- **Changes:** source formatting will be adapted to OpenFray’s schema.
-  Separable setting lore will be omitted without changing mechanical requirements.
+- **Changes:** source formatting is adapted to OpenFray’s schema.
+  Separable setting lore is omitted without changing mechanical requirements.
+  Missing materials and incorrect spell headers are corrected from the supplied sources.
+  Classes are listed only where the spell header explicitly supplies them.
+  Zymurgic Aura declares a material component without specifying its description;
+  no missing material is invented.
 
 These are distinct sources; their grants do not transfer between volumes.
 The complete chains below retain repeated notices and source-original title variants.

@@ -31,9 +31,10 @@ const chains = [
 ] as const
 
 describe('Warlock attribution preparation', () => {
-  it('includes the complete OGL, the content designation, and the no-distribution status', () => {
+  it('includes the complete OGL, the content designation, and the bounded selection', () => {
     expect(section).toBeDefined()
-    expect(section).toContain('No cards from this selection are distributed yet.')
+    expect(section).toContain('The selection contains 35 source-corrected spell cards.')
+    expect(section).toContain('five unsupplied imports are withheld.')
     expect(section).toContain('**Open Game Content designation:**')
     expect(section).toContain(
       'OpenFray Warlock Grimoire spell reference cards. Copyright 2026 Nicola Mustone.',
