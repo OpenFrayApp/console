@@ -10,10 +10,13 @@ import type { User } from '@supabase/supabase-js'
 import { authState } from './fixtures.ts'
 import { loadSettings, saveSettings } from '../src/state/settings.ts'
 
-/** Use the real search destination to reach Settings. */
-function openSettings() {
+/** Launch the tutorial through the real search command. */
+function launchFromSearch() {
   fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
-  fireEvent.click(screen.getByRole('option', { name: 'Settings' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Search references' }), {
+    target: { value: 'tutorial' },
+  })
+  fireEvent.click(screen.getByRole('option', { name: 'Start tutorial' }))
 }
 
 afterEach(() => {
@@ -23,7 +26,20 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-it('offers manual entry from Settings without clearing a nonempty board or its recovery copy', async () => {
+it('keeps manual entry in search, outside Settings', async () => {
+  saveSettings({ tutorialSuppression: 'completed' })
+  render(<App />)
+  await act(() => Promise.resolve())
+  fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Settings' }))
+  expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Start tutorial' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  launchFromSearch()
+  expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
+})
+
+it('offers manual entry from search without clearing a nonempty board or its recovery copy', async () => {
   saveSettings({ tutorialSuppression: 'completed' })
   render(<App />)
   await act(() => Promise.resolve())
@@ -35,8 +51,7 @@ it('offers manual entry from Settings without clearing a nonempty board or its r
   fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '30' } })
   fireEvent.click(screen.getByRole('button', { name: 'Add' }))
   const recovery = sessionStorage.getItem('openfray:session')
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Before starting the tutorial' })).toBeInTheDocument()
   expect(screen.getByText(/clear the board through the normal controls/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
@@ -74,8 +89,7 @@ it('explains missing SRD libraries without enabling one', async () => {
   render(<App />)
   await act(() => Promise.resolve())
   const settings = loadSettings()
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(
     screen.getByText(/Enable Basic Rules 2024 or Basic Rules 2014 in Settings/),
   ).toBeInTheDocument()
@@ -103,8 +117,7 @@ it('postpones once for the session across rerenders, board clearing, and reload'
   render(<App />)
   await act(() => Promise.resolve())
   expect(screen.queryByRole('dialog')).toBeNull()
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
 })
 
@@ -121,8 +134,7 @@ it('permanent exit survives a new session but still permits manual restart witho
   render(<App />)
   await act(() => Promise.resolve())
   expect(screen.queryByRole('dialog')).toBeNull()
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
   expect(screen.queryByText(/Tutorial complete/)).toBeNull()
 })
@@ -135,8 +147,7 @@ it('reload removes the guide and every manual restart opens the introduction', a
   render(<App />)
   await act(() => Promise.resolve())
   expect(screen.queryByRole('dialog')).toBeNull()
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
   expect(loadSettings().tutorialSuppression).toBeNull()
 })
@@ -147,8 +158,7 @@ it('explains pending readiness on manual entry and does not turn it into a silen
       <App />
     </AuthContext.Provider>,
   )
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByText(/Wait for identity and working-board recovery/)).toBeInTheDocument()
   app.rerender(
     <AuthContext.Provider value={authState()}>
@@ -159,8 +169,7 @@ it('explains pending readiness on manual entry and does not turn it into a silen
   expect(screen.getByRole('dialog', { name: 'Before starting the tutorial' })).toBeInTheDocument()
   expect(screen.getByText(/Wait for identity and working-board recovery/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
 })
 
@@ -180,8 +189,7 @@ it('keeps console entry and exit usable when browser storage is unavailable', as
   await act(() => Promise.resolve())
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
 })
 
@@ -196,8 +204,7 @@ it('persists the welcome checkbox when postponing and permits manual launch', as
   render(<App />)
   await act(() => Promise.resolve())
   expect(screen.queryByRole('dialog')).toBeNull()
-  openSettings()
-  fireEvent.click(screen.getByRole('button', { name: 'Start tutorial' }))
+  launchFromSearch()
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
 })
 
@@ -416,9 +423,7 @@ it('invites after identity resolves and opens an introductory guide without chan
   fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))
   expect(screen.getByText('Offer the tutorial again another time?')).toBeInTheDocument()
   expect(screen.getByText(/Exiting keeps your board and game log/)).toBeInTheDocument()
-  expect(
-    screen.getByText(/clear the board.*Start tutorial.*Settings or search/),
-  ).toBeInTheDocument()
+  expect(screen.getByText(/clear the board.*Start tutorial.*search/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Return to tutorial' }))
   expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Exit tutorial' }))

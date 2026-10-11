@@ -142,7 +142,7 @@ describe('App — keyboard control', () => {
   it('displays the rebound search shortcut and closes its reference back to the console', async () => {
     localStorage.setItem('openfray-settings', JSON.stringify({ hotkeys: { openSearch: 'meta+u' } }))
     renderConsole()
-    expect(screen.getByRole('button', { name: 'Search references' }).textContent).toContain('⌘+U')
+    expect(screen.getByRole('button', { name: 'Search references' }).textContent).toContain('⌘U')
     fireEvent.click(screen.getByRole('button', { name: 'Show the compendium' }))
     fireEvent.keyDown(document.body, { key: 'u', metaKey: true })
     const search = screen.getByRole('combobox', { name: 'Search references' })

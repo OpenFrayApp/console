@@ -247,7 +247,7 @@ export function formatChord(chord: string): string {
   } else {
     parts.push(rest.length === 1 ? rest.toUpperCase() : rest)
   }
-  return parts.join('+')
+  return parts.join('+').replace('⌘+', '⌘')
 }
 
 /** Whether a stored string is a well-formed, bindable chord in the grammar. */

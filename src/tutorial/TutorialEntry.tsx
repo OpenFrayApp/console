@@ -83,8 +83,7 @@ export function TutorialEntry({
             {surface === 'complete' && (
               <>
                 <p>
-                  Everyone and the game log are cleared. To replay, choose Start tutorial in
-                  Settings or search.
+                  Everyone and the game log are cleared. To replay, choose Start tutorial in search.
                 </p>
                 {signedIn ? (
                   <p>
@@ -110,8 +109,7 @@ export function TutorialEntry({
                 <p>Offer the tutorial again another time?</p>
                 <p>
                   Exiting keeps your board and game log. To replay, stop any running fight and clear
-                  the board through the normal controls, then choose Start tutorial in Settings or
-                  search.
+                  the board through the normal controls, then choose Start tutorial in search.
                 </p>
               </>
             )}
