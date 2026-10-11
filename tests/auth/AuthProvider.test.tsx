@@ -279,19 +279,18 @@ describe('Tutorial account preference through rendered entry', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'public-key')
     let finish!: (response: Response) => void
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        () =>
-          new Promise<Response>((resolve) => {
-            finish = resolve
-          }),
-      ),
+    const request = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve
+        }),
     )
+    vi.stubGlobal('fetch', request)
     const stub = makeAuthClient(session('a@openfray.app'))
     supa.client = stub.client
     renderTutorialPreference()
     await screen.findByText('a@openfray.app')
+    await waitFor(() => expect(request).toHaveBeenCalledOnce())
     stub.emit(session('b@openfray.app', { tutorial_suppression: 'completed' }), 'SIGNED_IN')
     await act(async () => {
       finish(new Response('{}', { status: 500 }))
