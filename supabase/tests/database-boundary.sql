@@ -5,6 +5,11 @@
 do $cb1$
 declare
   affected integer;
+  newsletter_intent text;
+  newsletter_proof text := repeat('a',64);
+  newsletter_proof_hash text;
+  newsletter_lifecycle uuid;
+  newsletter_result record;
   owner_table text;
   insert_statement text;
   live_encounter uuid;
@@ -186,6 +191,21 @@ begin
   ) then raise exception 'CB-1: security-definer functions must not retain PUBLIC execution';
   end if;
 
+  if (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname='newsletter' and c.relkind='r' and c.relrowsecurity) <> 5
+    or exists (
+      select 1 from pg_namespace n cross join lateral aclexplode(n.nspacl) acl
+      where n.nspname='newsletter' and acl.grantee<>n.nspowner
+    ) or exists (
+      select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      cross join lateral aclexplode(c.relacl) acl
+      where n.nspname='newsletter' and acl.grantee<>c.relowner
+    ) or exists (
+      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+      where n.nspname='newsletter' and acl.grantee<>p.proowner
+    ) then raise exception 'CB-1: newsletter must remain private with RLS and owner-only internals'; end if;
+
   if not exists (
     select 1 from pg_trigger t where t.tgrelid='auth.users'::regclass
       and t.tgname='queue_account_welcome' and t.tgenabled='O' and t.tgtype=5 and t.tgnargs=1
@@ -229,6 +249,16 @@ begin
         ('capabilities_of(uuid)', 'authenticated'),
         ('claim_encounter_writer(uuid,uuid)', 'authenticated'),
         ('claim_account_mail()', 'service_role'),
+        ('issue_newsletter_signup_intent(text)', 'service_role'),
+        ('consume_newsletter_signup_intent(text,text)', 'authenticated'),
+        ('discard_newsletter_signup_intent(text,text)', 'service_role'),
+        ('prepare_newsletter_signup(uuid)', 'service_role'),
+        ('finish_newsletter_signup(uuid,uuid,text,uuid)', 'service_role'),
+        ('cancel_newsletter_signup(uuid)', 'service_role'),
+        ('prepare_newsletter_cleanup(uuid)', 'service_role'),
+        ('pending_newsletter_cleanup(uuid)', 'service_role'),
+        ('finish_newsletter_cleanup(uuid,uuid,uuid,text)', 'service_role'),
+        ('prune_newsletter_signup_intents()', 'service_role'),
         ('prepare_account_mail(uuid,uuid,text)', 'service_role'),
         ('finish_account_mail(uuid,uuid,text,uuid)', 'service_role'),
         ('register_legal_publication(text,timestamp with time zone,date,date,boolean)', 'service_role'),
@@ -790,6 +820,43 @@ begin
     select 1 from recovery_deletions where kind = 'share' and subject = 'cb1delete'
   ) then raise exception 'RC-4: account deletion did not enter the recovery ledger';
   end if;
+
+  newsletter_proof_hash := newsletter.hash(newsletter_proof);
+  execute 'set local role service_role';
+  select capability into newsletter_intent from public.issue_newsletter_signup_intent(newsletter_proof_hash);
+  begin
+    perform count(*) from newsletter.subscriptions;
+    raise exception 'CB-1: worker read newsletter consent directly' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',true);
+  execute 'set local role authenticated';
+  select * into newsletter_result from public.consume_newsletter_signup_intent(newsletter_intent,newsletter_proof);
+  newsletter_lifecycle := newsletter_result.lifecycle;
+  if newsletter_result.status<>'ready' or newsletter_lifecycle is null then
+    raise exception 'CB-1: authenticated newsletter consent failed';
+  end if;
+  begin
+    perform public.prepare_newsletter_signup(newsletter_lifecycle);
+    raise exception 'CB-1: account prepared provider mutation' using errcode='OF014';
+  exception when insufficient_privilege then null; end;
+  perform set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',true);
+  select * into newsletter_result from public.consume_newsletter_signup_intent(newsletter_intent,newsletter_proof);
+  if newsletter_result.status<>'invalid' or newsletter_result.lifecycle is not null then
+    raise exception 'CB-1: newsletter receipt crossed owners';
+  end if;
+  execute 'reset role';
+  execute 'set local role service_role';
+  perform public.cancel_newsletter_signup(newsletter_lifecycle);
+  perform public.prepare_newsletter_cleanup(newsletter_lifecycle);
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111',true);
+  execute 'set local role authenticated';
+  select * into newsletter_result from public.consume_newsletter_signup_intent(newsletter_intent,newsletter_proof);
+  if newsletter_result.status<>'invalid' then raise exception 'CB-1: canceled newsletter callback replayed'; end if;
+  execute 'reset role';
+  delete from newsletter.signup_intents where capability_hash=newsletter.hash(newsletter_intent);
+  delete from newsletter.cancellation_fences where email_hash=newsletter.hash('owner-a@example.test');
 
   delete from share_reports where code = 'cb1delete';
   delete from audit_log where action = 'cb1.fixture';
