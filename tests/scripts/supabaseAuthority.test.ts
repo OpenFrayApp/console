@@ -33,7 +33,7 @@ describe('Supabase authority evidence', () => {
   it('gives the forward-only lineage a stable head and schema hash', () => {
     const lineage = migrationLineage(migrations)
 
-    expect(lineage.at(-1)?.file).toBe('20261008143033_admin_read_api_alignment.sql')
+    expect(lineage.at(-1)?.file).toBe('20261012112006_newsletter_signup.sql')
     expect(schemaHash(lineage)).toMatch(/^[a-f0-9]{64}$/)
     expect(new Set(lineage.map(({ hash }: { hash: string }) => hash)).size).toBe(lineage.length)
   })
@@ -276,4 +276,13 @@ describe('Supabase authority evidence', () => {
     })
     expect(attestation).not.toHaveProperty('credentials')
   })
+})
+
+it('includes private newsletter authority in schema dumps and column normalization', () => {
+  expect(authorityVerifier).toContain("'public,account_mail,newsletter'")
+  const first =
+    'CREATE TABLE "newsletter"."subscriptions" (\n    "email" text,\n    "owner_id" uuid\n);'
+  const second =
+    'CREATE TABLE "newsletter"."subscriptions" (\n    "owner_id" uuid,\n    "email" text\n);'
+  expect(canonicalSchemaDump(first)).toBe(canonicalSchemaDump(second))
 })

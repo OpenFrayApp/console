@@ -19,7 +19,7 @@ supabase start
 npm run db:verify
 ```
 
-The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized `public` and `account_mail` schemas. It writes `.artifacts/supabase/deployment-attestation.json`.
+The command performs a fresh local reset, regenerates database types, and compares them with `src/types/database.ts`. It also hashes the normalized `public`, `account_mail`, and `newsletter` schemas. It writes `.artifacts/supabase/deployment-attestation.json`.
 
 Run the hostile database boundary suite against another fresh reset:
 
@@ -49,9 +49,23 @@ The forward migration adopts the existing hosted trigger without changing existi
 
 ## Function execution grants
 
-The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. The three [account-email worker RPCs](./account-email.md) grant execution only to `service_role`. Other application functions grant it no execution. The automatic RLS function remains owner-only.
+The tracked migrations remove inherited execution grants from named application security-definer functions, then restore the reviewed client allowlist. Internal helpers remain unavailable to client roles. The [account-email worker RPCs](./account-email.md) and the service-only
+[newsletter signup RPCs](./newsletter-signup.md) grant execution only to `service_role`.
+Newsletter intent consumption grants execution only to `authenticated`.
+Other application functions grant service-role callers no execution. The automatic RLS function remains owner-only.
 
 Hosted defaults can grant API roles execution explicitly. Revoking `PUBLIC` alone does not remove those grants. Every future function migration must revoke `PUBLIC` and explicit API-role grants before granting its intended callers.
+
+## Newsletter persistence
+
+The private `newsletter` schema has RLS and no direct API-role grants.
+The authority dump and encrypted backup include its lifecycle data.
+The hostile fixture checks its private grants and the exact public RPC execution set.
+See [Newsletter signup persistence](./newsletter-signup.md) for the operation protocol and retention limits.
+
+Newsletter activation remains disabled. Account erasure must gain capture and fencing under #144
+before any subscription can be enabled. The current subscription foreign key restricts identity deletion.
+No existing deletion function or service-mail trigger is changed by #141.
 
 ## Existing admin read APIs
 

@@ -86,7 +86,15 @@ function dumpSchema(args, local = false) {
   const path = resolve(directory, 'schema.sql')
   try {
     const execute = local ? runLocal : run
-    execute('supabase', ['db', 'dump', ...args, '--schema', 'public,account_mail', '--file', path])
+    execute('supabase', [
+      'db',
+      'dump',
+      ...args,
+      '--schema',
+      'public,account_mail,newsletter',
+      '--file',
+      path,
+    ])
     return canonicalSchemaDump(readFileSync(path, 'utf8'))
   } finally {
     rmSync(directory, { recursive: true, force: true })
