@@ -35,6 +35,15 @@ Owner rollback mirrors use separate tab-scoped slots. Genuine anonymous recovery
 precedence over retained owner data after reload.
 Identity expiry retains the existing offline-owner recovery boundary.
 
+Explicit termination uses a source-review-gated auth-js 2.108.2 compatibility shim.
+It delegates to the SDK-selected native or memory storage without changing session defaults.
+Captured-token transport, storage cleanup, and null-event reconciliation fence observed replacements.
+Null events re-read the original storage delegate and verify replacement profiles with captured-bearer GET.
+The console never reinstalls a session or fabricates an auth event for this reconciliation.
+SDK upgrades require the real-client regression suite and source review.
+Native compare/remove is not an atomic cross-tab operation. Unobserved interleaving between
+those operations remains an assembled review and release limitation.
+
 Legacy browser recovery without ownership metadata remains unverified. The console
 preserves its bytes and blocks automatic restoration and overwrite.
 **Download retained recovery** exports those bytes separately from the current working

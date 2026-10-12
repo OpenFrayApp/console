@@ -5,6 +5,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { isContentLicense, type ContentLicense } from '../schema/license.ts'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
+import {
+  signOutConsoleSession,
+  observeConsoleSession,
+  readConsoleProfile,
+} from './sessionTermination.ts'
 import { parseTutorialSuppression, type TutorialSuppression } from '../state/settings.ts'
 import {
   writeTutorialAccountPreference,
@@ -33,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(Boolean(supabase))
   const [identityExpired, setIdentityExpired] = useState(false)
   const [identityGeneration, setIdentityGeneration] = useState(0)
-  const explicitSignOut = useRef(false)
+  const explicitSignOut = useRef<{ generation: number; accessToken: string | null } | null>(null)
   const identity = useRef<{ session: Session | null; generation: number }>({
     session: null,
     generation: 0,
@@ -57,13 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(next)
   }
 
-  useEffect(() => {
-    if (!supabase) return
-    let active = true
-    let authEventReceived = false
-    const currentIdentity = identity.current
-    /** Install auth identity while retaining confirmed suppression within the same session. */
-    const installSession = (session: Session | null) => {
+  /** Install auth identity while retaining confirmed suppression within the same session. */
+  const installSession = useCallback(
+    (session: Session | null) => {
       const previous = identity.current.session
       const sameIdentity = previous?.user.id === session?.user.id
       if (!sameIdentity) invalidatePreferenceWrites()
@@ -72,7 +73,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : null
       identity.current.session = next
       setUser(next?.user ?? null)
-    }
+    },
+    [invalidatePreferenceWrites],
+  )
+
+  /** Reconcile observed native identity with trusted profile data without reinstalling SDK sessions. */
+  const reconcileNativeSession = useCallback(
+    async (isCurrent: () => boolean, intentional: boolean, erasedSession?: Session) => {
+      if (!supabase) return
+      const observed = await observeConsoleSession(supabase)
+      if (!isCurrent()) return
+      if (observed.status === 'absent') {
+        installSession(null)
+        setIdentityExpired(!intentional)
+      } else if (observed.status === 'present') {
+        if (
+          erasedSession &&
+          observed.session.access_token === erasedSession.access_token &&
+          observed.session.refresh_token === erasedSession.refresh_token
+        ) {
+          setLoading(false)
+          return
+        }
+        const verified = await readConsoleProfile(supabase, observed.session)
+        const current = await observeConsoleSession(supabase)
+        if (!isCurrent()) return
+        if (
+          verified &&
+          current.status === 'present' &&
+          current.session.access_token === observed.session.access_token &&
+          current.session.refresh_token === observed.session.refresh_token &&
+          current.session.user.id === verified.id
+        ) {
+          installSession({ ...current.session, user: verified })
+          setIdentityExpired(false)
+        } else setIdentityExpired(true)
+      } else setIdentityExpired(true)
+      setLoading(false)
+    },
+    [installSession],
+  )
+
+  useEffect(() => {
+    if (!supabase) return
+    let active = true
+    let authEventReceived = false
+    const currentIdentity = identity.current
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
@@ -97,8 +143,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       )
         return
       authEventReceived = true
-      if (event === 'SIGNED_OUT') invalidatePreferenceWrites()
-      setIdentityExpired(event === 'SIGNED_OUT' && !explicitSignOut.current)
+      if (event === 'SIGNED_OUT') {
+        const previousToken = identity.current.session?.access_token
+        const intentional =
+          explicitSignOut.current?.generation === identity.current.generation &&
+          explicitSignOut.current.accessToken === (identity.current.session?.access_token ?? null)
+        invalidatePreferenceWrites()
+        const generation = identity.current.generation
+        setIdentityExpired(true)
+        /** Accept loss only after re-reading the SDK's current native identity. */
+        const isCurrentLoss = () =>
+          active &&
+          identity.current.generation === generation &&
+          identity.current.session?.access_token === previousToken
+        void Promise.resolve()
+          .then(() => reconcileNativeSession(isCurrentLoss, intentional))
+          .catch(() => {
+            if (isCurrentLoss()) setLoading(false)
+          })
+        return
+      }
+      setIdentityExpired(false)
       installSession(session)
       setLoading(false)
     })
@@ -108,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentIdentity.session = null
       sub.subscription.unsubscribe()
     }
-  }, [invalidatePreferenceWrites])
+  }, [invalidatePreferenceWrites, installSession, reconcileNativeSession])
 
   /** Revoke owner publication before ending the authenticated session. */
   const signOut = async (): Promise<void> => {
@@ -120,12 +185,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('[openfray] revoking live views before sign-out failed', error)
       return
     }
-    explicitSignOut.current = true
+    const session = identity.current.session
+    if (!session) return
     invalidatePreferenceWrites()
+    const terminationGeneration = identity.current.generation
+    const termination = { generation: terminationGeneration, accessToken: session.access_token }
+    explicitSignOut.current = termination
     try {
-      await supabase.auth.signOut()
+      await signOutConsoleSession(
+        supabase,
+        session,
+        () =>
+          identity.current.generation === terminationGeneration &&
+          identity.current.session?.access_token === session.access_token &&
+          identity.current.session?.refresh_token === session.refresh_token,
+      )
+    } catch (error) {
+      console.error('[openfray] account sign-out failed', error)
+      await reconcileNativeSession(
+        () =>
+          identity.current.generation === terminationGeneration &&
+          identity.current.session?.access_token === session.access_token,
+        true,
+      )
     } finally {
-      explicitSignOut.current = false
+      if (explicitSignOut.current === termination) explicitSignOut.current = null
     }
   }
 
@@ -244,7 +328,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error: 'Account deletion could not be confirmed. Check your account before trying again.',
     }
     if (!isCurrentIdentity()) return failure
+    let termination: typeof explicitSignOut.current = null
     try {
+      const session = identity.current.session!
       invalidatePreferenceWrites()
       const generation = identity.current.generation
       const result = await supabase.functions
@@ -258,15 +344,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         identity.current.session?.user.id !== user?.id
       )
         return failure
-      explicitSignOut.current = true
+      termination = { generation, accessToken: null }
+      explicitSignOut.current = termination
       identity.current.session = null
       setUser(null)
       setIdentityExpired(false)
       // The account is already gone; a failed session cleanup cannot undo erasure.
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+      await signOutConsoleSession(
+        supabase,
+        session,
+        () => identity.current.generation === generation && identity.current.session === null,
+        'local',
+      ).catch(() =>
+        reconcileNativeSession(
+          () => identity.current.generation === generation && identity.current.session === null,
+          true,
+          session,
+        ),
+      )
       return { error: null }
     } finally {
-      explicitSignOut.current = false
+      if (explicitSignOut.current === termination) explicitSignOut.current = null
     }
   }
 
