@@ -141,6 +141,7 @@ export interface ReconciliationConflict {
   unresolved?: boolean
   cloudEmpty?: boolean
   ownerRecovery?: { snapshot: SessionSnapshot; activeAt: string }
+  retainedCloud?: { snapshot: SessionSnapshot; activeAt: string; revision: number }
   device: { snapshot: SessionSnapshot; activeAt: string }
   cloud: { snapshot: SessionSnapshot; activeAt: string; revision: number }
 }
@@ -217,6 +218,10 @@ export class EncounterLifecycle {
       const ownerRecovery =
         recoverableConflict.ownerRecovery &&
         encodeSession(recoverableConflict.ownerRecovery.snapshot)
+      const retainedCloud =
+        recoverableConflict.retainedCloud &&
+        encodeSession(recoverableConflict.retainedCloud.snapshot)
+      if (retainedCloud && retainedCloud.status !== 'ok') return null
       if (ownerRecovery && ownerRecovery.status !== 'ok') return null
       if (device.status !== 'ok' || cloud.status !== 'ok') return null
       return {
@@ -225,6 +230,15 @@ export class EncounterLifecycle {
           kind: 'reconciliation-recovery',
           schemaVersion: 1,
           copies: {
+            ...(retainedCloud?.status === 'ok'
+              ? {
+                  retainedCloud: {
+                    activeAt: recoverableConflict.retainedCloud!.activeAt,
+                    revision: recoverableConflict.retainedCloud!.revision,
+                    envelope: JSON.parse(retainedCloud.serialized),
+                  },
+                }
+              : {}),
             ...(ownerRecovery?.status === 'ok'
               ? {
                   ownerRecovery: {
@@ -376,22 +390,27 @@ export class EncounterLifecycle {
         this.publishStatus({ kind: 'failed', reason: 'unavailable' })
         return false
       }
-      const preserved = (['device', 'cloud', 'ownerRecovery'] as const).every((key) => {
-        const expected = conflict[key]
-        if (!expected) return true
-        const actual = recovered[key]
-        if (!actual || expected.activeAt !== actual.activeAt) return false
-        const before = encodeSession(expected.snapshot)
-        const after = encodeSession(actual.snapshot)
-        return (
-          before.status === 'ok' && after.status === 'ok' && before.serialized === after.serialized
-        )
-      })
+      const preserved = (['device', 'cloud', 'ownerRecovery', 'retainedCloud'] as const).every(
+        (key) => {
+          const expected = conflict[key]
+          if (!expected) return true
+          const actual = recovered[key]
+          if (!actual || expected.activeAt !== actual.activeAt) return false
+          const before = encodeSession(expected.snapshot)
+          const after = encodeSession(actual.snapshot)
+          return (
+            before.status === 'ok' &&
+            after.status === 'ok' &&
+            before.serialized === after.serialized
+          )
+        },
+      )
       if (
         !preserved ||
         Boolean(conflict.anonymous) !== Boolean(recovered.anonymous) ||
         Boolean(conflict.cloudEmpty) !== Boolean(recovered.cloudEmpty) ||
-        conflict.cloud.revision !== recovered.cloud.revision
+        conflict.cloud.revision !== recovered.cloud.revision ||
+        conflict.retainedCloud?.revision !== recovered.retainedCloud?.revision
       ) {
         this.publishStatus({ kind: 'failed', reason: 'unavailable' })
         return false
@@ -516,6 +535,37 @@ export class EncounterLifecycle {
         ? { ownerId, snapshot: recovery }
         : { ownerId, snapshot: null, clearWorkingBoard: true }
     }
+    if (retainedConflict && !retainedConflict.anonymous) {
+      const snapshot = recovery ?? retainedConflict.device.snapshot
+      const conflict: ReconciliationConflict = {
+        ...retainedConflict,
+        id: crypto.randomUUID(),
+        cloudEmpty: cloud.status === 'empty',
+        retainedCloud: retainedConflict.retainedCloud ?? retainedConflict.cloud,
+        device: { snapshot, activeAt: recoverySavedAt ?? retainedConflict.device.activeAt },
+        cloud: {
+          snapshot: {
+            ...snapshot,
+            encounter: cloud.status === 'loaded' ? cloud.encounter : emptyEncounter(),
+            selectedId: null,
+          },
+          activeAt:
+            cloud.status === 'loaded' ? cloud.updatedAt : this.adapters.clock.now().toISOString(),
+          revision: cloud.status === 'loaded' ? (cloud.revision ?? 0) : 0,
+        },
+      }
+      if (cloud.status === 'loaded') this.cloudId = cloud.id
+      this.pendingConflict = conflict
+      this.latestSnapshot = snapshot
+      this.publishStatus({ kind: 'conflict' })
+      return {
+        ownerId,
+        snapshot,
+        savedAt: recoverySavedAt,
+        playerCode: cloud.status === 'loaded' ? cloud.playerCode : null,
+        conflict,
+      }
+    }
     if (cloud.status === 'empty' && this.anonymousSnapshot) {
       const activeAt = this.adapters.clock.now().toISOString()
       const conflict: ReconciliationConflict = {
@@ -568,6 +618,9 @@ export class EncounterLifecycle {
         const conflict: ReconciliationConflict = {
           id: crypto.randomUUID(),
           anonymous: Boolean(this.anonymousSnapshot),
+          ...(!this.anonymousSnapshot && this.archivedConflict?.retainedCloud
+            ? { retainedCloud: this.archivedConflict.retainedCloud }
+            : {}),
           ...(ownerRecovery ? { ownerRecovery } : {}),
           device: { snapshot: recovery, activeAt: recoverySavedAt ?? cloud.updatedAt },
           cloud: {

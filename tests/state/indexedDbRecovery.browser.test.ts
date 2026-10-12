@@ -17,6 +17,7 @@ function lifecycle(
   device: IndexedDbRecovery,
   cloudResult: Awaited<ReturnType<CloudEncounterAdapter['load']>>,
   authSnapshot: SessionSnapshot | null = null,
+  cloudAdapter?: CloudEncounterAdapter,
 ): EncounterLifecycle {
   return new EncounterLifecycle({
     device,
@@ -40,7 +41,7 @@ function lifecycle(
         return { status: 'deleted' }
       },
     },
-    cloud: {
+    cloud: cloudAdapter ?? {
       load: async () => cloudResult,
       acquire: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),
       takeover: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),
@@ -109,6 +110,172 @@ describe('IndexedDB recovery', () => {
       await onlineDevice.close()
     },
   )
+
+  it.each([
+    { cloudState: 'empty', choice: 'device' },
+    { cloudState: 'empty', choice: 'cloud' },
+    { cloudState: 'changed', choice: 'device' },
+    { cloudState: 'changed', choice: 'cloud' },
+    { cloudState: 'unchanged', choice: 'device' },
+    { cloudState: 'unchanged', choice: 'cloud' },
+  ] as const)(
+    'requires choice on $cloudState online owner renewal, retaining all branches after $choice choice and restart',
+    async ({ cloudState, choice }) => {
+      const name = `openfray-online-renewal-${crypto.randomUUID()}`
+      const device = new IndexedDbRecovery(name)
+      const local = snapshot('original-owner-device')
+      const originalCloud = snapshot('original-owner-cloud')
+      const originalOwner = snapshot('retained-third-owner')
+      local.encounter.combatants = [pc({ name: 'Device guard' })]
+      originalCloud.encounter.combatants = [pc({ name: 'Original cloud guard' })]
+      originalOwner.encounter.combatants = [pc({ name: 'Retained owner guard' })]
+      const changedCloud = snapshot('changed-owner-cloud')
+      changedCloud.encounter.combatants = [pc({ name: 'Changed cloud guard' })]
+      await device.save('owner-a', local, '2026-09-02T10:10:12.000Z')
+      const oldCloud = {
+        status: 'loaded' as const,
+        id: 'cloud-row',
+        encounter: originalCloud.encounter,
+        revision: 1,
+        playerCode: null,
+        updatedAt: '2026-09-02T10:11:12.000Z',
+      }
+      const first = lifecycle(device, oldCloud)
+      const firstReturn = await first.identify('owner-a')
+      await device.archiveConflict('owner-a', {
+        ...firstReturn.conflict!,
+        ownerRecovery: {
+          snapshot: originalOwner,
+          activeAt: '2026-09-02T10:09:12.000Z',
+        },
+      })
+      first.expireIdentity()
+      expect(await first.checkpointForSignIn()).toBe(true)
+      await device.close()
+
+      let current: Awaited<ReturnType<CloudEncounterAdapter['load']>> =
+        cloudState === 'empty'
+          ? { status: 'empty' }
+          : cloudState === 'unchanged'
+            ? oldCloud
+            : {
+                ...oldCloud,
+                encounter: changedCloud.encounter,
+                revision: 2,
+                updatedAt: '2026-09-02T10:12:12.000Z',
+              }
+      const publications: Array<{ ownerId: string; encounterId: string }> = []
+      const cloud: CloudEncounterAdapter = {
+        load: async () => current,
+        acquire: async () => ({
+          status: 'acquired',
+          revision: current.status === 'loaded' ? (current.revision ?? 0) : 0,
+          leaseToken: 'writer-a',
+        }),
+        takeover: async () => ({ status: 'acquired', revision: 2, leaseToken: 'writer-a' }),
+        save: async (ownerId, id, revision, writerId, encounter, updatedAt) => {
+          publications.push({ ownerId, encounterId: encounter.encounterId })
+          current = {
+            status: 'loaded',
+            id: id ?? 'new-cloud-row',
+            revision: revision + 1,
+            encounter,
+            updatedAt,
+            playerCode: null,
+          }
+          return {
+            status: 'saved',
+            id: current.id,
+            revision: current.revision!,
+            leaseToken: writerId,
+          }
+        },
+      }
+      const returnedDevice = new IndexedDbRecovery(name)
+      const renewed = lifecycle(returnedDevice, current, null, cloud)
+      let returned = await renewed.identify('owner-a')
+      await renewed.commit(local)
+      expect(await renewed.ensureCloudEncounter(local.encounter)).toBeNull()
+      expect(await renewed.takeOver()).toBe(false)
+      expect(publications).toEqual([])
+      expect(renewed.writableEncounter()).toBeNull()
+      expect(returned.conflict).toBeDefined()
+      const beforeChoice = renewed.recoveryDownload()!.serialized
+      expect(beforeChoice).toContain('original-owner-device')
+      expect(beforeChoice).toContain('original-owner-cloud')
+      expect(beforeChoice).toContain('retained-third-owner')
+      if (cloudState === 'changed') expect(beforeChoice).toContain('changed-owner-cloud')
+      renewed.expireIdentity()
+      expect(await renewed.checkpointForSignIn()).toBe(true)
+      returned = await renewed.identify('owner-a')
+      expect(await renewed.ensureCloudEncounter(local.encounter)).toBeNull()
+      expect(publications).toEqual([])
+      expect(renewed.recoveryDownload()!.serialized).toContain('original-owner-cloud')
+      const selected = choice === 'device' ? local : returned.conflict!.cloud.snapshot
+      expect((await renewed.resolveConflict(returned.conflict!.id, choice))?.snapshot).toEqual(
+        selected,
+      )
+      expect(publications).toHaveLength(choice === 'device' ? 1 : 0)
+      if (choice === 'device')
+        expect(publications[0]).toEqual({
+          ownerId: 'owner-a',
+          encounterId: 'original-owner-device',
+        })
+      expect((await returnedDevice.loadConflict('owner-a'))?.unresolved).toBe(false)
+      await renewed.commit(snapshot('after-choice-action'))
+      expect(
+        await renewed.ensureCloudEncounter(snapshot('after-choice-action').encounter),
+      ).not.toBeNull()
+      await renewed.commit(snapshot('after-second-action'))
+      expect(
+        await renewed.ensureCloudEncounter(snapshot('after-second-action').encounter),
+      ).not.toBeNull()
+      await returnedDevice.close()
+      const reopened = new IndexedDbRecovery(name)
+      const restarted = lifecycle(reopened, current, null, cloud)
+      const restartedReturn = await restarted.identify('owner-a')
+      expect(restartedReturn.snapshot?.encounter.encounterId).toBe('after-second-action')
+      expect(restartedReturn.conflict).toBeUndefined()
+      const afterRestart = restarted.recoveryDownload()!.serialized
+      const copies = JSON.parse(afterRestart).copies
+      expect(copies.device.envelope.payload.encounter).toEqual(local.encounter)
+      expect(copies.retainedCloud.envelope.payload.encounter).toEqual(originalCloud.encounter)
+      expect(copies.ownerRecovery.envelope.payload.encounter).toEqual(originalOwner.encounter)
+      expect(afterRestart).toContain('original-owner-device')
+      expect(afterRestart).toContain('original-owner-cloud')
+      expect(afterRestart).toContain('retained-third-owner')
+      if (cloudState === 'changed') expect(afterRestart).toContain('changed-owner-cloud')
+      await reopened.close()
+    },
+  )
+
+  it('does not expose another owner’s unresolved board or recovery download on online return', async () => {
+    const name = `openfray-wrong-owner-${crypto.randomUUID()}`
+    const device = new IndexedDbRecovery(name)
+    await device.save('owner-a', snapshot('private-owner-a-device'), '2026-09-02T10:11:12.000Z')
+    await device.archiveConflict('owner-a', {
+      id: 'owner-a-choice',
+      unresolved: true,
+      device: {
+        snapshot: snapshot('private-owner-a-device'),
+        activeAt: '2026-09-02T10:11:12.000Z',
+      },
+      cloud: {
+        snapshot: snapshot('private-owner-a-cloud'),
+        activeAt: '2026-09-02T10:11:12.000Z',
+        revision: 1,
+      },
+    })
+    await device.close()
+    const reopened = new IndexedDbRecovery(name)
+    const returnedSession = lifecycle(reopened, { status: 'empty' })
+    const returned = await returnedSession.identify('owner-b')
+    expect(returned.snapshot).toBeNull()
+    expect(returned.conflict).toBeUndefined()
+    expect(returnedSession.recoveryDownload()?.serialized ?? '').not.toContain('private-owner-a')
+    expect((await reopened.loadConflict('owner-a'))?.unresolved).toBe(true)
+    await reopened.close()
+  })
 
   it('reopens unresolved owner copies after an expired-identity checkpoint without cloud access', async () => {
     const name = `openfray-expired-conflict-${crypto.randomUUID()}`

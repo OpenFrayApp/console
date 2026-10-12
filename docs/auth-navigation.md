@@ -41,8 +41,12 @@ Closing the tab removes anonymous recovery.
 
 If identity expires with unresolved copies, sign-in verifies their preservation
 before leaving. Anonymous copies stay tab-scoped until explicit reconciliation.
-Owner copies stay owner-scoped. Renewal does not require cloud resolution or
-grant expired cloud write authority. Failed preservation blocks departure.
+Owner copies stay owner-scoped. On owner return, an active unresolved marker
+requires explicit choice even when the cloud loads successfully or is empty.
+The original cloud branch stays downloadable alongside the current cloud branch.
+Resolved archived history alone does not require another choice.
+Renewal does not require cloud resolution or grant expired cloud write authority.
+Failed preservation blocks departure.
 An anonymous return after cancellation restores the verified handoff even when
 the session mirror could not be saved.
 

@@ -255,6 +255,122 @@ function harness(options: {
 }
 
 describe('encounter lifecycle', () => {
+  it('does not publish an active unresolved owner branch when renewal returns to empty cloud', async () => {
+    const local = snapshot('unresolved-local')
+    const originalCloud = snapshot('original-cloud')
+    originalCloud.encounter.combatants = [pc({ name: 'Original cloud guard' })]
+    const { lifecycle, cloudWrites, flushCloud } = harness({
+      latest: { ownerId: 'owner-a', snapshot: local },
+      byOwner: { 'owner-a': local },
+      archivedConflict: {
+        id: 'active-choice',
+        unresolved: true,
+        device: { snapshot: local, activeAt: '2026-09-02T10:11:12.000Z' },
+        cloud: { snapshot: originalCloud, activeAt: '2026-09-02T10:10:12.000Z', revision: 1 },
+      },
+      cloud: { status: 'empty' },
+    })
+    const returned = await lifecycle.identify('owner-a')
+    await lifecycle.commit(local)
+    await flushCloud()
+    expect(cloudWrites).toEqual([])
+    expect(lifecycle.writableEncounter()).toBeNull()
+    expect(returned.conflict?.cloudEmpty).toBe(true)
+    expect(lifecycle.recoveryDownload()?.serialized).toContain('original-cloud')
+    expect(await lifecycle.resolveConflict(returned.conflict!.id, 'device')).not.toBeNull()
+    expect(cloudWrites.map((write) => write.encounter.encounterId)).toEqual(['unresolved-local'])
+    expect(lifecycle.recoveryDownload()?.serialized).toContain('original-cloud')
+  })
+
+  it.each(['same', 'device-descendant'] as const)(
+    'does not adopt %s lineage when renewed owner copies remain unresolved',
+    async (relationship) => {
+      const local = snapshot('unresolved-local')
+      const currentCloud = snapshot(relationship === 'same' ? 'unresolved-local' : 'changed-cloud')
+      const originalCloud = snapshot('original-cloud')
+      const { lifecycle, calls, cloudWrites, flushCloud } = harness({
+        latest: { ownerId: 'owner-a', snapshot: local },
+        byOwner: { 'owner-a': local },
+        lineage: {
+          cloudEncounterId: 'cloud-row',
+          cloudRevision: 2,
+          cloudStateHash: await encounterHash(currentCloud.encounter),
+        },
+        archivedConflict: {
+          id: 'active-choice',
+          unresolved: true,
+          device: { snapshot: local, activeAt: '2026-09-02T10:11:12.000Z' },
+          cloud: { snapshot: originalCloud, activeAt: '2026-09-02T10:10:12.000Z', revision: 1 },
+        },
+        cloud: {
+          status: 'loaded',
+          id: 'cloud-row',
+          encounter: currentCloud.encounter,
+          revision: 2,
+          playerCode: null,
+          updatedAt: '2026-09-02T10:12:12.000Z',
+        },
+      })
+      const returned = await lifecycle.identify('owner-a')
+      await lifecycle.commit(local)
+      await flushCloud()
+      expect(cloudWrites).toEqual([])
+      expect(calls).not.toContain('cloud:acquire')
+      expect(lifecycle.writableEncounter()).toBeNull()
+      expect(returned.conflict?.cloud.snapshot.encounter.encounterId).toBe(
+        currentCloud.encounter.encounterId,
+      )
+      expect(lifecycle.recoveryDownload()?.serialized).toContain('original-cloud')
+      expect(await lifecycle.resolveConflict(returned.conflict!.id, 'device')).not.toBeNull()
+      expect(cloudWrites.map((write) => write.encounter.encounterId)).toEqual(['unresolved-local'])
+      expect(lifecycle.recoveryDownload()?.serialized).toContain('original-cloud')
+    },
+  )
+
+  it.each(['missing', 'stale', 'revision'] as const)(
+    'blocks another renewal when retained cloud readback is %s',
+    async (fault) => {
+      const local = snapshot('protected-owner-device')
+      let stored: ReconciliationConflict = {
+        id: 'active-choice',
+        unresolved: true,
+        device: { snapshot: local, activeAt: '2026-09-02T10:11:12.000Z' },
+        cloud: {
+          snapshot: snapshot('original-cloud'),
+          activeAt: '2026-09-02T10:10:12.000Z',
+          revision: 1,
+        },
+      }
+      const { lifecycle, cloudWrites } = harness({
+        latest: { ownerId: 'owner-a', snapshot: local },
+        byOwner: { 'owner-a': local },
+        archiveLoad: async () => stored,
+        archiveSave: async (_ownerId, conflict) => {
+          stored = {
+            ...conflict,
+            retainedCloud:
+              fault === 'missing'
+                ? undefined
+                : {
+                    ...conflict.retainedCloud!,
+                    ...(fault === 'stale'
+                      ? { snapshot: snapshot('wrong-retained-cloud') }
+                      : { revision: 99 }),
+                  },
+          }
+          return { status: 'saved' }
+        },
+        cloud: { status: 'empty' },
+      })
+      await lifecycle.identify('owner-a')
+      lifecycle.expireIdentity()
+      expect(await lifecycle.checkpointForSignIn()).toBe(false)
+      expect(lifecycle.saveStatus().kind).toBe('failed')
+      expect(lifecycle.recoveryDownload()?.serialized).toContain('original-cloud')
+      expect(cloudWrites).toEqual([])
+    },
+  )
+
   it('retains unresolved owner copies without attempting cloud reconciliation under an expired identity', async () => {
     const { lifecycle, calls, cloudWrites } = harness({
       latest: { ownerId: 'owner-a', snapshot: snapshot('owner-device') },

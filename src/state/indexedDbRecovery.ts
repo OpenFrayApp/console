@@ -42,6 +42,9 @@ interface ConflictRecord {
   cloudRevision: number
   ownerRecoverySerialized?: string
   ownerRecoveryActiveAt?: string
+  retainedCloudSerialized?: string
+  retainedCloudActiveAt?: string
+  retainedCloudRevision?: number
 }
 
 interface MetadataRecord {
@@ -124,12 +127,15 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     if (!record) return null
     const device = decodeSession(record.deviceSerialized)
     const cloud = decodeSession(record.cloudSerialized)
+    const retainedCloud =
+      record.retainedCloudSerialized && decodeSession(record.retainedCloudSerialized)
     const ownerRecovery =
       record.ownerRecoverySerialized && decodeSession(record.ownerRecoverySerialized)
     if (
       device.status !== 'ok' ||
       cloud.status !== 'ok' ||
-      (ownerRecovery && ownerRecovery.status !== 'ok')
+      (ownerRecovery && ownerRecovery.status !== 'ok') ||
+      (retainedCloud && retainedCloud.status !== 'ok')
     )
       return null
     return {
@@ -142,6 +148,15 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
             ownerRecovery: {
               snapshot: ownerRecovery.snapshot,
               activeAt: record.ownerRecoveryActiveAt ?? record.deviceActiveAt,
+            },
+          }
+        : {}),
+      ...(retainedCloud && retainedCloud.status === 'ok'
+        ? {
+            retainedCloud: {
+              snapshot: retainedCloud.snapshot,
+              activeAt: record.retainedCloudActiveAt ?? record.cloudActiveAt,
+              revision: record.retainedCloudRevision ?? record.cloudRevision,
             },
           }
         : {}),
@@ -243,18 +258,20 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     }
   }
 
-  /** Preserve divergent branches and pre-existing owner recovery outside the rolling copy slot. */
+  /** Preserve protected conflict branches outside the rolling recovery copy slot. */
   async archiveConflict(
     ownerId: string,
     conflict: ReconciliationConflict,
   ): Promise<SessionWriteResult> {
     const deviceEncoded = encodeSession(conflict.device.snapshot)
     const cloudEncoded = encodeSession(conflict.cloud.snapshot)
+    const retainedEncoded = conflict.retainedCloud && encodeSession(conflict.retainedCloud.snapshot)
     const ownerEncoded = conflict.ownerRecovery && encodeSession(conflict.ownerRecovery.snapshot)
     if (
       deviceEncoded.status !== 'ok' ||
       cloudEncoded.status !== 'ok' ||
-      (ownerEncoded && ownerEncoded.status !== 'ok')
+      (ownerEncoded && ownerEncoded.status !== 'ok') ||
+      (retainedEncoded && retainedEncoded.status !== 'ok')
     ) {
       return { status: 'failed', reason: 'invalid-snapshot' }
     }
@@ -273,6 +290,12 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
             ? ownerEncoded.serialized
             : previous?.ownerRecoverySerialized,
         ownerRecoveryActiveAt: conflict.ownerRecovery?.activeAt ?? previous?.ownerRecoveryActiveAt,
+        retainedCloudSerialized:
+          retainedEncoded?.status === 'ok'
+            ? retainedEncoded.serialized
+            : previous?.retainedCloudSerialized,
+        retainedCloudActiveAt: conflict.retainedCloud?.activeAt ?? previous?.retainedCloudActiveAt,
+        retainedCloudRevision: conflict.retainedCloud?.revision ?? previous?.retainedCloudRevision,
         deviceSerialized: deviceEncoded.serialized,
         cloudSerialized: cloudEncoded.serialized,
         deviceActiveAt: conflict.device.activeAt,
