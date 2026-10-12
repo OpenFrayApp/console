@@ -493,7 +493,7 @@ export class EncounterLifecycle {
       retainedConflict?.ownerRecovery ??
       (this.anonymousSnapshot && device
         ? { snapshot: device.snapshot, activeAt: device.savedAt }
-        : undefined)
+        : this.archivedConflict?.ownerRecovery)
     const recoverySavedAt =
       device?.savedAt ?? (startup.ownerId === ownerId ? startup.savedAt : undefined)
     const cloud =

@@ -102,6 +102,11 @@ describe('IndexedDB recovery', () => {
       else
         expect(JSON.parse(download!).copies.cloud.envelope.payload.encounter.combatants).toEqual([])
       await reopenedDevice.close()
+      const onlineDevice = new IndexedDbRecovery(name)
+      const onlineReturn = lifecycle(onlineDevice, cloud)
+      await onlineReturn.identify('owner-a')
+      expect(onlineReturn.recoveryDownload()?.serialized).toContain('unsynced-owner')
+      await onlineDevice.close()
     },
   )
 
