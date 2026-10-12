@@ -14,12 +14,18 @@ afterEach(cleanup)
 function renderControl(overrides: Partial<AuthState> = {}) {
   const value = authState(overrides)
   const onSignIn = vi.fn()
+  const onOpenAccount = vi.fn()
+  const onOpenShares = vi.fn()
   render(
     <AuthContext.Provider value={value}>
-      <AccountControl onSignIn={onSignIn} />
+      <AccountControl
+        onSignIn={onSignIn}
+        onOpenAccount={onOpenAccount}
+        onOpenShares={onOpenShares}
+      />
     </AuthContext.Provider>,
   )
-  return { value, onSignIn }
+  return { value, onSignIn, onOpenAccount, onOpenShares }
 }
 
 describe('AccountControl (anonymous)', () => {
@@ -31,46 +37,37 @@ describe('AccountControl (anonymous)', () => {
     expect(onSignIn).toHaveBeenCalledTimes(1)
   })
 
-  it('shows a user-icon menu (Settings + Sign out) when signed in', () => {
-    const { value } = renderControl({ user: { email: 'dm@openfray.app' } as unknown as User })
-    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull()
-    // The menu is closed until the icon is clicked.
+  it('opens site account through the checkpoint action and keeps Shared links in the console', () => {
+    const { value, onOpenAccount, onOpenShares } = renderControl({
+      user: { email: 'gm@example.test' } as User,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
     expect(screen.queryByRole('menuitem', { name: 'Sign out' })).toBeNull()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-    expect(screen.getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
-    expect(value.signOut).toHaveBeenCalledTimes(1)
-  })
-
-  it('opens the existing profile on a navigation request and keeps it gated to signed-in users', () => {
-    const value = authState({ user: { email: 'gm@openfray.app' } as User })
-    const onSignIn = vi.fn()
-    const { rerender } = render(
-      <AuthContext.Provider value={value}>
-        <AccountControl onSignIn={onSignIn} openRequest={0} />
-      </AuthContext.Provider>,
-    )
-    expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
-    rerender(
-      <AuthContext.Provider value={value}>
-        <AccountControl onSignIn={onSignIn} openRequest={1} />
-      </AuthContext.Provider>,
-    )
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument()
-    rerender(
-      <AuthContext.Provider value={authState()}>
-        <AccountControl onSignIn={onSignIn} openRequest={1} />
-      </AuthContext.Provider>,
-    )
-    expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
-  })
-
-  it('opens the account settings panel from the menu', () => {
-    renderControl({ user: { email: 'dm@openfray.app' } as unknown as User })
-    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument()
-    expect(screen.getByText('Delete account')).toBeInTheDocument()
+    expect(onOpenAccount).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Shared links' }))
+    expect(onOpenShares).toHaveBeenCalledOnce()
+    expect(value.signOut).not.toHaveBeenCalled()
+  })
+
+  it('requests site account from quick navigation only while signed in', () => {
+    const onOpenAccount = vi.fn()
+    const control = (user: User | null, openRequest: number) => (
+      <AuthContext.Provider value={authState({ user })}>
+        <AccountControl
+          onSignIn={() => {}}
+          onOpenAccount={onOpenAccount}
+          openRequest={openRequest}
+        />
+      </AuthContext.Provider>
+    )
+    const user = { email: 'gm@example.test' } as User
+    const { rerender } = render(control(user, 0))
+    rerender(control(user, 1))
+    expect(onOpenAccount).toHaveBeenCalledOnce()
+    rerender(control(null, 2))
+    expect(onOpenAccount).toHaveBeenCalledOnce()
   })
 })

@@ -174,7 +174,7 @@ import { LegalLinks } from './components/shell/LegalLinks.tsx'
 import { SharePanel, CastIcon } from './components/share/SharePanel.tsx'
 import { BookIcon } from './components/icons/BookIcon.tsx'
 import { ShareIcon } from './components/icons/ShareIcon.tsx'
-import { navigateToSiteSignIn } from './auth/signInNavigation.ts'
+import { navigateToSiteSignIn, navigateToSiteAccount } from './auth/signInNavigation.ts'
 import { Modal } from './components/ui/Modal.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/log/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
@@ -394,8 +394,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     identityExpired,
   } = useAuth()
   const userId = user?.id ?? null
-  const [signInError, setSignInError] = useState<string | null>(null)
-  const signInPending = useRef(false)
+  const [departureError, setDepartureError] = useState<string | null>(null)
+  const [departureDestination, setDepartureDestination] = useState<'sign-in' | 'account'>('sign-in')
+  const departurePending = useRef(false)
   /**
    * Whether recovery and identity-triggered cloud reconciliation have settled. A cast from
    * a shared link waits on this so hydration cannot replace it or persist half a board.
@@ -607,11 +608,13 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   }
 
   /** Leave only after the latest committed board has a verified recovery checkpoint. */
-  const signIn = async () => {
-    if (signInPending.current) return
-    setSignInError(null)
+  const leaveForSite = async (destination: 'sign-in' | 'account') => {
+    if (departurePending.current) return
+    setDepartureError(null)
+    setDepartureDestination(destination)
+    const action = destination === 'account' ? 'opening your account' : 'sign-in'
     if (!authConfigured) {
-      setSignInError('Signing in isn’t available on this copy of OpenFray.')
+      setDepartureError('Accounts aren’t available on this copy of OpenFray.')
       return
     }
     if (
@@ -620,24 +623,25 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       (!identityExpired && settledIdentity !== userId) ||
       resolvingCopies
     ) {
-      setSignInError('The board is still recovering. Retry sign-in when recovery finishes.')
+      setDepartureError(`The board is still recovering. Retry ${action} when recovery finishes.`)
       return
     }
-    signInPending.current = true
+    departurePending.current = true
     try {
-      if (!(await lifecycle.checkpointForSignIn())) {
-        setSignInError(
-          'The sign-in checkpoint could not be verified. Retry sign-in or download your recovery copy. Resolve any divergent copies before leaving.',
+      if (!(await lifecycle.checkpointForSiteNavigation())) {
+        setDepartureError(
+          `The checkpoint could not be verified. Retry ${action} or download your recovery copy.`,
         )
         return
       }
-      navigateToSiteSignIn()
+      if (destination === 'account') navigateToSiteAccount()
+      else navigateToSiteSignIn()
     } catch {
-      setSignInError(
-        'The sign-in checkpoint did not finish. Retry sign-in or download your recovery copy.',
+      setDepartureError(
+        `The checkpoint did not finish. Retry ${action} or download your recovery copy.`,
       )
     } finally {
-      signInPending.current = false
+      departurePending.current = false
     }
   }
 
@@ -693,7 +697,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       return
     }
     if (!user) {
-      void signIn()
+      void leaveForSite('sign-in')
       return
     }
     const code = playerCode ?? randomPlayerCode()
@@ -1466,7 +1470,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     invitationAvailable:
       !settingsOpen &&
       !searchOpen &&
-      !signInError &&
+      !departureError &&
       !helpOpen &&
       !feedbackOpen &&
       !initPrompt &&
@@ -1878,8 +1882,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
               <AccountControl
                 openRequest={profileRequest}
-                onSignIn={() => void signIn()}
-                allowReserved={bylineGranted}
+                onSignIn={() => void leaveForSite('sign-in')}
+                onOpenAccount={() => void leaveForSite('account')}
                 onOpenShares={() => {
                   refreshShares()
                   setShowShares(true)
@@ -1892,7 +1896,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 sharing={sharing}
                 onToggleShare={toggleSharing}
                 onClaim={user ? claimShareCode : undefined}
-                onSignIn={() => void signIn()}
+                onSignIn={() => void leaveForSite('sign-in')}
                 pin={playerPin}
                 onSetPin={setPlayerPin}
                 backdrop={playerBackdrop}
@@ -1915,7 +1919,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 status={saveStatus}
                 onRetry={() => void lifecycle.retry()}
                 onDownload={downloadRecovery}
-                onSignIn={() => void signIn()}
+                onSignIn={() => void leaveForSite('sign-in')}
                 onTakeOver={() => void lifecycle.takeOver()}
                 onResolveCopies={() => setCopyConflictOpen(true)}
               />
@@ -1997,7 +2001,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                           id: 'sign-in',
                           name: 'Sign in',
                           icon: <UserIcon />,
-                          onSelect: () => navigateFromSearch(() => void signIn()),
+                          onSelect: () => navigateFromSearch(() => void leaveForSite('sign-in')),
                         },
                       ]
                     : []),
@@ -2088,7 +2092,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   showHomebrew={showHomebrew}
                   librarySort={librarySort}
                   createGated={!user}
-                  onGated={() => void signIn()}
+                  onGated={() => void leaveForSite('sign-in')}
                 />
               </div>
             ) : (
@@ -2100,7 +2104,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canSave={encounter.combatants.length > 0}
                       signedIn={!!user}
                       onSave={handleSaveFight}
-                      onSignIn={() => void signIn()}
+                      onSignIn={() => void leaveForSite('sign-in')}
                     />
                     <ShareEncounterButton
                       canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
@@ -2111,7 +2115,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canDropRestricted={restricted.someRemain}
                       allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
-                      onSignIn={() => void signIn()}
+                      onSignIn={() => void leaveForSite('sign-in')}
                     />
                   </>
                 }
@@ -2195,18 +2199,25 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           )}
 
-          {signInError && (
+          {departureError && (
             <DialogFocus>
-              <Modal title="Sign-in checkpoint" onClose={() => setSignInError(null)}>
+              <Modal
+                title={
+                  departureDestination === 'account' ? 'Account checkpoint' : 'Sign-in checkpoint'
+                }
+                onClose={() => setDepartureError(null)}
+              >
                 <p role="alert" className="mb-3 text-sm">
-                  {signInError}
+                  {departureError}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => void signIn()}>Retry sign-in</Button>
+                  <Button onClick={() => void leaveForSite(departureDestination)}>
+                    {departureDestination === 'account' ? 'Retry account' : 'Retry sign-in'}
+                  </Button>
                   <Button variant="quiet" onClick={downloadRecovery}>
                     Download recovery copy
                   </Button>
-                  <Button variant="quiet" onClick={() => setSignInError(null)}>
+                  <Button variant="quiet" onClick={() => setDepartureError(null)}>
                     Keep playing
                   </Button>
                 </div>
@@ -2277,7 +2288,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               defaultByline={displayName ?? shareByline}
               allowReserved={bylineGranted}
               onShare={(draft) => handleShareCreature(sharingCreature, draft)}
-              onSignIn={() => void signIn()}
+              onSignIn={() => void leaveForSite('sign-in')}
               onClose={() => setSharingCreature(null)}
             />
           )}
@@ -2376,7 +2387,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               authConfigured={authConfigured}
               onSignIn={() => {
                 tutorial.dismiss()
-                void signIn()
+                void leaveForSite('sign-in')
               }}
             />
           ))}

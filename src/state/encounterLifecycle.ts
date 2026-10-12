@@ -303,10 +303,10 @@ export class EncounterLifecycle {
     }
   }
 
-  /** Checkpoint recovery and drain writable cloud work before same-tab site sign-in. */
-  async checkpointForSignIn(): Promise<boolean> {
+  /** Checkpoint recovery and drain writable cloud work before same-tab site navigation. */
+  async checkpointForSiteNavigation(): Promise<boolean> {
     if (!this.latestSnapshot) return false
-    if (this.pendingConflict) return this.checkpointExpiredConflict()
+    if (this.pendingConflict) return this.checkpointUnresolvedConflict()
     const ownerId = this.ownerId
     const identityGeneration = this.identityGeneration
     if (ownerId) {
@@ -348,11 +348,10 @@ export class EncounterLifecycle {
     )
   }
 
-  /** Verify unresolved copies before renewal without cloud reads or expired write authority. */
-  private async checkpointExpiredConflict(): Promise<boolean> {
+  /** Verify unresolved copies before departure without choosing or publishing a branch. */
+  private async checkpointUnresolvedConflict(): Promise<boolean> {
     const ownerId = this.ownerId
-    if (!ownerId || !this.cloudIdentityExpired || !this.pendingConflict || !this.latestSnapshot)
-      return false
+    if (!ownerId || !this.pendingConflict || !this.latestSnapshot) return false
     const identityGeneration = this.identityGeneration
     const write = this.commit(this.latestSnapshot)
     const commitGeneration = this.commitGeneration
@@ -415,7 +414,7 @@ export class EncounterLifecycle {
         this.publishStatus({ kind: 'failed', reason: 'unavailable' })
         return false
       }
-      this.publishStatus({ kind: 'sign-in' })
+      if (this.cloudIdentityExpired) this.publishStatus({ kind: 'sign-in' })
       return true
     } catch {
       this.publishStatus({ kind: 'failed', reason: 'unavailable' })

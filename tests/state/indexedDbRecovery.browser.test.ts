@@ -150,7 +150,7 @@ describe('IndexedDB recovery', () => {
         },
       })
       first.expireIdentity()
-      expect(await first.checkpointForSignIn()).toBe(true)
+      expect(await first.checkpointForSiteNavigation()).toBe(true)
       await device.close()
 
       let current: Awaited<ReturnType<CloudEncounterAdapter['load']>> =
@@ -206,7 +206,7 @@ describe('IndexedDB recovery', () => {
       expect(beforeChoice).toContain('retained-third-owner')
       if (cloudState === 'changed') expect(beforeChoice).toContain('changed-owner-cloud')
       renewed.expireIdentity()
-      expect(await renewed.checkpointForSignIn()).toBe(true)
+      expect(await renewed.checkpointForSiteNavigation()).toBe(true)
       returned = await renewed.identify('owner-a')
       expect(await renewed.ensureCloudEncounter(local.encounter)).toBeNull()
       expect(publications).toEqual([])
@@ -291,7 +291,7 @@ describe('IndexedDB recovery', () => {
     })
     await first.identify('owner-a')
     first.expireIdentity()
-    expect(await first.checkpointForSignIn()).toBe(true)
+    expect(await first.checkpointForSiteNavigation()).toBe(true)
     expect(first.writableEncounter()).toBeNull()
     expect((await device.loadConflict('owner-a'))?.unresolved).toBe(true)
     await device.close()

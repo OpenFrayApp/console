@@ -21,8 +21,11 @@ import * as cloudEncounter from '../src/state/cloudEncounter.ts'
 import type { User } from '@supabase/supabase-js'
 import { authState, pc } from './fixtures.ts'
 
-const navigation = vi.hoisted(() => ({ leave: vi.fn() }))
-vi.mock('../src/auth/signInNavigation.ts', () => ({ navigateToSiteSignIn: navigation.leave }))
+const navigation = vi.hoisted(() => ({ leave: vi.fn(), account: vi.fn() }))
+vi.mock('../src/auth/signInNavigation.ts', () => ({
+  navigateToSiteSignIn: navigation.leave,
+  navigateToSiteAccount: navigation.account,
+}))
 
 afterEach(() => {
   cleanup()
@@ -30,6 +33,7 @@ afterEach(() => {
   localStorage.clear()
   vi.restoreAllMocks()
   navigation.leave.mockReset()
+  navigation.account.mockReset()
 })
 
 /** Start an anonymous board without the newcomer invitation. */
@@ -361,9 +365,14 @@ it('restores the latest verified anonymous handoff after full-page cancellation 
   expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
 })
 
-it.each(['anonymous', 'owner'] as const)(
-  'renews an expired %s conflict after preserving every unresolved branch without cloud authority',
-  async (origin) => {
+it.each([
+  ['anonymous', 'sign-in'],
+  ['owner', 'sign-in'],
+  ['anonymous', 'account'],
+  ['owner', 'account'],
+] as const)(
+  'preserves every unresolved %s branch before %s departure without cloud publication',
+  async (origin, destination) => {
     saveSettings({ tutorialSuppression: 'dismissed' })
     const ownerBoard = recoverySnapshot('before-renewal-owner')
     ownerBoard.encounter.combatants = [pc({ name: 'Owner guard' })]
@@ -419,14 +428,20 @@ it.each(['anonymous', 'owner'] as const)(
       </AuthContext.Provider>,
     )
     await screen.findByRole('dialog', { name: 'Choose a board copy' })
-    app.rerender(
-      <AuthContext.Provider value={authState({ identityExpired: true })}>
-        <App />
-      </AuthContext.Provider>,
-    )
-    await act(() => Promise.resolve())
-    fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
-    await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
+    if (destination === 'sign-in') {
+      app.rerender(
+        <AuthContext.Provider value={authState({ identityExpired: true })}>
+          <App />
+        </AuthContext.Provider>,
+      )
+      await act(() => Promise.resolve())
+      fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
+      await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
+      await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+    }
     expect(cloudLoad).toHaveBeenCalledOnce()
     expect(acquire).not.toHaveBeenCalled()
     expect(cloudSave).not.toHaveBeenCalled()

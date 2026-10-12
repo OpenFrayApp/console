@@ -5,8 +5,6 @@ import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../../auth/useAuth.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
-import { AccountPanel } from './AccountPanel.tsx'
-import { DialogFocus } from '../ui/DialogFocus.tsx'
 import { popoverClass } from '../ui/popover.ts'
 import { Button } from '../ui/primitives.tsx'
 
@@ -29,37 +27,26 @@ export function UserIcon() {
   )
 }
 
-/**
- * Header account control. Signed in: a user-icon button opening a menu with Profile (the
- * account panel), Shared encounters (the links this account has published) and Sign out.
- * Anonymous: a "Sign in" button that opens the full sign-in page (OAuth providers). Renders
- * nothing until Supabase is configured, so an unconfigured build stays anon-only.
- *
- * The shared links are reached from here rather than from the board because a published link
- * outlives the encounter it came from: "what have I put out there" is a question about the
- * account. The screen itself belongs to the app, which owns the list.
- */
+/** Open site account management or console-owned shared links from the header. */
 export function AccountControl({
   onSignIn,
   onOpenShares,
-  allowReserved = false,
+  onOpenAccount,
   openRequest,
 }: {
   onSignIn: () => void
-  /** Open the existing profile panel from quick navigation. */
+  onOpenAccount: () => void
+  /** Request the checkpointed site account destination from quick navigation. */
   openRequest?: number
-  /** Whether this account may publish under a reserved name; the profile field honours it. */
-  allowReserved?: boolean
   /** Open the shared-links screen. It is a screen rather than a dialog because it is
    *  somewhere a Game Master works, not somewhere they glance. */
   onOpenShares?: () => void
 }) {
-  const { user, loading, configured, signOut } = useAuth()
-  const [accountOpen, setAccountOpen] = useState(false)
+  const { user, loading, configured } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   useOpenRequest(openRequest, () => {
     setMenuOpen(false)
-    setAccountOpen(true)
+    if (user && configured && !loading) onOpenAccount()
   })
   const menuRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -90,7 +77,7 @@ export function AccountControl({
               role="menuitem"
               onClick={() => {
                 setMenuOpen(false)
-                setAccountOpen(true)
+                onOpenAccount()
               }}
               className={item}
             >
@@ -107,23 +94,7 @@ export function AccountControl({
             >
               Shared links
             </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setMenuOpen(false)
-                signOut()
-              }}
-              className={item}
-            >
-              Sign out
-            </button>
           </div>
-        )}
-        {accountOpen && (
-          <DialogFocus>
-            <AccountPanel onClose={() => setAccountOpen(false)} allowReserved={allowReserved} />
-          </DialogFocus>
         )}
       </div>
     )

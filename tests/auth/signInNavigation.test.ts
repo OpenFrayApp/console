@@ -64,3 +64,17 @@ it('drops callback-shaped route fragments that cannot be selectively cleaned', (
   })
   expect(assign).toHaveBeenCalledExactlyOnceWith('/sign-in/?returnTo=%2Fconsole%2F%3Fcast%3Dnotes')
 })
+
+it('opens site account in the same tab with a clean current route and no callback material', async () => {
+  const { navigateToSiteAccount } = await import('../../src/auth/signInNavigation.ts')
+  const assign = vi.fn()
+  navigateToSiteAccount({
+    pathname: '/console/',
+    search: '?cast=encounter%20notes&access_token=secret&state=callback',
+    hash: '#tracker',
+    assign,
+  })
+  expect(assign).toHaveBeenCalledWith(
+    '/account/?returnTo=%2Fconsole%2F%3Fcast%3Dencounter%2520notes%23tracker',
+  )
+})
