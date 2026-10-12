@@ -89,6 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fires on sign-in/out and token refresh, keeping `user` in sync across tabs.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active || event === 'INITIAL_SESSION') return
+      if (
+        event === 'USER_UPDATED' &&
+        (!session ||
+          session.user.id !== identity.current.session?.user.id ||
+          session.access_token !== identity.current.session.access_token)
+      )
+        return
       authEventReceived = true
       if (event === 'SIGNED_OUT') invalidatePreferenceWrites()
       setIdentityExpired(event === 'SIGNED_OUT' && !explicitSignOut.current)
@@ -105,8 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Revoke owner publication before ending the authenticated session. */
   const signOut = async (): Promise<void> => {
-    if (!supabase) return
+    if (!supabase || !isCurrentIdentity()) return
+    const generation = identity.current.generation
     const { error } = await supabase.rpc('stop_all_live_views')
+    if (!isCurrentIdentity() || generation !== identity.current.generation) return
     if (error) {
       console.error('[openfray] revoking live views before sign-out failed', error)
       return
@@ -120,6 +129,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  /** Check captured render authority against the current authenticated owner. */
+  const isCurrentIdentity = () =>
+    !loading &&
+    !identityExpired &&
+    !!user?.id &&
+    identity.current.session?.user.id === user.id &&
+    identity.current.generation === identityGeneration
+
+  /** Write profile metadata only while the invoking identity generation remains active. */
+  const updateProfile = async (data: Record<string, unknown>): Promise<AuthResult> => {
+    const failure = { error: 'Your account changed. Return to your account before trying again.' }
+    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
+    if (!isCurrentIdentity()) return failure
+    const result = await supabase.auth.updateUser({ data })
+    if (!isCurrentIdentity()) return failure
+    if (result.error) return { error: result.error.message }
+    if (!result.data.user || result.data.user.id !== user?.id) return failure
+    publishProfileUser(result.data.user)
+    return { error: null }
+  }
+
   /**
    * Write the name this account publishes under onto the user row (`user_metadata`), or
    * clear it. Supabase returns the updated user, so the app sees the new name at once
@@ -130,14 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * database already keeps it.
    */
   const setDisplayName = async (name: string): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
-    const trimmed = name.trim()
-    const { data, error } = await supabase.auth.updateUser({
-      data: { display_name: trimmed || null },
-    })
-    if (error) return { error: error.message }
-    if (data.user) publishProfileUser(data.user)
-    return { error: null }
+    return updateProfile({ display_name: name.trim() || null })
   }
 
   /**
@@ -147,15 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * where that one is.
    */
   const setShareLicense = async (license: ContentLicense): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
-    const { data, error } = await supabase.auth.updateUser({
-      // Unstated is the absent state, so choosing it clears the default rather than
-      // recording a preference for saying nothing.
-      data: { share_license: license === 'unstated' ? null : license },
-    })
-    if (error) return { error: error.message }
-    if (data.user) publishProfileUser(data.user)
-    return { error: null }
+    return updateProfile({ share_license: license === 'unstated' ? null : license })
   }
 
   /** Persist tutorial suppression without restoring a stale auth session or metadata. */
@@ -225,16 +240,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Permanently delete the account and all its data, then sign out. */
   const deleteAccount = async (): Promise<AuthResult> => {
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
-    explicitSignOut.current = true
+    const failure = {
+      error: 'Account deletion could not be confirmed. Check your account before trying again.',
+    }
+    if (!isCurrentIdentity()) return failure
     try {
       invalidatePreferenceWrites()
-      const failure = {
-        error: 'Account deletion could not be confirmed. Check your account before trying again.',
-      }
+      const generation = identity.current.generation
       const result = await supabase.functions
         .invoke('account-delete', { body: {} })
         .catch(() => null)
-      if (!result || result.error || result.data?.deleted !== true) return failure
+      if (
+        !result ||
+        result.error ||
+        result.data?.deleted !== true ||
+        generation !== identity.current.generation ||
+        identity.current.session?.user.id !== user?.id
+      )
+        return failure
+      explicitSignOut.current = true
       identity.current.session = null
       setUser(null)
       setIdentityExpired(false)

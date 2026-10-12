@@ -959,3 +959,99 @@ describe('AuthProvider with Supabase configured', () => {
     expect(stub.auth.signOut).not.toHaveBeenCalled()
   })
 })
+
+describe('AuthProvider — site account return and stale publishing metadata', () => {
+  it('reflects returned profile and license changes without rewriting tutorial preferences', async () => {
+    const stub = makeAuthClient(session('gm@openfray.app', { tutorial_suppression: 'completed' }))
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+    stub.emit(
+      session('gm@openfray.app', { display_name: 'Returned name', share_license: 'cc-by-sa-4.0' }),
+      'USER_UPDATED',
+    )
+    expect(latest.displayName).toBe('Returned name')
+    expect(latest.shareLicense).toBe('cc-by-sa-4.0')
+    expect(latest.tutorialSuppression).toBe('completed')
+    expect(stub.auth.updateUser).not.toHaveBeenCalled()
+  })
+
+  it.each(['replacement', 'expiry', 'same owner renewed'] as const)(
+    'refuses stale publishing callbacks and late profile events after %s',
+    async (change) => {
+      const original = session('gm@openfray.app', { display_name: 'Before' })
+      const stub = makeAuthClient(original)
+      let finish!: (value: Awaited<ReturnType<typeof stub.auth.updateUser>>) => void
+      stub.auth.updateUser.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+      )
+      supa.client = stub.client
+      renderProvider()
+      await screen.findByText('gm@openfray.app')
+      const oldSetter = latest.setDisplayName
+      const pending = oldSetter('Late name')
+      if (change === 'replacement')
+        stub.emit(session('other@example.test', { display_name: 'Other owner' }), 'SIGNED_IN')
+      else {
+        stub.emit(null, 'SIGNED_OUT')
+        if (change === 'same owner renewed')
+          stub.emit(
+            {
+              ...original,
+              access_token: 'renewed-token',
+              user: { ...original.user, user_metadata: { display_name: 'Renewed name' } },
+            },
+            'SIGNED_IN',
+          )
+      }
+      await act(async () => {
+        const updated = session('gm@openfray.app', { display_name: 'Late name' })
+        stub.emit(updated, 'USER_UPDATED')
+        finish({ data: { user: updated.user }, error: null })
+        expect((await pending).error).not.toBeNull()
+        expect((await oldSetter('Stale retry')).error).not.toBeNull()
+      })
+      expect(latest.displayName).toBe(
+        change === 'replacement' ? 'Other owner' : change === 'expiry' ? null : 'Renewed name',
+      )
+      expect(latest.identityExpired).toBe(change === 'expiry')
+      expect(stub.auth.updateUser).toHaveBeenCalledOnce()
+    },
+  )
+})
+
+it.each(['sign-out', 'deletion'] as const)(
+  'does not end a replacement identity after pending %s completes',
+  async (operation) => {
+    const stub = makeAuthClient(session('gm@openfray.app'))
+    let finish!: () => void
+    const held = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    if (operation === 'sign-out')
+      stub.rpc.mockImplementationOnce(async () => {
+        await held
+        return { error: null }
+      })
+    else
+      stub.invoke.mockImplementationOnce(async () => {
+        await held
+        return { data: { deleted: true }, error: null }
+      })
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+    const pending = operation === 'sign-out' ? latest.signOut() : latest.deleteAccount()
+    stub.emit(session('other@example.test'), 'SIGNED_IN')
+    await act(async () => {
+      finish()
+      await pending
+    })
+    expect(latest.user?.email).toBe('other@example.test')
+    expect(latest.identityExpired).toBe(false)
+    expect(stub.auth.signOut).not.toHaveBeenCalled()
+  },
+)

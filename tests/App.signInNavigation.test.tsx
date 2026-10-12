@@ -438,8 +438,17 @@ it.each([
       fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
       await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
     } else {
+      if (origin === 'owner')
+        vi.mocked(IndexedDbRecovery.prototype.loadConflict).mockResolvedValueOnce(null)
       fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
       fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
+      if (origin === 'owner') {
+        await screen.findByRole('dialog', { name: 'Account checkpoint' })
+        expect(navigation.account).not.toHaveBeenCalled()
+        expect(screen.getByRole('button', { name: 'Download recovery copy' })).toBeInTheDocument()
+        expect(cloudSave).not.toHaveBeenCalled()
+        fireEvent.click(screen.getByRole('button', { name: 'Retry account' }))
+      }
       await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
     }
     expect(cloudLoad).toHaveBeenCalledOnce()
@@ -454,7 +463,7 @@ it.each([
       expect(retained?.ownerRecovery?.snapshot.encounter.encounterId).toBe('before-renewal-owner')
       expect(loadAuthRecoveryConflict('wrong-owner')).toBeNull()
     } else {
-      expect(archive).toHaveBeenCalledOnce()
+      expect(archive).toHaveBeenCalledTimes(destination === 'account' ? 2 : 1)
       expect(archived).toMatchObject({
         unresolved: true,
         device: { snapshot: ownerBoard },

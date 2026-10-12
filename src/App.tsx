@@ -397,6 +397,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [departureError, setDepartureError] = useState<string | null>(null)
   const [departureDestination, setDepartureDestination] = useState<'sign-in' | 'account'>('sign-in')
   const departurePending = useRef(false)
+  const [offlineDepartureOffered, setOfflineDepartureOffered] = useState(false)
   /**
    * Whether recovery and identity-triggered cloud reconciliation have settled. A cast from
    * a shared link waits on this so hydration cannot replace it or persist half a board.
@@ -608,9 +609,10 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   }
 
   /** Leave only after the latest committed board has a verified recovery checkpoint. */
-  const leaveForSite = async (destination: 'sign-in' | 'account') => {
+  const leaveForSite = async (destination: 'sign-in' | 'account', continueWithDevice = false) => {
     if (departurePending.current) return
     setDepartureError(null)
+    setOfflineDepartureOffered(false)
     setDepartureDestination(destination)
     const action = destination === 'account' ? 'opening your account' : 'sign-in'
     if (!authConfigured) {
@@ -628,9 +630,16 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     }
     departurePending.current = true
     try {
-      if (!(await lifecycle.checkpointForSiteNavigation())) {
+      const verified = await lifecycle.checkpointForSiteNavigation()
+      const status = lifecycle.saveStatus().kind
+      const offlineAccount =
+        destination === 'account' && (status === 'offline' || status === 'read-only')
+      if (!verified || (offlineAccount && !continueWithDevice)) {
+        setOfflineDepartureOffered(offlineAccount)
         setDepartureError(
-          `The checkpoint could not be verified. Retry ${action} or download your recovery copy.`,
+          offlineAccount && !continueWithDevice
+            ? 'The cloud copy could not be confirmed. Retry or continue with your device copy after its recovery checkpoint is verified. Your cloud copy will stay unchanged.'
+            : `The checkpoint could not be verified. Retry ${action} or download your recovery copy.`,
         )
         return
       }
@@ -2217,6 +2226,14 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   <Button variant="quiet" onClick={downloadRecovery}>
                     Download recovery copy
                   </Button>
+                  {offlineDepartureOffered && (
+                    <Button
+                      variant="quiet"
+                      onClick={() => void leaveForSite(departureDestination, true)}
+                    >
+                      Continue with device copy
+                    </Button>
+                  )}
                   <Button variant="quiet" onClick={() => setDepartureError(null)}>
                     Keep playing
                   </Button>

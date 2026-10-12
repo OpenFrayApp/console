@@ -482,7 +482,9 @@ export class EncounterLifecycle {
           ? startup
           : { ownerId: null, snapshot: null, clearWorkingBoard: true }
       }
-      return startup.ownerId === null ? startup : this.anonymousRestore()
+      return startup.ownerId === null
+        ? startup
+        : { ownerId: null, snapshot: null, clearWorkingBoard: true }
     }
 
     let device: DeviceRecovery | null = null

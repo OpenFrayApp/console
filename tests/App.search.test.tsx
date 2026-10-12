@@ -9,11 +9,20 @@ import App from '../src/App.tsx'
 import { saveSettings } from '../src/state/settings.ts'
 import { AuthContext, type AuthState } from '../src/auth/useAuth.ts'
 import { authState } from './fixtures.ts'
+import { IndexedDbRecovery } from '../src/state/indexedDbRecovery.ts'
+import type { SessionSnapshot } from '../src/state/persistence.ts'
+
+const navigation = vi.hoisted(() => ({ account: vi.fn() }))
+vi.mock('../src/auth/signInNavigation.ts', () => ({
+  navigateToSiteAccount: navigation.account,
+  navigateToSiteSignIn: vi.fn(),
+}))
 
 const user = { id: 'search-owner', email: 'gm@example.com' } as User
 
 afterEach(() => {
   cleanup()
+  navigation.account.mockReset()
   vi.restoreAllMocks()
   sessionStorage.clear()
   localStorage.clear()
@@ -63,10 +72,7 @@ it.each([
   expect(accountDestinations).toEqual(expected)
 })
 
-it.each([
-  { destination: 'Profile', dialog: 'Account', auth: { user } },
-  { destination: 'Shared links', dialog: 'Shared links', auth: { user } },
-])(
+it.each([{ destination: 'Shared links', dialog: 'Shared links', auth: { user } }])(
   'opens $destination through its existing account surface',
   async ({ destination, dialog, auth }) => {
     await openSearch(auth)
@@ -77,3 +83,27 @@ it.each([
     await waitFor(() => expect(panel.contains(document.activeElement)).toBe(true))
   },
 )
+
+it('checkpoints Profile quick navigation instead of opening duplicate account management', async () => {
+  let stored: SessionSnapshot | null = null
+  vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockResolvedValue(null)
+  vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockResolvedValue(null)
+  vi.spyOn(IndexedDbRecovery.prototype, 'load').mockImplementation(async (ownerId) =>
+    stored ? { ownerId, snapshot: stored, savedAt: '2026-09-02T10:11:12Z' } : null,
+  )
+  vi.spyOn(IndexedDbRecovery.prototype, 'save').mockImplementation(async (_ownerId, snapshot) => {
+    stored = snapshot
+    return { status: 'saved' }
+  })
+  await openSearch({ user })
+  fireEvent.click(screen.getByRole('option', { name: 'Profile' }))
+  expect(screen.queryByRole('combobox', { name: 'Search references' })).toBeNull()
+  expect(await screen.findByRole('dialog', { name: 'Account checkpoint' })).toHaveTextContent(
+    'cloud copy could not be confirmed',
+  )
+  expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
+  expect(navigation.account).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Continue with device copy' }))
+  await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+  expect(stored).not.toBeNull()
+})
