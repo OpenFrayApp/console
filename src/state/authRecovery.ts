@@ -6,6 +6,7 @@ import { decodeSession, encodeSession, MAX_SESSION_BYTES } from '../codecs/sessi
 import type { ReconciliationConflict } from './encounterLifecycle.ts'
 import {
   storageFailureReason,
+  consumeAnonymousSession,
   type SessionLoadResult,
   type SessionSnapshot,
   type SessionWriteResult,
@@ -203,12 +204,28 @@ export function saveAuthRecovery(snapshot: SessionSnapshot): SessionWriteResult 
   }
 }
 
-/** Remove the handoff only after an explicit choice has been archived in owner recovery. */
+/** Consume active anonymous aliases only after the explicit selection is durably archived and saved. */
 export function clearAuthRecovery(): SessionWriteResult {
-  try {
-    sessionStorage.removeItem(KEY)
-    return { status: 'deleted' }
-  } catch (error) {
-    return { status: 'failed', reason: storageFailureReason(error) }
-  }
+  return consumeAnonymousSession(() => {
+    let raw: string | null = null
+    try {
+      raw = sessionStorage.getItem(KEY)
+      const stored = readRecovery(raw).result
+      if (stored.status === 'blocked')
+        return {
+          status: 'blocked',
+          reason: stored.blockedBy === 'unsupported' ? 'unsupported' : 'invalid',
+        }
+      sessionStorage.removeItem(KEY)
+      if (sessionStorage.getItem(KEY) !== null) throw new Error('Handoff removal readback failed')
+      return { status: 'deleted' }
+    } catch (error) {
+      try {
+        if (raw !== null && sessionStorage.getItem(KEY) === null) sessionStorage.setItem(KEY, raw)
+      } catch {
+        // The durable archive retains every selected and unselected conflict branch.
+      }
+      return { status: 'failed', reason: storageFailureReason(error) }
+    }
+  })
 }

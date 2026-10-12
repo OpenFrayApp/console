@@ -2,18 +2,23 @@
 // Copyright (C) 2026 Nicola Mustone
 // @vitest-environment jsdom
 
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { encodeSession } from '../../src/codecs/session.ts'
 import {
+  clearAuthRecovery,
   loadAuthRecovery,
   loadAuthRecoveryConflict,
   saveAuthRecovery,
   saveAuthRecoveryConflict,
 } from '../../src/state/authRecovery.ts'
+import { saveSession } from '../../src/state/persistence.ts'
 import type { ReconciliationConflict } from '../../src/state/encounterLifecycle.ts'
 import { recoverySnapshot as snapshot } from '../fixtures/sessionSnapshot.ts'
 
-afterEach(() => sessionStorage.clear())
+afterEach(() => {
+  vi.restoreAllMocks()
+  sessionStorage.clear()
+})
 
 /** Build the three independent branches protected during anonymous identity renewal. */
 function conflict(): ReconciliationConflict {
@@ -73,3 +78,43 @@ it('fails closed when one protected branch is damaged without overwriting the re
   })
   expect(sessionStorage.getItem('openfray:auth-recovery')).toBe(raw)
 })
+
+it('consumes only verified anonymous slots and preserves unknown retained bytes and owner mirrors', () => {
+  expect(saveSession(snapshot('anonymous')).status).toBe('saved')
+  expect(saveSession(snapshot('owner-copy'), 'owner-a').status).toBe('saved')
+  expect(saveAuthRecoveryConflict('owner-a', conflict()).status).toBe('saved')
+  const legacy = encodeSession(snapshot('unknown-legacy'))
+  if (legacy.status !== 'ok') throw new Error('Invalid fixture')
+  sessionStorage.setItem('openfray:session:previous', legacy.serialized)
+  sessionStorage.setItem('openfray:session:quarantine', 'unverified bytes')
+  const owner = sessionStorage.getItem('openfray:session:owner')
+  expect(clearAuthRecovery()).toEqual({ status: 'deleted' })
+  expect(sessionStorage.getItem('openfray:session')).toBeNull()
+  expect(sessionStorage.getItem('openfray:session:previous')).toBe(legacy.serialized)
+  expect(sessionStorage.getItem('openfray:session:quarantine')).toBe('unverified bytes')
+  expect(sessionStorage.getItem('openfray:session:owner')).toBe(owner)
+})
+
+it.each(['previous throws', 'previous dropped', 'handoff throws', 'handoff dropped'])(
+  'rolls back partial anonymous consumption when %s',
+  (failure) => {
+    expect(saveSession(snapshot('previous-anonymous')).status).toBe('saved')
+    expect(saveSession(snapshot('current-anonymous')).status).toBe('saved')
+    expect(saveAuthRecoveryConflict('owner-a', conflict()).status).toBe('saved')
+    const keys = ['openfray:session', 'openfray:session:previous', 'openfray:auth-recovery']
+    const before = keys.map((key) => sessionStorage.getItem(key))
+    const remove = Storage.prototype.removeItem
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+      if (key === (failure.startsWith('previous') ? keys[1] : keys[2])) {
+        if (failure.endsWith('throws')) throw new DOMException('Blocked', 'SecurityError')
+        return
+      }
+      remove.call(this, key)
+    })
+    expect(clearAuthRecovery()).toEqual({ status: 'failed', reason: 'unavailable' })
+    expect(keys.map((key) => sessionStorage.getItem(key))).toEqual(before)
+    expect(loadAuthRecoveryConflict('owner-a')?.ownerRecovery?.snapshot.encounter.encounterId).toBe(
+      'unsynced-owner',
+    )
+  },
+)

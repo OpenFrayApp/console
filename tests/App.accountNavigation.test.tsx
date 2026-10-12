@@ -14,11 +14,15 @@ import { saveSettings } from '../src/state/settings.ts'
 import { authState, pc } from './fixtures.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
 import {
+  saveSession,
   exportRecoveryCopy,
   loadSession,
   loadOwnerSession,
   type SessionSnapshot,
 } from '../src/state/persistence.ts'
+import { saveAuthRecovery, loadAuthRecovery } from '../src/state/authRecovery.ts'
+import { encounterHash } from '../src/state/reconciliation.ts'
+import type { DeviceRecovery, ReconciliationConflict } from '../src/state/encounterLifecycle.ts'
 import { encodeSession, decodeSession } from '../src/codecs/session.ts'
 
 const navigation = vi.hoisted(() => ({ account: vi.fn(), signIn: vi.fn() }))
@@ -407,3 +411,224 @@ it('downloads current anonymous edits and retained legacy recovery independently
   expect(writes).not.toHaveBeenCalled()
   expect(screen.queryByRole('button', { name: 'Remove Unverified guard' })).toBeNull()
 })
+
+it.each([
+  ['device', true],
+  ['cloud', true],
+  ['device', false],
+  ['cloud', false],
+] as const)(
+  'consumes resolved anonymous mirrors after %s choice and restores later owner edits with online=%s',
+  async (choice, online) => {
+    saveSettings({ tutorialSuppression: 'dismissed' })
+    const anonymous = recoverySnapshot('resolved-anonymous')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+    expect(saveSession(recoverySnapshot('previous-anonymous')).status).toBe('saved')
+    expect(saveSession(anonymous).status).toBe('saved')
+    expect(saveAuthRecovery(anonymous).status).toBe('saved')
+    const remote = recoverySnapshot('resolved-cloud')
+    remote.encounter.combatants = [pc({ name: 'Cloud guard' })]
+    let cloudBoard = remote.encounter
+    let revision = 8
+    let connected = true
+    vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => connected)
+    let device: DeviceRecovery | null = null
+    let archive: ReconciliationConflict | null = null
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockImplementation(async () => device)
+    vi.spyOn(IndexedDbRecovery.prototype, 'load').mockImplementation(async () => device)
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockImplementation(async () => archive)
+    vi.spyOn(IndexedDbRecovery.prototype, 'archiveConflict').mockImplementation(
+      async (_owner, value) => {
+        archive = structuredClone(value)
+        return { status: 'saved' }
+      },
+    )
+    vi.spyOn(IndexedDbRecovery.prototype, 'save').mockImplementation(
+      async (ownerId, snapshot, savedAt) => {
+        device = { ownerId, snapshot: structuredClone(snapshot), savedAt }
+        return { status: 'saved' }
+      },
+    )
+    vi.spyOn(IndexedDbRecovery.prototype, 'markSynced').mockImplementation(
+      async (ownerId, snapshot, lineage) => {
+        device = {
+          ownerId,
+          snapshot: structuredClone(snapshot),
+          savedAt: new Date().toISOString(),
+          lineage,
+        }
+        return { status: 'saved' }
+      },
+    )
+    vi.spyOn(cloud, 'loadCloudEncounter').mockImplementation(async () =>
+      connected
+        ? {
+            status: 'loaded',
+            id: 'cloud-row',
+            encounter: cloudBoard,
+            revision,
+            updatedAt: new Date().toISOString(),
+            playerCode: null,
+          }
+        : { status: 'failed' },
+    )
+    vi.spyOn(cloud, 'acquireCloudWriter').mockImplementation(async () => ({
+      status: 'acquired',
+      revision,
+      leaseToken: 'writer-a',
+    }))
+    const cloudWrite = vi
+      .spyOn(cloud, 'saveCloudEncounter')
+      .mockImplementation(async (_owner, _id, _revision, _writer, encounter) => {
+        cloudBoard = structuredClone(encounter)
+        return { status: 'saved', id: 'cloud-row', revision: ++revision, leaseToken: 'writer-a' }
+      })
+    const owner = authState({ user: { id: 'owner-a' } as User })
+    const mount = () =>
+      render(
+        <AuthContext.Provider value={owner}>
+          <App />
+        </AuthContext.Provider>,
+      )
+    const app = mount()
+    await screen.findByRole('dialog', { name: 'Choose a board copy' })
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: choice === 'device' ? 'Use device copy' : 'Use cloud copy',
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Choose a board copy' })).toBeNull(),
+    )
+    expect(loadAuthRecovery().status).toBe('empty')
+    expect(sessionStorage.getItem('openfray:session')).toBeNull()
+    expect(sessionStorage.getItem('openfray:session:previous')).toBeNull()
+    expect(archive).toMatchObject({
+      unresolved: false,
+      device: { snapshot: anonymous },
+      cloud: { snapshot: remote },
+    })
+    await waitFor(() =>
+      expect(loadOwnerSession('owner-a').snapshot?.encounter.encounterId).toBe(
+        choice === 'device' ? anonymous.encounter.encounterId : remote.encounter.encounterId,
+      ),
+    )
+    await screen.findByRole('button', { name: 'Saved' })
+    if (!online) {
+      connected = false
+      act(() => window.dispatchEvent(new Event('offline')))
+    }
+    addGuard()
+    await waitFor(() =>
+      expect(device?.snapshot.encounter.combatants.map(nameOf)).toContain('Latest guard'),
+    )
+    if (online)
+      await waitFor(() => expect(cloudBoard.combatants.map(nameOf)).toContain('Latest guard'))
+    await waitFor(() =>
+      expect(loadOwnerSession('owner-a').snapshot?.encounter.combatants.map(nameOf)).toContain(
+        'Latest guard',
+      ),
+    )
+    const expected = device!.snapshot.encounter
+    expect(loadOwnerSession('owner-a').snapshot?.encounter.combatants.map(nameOf)).toEqual(
+      expected.combatants.map(nameOf),
+    )
+    if (online) expect(device!.lineage?.cloudStateHash).toBe(await encounterHash(expected))
+    const archivedBytes = JSON.stringify(archive)
+    const writes = cloudWrite.mock.calls.length
+    app.unmount()
+    mount()
+    await screen.findByRole('button', { name: 'Remove Latest guard' })
+    expect(screen.queryByRole('dialog', { name: 'Choose a board copy' })).toBeNull()
+    expect(
+      screen.getByRole('button', {
+        name: choice === 'device' ? 'Remove Anonymous guard' : 'Remove Cloud guard',
+      }),
+    ).toBeInTheDocument()
+    expect(JSON.stringify(archive)).toBe(archivedBytes)
+    if (!online) expect(cloudWrite).toHaveBeenCalledTimes(writes)
+  },
+)
+
+it.each(['archive', 'selection', 'partial clear', 'handoff readback'] as const)(
+  'keeps explicit resolution pending and all recovery branches when %s fails',
+  async (failure) => {
+    saveSettings({ tutorialSuppression: 'dismissed' })
+    const anonymous = recoverySnapshot('pending-anonymous')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+    saveSession(recoverySnapshot('previous-anonymous'))
+    saveSession(anonymous)
+    saveAuthRecovery(anonymous)
+    const remote = recoverySnapshot('pending-cloud')
+    remote.encounter.combatants = [pc({ name: 'Cloud guard' })]
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockResolvedValue(null)
+    vi.spyOn(IndexedDbRecovery.prototype, 'load').mockResolvedValue(null)
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockResolvedValue(null)
+    let archived: ReconciliationConflict | null = null
+    const archive = vi
+      .spyOn(IndexedDbRecovery.prototype, 'archiveConflict')
+      .mockImplementation(async (_owner, value) => {
+        if (failure === 'archive') return { status: 'failed', reason: 'unavailable' }
+        archived = structuredClone(value)
+        return { status: 'saved' }
+      })
+    const save = vi
+      .spyOn(IndexedDbRecovery.prototype, 'save')
+      .mockResolvedValue(
+        failure === 'selection' ? { status: 'failed', reason: 'unavailable' } : { status: 'saved' },
+      )
+    vi.spyOn(IndexedDbRecovery.prototype, 'markSynced').mockResolvedValue({ status: 'saved' })
+    vi.spyOn(cloud, 'loadCloudEncounter').mockResolvedValue({
+      status: 'loaded',
+      id: 'cloud-row',
+      encounter: remote.encounter,
+      revision: 8,
+      updatedAt: new Date().toISOString(),
+      playerCode: null,
+    })
+    vi.spyOn(cloud, 'acquireCloudWriter').mockResolvedValue({
+      status: 'acquired',
+      revision: 8,
+      leaseToken: 'writer-a',
+    })
+    const cloudWrite = vi.spyOn(cloud, 'saveCloudEncounter').mockResolvedValue({ status: 'failed' })
+    render(
+      <AuthContext.Provider value={authState({ user: { id: 'owner-a' } as User })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await screen.findByRole('dialog', { name: 'Choose a board copy' })
+    const before = ['openfray:session', 'openfray:session:previous', 'openfray:auth-recovery'].map(
+      (key) => sessionStorage.getItem(key),
+    )
+    const remove = Storage.prototype.removeItem
+    if (failure === 'partial clear' || failure === 'handoff readback')
+      vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+        if (
+          key ===
+          (failure === 'partial clear' ? 'openfray:session:previous' : 'openfray:auth-recovery')
+        )
+          return
+        remove.call(this, key)
+      })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use cloud copy' }))
+    })
+    await waitFor(() => expect(archive).toHaveBeenCalled())
+    expect(screen.getByRole('dialog', { name: 'Choose a board copy' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Anonymous guard' })).toBeInTheDocument()
+    expect(loadSession().snapshot?.encounter.combatants.map(nameOf)).toEqual(['Anonymous guard'])
+    expect(loadAuthRecovery().snapshot?.encounter.combatants.map(nameOf)).toEqual([
+      'Anonymous guard',
+    ])
+    expect(sessionStorage.getItem('openfray:session:previous')).not.toBeNull()
+    expect(before.every((raw) => raw !== null)).toBe(true)
+    expect(cloudWrite).not.toHaveBeenCalled()
+    if (failure === 'archive') expect(save).not.toHaveBeenCalled()
+    else
+      expect(archived).toMatchObject({
+        device: { snapshot: anonymous },
+        cloud: { snapshot: remote },
+      })
+  },
+)

@@ -223,6 +223,42 @@ export function saveSession(
   }
 }
 
+/** Consume verified anonymous aliases and the archived handoff as one readback-checked operation. */
+export function consumeAnonymousSession(
+  clearHandoff: () => SessionWriteResult,
+): SessionWriteResult {
+  const store = storage()
+  if (!store) return { status: 'failed', reason: 'unavailable' }
+  const copies: Array<{ key: string; raw: string }> = []
+  /** Restore only removed aliases, without overwriting newly retained or unknown bytes. */
+  const rollback = () => {
+    for (const { key, raw } of copies) {
+      try {
+        if (store.getItem(key) === null) store.setItem(key, raw)
+      } catch {
+        // Durable archived branches and the handoff remain recoverable if rollback is denied.
+      }
+    }
+  }
+  try {
+    for (const key of [KEYS.current, KEYS.previous]) {
+      const raw = store.getItem(key)
+      if (raw !== null && browserRecovery(raw, false)) copies.push({ key, raw })
+    }
+    for (const { key, raw } of copies) {
+      if (store.getItem(key) !== raw) throw new Error('Recovery changed before consumption')
+      store.removeItem(key)
+      if (store.getItem(key) !== null) throw new Error('Recovery removal readback failed')
+    }
+    const result = clearHandoff()
+    if (result.status !== 'deleted') rollback()
+    return result
+  } catch (error) {
+    rollback()
+    return { status: 'failed', reason: storageFailureReason(error) }
+  }
+}
+
 /** Explicitly replace a blocked or valid current copy with a validated snapshot. */
 export function replaceSession(snapshot: SessionSnapshot): SessionWriteResult {
   const encoded = encodeForStorage(snapshot, null)
