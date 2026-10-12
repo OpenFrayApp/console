@@ -9,6 +9,8 @@ import {
   signOutConsoleSession,
   observeConsoleSession,
   readConsoleProfile,
+  writeConsoleProfile,
+  isCurrentConsoleSession,
 } from './sessionTermination.ts'
 import { parseTutorialSuppression, type TutorialSuppression } from '../state/settings.ts'
 import {
@@ -38,6 +40,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(Boolean(supabase))
   const [identityExpired, setIdentityExpired] = useState(false)
   const [identityGeneration, setIdentityGeneration] = useState(0)
+  const [identityAccessToken, setIdentityAccessToken] = useState<string | null>(null)
+  const [verifiedProfile, setVerifiedProfile] = useState<{
+    generation: number
+    token: string
+  } | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const profileRequests = useRef(0)
   const explicitSignOut = useRef<{ generation: number; accessToken: string | null } | null>(null)
   const identity = useRef<{ session: Session | null; generation: number }>({
     session: null,
@@ -54,25 +64,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /** Publish profile results without discarding this identity's confirmed tutorial preference. */
-  const publishProfileUser = (updated: User) => {
+  const publishProfileUser = useCallback((updated: User) => {
     const current = identity.current.session
     if (!current || current.user.id !== updated.id) return
     const next = retainTutorialSuppression(updated, current.user)
     identity.current.session = { ...current, user: next }
     setUser(next)
-  }
+    profileRequests.current += 1
+    setVerifiedProfile({ generation: identity.current.generation, token: current.access_token })
+    setProfileLoading(false)
+    setProfileError(null)
+  }, [])
 
   /** Install auth identity while retaining confirmed suppression within the same session. */
   const installSession = useCallback(
-    (session: Session | null) => {
+    (session: Session | null, profileVerified = false) => {
       const previous = identity.current.session
-      const sameIdentity = previous?.user.id === session?.user.id
+      const sameIdentity =
+        previous?.user.id === session?.user.id &&
+        previous?.access_token === session?.access_token &&
+        previous?.refresh_token === session?.refresh_token
       if (!sameIdentity) invalidatePreferenceWrites()
       const next = session
         ? { ...session, user: retainTutorialSuppression(session.user, previous?.user ?? null) }
         : null
       identity.current.session = next
       setUser(next?.user ?? null)
+      setIdentityAccessToken(next?.access_token ?? null)
+      profileRequests.current += 1
+      setVerifiedProfile(
+        next && profileVerified
+          ? { generation: identity.current.generation, token: next.access_token }
+          : null,
+      )
+      setProfileLoading(Boolean(next && !profileVerified))
+      setProfileError(null)
     },
     [invalidatePreferenceWrites],
   )
@@ -105,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           current.session.refresh_token === observed.session.refresh_token &&
           current.session.user.id === verified.id
         ) {
-          installSession({ ...current.session, user: verified })
+          installSession({ ...current.session, user: verified }, true)
           setIdentityExpired(false)
         } else setIdentityExpired(true)
       } else setIdentityExpired(true)
@@ -164,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       setIdentityExpired(false)
-      installSession(session)
+      installSession(session, event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED')
       setLoading(false)
     })
     return () => {
@@ -174,6 +200,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe()
     }
   }, [invalidatePreferenceWrites, installSession, reconcileNativeSession])
+
+  useEffect(() => {
+    const client = supabase
+    const captured = identity.current.session
+    if (!client || loading || identityExpired || !captured) {
+      setVerifiedProfile(null)
+      setProfileLoading(false)
+      return
+    }
+    let active = true
+    let controller: AbortController | null = null
+    const generation = identity.current.generation
+    /** Read current account metadata without delaying board recovery or mutating SDK storage. */
+    const refreshProfile = () => {
+      controller?.abort()
+      controller = new AbortController()
+      const request = ++profileRequests.current
+      setVerifiedProfile(null)
+      setProfileLoading(true)
+      setProfileError(null)
+      const signal = controller.signal
+      void isCurrentConsoleSession(client, captured)
+        .then((current) => (current ? readConsoleProfile(client, captured, signal) : null))
+        .then(async (updated) => {
+          const current = await isCurrentConsoleSession(client, captured)
+          if (
+            !active ||
+            request !== profileRequests.current ||
+            generation !== identity.current.generation ||
+            captured.access_token !== identity.current.session?.access_token ||
+            captured.user.id !== identity.current.session.user.id
+          )
+            return
+          if (updated && current) publishProfileUser(updated)
+          else {
+            setProfileLoading(false)
+            setProfileError(
+              'Your account profile could not be verified. Open your account to check it.',
+            )
+          }
+        })
+    }
+    /** Recheck return-to-console metadata when a preserved page becomes visible. */
+    const refreshVisibleProfile = () => {
+      if (document.visibilityState === 'visible') refreshProfile()
+    }
+    refreshProfile()
+    window.addEventListener('pageshow', refreshProfile)
+    window.addEventListener('focus', refreshProfile)
+    document.addEventListener('visibilitychange', refreshVisibleProfile)
+    return () => {
+      active = false
+      controller?.abort()
+      window.removeEventListener('pageshow', refreshProfile)
+      window.removeEventListener('focus', refreshProfile)
+      document.removeEventListener('visibilitychange', refreshVisibleProfile)
+    }
+  }, [
+    user?.id,
+    identityAccessToken,
+    identityGeneration,
+    loading,
+    identityExpired,
+    publishProfileUser,
+  ])
+
+  const profileCurrent =
+    verifiedProfile?.generation === identityGeneration &&
+    verifiedProfile.token === identityAccessToken
 
   /** Revoke owner publication before ending the authenticated session. */
   const signOut = async (): Promise<void> => {
@@ -226,11 +321,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const failure = { error: 'Your account changed. Return to your account before trying again.' }
     if (!supabase) return { error: 'Accounts aren’t available on this copy of OpenFray.' }
     if (!isCurrentIdentity()) return failure
-    const result = await supabase.auth.updateUser({ data })
-    if (!isCurrentIdentity()) return failure
-    if (result.error) return { error: result.error.message }
-    if (!result.data.user || result.data.user.id !== user?.id) return failure
-    publishProfileUser(result.data.user)
+    const captured = identity.current.session!
+    const controller = new AbortController()
+    preferenceWrites.current.add(controller)
+    profileRequests.current += 1
+    setVerifiedProfile(null)
+    setProfileLoading(true)
+    setProfileError(null)
+    try {
+      const result = await writeConsoleProfile(
+        supabase,
+        captured,
+        data,
+        () =>
+          isCurrentIdentity() &&
+          identity.current.session?.access_token === captured.access_token &&
+          identity.current.session?.refresh_token === captured.refresh_token,
+        controller.signal,
+      )
+      if (!isCurrentIdentity()) return failure
+      if (!result.current) {
+        await reconcileNativeSession(
+          () =>
+            isCurrentIdentity() && identity.current.session?.access_token === captured.access_token,
+          false,
+        )
+        return failure
+      }
+      if (result.error) {
+        setProfileLoading(false)
+        setProfileError(result.error)
+        return { error: result.error }
+      }
+      if (!result.user || result.user.id !== user?.id) return failure
+      publishProfileUser(result.user)
+    } finally {
+      preferenceWrites.current.delete(controller)
+    }
     return { error: null }
   }
 
@@ -280,43 +407,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         )
         return { error: null }
       }
-      const controller = new AbortController()
-      preferenceWrites.current.add(controller)
-      const result = await writeTutorialAccountPreference(
-        user.id,
-        captured.session.access_token,
-        reason,
-        controller.signal,
-      )
-      preferenceWrites.current.delete(controller)
+      const capturedSession = captured.session
       if (
-        controller.signal.aborted ||
-        identity.current.generation !== identityGeneration ||
-        identity.current.session?.user.id !== user.id
+        !(await isCurrentConsoleSession(supabase, capturedSession)) ||
+        identity.current.generation !== identityGeneration
       )
         return { error: TUTORIAL_ACCOUNT_WRITE_ERROR }
-      if (result.error) return result
-      setUser((current) => {
-        const session = identity.current.session
-        if (
-          !current ||
-          !session ||
-          current.id !== user.id ||
-          identity.current.generation !== identityGeneration
+      const controller = new AbortController()
+      preferenceWrites.current.add(controller)
+      try {
+        const result = await writeTutorialAccountPreference(
+          user.id,
+          capturedSession.access_token,
+          reason,
+          controller.signal,
         )
-          return current
-        const updated = {
-          ...current,
-          user_metadata: {
-            ...current.user_metadata,
-            tutorial_suppression:
-              parseTutorialSuppression(current.user_metadata?.tutorial_suppression) ?? reason,
-          },
-        }
-        identity.current.session = { ...session, user: updated }
-        return updated
-      })
-      return { error: null }
+        if (
+          controller.signal.aborted ||
+          !(await isCurrentConsoleSession(supabase, capturedSession)) ||
+          identity.current.generation !== identityGeneration ||
+          identity.current.session?.user.id !== user.id
+        )
+          return { error: TUTORIAL_ACCOUNT_WRITE_ERROR }
+        if (result.error) return result
+        const verified = await readConsoleProfile(supabase, capturedSession, controller.signal)
+        if (
+          !verified ||
+          parseTutorialSuppression(verified.user_metadata?.tutorial_suppression) !== reason ||
+          controller.signal.aborted ||
+          identity.current.generation !== identityGeneration ||
+          !(await isCurrentConsoleSession(supabase, capturedSession))
+        )
+          return { error: TUTORIAL_ACCOUNT_WRITE_ERROR }
+        setUser((current) => {
+          const session = identity.current.session
+          if (
+            !current ||
+            !session ||
+            current.id !== user.id ||
+            identity.current.generation !== identityGeneration
+          )
+            return current
+          const updated = {
+            ...current,
+            user_metadata: {
+              ...current.user_metadata,
+              tutorial_suppression:
+                parseTutorialSuppression(current.user_metadata?.tutorial_suppression) ?? reason,
+            },
+          }
+          identity.current.session = { ...session, user: updated }
+          return updated
+        })
+        return { error: null }
+      } finally {
+        preferenceWrites.current.delete(controller)
+      }
     },
     [user?.id, loading, identityExpired, identityGeneration],
   )
@@ -377,15 +523,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // three providers disagree: Supabase's own `display_name`, and the `full_name` /
         // `name` that Google and Discord actually write. Reading only the first left the
         // field empty for accounts whose name is under one of the others.
-        displayName:
-          ((user?.user_metadata?.display_name ??
-            user?.user_metadata?.full_name ??
-            user?.user_metadata?.name) as string | undefined) || null,
+        profileLoading,
+        profileError,
+        displayName: profileCurrent
+          ? ((user?.user_metadata?.display_name ??
+              user?.user_metadata?.full_name ??
+              user?.user_metadata?.name) as string | undefined) || null
+          : null,
         // Validated rather than trusted: it is metadata, and a value the app doesn't know
         // is no answer at all. Unknown reads as "never set", which seeds nothing.
-        shareLicense: isContentLicense(user?.user_metadata?.share_license)
-          ? user.user_metadata.share_license
-          : null,
+        shareLicense:
+          profileCurrent && isContentLicense(user?.user_metadata?.share_license)
+            ? user.user_metadata.share_license
+            : null,
         tutorialSuppression: parseTutorialSuppression(user?.user_metadata?.tutorial_suppression),
         loading,
         identityExpired,

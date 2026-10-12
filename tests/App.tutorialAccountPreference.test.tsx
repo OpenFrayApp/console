@@ -4,12 +4,15 @@
 
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { Session, User } from '@supabase/supabase-js'
+import type { Session, User, SupabaseClient } from '@supabase/supabase-js'
 import App from '../src/App.tsx'
+import { createConsoleClient } from '../src/auth/sessionTermination.ts'
 import { AuthProvider } from '../src/auth/AuthProvider.tsx'
 import { loadSettings, saveSettings, type TutorialSuppression } from '../src/state/settings.ts'
 
 const supa = vi.hoisted(() => ({ client: null as unknown }))
+const clients: SupabaseClient[] = []
+const fixtureExpiry = Math.floor(Date.now() / 1000) + 3600
 vi.mock('../src/lib/supabase.ts', () => ({
   get supabase() {
     return supa.client
@@ -24,6 +27,8 @@ vi.mock('../src/compendium/srd.ts', async (original) => ({
 
 afterEach(() => {
   cleanup()
+  for (const client of clients) client.auth.stopAutoRefresh()
+  clients.length = 0
   supa.client = null
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -35,7 +40,16 @@ afterEach(() => {
 /** Supply the identity fields read by the real provider and account adapter. */
 function session(reason: TutorialSuppression | null = null): Session {
   return {
-    access_token: 'tutorial-owner-token',
+    access_token: [
+      btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+      btoa(JSON.stringify({ sub: 'tutorial-account-owner', exp: fixtureExpiry })).replace(
+        /=+$/,
+        '',
+      ),
+      'fixture',
+    ].join('.'),
+    refresh_token: 'fixture-tutorial-refresh',
+    expires_at: fixtureExpiry,
     user: {
       id: 'tutorial-account-owner',
       email: 'gm@example.test',
@@ -45,8 +59,20 @@ function session(reason: TutorialSuppression | null = null): Session {
 }
 
 /** Mock external Supabase responses while retaining real auth and encounter transitions. */
-function accountClient(initial: Session | null) {
-  let listener!: (event: string, next: Session | null) => void
+async function accountClient(initial: Session | null) {
+  let serverUser = initial?.user ?? session().user
+  const putTransport = globalThis.fetch
+  vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes('/auth/v1/user') && init?.method !== 'PUT')
+      return Response.json(serverUser)
+    const response = await putTransport(input, init)
+    if (response.ok) serverUser = await response.clone().json()
+    return response
+  })
+  const client = createConsoleClient('https://project.supabase.co', 'public-key')!
+  clients.push(client)
+  if (initial) expect((await client.auth.setSession(initial)).error).toBeNull()
+  client.auth.stopAutoRefresh()
   const empty = Promise.resolve({ data: [], error: null })
   const query = {
     select: vi.fn(() => query),
@@ -56,20 +82,18 @@ function accountClient(initial: Session | null) {
     maybeSingle: vi.fn(async () => ({ data: null, error: null })),
     then: empty.then.bind(empty),
   }
-  supa.client = {
-    auth: {
-      getSession: vi.fn(async () => ({ data: { session: initial }, error: null })),
-      onAuthStateChange: vi.fn((callback: typeof listener) => {
-        listener = callback
-        return { data: { subscription: { unsubscribe: vi.fn() } } }
-      }),
-    },
-    from: vi.fn(() => query),
-    rpc: vi.fn(async () => ({ data: false, error: null })),
-  }
+  vi.spyOn(client, 'from').mockImplementation(() => query as never)
+  vi.spyOn(client, 'rpc').mockImplementation(
+    () => Promise.resolve({ data: false, error: null }) as never,
+  )
+  supa.client = client
   return {
-    /** Publish a real provider sign-in event at the mocked SDK boundary. */
-    signIn: (next: Session) => act(() => listener('SIGNED_IN', next)),
+    /** Install the fixture identity through the native SDK public API. */
+    signIn: (next: Session) =>
+      act(async () => {
+        serverUser = next.user
+        expect((await client.auth.setSession(next)).error).toBeNull()
+      }),
   }
 }
 
@@ -96,7 +120,7 @@ it.each(['dismissed', 'completed'] as const)(
   async (reason) => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
-    accountClient(session(reason))
+    await accountClient(session(reason))
     renderConsole()
     await screen.findByRole('button', { name: 'Save failed' })
     expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
@@ -120,17 +144,17 @@ it.each(['dismissed', 'completed'] as const)(
     let finish!: (response: Response) => void
     const fetch = vi.fn(() => new Promise<Response>((resolve) => (finish = resolve)))
     vi.stubGlobal('fetch', fetch)
-    const client = accountClient(null)
+    const client = await accountClient(null)
     renderConsole()
     await screen.findByRole('button', { name: 'Sign in to resume saving' })
     expect(fetch).not.toHaveBeenCalled()
-    client.signIn(session())
+    await client.signIn(session())
     await screen.findByRole('button', { name: 'Save failed' })
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
     expect(fetch).toHaveBeenCalledWith(
       'https://project.supabase.co/auth/v1/user',
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer tutorial-owner-token' }),
+        headers: expect.objectContaining({ Authorization: `Bearer ${session().access_token}` }),
         body: JSON.stringify({ data: { tutorial_suppression: reason } }),
       }),
     )
@@ -152,7 +176,7 @@ it('keeps failed App preference sync locally suppressed and its alert accessible
   let finish!: (response: Response) => void
   const fetch = vi.fn(() => new Promise<Response>((resolve) => (finish = resolve)))
   vi.stubGlobal('fetch', fetch)
-  accountClient(session())
+  await accountClient(session())
   renderConsole()
   await screen.findByRole('dialog', { name: 'Learn the console' })
   fireEvent.click(screen.getByRole('checkbox', { name: 'Never show this again' }))

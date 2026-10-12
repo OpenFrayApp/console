@@ -61,3 +61,25 @@ describe('AccountControl (anonymous)', () => {
     },
   )
 })
+
+it.each([
+  { profileLoading: true, profileError: null, role: 'status', message: 'Checking profile' },
+  {
+    profileLoading: false,
+    profileError: 'Your account profile could not be verified.',
+    role: 'alert',
+    message: 'could not be verified',
+  },
+])(
+  'keeps profile navigation available while reporting account metadata state ($role)',
+  ({ role, message, ...state }) => {
+    const { onOpenAccount } = renderControl({
+      user: { email: 'fixture@example.test' } as User,
+      ...state,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    expect(screen.getByRole(role)).toHaveTextContent(message)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
+    expect(onOpenAccount).toHaveBeenCalledOnce()
+  },
+)

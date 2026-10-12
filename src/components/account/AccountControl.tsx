@@ -38,7 +38,7 @@ export function AccountControl({
    *  somewhere a Game Master works, not somewhere they glance. */
   onOpenShares?: () => void
 }) {
-  const { user, loading, configured } = useAuth()
+  const { user, loading, configured, profileLoading, profileError } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -64,6 +64,16 @@ export function AccountControl({
         </button>
         {menuOpen && (
           <div role="menu" className={`${popoverClass('roomy:w-44')} py-1 roomy:overflow-hidden`}>
+            {profileLoading && (
+              <p role="status" className="px-3 py-1.5 text-xs">
+                Checking profile…
+              </p>
+            )}
+            {profileError && (
+              <p role="alert" className="px-3 py-1.5 text-xs">
+                {profileError}
+              </p>
+            )}
             <button
               type="button"
               role="menuitem"

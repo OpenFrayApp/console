@@ -54,6 +54,7 @@ function installTerminationBoundary(
 ): TerminationBoundary | null {
   // These private seams are source-review gated and exercised against the installed SDK.
   const auth = client.auth as unknown as SdkTerminationMembers
+  if (!auth) return null
   const storage = auth.storage
   const key = auth.storageKey
   const notify = auth._notifyAllSubscribers
@@ -251,11 +252,13 @@ export async function observeConsoleSession(
 export async function readConsoleProfile(
   client: SupabaseClient,
   session: Session,
+  signal?: AbortSignal,
 ): Promise<User | null> {
   const service = services.get(client)
   if (!service) return null
   try {
     const response = await fetch(`${service.url.replace(/\/$/, '')}/auth/v1/user`, {
+      signal,
       headers: { apikey: service.anonKey, Authorization: `Bearer ${session.access_token}` },
     })
     if (!response.ok) return null
@@ -274,5 +277,77 @@ export async function readConsoleProfile(
     return data as User
   } catch {
     return null
+  }
+}
+
+/** Compare observed native identity with captured authority without refreshing or installing sessions. */
+export async function isCurrentConsoleSession(
+  client: SupabaseClient,
+  session: Session,
+): Promise<boolean> {
+  const current = await observeConsoleSession(client)
+  return (
+    current.status === 'present' &&
+    current.session.access_token === session.access_token &&
+    current.session.refresh_token === session.refresh_token &&
+    current.session.user.id === session.user.id
+  )
+}
+
+/** Write only captured-owner metadata and verify it through GET without SDK storage side effects. */
+export async function writeConsoleProfile(
+  client: SupabaseClient,
+  session: Session,
+  data: Record<string, unknown>,
+  isCurrent: () => boolean,
+  signal: AbortSignal,
+): Promise<{ user: User | null; error: string | null; current: boolean }> {
+  const service = services.get(client)
+  const failure = 'Your account profile could not be updated. Try again.'
+  /** Fence both successful and failed profile requests against native replacement and abort. */
+  const current = async () =>
+    !signal.aborted &&
+    isCurrent() &&
+    (await isCurrentConsoleSession(client, session)) &&
+    isCurrent()
+  if (!service || !(await current())) return { user: null, error: CHANGED, current: false }
+  try {
+    const response = await fetch(`${service.url.replace(/\/$/, '')}/auth/v1/user`, {
+      method: 'PUT',
+      signal,
+      headers: {
+        apikey: service.anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data }),
+    })
+    if (!(await current())) return { user: null, error: CHANGED, current: false }
+    if (!response.ok) return { user: null, error: failure, current: true }
+    const updated: unknown = await response.json()
+    if (
+      !updated ||
+      typeof updated !== 'object' ||
+      !('id' in updated) ||
+      updated.id !== session.user.id ||
+      !('user_metadata' in updated) ||
+      !updated.user_metadata ||
+      typeof updated.user_metadata !== 'object' ||
+      Array.isArray(updated.user_metadata)
+    )
+      return { user: null, error: failure, current: await current() }
+    const user = await readConsoleProfile(client, session, signal)
+    if (!(await current())) return { user: null, error: CHANGED, current: false }
+    if (
+      !user ||
+      Object.entries(data).some(
+        ([key, value]) =>
+          user.user_metadata[key] !== value && !(value === null && user.user_metadata[key] == null),
+      )
+    )
+      return { user: null, error: failure, current: true }
+    return { user, error: null, current: true }
+  } catch {
+    return { user: null, error: failure, current: await current() }
   }
 }

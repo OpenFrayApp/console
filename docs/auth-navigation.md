@@ -41,8 +41,13 @@ Captured-token transport, storage cleanup, and null-event reconciliation fence o
 Null events re-read the original storage delegate and verify replacement profiles with captured-bearer GET.
 The console never reinstalls a session or fabricates an auth event for this reconciliation.
 SDK upgrades require the real-client regression suite and source review.
-Native compare/remove is not an atomic cross-tab operation. Unobserved interleaving between
-those operations remains an assembled review and release limitation.
+Native compare/remove is not an atomic cross-tab operation. An unrelated tab can write a
+replacement after the captured-session comparison and before native removal, without its event
+being observed first. That replacement can be erased before reconciliation can see it.
+This precise interleaving remains an assembled review and release limitation; no locks are added.
+An already-dispatched default global logout also cannot undo server revocation if a new session
+for the same account is created while the request is pending. Local replacement preservation is
+not a guarantee about the server's global revocation timing.
 
 Legacy browser recovery without ownership metadata remains unverified. The console
 preserves its bytes and blocks automatic restoration and overwrite.
@@ -97,3 +102,19 @@ Before release, the deployment owner must document and review Supabase's redirec
 allowlist for the site's `/auth/callback/` on each intended origin. Retain Google,
 Discord, and `custom:patreon`, with their existing verification settings. No live
 configuration change is part of this source change.
+
+## Current profile metadata
+
+The console reads the account profile with a captured-bearer GET at startup and when a preserved
+page is shown, focused, or made visible again. It does not call SDK `getUser`, reinstall a session,
+or depend on `USER_UPDATED` from the site. Site PUT/readback leaves SDK metadata unchanged.
+The console's trusted read supplies current publishing name and license defaults independently
+of board recovery, activation, and local editing. While the profile is unverified, those defaults
+are empty; the account menu reports checking or failure without blocking Profile navigation.
+
+Publishing metadata uses captured-bearer PUT followed by trusted GET/readback. Tutorial metadata
+keeps its existing captured PUT and reason validation, adds trusted GET/readback, and retains
+confirmed preferences and unrelated publishing fields. Selected-storage tokens and identity
+generations fence both success and failure. These operations never write SDK storage or fabricate
+auth events. Reserved-name permission and publication remain in their existing server RPC/table
+boundaries, not user metadata.

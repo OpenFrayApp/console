@@ -16,7 +16,10 @@ import type { Session, User } from '@supabase/supabase-js'
 import { AuthProvider } from '../../src/auth/AuthProvider.tsx'
 import { useAuth, type AuthState } from '../../src/auth/useAuth.ts'
 
-const supa = vi.hoisted(() => ({ client: null as unknown }))
+const supa = vi.hoisted(() => ({
+  client: null as unknown,
+  tutorialPreferences: new Map<string, string>(),
+}))
 
 vi.mock('../../src/lib/supabase.ts', () => ({
   get supabase() {
@@ -26,6 +29,21 @@ vi.mock('../../src/lib/supabase.ts', () => ({
     return supa.client !== null
   },
 }))
+
+vi.mock('../../src/auth/tutorialAccountPreference.ts', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../../src/auth/tutorialAccountPreference.ts')>()
+  return {
+    ...original,
+    writeTutorialAccountPreference: async (
+      ...args: Parameters<typeof original.writeTutorialAccountPreference>
+    ) => {
+      const result = await original.writeTutorialAccountPreference(...args)
+      if (!result.error) supa.tutorialPreferences.set(args[0], args[2])
+      return result
+    },
+  }
+})
 
 vi.mock('../../src/auth/sessionTermination.ts', () => ({
   observeConsoleSession: async (client: {
@@ -38,21 +56,48 @@ vi.mock('../../src/auth/sessionTermination.ts', () => ({
         ? { status: 'present', session: data.session }
         : { status: 'absent' }
   },
-  readConsoleProfile: async (_client: unknown, session: Session) => session.user,
+  readConsoleProfile: async (_client: unknown, session: Session) => ({
+    ...session.user,
+    user_metadata: {
+      ...session.user.user_metadata,
+      ...(supa.tutorialPreferences.has(session.user.id)
+        ? { tutorial_suppression: supa.tutorialPreferences.get(session.user.id) }
+        : {}),
+    },
+  }),
+  isCurrentConsoleSession: async () => true,
+  writeConsoleProfile: async (
+    client: {
+      auth: {
+        updateUser: (
+          body: unknown,
+        ) => Promise<{ data: { user: User | null }; error: { message: string } | null }>
+      }
+    },
+    _session: Session,
+    data: Record<string, unknown>,
+    isCurrent: () => boolean,
+  ) => {
+    const result = await client.auth.updateUser({ data })
+    return { user: result.data.user, error: result.error?.message ?? null, current: isCurrent() }
+  },
   signOutConsoleSession: async (
-    client: { auth: { signOut: (options?: { scope: string }) => Promise<unknown> } },
+    client: { auth: { signOut: (options?: { scope: string }) => Promise<{ error?: unknown }> } },
     _session: unknown,
     isCurrent: () => boolean,
     scope = 'global',
   ) => {
     if (!isCurrent()) throw new Error('Session changed')
-    await client.auth.signOut(scope === 'local' ? { scope } : undefined)
+    const result = await client.auth.signOut(scope === 'local' ? { scope } : undefined)
+    if (result.error) throw new Error('Sign-out failed')
   },
 }))
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   supa.client = null
+  supa.tutorialPreferences.clear()
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
   localStorage.clear()
@@ -81,7 +126,10 @@ function makeAuthClient(initial: Session | null, initialError: AuthResponse['err
       listeners.push(listener)
       return { data: { subscription: { unsubscribe } } }
     }),
-    signOut: vi.fn(async (): Promise<AuthResponse> => ({ error: null })),
+    signOut: vi.fn(async (): Promise<AuthResponse> => {
+      await emit(null, 'SIGNED_OUT')
+      return { error: null }
+    }),
     updateUser: vi.fn(async (patch: { data: Record<string, unknown> }) => ({
       data: {
         user: {
@@ -217,6 +265,7 @@ describe('Tutorial account preference through rendered entry', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restart tutorial' }))
     expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
     await act(async () => {
+      await waitFor(() => expect(finish).toBeDefined())
       finish(new Response('{}', { status: 503 }))
     })
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -550,6 +599,7 @@ describe('AuthProvider — tutorial account preference', () => {
       await screen.findByText('a@openfray.app')
       const oldSetter = latest.setTutorialSuppression
       const write = oldSetter('completed')
+      await waitFor(() => expect(fetch).toHaveBeenCalledOnce())
       const signal = fetch.mock.calls[0]?.[1]?.signal as AbortSignal
       if (change === 'different account') await stub.emit(session('b@openfray.app'), 'SIGNED_IN')
       else {
@@ -648,6 +698,7 @@ describe('AuthProvider — tutorial account preference', () => {
       const view = renderProvider()
       await screen.findByText('gm@openfray.app')
       const write = latest.setTutorialSuppression('completed')
+      await waitFor(() => expect(fetch).toHaveBeenCalledOnce())
       if (end === 'unmount') view.unmount()
       else await latest.signOut()
       expect(fetch.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
@@ -809,6 +860,7 @@ describe('AuthProvider — the name encounters publish under', () => {
       supa.client = makeAuthClient(session('gm@openfray.app', metadata)).client
       renderProvider()
       await screen.findByText('gm@openfray.app')
+      await waitFor(() => expect(latest.profileLoading).toBe(false))
       expect(latest.displayName, JSON.stringify(metadata)).toBe(expected)
       cleanup()
     }
@@ -989,7 +1041,7 @@ describe('AuthProvider with Supabase configured', () => {
 })
 
 describe('AuthProvider — site account return and stale publishing metadata', () => {
-  it('reflects returned profile and license changes without rewriting tutorial preferences', async () => {
+  it('consumes an SDK-owned user update without rewriting tutorial preferences', async () => {
     const stub = makeAuthClient(session('gm@openfray.app', { tutorial_suppression: 'completed' }))
     supa.client = stub.client
     renderProvider()
