@@ -21,6 +21,11 @@ function lifecycle(
       load: () => ({ status: 'empty', snapshot: null }),
       save: () => ({ status: 'saved' }),
     },
+    authRecovery: {
+      load: () => ({ status: 'empty', snapshot: null }),
+      save: () => ({ status: 'saved' }),
+      clear: () => ({ status: 'deleted' }),
+    },
     cloud: {
       load: async () => cloudResult,
       acquire: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),

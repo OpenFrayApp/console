@@ -22,6 +22,7 @@ import type {
   SessionWriteResult,
 } from '../../src/state/persistence.ts'
 import type { CloudLeaseResult, CloudWriteResult } from '../../src/state/cloudEncounter.ts'
+import { pc } from '../fixtures.ts'
 import { encounterHash, type RecoveryLineage } from '../../src/state/reconciliation.ts'
 
 /** Build deterministic lifecycle adapters and expose their observed calls. */
@@ -37,13 +38,17 @@ function harness(options: {
   cloudLeaseResult?: CloudLeaseResult
   takeoverResult?: CloudLeaseResult
   deviceUnavailable?: boolean
+  ownerRecoveryUnavailable?: boolean
   deviceWrite?: SessionWriteResult
   deviceSave?: () => Promise<SessionWriteResult>
   sessionWrite?: SessionWriteResult
   online?: boolean
   lineage?: RecoveryLineage
   archivedConflict?: ReconciliationConflict
+  authRecovery?: SessionSnapshot
 }) {
+  let authRecovery = options.authRecovery ?? null
+  const ownerRecovery = { ...options.byOwner }
   const calls: string[] = []
   const deviceWrites: Array<{ ownerId: string; snapshot: SessionSnapshot; savedAt: string }> = []
   const sessionWrites: SessionSnapshot[] = []
@@ -79,14 +84,19 @@ function harness(options: {
     async load(ownerId) {
       calls.push(`device:${ownerId}`)
       if (options.deviceUnavailable) throw new Error('IndexedDB unavailable')
-      const value = options.byOwner?.[ownerId]
+      if (options.ownerRecoveryUnavailable) throw new Error('Owner storage denied')
+      const value = ownerRecovery[ownerId]
       return value ? { ownerId, snapshot: value, savedAt, lineage: options.lineage } : null
     },
     /** Record one deterministic owner recovery write. */
     async save(ownerId, value, savedAt) {
       calls.push(`device-save:${ownerId}`)
       deviceWrites.push({ ownerId, snapshot: value, savedAt })
-      return options.deviceSave ? options.deviceSave() : (options.deviceWrite ?? saved)
+      const result = options.deviceSave
+        ? await options.deviceSave()
+        : (options.deviceWrite ?? saved)
+      if (result.status === 'saved') ownerRecovery[ownerId] = value
+      return result
     },
     /** Load one deterministic archived divergence. */
     async loadConflict() {
@@ -128,7 +138,7 @@ function harness(options: {
       return (
         options.cloudLeaseResult ?? {
           status: 'acquired',
-          revision: 1,
+          revision: options.cloud?.status === 'loaded' ? (options.cloud.revision ?? 1) : 1,
           leaseToken: 'writer-a',
         }
       )
@@ -163,6 +173,20 @@ function harness(options: {
     {
       device,
       session,
+      authRecovery: {
+        load: () =>
+          authRecovery
+            ? { status: 'loaded', snapshot: authRecovery }
+            : { status: 'empty', snapshot: null },
+        save: (value) => {
+          authRecovery = value
+          return { status: 'saved' }
+        },
+        clear: () => {
+          authRecovery = null
+          return { status: 'deleted' }
+        },
+      },
       cloud,
       clock: { now: () => new Date('2026-09-02T10:11:12.000Z') },
       network: {
@@ -190,6 +214,7 @@ function harness(options: {
   )
   return {
     lifecycle,
+    authRecovery: () => authRecovery,
     calls,
     deviceWrites,
     sessionWrites,
@@ -215,6 +240,200 @@ function harness(options: {
 }
 
 describe('encounter lifecycle', () => {
+  it('keeps an anonymous board separate on authenticated return until an explicit empty-cloud choice', async () => {
+    const anonymous = snapshot('anonymous-fight')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous adventurer' })]
+    const { lifecycle, cloudWrites, deviceWrites, authRecovery, flushCloud } = harness({
+      authRecovery: anonymous,
+      cloud: { status: 'empty' },
+    })
+    const returned = await lifecycle.identify('owner-a')
+    expect(returned.snapshot).toEqual(anonymous)
+    expect(returned.conflict?.cloud.snapshot.encounter.combatants).toEqual([])
+    await lifecycle.commit(anonymous)
+    await flushCloud()
+    expect(authRecovery()).toEqual(anonymous)
+    expect(deviceWrites).toEqual([])
+    expect(cloudWrites).toEqual([])
+    expect(await lifecycle.ensureCloudEncounter(anonymous.encounter)).toBeNull()
+    const resolved = await lifecycle.resolveConflict(returned.conflict!.id, 'device')
+    expect(resolved?.snapshot).toEqual(anonymous)
+    expect(cloudWrites.map((write) => write.encounter)).toEqual([anonymous.encounter])
+    expect(authRecovery()).toBeNull()
+  })
+
+  it('checkpoints the latest anonymous action before sign-in without publishing or assigning an owner', async () => {
+    const { lifecycle, authRecovery, cloudWrites, deviceWrites } = harness({})
+    await lifecycle.identify(null)
+    const latest = snapshot('just-committed')
+    latest.encounter.combatants = [pc({ name: 'Latest adventurer' })]
+    void lifecycle.commit(latest)
+    expect(await lifecycle.checkpointForSignIn()).toBe(true)
+    expect(authRecovery()).toEqual(latest)
+    expect(cloudWrites).toEqual([])
+    expect(deviceWrites).toEqual([])
+  })
+
+  it.each(['device', 'cloud'] as const)(
+    'reconciles anonymous return against an existing cloud with explicit %s choice',
+    async (choice) => {
+      const anonymous = snapshot('anonymous-fight')
+      anonymous.encounter.combatants = [pc({ name: 'Anonymous adventurer' })]
+      const priorOwner = snapshot('owner-device')
+      const { lifecycle, cloudWrites, deviceWrites, archivedConflicts, authRecovery, flushCloud } =
+        harness({
+          latest: { ownerId: 'owner-a', snapshot: priorOwner },
+          byOwner: { 'owner-a': priorOwner },
+          authRecovery: anonymous,
+          cloud: {
+            status: 'loaded',
+            id: 'cloud-row',
+            encounter: encounter('cloud-fight'),
+            playerCode: null,
+            revision: 8,
+            updatedAt: '2026-09-02T10:10:12.000Z',
+          },
+        })
+      const returned = await lifecycle.identify('owner-a')
+      expect(returned.snapshot).toEqual(anonymous)
+      expect(returned.conflict?.cloud.snapshot.encounter.encounterId).toBe('cloud-fight')
+      await lifecycle.commit(anonymous)
+      await flushCloud()
+      expect(cloudWrites).toEqual([])
+      expect(deviceWrites).toEqual([])
+      expect(authRecovery()).toEqual(anonymous)
+      const resolved = await lifecycle.resolveConflict(returned.conflict!.id, choice)
+      expect(resolved?.snapshot?.encounter.encounterId).toBe(
+        choice === 'device' ? 'anonymous-fight' : 'cloud-fight',
+      )
+      expect(archivedConflicts).toMatchObject([
+        {
+          ownerId: 'owner-a',
+          device: anonymous,
+          cloud: { encounter: { encounterId: 'cloud-fight' } },
+        },
+      ])
+      expect(cloudWrites.map((write) => write.encounter.encounterId)).toEqual(
+        choice === 'device' ? ['anonymous-fight'] : [],
+      )
+      expect(authRecovery()).toBeNull()
+    },
+  )
+
+  it('waits for outstanding owner cloud work and then drains the latest dirty board before sign-in', async () => {
+    let finish!: (result: CloudWriteResult) => void
+    const held = new Promise<CloudWriteResult>((resolve) => {
+      finish = resolve
+    })
+    let saves = 0
+    const { lifecycle, cloudWrites, deviceWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('first') },
+      byOwner: { 'owner-a': snapshot('first') },
+      cloud: { status: 'empty' },
+      cloudSave: async (_ownerId, id, revision, writerId) =>
+        ++saves === 1
+          ? held
+          : { status: 'saved', id: id!, revision: revision + 1, leaseToken: writerId },
+    })
+    await lifecycle.identify('owner-a')
+    const inFlight = lifecycle.ensureCloudEncounter(encounter('earlier'))
+    await Promise.resolve()
+    await lifecycle.commit(snapshot('latest-dirty'))
+    let left = false
+    const checkpoint = lifecycle.checkpointForSignIn().then((safe) => {
+      left = safe
+      return safe
+    })
+    await Promise.resolve()
+    expect(left).toBe(false)
+    finish({ status: 'saved', id: 'cloud-row', revision: 1, leaseToken: 'writer-a' })
+    await inFlight
+    expect(await checkpoint).toBe(true)
+    expect(cloudWrites.map((write) => write.encounter.encounterId)).toEqual([
+      'earlier',
+      'latest-dirty',
+    ])
+    expect(deviceWrites.at(-1)?.snapshot.encounter.encounterId).toBe('latest-dirty')
+    expect(lifecycle.saveStatus().kind).toBe('saved')
+  })
+
+  it('blocks sign-in departure when draining an outstanding owner save fails', async () => {
+    let finish!: (result: CloudWriteResult) => void
+    const held = new Promise<CloudWriteResult>((resolve) => {
+      finish = resolve
+    })
+    const { lifecycle, deviceWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('first') },
+      byOwner: { 'owner-a': snapshot('first') },
+      cloud: { status: 'empty' },
+      cloudSave: async () => held,
+    })
+    await lifecycle.identify('owner-a')
+    const pending = lifecycle.ensureCloudEncounter(encounter('first'))
+    await Promise.resolve()
+    await lifecycle.commit(snapshot('dirty'))
+    const checkpoint = lifecycle.checkpointForSignIn()
+    await Promise.resolve()
+    finish({ status: 'failed' })
+    await pending
+    expect(await checkpoint).toBe(false)
+    expect(deviceWrites.at(-1)?.snapshot.encounter.encounterId).toBe('dirty')
+    expect(lifecycle.saveStatus().kind).toBe('offline')
+  })
+
+  it('never adopts another owner recovery when the new owner storage is unavailable', async () => {
+    const { lifecycle, cloudWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('private-owner-a') },
+      ownerRecoveryUnavailable: true,
+      cloud: { status: 'empty' },
+    })
+    expect(await lifecycle.identify('owner-b')).toMatchObject({
+      snapshot: null,
+      clearWorkingBoard: true,
+    })
+    expect(cloudWrites).toEqual([])
+  })
+
+  it('keeps committed anonymous actions made after returning from cancelled sign-in', async () => {
+    const before = snapshot('before-cancel')
+    before.encounter.combatants = [pc({ name: 'Before guard' })]
+    const latest = snapshot('after-cancel')
+    latest.encounter.combatants = [pc({ name: 'After guard' })]
+    const { lifecycle, authRecovery } = harness({
+      authRecovery: before,
+      anonymous: { status: 'loaded', snapshot: before },
+      cloud: { status: 'empty' },
+    })
+    await lifecycle.identify(null)
+    await lifecycle.commit(latest)
+    const returned = await lifecycle.identify('owner-a')
+    expect(returned.snapshot).toEqual(latest)
+    expect(authRecovery()).toEqual(latest)
+  })
+
+  it('refreshes the choice when writer acquisition reveals a cloud revision beyond the displayed copy', async () => {
+    let loads = 0
+    const anonymous = snapshot('anonymous')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+    const { lifecycle, cloudWrites, authRecovery } = harness({
+      authRecovery: anonymous,
+      cloudLeaseResult: { status: 'acquired', revision: 9, leaseToken: 'writer-a' },
+      cloudLoad: async () => ({
+        status: 'loaded',
+        id: 'cloud-row',
+        encounter: encounter('cloud'),
+        revision: ++loads < 3 ? 8 : 9,
+        updatedAt: '2026-09-02T10:11:12Z',
+        playerCode: null,
+      }),
+    })
+    const first = await lifecycle.identify('owner-a')
+    const resolved = await lifecycle.resolveConflict(first.conflict!.id, 'device')
+    expect(resolved?.conflict?.cloud.revision).toBe(9)
+    expect(cloudWrites).toEqual([])
+    expect(authRecovery()).toEqual(anonymous)
+  })
+
   it('observes network state only while a save-status consumer is mounted', () => {
     const { lifecycle, networkCounts } = harness({})
     const first = lifecycle.subscribe(() => undefined)

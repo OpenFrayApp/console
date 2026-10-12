@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
+import { emptyEncounter } from './encounter.ts'
+import { loadAuthRecovery, saveAuthRecovery, clearAuthRecovery } from './authRecovery.ts'
 import { encodeSession } from '../codecs/session.ts'
 import type { Encounter } from '../schema/encounter.ts'
 import {
@@ -114,6 +116,7 @@ export function installNavigationWarning(): () => void {
 export interface EncounterLifecycleAdapters {
   device: DeviceRecoveryAdapter
   session: SessionRecoveryAdapter
+  authRecovery: SessionRecoveryAdapter & { clear: () => SessionWriteResult }
   cloud: CloudEncounterAdapter
   clock: LifecycleClock
   network?: LifecycleNetwork
@@ -124,6 +127,8 @@ export type CopyChoice = 'device' | 'cloud'
 
 export interface ReconciliationConflict {
   id: string
+  anonymous?: boolean
+  cloudEmpty?: boolean
   device: { snapshot: SessionSnapshot; activeAt: string }
   cloud: { snapshot: SessionSnapshot; activeAt: string; revision: number }
 }
@@ -155,6 +160,7 @@ export class EncounterLifecycle {
   private commitGeneration = 0
   private recoveryQueue: Promise<void> = Promise.resolve()
   private latestSnapshot: SessionSnapshot | null = null
+  private anonymousSnapshot: SessionSnapshot | null = null
   private pendingConflict: ReconciliationConflict | null = null
   private archivedConflict: ReconciliationConflict | null = null
   private status: LifecycleSaveStatus = { kind: 'saving' }
@@ -259,6 +265,50 @@ export class EncounterLifecycle {
     }
   }
 
+  /** Checkpoint recovery and drain writable cloud work before same-tab site sign-in. */
+  async checkpointForSignIn(): Promise<boolean> {
+    if (!this.latestSnapshot || this.pendingConflict) return false
+    const ownerId = this.ownerId
+    const identityGeneration = this.identityGeneration
+    if (ownerId) {
+      const drainCloud = this.cloudWritable && !this.cloudIdentityExpired
+      if (!(await this.checkpointForUpdate())) return false
+      const generation = this.commitGeneration
+      this.cancelCloudSave?.()
+      this.cancelCloudSave = null
+      await this.cloudQueue
+      if (identityGeneration !== this.identityGeneration || generation !== this.commitGeneration)
+        return false
+      if (drainCloud) {
+        if (
+          !this.cloudWritable ||
+          !(await this.ensureCloudEncounter(this.latestSnapshot.encounter))
+        )
+          return false
+      }
+      return identityGeneration === this.identityGeneration && generation === this.commitGeneration
+    }
+    const snapshot = this.latestSnapshot
+    const write = this.commit(snapshot)
+    const generation = this.commitGeneration
+    if ((await write).status !== 'saved') return false
+    const result = this.adapters.authRecovery.save(snapshot)
+    if (result.status !== 'saved') {
+      this.publishDeviceFailure(result)
+      return false
+    }
+    const recovered = this.adapters.authRecovery.load().snapshot
+    const expected = encodeSession(snapshot)
+    const actual = recovered && encodeSession(recovered)
+    return (
+      generation === this.commitGeneration &&
+      identityGeneration === this.identityGeneration &&
+      expected.status === 'ok' &&
+      actual?.status === 'ok' &&
+      expected.serialized === actual.serialized
+    )
+  }
+
   /** Return restart-safe recovery that began before identity or cloud reconciliation. */
   restore(): Promise<LifecycleRestore> {
     return this.restorePromise
@@ -289,6 +339,19 @@ export class EncounterLifecycle {
     if (generation !== this.identityGeneration) return startup
 
     const previousOwnerId = this.ownerId
+    const anonymous = !previousOwnerId
+      ? (this.latestSnapshot ??
+        this.adapters.authRecovery.load().snapshot ??
+        (startup.ownerId === null ? startup.snapshot : null))
+      : this.anonymousSnapshot
+    this.anonymousSnapshot =
+      ownerId &&
+      anonymous &&
+      (anonymous.encounter.combatants.length > 0 ||
+        anonymous.encounter.log.length > 0 ||
+        anonymous.encounter.round > 0)
+        ? anonymous
+        : null
     this.ownerId = ownerId
     this.cloudId = null
     this.cloudRevision = 0
@@ -321,8 +384,11 @@ export class EncounterLifecycle {
     }
     if (generation !== this.identityGeneration) return startup
     const recovery =
+      this.anonymousSnapshot ??
       device?.snapshot ??
-      (startup.ownerId === ownerId || deviceUnavailable ? startup.snapshot : null)
+      (startup.ownerId === ownerId || (deviceUnavailable && startup.ownerId === null)
+        ? startup.snapshot
+        : null)
     const recoverySavedAt =
       device?.savedAt ?? (startup.ownerId === ownerId ? startup.savedAt : undefined)
     const cloud =
@@ -334,9 +400,28 @@ export class EncounterLifecycle {
     }
 
     if (cloud.status === 'failed') {
+      if (recovery) this.latestSnapshot = recovery
       return recovery
         ? { ownerId, snapshot: recovery }
         : { ownerId, snapshot: null, clearWorkingBoard: true }
+    }
+    if (cloud.status === 'empty' && this.anonymousSnapshot) {
+      const activeAt = this.adapters.clock.now().toISOString()
+      const conflict: ReconciliationConflict = {
+        id: crypto.randomUUID(),
+        anonymous: true,
+        cloudEmpty: true,
+        device: { snapshot: this.anonymousSnapshot, activeAt },
+        cloud: {
+          snapshot: { ...this.anonymousSnapshot, encounter: emptyEncounter(), selectedId: null },
+          activeAt,
+          revision: 0,
+        },
+      }
+      this.pendingConflict = conflict
+      this.latestSnapshot = this.anonymousSnapshot
+      this.publishStatus({ kind: 'conflict' })
+      return { ownerId, snapshot: this.anonymousSnapshot, conflict }
     }
     if (cloud.status === 'empty') {
       this.cloudWritable = true
@@ -353,8 +438,9 @@ export class EncounterLifecycle {
     let selected = cloudSnapshot
     let selectedAt = cloud.updatedAt
     if (recovery) {
-      const relationship =
-        cloud.revision === null
+      const relationship = this.anonymousSnapshot
+        ? 'divergent'
+        : cloud.revision === null
           ? (await encounterHash(recovery.encounter)) === (await encounterHash(cloud.encounter))
             ? 'same'
             : 'divergent'
@@ -369,6 +455,7 @@ export class EncounterLifecycle {
       if (relationship === 'divergent') {
         const conflict: ReconciliationConflict = {
           id: crypto.randomUUID(),
+          anonymous: Boolean(this.anonymousSnapshot),
           device: { snapshot: recovery, activeAt: recoverySavedAt ?? cloud.updatedAt },
           cloud: {
             snapshot: cloudSnapshot,
@@ -422,49 +509,72 @@ export class EncounterLifecycle {
   async resolveConflict(conflictId: string, choice: CopyChoice): Promise<LifecycleRestore | null> {
     const conflict = this.pendingConflict
     const ownerId = this.ownerId
-    if (!conflict || conflict.id !== conflictId || !ownerId || !this.cloudId) return null
+    if (!conflict || conflict.id !== conflictId || !ownerId) return null
+    const generation = this.identityGeneration
     const current = await this.adapters.cloud.load()
+    if (generation !== this.identityGeneration) return null
     if (
-      current.status !== 'loaded' ||
-      current.id !== this.cloudId ||
-      current.revision !== conflict.cloud.revision
+      conflict.cloudEmpty
+        ? current.status !== 'empty'
+        : current.status !== 'loaded' ||
+          current.id !== this.cloudId ||
+          current.revision !== conflict.cloud.revision
     ) {
       return this.identify(ownerId)
     }
+    if (this.cloudId && current.status === 'loaded' && current.revision !== null) {
+      await this.acquireWriter(this.cloudId, generation)
+      if (generation !== this.identityGeneration) return null
+      if (this.cloudWritable && this.cloudRevision !== conflict.cloud.revision)
+        return this.identify(ownerId)
+    }
     const archived = await this.adapters.device.archiveConflict(ownerId, conflict)
+    if (generation !== this.identityGeneration) return null
     if (archived.status !== 'saved') {
       this.publishDeviceFailure(archived)
       return null
     }
 
-    this.pendingConflict = null
-    this.archivedConflict = conflict
     const snapshot = choice === 'device' ? conflict.device.snapshot : conflict.cloud.snapshot
-    this.latestSnapshot = snapshot
-    const generation = this.identityGeneration
-    await this.acquireWriter(this.cloudId, generation)
-    if (ownerId !== this.ownerId) return null
-    if (choice === 'device' && this.cloudWritable) {
-      await this.saveCloud(snapshot.encounter, conflict.device.activeAt)
-    } else if (choice === 'cloud') {
-      const savedAt = this.adapters.clock.now().toISOString()
-      const saved = await this.adapters.device.save(ownerId, snapshot, savedAt)
-      if (saved.status !== 'saved') {
-        this.publishDeviceFailure(saved)
+    const savedAt = this.adapters.clock.now().toISOString()
+    const saved = await this.adapters.device.save(ownerId, snapshot, savedAt)
+    if (generation !== this.identityGeneration) return null
+    if (saved.status !== 'saved') {
+      this.publishDeviceFailure(saved)
+      return null
+    }
+    if (conflict.anonymous) {
+      const cleared = this.adapters.authRecovery.clear()
+      if (cleared.status !== 'deleted') {
+        this.publishDeviceFailure(cleared)
         return null
       }
+    }
+    this.pendingConflict = null
+    this.anonymousSnapshot = null
+    this.archivedConflict = conflict
+    this.latestSnapshot = snapshot
+    if (!this.cloudId) {
+      this.cloudWritable = true
+      this.cloudWriterId = await this.clientId
+    }
+    if (generation !== this.identityGeneration) return null
+    if (choice === 'device' && this.cloudWritable) {
+      await this.saveCloud(snapshot.encounter, conflict.device.activeAt)
+    } else if (choice === 'cloud' && this.cloudId) {
       await this.adapters.device.markSynced(ownerId, snapshot, {
         cloudEncounterId: this.cloudId,
         cloudRevision: conflict.cloud.revision,
         cloudStateHash: await encounterHash(snapshot.encounter),
       })
-      if (this.cloudWritable) this.publishStatus({ kind: 'saved' })
     }
+    if (generation !== this.identityGeneration) return null
+    if (this.cloudWritable) this.publishStatus({ kind: 'saved' })
     return {
       ownerId,
       snapshot,
-      savedAt: choice === 'device' ? conflict.device.activeAt : conflict.cloud.activeAt,
-      playerCode: current.playerCode,
+      savedAt,
+      playerCode: current.status === 'loaded' ? current.playerCode : null,
     }
   }
 
@@ -500,8 +610,12 @@ export class EncounterLifecycle {
   async commit(snapshot: SessionSnapshot): Promise<SessionWriteResult> {
     const generation = ++this.commitGeneration
     const ownerId = this.ownerId
+    const anonymousRecovery =
+      Boolean(this.anonymousSnapshot) ||
+      (!ownerId && this.adapters.authRecovery.load().snapshot !== null)
     const savedAt = this.adapters.clock.now().toISOString()
     this.latestSnapshot = snapshot
+    if (this.anonymousSnapshot) this.anonymousSnapshot = snapshot
     if (this.pendingConflict && ownerId === this.ownerId) {
       this.pendingConflict = {
         ...this.pendingConflict,
@@ -518,9 +632,11 @@ export class EncounterLifecycle {
     this.recoveryQueue = this.recoveryQueue.then(async () => {
       try {
         const sessionResult = this.adapters.session.save(snapshot)
-        const result = ownerId
-          ? await this.adapters.device.save(ownerId, snapshot, savedAt)
-          : sessionResult
+        const result = anonymousRecovery
+          ? this.adapters.authRecovery.save(snapshot)
+          : ownerId
+            ? await this.adapters.device.save(ownerId, snapshot, savedAt)
+            : sessionResult
         resolveWrite(result)
       } catch {
         resolveWrite({ status: 'failed', reason: 'unavailable' })
@@ -534,6 +650,8 @@ export class EncounterLifecycle {
     if (
       result.status === 'saved' &&
       ownerId &&
+      !this.pendingConflict &&
+      !this.anonymousSnapshot &&
       this.cloudWritable &&
       ownerId === this.ownerId &&
       (!this.adapters.network || this.adapters.network.online())
@@ -559,6 +677,7 @@ export class EncounterLifecycle {
     }
     if (this.pendingConflict) return { kind: 'conflict' }
     if (!this.ownerId) return { kind: 'sign-in' }
+    if (this.anonymousSnapshot) return { kind: 'offline' }
     if (this.adapters.network && !this.adapters.network.online()) return { kind: 'offline' }
     if (!this.cloudWritable) {
       if (this.cloudIdentityExpired) return { kind: 'sign-in' }
@@ -595,7 +714,14 @@ export class EncounterLifecycle {
 
   /** Checkpoint the cloud copy, replace its writer, and save the current working board. */
   async takeOver(): Promise<boolean> {
-    if (!this.ownerId || !this.cloudId || !this.latestSnapshot) return false
+    if (
+      !this.ownerId ||
+      !this.cloudId ||
+      !this.latestSnapshot ||
+      this.pendingConflict ||
+      this.anonymousSnapshot
+    )
+      return false
     const ownerId = this.ownerId
     const identityGeneration = this.identityGeneration
     const clientId = await this.clientId
@@ -622,7 +748,14 @@ export class EncounterLifecycle {
 
   /** React to connectivity changes without claiming an unverified cloud write succeeded. */
   private networkChanged(): void {
-    if (!this.ownerId || this.status.kind === 'failed' || this.status.kind === 'read-only') return
+    if (
+      !this.ownerId ||
+      this.pendingConflict ||
+      this.anonymousSnapshot ||
+      this.status.kind === 'failed' ||
+      this.status.kind === 'read-only'
+    )
+      return
     if (!this.adapters.network?.online()) {
       this.cancelCloudSave?.()
       this.cancelCloudSave = null
@@ -657,7 +790,8 @@ export class EncounterLifecycle {
 
   /** Ensure the working encounter has a current cloud row and return its owner-scoped id. */
   async ensureCloudEncounter(encounter: Encounter): Promise<string | null> {
-    if (!this.ownerId || !this.cloudWritable) return null
+    if (!this.ownerId || !this.cloudWritable || this.pendingConflict || this.anonymousSnapshot)
+      return null
     const generation = this.commitGeneration
     this.cancelCloudSave?.()
     this.cancelCloudSave = null
@@ -764,6 +898,7 @@ export function createBrowserEncounterLifecycle(): EncounterLifecycle {
     {
       device,
       session: { load: loadSession, save: saveSession },
+      authRecovery: { load: loadAuthRecovery, save: saveAuthRecovery, clear: clearAuthRecovery },
       cloud: {
         load: loadCloudEncounter,
         acquire: acquireCloudWriter,
