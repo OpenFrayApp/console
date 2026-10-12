@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Nicola Mustone
 
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
@@ -12,7 +13,7 @@ it.each(['denied', 'quota'])(
     // A fresh SDK instance avoids its process-wide memoized browser-writability probe.
     const script = `
     import assert from 'node:assert/strict';
-    const { JSDOM } = await import(${JSON.stringify(pathToFileURL(resolve('node_modules/jsdom/lib/api.js')).href)});
+    const { JSDOM } = await import(${JSON.stringify(pathToFileURL(createRequire(import.meta.url).resolve('jsdom')).href)});
     const dom = new JSDOM('', { url: 'https://fixture.example.test' });
     globalThis.window = dom.window;
     globalThis.document = dom.window.document;
