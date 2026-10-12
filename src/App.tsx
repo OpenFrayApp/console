@@ -253,6 +253,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [copyConflict, setCopyConflict] = useState<ReconciliationConflict | null>(null)
   const [copyConflictOpen, setCopyConflictOpen] = useState(false)
   const [resolvingCopies, setResolvingCopies] = useState(false)
+  const reconciliationGeneration = useRef(0)
   // Theme is shared with the marketing site (and the player view) through its own
   // device-local preference, independent of authored encounter recovery.
   const [theme, toggleTheme] = useTheme()
@@ -499,6 +500,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   // Recovery completes before identity-triggered cloud reconciliation. Offline failure keeps
   // the validated device copy on the working board.
   useEffect(() => {
+    reconciliationGeneration.current += 1
+    setResolvingCopies(false)
     setSettledIdentity(undefined)
     if (authLoading) return
     if (identityExpired) {
@@ -577,10 +580,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const resolveCopies = async (choice: CopyChoice) => {
     const conflict = activeCopyConflict
     if (!conflict) return
+    const generation = reconciliationGeneration.current
     setResolvingCopies(true)
     setCopyConflictOpen(false)
     applyRecovery(conflict[choice].snapshot)
     const result = await lifecycle.resolveConflict(conflict.id, choice)
+    if (generation !== reconciliationGeneration.current) return
     if (!result) {
       const unresolved = lifecycle.conflict() ?? conflict
       applyRecovery(unresolved.device.snapshot)

@@ -232,3 +232,78 @@ it('can renew an expired identity after checkpointing its latest board to the or
   expect(loadAuthRecovery().status).toBe('empty')
   expect(saveCloud).not.toHaveBeenCalled()
 })
+
+it('does not reopen an old owner conflict when its pending reconciliation finishes after an owner switch', async () => {
+  saveSettings({ tutorialSuppression: 'dismissed' })
+  const deviceBoard = recoverySnapshot('owner-a-device')
+  deviceBoard.encounter.combatants = [pc({ name: 'Owner A device guard' })]
+  const device = { ownerId: 'owner-a', snapshot: deviceBoard, savedAt: '2026-09-02T10:11:12Z' }
+  vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockResolvedValue(device)
+  vi.spyOn(IndexedDbRecovery.prototype, 'load').mockImplementation(async (owner) =>
+    owner === 'owner-a' ? device : null,
+  )
+  vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockResolvedValue(null)
+  vi.spyOn(IndexedDbRecovery.prototype, 'save').mockResolvedValue({ status: 'saved' })
+  let finishArchive!: () => void
+  const held = new Promise<void>((resolve) => {
+    finishArchive = resolve
+  })
+  vi.spyOn(IndexedDbRecovery.prototype, 'archiveConflict').mockImplementation(async () => {
+    await held
+    return { status: 'saved' }
+  })
+  const cloudA = recoverySnapshot('owner-a-cloud')
+  cloudA.encounter.combatants = [pc({ name: 'Owner A cloud guard' })]
+  const cloudB = recoverySnapshot('owner-b-cloud')
+  cloudB.encounter.combatants = [pc({ name: 'Owner B cloud guard' })]
+  vi.spyOn(cloudEncounter, 'loadCloudEncounter')
+    .mockResolvedValueOnce({
+      status: 'loaded',
+      id: 'owner-a-row',
+      encounter: cloudA.encounter,
+      revision: 8,
+      updatedAt: '2026-09-02T10:11:12Z',
+      playerCode: null,
+    })
+    .mockResolvedValueOnce({
+      status: 'loaded',
+      id: 'owner-a-row',
+      encounter: cloudA.encounter,
+      revision: 8,
+      updatedAt: '2026-09-02T10:11:12Z',
+      playerCode: null,
+    })
+    .mockResolvedValueOnce({
+      status: 'loaded',
+      id: 'owner-b-row',
+      encounter: cloudB.encounter,
+      revision: 8,
+      updatedAt: '2026-09-02T10:11:12Z',
+      playerCode: null,
+    })
+  vi.spyOn(cloudEncounter, 'acquireCloudWriter').mockResolvedValue({
+    status: 'acquired',
+    revision: 8,
+    leaseToken: 'writer-a',
+  })
+  const app = render(
+    <AuthContext.Provider value={authState({ user: { id: 'owner-a' } as User })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await screen.findByRole('dialog', { name: 'Choose a board copy' })
+  fireEvent.click(screen.getByRole('button', { name: 'Use cloud copy' }))
+  await waitFor(() => expect(IndexedDbRecovery.prototype.archiveConflict).toHaveBeenCalledOnce())
+  app.rerender(
+    <AuthContext.Provider value={authState({ user: { id: 'owner-b' } as User })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await screen.findByRole('button', { name: 'Remove Owner B cloud guard' })
+  finishArchive()
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: 'Choose a board copy' })).toBeNull(),
+  )
+  expect(screen.getByRole('button', { name: 'Remove Owner B cloud guard' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Remove Owner A device guard' })).toBeNull()
+})
