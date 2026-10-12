@@ -17,6 +17,8 @@ import {
   type ContentLicense,
 } from '../../src/schema/license.ts'
 
+import * as contentLicense from '../../src/schema/contentLicense.ts'
+
 /**
  * These rules are the one place the app reasons about somebody else's license, and a wrong
  * answer here is written into a Game Master's data and then published under their name. So
@@ -162,4 +164,11 @@ describe('what a reader may take a copy of', () => {
     expect(mayCopy({ source: 'srd-5.2' })).toBe(true)
     expect(mayCopy({ source: 'kobold-press-tob' })).toBe(true)
   })
+})
+
+it('keeps the existing license exports compatible with the dependency-free account seam', () => {
+  expect(LICENSE_LABELS).toBe(contentLicense.LICENSE_LABELS)
+  expect(LICENSE_HINTS).toBe(contentLicense.LICENSE_HINTS)
+  expect(LICENSES_FROM_SCRATCH).toBe(contentLicense.LICENSES_FROM_SCRATCH)
+  expect(isContentLicense).toBe(contentLicense.isContentLicense)
 })
