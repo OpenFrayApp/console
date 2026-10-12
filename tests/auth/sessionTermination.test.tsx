@@ -172,6 +172,9 @@ it.each(['signout', 'deletion'] as const)(
   'completes ordinary %s through native SDK cleanup and confirmed null identity',
   async (operation) => {
     const { client, fetch, events } = await startIdentity()
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const remove = vi.spyOn(Storage.prototype, 'removeItem')
+    localStorage.setItem('sb-termination-fixture-auth-token-code-verifier', 'fixture-old-flow')
     await act(async () => {
       if (operation === 'deletion') expect(await latest.deleteAccount()).toEqual({ error: null })
       else await latest.signOut()
@@ -181,6 +184,14 @@ it.each(['signout', 'deletion'] as const)(
     expect((await client.auth.getSession()).data.session).toBeNull()
     expect(localStorage.getItem('sb-termination-fixture-auth-token')).toBeNull()
     expect(events.filter((event) => event === 'SIGNED_OUT')).toHaveLength(1)
+    expect(
+      errors.mock.calls.some(([message]) => String(message).includes('account sign-out failed')),
+    ).toBe(false)
+    expect(
+      remove.mock.calls.filter(
+        ([key]) => key === 'sb-termination-fixture-auth-token-code-verifier',
+      ),
+    ).toHaveLength(1)
     const logout = fetch.mock.calls.find(([input]) => String(input).includes('/logout'))!
     expect(new Headers(logout[1]?.headers).get('Authorization')).toBe(
       `Bearer ${token('owner-a', 'original')}`,
@@ -752,4 +763,22 @@ it('does not mask legitimate current-session expiry while an older logout HTTP r
   })
   expect((await client.auth.getSession()).data.session).toBeNull()
   expect(latest.identityExpired).toBe(true)
+})
+
+it('does not erase a new flow verifier created by the own terminal event', async () => {
+  const { client } = await startIdentity()
+  const original = (await client.auth.getSession()).data.session!
+  let current = true
+  client.auth.onAuthStateChange((event) => {
+    if (event !== 'SIGNED_OUT') return
+    current = false
+    localStorage.setItem('sb-termination-fixture-auth-token-code-verifier', 'fixture-new-flow')
+  })
+  await act(async () => {
+    await expect(signOutConsoleSession(client, original, () => current)).rejects.toThrow()
+  })
+  expect(localStorage.getItem('sb-termination-fixture-auth-token')).toBeNull()
+  expect(localStorage.getItem('sb-termination-fixture-auth-token-code-verifier')).toBe(
+    'fixture-new-flow',
+  )
 })

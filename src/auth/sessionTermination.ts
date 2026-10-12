@@ -16,6 +16,7 @@ type TerminationGuard = {
   cleanup: boolean
   logoutStarted: boolean
   removed: boolean
+  terminalCompleted: boolean
 }
 type SdkNotification = (
   event: AuthChangeEvent,
@@ -101,6 +102,20 @@ function installTerminationBoundary(
     return result
   }
 
+  /** A completed own event permits only an already-absent verifier no-op, never another erase. */
+  const redundantVerifierRemoval = (): void | Promise<void> => {
+    const session = storage.getItem(key)
+    const checkAbsent = (raw: string | null): void | Promise<void> => {
+      if (raw !== null) throw new Error(CHANGED)
+      const verifier = storage.getItem(`${key}-code-verifier`)
+      const checkVerifier = (value: string | null) => {
+        if (value !== null) throw new Error(CHANGED)
+      }
+      return isPromise(verifier) ? verifier.then(checkVerifier) : checkVerifier(verifier)
+    }
+    return isPromise(session) ? session.then(checkAbsent) : checkAbsent(session)
+  }
+
   const guardedStorage: SupportedStorage = {
     ...(storage.isServer === undefined ? {} : { isServer: storage.isServer }),
     getItem: storage.getItem.bind(storage),
@@ -110,6 +125,8 @@ function installTerminationBoundary(
       const guard = active
       if (!guard?.cleanup || ![key, `${key}-code-verifier`, `${key}-user`].includes(name))
         return storage.removeItem(name)
+      if (guard.terminalCompleted && name === `${key}-code-verifier`)
+        return redundantVerifierRemoval()
       const checked = check(guard)
       return isPromise(checked) ? checked.then(() => remove(name, guard)) : remove(name, guard)
     },
@@ -120,9 +137,12 @@ function installTerminationBoundary(
     const guard = active
     if (args[0] !== 'SIGNED_OUT' || !guard?.cleanup) return notify.apply(client.auth, args)
     const checked = check(guard)
-    return isPromise(checked)
+    const notified = isPromise(checked)
       ? checked.then(() => notify.apply(client.auth, args))
       : notify.apply(client.auth, args)
+    return notified.then(() => {
+      guard.terminalCompleted = true
+    })
   }
   auth.storage = guardedStorage
   auth._notifyAllSubscribers = guardedNotify
@@ -197,6 +217,7 @@ function installTerminationBoundary(
         cleanup: true,
         logoutStarted: false,
         removed: false,
+        terminalCompleted: false,
       }
       active = guard
       try {
