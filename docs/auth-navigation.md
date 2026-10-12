@@ -118,3 +118,11 @@ confirmed preferences and unrelated publishing fields. Selected-storage tokens a
 generations fence both success and failure. These operations never write SDK storage or fabricate
 auth events. Reserved-name permission and publication remain in their existing server RPC/table
 boundaries, not user metadata.
+
+Destructive console requests also check the original selected storage before dispatch. The existing
+`stop_all_live_views` RPC builder and `account-delete` invoke carry request-local captured
+Authorization headers, not global client headers or caller target identifiers. A replacement
+while the SDK acquires its transport cannot retarget the request to the new bearer. Responses
+recheck native tokens and generation; mismatches reconcile verified replacement identity and do
+not claim the new account was revoked or deleted. Already-issued authorized requests for the
+original account cannot recall server-side effects.

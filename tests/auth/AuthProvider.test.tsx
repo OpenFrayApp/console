@@ -155,7 +155,18 @@ function makeAuthClient(initial: Session | null, initialError: AuthResponse['err
       error: { message: string } | null
     }> => ({ data: { deleted: true }, error: null }),
   )
-  return { client: { auth, rpc, functions: { invoke } }, auth, rpc, invoke, unsubscribe, emit }
+  const clientRpc = (...args: Parameters<typeof rpc>) => {
+    const response = rpc(...args)
+    return Object.assign(response, { setHeader: () => response })
+  }
+  return {
+    client: { auth, rpc: clientRpc, functions: { invoke } },
+    auth,
+    rpc,
+    invoke,
+    unsubscribe,
+    emit,
+  }
 }
 
 let latest!: AuthState
@@ -989,7 +1000,10 @@ describe('AuthProvider with Supabase configured', () => {
     renderProvider()
     await screen.findByText('gm@openfray.app')
     await expect(latest.deleteAccount()).resolves.toEqual({ error: null })
-    expect(stub.invoke).toHaveBeenCalledWith('account-delete', { body: {} })
+    expect(stub.invoke).toHaveBeenCalledWith('account-delete', {
+      body: {},
+      headers: { Authorization: 'Bearer token:gm@openfray.app' },
+    })
     expect(stub.rpc).not.toHaveBeenCalled()
     expect(stub.auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
     expect(stub.auth.signOut).toHaveBeenCalledTimes(1)

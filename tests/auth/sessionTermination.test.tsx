@@ -625,3 +625,131 @@ it('verifies tutorial PUT with captured GET while preserving publishing fields a
     data: { tutorial_suppression: 'completed' },
   })
 })
+it.each([
+  ['signout', 'owner-b'],
+  ['signout', 'owner-a'],
+  ['deletion', 'owner-b'],
+  ['deletion', 'owner-a'],
+] as const)(
+  'does not send destructive %s requests for unseen native replacement %s',
+  async (operation, replacementId) => {
+    const { client, fetch, serverMetadata } = await startIdentity()
+    const original = (await client.auth.getSession()).data.session!
+    const replacement = {
+      ...original,
+      access_token: token(replacementId, 'raw'),
+      refresh_token: 'fixture-raw',
+      user: { ...original.user, id: replacementId },
+    }
+    serverMetadata[replacementId] = { display_name: 'Raw replacement' }
+    localStorage.setItem('sb-termination-fixture-auth-token', JSON.stringify(replacement))
+    fetch.mockClear()
+    await act(async () => {
+      if (operation === 'deletion') await latest.deleteAccount()
+      else await latest.signOut()
+    })
+    const destructive = fetch.mock.calls.filter(
+      ([input]) =>
+        String(input).includes('/rpc/stop_all_live_views') ||
+        String(input).includes('/functions/v1/account-delete'),
+    )
+    expect(destructive).toHaveLength(0)
+    expect((await client.auth.getSession()).data.session?.user.id).toBe(replacementId)
+  },
+)
+
+it.each([
+  ['signout', 'owner-b'],
+  ['signout', 'owner-a'],
+  ['deletion', 'owner-b'],
+  ['deletion', 'owner-a'],
+] as const)(
+  'keeps %s transport bearer captured while native SDK acquisition installs %s',
+  async (operation, replacementId) => {
+    const { client, fetch, serverMetadata } = await startIdentity()
+    const original = (await client.auth.getSession()).data.session!
+    const replacement = {
+      ...original,
+      access_token: token(replacementId, 'acquired'),
+      refresh_token: 'fixture-acquired',
+      user: { ...original.user, id: replacementId },
+    }
+    let acquired!: (value: Awaited<ReturnType<typeof client.auth.getSession>>) => void
+    vi.spyOn(client.auth, 'getSession').mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acquired = resolve
+        }),
+    )
+    const pending = operation === 'deletion' ? latest.deleteAccount() : latest.signOut()
+    await waitFor(() => expect(acquired).toBeDefined())
+    serverMetadata[replacementId] = { display_name: 'Acquired replacement' }
+    localStorage.setItem('sb-termination-fixture-auth-token', JSON.stringify(replacement))
+    await act(async () => {
+      acquired({ data: { session: replacement }, error: null })
+      await pending
+    })
+    await waitFor(() => expect(latest.displayName).toBe('Acquired replacement'))
+    const destructive = fetch.mock.calls.filter(
+      ([input]) =>
+        String(input).includes('/rpc/stop_all_live_views') ||
+        String(input).includes('/functions/v1/account-delete'),
+    )
+    expect(destructive).toHaveLength(1)
+    expect(new Headers(destructive[0][1]?.headers).get('Authorization')).toBe(
+      `Bearer ${original.access_token}`,
+    )
+    expect((await client.auth.getSession()).data.session?.access_token).toBe(
+      replacement.access_token,
+    )
+    expect(fetch.mock.calls.some(([input]) => String(input).includes('/logout'))).toBe(false)
+  },
+)
+
+it('does not mask legitimate current-session expiry while an older logout HTTP request is pending', async () => {
+  const { client, fetch, events } = await startIdentity()
+  let finish!: (response: Response) => void
+  const implementation = fetch.getMockImplementation()!
+  fetch.mockImplementationOnce(() => Promise.resolve(Response.json(null)))
+  fetch.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  const pending = latest.signOut()
+  await waitFor(() => expect(finish).toBeDefined())
+  await act(async () => {
+    await client.auth.setSession({
+      access_token: token('owner-b', 'expiring'),
+      refresh_token: 'fixture-expiring',
+    })
+  })
+  const expiring = JSON.parse(localStorage.getItem('sb-termination-fixture-auth-token')!)
+  localStorage.setItem(
+    'sb-termination-fixture-auth-token',
+    JSON.stringify({ ...expiring, expires_at: 1 }),
+  )
+  fetch.mockImplementation(async (input, init) =>
+    String(input).includes('/token')
+      ? Response.json(
+          { msg: 'Invalid fixture refresh token', code: 'refresh_token_not_found' },
+          { status: 400 },
+        )
+      : implementation(input, init),
+  )
+  await act(async () => {
+    expect(
+      (await client.auth.refreshSession({ refresh_token: 'fixture-expiring' })).error,
+    ).not.toBeNull()
+  })
+  await screen.findByText('anonymous')
+  expect(latest.identityExpired).toBe(true)
+  expect(events.filter((event) => event === 'SIGNED_OUT')).toHaveLength(1)
+  await act(async () => {
+    finish(Response.json({}))
+    await pending
+  })
+  expect((await client.auth.getSession()).data.session).toBeNull()
+  expect(latest.identityExpired).toBe(true)
+})

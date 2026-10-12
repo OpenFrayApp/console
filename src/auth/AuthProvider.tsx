@@ -273,15 +273,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Revoke owner publication before ending the authenticated session. */
   const signOut = async (): Promise<void> => {
     if (!supabase || !isCurrentIdentity()) return
+    const session = identity.current.session!
     const generation = identity.current.generation
-    const { error } = await supabase.rpc('stop_all_live_views')
-    if (!isCurrentIdentity() || generation !== identity.current.generation) return
+    /** Keep request authority bound to the invocation even while the SDK acquires its transport. */
+    const current = () =>
+      isCurrentIdentity() &&
+      identity.current.generation === generation &&
+      identity.current.session?.access_token === session.access_token &&
+      identity.current.session?.refresh_token === session.refresh_token
+    if (!(await isCurrentConsoleSession(supabase, session)) || !current()) {
+      await reconcileNativeSession(current, false)
+      return
+    }
+    const { error } = await supabase
+      .rpc('stop_all_live_views')
+      .setHeader('Authorization', `Bearer ${session.access_token}`)
+    if (!(await isCurrentConsoleSession(supabase, session)) || !current()) {
+      await reconcileNativeSession(current, false)
+      return
+    }
     if (error) {
       console.error('[openfray] revoking live views before sign-out failed', error)
       return
     }
-    const session = identity.current.session
-    if (!session) return
     invalidatePreferenceWrites()
     const terminationGeneration = identity.current.generation
     const termination = { generation: terminationGeneration, accessToken: session.access_token }
@@ -477,11 +491,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let termination: typeof explicitSignOut.current = null
     try {
       const session = identity.current.session!
+      const invocationGeneration = identity.current.generation
+      /** Refuse erasure until captured identity agrees with the original selected storage. */
+      const invocationCurrent = () =>
+        isCurrentIdentity() &&
+        identity.current.generation === invocationGeneration &&
+        identity.current.session?.access_token === session.access_token &&
+        identity.current.session?.refresh_token === session.refresh_token
+      if (!(await isCurrentConsoleSession(supabase, session)) || !invocationCurrent()) {
+        await reconcileNativeSession(invocationCurrent, false)
+        return failure
+      }
       invalidatePreferenceWrites()
       const generation = identity.current.generation
       const result = await supabase.functions
-        .invoke('account-delete', { body: {} })
+        .invoke('account-delete', {
+          body: {},
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
         .catch(() => null)
+      if (!(await isCurrentConsoleSession(supabase, session))) {
+        await reconcileNativeSession(
+          () =>
+            identity.current.generation === generation &&
+            identity.current.session?.access_token === session.access_token,
+          false,
+        )
+        return failure
+      }
       if (
         !result ||
         result.error ||
