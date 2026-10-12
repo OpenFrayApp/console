@@ -1,15 +1,19 @@
-# Site sign-in and console recovery
+# Site account navigation and console recovery
 
-The site owns `/sign-in/`, `/sign-up/`, and `/auth/callback/`.
-Console entry points navigate in the same tab to
+The site owns `/sign-in/`, `/sign-up/`, `/auth/callback/`, and `/account/`.
+Console sign-in entry points navigate in the same tab to
 `/sign-in/?returnTo=<encoded pathname+query+hash>`.
+**Profile** in the account menu and quick search opens
+`/account/?returnTo=<encoded pathname+query+hash>` through the same recovery checkpoint.
 The site validates the return destination. Navigation carries no session tokens.
 Recognized legacy callback parameters are discarded before building the return
 destination. The console never installs a session from those parameters.
 
-This change remains unreleased until #140 provides `/account/`, the site's
-fallback for direct authentication entry. Console profile editing, preferences,
-sign-out, and account deletion remain available until that move.
+The site account page owns profile editing, the default shared-encounter license,
+sign-out, and account deletion. **Shared links**, device settings, and encounter controls
+stay in the console. Publishing can still update the display name. Tutorial account
+preferences still use their existing console API.
+Source remains unreleased pending assembled authenticated checks and handbook updates.
 
 ## Shared session
 
@@ -19,9 +23,14 @@ callback material after validating its originating attempt.
 
 The SDK's default storage key, `persistSession=true`, `autoRefreshToken=true`, and
 implicit flow remain unchanged. Console session lookup and auth events consume the
-stored identity. Account preference writes remain fenced by identity. Sign-out
-revokes live views before ending the session; account deletion keeps its existing
-authenticated handler.
+stored identity. Returned profile and license changes update the console's publishing
+metadata. Pending metadata replies and account termination results cannot replace or
+end a newer identity. Tutorial preference writes remain fenced by identity.
+Sign-out revokes live views before ending the session. Account deletion uses the
+existing authenticated handler with an empty request body.
+An unauthenticated return starts an anonymous board without adopting private owner
+recovery or its session mirror. Owner recovery remains owner-scoped.
+Identity expiry retains the existing offline-owner recovery boundary.
 
 ## Board recovery
 
@@ -29,6 +38,9 @@ Before leaving, the console checkpoints the latest committed action and verifies
 recovery readback. A signed-in board also drains writable cloud work without
 waiting for a debounce timer. Failed verification or draining keeps the working
 board open and offers retry and recovery download.
+After an unconfirmed cloud drain, account navigation also offers **Continue with device copy**.
+Retry alone does not treat a failed cloud write as confirmed.
+Device-copy continuation verifies recovery again. Unavailable cloud authority permits no new cloud write.
 
 Anonymous authentication recovery stays in this tab's `sessionStorage`, separate
 from owner-scoped recovery. On authenticated return, a nonempty anonymous board
@@ -39,8 +51,9 @@ These copies remain downloadable after later commits and restart.
 A cloud outage retains the anonymous board without publishing it.
 Closing the tab removes anonymous recovery.
 
-If identity expires with unresolved copies, sign-in verifies their preservation
-before leaving. Anonymous copies stay tab-scoped until explicit reconciliation.
+Account departure and expired-identity sign-in verify unresolved copies before leaving.
+They preserve every branch without choosing or publishing one.
+Anonymous copies stay tab-scoped until explicit reconciliation.
 Owner copies stay owner-scoped. On owner return, an active unresolved marker
 requires explicit choice even when the cloud loads successfully or is empty.
 The original cloud branch stays downloadable alongside the current cloud branch.
