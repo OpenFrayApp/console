@@ -46,7 +46,11 @@ function harness(options: {
   lineage?: RecoveryLineage
   archivedConflict?: ReconciliationConflict
   authRecovery?: SessionSnapshot
+  archiveSave?: DeviceRecoveryAdapter['archiveConflict']
+  archiveLoad?: DeviceRecoveryAdapter['loadConflict']
 }) {
+  let authConflict: { ownerId: string; conflict: ReconciliationConflict } | null = null
+  let storedConflict = options.archivedConflict ?? null
   let authRecovery = options.authRecovery ?? null
   const ownerRecovery = { ...options.byOwner }
   const calls: string[] = []
@@ -99,8 +103,8 @@ function harness(options: {
       return result
     },
     /** Load one deterministic archived divergence. */
-    async loadConflict() {
-      return options.archivedConflict ?? null
+    async loadConflict(ownerId) {
+      return options.archiveLoad ? options.archiveLoad(ownerId) : storedConflict
     },
     /** Record one deterministic lineage update. */
     async markSynced(_ownerId, _snapshot, lineage) {
@@ -109,12 +113,14 @@ function harness(options: {
     },
     /** Record both branches of one deterministic divergence. */
     async archiveConflict(ownerId, conflict) {
+      const result = options.archiveSave ? await options.archiveSave(ownerId, conflict) : saved
+      if (result.status === 'saved') storedConflict = conflict
       archivedConflicts.push({
         ownerId,
         device: conflict.device.snapshot,
         cloud: conflict.cloud.snapshot,
       })
-      return saved
+      return result
     },
   }
   const session: SessionRecoveryAdapter = {
@@ -174,6 +180,13 @@ function harness(options: {
       device,
       session,
       authRecovery: {
+        loadConflict: (ownerId) =>
+          authConflict?.ownerId === ownerId ? authConflict.conflict : null,
+        saveConflict: (ownerId, conflict) => {
+          authConflict = { ownerId, conflict }
+          authRecovery = conflict.device.snapshot
+          return { status: 'saved' }
+        },
         load: () =>
           authRecovery
             ? { status: 'loaded', snapshot: authRecovery }
@@ -184,6 +197,7 @@ function harness(options: {
         },
         clear: () => {
           authRecovery = null
+          authConflict = null
           return { status: 'deleted' }
         },
       },
@@ -219,6 +233,7 @@ function harness(options: {
     deviceWrites,
     sessionWrites,
     archivedConflicts,
+    archivedRecovery: () => storedConflict,
     syncedLineages,
     cloudWrites,
     /** Report deterministic network-listener counts. */
@@ -240,6 +255,135 @@ function harness(options: {
 }
 
 describe('encounter lifecycle', () => {
+  it('retains unresolved owner copies without attempting cloud reconciliation under an expired identity', async () => {
+    const { lifecycle, calls, cloudWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('owner-device') },
+      byOwner: { 'owner-a': snapshot('owner-device') },
+      cloud: {
+        status: 'loaded',
+        id: 'cloud-row',
+        encounter: encounter('owner-cloud'),
+        revision: 1,
+        playerCode: null,
+        updatedAt: '2026-09-02T10:11:12.000Z',
+      },
+    })
+    const returned = await lifecycle.identify('owner-a')
+    lifecycle.expireIdentity()
+    await lifecycle.commit(snapshot('owner-device'))
+    expect(lifecycle.saveStatus().kind).toBe('sign-in')
+    expect(await lifecycle.resolveConflict(returned.conflict!.id, 'device')).toBeNull()
+    expect(calls.filter((call) => call === 'cloud:load')).toHaveLength(1)
+    expect(calls).not.toContain('cloud:acquire')
+    expect(await lifecycle.checkpointForSignIn()).toBe(true)
+    expect(await lifecycle.ensureCloudEncounter(encounter('must-not-publish'))).toBeNull()
+    expect(await lifecycle.takeOver()).toBe(false)
+    expect(cloudWrites).toEqual([])
+    expect(lifecycle.recoveryDownload()?.serialized).toContain('owner-device')
+    expect(lifecycle.recoveryDownload()?.serialized).toContain('owner-cloud')
+  })
+
+  it('marks the preserved archive resolved after an explicit empty-cloud choice following renewal', async () => {
+    let loads = 0
+    const anonymous = snapshot('unresolved-anonymous')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+    const { lifecycle, archivedRecovery } = harness({
+      authRecovery: anonymous,
+      cloudLoad: async () => (++loads === 2 ? { status: 'failed' } : { status: 'empty' }),
+    })
+    await lifecycle.identify('owner-a')
+    lifecycle.expireIdentity()
+    expect(await lifecycle.checkpointForSignIn()).toBe(true)
+    const renewed = await lifecycle.identify('owner-a')
+    expect(renewed.conflict?.unresolved).toBe(true)
+    expect(await lifecycle.resolveConflict(renewed.conflict!.id, 'cloud')).not.toBeNull()
+    expect(archivedRecovery()?.unresolved).toBe(false)
+  })
+
+  it.each(['failed', 'stale'] as const)(
+    'blocks expired owner renewal when conflict preservation is %s',
+    async (fault) => {
+      const device = snapshot('protected-device')
+      const cloud = snapshot('protected-cloud')
+      const { lifecycle, cloudWrites } = harness({
+        latest: { ownerId: 'owner-a', snapshot: device },
+        byOwner: { 'owner-a': device },
+        cloud: {
+          status: 'loaded',
+          id: 'cloud-row',
+          encounter: cloud.encounter,
+          revision: 1,
+          playerCode: null,
+          updatedAt: '2026-09-02T10:11:12.000Z',
+        },
+        ...(fault === 'failed'
+          ? { archiveSave: async () => ({ status: 'failed' as const, reason: 'quota' as const }) }
+          : {
+              archiveLoad: async () => ({
+                id: 'stale',
+                unresolved: true,
+                device: { snapshot: device, activeAt: '2026-09-02T10:11:12.000Z' },
+                cloud: {
+                  snapshot: snapshot('wrong-cloud'),
+                  activeAt: '2026-09-02T10:11:12.000Z',
+                  revision: 1,
+                },
+              }),
+            }),
+      })
+      await lifecycle.identify('owner-a')
+      lifecycle.expireIdentity()
+      expect(await lifecycle.checkpointForSignIn()).toBe(false)
+      expect(lifecycle.conflict()?.device.snapshot).toEqual(device)
+      expect(lifecycle.saveStatus().kind).toBe('failed')
+      expect(lifecycle.recoveryDownload()?.serialized).toContain('protected-cloud')
+      expect(cloudWrites).toEqual([])
+      expect(lifecycle.writableEncounter()).toBeNull()
+    },
+  )
+
+  it('fences an expired conflict checkpoint that finishes after another owner is identified', async () => {
+    let finish!: () => void
+    let started!: () => void
+    const saving = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const held = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    let loads = 0
+    const { lifecycle, cloudWrites } = harness({
+      latest: { ownerId: 'owner-a', snapshot: snapshot('owner-a-private') },
+      byOwner: { 'owner-a': snapshot('owner-a-private') },
+      cloudLoad: async () =>
+        ++loads === 1
+          ? {
+              status: 'loaded',
+              id: 'cloud-row',
+              encounter: encounter('owner-a-cloud'),
+              revision: 1,
+              playerCode: null,
+              updatedAt: '2026-09-02T10:11:12.000Z',
+            }
+          : { status: 'empty' },
+      archiveSave: async () => {
+        started()
+        await held
+        return { status: 'saved' }
+      },
+    })
+    await lifecycle.identify('owner-a')
+    lifecycle.expireIdentity()
+    const checkpoint = lifecycle.checkpointForSignIn()
+    await saving
+    const other = await lifecycle.identify('owner-b')
+    expect(other).toMatchObject({ ownerId: 'owner-b', snapshot: null, clearWorkingBoard: true })
+    finish()
+    expect(await checkpoint).toBe(false)
+    expect(cloudWrites).toEqual([])
+    expect(lifecycle.conflict()).toBeNull()
+  })
+
   it('keeps an anonymous board separate on authenticated return until an explicit empty-cloud choice', async () => {
     const anonymous = snapshot('anonymous-fight')
     anonymous.encounter.combatants = [pc({ name: 'Anonymous adventurer' })]

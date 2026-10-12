@@ -33,9 +33,18 @@ board open and offers retry and recovery download.
 Anonymous authentication recovery stays in this tab's `sessionStorage`, separate
 from owner-scoped recovery. On authenticated return, a nonempty anonymous board
 requires an explicit choice before replacement or cloud publication. This also
-applies when the account has no cloud board. Choosing a copy archives both branches
-before continuing. A cloud outage retains the anonymous board without publishing
-it. Closing the tab removes anonymous recovery.
+applies when the account has no cloud board. Choosing a copy archives the working
+and cloud branches, plus any pre-existing owner recovery, before continuing.
+These copies remain downloadable after later commits and restart.
+A cloud outage retains the anonymous board without publishing it.
+Closing the tab removes anonymous recovery.
+
+If identity expires with unresolved copies, sign-in verifies their preservation
+before leaving. Anonymous copies stay tab-scoped until explicit reconciliation.
+Owner copies stay owner-scoped. Renewal does not require cloud resolution or
+grant expired cloud write authority. Failed preservation blocks departure.
+An anonymous return after cancellation restores the verified handoff even when
+the session mirror could not be saved.
 
 Tutorial completion still requires the normal confirmed board and log clearing.
 Signing in after completion checkpoints that cleared board. It does not restore

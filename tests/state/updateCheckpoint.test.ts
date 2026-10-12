@@ -45,6 +45,8 @@ function harness(
       },
     },
     authRecovery: {
+      loadConflict: () => null,
+      saveConflict: () => ({ status: 'saved' }),
       load: () => ({ status: 'empty', snapshot: null }),
       save: () => ({ status: 'saved' }),
       clear: () => ({ status: 'deleted' }),

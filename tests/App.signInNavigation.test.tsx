@@ -3,11 +3,15 @@
 // @vitest-environment jsdom
 
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { nameOf } from '../src/combat/combatant.ts'
 import App from '../src/App.tsx'
 import { saveSettings } from '../src/state/settings.ts'
-import { loadAuthRecovery, saveAuthRecovery } from '../src/state/authRecovery.ts'
+import {
+  loadAuthRecovery,
+  saveAuthRecovery,
+  loadAuthRecoveryConflict,
+} from '../src/state/authRecovery.ts'
 import { saveSession } from '../src/state/persistence.ts'
 import { decodeSession } from '../src/codecs/session.ts'
 import { AuthContext } from '../src/auth/useAuth.ts'
@@ -356,3 +360,119 @@ it('restores the latest verified anonymous handoff after full-page cancellation 
   await screen.findByRole('button', { name: 'Remove Later guard' })
   expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
 })
+
+it.each(['anonymous', 'owner'] as const)(
+  'renews an expired %s conflict after preserving every unresolved branch without cloud authority',
+  async (origin) => {
+    saveSettings({ tutorialSuppression: 'dismissed' })
+    const ownerBoard = recoverySnapshot('before-renewal-owner')
+    ownerBoard.encounter.combatants = [pc({ name: 'Owner guard' })]
+    const anonymous = recoverySnapshot('before-renewal-anonymous')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+    const cloudBoard = recoverySnapshot('before-renewal-cloud')
+    cloudBoard.encounter.combatants = [pc({ name: 'Cloud guard' })]
+    if (origin === 'anonymous') expect(saveAuthRecovery(anonymous).status).toBe('saved')
+    let stored = ownerBoard
+    let archived: import('../src/state/encounterLifecycle.ts').ReconciliationConflict | null = null
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockImplementation(async () => ({
+      ownerId: 'renew-owner',
+      snapshot: stored,
+      savedAt: '2026-09-02T10:11:12Z',
+    }))
+    vi.spyOn(IndexedDbRecovery.prototype, 'load').mockImplementation(async (ownerId) =>
+      ownerId === 'renew-owner'
+        ? { ownerId: 'renew-owner', snapshot: stored, savedAt: '2026-09-02T10:11:12Z' }
+        : null,
+    )
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockImplementation(async (ownerId) =>
+      ownerId === 'renew-owner' ? archived : null,
+    )
+    const archive = vi
+      .spyOn(IndexedDbRecovery.prototype, 'archiveConflict')
+      .mockImplementation(async (_owner, conflict) => {
+        archived = conflict
+        return { status: 'saved' }
+      })
+    const deviceSave = vi
+      .spyOn(IndexedDbRecovery.prototype, 'save')
+      .mockImplementation(async (_owner, snapshot) => {
+        stored = snapshot
+        return { status: 'saved' }
+      })
+    const cloudLoad = vi.spyOn(cloudEncounter, 'loadCloudEncounter').mockResolvedValue({
+      status: 'loaded',
+      id: 'cloud-row',
+      encounter: cloudBoard.encounter,
+      revision: 8,
+      updatedAt: '2026-09-02T10:11:12Z',
+      playerCode: null,
+    })
+    const acquire = vi
+      .spyOn(cloudEncounter, 'acquireCloudWriter')
+      .mockResolvedValue({ status: 'failed' })
+    const cloudSave = vi
+      .spyOn(cloudEncounter, 'saveCloudEncounter')
+      .mockResolvedValue({ status: 'failed' })
+    const app = render(
+      <AuthContext.Provider value={authState({ user: { id: 'renew-owner' } as User })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await screen.findByRole('dialog', { name: 'Choose a board copy' })
+    app.rerender(
+      <AuthContext.Provider value={authState({ identityExpired: true })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await act(() => Promise.resolve())
+    fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
+    await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
+    expect(cloudLoad).toHaveBeenCalledOnce()
+    expect(acquire).not.toHaveBeenCalled()
+    expect(cloudSave).not.toHaveBeenCalled()
+    if (origin === 'anonymous') {
+      expect(archive).not.toHaveBeenCalled()
+      expect(deviceSave).not.toHaveBeenCalled()
+      const retained = loadAuthRecoveryConflict('renew-owner')
+      expect(retained?.device.snapshot.encounter.encounterId).toBe('before-renewal-anonymous')
+      expect(retained?.cloud.snapshot.encounter.encounterId).toBe('before-renewal-cloud')
+      expect(retained?.ownerRecovery?.snapshot.encounter.encounterId).toBe('before-renewal-owner')
+      expect(loadAuthRecoveryConflict('wrong-owner')).toBeNull()
+    } else {
+      expect(archive).toHaveBeenCalledOnce()
+      expect(archived).toMatchObject({
+        unresolved: true,
+        device: { snapshot: ownerBoard },
+        cloud: { snapshot: expect.objectContaining({ encounter: cloudBoard.encounter }) },
+      })
+    }
+    cleanup()
+    cloudLoad.mockResolvedValue({ status: 'failed' })
+    render(
+      <AuthContext.Provider value={authState({ user: { id: 'renew-owner' } as User })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await screen.findByRole('dialog', { name: 'Choose a board copy' })
+    expect(
+      screen.getByRole('button', {
+        name: origin === 'anonymous' ? 'Remove Anonymous guard' : 'Remove Owner guard',
+      }),
+    ).toBeInTheDocument()
+    expect(cloudSave).not.toHaveBeenCalled()
+    cleanup()
+    render(
+      <AuthContext.Provider value={authState({ user: { id: 'wrong-owner' } as User })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    if (origin === 'anonymous')
+      await screen.findByRole('button', { name: 'Remove Anonymous guard' })
+    else await screen.findByText(/Nobody is on the board yet/)
+    await act(() => Promise.resolve())
+    expect(screen.queryByRole('dialog', { name: 'Choose a board copy' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove Cloud guard' })).toBeNull()
+    expect(cloudSave).not.toHaveBeenCalled()
+  },
+)

@@ -25,6 +25,8 @@ function lifecycle(
       save: () => ({ status: 'saved' }),
     },
     authRecovery: {
+      loadConflict: () => null,
+      saveConflict: () => ({ status: 'saved' }),
       load: () =>
         authSnapshot
           ? { status: 'loaded', snapshot: authSnapshot }
@@ -54,9 +56,14 @@ function lifecycle(
 }
 
 describe('IndexedDB recovery', () => {
-  it.each(['device', 'cloud'] as const)(
-    'preserves the third unsynced owner branch through %s choice, later commits and restart',
-    async (choice) => {
+  it.each([
+    { choice: 'device', cloudState: 'existing' },
+    { choice: 'cloud', cloudState: 'existing' },
+    { choice: 'device', cloudState: 'empty' },
+    { choice: 'cloud', cloudState: 'empty' },
+  ] as const)(
+    'preserves the third unsynced owner branch with $cloudState cloud through $choice choice, later commits and restart',
+    async ({ choice, cloudState }) => {
       const name = `openfray-third-branch-${crypto.randomUUID()}`
       const device = new IndexedDbRecovery(name)
       await device.save('owner-a', snapshot('unsynced-owner'), '2026-09-02T10:10:12.000Z')
@@ -70,7 +77,11 @@ describe('IndexedDB recovery', () => {
         playerCode: null,
         updatedAt: '2026-09-02T10:11:12.000Z',
       }
-      const first = lifecycle(device, cloud, anonymous)
+      const first = lifecycle(
+        device,
+        cloudState === 'empty' ? { status: 'empty' } : cloud,
+        anonymous,
+      )
       const returned = await first.identify('owner-a')
       expect(first.recoveryDownload()?.serialized).toContain('unsynced-owner')
       expect((await device.load('owner-a'))?.snapshot.encounter.encounterId).toBe('unsynced-owner')
@@ -87,10 +98,41 @@ describe('IndexedDB recovery', () => {
       const download = restarted.recoveryDownload()?.serialized
       expect(download).toContain('unsynced-owner')
       expect(download).toContain('anonymous-board')
-      expect(download).toContain('cloud-board')
+      if (cloudState === 'existing') expect(download).toContain('cloud-board')
+      else
+        expect(JSON.parse(download!).copies.cloud.envelope.payload.encounter.combatants).toEqual([])
       await reopenedDevice.close()
     },
   )
+
+  it('reopens unresolved owner copies after an expired-identity checkpoint without cloud access', async () => {
+    const name = `openfray-expired-conflict-${crypto.randomUUID()}`
+    const device = new IndexedDbRecovery(name)
+    await device.save('owner-a', snapshot('unresolved-owner-device'), '2026-09-02T10:10:12.000Z')
+    const first = lifecycle(device, {
+      status: 'loaded',
+      id: 'cloud-row',
+      encounter: snapshot('unresolved-owner-cloud').encounter,
+      revision: 1,
+      playerCode: null,
+      updatedAt: '2026-09-02T10:11:12.000Z',
+    })
+    await first.identify('owner-a')
+    first.expireIdentity()
+    expect(await first.checkpointForSignIn()).toBe(true)
+    expect(first.writableEncounter()).toBeNull()
+    expect((await device.loadConflict('owner-a'))?.unresolved).toBe(true)
+    await device.close()
+    const reopenedDevice = new IndexedDbRecovery(name)
+    const restarted = lifecycle(reopenedDevice, { status: 'failed' })
+    const returned = await restarted.identify('owner-a')
+    expect(returned.conflict?.device.snapshot.encounter.encounterId).toBe('unresolved-owner-device')
+    expect(returned.conflict?.cloud.snapshot.encounter.encounterId).toBe('unresolved-owner-cloud')
+    expect(restarted.writableEncounter()).toBeNull()
+    expect(restarted.recoveryDownload()?.serialized).toContain('unresolved-owner-device')
+    expect(restarted.recoveryDownload()?.serialized).toContain('unresolved-owner-cloud')
+    await reopenedDevice.close()
+  })
 
   it('reopens a signed-in working board after a browser restart while cloud is offline', async () => {
     const databaseName = `openfray-restart-${crypto.randomUUID()}`

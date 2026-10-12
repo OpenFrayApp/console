@@ -32,6 +32,9 @@ interface RecoveryRecord {
 
 interface ConflictRecord {
   ownerId: string
+  anonymous?: boolean
+  unresolved?: boolean
+  cloudEmpty?: boolean
   deviceSerialized: string
   cloudSerialized: string
   deviceActiveAt: string
@@ -111,7 +114,7 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
       : null
   }
 
-  /** Load the latest archived divergence only after validating both stored branches. */
+  /** Load archived divergence only after validating every stored branch. */
   async loadConflict(ownerId: string): Promise<ReconciliationConflict | null> {
     const database = await this.database()
     const transaction = database.transaction(CONFLICTS, 'readonly')
@@ -131,6 +134,9 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
       return null
     return {
       id: crypto.randomUUID(),
+      ...(record.anonymous !== undefined ? { anonymous: record.anonymous } : {}),
+      ...(record.unresolved !== undefined ? { unresolved: record.unresolved } : {}),
+      ...(record.cloudEmpty !== undefined ? { cloudEmpty: record.cloudEmpty } : {}),
       ...(ownerRecovery && ownerRecovery.status === 'ok'
         ? {
             ownerRecovery: {
@@ -237,7 +243,7 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     }
   }
 
-  /** Preserve both divergent branches in a dedicated owner-scoped recovery slot. */
+  /** Preserve divergent branches and pre-existing owner recovery outside the rolling copy slot. */
   async archiveConflict(
     ownerId: string,
     conflict: ReconciliationConflict,
@@ -259,6 +265,9 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
       const previous = await requested(store.get(ownerId) as IDBRequest<ConflictRecord | undefined>)
       store.put({
         ownerId,
+        anonymous: conflict.anonymous,
+        unresolved: conflict.unresolved,
+        cloudEmpty: conflict.cloudEmpty,
         ownerRecoverySerialized:
           ownerEncoded?.status === 'ok'
             ? ownerEncoded.serialized
