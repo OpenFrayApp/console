@@ -368,6 +368,7 @@ describe('the tracked migration lineage', () => {
       'capabilities_of(uuid):authenticated',
       'claim_encounter_writer(uuid,uuid):authenticated',
       'confirm_security_notice(uuid,text,uuid[],boolean):authenticated',
+      'consume_newsletter_signup_intent(text,text):authenticated',
       'delete_account():authenticated',
       'deny_capability(uuid,text,text):authenticated',
       'grant_role(uuid,text,text):authenticated',
@@ -1065,6 +1066,13 @@ describe('report-worker privileges', () => {
       await expect(isolated.exec(proof)).resolves.toBeDefined()
       for (const [change, failure] of [
         ['alter role service_role nobypassrls', /report worker/],
+        ['alter table newsletter.subscriptions disable row level security', /newsletter/],
+        ['grant usage on schema newsletter to authenticated', /newsletter/],
+        ['grant select on newsletter.operations to service_role', /newsletter/],
+        [
+          'grant execute on function newsletter.cancel_address(text) to authenticated',
+          /newsletter/,
+        ],
         ['grant delete on public.encounters to public', /service-role/],
         ['grant select on public.encounters to service_role', /service-role/],
         ['grant select (message) on public.share_reports to service_role', /service-role/],

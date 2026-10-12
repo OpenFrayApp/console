@@ -94,6 +94,7 @@ echo "backup: dumping public + auth + account mail with $("$PG_DUMP" --version) 
     --snapshot="$SNAPSHOT" \
     --data-only \
     --schema=account_mail \
+    --schema=newsletter \
     --quote-all-identifiers \
     --no-owner \
     --no-privileges
