@@ -13,6 +13,7 @@ import App from '../src/App.tsx'
 import { AuthContext } from '../src/auth/useAuth.ts'
 import { authState } from './fixtures.ts'
 import { decodeSession } from '../src/codecs/session.ts'
+import { loadAuthRecovery } from '../src/state/authRecovery.ts'
 import { saveSession } from '../src/state/persistence.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
 import {
@@ -22,6 +23,9 @@ import {
 } from './tutorial/setupHarness.tsx'
 import type { User } from '@supabase/supabase-js'
 import type { RosterPc } from '../src/schema/roster.ts'
+
+const navigation = vi.hoisted(() => ({ leave: vi.fn() }))
+vi.mock('../src/auth/signInNavigation.ts', () => ({ navigateToSiteSignIn: navigation.leave }))
 
 const roster = vi.hoisted(() => ({ saved: [] as RosterPc[] }))
 vi.mock('../src/state/cloudPlayers.ts', () => ({
@@ -73,6 +77,7 @@ afterEach(() => {
   sessionStorage.clear()
   localStorage.clear()
   roster.saved = []
+  navigation.leave.mockReset()
 })
 
 it.each(['srd-5.2', 'srd-5.1'])(
@@ -187,40 +192,19 @@ it.each(['srd-5.2', 'srd-5.1'])(
   },
 )
 
-it.each(['google', 'discord', 'custom:patreon'])(
-  'offers existing %s OAuth only after actual cleanup, without an anonymous encounter preservation promise',
-  async (provider) => {
-    const signIn = vi.fn(async () => ({ error: 'Provider unavailable. Try again later.' }))
-    renderTutorial(null, { signInWithProvider: signIn })
-    await startPracticeFight(controls)
-    await resolvePracticeFight(controls)
-    expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
-    const complete = await clearPracticeFight()
-    expect(within(complete).getByRole('button', { name: 'Sign in' })).toHaveClass('bg-indigo-600')
-    fireEvent.click(within(complete).getByRole('button', { name: 'Sign in' }))
-    const entry = screen.getByRole('dialog', { name: 'Sign in' })
-    expect(within(entry).queryByText(/current encounter stays/)).toBeNull()
-    expect(
-      within(entry).getByText(/tutorial board and game log have been cleared/),
-    ).toBeInTheDocument()
-    fireEvent.click(
-      within(entry).getByRole('button', {
-        name:
-          provider === 'google'
-            ? 'Continue with Google'
-            : provider === 'discord'
-              ? 'Continue with Discord'
-              : 'Continue with Patreon',
-      }),
-    )
-    await waitFor(() => expect(signIn).toHaveBeenCalledWith(provider))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Provider unavailable. Try again later.',
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Back to the console' }))
-    expect(loadSettings().tutorialSuppression).toBe('completed')
-  },
-)
+it('navigates to site sign-in only after actual tutorial cleanup and checkpoints the cleared board', async () => {
+  renderTutorial()
+  await startPracticeFight(controls)
+  await resolvePracticeFight(controls)
+  const complete = await clearPracticeFight()
+  fireEvent.click(within(complete).getByRole('button', { name: 'Sign in' }))
+  await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
+  expect(loadAuthRecovery().snapshot?.encounter.combatants).toEqual([])
+  expect(loadAuthRecovery().snapshot?.encounter.log).toEqual([])
+  expect(screen.queryByRole('dialog', { name: 'Sign in' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
+  expect(loadSettings().tutorialSuppression).toBe('completed')
+})
 
 it.each([true, false])(
   'allows completed manual anonymous replays despite permanent suppression with configured auth=%s',

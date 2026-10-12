@@ -66,7 +66,6 @@ it.each([
 it.each([
   { destination: 'Profile', dialog: 'Account', auth: { user } },
   { destination: 'Shared links', dialog: 'Shared links', auth: { user } },
-  { destination: 'Sign in', dialog: 'Sign in', auth: {} },
 ])(
   'opens $destination through its existing account surface',
   async ({ destination, dialog, auth }) => {

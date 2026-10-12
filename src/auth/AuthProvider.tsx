@@ -10,7 +10,7 @@ import {
   writeTutorialAccountPreference,
   TUTORIAL_ACCOUNT_WRITE_ERROR,
 } from './tutorialAccountPreference.ts'
-import { AuthContext, type AuthResult, type OAuthProvider } from './useAuth.ts'
+import { AuthContext, type AuthResult } from './useAuth.ts'
 
 /** Preserve confirmed tutorial suppression when publishing the same account's metadata. */
 function retainTutorialSuppression(user: User, previous: User | null): User {
@@ -23,7 +23,7 @@ function retainTutorialSuppression(user: User, previous: User | null): User {
 }
 
 /**
- * Tracks the Supabase auth session and exposes OAuth sign-in / sign-out / delete.
+ * Tracks the Supabase auth session and exposes sign-out and account mutations.
  * When Supabase isn't configured, it resolves immediately to the anonymous state
  * so the app runs exactly as before — auth is purely additive.
  */
@@ -102,21 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe()
     }
   }, [invalidatePreferenceWrites])
-
-  /** Start the OAuth redirect to the provider; the session lands when the browser returns. */
-  const signInWithProvider = async (provider: OAuthProvider): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Signing in isn’t available on this copy of OpenFray.' }
-    // Redirect-based flow: the browser navigates to the provider and returns to
-    // the app, where supabase-js detects the session from the callback URL.
-    // Return to the app's own path (origin + base, e.g. /console/), not the site
-    // root. `redirectTo` must be in the project's allow-list (Authentication → URL
-    // Configuration). The provider verifies the identity — no email sent by us.
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
-    })
-    return { error: error?.message ?? null }
-  }
 
   /** Revoke owner publication before ending the authenticated session. */
   const signOut = async (): Promise<void> => {
@@ -283,7 +268,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         identityExpired,
         configured: Boolean(supabase),
-        signInWithProvider,
         signOut,
         deleteAccount,
         setDisplayName,

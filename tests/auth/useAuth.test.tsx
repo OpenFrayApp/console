@@ -16,13 +16,6 @@ describe('useAuth outside an AuthProvider', () => {
     expect(result.current.configured).toBe(false)
   })
 
-  it('reports sign-in as unavailable instead of throwing', async () => {
-    const { result } = renderHook(() => useAuth())
-    await expect(result.current.signInWithProvider('google')).resolves.toEqual({
-      error: 'Signing in isn’t available on this copy of OpenFray.',
-    })
-  })
-
   it('reports account deletion as unavailable instead of throwing', async () => {
     const { result } = renderHook(() => useAuth())
     await expect(result.current.deleteAccount()).resolves.toEqual({

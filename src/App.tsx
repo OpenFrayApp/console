@@ -174,7 +174,8 @@ import { LegalLinks } from './components/shell/LegalLinks.tsx'
 import { SharePanel, CastIcon } from './components/share/SharePanel.tsx'
 import { BookIcon } from './components/icons/BookIcon.tsx'
 import { ShareIcon } from './components/icons/ShareIcon.tsx'
-import { SignUpPage } from './components/account/SignUpPage.tsx'
+import { navigateToSiteSignIn } from './auth/signInNavigation.ts'
+import { Modal } from './components/ui/Modal.tsx'
 import { GameLogModal, type OnGmRoll, type OnNote, type OnRoll } from './components/log/GameLog.tsx'
 import { track, EVENTS } from './lib/analytics.ts'
 
@@ -392,8 +393,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     identityExpired,
   } = useAuth()
   const userId = user?.id ?? null
-  const [authOpen, setAuthOpen] = useState(false)
-  const [tutorialSignIn, setTutorialSignIn] = useState(false)
+  const [signInError, setSignInError] = useState<string | null>(null)
+  const signInPending = useRef(false)
   /**
    * Whether recovery and identity-triggered cloud reconciliation have settled. A cast from
    * a shared link waits on this so hydration cannot replace it or persist half a board.
@@ -447,13 +448,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     setSelectedId(snapshot.selectedId)
     setActiveCampaignId(snapshot.activeCampaignId ?? null)
   }, [])
-
-  useEffect(() => {
-    if (user) {
-      setAuthOpen(false)
-      setTutorialSignIn(false)
-    }
-  }, [user])
 
   useEffect(() => lifecycle.subscribe(setSaveStatus), [lifecycle])
 
@@ -607,6 +601,41 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (recovery) downloadRecoveryCopy(recovery)
   }
 
+  /** Leave only after the latest committed board has a verified recovery checkpoint. */
+  const signIn = async () => {
+    if (signInPending.current) return
+    setSignInError(null)
+    if (!authConfigured) {
+      setSignInError('Signing in isn’t available on this copy of OpenFray.')
+      return
+    }
+    if (
+      !boardReady ||
+      authLoading ||
+      (!identityExpired && settledIdentity !== userId) ||
+      resolvingCopies
+    ) {
+      setSignInError('The board is still recovering. Retry sign-in when recovery finishes.')
+      return
+    }
+    signInPending.current = true
+    try {
+      if (!(await lifecycle.checkpointForSignIn())) {
+        setSignInError(
+          'The sign-in checkpoint could not be verified. Retry sign-in or download your recovery copy. Resolve any divergent copies before leaving.',
+        )
+        return
+      }
+      navigateToSiteSignIn()
+    } catch {
+      setSignInError(
+        'The sign-in checkpoint did not finish. Retry sign-in or download your recovery copy.',
+      )
+    } finally {
+      signInPending.current = false
+    }
+  }
+
   // The summary travels with the board while the GM has it up, so the table reads the
   // fight's outcome on their own screens. Experience is left out of a milestone
   // campaign, the same call the GM's own recap makes.
@@ -659,7 +688,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       return
     }
     if (!user) {
-      setAuthOpen(true)
+      void signIn()
       return
     }
     const code = playerCode ?? randomPlayerCode()
@@ -1432,7 +1461,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     invitationAvailable:
       !settingsOpen &&
       !searchOpen &&
-      !authOpen &&
+      !signInError &&
       !helpOpen &&
       !feedbackOpen &&
       !initPrompt &&
@@ -1844,7 +1873,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               </div>
               <AccountControl
                 openRequest={profileRequest}
-                onSignIn={() => setAuthOpen(true)}
+                onSignIn={() => void signIn()}
                 allowReserved={bylineGranted}
                 onOpenShares={() => {
                   refreshShares()
@@ -1858,7 +1887,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 sharing={sharing}
                 onToggleShare={toggleSharing}
                 onClaim={user ? claimShareCode : undefined}
-                onSignIn={() => setAuthOpen(true)}
+                onSignIn={() => void signIn()}
                 pin={playerPin}
                 onSetPin={setPlayerPin}
                 backdrop={playerBackdrop}
@@ -1881,7 +1910,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 status={saveStatus}
                 onRetry={() => void lifecycle.retry()}
                 onDownload={downloadRecovery}
-                onSignIn={() => setAuthOpen(true)}
+                onSignIn={() => void signIn()}
                 onTakeOver={() => void lifecycle.takeOver()}
                 onResolveCopies={() => setCopyConflictOpen(true)}
               />
@@ -1963,7 +1992,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                           id: 'sign-in',
                           name: 'Sign in',
                           icon: <UserIcon />,
-                          onSelect: () => navigateFromSearch(() => setAuthOpen(true)),
+                          onSelect: () => navigateFromSearch(() => void signIn()),
                         },
                       ]
                     : []),
@@ -2054,7 +2083,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   showHomebrew={showHomebrew}
                   librarySort={librarySort}
                   createGated={!user}
-                  onGated={() => setAuthOpen(true)}
+                  onGated={() => void signIn()}
                 />
               </div>
             ) : (
@@ -2066,7 +2095,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canSave={encounter.combatants.length > 0}
                       signedIn={!!user}
                       onSave={handleSaveFight}
-                      onSignIn={() => setAuthOpen(true)}
+                      onSignIn={() => void signIn()}
                     />
                     <ShareEncounterButton
                       canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
@@ -2077,7 +2106,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canDropRestricted={restricted.someRemain}
                       allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
-                      onSignIn={() => setAuthOpen(true)}
+                      onSignIn={() => void signIn()}
                     />
                   </>
                 }
@@ -2161,15 +2190,22 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             />
           )}
 
-          {authOpen && (
+          {signInError && (
             <DialogFocus>
-              <SignUpPage
-                clearedTutorial={tutorialSignIn}
-                onClose={() => {
-                  setAuthOpen(false)
-                  setTutorialSignIn(false)
-                }}
-              />
+              <Modal title="Sign-in checkpoint" onClose={() => setSignInError(null)}>
+                <p role="alert" className="mb-3 text-sm">
+                  {signInError}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => void signIn()}>Retry sign-in</Button>
+                  <Button variant="quiet" onClick={downloadRecovery}>
+                    Download recovery copy
+                  </Button>
+                  <Button variant="quiet" onClick={() => setSignInError(null)}>
+                    Keep playing
+                  </Button>
+                </div>
+              </Modal>
             </DialogFocus>
           )}
 
@@ -2236,7 +2272,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               defaultByline={displayName ?? shareByline}
               allowReserved={bylineGranted}
               onShare={(draft) => handleShareCreature(sharingCreature, draft)}
-              onSignIn={() => setAuthOpen(true)}
+              onSignIn={() => void signIn()}
               onClose={() => setSharingCreature(null)}
             />
           )}
@@ -2335,8 +2371,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               authConfigured={authConfigured}
               onSignIn={() => {
                 tutorial.dismiss()
-                setTutorialSignIn(true)
-                setAuthOpen(true)
+                void signIn()
               }}
             />
           ))}

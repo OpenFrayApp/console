@@ -97,7 +97,6 @@ export function authState(over: Partial<AuthState> = {}): AuthState {
     loading: false,
     identityExpired: false,
     configured: true,
-    signInWithProvider: vi.fn(async () => ({ error: null })),
     signOut: vi.fn(async () => {}),
     deleteAccount: vi.fn(async () => ({ error: null })),
     setDisplayName: vi.fn(async () => ({ error: null })),
