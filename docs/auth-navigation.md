@@ -4,6 +4,8 @@ The site owns `/sign-in/`, `/sign-up/`, and `/auth/callback/`.
 Console entry points navigate in the same tab to
 `/sign-in/?returnTo=<encoded pathname+query+hash>`.
 The site validates the return destination. Navigation carries no session tokens.
+Recognized legacy callback parameters are discarded before building the return
+destination. The console never installs a session from those parameters.
 
 This change remains unreleased until #140 provides `/account/`, the site's
 fallback for direct authentication entry. Console profile editing, preferences,
