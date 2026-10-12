@@ -44,6 +44,13 @@ function harness(
         return { status: 'saved' }
       },
     },
+    authRecovery: {
+      loadConflict: () => null,
+      saveConflict: () => ({ status: 'saved' }),
+      load: () => ({ status: 'empty', snapshot: null }),
+      save: () => ({ status: 'saved' }),
+      clear: () => ({ status: 'deleted' }),
+    },
     cloud: {
       load: async () => ({ status: 'failed' }),
       acquire: async () => ({ status: 'failed' }),

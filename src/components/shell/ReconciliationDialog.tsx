@@ -27,12 +27,18 @@ export function ReconciliationDialog({
   return (
     <Modal
       title="Choose a board copy"
-      subtitle="Both copies contain changes. Choose which one should continue. The other stays available for recovery."
+      subtitle={
+        conflict.anonymous
+          ? 'Your anonymous board has not been added to this account. Choose which board should continue. The other stays available for recovery.'
+          : 'Both copies contain changes. Choose which one should continue. The other stays available for recovery.'
+      }
       onClose={onClose}
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <section className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-          <h4 className="font-semibold">Device recovery</h4>
+          <h4 className="font-semibold">
+            {conflict.anonymous ? 'Anonymous board' : 'Device recovery'}
+          </h4>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Last activity:{' '}
             <time dateTime={conflict.device.activeAt}>
@@ -45,6 +51,11 @@ export function ReconciliationDialog({
         </section>
         <section className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
           <h4 className="font-semibold">Cloud copy</h4>
+          {conflict.cloudEmpty && (
+            <p className="mt-1 text-sm">
+              This account has no cloud board. Use the cloud copy to start with an empty board.
+            </p>
+          )}
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Last activity:{' '}
             <time dateTime={conflict.cloud.activeAt}>{activityTime(conflict.cloud.activeAt)}</time>

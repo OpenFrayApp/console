@@ -6,9 +6,6 @@ import type { ContentLicense } from '../schema/license.ts'
 import type { TutorialSuppression } from '../state/settings.ts'
 import type { User } from '@supabase/supabase-js'
 
-/** The OAuth identity providers OpenFray signs in with. */
-export type OAuthProvider = 'google' | 'discord' | 'custom:patreon'
-
 /** The result of an auth attempt: an error message, or null on success. */
 export type AuthResult = { error: string | null }
 
@@ -38,9 +35,6 @@ export interface AuthState {
   identityExpired: boolean
   /** Whether Supabase is wired up at all (`.env.local` present). */
   configured: boolean
-  /** Start an OAuth sign-in. Redirects to the provider; the session lands on
-   *  return. First sign-in with a provider creates the account automatically. */
-  signInWithProvider: (provider: OAuthProvider) => Promise<AuthResult>
   signOut: () => Promise<void>
   /** Permanently delete the account and all its data, then sign out (GDPR erasure). */
   deleteAccount: () => Promise<AuthResult>
@@ -63,9 +57,6 @@ const ANONYMOUS: AuthState = {
   loading: false,
   identityExpired: false,
   configured: false,
-  signInWithProvider: async () => ({
-    error: 'Signing in isn’t available on this copy of OpenFray.',
-  }),
   signOut: async () => {},
   deleteAccount: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),
   setDisplayName: async () => ({ error: 'Accounts aren’t available on this copy of OpenFray.' }),

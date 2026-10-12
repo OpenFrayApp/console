@@ -59,7 +59,6 @@ it.each([
   { destination: 'Player view', dialog: 'Player view', close: null, signedIn: false },
   { destination: 'Profile', dialog: 'Account', close: 'Done', signedIn: true },
   { destination: 'Shared links', dialog: 'Shared links', close: 'Done', signedIn: true },
-  { destination: 'Sign in', dialog: 'Sign in', close: 'Back to the console', signedIn: false },
 ])(
   'contains and restores focus after navigating to $destination',
   async ({ destination, dialog, close, signedIn }) => {

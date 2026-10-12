@@ -58,7 +58,6 @@ function makeAuthClient(initial: Session | null, initialError: AuthResponse['err
       return { data: { subscription: { unsubscribe } } }
     }),
     signOut: vi.fn(async (): Promise<AuthResponse> => ({ error: null })),
-    signInWithOAuth: vi.fn(async (): Promise<AuthResponse> => ({ error: null })),
     updateUser: vi.fn(async (patch: { data: Record<string, unknown> }) => ({
       data: {
         user: {
@@ -813,9 +812,6 @@ describe('AuthProvider without Supabase configured', () => {
     expect(screen.getByText('anonymous')).toBeInTheDocument()
     expect(latest.loading).toBe(false)
     expect(latest.configured).toBe(false)
-    await expect(latest.signInWithProvider('google')).resolves.toEqual({
-      error: 'Signing in isn’t available on this copy of OpenFray.',
-    })
     await expect(latest.deleteAccount()).resolves.toEqual({
       error: 'Accounts aren’t available on this copy of OpenFray.',
     })
@@ -905,32 +901,6 @@ describe('AuthProvider with Supabase configured', () => {
     await latest.signOut()
 
     expect(stub.auth.signOut).not.toHaveBeenCalled()
-  })
-
-  it.each(['google', 'discord', 'custom:patreon'] as const)(
-    'starts the %s OAuth redirect back to the app’s own path',
-    async (provider) => {
-      const stub = makeAuthClient(null)
-      supa.client = stub.client
-      renderProvider()
-      await screen.findByText('anonymous')
-      await expect(latest.signInWithProvider(provider)).resolves.toEqual({ error: null })
-      expect(stub.auth.signInWithOAuth).toHaveBeenCalledWith({
-        provider,
-        options: { redirectTo: window.location.origin + import.meta.env.BASE_URL },
-      })
-    },
-  )
-
-  it('surfaces the provider handoff error message', async () => {
-    const stub = makeAuthClient(null)
-    stub.auth.signInWithOAuth.mockResolvedValueOnce({ error: { message: 'Provider disabled' } })
-    supa.client = stub.client
-    renderProvider()
-    await screen.findByText('anonymous')
-    await expect(latest.signInWithProvider('google')).resolves.toEqual({
-      error: 'Provider disabled',
-    })
   })
 
   it('uses the authenticated deletion handler without a recipient or target, then signs out locally', async () => {
