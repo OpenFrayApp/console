@@ -25,6 +25,8 @@ import { browserWriterIdentity } from './writerIdentity.ts'
 import { classifyCopies, encounterHash, type RecoveryLineage } from './reconciliation.ts'
 import {
   loadSession,
+  loadOwnerSession,
+  exportRetainedSession,
   saveSession,
   type SessionLoadResult,
   type SessionSnapshot,
@@ -56,7 +58,9 @@ export interface DeviceRecoveryAdapter {
 
 export interface SessionRecoveryAdapter {
   load: () => SessionLoadResult
-  save: (snapshot: SessionSnapshot) => SessionWriteResult
+  save: (snapshot: SessionSnapshot, ownerId?: string | null) => SessionWriteResult
+  loadOwner?: (ownerId?: string) => SessionLoadResult
+  retainedDownload?: () => RecoveryDownload | null
 }
 
 export interface CloudEncounterAdapter {
@@ -209,6 +213,11 @@ export class EncounterLifecycle {
     }
   }
 
+  /** Export retained unverified browser bytes separately from the current working board. */
+  retainedSessionDownload(): RecoveryDownload | null {
+    return this.adapters.session.retainedDownload?.() ?? null
+  }
+
   /** Encode the latest working board for a local recovery download. */
   recoveryDownload(): RecoveryDownload | null {
     const recoverableConflict = this.pendingConflict ?? this.archivedConflict
@@ -303,10 +312,10 @@ export class EncounterLifecycle {
     }
   }
 
-  /** Checkpoint recovery and drain writable cloud work before same-tab site sign-in. */
-  async checkpointForSignIn(): Promise<boolean> {
+  /** Checkpoint recovery and drain writable cloud work before same-tab site navigation. */
+  async checkpointForSiteNavigation(): Promise<boolean> {
     if (!this.latestSnapshot) return false
-    if (this.pendingConflict) return this.checkpointExpiredConflict()
+    if (this.pendingConflict) return this.checkpointUnresolvedConflict()
     const ownerId = this.ownerId
     const identityGeneration = this.identityGeneration
     if (ownerId) {
@@ -348,11 +357,10 @@ export class EncounterLifecycle {
     )
   }
 
-  /** Verify unresolved copies before renewal without cloud reads or expired write authority. */
-  private async checkpointExpiredConflict(): Promise<boolean> {
+  /** Verify unresolved copies before departure without choosing or publishing a branch. */
+  private async checkpointUnresolvedConflict(): Promise<boolean> {
     const ownerId = this.ownerId
-    if (!ownerId || !this.cloudIdentityExpired || !this.pendingConflict || !this.latestSnapshot)
-      return false
+    if (!ownerId || !this.pendingConflict || !this.latestSnapshot) return false
     const identityGeneration = this.identityGeneration
     const write = this.commit(this.latestSnapshot)
     const commitGeneration = this.commitGeneration
@@ -415,7 +423,7 @@ export class EncounterLifecycle {
         this.publishStatus({ kind: 'failed', reason: 'unavailable' })
         return false
       }
-      this.publishStatus({ kind: 'sign-in' })
+      if (this.cloudIdentityExpired) this.publishStatus({ kind: 'sign-in' })
       return true
     } catch {
       this.publishStatus({ kind: 'failed', reason: 'unavailable' })
@@ -478,12 +486,8 @@ export class EncounterLifecycle {
     this.cancelCloudSave = null
 
     if (!ownerId) {
-      if (previousOwnerId) {
-        return startup.ownerId === null
-          ? startup
-          : { ownerId: null, snapshot: null, clearWorkingBoard: true }
-      }
-      return startup.ownerId === null ? startup : this.anonymousRestore()
+      const anonymous = this.anonymousRestore()
+      return anonymous.snapshot ? anonymous : { ...anonymous, clearWorkingBoard: true }
     }
 
     let device: DeviceRecovery | null = null
@@ -497,9 +501,12 @@ export class EncounterLifecycle {
       deviceUnavailable = true
     }
     if (generation !== this.identityGeneration) return startup
+    const mirror = this.adapters.session.loadOwner?.(ownerId)
+    const ownerMirror = mirror?.snapshot && mirror.ownerId === ownerId ? mirror.snapshot : null
     const recovery =
       this.anonymousSnapshot ??
       device?.snapshot ??
+      ownerMirror ??
       (startup.ownerId === ownerId || (deviceUnavailable && startup.ownerId === null)
         ? startup.snapshot
         : null)
@@ -510,8 +517,11 @@ export class EncounterLifecycle {
         : null
     const ownerRecovery =
       retainedConflict?.ownerRecovery ??
-      (this.anonymousSnapshot && device
-        ? { snapshot: device.snapshot, activeAt: device.savedAt }
+      (this.anonymousSnapshot && (device || ownerMirror)
+        ? {
+            snapshot: device?.snapshot ?? ownerMirror!,
+            activeAt: device?.savedAt ?? this.adapters.clock.now().toISOString(),
+          }
         : this.archivedConflict?.ownerRecovery)
     const recoverySavedAt =
       device?.savedAt ?? (startup.ownerId === ownerId ? startup.savedAt : undefined)
@@ -799,7 +809,10 @@ export class EncounterLifecycle {
     })
     this.recoveryQueue = this.recoveryQueue.then(async () => {
       try {
-        const sessionResult = this.adapters.session.save(snapshot)
+        const sessionResult = this.adapters.session.save(
+          snapshot,
+          anonymousRecovery ? null : ownerId,
+        )
         const result = anonymousRecovery
           ? this.adapters.authRecovery.save(snapshot)
           : ownerId
@@ -972,20 +985,25 @@ export class EncounterLifecycle {
     return id
   }
 
-  /** Restore the device adapter first and retain the session adapter as the rollback path. */
+  /** Prefer actual anonymous recovery and retain owner-tagged device or tab rollback separately. */
   private async restoreOnce(): Promise<LifecycleRestore> {
     const handoff = this.adapters.authRecovery.load()
     if (handoff.snapshot) return { ownerId: null, snapshot: handoff.snapshot }
+    const anonymous = this.adapters.session.load()
+    if (anonymous.snapshot) return { ownerId: null, snapshot: anonymous.snapshot }
     try {
       const device = await this.adapters.device.loadLatest()
       if (device) return device
     } catch {
-      // The versioned session copy remains readable when IndexedDB initialization fails.
+      // Owner-tagged session rollback does not depend on IndexedDB initialization.
     }
-    return this.anonymousRestore()
+    const mirror = this.adapters.session.loadOwner?.()
+    return mirror?.snapshot && mirror.ownerId
+      ? { ownerId: mirror.ownerId, snapshot: mirror.snapshot }
+      : { ownerId: null, snapshot: null }
   }
 
-  /** Load the tab-scoped session copy without making it durable. */
+  /** Restore only an actual anonymous tab snapshot, never an owner rollback mirror. */
   private anonymousRestore(): LifecycleRestore {
     const handoff = this.adapters.authRecovery.load()
     const loaded = handoff.snapshot ? handoff : this.adapters.session.load()
@@ -1069,7 +1087,12 @@ export function createBrowserEncounterLifecycle(): EncounterLifecycle {
   return new EncounterLifecycle(
     {
       device,
-      session: { load: loadSession, save: saveSession },
+      session: {
+        load: loadSession,
+        save: saveSession,
+        loadOwner: loadOwnerSession,
+        retainedDownload: exportRetainedSession,
+      },
       authRecovery: {
         load: loadAuthRecovery,
         save: saveAuthRecovery,

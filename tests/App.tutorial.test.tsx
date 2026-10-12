@@ -380,7 +380,9 @@ it.each(
     })
     expect(document.activeElement).toBe(input)
     expect(screen.queryByRole('dialog', { name: 'Learn the console' })).toBeNull()
-    const recovery = sessionStorage.getItem('openfray:session')
+    const recovery = sessionStorage.getItem(
+      signedIn ? 'openfray:session:owner' : 'openfray:session',
+    )
     expect(recovery).not.toBeNull()
 
     if (route === 'Escape') fireEvent.keyDown(input, { key: 'Escape' })
@@ -389,12 +391,16 @@ it.each(
 
     await screen.findByRole('dialog', { name: 'Learn the console' })
     expect(screen.queryByLabelText(field)).toBeNull()
-    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+    expect(sessionStorage.getItem(signedIn ? 'openfray:session:owner' : 'openfray:session')).toBe(
+      recovery,
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
     expect(screen.getByText(/Nobody is on the board yet/)).toBeInTheDocument()
     expect(screen.getByText(/Nothing logged yet/)).toBeInTheDocument()
     expect(loadSettings().tutorialSuppression).toBeNull()
-    expect(sessionStorage.getItem('openfray:session')).toBe(recovery)
+    expect(sessionStorage.getItem(signedIn ? 'openfray:session:owner' : 'openfray:session')).toBe(
+      recovery,
+    )
   },
 )
 

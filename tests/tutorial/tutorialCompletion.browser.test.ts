@@ -199,7 +199,9 @@ it.each([
     expect(loadSettings().tutorialSuppression).toBe('completed')
     await expect
       .poll(() => {
-        const decoded = decodeSession(sessionStorage.getItem('openfray:session')!)
+        const decoded = decodeSession(
+          sessionStorage.getItem(signedIn ? 'openfray:session:owner' : 'openfray:session')!,
+        )
         return (
           decoded.status === 'ok' &&
           decoded.snapshot.encounter.combatants.length === 0 &&

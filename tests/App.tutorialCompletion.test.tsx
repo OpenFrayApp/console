@@ -314,7 +314,7 @@ it('retains account-only suppression on full manual completion without rewriting
     tutorialSuppression: 'dismissed',
     setTutorialSuppression: writePreference,
   })
-  await waitFor(() => expect(sessionStorage.getItem('openfray:session')).not.toBeNull())
+  await waitFor(() => expect(sessionStorage.getItem('openfray:session:owner')).not.toBeNull())
   fireEvent.click(screen.getByRole('button', { name: 'Search references' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'Search references' }), {
     target: { value: 'tutorial' },

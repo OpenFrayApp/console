@@ -16,7 +16,10 @@ import type { Session, User } from '@supabase/supabase-js'
 import { AuthProvider } from '../../src/auth/AuthProvider.tsx'
 import { useAuth, type AuthState } from '../../src/auth/useAuth.ts'
 
-const supa = vi.hoisted(() => ({ client: null as unknown }))
+const supa = vi.hoisted(() => ({
+  client: null as unknown,
+  tutorialPreferences: new Map<string, string>(),
+}))
 
 vi.mock('../../src/lib/supabase.ts', () => ({
   get supabase() {
@@ -27,9 +30,74 @@ vi.mock('../../src/lib/supabase.ts', () => ({
   },
 }))
 
+vi.mock('../../src/auth/tutorialAccountPreference.ts', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../../src/auth/tutorialAccountPreference.ts')>()
+  return {
+    ...original,
+    writeTutorialAccountPreference: async (
+      ...args: Parameters<typeof original.writeTutorialAccountPreference>
+    ) => {
+      const result = await original.writeTutorialAccountPreference(...args)
+      if (!result.error) supa.tutorialPreferences.set(args[0], args[2])
+      return result
+    },
+  }
+})
+
+vi.mock('../../src/auth/sessionTermination.ts', () => ({
+  observeConsoleSession: async (client: {
+    auth: { getSession: () => Promise<{ data: { session: Session | null }; error: unknown }> }
+  }) => {
+    const { data, error } = await client.auth.getSession()
+    return error
+      ? { status: 'unavailable' }
+      : data.session
+        ? { status: 'present', session: data.session }
+        : { status: 'absent' }
+  },
+  readConsoleProfile: async (_client: unknown, session: Session) => ({
+    ...session.user,
+    user_metadata: {
+      ...session.user.user_metadata,
+      ...(supa.tutorialPreferences.has(session.user.id)
+        ? { tutorial_suppression: supa.tutorialPreferences.get(session.user.id) }
+        : {}),
+    },
+  }),
+  isCurrentConsoleSession: async () => true,
+  writeConsoleProfile: async (
+    client: {
+      auth: {
+        updateUser: (
+          body: unknown,
+        ) => Promise<{ data: { user: User | null }; error: { message: string } | null }>
+      }
+    },
+    _session: Session,
+    data: Record<string, unknown>,
+    isCurrent: () => boolean,
+  ) => {
+    const result = await client.auth.updateUser({ data })
+    return { user: result.data.user, error: result.error?.message ?? null, current: isCurrent() }
+  },
+  signOutConsoleSession: async (
+    client: { auth: { signOut: (options?: { scope: string }) => Promise<{ error?: unknown }> } },
+    _session: unknown,
+    isCurrent: () => boolean,
+    scope = 'global',
+  ) => {
+    if (!isCurrent()) throw new Error('Session changed')
+    const result = await client.auth.signOut(scope === 'local' ? { scope } : undefined)
+    if (result.error) throw new Error('Sign-out failed')
+  },
+}))
+
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   supa.client = null
+  supa.tutorialPreferences.clear()
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
   localStorage.clear()
@@ -49,15 +117,19 @@ function session(email: string, metadata: Record<string, unknown> = {}): Session
 
 /** Build a Supabase stub covering auth, publication RPCs, and account deletion. */
 function makeAuthClient(initial: Session | null, initialError: AuthResponse['error'] = null) {
+  let currentSession = initial
   const listeners: AuthListener[] = []
   const unsubscribe = vi.fn()
   const auth = {
-    getSession: vi.fn(async () => ({ data: { session: initial }, error: initialError })),
+    getSession: vi.fn(async () => ({ data: { session: currentSession }, error: initialError })),
     onAuthStateChange: vi.fn((listener: AuthListener) => {
       listeners.push(listener)
       return { data: { subscription: { unsubscribe } } }
     }),
-    signOut: vi.fn(async (): Promise<AuthResponse> => ({ error: null })),
+    signOut: vi.fn(async (): Promise<AuthResponse> => {
+      await emit(null, 'SIGNED_OUT')
+      return { error: null }
+    }),
     updateUser: vi.fn(async (patch: { data: Record<string, unknown> }) => ({
       data: {
         user: {
@@ -72,14 +144,29 @@ function makeAuthClient(initial: Session | null, initialError: AuthResponse['err
   const rpc = vi.fn(async (): Promise<AuthResponse> => ({ error: null }))
   /** Fire every registered auth listener with the next session, inside act. */
   const emit = (next: Session | null, event = 'TOKEN_REFRESHED') =>
-    act(() => listeners.forEach((listener) => listener(event, next)))
+    act(async () => {
+      currentSession = next
+      listeners.forEach((listener) => listener(event, next))
+      await Promise.resolve()
+    })
   const invoke = vi.fn(
     async (): Promise<{
       data: { deleted: boolean } | null
       error: { message: string } | null
     }> => ({ data: { deleted: true }, error: null }),
   )
-  return { client: { auth, rpc, functions: { invoke } }, auth, rpc, invoke, unsubscribe, emit }
+  const clientRpc = (...args: Parameters<typeof rpc>) => {
+    const response = rpc(...args)
+    return Object.assign(response, { setHeader: () => response })
+  }
+  return {
+    client: { auth, rpc: clientRpc, functions: { invoke } },
+    auth,
+    rpc,
+    invoke,
+    unsubscribe,
+    emit,
+  }
 }
 
 let latest!: AuthState
@@ -189,6 +276,7 @@ describe('Tutorial account preference through rendered entry', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restart tutorial' }))
     expect(screen.getByRole('dialog', { name: 'Tutorial introduction' })).toBeInTheDocument()
     await act(async () => {
+      await waitFor(() => expect(finish).toBeDefined())
       finish(new Response('{}', { status: 503 }))
     })
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -208,7 +296,7 @@ describe('Tutorial account preference through rendered entry', () => {
     renderTutorialPreference()
     await screen.findByRole('dialog', { name: 'Learn the console' })
     fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
-    stub.emit(session('gm@openfray.app'), 'SIGNED_IN')
+    await stub.emit(session('gm@openfray.app'), 'SIGNED_IN')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(loadSettings().tutorialSuppression).toBeNull()
     expect(latest.tutorialSuppression).toBeNull()
@@ -290,7 +378,7 @@ describe('Tutorial account preference through rendered entry', () => {
     renderTutorialPreference()
     await screen.findByText('a@openfray.app')
     await waitFor(() => expect(request).toHaveBeenCalledOnce())
-    stub.emit(session('b@openfray.app', { tutorial_suppression: 'completed' }), 'SIGNED_IN')
+    await stub.emit(session('b@openfray.app', { tutorial_suppression: 'completed' }), 'SIGNED_IN')
     await act(async () => {
       finish(new Response('{}', { status: 500 }))
     })
@@ -319,7 +407,7 @@ describe('Tutorial account preference through rendered entry', () => {
       renderTutorialPreference()
       await screen.findByText('anonymous')
       expect(fetch).not.toHaveBeenCalled()
-      stub.emit(session('gm@openfray.app'), 'SIGNED_IN')
+      await stub.emit(session('gm@openfray.app'), 'SIGNED_IN')
       expect(screen.queryByRole('dialog', { name: 'Learn the console' })).not.toBeInTheDocument()
       expect(screen.getByLabelText('Invitation preference')).toHaveTextContent(reason)
       await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
@@ -433,7 +521,7 @@ describe('AuthProvider — tutorial account preference', () => {
             finish = resolve
           },
         )
-        stub.emit({ ...session('gm@openfray.app'), user: response.data.user }, 'USER_UPDATED')
+        await stub.emit({ ...session('gm@openfray.app'), user: response.data.user }, 'USER_UPDATED')
         return response
       })
       supa.client = stub.client
@@ -522,12 +610,13 @@ describe('AuthProvider — tutorial account preference', () => {
       await screen.findByText('a@openfray.app')
       const oldSetter = latest.setTutorialSuppression
       const write = oldSetter('completed')
+      await waitFor(() => expect(fetch).toHaveBeenCalledOnce())
       const signal = fetch.mock.calls[0]?.[1]?.signal as AbortSignal
-      if (change === 'different account') stub.emit(session('b@openfray.app'), 'SIGNED_IN')
+      if (change === 'different account') await stub.emit(session('b@openfray.app'), 'SIGNED_IN')
       else {
-        stub.emit(null, 'SIGNED_OUT')
+        await stub.emit(null, 'SIGNED_OUT')
         if (change === 'same account signed in again')
-          stub.emit(session('a@openfray.app'), 'SIGNED_IN')
+          await stub.emit(session('a@openfray.app'), 'SIGNED_IN')
       }
       expect(signal.aborted).toBe(true)
       await act(async () => {
@@ -620,6 +709,7 @@ describe('AuthProvider — tutorial account preference', () => {
       const view = renderProvider()
       await screen.findByText('gm@openfray.app')
       const write = latest.setTutorialSuppression('completed')
+      await waitFor(() => expect(fetch).toHaveBeenCalledOnce())
       if (end === 'unmount') view.unmount()
       else await latest.signOut()
       expect(fetch.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
@@ -685,10 +775,10 @@ describe('AuthProvider — tutorial account preference', () => {
     await act(async () => {
       await latest.setTutorialSuppression('completed')
     })
-    stub.emit(session('gm@openfray.app', { display_name: 'Fresh profile' }))
+    await stub.emit(session('gm@openfray.app', { display_name: 'Fresh profile' }))
     expect(latest.tutorialSuppression).toBe('completed')
     expect(latest.displayName).toBe('Fresh profile')
-    stub.emit(session('b@openfray.app'), 'SIGNED_IN')
+    await stub.emit(session('b@openfray.app'), 'SIGNED_IN')
     expect(latest.tutorialSuppression).toBeNull()
     expect(latest.displayName).toBeNull()
   })
@@ -717,7 +807,7 @@ describe('AuthProvider — tutorial account preference', () => {
     )
     supa.client = stub.client
     renderProvider()
-    stub.emit(null, 'INITIAL_SESSION')
+    await stub.emit(null, 'INITIAL_SESSION')
     expect(latest.loading).toBe(true)
     await act(async () => {
       finish({ data: { session: null }, error: { message: 'session unavailable' } })
@@ -737,7 +827,7 @@ describe('AuthProvider — tutorial account preference', () => {
     )
     supa.client = stub.client
     renderProvider()
-    stub.emit(session('b@openfray.app'), 'SIGNED_IN')
+    await stub.emit(session('b@openfray.app'), 'SIGNED_IN')
     expect(screen.getByText('b@openfray.app')).toBeInTheDocument()
     expect(latest.loading).toBe(false)
     await act(async () => {
@@ -781,6 +871,7 @@ describe('AuthProvider — the name encounters publish under', () => {
       supa.client = makeAuthClient(session('gm@openfray.app', metadata)).client
       renderProvider()
       await screen.findByText('gm@openfray.app')
+      await waitFor(() => expect(latest.profileLoading).toBe(false))
       expect(latest.displayName, JSON.stringify(metadata)).toBe(expected)
       cleanup()
     }
@@ -852,7 +943,7 @@ describe('AuthProvider with Supabase configured', () => {
     renderProvider()
     await screen.findByText('gm@openfray.app')
 
-    stub.emit(null, 'SIGNED_OUT')
+    await stub.emit(null, 'SIGNED_OUT')
 
     expect(latest.user).toBeNull()
     expect(latest.identityExpired).toBe(true)
@@ -863,9 +954,9 @@ describe('AuthProvider with Supabase configured', () => {
     supa.client = stub.client
     renderProvider()
     await screen.findByText('anonymous')
-    stub.emit(session('gm@openfray.app'))
+    await stub.emit(session('gm@openfray.app'))
     expect(screen.getByText('gm@openfray.app')).toBeInTheDocument()
-    stub.emit(null)
+    await stub.emit(null)
     expect(screen.getByText('anonymous')).toBeInTheDocument()
   })
 
@@ -909,7 +1000,10 @@ describe('AuthProvider with Supabase configured', () => {
     renderProvider()
     await screen.findByText('gm@openfray.app')
     await expect(latest.deleteAccount()).resolves.toEqual({ error: null })
-    expect(stub.invoke).toHaveBeenCalledWith('account-delete', { body: {} })
+    expect(stub.invoke).toHaveBeenCalledWith('account-delete', {
+      body: {},
+      headers: { Authorization: 'Bearer token:gm@openfray.app' },
+    })
     expect(stub.rpc).not.toHaveBeenCalled()
     expect(stub.auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
     expect(stub.auth.signOut).toHaveBeenCalledTimes(1)
@@ -959,3 +1053,99 @@ describe('AuthProvider with Supabase configured', () => {
     expect(stub.auth.signOut).not.toHaveBeenCalled()
   })
 })
+
+describe('AuthProvider — site account return and stale publishing metadata', () => {
+  it('consumes an SDK-owned user update without rewriting tutorial preferences', async () => {
+    const stub = makeAuthClient(session('gm@openfray.app', { tutorial_suppression: 'completed' }))
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+    await stub.emit(
+      session('gm@openfray.app', { display_name: 'Returned name', share_license: 'cc-by-sa-4.0' }),
+      'USER_UPDATED',
+    )
+    expect(latest.displayName).toBe('Returned name')
+    expect(latest.shareLicense).toBe('cc-by-sa-4.0')
+    expect(latest.tutorialSuppression).toBe('completed')
+    expect(stub.auth.updateUser).not.toHaveBeenCalled()
+  })
+
+  it.each(['replacement', 'expiry', 'same owner renewed'] as const)(
+    'refuses stale publishing callbacks and late profile events after %s',
+    async (change) => {
+      const original = session('gm@openfray.app', { display_name: 'Before' })
+      const stub = makeAuthClient(original)
+      let finish!: (value: Awaited<ReturnType<typeof stub.auth.updateUser>>) => void
+      stub.auth.updateUser.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+      )
+      supa.client = stub.client
+      renderProvider()
+      await screen.findByText('gm@openfray.app')
+      const oldSetter = latest.setDisplayName
+      const pending = oldSetter('Late name')
+      if (change === 'replacement')
+        await stub.emit(session('other@example.test', { display_name: 'Other owner' }), 'SIGNED_IN')
+      else {
+        await stub.emit(null, 'SIGNED_OUT')
+        if (change === 'same owner renewed')
+          await stub.emit(
+            {
+              ...original,
+              access_token: 'renewed-token',
+              user: { ...original.user, user_metadata: { display_name: 'Renewed name' } },
+            },
+            'SIGNED_IN',
+          )
+      }
+      await act(async () => {
+        const updated = session('gm@openfray.app', { display_name: 'Late name' })
+        await stub.emit(updated, 'USER_UPDATED')
+        finish({ data: { user: updated.user }, error: null })
+        expect((await pending).error).not.toBeNull()
+        expect((await oldSetter('Stale retry')).error).not.toBeNull()
+      })
+      expect(latest.displayName).toBe(
+        change === 'replacement' ? 'Other owner' : change === 'expiry' ? null : 'Renewed name',
+      )
+      expect(latest.identityExpired).toBe(change === 'expiry')
+      expect(stub.auth.updateUser).toHaveBeenCalledOnce()
+    },
+  )
+})
+
+it.each(['sign-out', 'deletion'] as const)(
+  'does not end a replacement identity after pending %s completes',
+  async (operation) => {
+    const stub = makeAuthClient(session('gm@openfray.app'))
+    let finish!: () => void
+    const held = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    if (operation === 'sign-out')
+      stub.rpc.mockImplementationOnce(async () => {
+        await held
+        return { error: null }
+      })
+    else
+      stub.invoke.mockImplementationOnce(async () => {
+        await held
+        return { data: { deleted: true }, error: null }
+      })
+    supa.client = stub.client
+    renderProvider()
+    await screen.findByText('gm@openfray.app')
+    const pending = operation === 'sign-out' ? latest.signOut() : latest.deleteAccount()
+    await stub.emit(session('other@example.test'), 'SIGNED_IN')
+    await act(async () => {
+      finish()
+      await pending
+    })
+    expect(latest.user?.email).toBe('other@example.test')
+    expect(latest.identityExpired).toBe(false)
+    expect(stub.auth.signOut).not.toHaveBeenCalled()
+  },
+)

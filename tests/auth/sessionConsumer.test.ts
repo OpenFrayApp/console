@@ -20,6 +20,7 @@ it('consumes stored shared sessions without detecting callback material on conso
     'public-test-key',
     {
       auth: { detectSessionInUrl: false },
+      global: { fetch: expect.any(Function) },
     },
   )
 })

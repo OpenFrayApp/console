@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 import {
   EncounterLifecycle,
@@ -9,7 +9,20 @@ import {
 } from '../../src/state/encounterLifecycle.ts'
 import { IndexedDbRecovery } from '../../src/state/indexedDbRecovery.ts'
 import { pc } from '../fixtures.ts'
-import type { SessionSnapshot } from '../../src/state/persistence.ts'
+import {
+  loadSession,
+  loadOwnerSession,
+  saveSession,
+  type SessionSnapshot,
+} from '../../src/state/persistence.ts'
+import {
+  clearAuthRecovery,
+  loadAuthRecovery,
+  loadAuthRecoveryConflict,
+  saveAuthRecovery,
+  saveAuthRecoveryConflict,
+} from '../../src/state/authRecovery.ts'
+import type { SessionRecoveryAdapter } from '../../src/state/encounterLifecycle.ts'
 import { recoverySnapshot as snapshot } from '../fixtures/sessionSnapshot.ts'
 
 /** Build a browser lifecycle around real IndexedDB and a controlled cloud outcome. */
@@ -18,10 +31,11 @@ function lifecycle(
   cloudResult: Awaited<ReturnType<CloudEncounterAdapter['load']>>,
   authSnapshot: SessionSnapshot | null = null,
   cloudAdapter?: CloudEncounterAdapter,
+  sessionRecovery?: SessionRecoveryAdapter,
 ): EncounterLifecycle {
   return new EncounterLifecycle({
     device,
-    session: {
+    session: sessionRecovery ?? {
       load: () => ({ status: 'empty', snapshot: null }),
       save: () => ({ status: 'saved' }),
     },
@@ -150,7 +164,7 @@ describe('IndexedDB recovery', () => {
         },
       })
       first.expireIdentity()
-      expect(await first.checkpointForSignIn()).toBe(true)
+      expect(await first.checkpointForSiteNavigation()).toBe(true)
       await device.close()
 
       let current: Awaited<ReturnType<CloudEncounterAdapter['load']>> =
@@ -206,7 +220,7 @@ describe('IndexedDB recovery', () => {
       expect(beforeChoice).toContain('retained-third-owner')
       if (cloudState === 'changed') expect(beforeChoice).toContain('changed-owner-cloud')
       renewed.expireIdentity()
-      expect(await renewed.checkpointForSignIn()).toBe(true)
+      expect(await renewed.checkpointForSiteNavigation()).toBe(true)
       returned = await renewed.identify('owner-a')
       expect(await renewed.ensureCloudEncounter(local.encounter)).toBeNull()
       expect(publications).toEqual([])
@@ -291,7 +305,7 @@ describe('IndexedDB recovery', () => {
     })
     await first.identify('owner-a')
     first.expireIdentity()
-    expect(await first.checkpointForSignIn()).toBe(true)
+    expect(await first.checkpointForSiteNavigation()).toBe(true)
     expect(first.writableEncounter()).toBeNull()
     expect((await device.loadConflict('owner-a'))?.unresolved).toBe(true)
     await device.close()
@@ -450,3 +464,158 @@ describe('IndexedDB recovery', () => {
     await recovery.close()
   })
 })
+
+it.each(['healthy', 'blocked', 'missing'] as const)(
+  'keeps real owner tab mirrors isolated while anonymous reloads survive %s IndexedDB',
+  async (availability) => {
+    sessionStorage.clear()
+    const device = new IndexedDbRecovery(`openfray-mirror-${crypto.randomUUID()}`)
+    const privateBoard = snapshot('private-owner-board')
+    privateBoard.encounter.combatants = [pc({ name: 'Private guard' })]
+    const cloudWrites: SessionSnapshot['encounter'][] = []
+    const cloudAdapter: CloudEncounterAdapter = {
+      load: async () => ({
+        status: 'loaded',
+        id: 'owner-row',
+        encounter: privateBoard.encounter,
+        revision: 1,
+        playerCode: null,
+        updatedAt: '2026-09-02T10:11:12Z',
+      }),
+      acquire: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),
+      takeover: async () => ({ status: 'failed' }),
+      save: async (_owner, id, revision, writerId, encounter) => {
+        cloudWrites.push(encounter)
+        return { status: 'saved', id: id!, revision: revision + 1, leaseToken: writerId }
+      },
+    }
+    const session = { load: loadSession, loadOwner: loadOwnerSession, save: saveSession }
+    try {
+      const owner = lifecycle(device, { status: 'failed' }, null, cloudAdapter, session)
+      await owner.identify('owner-a')
+      await owner.commit(privateBoard)
+      expect(await owner.checkpointForSiteNavigation()).toBe(true)
+      const before = cloudWrites.length
+      if (availability === 'blocked') {
+        vi.spyOn(device, 'loadLatest').mockRejectedValue(new Error('blocked'))
+        vi.spyOn(device, 'load').mockRejectedValue(new Error('blocked'))
+      } else if (availability === 'missing') {
+        vi.spyOn(device, 'loadLatest').mockResolvedValue(null)
+        vi.spyOn(device, 'load').mockResolvedValue(null)
+      }
+      const anonymous = lifecycle(device, { status: 'failed' }, null, cloudAdapter, session)
+      expect(await anonymous.identify(null)).toMatchObject({
+        ownerId: null,
+        snapshot: null,
+        clearWorkingBoard: true,
+      })
+      const later = snapshot('real-anonymous-edit')
+      later.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+      await anonymous.commit(later)
+      const restarted = lifecycle(device, { status: 'failed' }, null, cloudAdapter, session)
+      expect(await restarted.identify(null)).toMatchObject({ ownerId: null, snapshot: later })
+      expect(loadOwnerSession('owner-a')).toMatchObject({
+        ownerId: 'owner-a',
+        snapshot: privateBoard,
+      })
+      expect(cloudWrites).toHaveLength(before)
+    } finally {
+      vi.restoreAllMocks()
+      sessionStorage.clear()
+      await device.close()
+    }
+  },
+)
+
+it.each([
+  ['device', true],
+  ['cloud', true],
+  ['device', false],
+  ['cloud', false],
+] as const)(
+  'keeps resolved anonymous history inactive after %s choice, owner edits and real-storage restart online=%s',
+  async (choice, online) => {
+    sessionStorage.clear()
+    const name = `openfray-consumed-anonymous-${crypto.randomUUID()}`
+    let device = new IndexedDbRecovery(name)
+    const anonymous = snapshot('resolved-anonymous')
+    anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+    const initialCloud = snapshot('original-cloud')
+    initialCloud.encounter.combatants = [pc({ name: 'Cloud guard' })]
+    let remote = initialCloud.encounter
+    let revision = 1
+    let connected = true
+    expect(saveSession(snapshot('previous-anonymous')).status).toBe('saved')
+    expect(saveSession(anonymous).status).toBe('saved')
+    expect(saveAuthRecovery(anonymous).status).toBe('saved')
+    const cloud: CloudEncounterAdapter = {
+      load: async () =>
+        connected
+          ? {
+              status: 'loaded',
+              id: 'cloud-row',
+              encounter: remote,
+              revision,
+              playerCode: null,
+              updatedAt: '2026-09-02T10:11:12.000Z',
+            }
+          : { status: 'failed' },
+      acquire: async () => ({ status: 'acquired', revision, leaseToken: 'writer-a' }),
+      takeover: async () => ({ status: 'acquired', revision, leaseToken: 'writer-a' }),
+      save: async (_owner, _id, _revision, _writer, encounter) => {
+        remote = encounter
+        return { status: 'saved', id: 'cloud-row', revision: ++revision, leaseToken: 'writer-a' }
+      },
+    }
+    /** Use production session and handoff adapters with actual browser stores. */
+    const create = () =>
+      new EncounterLifecycle({
+        device,
+        session: { load: loadSession, save: saveSession, loadOwner: loadOwnerSession },
+        authRecovery: {
+          load: loadAuthRecovery,
+          save: saveAuthRecovery,
+          clear: clearAuthRecovery,
+          loadConflict: loadAuthRecoveryConflict,
+          saveConflict: saveAuthRecoveryConflict,
+        },
+        cloud,
+        clock: { now: () => new Date('2026-09-02T10:11:12.000Z') },
+        network: { online: () => connected, subscribe: () => () => undefined },
+        scheduler: { after: () => () => undefined },
+      })
+    const first = create()
+    const returned = await first.identify('owner-a')
+    expect(returned.conflict?.anonymous).toBe(true)
+    expect(await first.resolveConflict(returned.conflict!.id, choice)).not.toBeNull()
+    expect(loadSession().status).toBe('empty')
+    expect(loadAuthRecovery().status).toBe('empty')
+    expect(sessionStorage.getItem('openfray:session:previous')).toBeNull()
+    const archived = await device.loadConflict('owner-a')
+    expect(archived).toMatchObject({
+      unresolved: false,
+      device: { snapshot: anonymous },
+      cloud: { snapshot: initialCloud },
+    })
+    connected = online
+    const later = snapshot('later-owner-edit')
+    later.encounter.combatants = [pc({ name: 'Later owner guard' })]
+    const newest = snapshot('newest-owner-edit')
+    newest.encounter.combatants = [pc({ name: 'Newest owner guard' })]
+    expect(await first.commit(later)).toEqual({ status: 'saved' })
+    if (online) expect(await first.ensureCloudEncounter(later.encounter)).toBe('cloud-row')
+    expect(await first.commit(newest)).toEqual({ status: 'saved' })
+    if (online) expect(await first.ensureCloudEncounter(newest.encounter)).toBe('cloud-row')
+    expect(loadOwnerSession('owner-a').snapshot?.encounter.encounterId).toBe('newest-owner-edit')
+    await device.close()
+    device = new IndexedDbRecovery(name)
+    const restarted = create()
+    const restored = await restarted.identify('owner-a')
+    expect(restored.snapshot?.encounter.encounterId).toBe('newest-owner-edit')
+    expect(restored.conflict).toBeUndefined()
+    expect(await device.loadConflict('owner-a')).toEqual({ ...archived, id: expect.any(String) })
+    expect(restarted.recoveryDownload()?.serialized).toContain('resolved-anonymous')
+    await device.close()
+    sessionStorage.clear()
+  },
+)

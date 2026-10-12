@@ -15,7 +15,7 @@ export interface AuthState {
   /**
    * The name this account publishes under: `display_name` on the user row, which Google and
    * Discord fill in at sign-in and the Game Master can change in their profile. Null only
-   * when there is none and none was ever typed.
+   * when there is none or the current profile could not be verified.
    *
    * It is a default, never a decision: the share form shows it in an editable field, the
    * profile clears it, and nothing is published until Publish is pressed.
@@ -23,10 +23,14 @@ export interface AuthState {
   displayName: string | null
   /**
    * The license this account's shared encounters start on, or null when it has never been
-   * set. It seeds the share dialog and is always overridable there — a default that
+   * set or verified. It seeds the share dialog and is always overridable there — a default that
    * replaced the control rather than filling it would publish a term nobody chose.
    */
   shareLicense: ContentLicense | null
+  /** Profile read is independent of authenticated board recovery. */
+  profileLoading?: boolean
+  /** The profile read failed; cached publishing metadata is not confirmed. */
+  profileError?: string | null
   /** Confirmed account invitation preference; never an authorization claim. */
   tutorialSuppression: TutorialSuppression | null
   /** True until the initial session lookup resolves (avoids an auth-UI flash). */

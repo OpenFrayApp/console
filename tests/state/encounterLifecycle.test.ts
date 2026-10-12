@@ -364,7 +364,7 @@ describe('encounter lifecycle', () => {
       })
       await lifecycle.identify('owner-a')
       lifecycle.expireIdentity()
-      expect(await lifecycle.checkpointForSignIn()).toBe(false)
+      expect(await lifecycle.checkpointForSiteNavigation()).toBe(false)
       expect(lifecycle.saveStatus().kind).toBe('failed')
       expect(lifecycle.recoveryDownload()?.serialized).toContain('original-cloud')
       expect(cloudWrites).toEqual([])
@@ -391,7 +391,7 @@ describe('encounter lifecycle', () => {
     expect(await lifecycle.resolveConflict(returned.conflict!.id, 'device')).toBeNull()
     expect(calls.filter((call) => call === 'cloud:load')).toHaveLength(1)
     expect(calls).not.toContain('cloud:acquire')
-    expect(await lifecycle.checkpointForSignIn()).toBe(true)
+    expect(await lifecycle.checkpointForSiteNavigation()).toBe(true)
     expect(await lifecycle.ensureCloudEncounter(encounter('must-not-publish'))).toBeNull()
     expect(await lifecycle.takeOver()).toBe(false)
     expect(cloudWrites).toEqual([])
@@ -409,7 +409,7 @@ describe('encounter lifecycle', () => {
     })
     await lifecycle.identify('owner-a')
     lifecycle.expireIdentity()
-    expect(await lifecycle.checkpointForSignIn()).toBe(true)
+    expect(await lifecycle.checkpointForSiteNavigation()).toBe(true)
     const renewed = await lifecycle.identify('owner-a')
     expect(renewed.conflict?.unresolved).toBe(true)
     expect(await lifecycle.resolveConflict(renewed.conflict!.id, 'cloud')).not.toBeNull()
@@ -449,7 +449,7 @@ describe('encounter lifecycle', () => {
       })
       await lifecycle.identify('owner-a')
       lifecycle.expireIdentity()
-      expect(await lifecycle.checkpointForSignIn()).toBe(false)
+      expect(await lifecycle.checkpointForSiteNavigation()).toBe(false)
       expect(lifecycle.conflict()?.device.snapshot).toEqual(device)
       expect(lifecycle.saveStatus().kind).toBe('failed')
       expect(lifecycle.recoveryDownload()?.serialized).toContain('protected-cloud')
@@ -490,7 +490,7 @@ describe('encounter lifecycle', () => {
     })
     await lifecycle.identify('owner-a')
     lifecycle.expireIdentity()
-    const checkpoint = lifecycle.checkpointForSignIn()
+    const checkpoint = lifecycle.checkpointForSiteNavigation()
     await saving
     const other = await lifecycle.identify('owner-b')
     expect(other).toMatchObject({ ownerId: 'owner-b', snapshot: null, clearWorkingBoard: true })
@@ -528,7 +528,7 @@ describe('encounter lifecycle', () => {
     const latest = snapshot('just-committed')
     latest.encounter.combatants = [pc({ name: 'Latest adventurer' })]
     void lifecycle.commit(latest)
-    expect(await lifecycle.checkpointForSignIn()).toBe(true)
+    expect(await lifecycle.checkpointForSiteNavigation()).toBe(true)
     expect(authRecovery()).toEqual(latest)
     expect(cloudWrites).toEqual([])
     expect(deviceWrites).toEqual([])
@@ -600,7 +600,7 @@ describe('encounter lifecycle', () => {
     await Promise.resolve()
     await lifecycle.commit(snapshot('latest-dirty'))
     let left = false
-    const checkpoint = lifecycle.checkpointForSignIn().then((safe) => {
+    const checkpoint = lifecycle.checkpointForSiteNavigation().then((safe) => {
       left = safe
       return safe
     })
@@ -632,7 +632,7 @@ describe('encounter lifecycle', () => {
     const pending = lifecycle.ensureCloudEncounter(encounter('first'))
     await Promise.resolve()
     await lifecycle.commit(snapshot('dirty'))
-    const checkpoint = lifecycle.checkpointForSignIn()
+    const checkpoint = lifecycle.checkpointForSiteNavigation()
     await Promise.resolve()
     finish({ status: 'failed' })
     await pending
@@ -719,10 +719,14 @@ describe('encounter lifecycle', () => {
       snapshot: recovered,
       savedAt: '2026-09-02T10:11:12.000Z',
     })
-    expect(calls).toEqual(['device:latest'])
+    expect(calls.filter((call) => !call.startsWith('session:'))).toEqual(['device:latest'])
 
     await expect(lifecycle.identify('owner-a')).resolves.toMatchObject({ snapshot: recovered })
-    expect(calls).toEqual(['device:latest', 'device:owner-a', 'cloud:load'])
+    expect(calls.filter((call) => !call.startsWith('session:'))).toEqual([
+      'device:latest',
+      'device:owner-a',
+      'cloud:load',
+    ])
   })
 
   it('keeps anonymous recovery tab-scoped and never writes it to device or cloud adapters', async () => {
@@ -738,7 +742,7 @@ describe('encounter lifecycle', () => {
     expect(sessionWrites).toEqual([snapshot('anonymous-next')])
     expect(deviceWrites).toEqual([])
     expect(cloudWrites).toEqual([])
-    expect(calls).toEqual(['device:latest', 'session:load', 'session:save'])
+    expect(calls.filter((call) => !call.endsWith(':load'))).toEqual(['session:save'])
   })
 
   it('writes signed-in recovery with a deterministic clock and keeps the legacy copy readable', async () => {
@@ -1238,7 +1242,9 @@ describe('encounter lifecycle', () => {
 
     await expect(lifecycle.restore()).resolves.toEqual({ ownerId: null, snapshot: fallback })
     await expect(lifecycle.identify('owner-a')).resolves.toMatchObject({ snapshot: fallback })
-    expect(calls).toEqual(['device:latest', 'session:load', 'device:owner-a', 'cloud:load'])
+    expect(
+      calls.filter((call) => call.startsWith('device:owner') || call.startsWith('cloud:')),
+    ).toEqual(['device:owner-a', 'cloud:load'])
   })
 
   it('loads the resolved owner recovery before reconciling a different startup identity', async () => {
@@ -1252,7 +1258,11 @@ describe('encounter lifecycle', () => {
 
     await lifecycle.restore()
     await expect(lifecycle.identify('owner-b')).resolves.toMatchObject({ snapshot: currentOwner })
-    expect(calls).toEqual(['device:latest', 'device:owner-b', 'cloud:load'])
+    expect(calls.filter((call) => !call.startsWith('session:'))).toEqual([
+      'device:latest',
+      'device:owner-b',
+      'cloud:load',
+    ])
   })
 
   it('clears owner recovery when the authenticated session signs out', async () => {

@@ -41,13 +41,28 @@ function withoutCallbackMaterial(component: string): string {
   return remaining ? component[0] + remaining : ''
 }
 
-/** Leave in the same tab; the site alone initiates OAuth and validates the return destination. */
-export function navigateToSiteSignIn(
-  location: Pick<Location, 'pathname' | 'search' | 'hash' | 'assign'> = window.location,
+/** Leave in the same tab with a cleaned return route for a site-owned account destination. */
+function navigateToSite(
+  destination: '/sign-in/' | '/account/',
+  location: Pick<Location, 'pathname' | 'search' | 'hash' | 'assign'>,
 ): void {
   const returnTo =
     location.pathname +
     withoutCallbackMaterial(location.search) +
     withoutCallbackMaterial(location.hash)
-  location.assign(`/sign-in/?returnTo=${encodeURIComponent(returnTo)}`)
+  location.assign(`${destination}?returnTo=${encodeURIComponent(returnTo)}`)
+}
+
+/** Leave in the same tab; the site alone initiates OAuth and validates the return destination. */
+export function navigateToSiteSignIn(
+  location: Pick<Location, 'pathname' | 'search' | 'hash' | 'assign'> = window.location,
+): void {
+  navigateToSite('/sign-in/', location)
+}
+
+/** Open site account management with the current clean console route as its return destination. */
+export function navigateToSiteAccount(
+  location: Pick<Location, 'pathname' | 'search' | 'hash' | 'assign'> = window.location,
+): void {
+  navigateToSite('/account/', location)
 }

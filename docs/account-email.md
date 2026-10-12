@@ -124,8 +124,9 @@ Deletion cannot recall a provider request already in flight.
 
 ## Deletion confirmation
 
-Issue #112 uses the admin-owned `account-delete` Edge Function. The console sends
-an empty object with its current session. The handler verifies that token with Auth,
+The site account page uses the admin-owned `account-delete` Edge Function. It sends
+an empty object with its current session. The console retains the authenticated
+account API for existing consumers. The handler verifies that token with Auth,
 holds the trusted address in memory, and calls `delete_account()` with the caller’s
 JWT and anon key. It accepts no recipient, account ID, or template from the caller.
 No service-role key or admin deletion API selects the target.

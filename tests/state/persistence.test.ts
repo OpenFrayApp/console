@@ -11,6 +11,7 @@ import {
   exportRecoveryCopy,
   listRecoveryCopies,
   loadSession,
+  loadOwnerSession,
   replaceSession,
   saveSession,
 } from '../../src/state/persistence.ts'
@@ -85,13 +86,17 @@ describe('session persistence', () => {
     })
   })
 
-  it('archives a supported legacy value before rewriting it canonically', () => {
+  it('retains legacy recovery with unknown provenance without restoring or overwriting it', () => {
     const legacy = JSON.stringify({ version: 2, snapshot: recoverySnapshot() })
     sessionStorage.setItem('openfray:session', legacy)
 
-    expect(loadSession()).toEqual({ status: 'loaded', snapshot: recoverySnapshot() })
-    expect(exportRecoveryCopy('migrated')?.serialized).toBe(legacy)
-    expect(exportRecoveryCopy('current')?.serialized).toContain('"schemaVersion":3')
+    expect(loadSession()).toEqual({ status: 'blocked', snapshot: null, blockedBy: 'invalid' })
+    expect(exportRecoveryCopy('quarantine')?.serialized).toBe(legacy)
+    expect(exportRecoveryCopy('current')?.serialized).toBe(legacy)
+    expect(saveSession(recoverySnapshot('empty-replacement'))).toEqual({
+      status: 'blocked',
+      reason: 'invalid',
+    })
   })
 
   it('allows explicit replacement and deletion of a future copy', () => {
@@ -129,4 +134,46 @@ describe('session persistence', () => {
     expect(clearSession()).toEqual({ status: 'deleted' })
     expect(listRecoveryCopies()).toEqual([])
   })
+})
+
+it('keeps an explicit owner mirror separate from genuine anonymous recovery', () => {
+  const anonymous = recoverySnapshot('anonymous')
+  const owner = recoverySnapshot('private-owner')
+  expect(saveSession(anonymous)).toEqual({ status: 'saved' })
+  expect(saveSession(owner, 'owner-a')).toEqual({ status: 'saved' })
+  expect(loadSession()).toEqual({ status: 'loaded', snapshot: anonymous })
+  expect(loadOwnerSession()).toEqual({ status: 'loaded', snapshot: owner, ownerId: 'owner-a' })
+  expect(JSON.parse(exportRecoveryCopy('owner')!.serialized)).toMatchObject({
+    recoveryOwnerId: 'owner-a',
+  })
+})
+
+it('never restores an unknown previous copy and preserves it before rotating explicit anonymous recovery', () => {
+  sessionStorage.clear()
+  const unknown = JSON.stringify({ version: 2, snapshot: recoverySnapshot('unknown-previous') })
+  sessionStorage.setItem('openfray:session:previous', unknown)
+  sessionStorage.setItem('openfray:session', '{ broken current')
+  expect(loadSession()).toEqual({ status: 'blocked', snapshot: null, blockedBy: 'invalid' })
+  expect(exportRecoveryCopy('previous')?.serialized).toBe(unknown)
+  deleteRecoveryCopy('current')
+  deleteRecoveryCopy('quarantine')
+  saveSession(recoverySnapshot('actual-anonymous'))
+  expect(saveSession(recoverySnapshot('later-anonymous'))).toEqual({ status: 'saved' })
+  expect(exportRecoveryCopy('quarantine')?.serialized).toBe(unknown)
+})
+
+it('refuses a browser write whose atomic provenance/snapshot readback was dropped', () => {
+  sessionStorage.clear()
+  const before = recoverySnapshot('before')
+  saveSession(before, 'owner-a')
+  const set = Storage.prototype.setItem
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key !== 'openfray:session:owner') set.call(this, key, value)
+  })
+  expect(saveSession(recoverySnapshot('after'), 'owner-a')).toEqual({
+    status: 'failed',
+    reason: 'unavailable',
+  })
+  expect(loadOwnerSession()).toMatchObject({ snapshot: before, ownerId: 'owner-a' })
+  vi.restoreAllMocks()
 })
