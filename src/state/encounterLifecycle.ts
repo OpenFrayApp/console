@@ -129,6 +129,7 @@ export interface ReconciliationConflict {
   id: string
   anonymous?: boolean
   cloudEmpty?: boolean
+  ownerRecovery?: { snapshot: SessionSnapshot; activeAt: string }
   device: { snapshot: SessionSnapshot; activeAt: string }
   cloud: { snapshot: SessionSnapshot; activeAt: string; revision: number }
 }
@@ -202,6 +203,10 @@ export class EncounterLifecycle {
     if (recoverableConflict) {
       const device = encodeSession(recoverableConflict.device.snapshot)
       const cloud = encodeSession(recoverableConflict.cloud.snapshot)
+      const ownerRecovery =
+        recoverableConflict.ownerRecovery &&
+        encodeSession(recoverableConflict.ownerRecovery.snapshot)
+      if (ownerRecovery && ownerRecovery.status !== 'ok') return null
       if (device.status !== 'ok' || cloud.status !== 'ok') return null
       return {
         filename: 'openfray-recovery-conflict.json',
@@ -209,6 +214,14 @@ export class EncounterLifecycle {
           kind: 'reconciliation-recovery',
           schemaVersion: 1,
           copies: {
+            ...(ownerRecovery?.status === 'ok'
+              ? {
+                  ownerRecovery: {
+                    activeAt: recoverableConflict.ownerRecovery!.activeAt,
+                    envelope: JSON.parse(ownerRecovery.serialized),
+                  },
+                }
+              : {}),
             device: {
               activeAt: recoverableConflict.device.activeAt,
               envelope: JSON.parse(device.serialized),
@@ -411,6 +424,9 @@ export class EncounterLifecycle {
         id: crypto.randomUUID(),
         anonymous: true,
         cloudEmpty: true,
+        ...(device
+          ? { ownerRecovery: { snapshot: device.snapshot, activeAt: device.savedAt } }
+          : {}),
         device: { snapshot: this.anonymousSnapshot, activeAt },
         cloud: {
           snapshot: { ...this.anonymousSnapshot, encounter: emptyEncounter(), selectedId: null },
@@ -456,6 +472,9 @@ export class EncounterLifecycle {
         const conflict: ReconciliationConflict = {
           id: crypto.randomUUID(),
           anonymous: Boolean(this.anonymousSnapshot),
+          ...(this.anonymousSnapshot && device
+            ? { ownerRecovery: { snapshot: device.snapshot, activeAt: device.savedAt } }
+            : {}),
           device: { snapshot: recovery, activeAt: recoverySavedAt ?? cloud.updatedAt },
           cloud: {
             snapshot: cloudSnapshot,
@@ -805,6 +824,8 @@ export class EncounterLifecycle {
 
   /** Restore the device adapter first and retain the session adapter as the rollback path. */
   private async restoreOnce(): Promise<LifecycleRestore> {
+    const handoff = this.adapters.authRecovery.load()
+    if (handoff.snapshot) return { ownerId: null, snapshot: handoff.snapshot }
     try {
       const device = await this.adapters.device.loadLatest()
       if (device) return device
@@ -816,7 +837,8 @@ export class EncounterLifecycle {
 
   /** Load the tab-scoped session copy without making it durable. */
   private anonymousRestore(): LifecycleRestore {
-    const loaded = this.adapters.session.load()
+    const handoff = this.adapters.authRecovery.load()
+    const loaded = handoff.snapshot ? handoff : this.adapters.session.load()
     return { ownerId: null, snapshot: loaded.snapshot }
   }
 

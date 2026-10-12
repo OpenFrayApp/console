@@ -8,12 +8,15 @@ import {
   type CloudEncounterAdapter,
 } from '../../src/state/encounterLifecycle.ts'
 import { IndexedDbRecovery } from '../../src/state/indexedDbRecovery.ts'
+import { pc } from '../fixtures.ts'
+import type { SessionSnapshot } from '../../src/state/persistence.ts'
 import { recoverySnapshot as snapshot } from '../fixtures/sessionSnapshot.ts'
 
 /** Build a browser lifecycle around real IndexedDB and a controlled cloud outcome. */
 function lifecycle(
   device: IndexedDbRecovery,
   cloudResult: Awaited<ReturnType<CloudEncounterAdapter['load']>>,
+  authSnapshot: SessionSnapshot | null = null,
 ): EncounterLifecycle {
   return new EncounterLifecycle({
     device,
@@ -22,9 +25,18 @@ function lifecycle(
       save: () => ({ status: 'saved' }),
     },
     authRecovery: {
-      load: () => ({ status: 'empty', snapshot: null }),
-      save: () => ({ status: 'saved' }),
-      clear: () => ({ status: 'deleted' }),
+      load: () =>
+        authSnapshot
+          ? { status: 'loaded', snapshot: authSnapshot }
+          : { status: 'empty', snapshot: null },
+      save: (value) => {
+        authSnapshot = value
+        return { status: 'saved' }
+      },
+      clear: () => {
+        authSnapshot = null
+        return { status: 'deleted' }
+      },
     },
     cloud: {
       load: async () => cloudResult,
@@ -42,6 +54,44 @@ function lifecycle(
 }
 
 describe('IndexedDB recovery', () => {
+  it.each(['device', 'cloud'] as const)(
+    'preserves the third unsynced owner branch through %s choice, later commits and restart',
+    async (choice) => {
+      const name = `openfray-third-branch-${crypto.randomUUID()}`
+      const device = new IndexedDbRecovery(name)
+      await device.save('owner-a', snapshot('unsynced-owner'), '2026-09-02T10:10:12.000Z')
+      const anonymous = snapshot('anonymous-board')
+      anonymous.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+      const cloud = {
+        status: 'loaded' as const,
+        id: 'cloud-row',
+        encounter: snapshot('cloud-board').encounter,
+        revision: 1,
+        playerCode: null,
+        updatedAt: '2026-09-02T10:11:12.000Z',
+      }
+      const first = lifecycle(device, cloud, anonymous)
+      const returned = await first.identify('owner-a')
+      expect(first.recoveryDownload()?.serialized).toContain('unsynced-owner')
+      expect((await device.load('owner-a'))?.snapshot.encounter.encounterId).toBe('unsynced-owner')
+      expect(await first.resolveConflict(returned.conflict!.id, choice)).not.toBeNull()
+      await first.commit(snapshot('after-choice'))
+      await first.commit(snapshot('after-another-action'))
+      await device.close()
+      const reopenedDevice = new IndexedDbRecovery(name)
+      const restarted = lifecycle(reopenedDevice, { status: 'failed' })
+      await restarted.identify('owner-a')
+      expect((await reopenedDevice.loadPrevious('owner-a'))?.snapshot.encounter.encounterId).toBe(
+        'after-choice',
+      )
+      const download = restarted.recoveryDownload()?.serialized
+      expect(download).toContain('unsynced-owner')
+      expect(download).toContain('anonymous-board')
+      expect(download).toContain('cloud-board')
+      await reopenedDevice.close()
+    },
+  )
+
   it('reopens a signed-in working board after a browser restart while cloud is offline', async () => {
     const databaseName = `openfray-restart-${crypto.randomUUID()}`
     const firstDevice = new IndexedDbRecovery(databaseName)

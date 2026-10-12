@@ -8,6 +8,7 @@ import { nameOf } from '../src/combat/combatant.ts'
 import App from '../src/App.tsx'
 import { saveSettings } from '../src/state/settings.ts'
 import { loadAuthRecovery, saveAuthRecovery } from '../src/state/authRecovery.ts'
+import { saveSession } from '../src/state/persistence.ts'
 import { decodeSession } from '../src/codecs/session.ts'
 import { AuthContext } from '../src/auth/useAuth.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
@@ -306,4 +307,52 @@ it('does not reopen an old owner conflict when its pending reconciliation finish
   )
   expect(screen.getByRole('button', { name: 'Remove Owner B cloud guard' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Remove Owner A device guard' })).toBeNull()
+})
+
+it('restores the latest verified anonymous handoff after full-page cancellation when session mirroring failed', async () => {
+  saveSettings({ tutorialSuppression: 'dismissed' })
+  vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockResolvedValue(null)
+  const old = recoverySnapshot('cancelled-trip')
+  old.encounter.combatants = [pc({ name: 'Old guard' })]
+  expect(saveSession(old).status).toBe('saved')
+  expect(saveAuthRecovery(old).status).toBe('saved')
+  const write = Storage.prototype.setItem
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key.startsWith('openfray:session')) throw new DOMException('Full', 'QuotaExceededError')
+    return write.call(this, key, value)
+  })
+  const renderAnonymous = () =>
+    render(
+      <AuthContext.Provider value={authState()}>
+        <App />
+      </AuthContext.Provider>,
+    )
+  renderAnonymous()
+  await screen.findByRole('button', { name: 'Remove Old guard' })
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Old guard' }))
+  const addGuard = (name: string) => {
+    fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+    fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: name } })
+    fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+  }
+  addGuard('Latest guard')
+  fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
+  await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
+  expect(loadAuthRecovery().snapshot?.encounter.combatants.map(nameOf)).toEqual(['Latest guard'])
+  cleanup()
+  renderAnonymous()
+  await screen.findByRole('button', { name: 'Remove Latest guard' })
+  expect(screen.queryByRole('button', { name: 'Remove Old guard' })).toBeNull()
+  addGuard('Later guard')
+  await waitFor(() =>
+    expect(loadAuthRecovery().snapshot?.encounter.combatants.map(nameOf)).toEqual([
+      'Latest guard',
+      'Later guard',
+    ]),
+  )
+  cleanup()
+  renderAnonymous()
+  await screen.findByRole('button', { name: 'Remove Later guard' })
+  expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
 })

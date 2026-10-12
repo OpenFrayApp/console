@@ -37,6 +37,8 @@ interface ConflictRecord {
   deviceActiveAt: string
   cloudActiveAt: string
   cloudRevision: number
+  ownerRecoverySerialized?: string
+  ownerRecoveryActiveAt?: string
 }
 
 interface MetadataRecord {
@@ -119,9 +121,24 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     if (!record) return null
     const device = decodeSession(record.deviceSerialized)
     const cloud = decodeSession(record.cloudSerialized)
-    if (device.status !== 'ok' || cloud.status !== 'ok') return null
+    const ownerRecovery =
+      record.ownerRecoverySerialized && decodeSession(record.ownerRecoverySerialized)
+    if (
+      device.status !== 'ok' ||
+      cloud.status !== 'ok' ||
+      (ownerRecovery && ownerRecovery.status !== 'ok')
+    )
+      return null
     return {
       id: crypto.randomUUID(),
+      ...(ownerRecovery && ownerRecovery.status === 'ok'
+        ? {
+            ownerRecovery: {
+              snapshot: ownerRecovery.snapshot,
+              activeAt: record.ownerRecoveryActiveAt ?? record.deviceActiveAt,
+            },
+          }
+        : {}),
       device: { snapshot: device.snapshot, activeAt: record.deviceActiveAt },
       cloud: {
         snapshot: cloud.snapshot,
@@ -227,14 +244,26 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
   ): Promise<SessionWriteResult> {
     const deviceEncoded = encodeSession(conflict.device.snapshot)
     const cloudEncoded = encodeSession(conflict.cloud.snapshot)
-    if (deviceEncoded.status !== 'ok' || cloudEncoded.status !== 'ok') {
+    const ownerEncoded = conflict.ownerRecovery && encodeSession(conflict.ownerRecovery.snapshot)
+    if (
+      deviceEncoded.status !== 'ok' ||
+      cloudEncoded.status !== 'ok' ||
+      (ownerEncoded && ownerEncoded.status !== 'ok')
+    ) {
       return { status: 'failed', reason: 'invalid-snapshot' }
     }
     try {
       const database = await this.database()
       const transaction = database.transaction(CONFLICTS, 'readwrite')
-      transaction.objectStore(CONFLICTS).put({
+      const store = transaction.objectStore(CONFLICTS)
+      const previous = await requested(store.get(ownerId) as IDBRequest<ConflictRecord | undefined>)
+      store.put({
         ownerId,
+        ownerRecoverySerialized:
+          ownerEncoded?.status === 'ok'
+            ? ownerEncoded.serialized
+            : previous?.ownerRecoverySerialized,
+        ownerRecoveryActiveAt: conflict.ownerRecovery?.activeAt ?? previous?.ownerRecoveryActiveAt,
         deviceSerialized: deviceEncoded.serialized,
         cloudSerialized: cloudEncoded.serialized,
         deviceActiveAt: conflict.device.activeAt,
