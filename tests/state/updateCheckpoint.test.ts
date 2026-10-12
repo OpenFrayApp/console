@@ -38,9 +38,11 @@ function harness(
     },
     session: {
       load: () =>
-        stored ? { status: 'loaded', snapshot: stored } : { status: 'empty', snapshot: null },
-      save: (snapshot) => {
-        stored = snapshot
+        !options.owner && stored
+          ? { status: 'loaded', snapshot: stored }
+          : { status: 'empty', snapshot: null },
+      save: (snapshot, ownerId) => {
+        if (!ownerId) stored = snapshot
         return { status: 'saved' }
       },
     },

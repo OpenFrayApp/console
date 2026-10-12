@@ -719,10 +719,14 @@ describe('encounter lifecycle', () => {
       snapshot: recovered,
       savedAt: '2026-09-02T10:11:12.000Z',
     })
-    expect(calls).toEqual(['device:latest'])
+    expect(calls.filter((call) => !call.startsWith('session:'))).toEqual(['device:latest'])
 
     await expect(lifecycle.identify('owner-a')).resolves.toMatchObject({ snapshot: recovered })
-    expect(calls).toEqual(['device:latest', 'device:owner-a', 'cloud:load'])
+    expect(calls.filter((call) => !call.startsWith('session:'))).toEqual([
+      'device:latest',
+      'device:owner-a',
+      'cloud:load',
+    ])
   })
 
   it('keeps anonymous recovery tab-scoped and never writes it to device or cloud adapters', async () => {
@@ -738,7 +742,7 @@ describe('encounter lifecycle', () => {
     expect(sessionWrites).toEqual([snapshot('anonymous-next')])
     expect(deviceWrites).toEqual([])
     expect(cloudWrites).toEqual([])
-    expect(calls).toEqual(['device:latest', 'session:load', 'session:save'])
+    expect(calls.filter((call) => !call.endsWith(':load'))).toEqual(['session:save'])
   })
 
   it('writes signed-in recovery with a deterministic clock and keeps the legacy copy readable', async () => {
@@ -1238,7 +1242,9 @@ describe('encounter lifecycle', () => {
 
     await expect(lifecycle.restore()).resolves.toEqual({ ownerId: null, snapshot: fallback })
     await expect(lifecycle.identify('owner-a')).resolves.toMatchObject({ snapshot: fallback })
-    expect(calls).toEqual(['device:latest', 'session:load', 'device:owner-a', 'cloud:load'])
+    expect(
+      calls.filter((call) => call.startsWith('device:owner') || call.startsWith('cloud:')),
+    ).toEqual(['device:owner-a', 'cloud:load'])
   })
 
   it('loads the resolved owner recovery before reconciling a different startup identity', async () => {
@@ -1252,7 +1258,11 @@ describe('encounter lifecycle', () => {
 
     await lifecycle.restore()
     await expect(lifecycle.identify('owner-b')).resolves.toMatchObject({ snapshot: currentOwner })
-    expect(calls).toEqual(['device:latest', 'device:owner-b', 'cloud:load'])
+    expect(calls.filter((call) => !call.startsWith('session:'))).toEqual([
+      'device:latest',
+      'device:owner-b',
+      'cloud:load',
+    ])
   })
 
   it('clears owner recovery when the authenticated session signs out', async () => {

@@ -276,7 +276,9 @@ it.each(
     expect(screen.getByRole('button', { name: 'Remove Launched adventurer' })).toBeInTheDocument()
     expect(screen.getByText(/Quick add.*Friend/)).toBeInTheDocument()
     await waitFor(() =>
-      expect(sessionStorage.getItem('openfray:session')).toContain('Launched adventurer'),
+      expect(
+        sessionStorage.getItem(signedIn ? 'openfray:session:owner' : 'openfray:session'),
+      ).toContain('Launched adventurer'),
     )
   },
 )

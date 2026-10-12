@@ -607,6 +607,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (recovery) downloadRecoveryCopy(recovery)
   }
 
+  /** Download unverified retained bytes independently of the current working board. */
+  const downloadRetainedRecovery = () => {
+    const recovery = lifecycle.retainedSessionDownload()
+    if (recovery) downloadRecoveryCopy(recovery)
+  }
+
   /** Leave only after the latest committed board has a verified recovery checkpoint. */
   const leaveForSite = async (destination: 'sign-in' | 'account', continueWithDevice = false) => {
     if (departurePending.current) return
@@ -1926,6 +1932,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 status={saveStatus}
                 onRetry={() => void lifecycle.retry()}
                 onDownload={downloadRecovery}
+                onDownloadRetained={
+                  lifecycle.retainedSessionDownload() ? downloadRetainedRecovery : undefined
+                }
                 onSignIn={() => void leaveForSite('sign-in')}
                 onTakeOver={() => void lifecycle.takeOver()}
                 onResolveCopies={() => setCopyConflictOpen(true)}

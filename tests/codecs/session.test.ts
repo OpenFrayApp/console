@@ -234,3 +234,20 @@ describe('session codec', () => {
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined()
   })
 })
+
+it('round-trips explicit recovery provenance without guessing ownership from the encounter', () => {
+  for (const ownerId of [null, 'owner-a']) {
+    const encoded = encodeSession(snapshot(), ownerId)
+    expect(encoded.status).toBe('ok')
+    if (encoded.status !== 'ok') return
+    expect(decodeSession(encoded.serialized)).toMatchObject({
+      status: 'ok',
+      snapshot: snapshot(),
+      recoveryOwnerId: ownerId,
+      canonical: encoded.serialized,
+    })
+  }
+  const file = encodeSession(snapshot())
+  if (file.status !== 'ok') return
+  expect(decodeSession(file.serialized)).not.toHaveProperty('recoveryOwnerId')
+})

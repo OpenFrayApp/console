@@ -5,9 +5,9 @@ import type { Encounter } from '../schema/encounter.ts'
 import { decodeSession, encodeSession } from '../codecs/session.ts'
 
 /**
- * Anonymous recovery is mirrored to `sessionStorage`: tab-scoped, cleared on tab
- * close, and never written to the database. The codec validates the whole aggregate
- * before this adapter makes it available to the working board.
+ * Browser recovery is tab-scoped and never written to the database. Anonymous
+ * snapshots and explicitly owner-tagged rollback mirrors use separate slots.
+ * The codec validates the aggregate before this adapter exposes a recovery copy.
  */
 
 export type Theme = 'dark' | 'light'
@@ -31,6 +31,8 @@ const KEYS = {
   previous: 'openfray:session:previous',
   quarantine: 'openfray:session:quarantine',
   migrated: 'openfray:session:migrated',
+  owner: 'openfray:session:owner',
+  ownerPrevious: 'openfray:session:owner:previous',
 } as const
 
 export type RecoverySlot = keyof typeof KEYS
@@ -47,9 +49,10 @@ export interface RecoveryExport {
 
 export type SessionLoadResult =
   | { status: 'empty'; snapshot: null }
-  | { status: 'loaded'; snapshot: SessionSnapshot }
+  | { status: 'loaded'; snapshot: SessionSnapshot; ownerId?: string }
   | {
       status: 'recovered'
+      ownerId?: string
       snapshot: SessionSnapshot
       blockedBy: 'invalid' | 'unsupported'
     }
@@ -82,14 +85,6 @@ export function storageFailureReason(error: unknown): 'quota' | 'unavailable' {
     : 'unavailable'
 }
 
-/** Load a validated previous recovery copy, if one exists. */
-function previousSnapshot(store: Storage): SessionSnapshot | null {
-  const raw = store.getItem(KEYS.previous)
-  if (!raw) return null
-  const decoded = decodeSession(raw)
-  return decoded.status === 'ok' ? decoded.snapshot : null
-}
-
 /** Preserve invalid input once without replacing an earlier quarantined value. */
 function quarantine(store: Storage, raw: string): void {
   try {
@@ -99,38 +94,58 @@ function quarantine(store: Storage, raw: string): void {
   }
 }
 
-/** Load only a completely validated snapshot and preserve every rejected current value. */
-export function loadSession(): SessionLoadResult {
+/** Decode browser recovery only when its explicit provenance matches the storage slot. */
+function browserRecovery(
+  raw: string,
+  ownerMirror: boolean,
+): { snapshot: SessionSnapshot; ownerId?: string } | null {
+  const decoded = decodeSession(raw)
+  if (decoded.status !== 'ok') return null
+  if (ownerMirror ? typeof decoded.recoveryOwnerId !== 'string' : decoded.recoveryOwnerId !== null)
+    return null
+  return {
+    snapshot: decoded.snapshot,
+    ...(ownerMirror ? { ownerId: decoded.recoveryOwnerId as string } : {}),
+  }
+}
+
+/** Load provenance-validated browser recovery without assigning ownership to legacy bytes. */
+function loadRecovery(ownerMirror: boolean): SessionLoadResult {
   const store = storage()
   if (!store) return { status: 'blocked', snapshot: null, blockedBy: 'unavailable' }
   try {
-    const raw = store.getItem(KEYS.current)
+    const raw = store.getItem(ownerMirror ? KEYS.owner : KEYS.current)
     if (!raw) return { status: 'empty', snapshot: null }
+    const recovered = browserRecovery(raw, ownerMirror)
+    if (recovered) return { status: 'loaded', ...recovered }
     const decoded = decodeSession(raw)
-    if (decoded.status === 'ok') {
-      if (decoded.migratedFrom !== undefined) {
-        try {
-          if (store.getItem(KEYS.migrated) === null) {
-            store.setItem(KEYS.migrated, raw)
-            store.setItem(KEYS.current, decoded.canonical)
-          }
-        } catch {
-          // Restore in memory while keeping the original stored value recoverable.
-        }
-      }
-      return { status: 'loaded', snapshot: decoded.snapshot }
-    }
-
-    const previous = previousSnapshot(store)
-    if (decoded.status === 'unsupported') {
-      return previous
-        ? { status: 'recovered', snapshot: previous, blockedBy: 'unsupported' }
-        : { status: 'blocked', snapshot: null, blockedBy: 'unsupported' }
-    }
-    quarantine(store, raw)
+    const blockedBy = decoded.status === 'unsupported' ? 'unsupported' : 'invalid'
+    if (blockedBy === 'invalid') quarantine(store, raw)
+    const previousRaw = store.getItem(ownerMirror ? KEYS.ownerPrevious : KEYS.previous)
+    const previous = previousRaw && browserRecovery(previousRaw, ownerMirror)
     return previous
-      ? { status: 'recovered', snapshot: previous, blockedBy: 'invalid' }
-      : { status: 'blocked', snapshot: null, blockedBy: 'invalid' }
+      ? { status: 'recovered', ...previous, blockedBy }
+      : { status: 'blocked', snapshot: null, blockedBy }
+  } catch {
+    return { status: 'blocked', snapshot: null, blockedBy: 'unavailable' }
+  }
+}
+
+/** Load only explicitly anonymous tab recovery. */
+export function loadSession(): SessionLoadResult {
+  return loadRecovery(false)
+}
+
+/** Load the separate owner-tagged tab rollback mirror without granting identity authority. */
+export function loadOwnerSession(ownerId?: string): SessionLoadResult {
+  const loaded = loadRecovery(true)
+  if (ownerId === undefined || (loaded.snapshot && loaded.ownerId === ownerId)) return loaded
+  try {
+    const previousRaw = storage()?.getItem(KEYS.ownerPrevious)
+    const previous = previousRaw && browserRecovery(previousRaw, true)
+    return previous && previous.ownerId === ownerId
+      ? { status: 'loaded', ...previous }
+      : { status: 'empty', snapshot: null }
   } catch {
     return { status: 'blocked', snapshot: null, blockedBy: 'unavailable' }
   }
@@ -139,8 +154,9 @@ export function loadSession(): SessionLoadResult {
 /** Convert codec failures into the browser-storage result vocabulary. */
 function encodeForStorage(
   snapshot: SessionSnapshot,
+  ownerId: string | null,
 ): { status: 'ok'; serialized: string } | { status: 'failed'; result: SessionWriteResult } {
-  const encoded = encodeSession(snapshot)
+  const encoded = encodeSession(snapshot, ownerId)
   return encoded.status === 'ok'
     ? encoded
     : {
@@ -153,32 +169,52 @@ function encodeForStorage(
 }
 
 /** Save a canonical snapshot while retaining the previous validated current copy. */
-export function saveSession(snapshot: SessionSnapshot): SessionWriteResult {
-  const encoded = encodeForStorage(snapshot)
+export function saveSession(
+  snapshot: SessionSnapshot,
+  ownerId: string | null = null,
+): SessionWriteResult {
+  const encoded = encodeForStorage(snapshot, ownerId)
   if (encoded.status === 'failed') return encoded.result
   const store = storage()
   if (!store) return { status: 'failed', reason: 'unavailable' }
+  const currentKey = ownerId === null ? KEYS.current : KEYS.owner
+  const previousKey = ownerId === null ? KEYS.previous : KEYS.ownerPrevious
   try {
-    const current = store.getItem(KEYS.current)
+    const current = store.getItem(currentKey)
     if (current === null) {
-      store.setItem(KEYS.current, encoded.serialized)
+      store.setItem(currentKey, encoded.serialized)
+      if (store.getItem(currentKey) !== encoded.serialized)
+        return { status: 'failed', reason: 'unavailable' }
       return { status: 'saved' }
     }
 
     const decoded = decodeSession(current)
     if (decoded.status === 'unsupported') return { status: 'blocked', reason: 'unsupported' }
-    if (decoded.status !== 'ok') return { status: 'blocked', reason: 'invalid' }
-    const previous = store.getItem(KEYS.previous)
-    store.setItem(KEYS.previous, decoded.canonical)
+    if (decoded.status !== 'ok' || !browserRecovery(current, ownerId !== null))
+      return { status: 'blocked', reason: 'invalid' }
+    const previous = store.getItem(previousKey)
+    if (previous !== null && !browserRecovery(previous, ownerId !== null)) {
+      quarantine(store, previous)
+      if (store.getItem(KEYS.quarantine) !== previous)
+        return { status: 'blocked', reason: 'invalid' }
+    }
+    store.setItem(previousKey, decoded.canonical)
     try {
-      store.setItem(KEYS.current, encoded.serialized)
+      store.setItem(currentKey, encoded.serialized)
+      if (store.getItem(currentKey) !== encoded.serialized)
+        throw new Error('Recovery readback failed')
       return { status: 'saved' }
     } catch (error) {
       try {
-        if (previous === null) store.removeItem(KEYS.previous)
-        else store.setItem(KEYS.previous, previous)
+        if (store.getItem(currentKey) !== current) store.setItem(currentKey, current)
       } catch {
-        // The validated current copy still remains when rollback storage also fails.
+        // A denied current rollback must not prevent rollback of the previous copy.
+      }
+      try {
+        if (previous === null) store.removeItem(previousKey)
+        else store.setItem(previousKey, previous)
+      } catch {
+        // The original or partial current value remains available for recovery export.
       }
       return { status: 'failed', reason: storageFailureReason(error) }
     }
@@ -189,13 +225,15 @@ export function saveSession(snapshot: SessionSnapshot): SessionWriteResult {
 
 /** Explicitly replace a blocked or valid current copy with a validated snapshot. */
 export function replaceSession(snapshot: SessionSnapshot): SessionWriteResult {
-  const encoded = encodeForStorage(snapshot)
+  const encoded = encodeForStorage(snapshot, null)
   if (encoded.status === 'failed') return encoded.result
   const store = storage()
   if (!store) return { status: 'failed', reason: 'unavailable' }
   try {
     store.setItem(KEYS.current, encoded.serialized)
-    return { status: 'saved' }
+    return store.getItem(KEYS.current) === encoded.serialized
+      ? { status: 'saved' }
+      : { status: 'failed', reason: 'unavailable' }
   } catch (error) {
     return { status: 'failed', reason: storageFailureReason(error) }
   }
@@ -240,6 +278,17 @@ export function exportRecoveryCopy(slot: RecoverySlot): RecoveryExport | null {
   } catch {
     return null
   }
+}
+
+/** Export unverified retained browser bytes without restoring them onto any working board. */
+export function exportRetainedSession(): RecoveryExport | null {
+  for (const slot of ['current', 'previous', 'quarantine'] as const) {
+    const copy = exportRecoveryCopy(slot)
+    if (!copy) continue
+    const decoded = decodeSession(copy.serialized)
+    if (decoded.status !== 'ok' || decoded.recoveryOwnerId === undefined) return copy
+  }
+  return null
 }
 
 /** Delete one recovery value only after an explicit request. */

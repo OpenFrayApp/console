@@ -13,7 +13,13 @@ import * as cloud from '../src/state/cloudEncounter.ts'
 import { saveSettings } from '../src/state/settings.ts'
 import { authState, pc } from './fixtures.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
-import type { SessionSnapshot } from '../src/state/persistence.ts'
+import {
+  exportRecoveryCopy,
+  loadSession,
+  loadOwnerSession,
+  type SessionSnapshot,
+} from '../src/state/persistence.ts'
+import { encodeSession, decodeSession } from '../src/codecs/session.ts'
 
 const navigation = vi.hoisted(() => ({ account: vi.fn(), signIn: vi.fn() }))
 vi.mock('../src/auth/signInNavigation.ts', () => ({
@@ -26,6 +32,7 @@ afterEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   navigation.account.mockReset()
   navigation.signIn.mockReset()
 })
@@ -195,30 +202,41 @@ it('does not leave for account if identity changes during cloud draining', async
   expect(board.cloudBoard().combatants.map(nameOf)).toEqual(['Owner guard'])
 })
 
-it('keeps owner recovery separate and never republishes it after an unauthenticated full-page account return', async () => {
-  const board = await startOwnerBoard()
-  addGuard()
-  openAccount()
-  await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
-  const cloudWrites = board.saveCloud.mock.calls.length
-  board.app.unmount()
-  render(
-    <AuthContext.Provider value={authState()}>
-      <App />
-    </AuthContext.Provider>,
-  )
-  await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull(),
-  )
-  await screen.findByText(/Nobody is on the board yet/)
-  expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull()
-  expect(board.recovery.get('owner-a')?.encounter.combatants.map(nameOf)).toEqual([
-    'Owner guard',
-    'Latest guard',
-  ])
-  expect(board.saveCloud).toHaveBeenCalledTimes(cloudWrites)
-  expect(board.cloudBoard().combatants.map(nameOf)).toEqual(['Owner guard', 'Latest guard'])
-})
+it.each(['healthy', 'blocked', 'missing'] as const)(
+  'keeps owner recovery separate after account signout with %s IndexedDB',
+  async (availability) => {
+    const board = await startOwnerBoard()
+    addGuard()
+    openAccount()
+    await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+    const cloudWrites = board.saveCloud.mock.calls.length
+    board.app.unmount()
+    if (availability === 'blocked') {
+      vi.mocked(IndexedDbRecovery.prototype.loadLatest).mockRejectedValue(new Error('blocked'))
+      board.read.mockRejectedValue(new Error('blocked'))
+    } else if (availability === 'missing') {
+      vi.mocked(IndexedDbRecovery.prototype.loadLatest).mockResolvedValue(null)
+      board.read.mockResolvedValue(null)
+    }
+    render(
+      <AuthContext.Provider value={authState()}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull(),
+    )
+    await screen.findByRole('button', { name: 'Sign in to resume saving' })
+    await screen.findByText(/Nobody is on the board yet/)
+    expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull()
+    expect(board.recovery.get('owner-a')?.encounter.combatants.map(nameOf)).toEqual([
+      'Owner guard',
+      'Latest guard',
+    ])
+    expect(board.saveCloud).toHaveBeenCalledTimes(cloudWrites)
+    expect(board.cloudBoard().combatants.map(nameOf)).toEqual(['Owner guard', 'Latest guard'])
+  },
+)
 
 it('refuses explicit device-copy continuation when recovery readback cannot be verified', async () => {
   const board = await startOwnerBoard()
@@ -236,4 +254,156 @@ it('refuses explicit device-copy continuation when recovery readback cannot be v
     'Owner guard',
     'Latest guard',
   ])
+})
+
+it('restores later genuine anonymous edits after reload even when owner IndexedDB recovery remains', async () => {
+  const board = await startOwnerBoard()
+  openAccount()
+  await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+  const writes = board.saveCloud.mock.calls.length
+  board.app.unmount()
+  const anonymous = () =>
+    render(
+      <AuthContext.Provider value={authState()}>
+        <App />
+      </AuthContext.Provider>,
+    )
+  anonymous()
+  await screen.findByRole('button', { name: 'Sign in to resume saving' })
+  addGuard()
+  await screen.findByRole('button', { name: 'Remove Latest guard' })
+  cleanup()
+  anonymous()
+  await screen.findByRole('button', { name: 'Remove Latest guard' })
+  expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull()
+  expect(board.recovery.get('owner-a')?.encounter.combatants.map(nameOf)).toEqual(['Owner guard'])
+  expect(board.saveCloud).toHaveBeenCalledTimes(writes)
+})
+
+it('does not expose owner tab rollback to a different identity when IndexedDB is missing', async () => {
+  const board = await startOwnerBoard()
+  openAccount()
+  await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+  board.app.unmount()
+  vi.mocked(IndexedDbRecovery.prototype.loadLatest).mockResolvedValue(null)
+  board.read.mockResolvedValue(null)
+  vi.mocked(cloud.loadCloudEncounter).mockResolvedValue({ status: 'failed' })
+  const writes = board.saveCloud.mock.calls.length
+  render(
+    <AuthContext.Provider value={authState({ user: { id: 'owner-b' } as User })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await screen.findByRole('button', { name: 'Offline' })
+  expect(screen.queryByRole('button', { name: 'Remove Owner guard' })).toBeNull()
+  expect(board.saveCloud).toHaveBeenCalledTimes(writes)
+  expect(loadOwnerSession('owner-a').snapshot?.encounter.combatants.map(nameOf)).toEqual([
+    'Owner guard',
+  ])
+  expect(loadSession()).toEqual({ status: 'empty', snapshot: null })
+})
+
+it('restores matching owner rollback during expiry without anonymous relabeling when IndexedDB is blocked', async () => {
+  const board = await startOwnerBoard()
+  openAccount()
+  await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+  board.app.unmount()
+  vi.mocked(IndexedDbRecovery.prototype.loadLatest).mockRejectedValue(new Error('blocked'))
+  board.read.mockRejectedValue(new Error('blocked'))
+  const writes = board.saveCloud.mock.calls.length
+  render(
+    <AuthContext.Provider value={authState({ identityExpired: true })}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await screen.findByRole('button', { name: 'Remove Owner guard' })
+  expect(board.saveCloud).toHaveBeenCalledTimes(writes)
+  expect(loadOwnerSession('owner-a').snapshot?.encounter.combatants.map(nameOf)).toEqual([
+    'Owner guard',
+  ])
+  expect(loadSession()).toEqual({ status: 'empty', snapshot: null })
+})
+
+it.each([null, 'wrong-owner'])(
+  'retains unknown legacy session bytes without displaying or publishing them (%s)',
+  async (ownerId) => {
+    saveSettings({ tutorialSuppression: 'dismissed' })
+    const legacy = recoverySnapshot('legacy-private')
+    legacy.encounter.combatants = [pc({ name: 'Legacy private guard' })]
+    const encoded = encodeSession(legacy)
+    if (encoded.status !== 'ok') throw new Error('Invalid test snapshot')
+    sessionStorage.setItem('openfray:session', encoded.serialized)
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockResolvedValue(null)
+    vi.spyOn(IndexedDbRecovery.prototype, 'load').mockResolvedValue(null)
+    vi.spyOn(IndexedDbRecovery.prototype, 'loadConflict').mockResolvedValue(null)
+    vi.spyOn(IndexedDbRecovery.prototype, 'save').mockResolvedValue({ status: 'saved' })
+    vi.spyOn(cloud, 'loadCloudEncounter').mockResolvedValue({ status: 'failed' })
+    const writes = vi.spyOn(cloud, 'saveCloudEncounter').mockResolvedValue({ status: 'failed' })
+    render(
+      <AuthContext.Provider value={authState({ user: ownerId ? ({ id: ownerId } as User) : null })}>
+        <App />
+      </AuthContext.Provider>,
+    )
+    await screen.findByRole('button', { name: ownerId ? 'Offline' : 'Save failed' })
+    expect(screen.queryByRole('button', { name: 'Remove Legacy private guard' })).toBeNull()
+    expect(exportRecoveryCopy('current')?.serialized).toBe(encoded.serialized)
+    expect(exportRecoveryCopy('quarantine')?.serialized).toBe(encoded.serialized)
+    expect(writes).not.toHaveBeenCalled()
+  },
+)
+
+it('downloads current anonymous edits and retained legacy recovery independently without replacing either copy', async () => {
+  saveSettings({ tutorialSuppression: 'dismissed' })
+  const legacy = recoverySnapshot('unverified-legacy')
+  legacy.encounter.combatants = [pc({ name: 'Unverified guard' })]
+  const raw = JSON.stringify({ version: 2, snapshot: legacy })
+  sessionStorage.setItem('openfray:session', raw)
+  vi.spyOn(IndexedDbRecovery.prototype, 'loadLatest').mockRejectedValue(new Error('blocked'))
+  const writes = vi.spyOn(cloud, 'saveCloudEncounter').mockResolvedValue({ status: 'failed' })
+  const downloads: Blob[] = []
+  vi.stubGlobal(
+    'URL',
+    class extends URL {
+      static createObjectURL(blob: Blob) {
+        downloads.push(blob)
+        return 'blob:recovery'
+      }
+      static revokeObjectURL() {}
+    },
+  )
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  render(
+    <AuthContext.Provider value={authState()}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await screen.findByRole('button', { name: 'Save failed' })
+  addGuard()
+  await screen.findByRole('button', { name: 'Remove Latest guard' })
+  fireEvent.click(screen.getByRole('button', { name: 'Save failed' }))
+  expect(screen.getByText(/unverified ownership/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Download recovery copy' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save failed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Download retained recovery' }))
+  const contents = await Promise.all(
+    downloads.map(
+      (blob) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.addEventListener('load', () => resolve(String(reader.result)), { once: true })
+          reader.addEventListener('error', () => reject(reader.error), { once: true })
+          reader.readAsText(blob)
+        }),
+    ),
+  )
+  expect(contents).toHaveLength(2)
+  const current = decodeSession(contents[0])
+  expect(current.status === 'ok' && current.snapshot.encounter.combatants.map(nameOf)).toEqual([
+    'Latest guard',
+  ])
+  expect(contents[1]).toBe(raw)
+  expect(exportRecoveryCopy('current')?.serialized).toBe(raw)
+  expect(exportRecoveryCopy('quarantine')?.serialized).toBe(raw)
+  expect(writes).not.toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: 'Remove Unverified guard' })).toBeNull()
 })

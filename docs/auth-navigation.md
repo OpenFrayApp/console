@@ -30,7 +30,16 @@ Sign-out revokes live views before ending the session. Account deletion uses the
 existing authenticated handler with an empty request body.
 An unauthenticated return starts an anonymous board without adopting private owner
 recovery or its session mirror. Owner recovery remains owner-scoped.
+Session writes record explicit recovery ownership independently of IndexedDB.
+Owner rollback mirrors use separate tab-scoped slots. Genuine anonymous recovery takes
+precedence over retained owner data after reload.
 Identity expiry retains the existing offline-owner recovery boundary.
+
+Legacy browser recovery without ownership metadata remains unverified. The console
+preserves its bytes and blocks automatic restoration and overwrite.
+**Download retained recovery** exports those bytes separately from the current working
+board's **Download recovery copy**. Neither action chooses or publishes a copy.
+Imported recovery files still use the existing snapshot decoder.
 
 ## Board recovery
 

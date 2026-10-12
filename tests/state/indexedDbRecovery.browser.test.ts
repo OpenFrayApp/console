@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { emptyEncounter, encounterReducer } from '../../src/state/encounter.ts'
 import {
   EncounterLifecycle,
@@ -9,7 +9,13 @@ import {
 } from '../../src/state/encounterLifecycle.ts'
 import { IndexedDbRecovery } from '../../src/state/indexedDbRecovery.ts'
 import { pc } from '../fixtures.ts'
-import type { SessionSnapshot } from '../../src/state/persistence.ts'
+import {
+  loadSession,
+  loadOwnerSession,
+  saveSession,
+  type SessionSnapshot,
+} from '../../src/state/persistence.ts'
+import type { SessionRecoveryAdapter } from '../../src/state/encounterLifecycle.ts'
 import { recoverySnapshot as snapshot } from '../fixtures/sessionSnapshot.ts'
 
 /** Build a browser lifecycle around real IndexedDB and a controlled cloud outcome. */
@@ -18,10 +24,11 @@ function lifecycle(
   cloudResult: Awaited<ReturnType<CloudEncounterAdapter['load']>>,
   authSnapshot: SessionSnapshot | null = null,
   cloudAdapter?: CloudEncounterAdapter,
+  sessionRecovery?: SessionRecoveryAdapter,
 ): EncounterLifecycle {
   return new EncounterLifecycle({
     device,
-    session: {
+    session: sessionRecovery ?? {
       load: () => ({ status: 'empty', snapshot: null }),
       save: () => ({ status: 'saved' }),
     },
@@ -450,3 +457,65 @@ describe('IndexedDB recovery', () => {
     await recovery.close()
   })
 })
+
+it.each(['healthy', 'blocked', 'missing'] as const)(
+  'keeps real owner tab mirrors isolated while anonymous reloads survive %s IndexedDB',
+  async (availability) => {
+    sessionStorage.clear()
+    const device = new IndexedDbRecovery(`openfray-mirror-${crypto.randomUUID()}`)
+    const privateBoard = snapshot('private-owner-board')
+    privateBoard.encounter.combatants = [pc({ name: 'Private guard' })]
+    const cloudWrites: SessionSnapshot['encounter'][] = []
+    const cloudAdapter: CloudEncounterAdapter = {
+      load: async () => ({
+        status: 'loaded',
+        id: 'owner-row',
+        encounter: privateBoard.encounter,
+        revision: 1,
+        playerCode: null,
+        updatedAt: '2026-09-02T10:11:12Z',
+      }),
+      acquire: async () => ({ status: 'acquired', revision: 1, leaseToken: 'writer-a' }),
+      takeover: async () => ({ status: 'failed' }),
+      save: async (_owner, id, revision, writerId, encounter) => {
+        cloudWrites.push(encounter)
+        return { status: 'saved', id: id!, revision: revision + 1, leaseToken: writerId }
+      },
+    }
+    const session = { load: loadSession, loadOwner: loadOwnerSession, save: saveSession }
+    try {
+      const owner = lifecycle(device, { status: 'failed' }, null, cloudAdapter, session)
+      await owner.identify('owner-a')
+      await owner.commit(privateBoard)
+      expect(await owner.checkpointForSiteNavigation()).toBe(true)
+      const before = cloudWrites.length
+      if (availability === 'blocked') {
+        vi.spyOn(device, 'loadLatest').mockRejectedValue(new Error('blocked'))
+        vi.spyOn(device, 'load').mockRejectedValue(new Error('blocked'))
+      } else if (availability === 'missing') {
+        vi.spyOn(device, 'loadLatest').mockResolvedValue(null)
+        vi.spyOn(device, 'load').mockResolvedValue(null)
+      }
+      const anonymous = lifecycle(device, { status: 'failed' }, null, cloudAdapter, session)
+      expect(await anonymous.identify(null)).toMatchObject({
+        ownerId: null,
+        snapshot: null,
+        clearWorkingBoard: true,
+      })
+      const later = snapshot('real-anonymous-edit')
+      later.encounter.combatants = [pc({ name: 'Anonymous guard' })]
+      await anonymous.commit(later)
+      const restarted = lifecycle(device, { status: 'failed' }, null, cloudAdapter, session)
+      expect(await restarted.identify(null)).toMatchObject({ ownerId: null, snapshot: later })
+      expect(loadOwnerSession('owner-a')).toMatchObject({
+        ownerId: 'owner-a',
+        snapshot: privateBoard,
+      })
+      expect(cloudWrites).toHaveLength(before)
+    } finally {
+      vi.restoreAllMocks()
+      sessionStorage.clear()
+      await device.close()
+    }
+  },
+)
