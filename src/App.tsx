@@ -260,7 +260,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   const [view, setView] = useState<View>('encounter')
   const [compendiumTab, setCompendiumTab] = useState<CompendiumTab>('creatures')
   const [searchOpen, setSearchOpen] = useState(false)
-  const [profileRequest, setProfileRequest] = useState(0)
   const [playerViewRequest, setPlayerViewRequest] = useState(0)
   /** Close quick search and open an existing destination without resetting the board view. */
   const navigateFromSearch = (open: () => void) => {
@@ -1890,7 +1889,6 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
               <AccountControl
-                openRequest={profileRequest}
                 onSignIn={() => void leaveForSite('sign-in')}
                 onOpenAccount={() => void leaveForSite('account')}
                 onOpenShares={() => {
@@ -1991,7 +1989,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                         id: 'profile',
                         name: 'Profile',
                         icon: <UserIcon />,
-                        onSelect: () => navigateFromSearch(() => setProfileRequest((n) => n + 1)),
+                        onSelect: () => navigateFromSearch(() => void leaveForSite('account')),
                       },
                       {
                         id: 'shared-links',

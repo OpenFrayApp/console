@@ -4,7 +4,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '../../auth/useAuth.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
-import { useOpenRequest } from '../../hooks/useOpenRequest.ts'
 import { popoverClass } from '../ui/popover.ts'
 import { Button } from '../ui/primitives.tsx'
 
@@ -32,22 +31,15 @@ export function AccountControl({
   onSignIn,
   onOpenShares,
   onOpenAccount,
-  openRequest,
 }: {
   onSignIn: () => void
   onOpenAccount: () => void
-  /** Request the checkpointed site account destination from quick navigation. */
-  openRequest?: number
   /** Open the shared-links screen. It is a screen rather than a dialog because it is
    *  somewhere a Game Master works, not somewhere they glance. */
   onOpenShares?: () => void
 }) {
   const { user, loading, configured } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  useOpenRequest(openRequest, () => {
-    setMenuOpen(false)
-    if (user && configured && !loading) onOpenAccount()
-  })
   const menuRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   useDismiss(menuRef, menuOpen, closeMenu)

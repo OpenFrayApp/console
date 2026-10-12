@@ -52,22 +52,12 @@ describe('AccountControl (anonymous)', () => {
     expect(value.signOut).not.toHaveBeenCalled()
   })
 
-  it('requests site account from quick navigation only while signed in', () => {
-    const onOpenAccount = vi.fn()
-    const control = (user: User | null, openRequest: number) => (
-      <AuthContext.Provider value={authState({ user })}>
-        <AccountControl
-          onSignIn={() => {}}
-          onOpenAccount={onOpenAccount}
-          openRequest={openRequest}
-        />
-      </AuthContext.Provider>
-    )
-    const user = { email: 'gm@example.test' } as User
-    const { rerender } = render(control(user, 0))
-    rerender(control(user, 1))
-    expect(onOpenAccount).toHaveBeenCalledOnce()
-    rerender(control(null, 2))
-    expect(onOpenAccount).toHaveBeenCalledOnce()
-  })
+  it.each([{ loading: true }, { configured: false }])(
+    'hides account entry when unavailable (%j)',
+    (overrides) => {
+      const { onOpenAccount } = renderControl(overrides)
+      expect(screen.queryByRole('button')).toBeNull()
+      expect(onOpenAccount).not.toHaveBeenCalled()
+    },
+  )
 })
