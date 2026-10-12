@@ -30,6 +30,10 @@ That is enough to run the console. Accounts and cloud saving need a Supabase
 project: copy [.env.example](./.env.example) to `.env` and fill in the two values.
 Without them the app runs anonymous-only and the header shows no sign-in button.
 
+Sign-in entry and callback handling belong to the site. See
+[Site sign-in and console recovery](./docs/auth-navigation.md) for the shared-session
+contract, board reconciliation, and same-origin preview requirements.
+
 For Patreon sign-in, deploy the UserInfo adapter and configure the custom provider
 as described in [Patreon sign-in](./docs/patreon-auth.md).
 

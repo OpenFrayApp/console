@@ -1,6 +1,7 @@
 # Patreon sign-in
 
-The console uses the Supabase custom OAuth provider `custom:patreon`.
+Site sign-in uses the Supabase custom OAuth provider `custom:patreon`.
+The console consumes the shared session. See [Site sign-in and console recovery](./auth-navigation.md).
 Patreon returns a nested JSON:API profile. The `patreon-userinfo` Edge Function
 unwraps it into the top-level claims Supabase Auth expects.
 
@@ -35,7 +36,9 @@ Update the enabled custom provider with these settings:
 | Scopes            | `identity identity[email]`                                        |
 
 Keep the callback URL shown by Supabase registered in the Patreon client.
-Allow the console URL in Supabase Auth's redirect URL configuration.
+Before release, review the site's `/auth/callback/` URL in Supabase Auth's redirect
+URL configuration for each intended origin. This source change does not authorize
+live configuration changes.
 Do not add tokens, client secrets, or API keys to the UserInfo URL.
 
 The adapter returns the Patreon user ID as `sub`, the shared email as `email`,
@@ -63,7 +66,7 @@ After deployment, a GET without a bearer token must return HTTP 401:
 curl -i 'https://<project-ref>.supabase.co/functions/v1/patreon-userinfo'
 ```
 
-Then choose **Continue with Patreon** in the console. Complete Patreon consent
+Then choose **Continue with Patreon** on the site's sign-in page. Complete Patreon consent
 and confirm that Supabase returns a session, subject to email confirmation.
 Check the profile's provider label and display name.
 Test a new account and an existing identity separately; verify the resulting user
