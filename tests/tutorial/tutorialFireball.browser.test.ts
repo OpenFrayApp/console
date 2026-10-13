@@ -121,7 +121,13 @@ it.each([
     await userEvent.click(within(row).getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('textbox', { name: 'Damage to Robin' })).toHaveValue('24')
     expect(screen.getByRole('textbox', { name: 'Damage to Ogre' })).toHaveValue('48')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }), { force: true })
+    const close = within(dialog).getByRole('button', { name: 'Close' })
+    expect(close).toHaveAttribute('inert')
+    // An inert cancellation control can be offscreen; probe its event guard without scrolling it.
+    expect(close.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))).toBe(
+      false,
+    )
+    expect(screen.getByRole('dialog', { name: 'Mage · Fireball' })).toBe(dialog)
     await userEvent.keyboard('{Escape}')
     await userEvent.click(screen.getByRole('button', { name: 'Return to tutorial' }))
     expect(screen.getByRole('textbox', { name: 'Damage to Robin' })).toHaveValue('24')
