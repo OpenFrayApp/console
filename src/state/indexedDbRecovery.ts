@@ -32,11 +32,19 @@ interface RecoveryRecord {
 
 interface ConflictRecord {
   ownerId: string
+  anonymous?: boolean
+  unresolved?: boolean
+  cloudEmpty?: boolean
   deviceSerialized: string
   cloudSerialized: string
   deviceActiveAt: string
   cloudActiveAt: string
   cloudRevision: number
+  ownerRecoverySerialized?: string
+  ownerRecoveryActiveAt?: string
+  retainedCloudSerialized?: string
+  retainedCloudActiveAt?: string
+  retainedCloudRevision?: number
 }
 
 interface MetadataRecord {
@@ -109,7 +117,7 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
       : null
   }
 
-  /** Load the latest archived divergence only after validating both stored branches. */
+  /** Load archived divergence only after validating every stored branch. */
   async loadConflict(ownerId: string): Promise<ReconciliationConflict | null> {
     const database = await this.database()
     const transaction = database.transaction(CONFLICTS, 'readonly')
@@ -119,9 +127,39 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     if (!record) return null
     const device = decodeSession(record.deviceSerialized)
     const cloud = decodeSession(record.cloudSerialized)
-    if (device.status !== 'ok' || cloud.status !== 'ok') return null
+    const retainedCloud =
+      record.retainedCloudSerialized && decodeSession(record.retainedCloudSerialized)
+    const ownerRecovery =
+      record.ownerRecoverySerialized && decodeSession(record.ownerRecoverySerialized)
+    if (
+      device.status !== 'ok' ||
+      cloud.status !== 'ok' ||
+      (ownerRecovery && ownerRecovery.status !== 'ok') ||
+      (retainedCloud && retainedCloud.status !== 'ok')
+    )
+      return null
     return {
       id: crypto.randomUUID(),
+      ...(record.anonymous !== undefined ? { anonymous: record.anonymous } : {}),
+      ...(record.unresolved !== undefined ? { unresolved: record.unresolved } : {}),
+      ...(record.cloudEmpty !== undefined ? { cloudEmpty: record.cloudEmpty } : {}),
+      ...(ownerRecovery && ownerRecovery.status === 'ok'
+        ? {
+            ownerRecovery: {
+              snapshot: ownerRecovery.snapshot,
+              activeAt: record.ownerRecoveryActiveAt ?? record.deviceActiveAt,
+            },
+          }
+        : {}),
+      ...(retainedCloud && retainedCloud.status === 'ok'
+        ? {
+            retainedCloud: {
+              snapshot: retainedCloud.snapshot,
+              activeAt: record.retainedCloudActiveAt ?? record.cloudActiveAt,
+              revision: record.retainedCloudRevision ?? record.cloudRevision,
+            },
+          }
+        : {}),
       device: { snapshot: device.snapshot, activeAt: record.deviceActiveAt },
       cloud: {
         snapshot: cloud.snapshot,
@@ -220,21 +258,44 @@ export class IndexedDbRecovery implements DeviceRecoveryAdapter {
     }
   }
 
-  /** Preserve both divergent branches in a dedicated owner-scoped recovery slot. */
+  /** Preserve protected conflict branches outside the rolling recovery copy slot. */
   async archiveConflict(
     ownerId: string,
     conflict: ReconciliationConflict,
   ): Promise<SessionWriteResult> {
     const deviceEncoded = encodeSession(conflict.device.snapshot)
     const cloudEncoded = encodeSession(conflict.cloud.snapshot)
-    if (deviceEncoded.status !== 'ok' || cloudEncoded.status !== 'ok') {
+    const retainedEncoded = conflict.retainedCloud && encodeSession(conflict.retainedCloud.snapshot)
+    const ownerEncoded = conflict.ownerRecovery && encodeSession(conflict.ownerRecovery.snapshot)
+    if (
+      deviceEncoded.status !== 'ok' ||
+      cloudEncoded.status !== 'ok' ||
+      (ownerEncoded && ownerEncoded.status !== 'ok') ||
+      (retainedEncoded && retainedEncoded.status !== 'ok')
+    ) {
       return { status: 'failed', reason: 'invalid-snapshot' }
     }
     try {
       const database = await this.database()
       const transaction = database.transaction(CONFLICTS, 'readwrite')
-      transaction.objectStore(CONFLICTS).put({
+      const store = transaction.objectStore(CONFLICTS)
+      const previous = await requested(store.get(ownerId) as IDBRequest<ConflictRecord | undefined>)
+      store.put({
         ownerId,
+        anonymous: conflict.anonymous,
+        unresolved: conflict.unresolved,
+        cloudEmpty: conflict.cloudEmpty,
+        ownerRecoverySerialized:
+          ownerEncoded?.status === 'ok'
+            ? ownerEncoded.serialized
+            : previous?.ownerRecoverySerialized,
+        ownerRecoveryActiveAt: conflict.ownerRecovery?.activeAt ?? previous?.ownerRecoveryActiveAt,
+        retainedCloudSerialized:
+          retainedEncoded?.status === 'ok'
+            ? retainedEncoded.serialized
+            : previous?.retainedCloudSerialized,
+        retainedCloudActiveAt: conflict.retainedCloud?.activeAt ?? previous?.retainedCloudActiveAt,
+        retainedCloudRevision: conflict.retainedCloud?.revision ?? previous?.retainedCloudRevision,
         deviceSerialized: deviceEncoded.serialized,
         cloudSerialized: cloudEncoded.serialized,
         deviceActiveAt: conflict.device.activeAt,

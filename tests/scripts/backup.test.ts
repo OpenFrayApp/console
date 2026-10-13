@@ -260,7 +260,7 @@ describe('encrypted database backup', () => {
     expect(dumpCalls[0]).toMatch(/--data-only .*--table=auth\.users .*--table=auth\.identities/)
     expect(dumpCalls[1]).toContain('--schema=public')
     expect(dumpCalls[1]).not.toContain('--no-privileges')
-    expect(dumpCalls[2]).toMatch(/--data-only .*--schema=account_mail/)
+    expect(dumpCalls[2]).toMatch(/--data-only .*--schema=account_mail .*--schema=newsletter/)
   })
 
   it('uploads immutable ciphertext, then applies retention only as a later stage', () => {

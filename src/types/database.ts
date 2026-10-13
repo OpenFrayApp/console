@@ -673,6 +673,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      cancel_newsletter_signup: {
+        Args: { p_lifecycle: string }
+        Returns: boolean
+      }
       capabilities_of: {
         Args: { who: string }
         Returns: {
@@ -707,10 +711,21 @@ export type Database = {
         }
         Returns: string
       }
+      consume_newsletter_signup_intent: {
+        Args: { p_attempt_proof: string; p_capability: string }
+        Returns: {
+          lifecycle: string
+          status: string
+        }[]
+      }
       delete_account: { Args: never; Returns: undefined }
       deny_capability: {
         Args: { cap: string; who: string; why?: string }
         Returns: boolean
+      }
+      discard_newsletter_signup_intent: {
+        Args: { p_attempt_proof: string; p_capability: string }
+        Returns: undefined
       }
       finish_account_mail: {
         Args: {
@@ -721,9 +736,34 @@ export type Database = {
         }
         Returns: boolean
       }
+      finish_newsletter_cleanup: {
+        Args: {
+          p_generation: string
+          p_operation: string
+          p_outcome: string
+          p_provider_id: string
+        }
+        Returns: boolean
+      }
+      finish_newsletter_signup: {
+        Args: {
+          p_generation: string
+          p_operation: string
+          p_outcome: string
+          p_provider_id?: string
+        }
+        Returns: boolean
+      }
       grant_role: {
         Args: { what: string; who: string; why?: string }
         Returns: boolean
+      }
+      issue_newsletter_signup_intent: {
+        Args: { p_attempt_hash: string }
+        Returns: {
+          capability: string
+          expires_at: string
+        }[]
       }
       live_view_topic_active: { Args: { want_topic: string }; Returns: boolean }
       live_view_topic_owned: { Args: { want_topic: string }; Returns: boolean }
@@ -735,9 +775,35 @@ export type Database = {
         Args: { extra?: Json; what: string; which: string }
         Returns: undefined
       }
+      pending_newsletter_cleanup: {
+        Args: { p_after?: string }
+        Returns: {
+          lifecycle: string
+        }[]
+      }
       prepare_account_mail: {
         Args: { p_claim: string; p_hash: string; p_id: string }
         Returns: boolean
+      }
+      prepare_newsletter_cleanup: {
+        Args: { p_lifecycle: string }
+        Returns: {
+          action: string
+          generation: string
+          operation: string
+          provider_id: string
+        }[]
+      }
+      prepare_newsletter_signup: {
+        Args: { p_lifecycle: string }
+        Returns: {
+          action: string
+          attempt: number
+          generation: string
+          operation: string
+          provider_id: string
+          recipient: string
+        }[]
       }
       preview_security_notice: {
         Args: {
@@ -749,6 +815,7 @@ export type Database = {
         }
         Returns: number
       }
+      prune_newsletter_signup_intents: { Args: never; Returns: undefined }
       published_share: {
         Args: { want: string }
         Returns: {

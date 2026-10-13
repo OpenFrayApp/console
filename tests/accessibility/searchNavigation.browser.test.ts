@@ -57,9 +57,8 @@ it.each([
 it.each([
   { destination: 'Settings', dialog: 'Settings', close: 'Done', signedIn: false },
   { destination: 'Player view', dialog: 'Player view', close: null, signedIn: false },
-  { destination: 'Profile', dialog: 'Account', close: 'Done', signedIn: true },
+  { destination: 'Profile', dialog: 'Account checkpoint', close: 'Keep playing', signedIn: true },
   { destination: 'Shared links', dialog: 'Shared links', close: 'Done', signedIn: true },
-  { destination: 'Sign in', dialog: 'Sign in', close: 'Back to the console', signedIn: false },
 ])(
   'contains and restores focus after navigating to $destination',
   async ({ destination, dialog, close, signedIn }) => {
@@ -78,7 +77,7 @@ it.each([
     const trigger = screen.getByRole('button', { name: 'Search references' })
     await userEvent.click(trigger)
     await userEvent.click(screen.getByRole('option', { name: destination }))
-    const panel = screen.getByRole('dialog', { name: dialog })
+    const panel = await screen.findByRole('dialog', { name: dialog })
     await expect.poll(() => panel.contains(document.activeElement)).toBe(true)
     const first = document.activeElement
     await userEvent.tab({ shift: true })

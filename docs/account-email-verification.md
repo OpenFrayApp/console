@@ -59,7 +59,7 @@ the isolated staging console URL.
 
 Before the synthetic retry and isolation checks, use an approved disposable account
 through a supported sign-in provider in the staging console. Confirm the welcome
-in its registered inbox, then delete that account through the console and confirm
+in its registered inbox, then delete that account through the site account page and confirm
 the deletion email. Explain the once-per-minute welcome cadence before starting;
 deletion confirmation is attempted directly after erasure.
 

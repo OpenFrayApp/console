@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Nicola Mustone
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { createConsoleClient } from '../auth/sessionTermination.ts'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -16,4 +17,4 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
  * database's RLS policies (every row's `owner_id` must equal `auth.uid()`),
  * never by hiding this key.
  */
-export const supabase: SupabaseClient | null = url && anonKey ? createClient(url, anonKey) : null
+export const supabase: SupabaseClient | null = createConsoleClient(url, anonKey)

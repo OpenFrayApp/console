@@ -33,6 +33,7 @@ export function RecoveryStatus({
   status,
   onRetry,
   onDownload,
+  onDownloadRetained,
   onSignIn,
   onTakeOver,
   onResolveCopies,
@@ -40,6 +41,7 @@ export function RecoveryStatus({
   status: LifecycleSaveStatus
   onRetry: () => void
   onDownload: () => void
+  onDownloadRetained?: () => void
   onSignIn?: () => void
   onTakeOver?: () => void
   onResolveCopies?: () => void
@@ -96,6 +98,18 @@ export function RecoveryStatus({
                 </button>
                 <button type="button" onClick={() => runAction(onDownload)} className={ACTION}>
                   Download recovery copy
+                </button>
+              </>
+            )}
+            {onDownloadRetained && (
+              <>
+                <p>A retained recovery copy has unverified ownership. It has not been opened.</p>
+                <button
+                  type="button"
+                  onClick={() => runAction(onDownloadRetained)}
+                  className={ACTION}
+                >
+                  Download retained recovery
                 </button>
               </>
             )}

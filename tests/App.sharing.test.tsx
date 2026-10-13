@@ -47,6 +47,7 @@ vi.mock('../src/state/encounterLifecycle.ts', async (importOriginal) => ({
     identify: mocks.identify,
     commit: async () => {},
     conflict: () => null,
+    retainedSessionDownload: () => null,
     ensureCloudEncounter: async () => 'encounter',
     writableEncounter: () => (mocks.writable ? { ownerId: 'owner', id: 'encounter' } : null),
   }),

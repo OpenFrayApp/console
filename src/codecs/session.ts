@@ -415,6 +415,7 @@ const currentEnvelope = v.object({
   kind: v.literal(SESSION_KIND),
   schemaVersion: v.literal(CURRENT_SESSION_SCHEMA_VERSION),
   payload: sessionSnapshot,
+  recoveryOwnerId: v.optional(v.nullable(v.pipe(v.string(), v.minLength(1)))),
 })
 const oldDieGroup = v.strictObject({
   sides: number,
@@ -540,7 +541,13 @@ type CompatibleRollResult = v.InferOutput<typeof compatibleRollResult>
 type LegacyGameLogEntryV2 = v.InferOutput<typeof legacyGameLogEntryV2>
 
 export type SessionDecodeResult =
-  | { status: 'ok'; snapshot: SessionSnapshot; canonical: string; migratedFrom?: 1 | 2 }
+  | {
+      status: 'ok'
+      snapshot: SessionSnapshot
+      canonical: string
+      migratedFrom?: 1 | 2
+      recoveryOwnerId?: string | null
+    }
   | { status: 'unsupported'; schemaVersion?: number }
   | { status: 'invalid'; reason: 'too-large' | 'json' | 'envelope' | 'payload' | 'semantic' }
 
@@ -720,11 +727,15 @@ function migrateV1ToV2(
 }
 
 /** Encode and revalidate the one canonical current envelope. */
-function canonical(snapshot: ParsedSessionSnapshot): string | null {
+function canonical(
+  snapshot: ParsedSessionSnapshot,
+  recoveryOwnerId?: string | null,
+): string | null {
   const envelope = {
     kind: SESSION_KIND,
     schemaVersion: CURRENT_SESSION_SCHEMA_VERSION,
     payload: snapshot,
+    ...(recoveryOwnerId === undefined ? {} : { recoveryOwnerId }),
   }
   const output = v.safeParse(currentEnvelope, envelope)
   if (!output.success) return null
@@ -734,14 +745,19 @@ function canonical(snapshot: ParsedSessionSnapshot): string | null {
 }
 
 /** Finish one decoded payload only after semantic and canonical-output validation. */
-function finishDecoded(snapshot: ParsedSessionSnapshot, migratedFrom?: 1 | 2): SessionDecodeResult {
+function finishDecoded(
+  snapshot: ParsedSessionSnapshot,
+  migratedFrom?: 1 | 2,
+  recoveryOwnerId?: string | null,
+): SessionDecodeResult {
   const repaired = repairSnapshot(snapshot)
   if (!isSemanticallyValid(repaired)) return { status: 'invalid', reason: 'semantic' }
-  const serialized = canonical(repaired)
+  const serialized = canonical(repaired, recoveryOwnerId)
   if (!serialized) return { status: 'invalid', reason: 'payload' }
   return {
     status: 'ok',
     snapshot: repaired as SessionSnapshot,
+    ...(recoveryOwnerId === undefined ? {} : { recoveryOwnerId }),
     canonical: serialized,
     ...(migratedFrom === undefined ? {} : { migratedFrom }),
   }
@@ -769,7 +785,7 @@ export function decodeSession(serialized: string): SessionDecodeResult {
     }
     const parsed = v.safeParse(currentEnvelope, input)
     if (!parsed.success) return { status: 'invalid', reason: 'payload' }
-    return finishDecoded(parsed.output.payload)
+    return finishDecoded(parsed.output.payload, undefined, parsed.output.recoveryOwnerId)
   }
 
   if (record.version === 2) {
@@ -792,12 +808,15 @@ export function decodeSession(serialized: string): SessionDecodeResult {
 }
 
 /** Validate and encode one in-memory snapshot without coercing gameplay data. */
-export function encodeSession(snapshot: unknown): SessionEncodeResult {
+export function encodeSession(
+  snapshot: unknown,
+  recoveryOwnerId?: string | null,
+): SessionEncodeResult {
   const parsed = v.safeParse(sessionSnapshot, snapshot)
   if (!parsed.success) return { status: 'invalid', reason: 'payload' }
   const repaired = repairSnapshot(parsed.output)
   if (!isSemanticallyValid(repaired)) return { status: 'invalid', reason: 'semantic' }
-  const serialized = canonical(repaired)
+  const serialized = canonical(repaired, recoveryOwnerId)
   if (!serialized) return { status: 'invalid', reason: 'payload' }
   if (byteLength(serialized) > MAX_SESSION_BYTES) return { status: 'invalid', reason: 'too-large' }
   return { status: 'ok', serialized }
