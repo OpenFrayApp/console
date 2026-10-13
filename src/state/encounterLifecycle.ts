@@ -339,7 +339,10 @@ export class EncounterLifecycle {
     const snapshot = this.latestSnapshot
     const write = this.commit(snapshot)
     const generation = this.commitGeneration
-    if ((await write).status !== 'saved') return false
+    // Legacy session bytes remain protected; the separate handoff is the departure checkpoint.
+    await write
+    if (generation !== this.commitGeneration || identityGeneration !== this.identityGeneration)
+      return false
     const result = this.adapters.authRecovery.save(snapshot)
     if (result.status !== 'saved') {
       this.publishDeviceFailure(result)

@@ -13,7 +13,7 @@ import {
   loadAuthRecoveryConflict,
 } from '../src/state/authRecovery.ts'
 import { saveSession } from '../src/state/persistence.ts'
-import { decodeSession } from '../src/codecs/session.ts'
+import { decodeSession, encodeSession } from '../src/codecs/session.ts'
 import { AuthContext } from '../src/auth/useAuth.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
 import { IndexedDbRecovery } from '../src/state/indexedDbRecovery.ts'
@@ -32,19 +32,20 @@ afterEach(() => {
   sessionStorage.clear()
   localStorage.clear()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   navigation.leave.mockReset()
   navigation.account.mockReset()
 })
 
 /** Start an anonymous board without the newcomer invitation. */
-async function startBoard() {
+async function startBoard(status = 'Sign in to resume saving') {
   saveSettings({ tutorialSuppression: 'dismissed' })
   render(
     <AuthContext.Provider value={authState()}>
       <App />
     </AuthContext.Provider>,
   )
-  await screen.findByRole('button', { name: 'Sign in to resume saving' })
+  await screen.findByRole('button', { name: status })
   fireEvent.click(screen.getByRole('button', { name: 'Quick add' }))
   fireEvent.change(screen.getByLabelText('Quick add name'), { target: { value: 'Latest guard' } })
   fireEvent.change(screen.getByLabelText('Max HP'), { target: { value: '10' } })
@@ -61,6 +62,17 @@ it('checkpoints the latest board before navigating to site sign-in in the same t
   expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
 })
 
+it('can sign in with a verified separate handoff while preserving unknown legacy recovery', async () => {
+  const legacy = encodeSession(recoverySnapshot('unverified-legacy'))
+  if (legacy.status !== 'ok') throw new Error('Invalid fixture')
+  sessionStorage.setItem('openfray:session', legacy.serialized)
+  await startBoard('Save failed')
+  fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
+  await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
+  expect(loadAuthRecovery().snapshot?.encounter.combatants.map(nameOf)).toEqual(['Latest guard'])
+  expect(sessionStorage.getItem('openfray:session')).toBe(legacy.serialized)
+})
+
 it('stays on the working board when a checkpoint fails and offers retry and download', async () => {
   await startBoard()
   const write = Storage.prototype.setItem
@@ -73,7 +85,26 @@ it('stays on the working board when a checkpoint fails and offers retry and down
   expect(navigation.leave).not.toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
   expect(decodeSession(sessionStorage.getItem('openfray:session')!)).toMatchObject({ status: 'ok' })
-  expect(screen.getByRole('button', { name: 'Download recovery copy' })).toBeInTheDocument()
+  const dialog = screen.getByRole('dialog', { name: 'Sign-in checkpoint' })
+  expect(dialog.closest('[inert]')).toBeNull()
+  const download = vi.fn(() => 'blob:checkpoint')
+  const revoke = vi.fn()
+  vi.stubGlobal(
+    'URL',
+    class extends URL {
+      static createObjectURL = download
+      static revokeObjectURL = revoke
+    },
+  )
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  fireEvent.click(screen.getByRole('button', { name: 'Download recovery copy' }))
+  expect(download).toHaveBeenCalledOnce()
+  expect(revoke).toHaveBeenCalledWith('blob:checkpoint')
+  fireEvent.click(screen.getByRole('button', { name: 'Keep playing' }))
+  expect(screen.queryByRole('dialog', { name: 'Sign-in checkpoint' })).toBeNull()
+  fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0])
+  await screen.findByRole('dialog', { name: 'Sign-in checkpoint' })
+  vi.unstubAllGlobals()
   vi.restoreAllMocks()
   fireEvent.click(screen.getByRole('button', { name: 'Retry sign-in' }))
   await waitFor(() => expect(navigation.leave).toHaveBeenCalledOnce())
