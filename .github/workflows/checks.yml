@@ -15,7 +15,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  checks:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Node tests (one worker per shard)
+        run: npx --no-install vitest run --maxWorkers=1 --shard=${{ matrix.shard }}/2 --reporter=default --reporter=json --outputFile=.artifacts/ci/console-node.json
+      - name: Upload shard durations and inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: console-node-shard-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: .artifacts/ci/console-node.json
+          include-hidden-files: true
+          retention-days: 14
+
+  validation:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -30,6 +57,17 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npx --no-install playwright install --with-deps chromium
-      - run: npx --no-install vitest run --maxWorkers=1
       - run: npm run test:browser
       - run: npm run build
+
+  checks:
+    needs: [node-tests, validation]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require every check to pass
+        env:
+          NODE_TEST_RESULT: ${{ needs.node-tests.result }}
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+        run: test "$NODE_TEST_RESULT" = success && test "$VALIDATION_RESULT" = success
