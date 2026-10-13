@@ -42,6 +42,7 @@ describe('CombatantRow', () => {
     expect(row).toHaveClass('bg-indigo-50', 'ring-2')
     rerender(<CombatantRow combatant={monster({ side: 'friend' })} trackerColors={trackerColors} />)
     expect(row).toHaveStyle({ borderLeftColor: '#abcdef' })
+    expect(row).not.toHaveAttribute('aria-current')
     rerender(
       <CombatantRow combatant={pc()} trackerColors={{ ...trackerColors, ally: '#654321' }} />,
     )
@@ -50,17 +51,18 @@ describe('CombatantRow', () => {
     expect((row as HTMLElement).style.borderLeftColor).toBe('')
   })
 
-  it('shows the name, HP, and AC', () => {
-    render(<CombatantRow combatant={monster()} />)
+  it('shows the monster name, current/max HP, and AC', () => {
+    render(<CombatantRow combatant={monster({ hp: { current: 3, max: 7, temp: 0 } })} />)
     expect(screen.getByText('Goblin (A)')).toBeInTheDocument()
-    expect(screen.getByText('7')).toBeInTheDocument()
-    expect(screen.getByText('/7')).toBeInTheDocument()
+    expect(screen.getByText('/7').parentElement).toHaveTextContent(/^3\/7$/)
     expect(screen.getByText('AC 15')).toBeInTheDocument()
   })
 
-  it('uses the PC name and AC', () => {
-    render(<CombatantRow combatant={pc()} />)
+  it('shows the PC name, current/max HP, temporary HP, and AC', () => {
+    render(<CombatantRow combatant={pc({ hp: { current: 20, max: 38, temp: 5 } })} />)
     expect(screen.getByText('Thalia')).toBeInTheDocument()
+    expect(screen.getByText('/38').parentElement).toHaveTextContent(/^20\/38$/)
+    expect(screen.getByText('+5')).toBeInTheDocument()
     expect(screen.getByText('AC 16')).toBeInTheDocument()
   })
 
@@ -104,11 +106,6 @@ describe('CombatantRow', () => {
     expect(screen.getByText('Critical')).toBeInTheDocument()
   })
 
-  it('shows temporary HP', () => {
-    render(<CombatantRow combatant={pc({ hp: { current: 20, max: 38, temp: 5 } })} />)
-    expect(screen.getByText('+5')).toBeInTheDocument()
-  })
-
   it('shows a concentration C badge with the spell in its tooltip', () => {
     render(
       <CombatantRow
@@ -116,11 +113,6 @@ describe('CombatantRow', () => {
       />,
     )
     expect(screen.getByTitle('Concentrating: Hold Person')).toBeInTheDocument()
-  })
-
-  it('marks the active combatant with aria-current', () => {
-    const { container } = render(<CombatantRow combatant={pc()} active />)
-    expect(container.querySelector('[aria-current="true"]')).not.toBeNull()
   })
 
   it('removes the combatant via the hover X when onRemove is provided', () => {

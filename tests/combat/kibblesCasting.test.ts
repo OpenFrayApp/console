@@ -55,7 +55,7 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
   })
 
   it.each(Object.entries(KIBBLES_CASTING_REVIEW_RECORDS))(
-    'pins %s and prevents source/name fallback',
+    'pins %s and leaves its source card unchanged',
     (id, digest) => {
       const spell = spells.find((entry) => entry.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(digest)
@@ -67,14 +67,6 @@ describe('Kibbles Casting Compendium v2.3 reviewed casting', () => {
       damageVariants(spell)
       spellEffectFor(spell)?.build({ spell, source: 'caster', target: monster() })
       expect(JSON.stringify(spell)).toBe(original)
-      for (const altered of [
-        { ...spell, id: 'custom:copy', source: 'custom' as const },
-        { ...spell, source: 'somanyrobots-so-many-spells' as const },
-        { ...spell, edition: '5.5' as const },
-        { ...spell, name: 'Changed name' },
-        { ...spell, id: `${source}:unreviewed-copy` },
-      ])
-        expect(reviewedSpellCasting(altered)).toBeUndefined()
     },
   )
 

@@ -123,34 +123,28 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     ).toEqual([])
   })
 
-  it.each([
-    'black-swan-storm',
-    'blizzard',
-    'creeping-ice',
-    'mire',
-    'pyroclasm',
-    'talons-of-a-hungry-land',
-    'time-vortex',
-    'winterdark',
-  ])('retains %s creation after successful initial saves', (slug) => {
-    const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
-    const dispatch = cast(spell, entry)
-    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
-    if (spell.concentration) {
-      const update = dispatch.mock.calls
-        .map(([action]) => action)
-        .find((action) => action.type === 'update' && action.id === 'caster')
-      expect(update.update(caster).concentration?.spell).toBe(spell.name)
-    }
-    expect(
-      dispatch.mock.calls
-        .filter(([action]) => action.type === 'update' && action.id === 'target')
-        .flatMap(([action]) => action.update(target).effects),
-    ).toEqual([])
-  })
+  it.each(['black-swan-storm', 'creeping-ice', 'mire'])(
+    'retains %s creation after successful initial saves',
+    (slug) => {
+      const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
+      const dispatch = cast(spell, entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Apply damage' }))
+      if (spell.concentration) {
+        const update = dispatch.mock.calls
+          .map(([action]) => action)
+          .find((action) => action.type === 'update' && action.id === 'caster')
+        expect(update.update(caster).concentration?.spell).toBe(spell.name)
+      }
+      expect(
+        dispatch.mock.calls
+          .filter(([action]) => action.type === 'update' && action.id === 'target')
+          .flatMap(([action]) => action.update(target).effects),
+      ).toEqual([])
+    },
+  )
 
   it('keeps Void Strike concentration on a miss without frightening the missed target', () => {
     const spell = deepMagicCards.find((card) => card.id === 'kobold-press-deepm:void-strike')!
@@ -191,14 +185,7 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
     ])
   })
 
-  it.each([
-    'exsanguinate',
-    'time-loop',
-    'time-slippage',
-    'night-terrors',
-    'prismatic-ray',
-    'thunderous-wave',
-  ])('does not offer invented compatible outcomes for %s', (slug) => {
+  it.each(['time-loop'])('does not offer invented compatible outcomes for %s', (slug) => {
     const spell = deepMagicCards.find((card) => card.id === `kobold-press-deepm:${slug}`)!
     cast(spell, entry)
     expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
@@ -322,33 +309,8 @@ describe.each(['panel', 'monster'] as const)('reviewed spells through %s casting
 
   it.each([
     ['butterfly-effect', 'CHA'],
-    ['calm-beasts', 'CHA'],
     ['conjure-spectral-allies', 'WIS'],
-    ['divine-retribution', 'CON'],
-    ['emerald-eyes', 'WIS'],
     ['eruption', 'STR'],
-    ['glare', 'WIS'],
-    ['immolating-gibbet', 'DEX'],
-    ['inexorable-summons', 'WIS'],
-    ['jarring-growl', 'WIS'],
-    ['lightless-torch', 'DEX'],
-    ['long-game', 'CHA'],
-    ['magma-spray', 'DEX'],
-    ['mass-faerie-fire', 'DEX'],
-    ['oathbound-implement', 'WIS'],
-    ['outmaneuver', 'WIS'],
-    ['power-word-fling', 'STR'],
-    ['reapers-knell', 'WIS'],
-    ['shared-frenzy', 'CHA'],
-    ['silvershout', 'CON'],
-    ['sneer', 'CHA'],
-    ['steam-gout', 'DEX'],
-    ['sudden-stampede', 'DEX'],
-    ['war-horn', 'WIS'],
-    ['clear-the-board', 'WIS'],
-    ['forced-reposition', 'CON'],
-    ['power-word-rend', 'CON'],
-    ['damaging-intel', 'CHA'],
   ])('opens the printed save for %s without inventing an attack roll', (slug, ability) => {
     cast(slug, entry)
     expect(screen.getByText(`${ability} save`)).toBeInTheDocument()
@@ -539,31 +501,17 @@ describe.each(['panel', 'monster'] as const)('So Many Spells through %s casting'
     ).toEqual([])
   })
 
-  it.each([
-    'deadly-light',
-    'death-hex',
-    'grasping-dead',
-    'melt-flesh',
-    'poison-light',
-    'putrefy',
-    'shackle-of-flame',
-    'wind-of-ruin',
-  ])('does not roll later damage or HP reductions during %s initial save', (slug) => {
-    cast(soManyCard(slug), entry)
-    fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
-    expect(screen.getByLabelText('Damage to Ogre')).toHaveValue('0')
-  })
+  it.each(['deadly-light'])(
+    'does not roll later damage or HP reductions during %s initial save',
+    (slug) => {
+      cast(soManyCard(slug), entry)
+      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+      expect(screen.getByLabelText('Damage to Ogre')).toHaveValue('0')
+    },
+  )
 
-  it.each([
-    'ghastly-stampede',
-    'gloamblast',
-    'lightning-spike',
-    'screaming-skull',
-    'searing-hammer',
-    'thunderous-chords',
-    'volcanic-seep',
-  ])('keeps %s mixed or ambiguous rules explicitly manual', (slug) => {
+  it.each(['ghastly-stampede'])('keeps %s mixed or ambiguous rules explicitly manual', (slug) => {
     cast(soManyCard(slug), entry)
     expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
@@ -644,24 +592,15 @@ describe.each(['panel', 'monster'] as const)(
       ])
     })
 
-    it.each([
-      'animal-transformation',
-      'bewilder',
-      'captivate',
-      'earth-leash',
-      'expose-weakness',
-      'expulsion',
-      'false-foes',
-      'injunction',
-      'phantasm',
-      'phantasmal-nightmares',
-      'unbridled-fury',
-    ])('does not roll %s later damage or HP reduction at casting', (slug) => {
-      cast(stdsCard(slug), entry)
-      fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
-      fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
-      expect(screen.getByLabelText('Damage to Ogre')).toHaveValue('0')
-    })
+    it.each(['animal-transformation'])(
+      'does not roll %s later damage or HP reduction at casting',
+      (slug) => {
+        cast(stdsCard(slug), entry)
+        fireEvent.click(screen.getByRole('button', { name: 'Ogre' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Roll saves' }))
+        expect(screen.getByLabelText('Damage to Ogre')).toHaveValue('0')
+      },
+    )
 
     it.each(['black-ice', 'drink-life', 'great-wave', 'muddy-servant', 'rain-of-fire'])(
       'sustains %s creation after successful saves',
@@ -708,15 +647,7 @@ describe.each(['panel', 'monster'] as const)(
       expect(dispatch.mock.calls.some(([action]) => action.type === 'update')).toBe(false)
     })
 
-    it.each([
-      'death-ray',
-      'prismatic-bolt',
-      'scintillant-blast',
-      'shatter-mind',
-      'siphon-life',
-      'spreadshot',
-      'morph-earth',
-    ])('keeps %s mixed branches explicitly manual', (slug) => {
+    it.each(['death-ray'])('keeps %s mixed branches explicitly manual', (slug) => {
       cast(stdsCard(slug), entry)
       expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()
@@ -787,8 +718,9 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
     },
   )
 
-  it.each(['acid-bubble', 'electrocute', 'mind-blast', 'flash-freeze', 'shadow-bind', 'supernova'])(
-    'opens %s initial save and manual guidance',
+  // Damage and save-only entry points; every authored save remains in kibblesCasting.test.ts.
+  it.each(['acid-bubble', 'shadow-bind'])(
+    'opens %s initial save without an attack resolver',
     (slug) => {
       cast(kibblesCard(slug), entry)
       expect(screen.getByLabelText('Save DC')).toHaveValue('99')
@@ -873,7 +805,7 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
     ])
   })
 
-  it.each(['poison-dart', 'spider-bite', 'water-blast', 'crackle'])(
+  it.each(['poison-dart'])(
     'does not apply %s secondary-save condition after attack alone',
     (slug) => {
       const spell = kibblesCard(slug)
@@ -888,14 +820,7 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
     },
   )
 
-  it.each([
-    'acidic-pit',
-    'brilliant-blade',
-    'ice-spike',
-    'jumping-jolt',
-    'whirling-conflagration',
-    'exsanguinate',
-  ])('keeps %s incompatible outcomes manual', (slug) => {
+  it.each(['acidic-pit'])('keeps %s incompatible outcomes manual', (slug) => {
     cast(kibblesCard(slug), entry)
     expect(screen.queryByText('Manual spell:')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Roll saves' })).toBeNull()

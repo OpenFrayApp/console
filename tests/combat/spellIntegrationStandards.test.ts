@@ -47,16 +47,24 @@ describe('new libraries follow the existing board-effect boundary', () => {
     },
   )
 
-  it.each(spells)('keeps $id creature reminders concise and free of GM instructions', (spell) => {
-    for (const effect of effectFor(spell.id)) {
-      if (effect.icon === 'reminder') {
-        expect(effect.note!.length).toBeLessThanOrEqual(80)
-        expect(effect.note).not.toMatch(/manually|GM resolution|consult the source|track printed/i)
+  // Cards without a reviewed effect had no assertions in this check.
+  it.each(spells.filter((spell) => reviewedSpellCasting(spell)?.effect))(
+    'keeps $id creature reminders concise and free of GM instructions',
+    (spell) => {
+      const effects = effectFor(spell.id)
+      expect(effects.length).toBeGreaterThan(0)
+      for (const effect of effects) {
+        if (effect.icon === 'reminder') {
+          expect(effect.note!.length).toBeLessThanOrEqual(80)
+          expect(effect.note).not.toMatch(
+            /manually|GM resolution|consult the source|track printed/i,
+          )
+        }
+        if (effect.icon === 'condition') expect(effect.note).toBeUndefined()
+        expect(effect.durationNote ?? '').not.toMatch(/^instantaneous$/i)
       }
-      if (effect.icon === 'condition') expect(effect.note).toBeUndefined()
-      expect(effect.durationNote ?? '').not.toMatch(/^instantaneous$/i)
-    }
-  })
+    },
+  )
 
   it.each([
     'kibblestasty-casting-compendium-v2.3:animate-shadow',

@@ -366,12 +366,8 @@ describe('So Many Spells reviewed casting', () => {
     'gravity-slam',
     'irresistible-melody',
     'wind-of-ruin',
-  ])('builds a fresh removable bundle for %s', (slug) => {
-    const a = effects(slug)
-    const b = effects(slug)
-    expect(a[0].bundle?.id).toBeTruthy()
-    expect(a.every((effect) => effect.bundle?.id === a[0].bundle?.id)).toBe(true)
-    expect(a[0].bundle?.id).not.toBe(b[0].bundle?.id)
+  ])('builds multipart consequences for %s', (slug) => {
+    expect(effects(slug).length).toBeGreaterThanOrEqual(2)
   })
 
   it('keeps Sonic Blast and Soul Leech distinct character and two-slot scaling', () => {
@@ -491,6 +487,18 @@ describe('So Many Spells reviewed casting', () => {
       expect(spellAction(forged, {})).toBeNull()
       expect(spellEffectFor(forged)).toBeNull()
     }
+  })
+
+  it.each([
+    'ghastly-stampede',
+    'gloamblast',
+    'lightning-spike',
+    'screaming-skull',
+    'searing-hammer',
+    'thunderous-chords',
+    'volcanic-seep',
+  ])('keeps %s ambiguous resolution off the effect chooser', (slug) => {
+    expect(spellEffectFor(card(slug))).toBeNull()
   })
 
   it.each([

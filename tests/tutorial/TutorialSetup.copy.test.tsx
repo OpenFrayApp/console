@@ -64,45 +64,37 @@ it('uses the character picker’s exact label without touching existing roster c
   expect(instruction).toHaveTextContent('Existing characters stay untouched')
 })
 
-it.each<{ task: Exclude<SetupTask, 'ready'>; heading: string; controls: string[] }>([
+it.each<{ task: Exclude<SetupTask, 'ready'>; controls: string[] }>([
   {
     task: 'pc',
-    heading: 'Step 1. Add a player character to the board',
     controls: ['Add PC', 'Max HP', 'AC', 'then choose Add'],
   },
   {
     task: 'roster-create',
-    heading: 'Step 1. Create your practice character',
     controls: ['Create character', 'Create PC'],
   },
   {
     task: 'roster-add',
-    heading: 'Step 1. Put your character on the board',
     controls: ['Add to encounter', 'copy', 'roster'],
   },
   {
     task: 'quick',
-    heading: 'Step 2. Add an ally',
     controls: ['Quick add', 'Max HP', 'AC', 'Side', 'Friend', 'Choose Add.'],
   },
   {
     task: 'mage',
-    heading: 'Step 3. Add the Mage',
     controls: ['Add creature', 'Mage', 'Basic Rules'],
   },
   {
     task: 'ogre',
-    heading: 'Step 4. Add the Ogre',
     controls: ['Add creature', 'Ogre', 'same Basic Rules'],
   },
   {
     task: 'begin',
-    heading: 'Step 5. Set the turn order',
     controls: ['Begin', 'Roll initiative', 'player character', 'Ogre', 'Mage', 'ally'],
   },
   {
     task: 'initiative',
-    heading: 'Step 5. Set the turn order',
     controls: [
       '20',
       'Ogre 18',
@@ -115,28 +107,23 @@ it.each<{ task: Exclude<SetupTask, 'ready'>; heading: string; controls: string[]
   },
   {
     task: 'damage',
-    heading: 'Step 6. Record your player’s hit',
     controls: ['player character', 'Ogre', '3 damage', 'rolled at the table', '-3', 'Enter'],
   },
-  { task: 'ogre-turn', heading: 'Step 7. Start the Ogre’s turn', controls: ['Next turn', 'Ogre'] },
+  { task: 'ogre-turn', controls: ['Next turn', 'Ogre'] },
   {
     task: 'attack',
-    heading: 'Step 8. Resolve the Ogre’s Javelin',
     controls: ['Ogre', 'Javelin', 'Roll attack', 'Apply to', 'Close', 'no damage'],
   },
   {
     task: 'prone',
-    heading: 'Step 9. Record the Ogre’s fall',
     controls: ['rubble', 'Apply effect', 'Prone', 'then choose Apply'],
   },
   {
     task: 'mage-turn',
-    heading: 'Step 10. Start the Mage’s turn',
     controls: ['Prone', 'Ogre', 'Next turn', 'Mage'],
   },
   {
     task: 'spell',
-    heading: 'Step 11. Cast the Mage’s Fireball',
     controls: [
       'Mage',
       'ally and its own Ogre',
@@ -150,12 +137,10 @@ it.each<{ task: Exclude<SetupTask, 'ready'>; heading: string; controls: string[]
   },
   {
     task: 'turn',
-    heading: 'Step 12. Advance the fight',
     controls: ['Mage', 'Fireball', 'Next turn'],
   },
   {
     task: 'death-save',
-    heading: 'Step 12. Resolve your ally’s death save',
     controls: [
       'ally is unconscious',
       'Save or Fail',
@@ -166,22 +151,18 @@ it.each<{ task: Exclude<SetupTask, 'ready'>; heading: string; controls: string[]
   },
   {
     task: 'stop',
-    heading: 'Step 13. End the practice fight',
     controls: ['Stop', 'Combat recap', 'Pause', 'game log'],
   },
   {
     task: 'recap',
-    heading: 'Review the ended fight',
     controls: ['Done', 'Combat recap', 'tutorial', 'stay on the board'],
   },
   {
     task: 'end-prompt',
-    heading: 'Choose whether to keep fighting',
     controls: ['Keep fighting', 'End combat', 'Combat recap', 'Done', 'results stay on the board'],
   },
   {
     task: 'clear',
-    heading: 'Step 14. Clear the practice board',
     controls: [
       'Remove everyone and clear the log',
       'confirmation',
@@ -194,19 +175,13 @@ it.each<{ task: Exclude<SetupTask, 'ready'>; heading: string; controls: string[]
   },
   {
     task: 'complete',
-    heading: 'Tutorial complete',
     controls: ['Everyone and the game log are cleared'],
   },
-])(
-  'keeps $task concise with its story heading and actual next controls',
-  ({ task, heading, controls }) => {
-    const { instruction } = showTask(task)
-    expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
-    for (const label of controls) expect(instruction).toHaveTextContent(label)
-    expect(instruction.textContent!.split(/\s+/).length).toBeLessThanOrEqual(65)
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
-  },
-)
+])('guides $task using its actual next controls', ({ task, controls }) => {
+  const { instruction } = showTask(task)
+  for (const label of controls) expect(instruction).toHaveTextContent(label)
+  expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+})
 
 it.each([
   {

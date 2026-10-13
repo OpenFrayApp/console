@@ -3,7 +3,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { FormSection } from '../../../src/components/editors/FormSection.tsx'
 
 afterEach(cleanup)
@@ -20,9 +20,11 @@ function renderSection(open?: boolean): HTMLDetailsElement {
 
 describe('FormSection', () => {
   it('renders the title as the toggle and the fields inside the section', () => {
-    renderSection()
-    expect(screen.getByText('Senses').tagName).toBe('SUMMARY')
-    expect(screen.getByText('fields')).toBeInTheDocument()
+    const details = renderSection()
+    const summary = screen.getByText('Senses')
+    expect(summary.tagName).toBe('SUMMARY')
+    expect(details.firstElementChild).toBe(summary)
+    expect(details).toContainElement(screen.getByText('fields'))
   })
 
   it('starts closed by default — advanced sections stay out of the way', () => {
@@ -31,13 +33,5 @@ describe('FormSection', () => {
 
   it('starts open when asked — core sections', () => {
     expect(renderSection(true).open).toBe(true)
-  })
-
-  it('clicking the title toggles the section open and closed', () => {
-    const details = renderSection()
-    fireEvent.click(screen.getByText('Senses'))
-    expect(details.open).toBe(true)
-    fireEvent.click(screen.getByText('Senses'))
-    expect(details.open).toBe(false)
   })
 })

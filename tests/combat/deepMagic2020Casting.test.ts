@@ -43,23 +43,11 @@ describe('Deep Magic 2020 completed casting review', () => {
     expect(
       reviewed.filter((spell) => !castingMechanics(spell) && spellEffectFor(spell)),
     ).toHaveLength(137)
-    for (const spell of reviewed.filter((spell) => !castingMechanics(spell))) {
-      expect(REFERENCE_ONLY_SPELLS[spell.id]).toBeUndefined()
-      expect(
-        spellAction(
-          {
-            ...spell,
-            mechanics: { attackRoll: true, damage: [{ formula: '99d6', type: 'fire' }] },
-          },
-          {},
-        ),
-      ).toBeNull()
-    }
     expect(Object.keys(REFERENCE_ONLY_SPELLS)).toEqual([])
   })
 
   it.each(Object.entries(DEEP_MAGIC_2020_REVIEW_RECORDS))(
-    'pins %s without fallback or mutation',
+    'pins %s and leaves its source card unchanged',
     (id, hash) => {
       const spell = spells.find((entry) => entry.id === id)!
       expect(createHash('sha256').update(JSON.stringify(spell)).digest('hex')).toBe(hash)
@@ -69,13 +57,6 @@ describe('Deep Magic 2020 completed casting review', () => {
       spellAction(spell, { saveDc: 17, toHit: 8 })
       spellEffectFor(spell)?.build({ spell, source: 'caster', target: monster() })
       expect(JSON.stringify(spell)).toBe(original)
-      for (const altered of [
-        { ...spell, source: 'custom' as const },
-        { ...spell, edition: '5.5' as const },
-        { ...spell, name: 'Changed name' },
-        { ...spell, id: 'custom:copy' },
-      ])
-        expect(reviewedSpellCasting(altered)).toBeUndefined()
     },
   )
 
@@ -84,11 +65,6 @@ describe('Deep Magic 2020 completed casting review', () => {
     (id, verdict) => {
       const spell = spells.find((entry) => entry.id === id)!
       const profile = reviewedSpellCasting(spell)!
-      const forged = {
-        ...spell,
-        mechanics: { attackRoll: true, damage: [{ formula: '99d6', type: 'fire' as const }] },
-      }
-      expect(castingMechanics(forged)).toEqual(castingMechanics(spell))
       expect(profile.attackKind).toBe(verdict.attackKind)
       if (verdict.mechanics) {
         expect(profile.mechanics).toMatchObject(verdict.mechanics)
@@ -96,13 +72,40 @@ describe('Deep Magic 2020 completed casting review', () => {
         if (verdict.kind === 'a') expect(profile.mechanics?.save).toBeUndefined()
         else expect(profile.mechanics?.attackRoll).toBeUndefined()
       } else {
-        expect(spellAction(forged, {})).toBeNull()
+        expect(spellAction(spell, {})).toBeNull()
         expect(profile.mechanics).toBeUndefined()
       }
       if (verdict.kind === 'm') expect(profile.effect).toBeUndefined()
       if (verdict.kind === 'r') expect(profile.effect).toBeDefined()
     },
   )
+
+  it.each(['ale-dritch-blast', 'abhorrent-apparition', 'alchemical-form', 'acid-gate'])(
+    'ignores forged mechanics for reviewed %s attack, save, effect-only, and manual profiles',
+    (slug) => {
+      const spell = card(slug)
+      const forged = {
+        ...spell,
+        mechanics: { attackRoll: true, damage: [{ formula: '99d6', type: 'fire' as const }] },
+      }
+      expect(castingMechanics(forged)).toEqual(castingMechanics(spell))
+      expect(spellAction(forged, {})).toEqual(spellAction(spell, {}))
+    },
+  )
+
+  it.each([
+    'black-swan-storm',
+    'blizzard',
+    'creeping-ice',
+    'mire',
+    'pyroclasm',
+    'talons-of-a-hungry-land',
+    'time-vortex',
+    'winterdark',
+  ])('preserves %s area after initial saves without a creature effect', (slug) => {
+    expect(reviewedSpellCasting(card(slug))?.persistsAfterSave).toBe(true)
+    expect(spellEffectFor(card(slug))).toBeNull()
+  })
 
   it('keeps printed exceptional scaling and chosen components manual', () => {
     expect(
