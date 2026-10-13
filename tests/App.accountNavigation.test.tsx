@@ -107,6 +107,20 @@ function openAccount() {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
 }
 
+it('removes the unsafe-navigation warning synchronously after verifying Profile departure', async () => {
+  await startOwnerBoard()
+  addGuard()
+  let warned: boolean | undefined
+  navigation.account.mockImplementationOnce(() => {
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    warned = event.defaultPrevented
+  })
+  openAccount()
+  await waitFor(() => expect(navigation.account).toHaveBeenCalledOnce())
+  expect(warned).toBe(false)
+})
+
 it('drains the latest committed cloud write before account departure and restores it on return', async () => {
   const board = await startOwnerBoard()
   addGuard()
@@ -158,6 +172,11 @@ it.each(['recovery readback', 'cloud drain'] as const)(
       failure === 'cloud drain' ? 'cloud copy could not be confirmed' : 'could not be verified',
     )
     expect(navigation.account).not.toHaveBeenCalled()
+    if (failure === 'recovery readback') {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(true)
+    }
     expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Download recovery copy' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry account' }))

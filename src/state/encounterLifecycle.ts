@@ -294,10 +294,13 @@ export class EncounterLifecycle {
     const write = this.commit(snapshot)
     const generation = this.commitGeneration
     try {
-      if ((await write).status !== 'saved') return false
+      if ((await write).status !== 'saved')
+        return (
+          !ownerId && this.checkpointAnonymousRecovery(snapshot, generation, identityGeneration)
+        )
       const recovered = ownerId
         ? (await this.adapters.device.load(ownerId))?.snapshot
-        : this.adapters.session.load().snapshot
+        : (this.adapters.authRecovery.load().snapshot ?? this.adapters.session.load().snapshot)
       if (!recovered) return false
       const actual = encodeSession(recovered)
       return (
@@ -343,6 +346,22 @@ export class EncounterLifecycle {
     await write
     if (generation !== this.commitGeneration || identityGeneration !== this.identityGeneration)
       return false
+    return this.checkpointAnonymousRecovery(snapshot, generation, identityGeneration)
+  }
+
+  /** Verify a separate anonymous checkpoint without replacing retained session bytes. */
+  private checkpointAnonymousRecovery(
+    snapshot: SessionSnapshot,
+    generation: number,
+    identityGeneration: number,
+  ): boolean {
+    if (
+      this.ownerId ||
+      this.pendingConflict ||
+      generation !== this.commitGeneration ||
+      identityGeneration !== this.identityGeneration
+    )
+      return false
     const result = this.adapters.authRecovery.save(snapshot)
     if (result.status !== 'saved') {
       this.publishDeviceFailure(result)
@@ -351,13 +370,14 @@ export class EncounterLifecycle {
     const recovered = this.adapters.authRecovery.load().snapshot
     const expected = encodeSession(snapshot)
     const actual = recovered && encodeSession(recovered)
-    return (
+    const verified =
       generation === this.commitGeneration &&
       identityGeneration === this.identityGeneration &&
       expected.status === 'ok' &&
       actual?.status === 'ok' &&
       expected.serialized === actual.serialized
-    )
+    if (verified) this.publishStatus(this.statusAfterRecovery(result))
+    return verified
   }
 
   /** Verify unresolved copies before departure without choosing or publishing a branch. */

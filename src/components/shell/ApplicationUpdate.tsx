@@ -11,10 +11,12 @@ export function ApplicationUpdate({
   lifecycle,
   ready,
   onDownload,
+  onBeforeReload,
 }: {
   lifecycle: EncounterLifecycle
   ready: boolean
   onDownload: () => void
+  onBeforeReload: () => void
 }) {
   const [status, setStatus] = useState<ShellStatus>('installing')
   const [attempt, setAttempt] = useState(0)
@@ -57,6 +59,7 @@ export function ApplicationUpdate({
         )
         return
       }
+      onBeforeReload()
       window.location.reload()
     } catch {
       setError('The update did not finish. Retry or download your recovery copy.')

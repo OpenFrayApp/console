@@ -570,10 +570,23 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
   ])
 
   const navigationUnsafe = requiresNavigationWarning(saveStatus)
+  const navigationWarningCleanup = useRef<(() => void) | null>(null)
   useEffect(() => {
     if (!boardReady || !navigationUnsafe) return
-    return installNavigationWarning()
-  }, [boardReady, navigationUnsafe])
+    const removeWarning = installNavigationWarning()
+    navigationWarningCleanup.current = removeWarning
+    return () => {
+      removeWarning()
+      if (navigationWarningCleanup.current === removeWarning)
+        navigationWarningCleanup.current = null
+    }
+  }, [boardReady, navigationUnsafe, departureError])
+
+  /** Release the browser warning only at an explicitly verified departure or reload. */
+  const releaseNavigationWarning = () => {
+    navigationWarningCleanup.current?.()
+    navigationWarningCleanup.current = null
+  }
 
   const activeCopyConflict = lifecycle.conflict() ?? copyConflict
 
@@ -648,6 +661,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
         )
         return
       }
+      releaseNavigationWarning()
       if (destination === 'account') navigateToSiteAccount()
       else navigateToSiteSignIn()
     } catch {
@@ -1945,6 +1959,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             lifecycle={lifecycle}
             ready={boardReady && !resolvingCopies}
             onDownload={downloadRecovery}
+            onBeforeReload={releaseNavigationWarning}
           />
 
           {searchOpen && (

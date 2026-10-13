@@ -17,6 +17,7 @@ import { decodeSession, encodeSession } from '../src/codecs/session.ts'
 import { AuthContext } from '../src/auth/useAuth.ts'
 import { recoverySnapshot } from './fixtures/sessionSnapshot.ts'
 import { IndexedDbRecovery } from '../src/state/indexedDbRecovery.ts'
+import { createBrowserEncounterLifecycle } from '../src/state/encounterLifecycle.ts'
 import * as cloudEncounter from '../src/state/cloudEncounter.ts'
 import type { User } from '@supabase/supabase-js'
 import { authState, pc } from './fixtures.ts'
@@ -60,6 +61,64 @@ it('checkpoints the latest board before navigating to site sign-in in the same t
   expect(recovery.snapshot?.encounter.combatants.map(nameOf)).toEqual(['Latest guard'])
   expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull()
+})
+
+it('checkpoints an anonymous update independently of retained legacy bytes and restores the latest board', async () => {
+  const legacy = encodeSession(recoverySnapshot('unverified-update'))
+  if (legacy.status !== 'ok') throw new Error('Invalid fixture')
+  sessionStorage.setItem('openfray:session', legacy.serialized)
+  const lifecycle = createBrowserEncounterLifecycle()
+  await lifecycle.identify(null)
+  const latest = recoverySnapshot('updated-board')
+  latest.encounter.combatants = [pc({ name: 'Latest guard' })]
+  expect((await lifecycle.commit(latest)).status).toBe('blocked')
+  expect(await lifecycle.checkpointForUpdate()).toBe(true)
+  const reopened = await createBrowserEncounterLifecycle().identify(null)
+  expect(reopened.snapshot?.encounter.combatants.map(nameOf)).toEqual(['Latest guard'])
+  expect(sessionStorage.getItem('openfray:session')).toBe(legacy.serialized)
+})
+
+it.each(['update', 'sign-in'] as const)(
+  'rejects a stale anonymous %s checkpoint after an edit or identity change',
+  async (destination) => {
+    for (const change of ['edit', 'identity'] as const) {
+      sessionStorage.clear()
+      const legacy = encodeSession(recoverySnapshot('unverified-stale'))
+      if (legacy.status !== 'ok') throw new Error('Invalid fixture')
+      sessionStorage.setItem('openfray:session', legacy.serialized)
+      const lifecycle = createBrowserEncounterLifecycle()
+      await lifecycle.identify(null)
+      await lifecycle.commit(recoverySnapshot('before'))
+      const checkpoint =
+        destination === 'update'
+          ? lifecycle.checkpointForUpdate()
+          : lifecycle.checkpointForSiteNavigation()
+      if (change === 'edit') await lifecycle.commit(recoverySnapshot('after'))
+      else {
+        vi.spyOn(cloudEncounter, 'loadCloudEncounter').mockResolvedValue({ status: 'failed' })
+        await lifecycle.identify('new-owner')
+      }
+      expect(await checkpoint).toBe(false)
+      expect(loadAuthRecovery().snapshot).toBeNull()
+      expect(sessionStorage.getItem('openfray:session')).toBe(legacy.serialized)
+    }
+  },
+)
+
+it('still blocks anonymous updates when both the legacy mirror and independent checkpoint cannot be written', async () => {
+  const legacy = encodeSession(recoverySnapshot('unverified-update'))
+  if (legacy.status !== 'ok') throw new Error('Invalid fixture')
+  sessionStorage.setItem('openfray:session', legacy.serialized)
+  const lifecycle = createBrowserEncounterLifecycle()
+  await lifecycle.identify(null)
+  await lifecycle.commit(recoverySnapshot('latest'))
+  const write = Storage.prototype.setItem
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key === 'openfray:auth-recovery') throw new DOMException('Full', 'QuotaExceededError')
+    return write.call(this, key, value)
+  })
+  expect(await lifecycle.checkpointForUpdate()).toBe(false)
+  expect(sessionStorage.getItem('openfray:session')).toBe(legacy.serialized)
 })
 
 it('can sign in with a verified separate handoff while preserving unknown legacy recovery', async () => {
