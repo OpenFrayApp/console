@@ -37,7 +37,11 @@ it.each([1280, 768])('keeps header checkpoint controls clickable at width %s', a
   render(createElement(AuthContext.Provider, { value: authState() }, createElement(App)))
   await screen.findByRole('button', { name: 'Save failed' })
   const write = Storage.prototype.setItem
-  const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+  const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+    this: Storage,
+    key,
+    value,
+  ) {
     if (key === 'openfray:auth-recovery') throw new DOMException('Full', 'QuotaExceededError')
     return write.call(this, key, value)
   })
