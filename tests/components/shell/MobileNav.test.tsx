@@ -9,23 +9,29 @@ import { MobileNav } from '../../../src/components/shell/MobileNav.tsx'
 afterEach(cleanup)
 
 describe('MobileNav', () => {
-  it('shows the four tabs and marks the active one', () => {
-    render(<MobileNav active="stat-block" onSelect={vi.fn()} />)
-    for (const label of ['Tracker', 'Stat block', 'Controls', 'Compendium']) {
-      expect(screen.getByText(label)).toBeTruthy()
+  it('reports each tab selection and moves the accessible active marker', () => {
+    const onSelect = vi.fn()
+    const { rerender } = render(<MobileNav active="stat-block" onSelect={onSelect} />)
+    const statBlock = screen.getByRole('button', { name: 'Stat block' })
+    expect(statBlock).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Tracker' })).not.toHaveAttribute('aria-current')
+
+    for (const [label, tab] of [
+      ['Tracker', 'tracker'],
+      ['Stat block', 'stat-block'],
+      ['Controls', 'controls'],
+      ['Compendium', 'compendium'],
+    ]) {
+      onSelect.mockClear()
+      fireEvent.click(screen.getByRole('button', { name: label }))
+      expect(onSelect).toHaveBeenCalledExactlyOnceWith(tab)
     }
-    expect(screen.getByText('Stat block').closest('button')?.getAttribute('aria-current')).toBe(
+
+    rerender(<MobileNav active="compendium" onSelect={onSelect} />)
+    expect(screen.getByRole('button', { name: 'Compendium' })).toHaveAttribute(
+      'aria-current',
       'page',
     )
-    expect(screen.getByText('Tracker').closest('button')?.getAttribute('aria-current')).toBeNull()
-  })
-
-  it('reports the tapped tab', () => {
-    const onSelect = vi.fn()
-    render(<MobileNav active="tracker" onSelect={onSelect} />)
-    fireEvent.click(screen.getByText('Compendium'))
-    expect(onSelect).toHaveBeenCalledWith('compendium')
-    fireEvent.click(screen.getByText('Controls'))
-    expect(onSelect).toHaveBeenCalledWith('controls')
+    expect(statBlock).not.toHaveAttribute('aria-current')
   })
 })

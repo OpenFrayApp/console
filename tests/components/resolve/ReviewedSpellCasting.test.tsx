@@ -718,8 +718,9 @@ describe.each(['panel', 'monster'] as const)('Kibbles through %s casting', (entr
     },
   )
 
-  it.each(['acid-bubble', 'electrocute', 'mind-blast', 'flash-freeze', 'shadow-bind', 'supernova'])(
-    'opens %s initial save and manual guidance',
+  // Damage and save-only entry points; every authored save remains in kibblesCasting.test.ts.
+  it.each(['acid-bubble', 'shadow-bind'])(
+    'opens %s initial save without an attack resolver',
     (slug) => {
       cast(kibblesCard(slug), entry)
       expect(screen.getByLabelText('Save DC')).toHaveValue('99')

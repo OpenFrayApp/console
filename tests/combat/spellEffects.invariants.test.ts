@@ -62,11 +62,7 @@ function buildAll(name: string, def: SpellEffectDef, over: Partial<Spell> = {}):
 const entries = Object.entries(SPELL_EFFECTS)
 
 describe('spell effect invariants', () => {
-  it('covers a meaningful share of the compendium', () => {
-    expect(entries.length).toBeGreaterThan(150)
-  })
-
-  it.each(entries)('%s has valid targeting, summary, badges, and conditions', (name, def) => {
+  it.each(entries)('%s has valid targeting, badges, conditions, and saves', (name, def) => {
     expect(['self', 'ally', 'enemy'], `${name}: bad targeting`).toContain(def.targeting)
     expect(def.summary, `${name}: missing summary`).toBeTruthy()
     const bundled = def.build({ spell: spellFor(name), target: target() }).length >= 2
@@ -85,6 +81,13 @@ describe('spell effect invariants', () => {
       expect(label, `${name}: badge should be one line`).not.toContain('\n')
       expect(label.trim(), `${name}: badge has stray whitespace`).toBe(label)
       expect(def.summary, `${name}: summary duplicates the badge`).not.toBe(effect.note)
+
+      if (effect.duration.type === 'saveEnds') {
+        expect(effect.duration.save, `${name}: save-ends without the supplied save`).toEqual({
+          ability: 'wis',
+          dc: 15,
+        })
+      }
 
       if (effect.icon !== 'condition') continue
       expect(
@@ -118,17 +121,17 @@ describe('spell effect invariants', () => {
   })
 
   // Bundling is shared wrapper behavior; authored effect counts are checked above.
-  it.each(['bless', 'haste'])('%s groups single and multipart effects on the row', (name) => {
+  it.each([
+    ['mage armor', 1],
+    ['haste', 4],
+  ] as const)('%s groups single and multipart effects on the row', (name, count) => {
     // Through spellEffectFor, where the bundle is stamped — the same path the app takes.
     const spell = spellFor(name)
     const wrapped = spellEffectFor(spell)!
     const first = wrapped.build({ spell, target: target() })
-    // Two badges is the row's ceiling; a multi-part spell folds into one bundle badge.
-    expect(
-      groupEffects(first).length,
-      `${name}: renders ${groupEffects(first).length} badges`,
-    ).toBeLessThanOrEqual(2)
-    if (first.length >= 2) {
+    expect(first).toHaveLength(count)
+    expect(groupEffects(first)).toHaveLength(1)
+    if (count >= 2) {
       const bundles = new Set(first.map((e) => e.bundle?.id))
       expect(first[0].bundle?.id).toBeTruthy()
       expect(bundles.size, `${name}: parts split across bundles`).toBe(1)
@@ -140,22 +143,6 @@ describe('spell effect invariants', () => {
       )
     } else {
       expect(first[0].bundle, `${name}: a lone effect needs no bundle`).toBeUndefined()
-    }
-  })
-
-  it.each(entries)('%s carries the save it was handed', (name, def) => {
-    const save = { ability: 'wis', dc: 15 } as const
-    const spell = spellFor(name)
-    for (const effect of def.build({ spell, target: target(), save })) {
-      if (effect.duration.type !== 'saveEnds') continue
-      expect(effect.duration.save, `${name}: save-ends without a save`).toEqual(save)
-    }
-  })
-
-  it.each(entries)('%s builds for both editions', (name, def) => {
-    for (const edition of ['5.0', '5.5'] as const) {
-      const effects = def.build({ spell: spellFor(name, { edition }), target: target() })
-      expect(effects.length, `${name}: built nothing for edition ${edition}`).toBeGreaterThan(0)
     }
   })
 })

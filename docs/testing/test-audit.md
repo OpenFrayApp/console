@@ -14,12 +14,12 @@ this change modifies only the console.
 
 ## First batch
 
-| Test file under `tests/`                   | Change                                                                                                                                                             | Retained confidence and accepted gap                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `combat/spellIntegrationStandards.test.ts` | Select cards with a reviewed effect for reminder validation. Remove 718 no-effect cases that executed no assertions. Require selected builders to produce effects. | Every authored effect definition in these libraries still receives the reminder checks. Skip verdicts and targeted casting regressions remain. `spellCoverage.test.ts` and library casting tests retain the verdict contract.                                                                                                                                                                  |
-| `combat/spellEffects.invariants.test.ts`   | Replace 177 bundling cases with Bless and Haste, covering single and multipart wrapper paths. Require a nonempty bundle ID.                                        | Haste still checks grouping, naming, and independent bundle IDs across builds. Bless checks the unbundled path. All entries retain badge shape, authored effect counts, fresh IDs, targeting, condition names, save propagation, and edition checks. Per-entry wrapper repetition is removed; entry-specific wrapper faults could require additional cases if the wrapper gains such branches. |
-| `combat/deepMagic2020Casting.test.ts`      | Remove four altered-identity lookups from each of 503 source-hash cases (2,012 repeated negative assertions).                                                      | The shared lookup’s source, edition, name, and ID rejection remains in `reviewedSpells.test.ts`. Every Deep Magic source hash, positive lookup, non-mutation check, authored verdict, and targeted regression remains. Negative identity permutations are no longer repeated for each card.                                                                                                    |
-| `tutorial/TutorialSetup.copy.test.tsx`     | Remove exact headings and the 65-word ceiling from 21 task cases.                                                                                                  | Next-action guidance, destructive-action consequences, roster wording, committed hit/miss/critical outcomes, and the absence of an acknowledgement button remain. Editorial heading wording and length are no longer test contracts.                                                                                                                                                           |
+| Test file under `tests/`                   | Change                                                                                                                                                             | Retained confidence and accepted gap                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `combat/spellIntegrationStandards.test.ts` | Select cards with a reviewed effect for reminder validation. Remove 718 no-effect cases that executed no assertions. Require selected builders to produce effects. | Every authored effect definition in these libraries still receives the reminder checks. Skip verdicts and targeted casting regressions remain. `spellCoverage.test.ts` and library casting tests retain the verdict contract.                                                                                                                                                                                                                     |
+| `combat/spellEffects.invariants.test.ts`   | Replace 177 bundling cases with Bless and Haste. Require a nonempty bundle ID. The third batch corrects the single-effect representative.                          | Haste still checks grouping, naming, and independent bundle IDs across builds. Bless also builds multiple effects, so this pair does not check the unbundled path. All entries retain badge shape, authored effect counts, fresh IDs, targeting, condition names, save propagation, and edition checks. Per-entry wrapper repetition is removed; entry-specific wrapper faults could require additional cases if the wrapper gains such branches. |
+| `combat/deepMagic2020Casting.test.ts`      | Remove four altered-identity lookups from each of 503 source-hash cases (2,012 repeated negative assertions).                                                      | The shared lookup’s source, edition, name, and ID rejection remains in `reviewedSpells.test.ts`. Every Deep Magic source hash, positive lookup, non-mutation check, authored verdict, and targeted regression remains. Negative identity permutations are no longer repeated for each card.                                                                                                                                                       |
+| `tutorial/TutorialSetup.copy.test.tsx`     | Remove exact headings and the 65-word ceiling from 21 task cases.                                                                                                  | Next-action guidance, destructive-action consequences, roster wording, committed hit/miss/critical outcomes, and the absence of an acknowledgement button remain. Editorial heading wording and length are no longer test contracts.                                                                                                                                                                                                              |
 
 The two largest reductions remove redundant execution, not just parameterized
 case names. Deep Magic and tutorial changes reduce assertions and expected-copy
@@ -141,3 +141,56 @@ The remaining large spell tests predominantly check independently authored sourc
 cards, casting verdicts, badge wording, and combat semantics. Those contracts
 remain exhaustive. This audit has not established that all remaining tests across
 the repository are necessary.
+
+## Third batch: redundant rendering and invariant checks
+
+A rendering assertion earns its place when it protects conditional display,
+correct data wiring, an interaction, or an accessibility requirement. Check for
+an existing assertion of the same behavior before adding a separate presence test.
+DOM presence alone does not establish visibility or reachability in a browser.
+
+| Test file under `tests/`                           | Change                                                                                                                                                    | Retained protection                                                                                                                                                                                                     |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `combat/spellEffects.invariants.test.ts`           | Fold save propagation into the existing authored invariant builds. Remove the 177-case save matrix, whose 160 non-save cases had no assertions.           | Every built save-ends effect still carries the supplied ability and DC.                                                                                                                                                 |
+| `combat/spellEffects.invariants.test.ts`           | Remove 177 per-edition nonempty checks and the arbitrary 150-entry minimum.                                                                               | `spellBadges.test.ts` checks the complete table and exact nonempty output in both editions. `spellCoverage.test.ts` requires every shipped spell to have a verdict. Target-dependent effects keep their semantic tests. |
+| `combat/spellEffects.invariants.test.ts`           | Use Mage Armor and Haste for single/multipart wrapping; require their expected effect counts and exactly one row group.                                   | Both wrapper branches have explicit representatives. Bundle naming, fresh bundle IDs, and unbundled single effects remain checked.                                                                                      |
+| `components/resolve/ReviewedSpellCasting.test.tsx` | Reduce Kibbles initial-save display examples from six to two per route.                                                                                   | Acid Bubble covers damage and Shadow Bind covers save-only entry. Every authored save stays in the pure casting tests. Mind Blast retains its dedicated UI application test. Both casting routes remain covered.        |
+| `components/statblock/SpellCard.test.tsx`          | Replace six formatting renders with one component wiring check.                                                                                           | Formatter equivalence classes stay in `compendium/format.test.ts`. The component still checks casting time, duration, and source non-mutation. Browser coverage retains reaction formatting and actual text alignment.  |
+| `components/tracker/CombatantRow.test.tsx`         | Fold temporary HP into PC display coverage; remove the duplicate active-marker case. Use distinct current/max HP values and check their combined display. | Monster and PC data paths remain covered. Color updates already check the active marker; a new assertion checks its removal when inactive. Swapping current and maximum HP now fails the display checks.                |
+| `components/shell/MobileNav.test.tsx`              | Combine label presence with tab interaction and active-state checks.                                                                                      | Every authored tab dispatches its own ID exactly once. Updating the active tab moves the accessible marker.                                                                                                             |
+| `components/editors/FormSection.test.tsx`          | Remove the browser-owned native details-toggle test.                                                                                                      | The component must render the summary first inside details, contain its fields, and honor default/explicit open state.                                                                                                  |
+
+The accepted reduction is repeated UI execution for equivalent inputs. Per-card
+resolver routing and formatter wiring now rely on representatives plus lower-layer
+coverage. Distinct save outcomes, rider application, concentration, temporary HP,
+and navigation behavior remain covered. Privacy, recovery, ownership, and browser
+reachability tests are unchanged.
+
+This batch removes 372 standalone cases: 355 invariant cases and 17 component
+cases. The save assertions and several component assertions move into existing
+scenarios. The reduction includes consolidation and redundant execution; it does
+not represent 372 discarded behaviors.
+
+### Third-batch verification
+
+The same 11 focused files passed before and after cleanup: 1,647 cases in
+3.48 seconds, then 1,275 in 3.49 seconds. This pair of runs establishes no speed
+improvement.
+
+- Full default suite: 6,308 tests passed across 213 files in 30.11 seconds.
+- Browser suite: 179 tests passed across 17 files in 19.26 seconds. All four
+  writer-identity checks passed.
+- Typecheck, ESLint, changed-file Prettier, and `git diff --check` passed.
+- The parent prose checker passed for this audit document in an isolated directory.
+- Increasing the supplied save DC failed the consolidated Hold Person invariant.
+- Bundling single effects failed the Mage Armor wrapper check.
+- Displaying maximum HP as current HP failed both monster and PC display checks.
+- Bypassing casting-time formatting failed the retained SpellCard wiring check.
+- All four temporary faults were restored before full verification. Production
+  files have no diff.
+
+The default inventory is 372 below the second batch and 1,744 below the original
+baseline. Browser coverage is unchanged. The full default run took longer than the
+recorded second-batch run; typecheck and lint ran concurrently with this test run.
+These measurements establish no overall speed improvement. No build was run because
+production code, dependencies, and configuration are unchanged.
