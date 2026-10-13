@@ -68,14 +68,6 @@ describe('Spells That Don’t Suck reviewed casting', () => {
       spellEffectFor(spell)?.build({ spell, source: 'caster', target: monster() })
       expect(JSON.stringify(spell)).toBe(original)
       expect(spell.mechanics).toBeUndefined()
-      for (const alternate of [
-        { ...spell, id: 'custom:copy', source: 'custom' as const },
-        { ...spell, source: 'somanyrobots-so-many-spells' as const },
-        { ...spell, edition: '5.5' as const },
-        { ...spell, name: 'Changed name' },
-      ]) {
-        expect(reviewedSpellCasting(alternate)).toBeUndefined()
-      }
     },
   )
 

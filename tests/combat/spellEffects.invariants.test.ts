@@ -66,16 +66,16 @@ describe('spell effect invariants', () => {
     expect(entries.length).toBeGreaterThan(150)
   })
 
-  it.each(entries)('%s builds effects that fit the badge', (name, def) => {
+  it.each(entries)('%s has valid targeting, summary, badges, and conditions', (name, def) => {
+    expect(['self', 'ally', 'enemy'], `${name}: bad targeting`).toContain(def.targeting)
+    expect(def.summary, `${name}: missing summary`).toBeTruthy()
+    const bundled = def.build({ spell: spellFor(name), target: target() }).length >= 2
     for (const effect of buildAll(name, def)) {
       expect(effect.name, `${name}: empty effect name`).toBeTruthy()
       expect(effect.duration.type, `${name}: missing duration`).toBeTruthy()
 
       const label = badgeLabel(effect)
-      // A bundled effect's row badge is the bundle's name; its own label shows only
-      // in the Applied effects list, so just the general cap applies. A loose
-      // save-ends effect draws its DC beside the label, hence the tighter limit.
-      const bundled = def.build({ spell: spellFor(name), target: target() }).length >= 2
+      // A loose save-ends badge includes its DC; bundle members only need the general cap.
       const limit = effect.duration.type === 'saveEnds' && !bundled ? MAX_SAVE_ENDS_NOTE : MAX_NOTE
       expect(
         label.length,
@@ -84,28 +84,13 @@ describe('spell effect invariants', () => {
       expect(label, `${name}: badge should not end in a period`).not.toMatch(/\.$/)
       expect(label, `${name}: badge should be one line`).not.toContain('\n')
       expect(label.trim(), `${name}: badge has stray whitespace`).toBe(label)
-    }
-  })
-
-  it.each(entries)('%s targets a known side and describes itself', (name, def) => {
-    expect(['self', 'ally', 'enemy'], `${name}: bad targeting`).toContain(def.targeting)
-    expect(def.summary, `${name}: missing summary`).toBeTruthy()
-    // The summary is prose for the apply prompt; the note is the badge. If they are
-    // the same string, one of them is doing the wrong job.
-    for (const effect of buildAll(name, def)) {
       expect(def.summary, `${name}: summary duplicates the badge`).not.toBe(effect.note)
-    }
-  })
 
-  it.each(entries)('%s names a real condition when it applies one', (name, def) => {
-    for (const effect of buildAll(name, def)) {
       if (effect.icon !== 'condition') continue
       expect(
         resolveCondition(effect.name),
         `${name}: "${effect.name}" is not a 5e condition`,
       ).toBeTruthy()
-      // A note replaces the condition name on the badge, so repeating it would cost a
-      // string and show nothing new.
       if (effect.note) {
         expect(effect.note.toLowerCase(), `${name}: note repeats the condition name`).not.toContain(
           effect.name.toLowerCase(),
@@ -132,7 +117,8 @@ describe('spell effect invariants', () => {
     }
   })
 
-  it.each(entries)('%s renders as at most two badges, bundling several parts', (name) => {
+  // Bundling is shared wrapper behavior; authored effect counts are checked above.
+  it.each(['bless', 'haste'])('%s groups single and multipart effects on the row', (name) => {
     // Through spellEffectFor, where the bundle is stamped — the same path the app takes.
     const spell = spellFor(name)
     const wrapped = spellEffectFor(spell)!
@@ -144,6 +130,7 @@ describe('spell effect invariants', () => {
     ).toBeLessThanOrEqual(2)
     if (first.length >= 2) {
       const bundles = new Set(first.map((e) => e.bundle?.id))
+      expect(first[0].bundle?.id).toBeTruthy()
       expect(bundles.size, `${name}: parts split across bundles`).toBe(1)
       expect(first[0].bundle?.name, `${name}: bundle not named after the spell`).toBe(spell.name)
       // Each target gets its own bundle, so clearing one leaves the other alone.

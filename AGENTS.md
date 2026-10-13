@@ -243,18 +243,32 @@ to.
 
 ## Tests
 
-Everything testable ships with tests, and a behavior change updates its tests in
-the same commit.
+Choose tests by regression risk and maintenance cost. Before adding a case, name
+the meaningful failure it catches and inspect existing coverage.
+
+- **Marginal coverage:** extend an existing test when it can catch the failure.
+  Add a case for a distinct behavior, risk, or important boundary.
+- **Scope:** use representative equivalence classes and meaningful boundaries for
+  shared behavior. Validate independently authored data exhaustively when each
+  entry can be wrong separately.
+- **Layer:** prefer the lowest-cost public boundary that catches the failure.
+  Add integration or browser coverage when wiring or browser behavior creates a
+  distinct risk. Mock network access in unit and component tests; retain real
+  boundary checks where mocks cannot establish the contract.
+- **Changes:** update affected tests with behavior changes in the same commit.
+  Copy-only edits, mechanical refactors with adequate coverage, and already-covered
+  behavior may need no new test. Report the verification used.
+- **Critical risks:** keep security, privacy, destructive operations, recovery,
+  and critical combat rules explicitly covered, including relevant failure paths.
+  Test the `owner_id`/RLS boundary and reason about it explicitly in the PR;
+  passing functional tests alone does not establish isolation.
+- **Measures:** use test counts and coverage percentages as diagnostic signals,
+  not completion targets.
 
 - **Where they live:** `tests/`, mirroring `src/` (never co-located).
 - **How they run:** `npm test`. Tests default to the fast node environment; a
   component test opts into jsdom with a file docblock
   (`// @vitest-environment jsdom`).
-- **What "testable" means here:** pure logic always (combat math, formatters,
-  parsers, transforms); components render-tested for the states that carry logic;
-  network and Supabase access behind mocks. The `owner_id`/RLS boundary is where a
-  change can pass tests and still be wrong. Test it anyway, then reason about it
-  explicitly in the PR.
 - **Test what this repo owns.** `src/dice/roll.ts` is the 5e layer over the engine:
   crit rules, attack crit/fumble, damage tags, flat damage, and the formula guard.
   Grammar, keep rules, advantage and the RNG belong to opendice and are tested there,
