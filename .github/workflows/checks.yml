@@ -30,6 +30,15 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npx --no-install playwright install --with-deps chromium
-      - run: npx --no-install vitest run --maxWorkers=1
+      - name: Node tests (one worker)
+        run: npx --no-install vitest run --maxWorkers=1 --reporter=default --reporter=json --outputFile=.artifacts/ci/console-node.json
+      - name: Upload node-test durations and inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: console-node-${{ github.run_attempt }}
+          path: .artifacts/ci/console-node.json
+          include-hidden-files: true
+          retention-days: 14
       - run: npm run test:browser
       - run: npm run build
