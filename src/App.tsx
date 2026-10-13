@@ -388,13 +388,16 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     displayName,
     shareLicense,
     setDisplayName,
+    signOut: signOutAccount,
     loading: authLoading,
     configured: authConfigured,
     identityExpired,
   } = useAuth()
   const userId = user?.id ?? null
   const [departureError, setDepartureError] = useState<string | null>(null)
-  const [departureDestination, setDepartureDestination] = useState<'sign-in' | 'account'>('sign-in')
+  const [departureDestination, setDepartureDestination] = useState<
+    'sign-in' | 'account' | 'sign-out'
+  >('sign-in')
   const departurePending = useRef(false)
   const [offlineDepartureOffered, setOfflineDepartureOffered] = useState(false)
   /**
@@ -626,13 +629,21 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     if (recovery) downloadRecoveryCopy(recovery)
   }
 
-  /** Leave only after the latest committed board has a verified recovery checkpoint. */
-  const leaveForSite = async (destination: 'sign-in' | 'account', continueWithDevice = false) => {
+  /** Checkpoint the latest board before account navigation or explicit session termination. */
+  const runAccountAction = async (
+    destination: 'sign-in' | 'account' | 'sign-out',
+    continueWithDevice = false,
+  ) => {
     if (departurePending.current) return
     setDepartureError(null)
     setOfflineDepartureOffered(false)
     setDepartureDestination(destination)
-    const action = destination === 'account' ? 'opening your account' : 'sign-in'
+    const action =
+      destination === 'account'
+        ? 'opening your account'
+        : destination === 'sign-out'
+          ? 'sign-out'
+          : 'sign-in'
     if (!authConfigured) {
       setDepartureError('Accounts aren’t available on this copy of OpenFray.')
       return
@@ -650,20 +661,24 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
     try {
       const verified = await lifecycle.checkpointForSiteNavigation()
       const status = lifecycle.saveStatus().kind
-      const offlineAccount =
-        destination === 'account' && (status === 'offline' || status === 'read-only')
-      if (!verified || (offlineAccount && !continueWithDevice)) {
-        setOfflineDepartureOffered(offlineAccount)
+      const offlineDeparture =
+        destination !== 'sign-in' && (status === 'offline' || status === 'read-only')
+      if (!verified || (offlineDeparture && !continueWithDevice)) {
+        setOfflineDepartureOffered(offlineDeparture)
         setDepartureError(
-          offlineAccount && !continueWithDevice
+          offlineDeparture && !continueWithDevice
             ? 'The cloud copy could not be confirmed. Retry or continue with your device copy after its recovery checkpoint is verified. Your cloud copy will stay unchanged.'
             : `The checkpoint could not be verified. Retry ${action} or download your recovery copy.`,
         )
         return
       }
-      releaseNavigationWarning()
-      if (destination === 'account') navigateToSiteAccount()
-      else navigateToSiteSignIn()
+      if (destination === 'sign-out') {
+        await signOutAccount()
+      } else {
+        releaseNavigationWarning()
+        if (destination === 'account') navigateToSiteAccount()
+        else navigateToSiteSignIn()
+      }
     } catch {
       setDepartureError(
         `The checkpoint did not finish. Retry ${action} or download your recovery copy.`,
@@ -725,7 +740,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
       return
     }
     if (!user) {
-      void leaveForSite('sign-in')
+      void runAccountAction('sign-in')
       return
     }
     const code = playerCode ?? randomPlayerCode()
@@ -1909,8 +1924,9 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 <ViewToggle view={view} onChange={handleViewChange} />
               </div>
               <AccountControl
-                onSignIn={() => void leaveForSite('sign-in')}
-                onOpenAccount={() => void leaveForSite('account')}
+                onSignIn={() => void runAccountAction('sign-in')}
+                onOpenAccount={() => void runAccountAction('account')}
+                onSignOut={() => void runAccountAction('sign-out')}
                 onOpenShares={() => {
                   refreshShares()
                   setShowShares(true)
@@ -1923,7 +1939,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 sharing={sharing}
                 onToggleShare={toggleSharing}
                 onClaim={user ? claimShareCode : undefined}
-                onSignIn={() => void leaveForSite('sign-in')}
+                onSignIn={() => void runAccountAction('sign-in')}
                 pin={playerPin}
                 onSetPin={setPlayerPin}
                 backdrop={playerBackdrop}
@@ -1949,7 +1965,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                 onDownloadRetained={
                   lifecycle.retainedSessionDownload() ? downloadRetainedRecovery : undefined
                 }
-                onSignIn={() => void leaveForSite('sign-in')}
+                onSignIn={() => void runAccountAction('sign-in')}
                 onTakeOver={() => void lifecycle.takeOver()}
                 onResolveCopies={() => setCopyConflictOpen(true)}
               />
@@ -2013,7 +2029,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                         id: 'profile',
                         name: 'Profile',
                         icon: <UserIcon />,
-                        onSelect: () => navigateFromSearch(() => void leaveForSite('account')),
+                        onSelect: () => navigateFromSearch(() => void runAccountAction('account')),
                       },
                       {
                         id: 'shared-links',
@@ -2032,7 +2048,8 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                           id: 'sign-in',
                           name: 'Sign in',
                           icon: <UserIcon />,
-                          onSelect: () => navigateFromSearch(() => void leaveForSite('sign-in')),
+                          onSelect: () =>
+                            navigateFromSearch(() => void runAccountAction('sign-in')),
                         },
                       ]
                     : []),
@@ -2123,7 +2140,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   showHomebrew={showHomebrew}
                   librarySort={librarySort}
                   createGated={!user}
-                  onGated={() => void leaveForSite('sign-in')}
+                  onGated={() => void runAccountAction('sign-in')}
                 />
               </div>
             ) : (
@@ -2135,7 +2152,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canSave={encounter.combatants.length > 0}
                       signedIn={!!user}
                       onSave={handleSaveFight}
-                      onSignIn={() => void leaveForSite('sign-in')}
+                      onSignIn={() => void runAccountAction('sign-in')}
                     />
                     <ShareEncounterButton
                       canShare={encounter.combatants.some((c) => !c.isPC || c.kind === 'quick')}
@@ -2146,7 +2163,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                       canDropRestricted={restricted.someRemain}
                       allowReserved={bylineGranted}
                       onShare={handleShareEncounter}
-                      onSignIn={() => void leaveForSite('sign-in')}
+                      onSignIn={() => void runAccountAction('sign-in')}
                     />
                   </>
                 }
@@ -2234,7 +2251,11 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
             <DialogFocus>
               <Modal
                 title={
-                  departureDestination === 'account' ? 'Account checkpoint' : 'Sign-in checkpoint'
+                  departureDestination === 'account'
+                    ? 'Account checkpoint'
+                    : departureDestination === 'sign-out'
+                      ? 'Sign-out checkpoint'
+                      : 'Sign-in checkpoint'
                 }
                 onClose={() => setDepartureError(null)}
               >
@@ -2242,8 +2263,12 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   {departureError}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => void leaveForSite(departureDestination)}>
-                    {departureDestination === 'account' ? 'Retry account' : 'Retry sign-in'}
+                  <Button onClick={() => void runAccountAction(departureDestination)}>
+                    {departureDestination === 'account'
+                      ? 'Retry account'
+                      : departureDestination === 'sign-out'
+                        ? 'Retry sign-out'
+                        : 'Retry sign-in'}
                   </Button>
                   <Button variant="quiet" onClick={downloadRecovery}>
                     Download recovery copy
@@ -2251,7 +2276,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
                   {offlineDepartureOffered && (
                     <Button
                       variant="quiet"
-                      onClick={() => void leaveForSite(departureDestination, true)}
+                      onClick={() => void runAccountAction(departureDestination, true)}
                     >
                       Continue with device copy
                     </Button>
@@ -2327,7 +2352,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               defaultByline={displayName ?? shareByline}
               allowReserved={bylineGranted}
               onShare={(draft) => handleShareCreature(sharingCreature, draft)}
-              onSignIn={() => void leaveForSite('sign-in')}
+              onSignIn={() => void runAccountAction('sign-in')}
               onClose={() => setSharingCreature(null)}
             />
           )}
@@ -2426,7 +2451,7 @@ function App({ stagedCast }: { stagedCast?: EncounterTemplate } = {}) {
               authConfigured={authConfigured}
               onSignIn={() => {
                 tutorial.dismiss()
-                void leaveForSite('sign-in')
+                void runAccountAction('sign-in')
               }}
             />
           ))}

@@ -10,8 +10,12 @@ Recognized legacy callback parameters are discarded before building the return
 destination. The console never installs a session from those parameters.
 
 The site account page owns profile editing, the default shared-encounter license,
-sign-out, and account deletion. **Shared links**, device settings, and encounter controls
-stay in the console. Publishing can still update the display name. Tutorial account
+and account deletion, and provides sign-out with a confirmed sign-in redirect.
+The console account menu also offers **Sign out**, through its recovery checkpoint
+and existing identity-fenced `AuthProvider.signOut` path, without site navigation.
+An unverified recovery checkpoint blocks termination; an unconfirmed cloud copy
+requires explicit device-copy continuation. The menu never calls the SDK directly.
+**Shared links**, device settings, and encounter controls stay in the console. Publishing can still update the display name. Tutorial account
 preferences still use their existing console API.
 Source remains unreleased pending assembled authenticated checks and handbook updates.
 

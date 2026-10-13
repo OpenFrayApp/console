@@ -16,16 +16,18 @@ function renderControl(overrides: Partial<AuthState> = {}) {
   const onSignIn = vi.fn()
   const onOpenAccount = vi.fn()
   const onOpenShares = vi.fn()
+  const onSignOut = vi.fn()
   render(
     <AuthContext.Provider value={value}>
       <AccountControl
         onSignIn={onSignIn}
         onOpenAccount={onOpenAccount}
         onOpenShares={onOpenShares}
+        onSignOut={onSignOut}
       />
     </AuthContext.Provider>,
   )
-  return { value, onSignIn, onOpenAccount, onOpenShares }
+  return { value, onSignIn, onOpenAccount, onOpenShares, onSignOut }
 }
 
 describe('AccountControl (anonymous)', () => {
@@ -42,7 +44,7 @@ describe('AccountControl (anonymous)', () => {
       user: { email: 'gm@example.test' } as User,
     })
     fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
-    expect(screen.queryByRole('menuitem', { name: 'Sign out' })).toBeNull()
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
     expect(onOpenAccount).toHaveBeenCalledOnce()
     expect(screen.queryByRole('heading', { name: 'Account' })).toBeNull()
@@ -50,6 +52,17 @@ describe('AccountControl (anonymous)', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Shared links' }))
     expect(onOpenShares).toHaveBeenCalledOnce()
     expect(value.signOut).not.toHaveBeenCalled()
+  })
+
+  it('closes the menu and requests checkpointed sign-out without calling auth directly', () => {
+    const { value, onSignOut } = renderControl({
+      user: { id: 'owner', email: 'gm@example.test' } as User,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
+    expect(onSignOut).toHaveBeenCalledOnce()
+    expect(value.signOut).not.toHaveBeenCalled()
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 
   it.each([{ loading: true }, { configured: false }])(

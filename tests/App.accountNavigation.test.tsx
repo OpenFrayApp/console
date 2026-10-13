@@ -107,6 +107,83 @@ function openAccount() {
   fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }))
 }
 
+/** Request explicit termination through the header rather than bypassing recovery. */
+function requestSignOut() {
+  fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
+}
+
+it('drains latest recovery before the menu invokes guarded sign-out without site navigation', async () => {
+  const board = await startOwnerBoard()
+  addGuard()
+  let finish!: () => void
+  const held = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  const persist = board.saveCloud.getMockImplementation()!
+  board.saveCloud.mockImplementationOnce(async (...args) => {
+    await held
+    return persist(...args)
+  })
+  requestSignOut()
+  await waitFor(() => expect(board.saveCloud).toHaveBeenCalled())
+  expect(board.owner.signOut).not.toHaveBeenCalled()
+  await act(async () => {
+    finish()
+    await held
+  })
+  await waitFor(() => expect(board.owner.signOut).toHaveBeenCalledOnce())
+  expect(navigation.account).not.toHaveBeenCalled()
+  expect(navigation.signIn).not.toHaveBeenCalled()
+  expect(board.recovery.get('owner-a')?.encounter.combatants.map(nameOf)).toEqual([
+    'Owner guard',
+    'Latest guard',
+  ])
+})
+
+it.each(['recovery readback', 'cloud drain'] as const)(
+  'keeps the menu sign-out gated on failed %s with recovery available',
+  async (failure) => {
+    const board = await startOwnerBoard()
+    addGuard()
+    if (failure === 'recovery readback') board.read.mockResolvedValueOnce(null)
+    else board.saveCloud.mockResolvedValueOnce({ status: 'failed' })
+    requestSignOut()
+    expect(await screen.findByRole('dialog', { name: 'Sign-out checkpoint' })).toHaveTextContent(
+      failure === 'cloud drain' ? 'cloud copy could not be confirmed' : 'could not be verified',
+    )
+    expect(board.owner.signOut).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Download recovery copy' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Latest guard' })).toBeInTheDocument()
+  },
+)
+
+it('does not invoke old or replacement sign-out if identity changes during checkpoint', async () => {
+  const board = await startOwnerBoard()
+  addGuard()
+  let finish!: (result: cloud.CloudWriteResult) => void
+  board.saveCloud.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  requestSignOut()
+  await waitFor(() => expect(board.saveCloud).toHaveBeenCalled())
+  const replacement = authState({ user: { id: 'owner-b', email: 'other@example.test' } as User })
+  board.app.rerender(
+    <AuthContext.Provider value={replacement}>
+      <App />
+    </AuthContext.Provider>,
+  )
+  await act(async () => {
+    finish({ status: 'identity-expired' })
+  })
+  await screen.findByRole('dialog', { name: 'Sign-out checkpoint' })
+  expect(board.owner.signOut).not.toHaveBeenCalled()
+  expect(replacement.signOut).not.toHaveBeenCalled()
+})
+
 it('removes the unsafe-navigation warning synchronously after verifying Profile departure', async () => {
   await startOwnerBoard()
   addGuard()

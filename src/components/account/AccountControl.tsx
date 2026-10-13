@@ -31,9 +31,11 @@ export function AccountControl({
   onSignIn,
   onOpenShares,
   onOpenAccount,
+  onSignOut,
 }: {
   onSignIn: () => void
   onOpenAccount: () => void
+  onSignOut: () => void
   /** Open the shared-links screen. It is a screen rather than a dialog because it is
    *  somewhere a Game Master works, not somewhere they glance. */
   onOpenShares?: () => void
@@ -95,6 +97,17 @@ export function AccountControl({
               className={item}
             >
               Shared links
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false)
+                onSignOut()
+              }}
+              className="tap-y block w-full px-3 py-1.5 text-left text-sm text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/50"
+            >
+              Sign out
             </button>
           </div>
         )}
